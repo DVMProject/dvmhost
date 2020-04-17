@@ -1,0 +1,91 @@
+CC      = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+CXX     = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ 
+CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
+LIBS    = -lpthread
+LDFLAGS = -g
+
+OBJECTS = \
+		edac/AMBEFEC.o \
+		edac/BCH.o \
+		edac/BPTC19696.o \
+		edac/CRC.o \
+		edac/Golay2087.o \
+		edac/Golay24128.o \
+		edac/Hamming.o \
+		edac/QR1676.o \
+		edac/RS129.o \
+		edac/RS634717.o \
+		edac/SHA256.o \
+		dmr/acl/AccessControl.o \
+		dmr/data/Data.o \
+		dmr/data/DataHeader.o \
+		dmr/data/EMB.o \
+		dmr/data/EmbeddedData.o \
+		dmr/edac/Trellis.o \
+		dmr/lc/CSBK.o \
+		dmr/lc/FullLC.o \
+		dmr/lc/LC.o \
+		dmr/lc/ShortLC.o \
+		dmr/Control.o \
+		dmr/DataPacket.o \
+		dmr/Slot.o \
+		dmr/SlotType.o \
+		dmr/Sync.o \
+		dmr/VoicePacket.o \
+		lookups/IdenTableLookup.o \
+		lookups/RadioIdLookup.o \
+		lookups/RSSIInterpolator.o \
+		lookups/TalkgroupIdLookup.o \
+		p25/acl/AccessControl.o \
+		p25/data/DataBlock.o \
+		p25/data/DataHeader.o \
+		p25/data/LowSpeedData.o \
+		p25/edac/Trellis.o \
+		p25/lc/LC.o \
+		p25/lc/TDULC.o \
+		p25/lc/TSBK.o \
+		p25/Audio.o \
+		p25/Control.o \
+		p25/DataPacket.o \
+		p25/NID.o \
+		p25/Sync.o \
+		p25/TrunkPacket.o \
+		p25/P25Utils.o \
+		p25/VoicePacket.o \
+		modem/SerialController.o \
+		modem/Modem.o \
+		modem/NullModem.o \
+		network/UDPSocket.o \
+		network/RemoteControl.o \
+		network/BaseNetwork.o \
+		network/Network.o \
+		yaml/Yaml.o \
+		host/calibrate/Console.o \
+		host/calibrate/HostCal.o \
+		host/Host.o \
+		Log.o \
+		Mutex.o \
+		Thread.o \
+		Timer.o \
+		StopWatch.o \
+		Utils.o \
+		HostMain.o
+
+BIN = ../bin
+
+all:	dvmhost
+		-cp -f dvmhost $(BIN)
+		if [ ! -e $(BIN)/config.yml ]; then cp -f config.yml $(BIN); fi
+		if [ ! -e $(BIN)/rid_acl.dat ]; then cp -f rid_acl.dat $(BIN); fi
+		if [ ! -e $(BIN)/tg_acl.dat ]; then cp -f tg_acl.dat $(BIN); fi
+		if [ ! -e $(BIN)/iden_table.dat ]; then cp -f iden_table.dat $(BIN); fi
+		if [ ! -e $(BIN)/RSSI.dat ]; then cp -f RSSI.dat $(BIN); fi
+
+dvmhost: $(OBJECTS) 
+		$(CXX) $(OBJECTS) $(CFLAGS) $(LIBS) -o dvmhost
+
+%.o: %.cpp
+		$(CXX) $(CFLAGS) -c -o $@ $<
+
+clean:
+		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o

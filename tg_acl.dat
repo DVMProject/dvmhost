@@ -1,0 +1,6 @@
+#
+# This file sets the valid Talkgroup IDs allowed on a repeater.
+#
+# TGID,Enabled (1 = Enabled / 0 = Disabled),Slot (0 = Both, 1 = Slot 1, 2 = Slot 2),<newline>
+16777215,1,0,
+65535,1,0,

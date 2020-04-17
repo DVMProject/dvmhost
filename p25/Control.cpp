@@ -1,0 +1,821 @@
+/**
+* Digital Voice Modem - Host Software
+* GPLv2 Open Source. Use is subject to license terms.
+* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+*
+* @package DVM / Host Software
+*
+*/
+//
+// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
+// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
+//
+/*
+*   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
+*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*
+*   This program is free software; you can redistribute it and/or modify
+*   it under the terms of the GNU General Public License as published by
+*   the Free Software Foundation; either version 2 of the License, or
+*   (at your option) any later version.
+*
+*   This program is distributed in the hope that it will be useful,
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*   GNU General Public License for more details.
+*
+*   You should have received a copy of the GNU General Public License
+*   along with this program; if not, write to the Free Software
+*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+#include "Defines.h"
+#include "p25/P25Defines.h"
+#include "p25/Control.h"
+#include "p25/acl/AccessControl.h"
+#include "p25/P25Utils.h"
+#include "p25/Sync.h"
+#include "edac/CRC.h"
+#include "HostMain.h"
+#include "Log.h"
+#include "Utils.h"
+
+using namespace p25;
+
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t TSBK_PCH_CCH_CNT = 6U;
+const uint32_t MAX_PREAMBLE_CNT = 85U;
+
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+/// <summary>
+/// Initializes a new instance of the Control class.
+/// </summary>
+/// <param name="nac">P25 Network Access Code.</param>
+/// <param name="callHang">Amount of hangtime for a P25 call.</param>
+/// <param name="queueSize">Modem frame buffer queue size (bytes).</param>
+/// <param name="modem">Instance of the Modem class.</param>
+/// <param name="network">Instance of the BaseNetwork class.</param>
+/// <param name="timeout">Transmit timeout.</param>
+/// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
+/// <param name="ccBcstInterval">Control Channel Broadcast Interval.</param>
+/// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
+/// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
+/// <param name="dumpPDUData"></param>
+/// <param name="repeatPDU"></param>
+/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
+Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+    uint32_t timeout, uint32_t tgHang, uint32_t ccBcstInterval, bool duplex, lookups::RadioIdLookup* ridLookup,
+    lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+    bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
+    m_voice(NULL),
+    m_data(NULL),
+    m_trunk(NULL),
+    m_nac(nac),
+    m_timeout(timeout),
+    m_modem(modem),
+    m_network(network),
+    m_inhibitIllegal(false),
+    m_legacyGroupGrnt(true),
+    m_duplex(duplex),
+    m_control(false),
+    m_continuousControl(false),
+    m_voiceOnControl(false),
+    m_idenTable(idenTable),
+    m_ridLookup(ridLookup),
+    m_tidLookup(tidLookup),
+    m_queue(queueSize, "P25 Control"),
+    m_rfState(RS_RF_LISTENING),
+    m_rfLastDstId(0U),
+    m_netState(RS_NET_IDLE),
+    m_netLastDstId(0U),
+    m_tailOnIdle(false),
+    m_ccOnIdle(false),
+    m_ccRunning(false),
+    m_ccBcstInterval(ccBcstInterval),
+    m_rfTimeout(1000U, timeout),
+    m_netTimeout(1000U, timeout),
+    m_networkWatchdog(1000U, 0U, 1500U),
+    m_networkTGHang(1000U, tgHang),
+    m_hangCount(3U * 8U),
+    m_preambleCount(0U),
+    m_ccFrameCnt(0U),
+    m_nid(nac),
+    m_rssiMapper(rssiMapper),
+    m_rssi(0U),
+    m_maxRSSI(0U),
+    m_minRSSI(0U),
+    m_aveRSSI(0U),
+    m_rssiCount(0U),
+    m_verbose(verbose),
+    m_debug(debug)
+{
+    assert(ridLookup != NULL);
+    assert(tidLookup != NULL);
+    assert(idenTable != NULL);
+    assert(rssiMapper != NULL);
+
+    acl::AccessControl::init(m_ridLookup, m_tidLookup);
+
+    m_hangCount = callHang * 4U;
+
+    m_voice = new VoicePacket(this, network, debug, verbose);
+    m_data = new DataPacket(this, network, dumpPDUData, repeatPDU, debug, verbose);
+    m_trunk = new TrunkPacket(this, network, debug, verbose);
+}
+
+/// <summary>
+/// Finalizes a instance of the Control class.
+/// </summary>
+Control::~Control()
+{
+    delete m_voice;
+    delete m_data;
+    delete m_trunk;
+}
+
+/// <summary>
+/// Resets the data states for the RF interface.
+/// </summary>
+void Control::reset()
+{
+    m_rfState = RS_RF_LISTENING;
+    m_rfLastDstId = 0U;
+
+    m_voice->resetRF();
+    m_trunk->resetRF();
+    m_data->resetRF();
+    m_queue.clear();
+}
+
+/// <summary>
+/// Helper to set P25 configuration options.
+/// </summary>
+/// <param name="conf">Instance of the ConfigINI class.</param>
+/// <param name="netOnly">Flag indicating this instance should operate in network only mode.</param>
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
+    uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId,
+    uint32_t channelNo, bool printOptions)
+{
+    yaml::Node systemConf = conf["system"];
+    yaml::Node p25Protocol = conf["protocols"]["p25"];
+
+    m_trunk->setCallsign(cwCallsign);
+
+    m_preambleCount = p25Protocol["preambleCount"].as<uint32_t>(4U);
+
+    m_trunk->m_patchSuperGroup = pSuperGroup;
+    m_trunk->setSiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo);
+
+    m_inhibitIllegal = p25Protocol["inhibitIllegal"].as<bool>(false);
+    m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
+
+    m_trunk->m_verifyAff = p25Protocol["verifyAff"].as<bool>(false);
+    m_trunk->m_verifyReg = p25Protocol["verifyReg"].as<bool>(false);
+
+    m_trunk->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
+    m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
+
+    yaml::Node statusCmd = p25Protocol["statusCmd"];
+    m_trunk->m_statusCmdEnable = statusCmd["enable"].as<bool>(false);
+    m_trunk->m_statusRadioCheck = (uint8_t)statusCmd["radioCheck"].as<uint32_t>(0U);
+    m_trunk->m_statusRadioInhibit = (uint8_t)statusCmd["radioInhibit"].as<uint32_t>(0U);
+    m_trunk->m_statusRadioUninhibit = (uint8_t)statusCmd["radioUninhibit"].as<uint32_t>(0U);
+    m_trunk->m_statusRadioForceReg = (uint8_t)statusCmd["radioForceReg"].as<uint32_t>(0U);
+    m_trunk->m_statusRadioForceDereg = (uint8_t)statusCmd["radioForceDereg"].as<uint32_t>(0U);
+
+    yaml::Node control = p25Protocol["control"];
+    m_control = control["enable"].as<bool>(false);
+    if (m_control) {
+        m_continuousControl = control["continuous"].as<bool>(false);
+    }
+    else {
+        m_continuousControl = false;
+    }
+
+    m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
+
+    m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
+
+    std::vector<uint32_t> availCh = voiceChNo;
+    m_trunk->m_voiceChCnt = (uint8_t)availCh.size();
+    m_trunk->setSiteChCnt((uint8_t)availCh.size());
+
+    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
+        m_trunk->m_voiceChTable.push_back(*it);
+    }
+
+    if (printOptions) {
+        LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
+
+        if (m_control) {
+            LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
+        }
+
+        LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
+        LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
+        LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
+        LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
+
+        LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
+        LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
+        LogInfo("    Status Command Support: %s", m_trunk->m_statusCmdEnable ? "yes" : "no");
+        if (m_trunk->m_statusCmdEnable) {
+            LogInfo("    Status Radio Check: $%02X", m_trunk->m_statusRadioCheck);
+            LogInfo("    Status Radio Inhibit: $%02X", m_trunk->m_statusRadioInhibit);
+            LogInfo("    Status Radio Uninhibit: $%02X", m_trunk->m_statusRadioUninhibit);
+            LogInfo("    Status Radio Force Register: $%02X", m_trunk->m_statusRadioForceReg);
+            LogInfo("    Status Radio Force Deregister: $%02X", m_trunk->m_statusRadioForceDereg);
+        }
+    }
+}
+
+/// <summary>
+/// Sets a flag indicating whether the P25 control channel is running.
+/// </summary>
+/// <param name="ccRunning"></param>
+void Control::setCCRunning(bool ccRunning)
+{
+    m_ccRunning = ccRunning;
+}
+
+/// <summary>
+/// Process a data frame from the RF interface.
+/// </summary>
+/// <param name="data">Buffer containing data frame.</param>
+/// <param name="len">Length of data frame.</param>
+/// <returns></returns>
+bool Control::processFrame(uint8_t* data, uint32_t len)
+{
+    assert(data != NULL);
+
+    // Utils::dump(2U, "!!! *RX P25 Raw", data, len);
+
+    bool sync = data[1U] == 0x01U;
+
+    if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
+        if (m_rssi != 0U) {
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
+                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
+        }
+        else {
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%", 
+                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+        }
+
+        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+
+        if (m_control) {
+            m_trunk->releaseDstIdGrant(m_voice->m_rfLC.getDstId(), false);
+        }
+
+        writeRF_TDU(false);
+        m_voice->m_lastDUID = P25_DUID_TDU;
+        m_voice->writeNetworkRF(data + 2U, P25_DUID_TDU);
+
+        m_rfState = RS_RF_LISTENING;
+        m_rfLastDstId = 0U;
+
+        m_tailOnIdle = true;
+
+        m_rfTimeout.stop();
+        m_queue.clear();
+
+        if (m_network != NULL)
+            m_network->resetP25();
+
+        return false;
+    }
+
+    if (data[0U] == TAG_LOST && m_rfState == RS_RF_DATA) {
+        m_rfState = RS_RF_LISTENING;
+        m_rfLastDstId = 0U;
+
+        m_tailOnIdle = true;
+
+        m_data->resetRF();
+
+        m_rfTimeout.stop();
+        m_queue.clear();
+
+        return false;
+    }
+
+    if (data[0U] == TAG_LOST) {
+        m_rfState = RS_RF_LISTENING;
+        m_rfLastDstId = 0U;
+
+        m_voice->resetRF();
+        m_trunk->resetRF();
+        m_data->resetRF();
+
+        return false;
+    }
+
+    if (!sync && m_rfState == RS_RF_LISTENING) {
+        if (m_verbose) {
+            uint8_t sync[P25_SYNC_LENGTH_BYTES];
+            ::memcpy(sync, data + 2U, P25_SYNC_LENGTH_BYTES);
+
+            uint8_t errs = 0U;
+            for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
+                errs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
+
+            LogDebug(LOG_RF, "P25, possible sync word rejected, errs = %u", errs);
+        }
+        return false;
+    }
+
+    if (sync && m_debug) {
+        Utils::dump(2U, "!!! *RX P25 Frame", data, len);
+    }
+
+    // Decode the NID
+    bool valid = m_nid.decode(data + 2U);
+
+    if (!valid && m_rfState == RS_RF_LISTENING)
+        return false;
+
+    uint8_t duid = m_nid.getDUID();
+
+    // Have we got RSSI bytes on the end of a P25 LDU?
+    if (len == (P25_LDU_FRAME_LENGTH_BYTES + 4U)) {
+        uint16_t raw = 0U;
+        raw |= (data[218U] << 8) & 0xFF00U;
+        raw |= (data[219U] << 0) & 0x00FFU;
+
+        // Convert the raw RSSI to dBm
+        int rssi = m_rssiMapper->interpolate(raw);
+        if (m_verbose) {
+            LogMessage(LOG_RF, "P25, raw RSSI = %u, reported RSSI = %d dBm", raw, rssi);
+        }
+
+        // RSSI is always reported as positive
+        m_rssi = (rssi >= 0) ? rssi : -rssi;
+
+        if (m_rssi > m_minRSSI)
+            m_minRSSI = m_rssi;
+        if (m_rssi < m_maxRSSI)
+            m_maxRSSI = m_rssi;
+
+        m_aveRSSI += m_rssi;
+        m_rssiCount++;
+    }
+
+    if (m_debug) {
+        LogDebug(LOG_RF, "P25, rfState = %u, netState = %u, DUID = %u, lastDUID = %u", m_rfState, m_netState, duid, m_voice->m_lastDUID);
+    }
+
+    // are we interrupting a running CC?
+    if (m_ccRunning) {
+        if (duid != P25_DUID_TSDU) {
+            g_interruptP25Control = true;
+        }
+    }
+
+    bool ret = false;
+
+    // handle individual DUIDs
+    switch (duid) {
+        case P25_DUID_HDU:
+        case P25_DUID_LDU1:
+        case P25_DUID_LDU2:
+            ret = m_voice->process(data, len);
+            break;
+
+        case P25_DUID_TDU:
+        case P25_DUID_TDULC:
+            ret = m_voice->process(data, len);
+            break;
+
+        case P25_DUID_PDU:
+            ret = m_data->process(data, len);
+            break;
+
+        case P25_DUID_TSDU:
+            ret = m_trunk->process(data, len);
+            break;
+
+        default:
+            LogError(LOG_RF, "P25 unhandled DUID, duid = $%02X", duid);
+            return false;
+    }
+
+    return ret;
+}
+
+/// <summary>
+/// Get frame data from data ring buffer.
+/// </summary>
+/// <param name="data">Buffer to store frame data.</param>
+/// <returns>Length of frame data retreived.</returns>
+uint32_t Control::getFrame(uint8_t* data)
+{
+    assert(data != NULL);
+
+    if (m_queue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_queue.getData(&len, 1U);
+
+    m_queue.getData(data, len);
+
+    return len;
+}
+
+/// <summary>
+/// Helper to write P25 adjacent site information to the network.
+/// </summary>
+void Control::writeAdjSSNetwork()
+{
+    m_trunk->writeAdjSSNetwork();
+}
+
+/// <summary>
+/// Helper to write control channel frame data.
+/// </summary>
+/// <returns></returns>
+bool Control::writeControlRF()
+{
+    if (!m_control) {
+        return false;
+    }
+
+    if (m_ccFrameCnt == 254U) {
+        m_ccFrameCnt = 0U;
+    }
+
+    if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
+        m_trunk->writeRF_ControlData(m_ccFrameCnt, true);
+        m_ccFrameCnt++;
+        return true;
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Helper to write end of control channel frame data.
+/// </summary>
+/// <returns></returns>
+bool Control::writeControlEndRF()
+{
+    if (!m_control) {
+        return false;
+    }
+
+    if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
+        for (uint32_t i = 0; i < TSBK_PCH_CCH_CNT; i++) {
+            m_trunk->queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_PSH_CCH);
+        }
+
+        writeRF_Nulls();
+        return true;
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Helper to write end of frame data.
+/// </summary>
+/// <returns></returns>
+bool Control::writeEndRF()
+{
+    if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
+        if (m_tailOnIdle) {
+            bool ret = m_voice->writeEndRF();
+            if (!m_control) {
+                writeRF_Nulls();
+            }
+
+            return ret;
+        }
+
+        if (m_ccOnIdle) {
+            g_fireP25Control = true;
+            m_ccOnIdle = false;
+        }
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Updates the processor by the passed number of milliseconds.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clock(uint32_t ms)
+{
+    if (m_network != NULL) {
+        processNetwork();
+
+        if (m_network->getStatus() == network::NET_STAT_RUNNING) {
+            m_trunk->setNetActive(true);
+        }
+        else {
+            m_trunk->setNetActive(false);
+        }
+    }
+
+    m_rfTimeout.clock(ms);
+    m_netTimeout.clock(ms);
+
+    if (m_networkTGHang.isRunning()) {
+        m_networkTGHang.clock(ms);
+
+        if (m_networkTGHang.hasExpired()) {
+            m_networkTGHang.stop();
+            m_rfLastDstId = 0U;
+        }
+    }
+
+    if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {
+        m_networkWatchdog.clock(ms);
+
+        if (m_networkWatchdog.hasExpired()) {
+            if (m_netState == RS_NET_AUDIO) {
+                ::ActivityLog("P25", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
+                    float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
+            }
+            else {
+                ::ActivityLog("P25", false, "network watchdog has expired");
+            }
+
+            m_networkWatchdog.stop();
+
+            if (m_control) {
+                m_trunk->releaseDstIdGrant(m_voice->m_netLC.getDstId(), false);
+            }
+
+            if (m_continuousControl) {
+                if (m_network != NULL)
+                    m_network->resetP25();
+            }
+
+            m_netState = RS_NET_IDLE;
+            m_tailOnIdle = true;
+
+            m_voice->resetNet();
+            m_trunk->resetNet();
+
+            m_netTimeout.stop();
+        }
+    }
+
+    if (m_rfState == RS_RF_REJECTED) {
+        m_queue.clear();
+
+        m_voice->resetRF();
+        m_voice->m_rfLastHDU.reset();
+        m_voice->resetNet();
+        m_trunk->resetRF();
+        m_trunk->resetNet();
+        m_data->resetRF();
+
+        if (m_network != NULL)
+            m_network->resetP25();
+
+        m_rfState = RS_RF_LISTENING;
+    }
+
+    m_trunk->clock(ms);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+/// <summary>
+/// Write data processed from RF to the data ring buffer.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+void Control::writeQueueRF(const uint8_t* data, uint32_t length)
+{
+    assert(data != NULL);
+
+    if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
+        return;
+
+    uint32_t space = m_queue.freeSpace();
+    if (space < (length + 1U)) {
+        uint32_t queueLen = m_queue.length();
+        m_queue.resize(queueLen + 2500);
+
+        LogError(LOG_P25, "overflow in the P25 RF queue; queue resized was %u is %u", queueLen, m_queue.length());
+        return;
+    }
+
+    uint8_t len = length;
+    m_queue.addData(&len, 1U);
+
+    m_queue.addData(data, len);
+}
+
+/// <summary>
+/// Write data processed from the network to the data ring buffer.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+void Control::writeQueueNet(const uint8_t* data, uint32_t length)
+{
+    assert(data != NULL);
+
+    if (m_netTimeout.isRunning() && m_netTimeout.hasExpired())
+        return;
+
+    uint32_t space = m_queue.freeSpace();
+    if (space < (length + 1U)) {
+        LogError(LOG_P25, "network overflow in the P25 RF queue");
+        return;
+    }
+
+    uint8_t len = length;
+    m_queue.addData(&len, 1U);
+
+    m_queue.addData(data, len);
+}
+
+/// <summary>
+/// Process a data frames from the network.
+/// </summary>
+void Control::processNetwork()
+{
+    if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
+        return;
+
+    lc::LC control;
+    data::LowSpeedData lsd;
+    uint8_t duid;
+
+    uint32_t length = 100U;
+    bool ret = false;
+    uint8_t* data = m_network->readP25(ret, control, lsd, duid, length);
+    if (!ret)
+        return;
+    if (length == 0U)
+        return;
+    if (data == NULL) {
+        m_network->resetP25();
+        return;
+    }
+
+    m_networkWatchdog.start();
+
+    if (m_debug) {
+        Utils::dump(2U, "!!! *RX P25 Network Frame - Data Bytes", data, length);
+    }
+
+    switch (duid) {
+        case P25_DUID_HDU:
+        case P25_DUID_LDU1:
+        case P25_DUID_LDU2:
+        case P25_DUID_TDU:
+        case P25_DUID_TDULC:
+            m_voice->processNetwork(data, length, control, lsd, duid);
+            break;
+
+        case P25_DUID_PDU:
+            m_data->processNetwork(data, length, control, lsd, duid);
+            break;
+
+        case P25_DUID_TSDU:
+            m_trunk->processNetwork(data, length, control, lsd, duid);
+            break;
+    }
+
+    delete data;
+}
+
+/// <summary>
+/// Helper to write data nulls.
+/// </summary>
+void Control::writeRF_Nulls()
+{
+    const uint8_t NULLS_LENGTH_BYTES = 25U;
+    uint8_t data[NULLS_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, NULLS_LENGTH_BYTES);
+
+    data[0U] = TAG_EOT;
+    data[1U] = 0x00U;
+
+    // fill nulls
+    for (uint8_t i = 0; i < NULLS_LENGTH_BYTES; i++) {
+        data[i + 2U] = 0x00U;
+    }
+
+    writeQueueRF(data, NULLS_LENGTH_BYTES + 2U);
+}
+
+/// <summary>
+/// Helper to write preamble packet burst.
+/// </summary>
+void Control::writeRF_Preamble()
+{
+    if (m_modem->hasTX() || m_preambleCount == 0U) {
+        return;
+    }
+
+    if (m_ccRunning) {
+        return;
+    }
+
+    if (m_preambleCount > MAX_PREAMBLE_CNT) {
+        m_preambleCount = MAX_PREAMBLE_CNT;
+    }
+
+    writeRF_Nulls();
+    for (uint8_t i = 0U; i < m_preambleCount; i++) {
+        writeRF_TDU(true);
+    }
+}
+
+/// <summary>
+/// Helper to write a P25 TDU packet.
+/// </summary>
+/// <param name="noNetwork"></param>
+void Control::writeRF_TDU(bool noNetwork)
+{
+    uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
+
+    // Generate Sync
+    Sync::addP25Sync(data + 2U);
+
+    // Generate NID
+    m_nid.encode(data + 2U, P25_DUID_TDU);
+
+    // Add busy bits
+    addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
+
+    if (!noNetwork)
+        m_voice->writeNetworkRF(data + 2U, P25_DUID_TDU);
+
+    if (m_duplex) {
+        data[0U] = TAG_EOT;
+        data[1U] = 0x00U;
+
+        writeQueueRF(data, P25_TDU_FRAME_LENGTH_BYTES + 2U);
+    }
+}
+
+/// <summary>
+///
+/// </summary> 
+void Control::checkAndReject()
+{
+    if (m_rfState != RS_RF_LISTENING && m_rfState != RS_RF_DATA) {
+        LogWarning(LOG_RF, "rejected operation (not setting RF rejection)");
+    }
+    else {
+        m_rfState = RS_RF_REJECTED;
+        LogWarning(LOG_RF, "rejected operation");
+    }
+}
+
+/// <summary>
+/// Helper to set the busy status bits on P25 frame data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="ssOffset"></param>
+/// <param name="b1"></param>
+/// <param name="b2"></param>
+void Control::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
+{
+    assert(data != NULL);
+
+    WRITE_BIT(data, ssOffset, b1);
+    WRITE_BIT(data, ssOffset + 1U, b2);
+}
+
+/// <summary>
+/// Helper to add the busy status bits on P25 frame data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+/// <param name="b1"></param>
+/// <param name="b2"></param>
+void Control::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+{
+    assert(data != NULL);
+
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, b1);
+        WRITE_BIT(data, ss1Pos, b2);
+    }
+}

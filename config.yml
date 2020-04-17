@@ -1,0 +1,128 @@
+daemon: true
+log:
+    displayLevel: 1
+    fileLevel: 1
+    filePath: .
+    activityFilePath: .
+    fileRoot: DVM
+network:
+    enable: true
+    id: 100000
+    address: 127.0.0.1
+    port: 62031
+    rconAddress: 127.0.0.1
+    rconPort: 9990
+    jitter: 360
+    talkgroupHang: 10
+    password: "PASSWORD"
+    slot1: true
+    slot2: true
+    transferActivityLog: false
+    updateLookups: false
+    debug: false
+protocols:
+    dmr:
+        enable: true
+        beacons:
+            enable: false
+            interval: 60
+            duration: 3
+        embeddedLCOnly: false
+        dumpTAData: true
+        dumpDataPacket: false
+        repeatDataPacket: true
+        callHang: 5
+        txHang: 8
+        queueSize: 10000
+        verbose: true
+        debug: false
+    p25:
+        enable: true
+        preambleCount: 4
+        control:
+            enable: false
+            continuous: false
+            interval: 60
+            duration: 1
+        voiceOnControl: false
+        inhibitIllegal: false
+        legacyGroupGrnt: true
+        verifyAff: false
+        verifyReg: false
+        dumpDataPacket: false
+        repeatDataPacket: true
+        callHang: 5
+        noStatusAck: false
+        noMessageAck: true
+        statusCmd:
+            enable: true
+            radioCheck: 1
+            radioInhibit: 0
+            radioUninhibit: 0
+            radioForceReg: 0
+            radioForceDereg: 0
+        silenceThreshold: 124
+        queueSize: 16000
+        verbose: true
+        debug: false
+system:
+    identity: ABCD123
+    timeout: 180
+    duplex: true
+    modeHang: 10
+#    rfModeHang: 10
+#    netModeHang: 10
+#    fixedMode: false
+    info:
+        latitude: 0.0
+        longitude: 0.0
+        height: 0
+        power: 10
+        location: "Repeater Site, USA"
+    config:
+        channelId: 2
+        channelNo: 1
+        voiceChNo:
+            - 1
+        colorCode: 5
+        nac: 293
+        pSuperGroup: FFFF
+        netId: BB800
+        sysId: 001
+        rfssId: 1
+        siteId: 1
+    modem:
+        port: null
+        rxInvert: false
+        txInvert: false
+        pttInvert: false
+        dcBlocker: true
+        cosLockout: false
+        txDelay: 1
+        dmrDelay: 7
+        rxDCOffset: 0
+        txDCOffset: 0
+        rxLevel: 50
+        txLevel: 50
+#        cwIdTxLevel: 50
+#        dmrTxLevel: 50
+#        p25TxLevel: 50
+        rssiMappingFile: RSSI.dat
+        disableOFlowReset: false
+        trace: false
+        debug: false
+    cwId:
+        enable: true
+        time: 15
+        callsign: ABCD123
+    iden_table:
+        file: iden_table.dat
+        time: 30
+    radio_id:
+        file: rid_acl.dat
+        time: 2
+        acl: false
+    talkgroup_id:
+        file: tg_acl.dat
+        time: 2
+        acl: false

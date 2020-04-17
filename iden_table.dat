@@ -1,0 +1,8 @@
+#
+# This file sets the valid P25 bandplan identity table.
+#
+# ChId,Base Freq,Spacing (khz),Input Offset (mhz),Bandwidth (khz),<newline>
+0,851006250,6.25,-45.000,12.5,
+1,762006250,6.25,30.000,12.5,
+15,935001250,6.25,-39.00000,12.5,
+2,450000000,6.25,5.000,12.5,
