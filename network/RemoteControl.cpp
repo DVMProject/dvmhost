@@ -83,6 +83,7 @@ using namespace modem;
 #define RCD_P25_PATCH_CMD           "p25-patch"
 
 #define RCD_P25_RELEASE_GRANTS      "p25-rel-grnts"
+#define RCD_P25_RELEASE_AFFS        "p25-rel-affs"
 
 const uint32_t RC_BUFFER_LENGTH = 100U;
 
@@ -567,6 +568,22 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 // Command is in the form of: "p25-rel-grnts"
                 if (p25 != NULL) {
                     p25->trunk()->releaseDstIdGrant(0, true);
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_RELEASE_AFFS) {
+                // Command is in the form of: "p25-rel-affs <group>"
+                if (p25 != NULL) {
+                    uint32_t grp = getArgUInt32(args, 0U);
+
+                    if (grp == 0) {
+                        p25->trunk()->clearGrpAff(0, true);
+                    }
+                    else {
+                        p25->trunk()->clearGrpAff(grp, false);
+                    }
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");

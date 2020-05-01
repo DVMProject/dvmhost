@@ -89,6 +89,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_network(network),
     m_inhibitIllegal(false),
     m_legacyGroupGrnt(true),
+    m_legacyGroupReg(false),
     m_duplex(duplex),
     m_control(false),
     m_continuousControl(false),
@@ -112,6 +113,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_hangCount(3U * 8U),
     m_preambleCount(0U),
     m_ccFrameCnt(0U),
+    m_ccSeq(0U),
     m_nid(nac),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
@@ -181,6 +183,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_inhibitIllegal = p25Protocol["inhibitIllegal"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
+    m_legacyGroupReg = p25Protocol["legacyGroupReg"].as<bool>(false);
 
     m_trunk->m_verifyAff = p25Protocol["verifyAff"].as<bool>(false);
     m_trunk->m_verifyReg = p25Protocol["verifyReg"].as<bool>(false);
@@ -226,6 +229,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
+        LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
 
@@ -455,13 +459,18 @@ bool Control::writeControlRF()
         return false;
     }
 
+    if (m_ccSeq == 5U) {
+        m_ccSeq = 0U;
+    }
+
     if (m_ccFrameCnt == 254U) {
         m_ccFrameCnt = 0U;
     }
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
-        m_trunk->writeRF_ControlData(m_ccFrameCnt, true);
+        m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
         m_ccFrameCnt++;
+        m_ccSeq++;
         return true;
     }
 

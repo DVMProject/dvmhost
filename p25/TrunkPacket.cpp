@@ -339,6 +339,8 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
+                ::ActivityLog("P25", true, "received group grant request from %u to TG %u", srcId, dstId);
+
                 writeRF_TSDU_Grant(true, false);
                 break;
             case TSBK_IOSP_UU_VCH:
@@ -358,6 +360,8 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
+                ::ActivityLog("P25", true, "received unit-to-unit grant request from %u to %u", srcId, dstId);
+
                 writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 break;
             case TSBK_IOSP_UU_ANS:
@@ -374,6 +378,8 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u", 
                         m_rfTSBK.getResponse(), srcId, dstId);
                 }
+
+                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_UU_ANS, true);
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
                     writeRF_TSDU_Grant(false, false);
@@ -396,6 +402,8 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_TELE_INT_ANS (Telephone Interconnect Answer Response), response = $%02X, srcId = %u",
                         m_rfTSBK.getResponse(), srcId);
                 }
+
+                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, true);
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
                     //writeRF_TSDU_Grant(false);
@@ -677,6 +685,19 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 resetStatusCommand(m_netTSBK);
 
                 switch (m_netTSBK.getLCO()) {
+                    case TSBK_IOSP_UU_ANS:
+                        if (m_netTSBK.getResponse() > 0U) {
+                            if (m_verbose) {
+                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u",
+                                    m_netTSBK.getResponse(), srcId, dstId);
+                            }
+                        }
+                        else {
+                            if (m_verbose) {
+                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Request), srcId = %u, dstId = %u", srcId, dstId);
+                            }
+                        }
+                        break;
                     case TSBK_IOSP_STS_UPDT:
                         // validate the source RID
                         VALID_SRCID_NET("TSBK_IOSP_STS_UPDT (Status Update)", srcId);
@@ -751,14 +772,14 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         break;
                     case TSBK_OSP_DENY_RSP:
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), reason = %u, srcId = %u, dstId = %u", 
-                                m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
+                                m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
                         }
                         break;
                     case TSBK_OSP_QUE_RSP:
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), reason = %u, srcId = %u, dstId = %u", 
-                                m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
+                                m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
                         }
                         break;
                     default:
@@ -956,6 +977,42 @@ void TrunkPacket::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
         }
 
         m_grantTimers[dstId].stop();
+    }
+}
+
+/// <summary>
+/// Helper to release group affiliations.
+/// </summary>
+/// <param name="dstId"></param>
+/// <param name="releaseAll"></param>
+void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
+{
+    if (dstId == 0U && !releaseAll) {
+        return;
+    }
+
+    std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
+    if (dstId == 0U && releaseAll) {
+        LogWarning(LOG_RF, "P25, releasing all group affiliations");
+        for (auto it = m_grpAffTable.begin(); it != m_grpAffTable.end(); ++it) {
+            uint32_t srcId = it->first;
+            srcToRel.push_back(srcId);
+        }
+    }
+    else {
+        LogWarning(LOG_RF, "P25, releasing group affiliations, dstId = %u", dstId);
+        for (auto it = m_grpAffTable.begin(); it != m_grpAffTable.end(); ++it) {
+            uint32_t srcId = it->first;
+            uint32_t grpId = it->second;
+            if (grpId == dstId) {
+                srcToRel.push_back(srcId);
+            }
+        }
+    }
+
+    // release affiliations
+    for (auto it = srcToRel.begin(); it != srcToRel.end(); ++it) {
+        writeRF_TSDU_U_Dereg_Ack(*it);
     }
 }
 
@@ -1258,124 +1315,91 @@ void TrunkPacket::writeNetworkRF(const uint8_t* data, bool autoReset)
 /// Helper to write control channel packet data.
 /// </summary>
 /// <param name="frameCnt"></param>
+/// <param name="n"></param>
 /// <param name="adjSS"></param>
-void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, bool adjSS)
+void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
+    uint8_t i = 0U, seqCnt = 0U;
+
     if (!m_p25->m_control) {
         return;
     }
 
-    m_rfTSBK.reset();
-
-    bool alt = (frameCnt % 2) > 0U;
-    if (m_debug) {
-        LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, alt = %u, adjSS = %u", m_mbfCnt, frameCnt, alt, adjSS);
+    // loop to generate 6 control sequences
+    if (frameCnt == 255U) {
+        seqCnt = 6U;
     }
 
-    queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
-
-    if (alt) {
-        // write rfss-net-rfss bcast
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-    }
-    else {
-        // write net-rfss-net bcast
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
-    }
-
-    queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SNDCP_CH_ANN);
-
-    // LogDebug(LOG_P25, "writeRF_ControlData, before adjSS, mbfCnt = %u", m_mbfCnt);
-
-    // write ADJSS
-    if (adjSS && m_adjSiteTable.size() > 0) {
-        if (m_mbfAdjSSCnt >= m_adjSiteTable.size())
-            m_mbfAdjSSCnt = 0U;
-
-        uint8_t i = 0U;
-        for (auto it = m_adjSiteTable.begin(); it != m_adjSiteTable.end(); ++it) {
-            // no good very bad way of skipping entries...
-            if (i != m_mbfAdjSSCnt) {
-                i++;
-                continue;
-            }
-            else {
-                m_rfTSBK.reset();
-
-                SiteData site = it->second;
-
-                uint8_t cfva = P25_CFVA_CONV | P25_CFVA_NETWORK;
-                if (m_adjSiteUpdateCnt[site.siteId()] == 0U) {
-                    cfva |= P25_CFVA_FAILURE;
-                }
-                else {
-                    cfva |= P25_CFVA_VALID;
-                }
-
-                // transmit adjacent site broadcast
-                m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
-                m_rfTSBK.setAdjSiteCFVA(cfva);
-                m_rfTSBK.setAdjSiteSysId(site.sysId());
-                m_rfTSBK.setAdjSiteRFSSId(site.rfssId());
-                m_rfTSBK.setAdjSiteId(site.siteId());
-                m_rfTSBK.setAdjSiteChnId(site.channelId());
-                m_rfTSBK.setAdjSiteChnNo(site.channelNo());
-
-                m_rfTSBK.setLastBlock(true); // always set last block
-                writeRF_TSDU_MBF();
-
-                m_mbfAdjSSCnt++;
-                break;
-            }
-        }
-    }
-
-    // LogDebug(LOG_P25, "writeRF_ControlData, after adjSS, mbfCnt = %u", m_mbfCnt);
-
-    // should we insert the BSI bursts?
-    bool bsi = (frameCnt % 127) == 0U;
-    if (bsi) {
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_CC_BSI);
-
+    do
+    {
         m_rfTSBK.reset();
 
-        // transmit CC BSI burst
-        m_rfTSBK.setLCO(TSBK_OSP_MOT_CC_BSI);
-        m_rfTSBK.setMFId(P25_MFG_MOT);
-
-        m_rfTSBK.setLastBlock(true); // always set last block
-        writeRF_TSDU_MBF();
-    }
-
-    // pad MBF if we have 1 queued TSDUs
-    if (m_mbfCnt == 1U) {
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
         if (m_debug) {
-            LogDebug(LOG_P25, "writeRF_ControlData, have 1 pad 2, mbfCnt = %u", m_mbfCnt);
+            LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
         }
-    }
 
-    // pad MBF if we have 2 queued TSDUs
-    if (m_mbfCnt == 2U) {
-        std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
-        if (entries.size() > 1U) {
+        switch (n)
+        {
+        case 0:
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
-        }
-        else {
+            break;
+        case 1:
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            break;
+        case 2:
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            break;
+        case 3:
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SNDCP_CH_ANN);
+            break;
+        case 4:
+            // write ADJSS
+            if (adjSS) {
+                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_ADJ_STS_BCAST);
+            }
+            break;
         }
-        if (m_debug) {
-            LogDebug(LOG_P25, "writeRF_ControlData, have 2 pad 1, mbfCnt = %u", m_mbfCnt);
-        }
+        
+        if (seqCnt > 0U)
+            n++;
+        i++;
+    } while (i <= seqCnt);
+
+    // should we insert the BSI bursts?
+    bool bsi = (frameCnt % 64U) == 0U;
+    if (bsi || frameCnt == 255U) {
+        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_CC_BSI);
     }
 
-    // reset MBF count
-    m_mbfCnt = 0U;
+    // add padding after the 4th sequence
+    if (seqCnt > 4U) {
+        // pad MBF if we have 1 queued TSDUs
+        if (m_mbfCnt == 1U) {
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            if (m_debug) {
+                LogDebug(LOG_P25, "writeRF_ControlData, have 1 pad 2, mbfCnt = %u", m_mbfCnt);
+            }
+        }
+
+        // pad MBF if we have 2 queued TSDUs
+        if (m_mbfCnt == 2U) {
+            std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
+            if (entries.size() > 1U) {
+                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
+            }
+            else {
+                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            }
+
+            if (m_debug) {
+                LogDebug(LOG_P25, "writeRF_ControlData, have 2 pad 1, mbfCnt = %u", m_mbfCnt);
+            }
+        }
+
+        // reset MBF count
+        m_mbfCnt = 0U;
+    }
 }
 
 /// <summary>
@@ -1669,6 +1693,10 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
     switch (lco) {
         case TSBK_OSP_IDEN_UP:
             {
+                if (m_debug) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_IDEN_UP (Identity Update)");
+                }
+
                 std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
                 if (m_mbfIdenCnt >= entries.size())
                     m_mbfIdenCnt = 0U;
@@ -1722,6 +1750,52 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
 
             // transmit rfss status burst
             m_rfTSBK.setLCO(TSBK_OSP_RFSS_STS_BCAST);
+            break;
+        case TSBK_OSP_ADJ_STS_BCAST:
+            // write ADJSS
+            if (m_adjSiteTable.size() > 0) {
+                if (m_mbfAdjSSCnt >= m_adjSiteTable.size())
+                    m_mbfAdjSSCnt = 0U;
+
+                if (m_debug) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Broadcast)");
+                }
+
+                uint8_t i = 0U;
+                for (auto it = m_adjSiteTable.begin(); it != m_adjSiteTable.end(); ++it) {
+                    // no good very bad way of skipping entries...
+                    if (i != m_mbfAdjSSCnt) {
+                        i++;
+                        continue;
+                    }
+                    else {
+                        SiteData site = it->second;
+
+                        uint8_t cfva = P25_CFVA_CONV | P25_CFVA_NETWORK;
+                        if (m_adjSiteUpdateCnt[site.siteId()] == 0U) {
+                            cfva |= P25_CFVA_FAILURE;
+                        }
+                        else {
+                            cfva |= P25_CFVA_VALID;
+                        }
+
+                        // transmit adjacent site broadcast
+                        m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
+                        m_rfTSBK.setAdjSiteCFVA(cfva);
+                        m_rfTSBK.setAdjSiteSysId(site.sysId());
+                        m_rfTSBK.setAdjSiteRFSSId(site.rfssId());
+                        m_rfTSBK.setAdjSiteId(site.siteId());
+                        m_rfTSBK.setAdjSiteChnId(site.channelId());
+                        m_rfTSBK.setAdjSiteChnNo(site.channelNo());
+
+                        m_mbfAdjSSCnt++;
+                        break;
+                    }
+                }
+            }
+            else {
+                return; // don't create anything
+            }
             break;
         case TSBK_OSP_SNDCP_CH_ANN:
             if (m_debug) {
@@ -1880,7 +1954,7 @@ void TrunkPacket::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
     m_rfTSBK.setSrcId(srcId);
     m_rfTSBK.setDstId(dstId);
     m_rfTSBK.setVendorSkip(true);
-    writeRF_TSDU_SBF(true);
+    writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
     m_rfTSBK.setVendorSkip(false);
@@ -1929,7 +2003,7 @@ void TrunkPacket::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
     m_rfTSBK.setLCO(TSBK_OSP_DENY_RSP);
     m_rfTSBK.setService(service);
     m_rfTSBK.setResponse(reason);
-    writeRF_TSDU_SBF(true);
+    writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
 }
@@ -1939,8 +2013,10 @@ void TrunkPacket::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
+bool TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
+    bool ret = false;
+
     m_rfTSBK.setLCO(TSBK_IOSP_GRP_AFF);
     m_rfTSBK.setResponse(P25_RSP_ACCEPT);
     m_rfTSBK.setPatchSuperGroupId(m_patchSuperGroup);
@@ -1972,12 +2048,14 @@ void TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         }
 
         ::ActivityLog("P25", true, "received group affiliation request from %u to %s %u", srcId, "TG ", dstId);
+        ret = true;
 
         // update dynamic affiliation table
         m_grpAffTable[srcId] = dstId;
     }
 
     writeRF_TSDU_SBF(false);
+    return ret;
 }
 
 /// <summary>
@@ -2059,6 +2137,7 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     }
 
     m_rfTSBK.setSrcId(P25_WUID_SYS);
+    m_rfTSBK.setDstId(srcId);
 
     writeRF_TSDU_SBF(false);
 }
@@ -2080,7 +2159,7 @@ void TrunkPacket::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
     m_rfTSBK.setLCO(TSBK_OSP_QUE_RSP);
     m_rfTSBK.setService(service);
     m_rfTSBK.setResponse(reason);
-    writeRF_TSDU_SBF(true);
+    writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
 }

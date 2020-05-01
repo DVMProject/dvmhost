@@ -100,6 +100,8 @@ namespace p25
         void touchDstIdGrant(uint32_t dstId);
         /// <summary>Helper to release the channel grant for the destination ID.</summary>
         void releaseDstIdGrant(uint32_t dstId, bool releaseAll);
+        /// <summary>Helper to release group affiliations.</summary>
+        void clearGrpAff(uint32_t dstId, bool releaseAll);
 
         /// <summary></summary>
         void resetStatusCommand();
@@ -191,7 +193,7 @@ namespace p25
         void writeNetworkRF(const uint8_t* data, bool autoReset);
 
         /// <summary>Helper to write control channel packet data.</summary>
-        void writeRF_ControlData(uint8_t frameCnt, bool adjSS);
+        void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
         /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
         void writeRF_TDULC(uint8_t duid, bool noNetwork);
@@ -217,7 +219,7 @@ namespace p25
         /// <summary>Helper to write a deny packet.</summary>
         void writeRF_TSDU_Deny(uint8_t reason, uint8_t service);
         /// <summary>Helper to write a group affiliation response packet.</summary>
-        void writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId);
+        bool writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to write a unit registration response packet.</summary>
         void writeRF_TSDU_U_Reg_Rsp(uint32_t srcId);
         /// <summary>Helper to write a unit de-registration acknowledge packet.</summary>

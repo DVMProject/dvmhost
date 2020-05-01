@@ -129,7 +129,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_p25->writeRF_Preamble();
 
             if (!m_p25->m_ccRunning) {
-                m_p25->m_trunk->writeRF_ControlData(127U, false);
+                m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
             }
         }
 
@@ -235,6 +235,16 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 // if the group wasn't granted out -- explicitly grant the group
                 if (!m_p25->m_trunk->hasDstIdGranted(dstId)) {
                     if (m_p25->m_legacyGroupGrnt) {
+                        // are we auto-registering legacy radios to groups?
+                        if (m_p25->m_legacyGroupReg && m_rfLC.getGroup()) {
+                            if (!m_p25->m_trunk->hasSrcIdGrpAff(srcId, dstId)) {
+                                m_p25->m_trunk->m_skipSBFPreamble = true; // HACK: force an SBF to skip generating preambles
+                                if (!m_p25->m_trunk->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId)) {
+                                    return false;
+                                }
+                            }
+                        }                        
+
                         m_p25->m_trunk->m_skipSBFPreamble = true; // HACK: force an SBF to skip generating preambles
                         if (!m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), false)) {
                             return false;
@@ -693,7 +703,7 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                     m_p25->m_trunk->resetNet();
 
                     if (!m_p25->m_ccRunning) {
-                        m_p25->m_trunk->writeRF_ControlData(127U, false);
+                        m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
                     }
 
                     writeNet_HDU(control, lsd);
@@ -740,7 +750,7 @@ bool VoicePacket::writeEndRF()
         writeRF_EndOfVoice();
 
         if (!m_p25->m_ccRunning) {
-            m_p25->m_trunk->writeRF_ControlData(127U, false);
+            m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
             m_p25->writeControlEndRF();
         }
 

@@ -122,6 +122,7 @@ namespace p25
 
         bool m_inhibitIllegal;
         bool m_legacyGroupGrnt;
+        bool m_legacyGroupReg;
 
         bool m_duplex;
         bool m_control;
@@ -151,7 +152,9 @@ namespace p25
 
         uint32_t m_hangCount;
         uint32_t m_preambleCount;
+        
         uint8_t m_ccFrameCnt;
+        uint8_t m_ccSeq;
 
         NID m_nid;
 

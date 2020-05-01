@@ -156,6 +156,8 @@ bool TSBK::decode(const uint8_t* data)
         case TSBK_IOSP_U_REG:
         case TSBK_ISP_CAN_SRV_REQ:
         case TSBK_ISP_GRP_AFF_Q_RSP:
+        case TSBK_OSP_DENY_RSP:
+        case TSBK_OSP_QUE_RSP:
         case TSBK_ISP_U_DEREG_REQ:
         case TSBK_OSP_U_DEREG_ACK:
         case TSBK_ISP_LOC_REG_REQ:
@@ -250,6 +252,14 @@ bool TSBK::decode(const uint8_t* data)
     case TSBK_ISP_GRP_AFF_Q_RSP:
         m_patchSuperGroupId = (uint32_t)((tsbkValue >> 40) & 0xFFFFU);              // Announcement Group Address
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
+    case TSBK_OSP_DENY_RSP:
+    case TSBK_OSP_QUE_RSP:
+        m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Additional Info. Flag
+        m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
+        m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Reason
+        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case TSBK_ISP_U_DEREG_REQ:

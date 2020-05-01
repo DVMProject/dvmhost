@@ -47,6 +47,7 @@ protocols:
         voiceOnControl: false
         inhibitIllegal: false
         legacyGroupGrnt: true
+        legacyGroupReg: false
         verifyAff: false
         verifyReg: false
         dumpDataPacket: false
