@@ -148,8 +148,8 @@ HostCal::HostCal(const std::string& confFile) :
     m_p25Rx1K(false),
     m_txDCOffset(0),
     m_rxDCOffset(0),
-    m_txDelay(1U),
-    m_dmrDelay(7U),
+    m_fdmaPreamble(80U),
+    m_dmrRxDelay(7U),
     m_debug(false),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
@@ -235,8 +235,8 @@ int HostCal::run()
     m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     m_txLevel = modemConf["txLevel"].as<float>(50.0F);
 
-    m_txDelay = modemConf["txDelay"].as<uint32_t>(1U);
-    m_dmrDelay = modemConf["dmrDelay"].as<uint32_t>(7U);
+    m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
+    m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
 
     writeConfig();
 
@@ -1456,7 +1456,12 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     if (m_p25Enabled)
         buffer[4U] |= 0x08U;
 
-    buffer[5U] = m_txDelay;
+    if (m_fdmaPreamble > MAX_FDMA_PREAMBLE) {
+        LogWarning(LOG_P25, "oversized FDMA preamble count, reducing to maximum %u", MAX_FDMA_PREAMBLE);
+        m_fdmaPreamble = MAX_FDMA_PREAMBLE;
+    }
+
+    buffer[5U] = m_fdmaPreamble;
 
     buffer[6U] = modeOverride;
 
@@ -1468,7 +1473,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     buffer[9U] = 1U;
 
-    buffer[10U] = m_dmrDelay;
+    buffer[10U] = m_dmrRxDelay;
     buffer[11U] = 128U;
 
     buffer[13U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
@@ -1562,7 +1567,7 @@ void HostCal::printStatus()
     LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s, RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
         m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no",
         m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
-    LogMessage(LOG_CAL, " - TX Delay: %u (%ums), DMR Delay: %u (%.1fms)", m_txDelay, (m_txDelay * 10), m_dmrDelay, float(m_dmrDelay) * 0.0416666F);
+    LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F);
     LogMessage(LOG_CAL, " - Operating Mode: %s", m_modeStr.c_str());
 
     uint8_t buffer[50U];

@@ -179,8 +179,6 @@ namespace p25
         Timer m_adjSiteUpdateTimer;
         uint32_t m_adjSiteUpdateInterval;
 
-        bool m_skipSBFPreamble;
-
         bool m_verbose;
         bool m_debug;
 

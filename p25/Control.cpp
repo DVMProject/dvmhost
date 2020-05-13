@@ -51,7 +51,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 const uint32_t TSBK_PCH_CCH_CNT = 6U;
-const uint32_t MAX_PREAMBLE_CNT = 85U;
+const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -107,11 +107,11 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_ccRunning(false),
     m_ccBcstInterval(ccBcstInterval),
     m_rfTimeout(1000U, timeout),
+    m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_networkTGHang(1000U, tgHang),
     m_hangCount(3U * 8U),
-    m_preambleCount(0U),
+    m_tduPreambleCount(8U),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_nid(nac),
@@ -154,7 +154,6 @@ Control::~Control()
 void Control::reset()
 {
     m_rfState = RS_RF_LISTENING;
-    m_rfLastDstId = 0U;
 
     m_voice->resetRF();
     m_trunk->resetRF();
@@ -176,7 +175,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_trunk->setCallsign(cwCallsign);
 
-    m_preambleCount = p25Protocol["preambleCount"].as<uint32_t>(4U);
+    m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 
     m_trunk->m_patchSuperGroup = pSuperGroup;
     m_trunk->setSiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo);
@@ -292,6 +291,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
+        m_rfTGHang.stop();
 
         m_tailOnIdle = true;
 
@@ -307,6 +307,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     if (data[0U] == TAG_LOST && m_rfState == RS_RF_DATA) {
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
+        m_rfTGHang.stop();
 
         m_tailOnIdle = true;
 
@@ -320,7 +321,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     if (data[0U] == TAG_LOST) {
         m_rfState = RS_RF_LISTENING;
-        m_rfLastDstId = 0U;
 
         m_voice->resetRF();
         m_trunk->resetRF();
@@ -544,11 +544,14 @@ void Control::clock(uint32_t ms)
     m_rfTimeout.clock(ms);
     m_netTimeout.clock(ms);
 
-    if (m_networkTGHang.isRunning()) {
-        m_networkTGHang.clock(ms);
+    if (m_rfTGHang.isRunning()) {
+        m_rfTGHang.clock(ms);
 
-        if (m_networkTGHang.hasExpired()) {
-            m_networkTGHang.stop();
+        if (m_rfTGHang.hasExpired()) {
+            m_rfTGHang.stop();
+            if (m_verbose) {
+                LogMessage(LOG_RF, "talkgroup hang has expired, lastDstId = %u", m_rfLastDstId);
+            }
             m_rfLastDstId = 0U;
         }
     }
@@ -716,26 +719,23 @@ void Control::processNetwork()
 void Control::writeRF_Nulls()
 {
     const uint8_t NULLS_LENGTH_BYTES = 25U;
+    
+    // write null bits (0x00)
     uint8_t data[NULLS_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NULLS_LENGTH_BYTES);
 
     data[0U] = TAG_EOT;
     data[1U] = 0x00U;
 
-    // fill nulls
-    for (uint8_t i = 0; i < NULLS_LENGTH_BYTES; i++) {
-        data[i + 2U] = 0x00U;
-    }
-
     writeQueueRF(data, NULLS_LENGTH_BYTES + 2U);
 }
 
 /// <summary>
-/// Helper to write preamble packet burst.
+/// Helper to write TDU preamble packet burst.
 /// </summary>
 void Control::writeRF_Preamble()
 {
-    if (m_modem->hasTX() || m_preambleCount == 0U) {
+    if (m_modem->hasTX() || m_tduPreambleCount == 0U) {
         return;
     }
 
@@ -743,12 +743,13 @@ void Control::writeRF_Preamble()
         return;
     }
 
-    if (m_preambleCount > MAX_PREAMBLE_CNT) {
-        m_preambleCount = MAX_PREAMBLE_CNT;
+    if (m_tduPreambleCount > MAX_PREAMBLE_TDU_CNT) {
+        LogWarning(LOG_P25, "oversized TDU preamble count, reducing to maximum %u", MAX_PREAMBLE_TDU_CNT);
+        m_tduPreambleCount = MAX_PREAMBLE_TDU_CNT;
     }
 
-    writeRF_Nulls();
-    for (uint8_t i = 0U; i < m_preambleCount; i++) {
+    // write TDUs if requested
+    for (uint8_t i = 0U; i < m_tduPreambleCount; i++) {
         writeRF_TDU(true);
     }
 }

@@ -79,8 +79,8 @@ Host::Host(const std::string& confFile) :
     m_fixedMode(false),
     m_timeout(180U),
     m_rfModeHang(10U),
+    m_rfTalkgroupHang(10U),
     m_netModeHang(3U),
-    m_netTalkgroupHang(10U),
     m_identity(),
     m_cwCallsign(),
     m_cwIdTime(0U),
@@ -309,7 +309,7 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = new dmr::Control(m_dmrColorCode, callHang, dmrQueueSize, embeddedLCOnly, dumpTAData, m_timeout, m_netTalkgroupHang,
+        dmr = new dmr::Control(m_dmrColorCode, callHang, dmrQueueSize, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDebug, dmrVerbose);
         m_dmrTXTimer.setTimeout(txHang);
 
@@ -330,7 +330,7 @@ int Host::run()
     LogInfo("    Enabled: %s", m_p25Enabled ? "yes" : "no");
     if (m_p25Enabled) {
         yaml::Node p25Protocol = protocolConf["p25"];
-        uint32_t preambleCount = p25Protocol["preambleCount"].as<uint32_t>(4U);
+        uint32_t tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
         m_controlData = p25Protocol["control"]["enable"].as<bool>(false);
         bool controlBcstContinuous = p25Protocol["control"]["continuous"].as<bool>(false);
         bool p25DumpDataPacket = p25Protocol["dumpDataPacket"].as<bool>(false);
@@ -340,7 +340,7 @@ int Host::run()
         bool p25Verbose = p25Protocol["verbose"].as<bool>(true);
         bool p25Debug = p25Protocol["debug"].as<bool>(false);
 
-        LogInfo("    Preamble Count: %u", preambleCount);
+        LogInfo("    TDU Preamble before Voice: %u", tduPreambleCount);
         LogInfo("    Dump Packet Data: %s", p25DumpDataPacket ? "yes" : "no");
         LogInfo("    Repeat Packet Data: %s", p25RepeatDataPacket ? "yes" : "no");
         LogInfo("    Call Hang: %us", callHang);
@@ -371,7 +371,7 @@ int Host::run()
             g_interruptP25Control = false;
         }
 
-        p25 = new p25::Control(m_p25NAC, callHang, p25QueueSize, m_modem, m_network, m_timeout, m_netTalkgroupHang,
+        p25 = new p25::Control(m_p25NAC, callHang, p25QueueSize, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             p25ControlBcstInterval, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket, p25Debug, p25Verbose);
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
             m_p25SiteId, m_channelId, m_channelNo, true);
@@ -1029,6 +1029,7 @@ bool Host::readParams()
 
     m_timeout = systemConf["timeout"].as<uint32_t>(120U);
     m_rfModeHang = systemConf["rfModeHang"].as<uint32_t>(10U);
+    m_rfTalkgroupHang = systemConf["rfTalkgroupHang"].as<uint32_t>(10U);
     m_netModeHang = systemConf["netModeHang"].as<uint32_t>(3U);
     if (!systemConf["modeHang"].isNone()) {
         m_rfModeHang = m_netModeHang = systemConf["modeHang"].as<uint32_t>();
@@ -1045,6 +1046,7 @@ bool Host::readParams()
     LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
     LogInfo("    Timeout: %us", m_timeout);
     LogInfo("    RF Mode Hang: %us", m_rfModeHang);
+    LogInfo("    RF Talkgroup Hang: %us", m_rfTalkgroupHang);
     LogInfo("    Net Mode Hang: %us", m_netModeHang);
     LogInfo("    Identity: %s", m_identity.c_str());
     LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
@@ -1196,8 +1198,8 @@ bool Host::createModem()
     bool pttInvert = modemConf["pttInvert"].as<bool>(false);
     bool dcBlocker = modemConf["dcBlocker"].as<bool>(true);
     bool cosLockout = modemConf["cosLockout"].as<bool>(false);
-    uint32_t txDelay = modemConf["txDelay"].as<uint32_t>(1U);
-    uint32_t dmrDelay = modemConf["dmrDelay"].as<uint32_t>(7U);
+    uint8_t fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
+    uint8_t dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
@@ -1218,10 +1220,10 @@ bool Host::createModem()
     LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
     LogInfo("    DC Blocker: %s", dcBlocker ? "yes" : "no");
     LogInfo("    COS Lockout: %s", cosLockout ? "yes" : "no");
-    LogInfo("    TX Delay: %u (%ums)", txDelay, (txDelay * 10));
+    LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2083F);
+    LogInfo("    DMR RX Delay: %u (%.1fms)", dmrRxDelay, float(dmrRxDelay) * 0.0416666F);
     LogInfo("    RX DC Offset: %d", rxDCOffset);
     LogInfo("    TX DC Offset: %d", txDCOffset);
-    LogInfo("    DMR Delay: %u (%.1fms)", dmrDelay, float(dmrDelay) * 0.0416666F);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
     LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
@@ -1232,7 +1234,7 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, txDelay, dmrDelay, disableOFlowReset, trace, debug);
+    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
@@ -1261,7 +1263,6 @@ bool Host::createNetwork()
     uint32_t rconPort = networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
     uint32_t id = networkConf["id"].as<uint32_t>(0U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
-    m_netTalkgroupHang = networkConf["talkgroupHang"].as<uint32_t>(10U);
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
     bool slot2 = networkConf["slot2"].as<bool>(true);
@@ -1282,7 +1283,6 @@ bool Host::createNetwork()
     LogInfo("    RCON Address: %s", rconAddress.c_str());
     LogInfo("    RCON Port: %u", rconPort);
     LogInfo("    DMR Jitter: %ums", jitter);
-    LogInfo("    Talkgroup Hang: %us", m_netTalkgroupHang);
     LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
     LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
     LogInfo("    Transfer Activity Log: %s", transferActivityLog ? "enabled" : "disabled");

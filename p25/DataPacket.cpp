@@ -386,8 +386,6 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
                     // write data to RF interface?
                     if (m_repeatPDU) {
                         if (m_netDataBlockCnt >= m_netBlocksToFollow) {
-                            m_p25->writeRF_Preamble();
-
                             uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
                             uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
@@ -597,8 +595,6 @@ void DataPacket::writeNetworkRF(const uint8_t dataType, const uint8_t *data, uin
 /// </summary>
 void DataPacket::writeRF_PDU()
 {
-    m_p25->writeRF_Preamble();
-
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 

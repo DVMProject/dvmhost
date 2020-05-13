@@ -98,9 +98,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfSeqNo(0U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
+    m_rfTGHang(1000U, tgHang),
     m_netTimeoutTimer(1000U, timeout),
     m_packetTimer(1000U, 0U, 50U),
-    m_networkTGHang(1000U, tgHang),
     m_interval(),
     m_elapsed(),
     m_rfFrames(0U),
@@ -180,6 +180,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     if (data[0U] == TAG_LOST) {
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
+        m_rfTGHang.stop();
         return false;
     }
 
@@ -234,7 +235,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     }
 
     if ((dataSync || voiceSync) && m_rfState != RS_RF_LISTENING)
-        m_networkTGHang.start();
+        m_rfTGHang.start();
 
     if (dataSync) {
         return m_data->process(data, len);
@@ -273,6 +274,17 @@ void Slot::processNetwork(const data::Data& dmrData)
     if (m_rfState != RS_RF_LISTENING) {
         LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic!");
         return;
+    }
+
+    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+    if (m_rfLastDstId != 0U) {
+        if (m_rfLastDstId != dmrData.getDstId() && (m_rfTGHang.isRunning() && !m_rfTGHang.hasExpired())) {
+            return;
+        }
+
+        if (m_rfLastDstId == dmrData.getDstId() && (m_rfTGHang.isRunning() && !m_rfTGHang.hasExpired())) {
+            m_rfTGHang.start();
+        }
     }
 
     m_networkWatchdog.start();
@@ -322,11 +334,14 @@ void Slot::clock()
         }
     }
 
-    if (m_networkTGHang.isRunning()) {
-        m_networkTGHang.clock(ms);
+    if (m_rfTGHang.isRunning()) {
+        m_rfTGHang.clock(ms);
 
-        if (m_networkTGHang.hasExpired()) {
-            m_networkTGHang.stop();
+        if (m_rfTGHang.hasExpired()) {
+            m_rfTGHang.stop();
+            if (m_verbose) {
+                LogMessage(LOG_RF, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_rfLastDstId);
+            }
             m_rfLastDstId = 0U;
         }
     }

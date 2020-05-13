@@ -146,12 +146,12 @@ namespace p25
         uint32_t m_ccBcstInterval;
 
         Timer m_rfTimeout;
+        Timer m_rfTGHang;
         Timer m_netTimeout;
         Timer m_networkWatchdog;
-        Timer m_networkTGHang;
 
         uint32_t m_hangCount;
-        uint32_t m_preambleCount;
+        uint32_t m_tduPreambleCount;
         
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;
@@ -178,7 +178,7 @@ namespace p25
 
         /// <summary>Helper to write data nulls.</summary>
         void writeRF_Nulls();
-        /// <summary>Helper to write preamble packet burst.</summary>
+        /// <summary>Helper to write TDU preamble packet burst.</summary>
         void writeRF_Preamble();
         /// <summary>Helper to write a P25 TDU packet.</summary>
         void writeRF_TDU(bool noNetwork);

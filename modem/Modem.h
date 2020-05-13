@@ -132,18 +132,21 @@ namespace modem
         RSN_INVALID_REQUEST = 4U,
         RSN_RINGBUFF_FULL = 8U,
 
-        RSN_INVALID_TXDELAY = 10U,
+        RSN_INVALID_FDMA_PREAMBLE = 10U,
         RSN_INVALID_MODE = 11U,
 
         RSN_INVALID_DMR_CC = 12U,
         RSN_INVALID_DMR_SLOT = 13U,
         RSN_INVALID_DMR_START = 14U,
+        RSN_INVALID_DMR_RX_DELAY = 15U,
 
         RSN_DMR_DISABLED = 63U,
         RSN_P25_DISABLED = 64U,
     };
 
     const uint8_t DVM_FRAME_START = 0xFEU;
+
+    const uint8_t MAX_FDMA_PREAMBLE = 255U;
 
     const uint32_t MAX_RESPONSES = 30U;
     const uint32_t BUFFER_LENGTH = 2000U;
@@ -160,7 +163,7 @@ namespace modem
     public:
         /// <summary>Initializes a new instance of the Modem class.</summary>
         Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug);
+            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug);
         /// <summary>Finalizes a instance of the Modem class.</summary>
         virtual ~Modem();
 
@@ -244,7 +247,7 @@ namespace modem
 
         /// <summary>Helper to create an instance of the Modem class.</summary>
         static Modem* createModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug);
+            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug);
 
     private:
         std::string m_port;
@@ -260,8 +263,8 @@ namespace modem
         bool m_dcBlocker;
         bool m_cosLockout;
 
-        uint32_t m_txDelay;
-        uint32_t m_dmrDelay;
+        uint8_t m_fdmaPreamble;
+        uint8_t m_dmrRxDelay;
 
         float m_rxLevel;
         float m_cwIdTXLevel;

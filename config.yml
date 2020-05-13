@@ -13,7 +13,6 @@ network:
     rconAddress: 127.0.0.1
     rconPort: 9990
     jitter: 360
-    talkgroupHang: 10
     password: "PASSWORD"
     slot1: true
     slot2: true
@@ -38,7 +37,7 @@ protocols:
         debug: false
     p25:
         enable: true
-        preambleCount: 4
+        tduPreambleCount: 6
         control:
             enable: false
             continuous: false
@@ -74,6 +73,7 @@ system:
 #    rfModeHang: 10
 #    netModeHang: 10
 #    fixedMode: false
+    rfTalkgroupHang: 10
     info:
         latitude: 0.0
         longitude: 0.0
@@ -99,8 +99,8 @@ system:
         pttInvert: false
         dcBlocker: true
         cosLockout: false
-        txDelay: 1
-        dmrDelay: 7
+        fdmaPreamble: 80
+        dmrRxDelay: 7
         rxDCOffset: 0
         txDCOffset: 0
         rxLevel: 50

@@ -45,7 +45,7 @@ namespace modem
     public:
         /// <summary>Initializes a new instance of the NullModem class.</summary>
         NullModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug);
+            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug);
         /// <summary>Finalizes a instance of the NullModem class.</summary>
         ~NullModem();
 

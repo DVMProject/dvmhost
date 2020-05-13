@@ -319,8 +319,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
         resetStatusCommand(m_rfTSBK);
 
-        m_p25->writeRF_Preamble();
-
         switch (m_rfTSBK.getLCO()) {
             case TSBK_IOSP_GRP_VCH:
                 // make sure control data is supported
@@ -1251,7 +1249,6 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool debug
     m_siteData(),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
-    m_skipSBFPreamble(false),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1560,12 +1557,6 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
         m_p25->m_queue.clear();
     }
 
-    if (!m_skipSBFPreamble) {
-        m_p25->writeRF_Preamble();
-    }
-
-    m_skipSBFPreamble = false;
-
     if (m_p25->m_duplex) {
         data[0U] = TAG_DATA;
         data[1U] = 0x00U;
@@ -1866,7 +1857,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
 
         // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
         if (m_p25->m_rfLastDstId != 0U) {
-            if (m_p25->m_rfLastDstId != m_rfTSBK.getDstId() && (m_p25->m_networkTGHang.isRunning() && !m_p25->m_networkTGHang.hasExpired())) {
+            if (m_p25->m_rfLastDstId != m_rfTSBK.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
                 m_rfTSBK.setLCO(lco);
                 return false;
             }

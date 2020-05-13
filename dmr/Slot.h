@@ -104,9 +104,9 @@ namespace dmr
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;
+        Timer m_rfTGHang;
         Timer m_netTimeoutTimer;
         Timer m_packetTimer;
-        Timer m_networkTGHang;
 
         StopWatch m_interval;
         StopWatch m_elapsed;

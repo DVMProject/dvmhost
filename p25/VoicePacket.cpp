@@ -111,8 +111,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
         g_interruptP25Control = true;
     }
 
-    if (m_p25->m_rfState != RS_RF_LISTENING)
-        m_p25->m_networkTGHang.start();
+    if (m_p25->m_rfState != RS_RF_LISTENING) {
+        m_p25->m_rfTGHang.start();
+    }
 
     // handle individual DUIDs
     if (duid == P25_DUID_HDU) {
@@ -125,12 +126,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_p25->m_queue.clear();
             resetRF();
             resetNet();
-
-            m_p25->writeRF_Preamble();
-
-            if (!m_p25->m_ccRunning) {
-                m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
-            }
         }
 
         if (m_p25->m_rfState == RS_RF_LISTENING || m_p25->m_rfState == RS_RF_AUDIO) {
@@ -148,6 +143,24 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
             }
 
+            // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
+            if (m_p25->m_netState != RS_NET_IDLE && m_rfLC.getDstId() == m_p25->m_netLastDstId) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
+                resetRF();
+                return false;
+            }
+
+            // stop network frames from processing -- RF wants to transmit on a different talkgroup
+            if (m_p25->m_netState != RS_NET_IDLE) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                    m_p25->m_netLastDstId);
+                resetNet();
+                m_p25->writeRF_TDU(true);
+            }
+
+            m_p25->m_rfTGHang.start();
+            m_p25->m_rfLastDstId = m_rfLC.getDstId();
+
             m_rfLastHDU.reset();
             m_rfLastHDU = m_rfLC;
         }
@@ -161,6 +174,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
         m_lastDUID = P25_DUID_LDU1;
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
+            if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
+                m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
+            }
+
             bool ret = m_rfLC.decodeLDU1(data + 2U);
             if (!ret) {
                 return false;
@@ -172,11 +189,19 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             uint32_t srcId = m_rfLC.getSrcId();
             uint32_t dstId = m_rfLC.getDstId();
 
-            // don't process RF frames if the network isn't in a idle state
+            // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
             if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
                 resetRF();
                 return false;
+            }
+
+            // stop network frames from processing -- RF wants to transmit on a different talkgroup
+            if (m_p25->m_netState != RS_NET_IDLE) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                    m_p25->m_netLastDstId);
+                resetNet();
+                m_p25->writeRF_TDU(true);
             }
 
             m_p25->m_trunk->setRFLC(m_rfLC);
@@ -238,14 +263,12 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                         // are we auto-registering legacy radios to groups?
                         if (m_p25->m_legacyGroupReg && m_rfLC.getGroup()) {
                             if (!m_p25->m_trunk->hasSrcIdGrpAff(srcId, dstId)) {
-                                m_p25->m_trunk->m_skipSBFPreamble = true; // HACK: force an SBF to skip generating preambles
                                 if (!m_p25->m_trunk->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId)) {
                                     return false;
                                 }
                             }
                         }                        
 
-                        m_p25->m_trunk->m_skipSBFPreamble = true; // HACK: force an SBF to skip generating preambles
                         if (!m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), false)) {
                             return false;
                         }
@@ -282,7 +305,11 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 }
             }
 
+            m_p25->writeRF_Preamble();
+
             m_p25->m_rfState = RS_RF_AUDIO;
+
+            m_p25->m_rfTGHang.start();
             m_p25->m_rfLastDstId = dstId;
 
             uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
@@ -895,9 +922,13 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_networkTGHang.isRunning() && !m_p25->m_networkTGHang.hasExpired())) {
+        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
             resetNet();
             return;
+        }
+
+        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            m_p25->m_rfTGHang.start();
         }
     }
 
@@ -987,6 +1018,8 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
     m_rfLC.setPriority((serviceOptions & 0x07U));
 
     m_p25->m_trunk->setRFLC(m_rfLC);
+
+    m_p25->writeRF_Preamble();
 
     if (m_p25->m_control) {
         if (group && (m_lastPatchGroup != dstId) &&
@@ -1146,9 +1179,13 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_networkTGHang.isRunning() && !m_p25->m_networkTGHang.hasExpired())) {
+        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
             resetNet();
             return;
+        }
+
+        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            m_p25->m_rfTGHang.start();
         }
     }
 
@@ -1255,6 +1292,14 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
 {
     uint8_t algId = m_netLDU2[126U];
     uint32_t kId = (m_netLDU2[127U] << 8) + m_netLDU2[128U];
+
+    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+    if (m_p25->m_rfLastDstId != 0U) {
+        if (m_p25->m_rfLastDstId != m_netLastLDU1.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            resetNet();
+            return;
+        }
+    }
 
     uint8_t mi[P25_MI_LENGTH_BYTES];
     ::memcpy(mi + 0U, m_netLDU2 + 51U, 3U);

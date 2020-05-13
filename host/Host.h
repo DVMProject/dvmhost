@@ -86,8 +86,8 @@ private:
 
     uint32_t m_timeout;
     uint32_t m_rfModeHang;
+    uint32_t m_rfTalkgroupHang;
     uint32_t m_netModeHang;
-    uint32_t m_netTalkgroupHang;
 
     std::string m_identity;
     std::string m_cwCallsign;

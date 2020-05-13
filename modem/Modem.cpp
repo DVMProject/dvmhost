@@ -64,13 +64,13 @@ using namespace modem;
 /// <param name="pttInvert">Flag indicating the PTT polarity should be inverted.</param>
 /// <param name="dcBlocker">Flag indicating whether the DSP DC-level blocking should be enabled.</param>
 /// <param name="cosLockout">Flag indicating whether the COS signal should be used to lockout the modem.</param>
-/// <param name="txDelay">Compensation for transmitter to settle in ms.</param>
-/// <param name="dmrDelay">Compensate for delay in transmitter audio chain in ms. Usually DSP based.</param>
+/// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
+/// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="trace">Flag indicating whether modem DSP trace is enabled.</param>
 /// <param name="debug">Flag indicating whether modem DSP debug is enabled.</param>
 Modem::Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-    bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug) :
+    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug) :
     m_port(port),
     m_dmrColorCode(0U),
     m_duplex(duplex),
@@ -79,8 +79,8 @@ Modem::Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert,
     m_pttInvert(pttInvert),
     m_dcBlocker(dcBlocker),
     m_cosLockout(cosLockout),
-    m_txDelay(txDelay),
-    m_dmrDelay(dmrDelay),
+    m_fdmaPreamble(fdmaPreamble),
+    m_dmrRxDelay(dmrRxDelay),
     m_rxLevel(0U),
     m_cwIdTXLevel(0U),
     m_dmrTXLevel(0U),
@@ -1028,19 +1028,19 @@ bool Modem::sendCWId(const std::string& callsign)
 /// <param name="pttInvert">Flag indicating the PTT polarity should be inverted.</param>
 /// <param name="dcBlocker">Flag indicating whether the DSP DC-level blocking should be enabled.</param>
 /// <param name="cosLockout">Flag indicating whether the COS signal should be used to lockout the modem.</param>
-/// <param name="txDelay">Amount of time to delay before transmitting frames.</param>
-/// <param name="dmrDelay"></param>
+/// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
+/// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="trace">Flag indicating whether modem DSP trace is enabled.</param>
 /// <param name="debug">Flag indicating whether modem DSP debug is enabled.</param>
 Modem* Modem::createModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-    bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug)
+    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug)
 {
     if (port == NULL_MODEM) {
-        return new NullModem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, txDelay, dmrDelay, disableOFlowReset, trace, debug);
+        return new NullModem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug);
     }
     else {
-        return new Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, txDelay, dmrDelay, disableOFlowReset, trace, debug);
+        return new Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug);
     }
 }
 
@@ -1137,7 +1137,12 @@ bool Modem::writeConfig()
     if (m_p25Enabled)
         buffer[4U] |= 0x08U;
 
-    buffer[5U] = m_txDelay / 10U;        // In 10ms units
+    if (m_fdmaPreamble > MAX_FDMA_PREAMBLE) {
+        LogWarning(LOG_P25, "oversized FDMA preamble count, reducing to maximum %u", MAX_FDMA_PREAMBLE);
+        m_fdmaPreamble = MAX_FDMA_PREAMBLE;
+    }
+
+    buffer[5U] = m_fdmaPreamble;
 
     buffer[6U] = STATE_IDLE;
 
@@ -1147,7 +1152,7 @@ bool Modem::writeConfig()
 
     buffer[9U] = m_dmrColorCode;
 
-    buffer[10U] = m_dmrDelay;
+    buffer[10U] = m_dmrRxDelay;
 
     buffer[11U] = 128U;           // Was OscOffset
 

@@ -86,8 +86,8 @@ private:
     int m_txDCOffset;
     int m_rxDCOffset;
 
-    uint32_t m_txDelay;
-    uint32_t m_dmrDelay;
+    uint8_t m_fdmaPreamble;
+    uint8_t m_dmrRxDelay;
 
     bool m_debug;
 

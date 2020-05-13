@@ -47,14 +47,14 @@ using namespace modem;
 /// <param name="pttInvert">Flag indicating the PTT polarity should be inverted.</param>
 /// <param name="dcBlocker">Flag indicating whether the DSP DC-level blocking should be enabled.</param>
 /// <param name="cosLockout">Flag indicating whether the COS signal should be used to lockout the modem.</param>
-/// <param name="txDelay">Compensation for transmitter to settle in ms.</param>
-/// <param name="dmrDelay">Compensate for delay in transmitter audio chain in ms. Usually DSP based.</param>
+/// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
+/// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="trace">Flag indicating whether modem DSP trace is enabled.</param>
 /// <param name="debug">Flag indicating whether modem DSP debug is enabled.</param>
 NullModem::NullModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-    bool cosLockout, uint32_t txDelay, uint32_t dmrDelay, bool disableOFlowReset, bool trace, bool debug) :
-    Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, txDelay, dmrDelay, disableOFlowReset, trace, debug)
+    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug) :
+    Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug)
 {
     /* stub */
 }

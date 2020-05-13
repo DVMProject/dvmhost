@@ -63,16 +63,16 @@ using namespace dmr;
         return false;                                                                   \
     }
 
-#define CHECK_NET_TG_HANG(_DST_ID)                                                      \
+#define CHECK_TG_HANG(_DST_ID)                                                          \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_networkTGHang.isRunning() && !m_slot->m_networkTGHang.hasExpired())) { \
+        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
             return;                                                                     \
         }                                                                               \
     }
 
-#define CHECK_NET_TG_HANG_DELLC(_DST_ID)                                                \
+#define CHECK_TG_HANG_DELLC(_DST_ID)                                                    \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_networkTGHang.isRunning() && !m_slot->m_networkTGHang.hasExpired())) { \
+        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
             delete lc;                                                                  \
             return;                                                                     \
         }                                                                               \
@@ -577,7 +577,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         uint32_t dstId = lc->getDstId();
         uint8_t flco = lc->getFLCO();
 
-        CHECK_NET_TG_HANG_DELLC(dstId);
+        CHECK_TG_HANG_DELLC(dstId);
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
@@ -655,7 +655,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
 
-            CHECK_NET_TG_HANG_DELLC(dstId);
+            CHECK_TG_HANG_DELLC(dstId);
 
             m_netLC = lc;
 
@@ -793,7 +793,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         uint32_t srcId = csbk.getSrcId();
         uint32_t dstId = csbk.getDstId();
 
-        CHECK_NET_TG_HANG(dstId);
+        CHECK_TG_HANG(dstId);
 
         // Regenerate the CSBK data
         csbk.encode(data + 2U);
@@ -923,7 +923,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         uint32_t srcId = dataHeader.getSrcId();
         uint32_t dstId = dataHeader.getDstId();
 
-        CHECK_NET_TG_HANG(dstId);
+        CHECK_TG_HANG(dstId);
 
         m_slot->m_netFrames = dataHeader.getBlocks();
 

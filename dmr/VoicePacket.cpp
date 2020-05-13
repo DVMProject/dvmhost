@@ -93,6 +93,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_slot->m_rfBits += 141U;
             m_slot->m_rfFrames++;
 
+            m_slot->m_rfTGHang.start();
+            m_slot->m_rfLastDstId = m_slot->m_data->m_rfLC->getDstId();
+
             m_rfEmbeddedReadN = (m_rfEmbeddedReadN + 1U) % 2U;
             m_rfEmbeddedWriteN = (m_rfEmbeddedWriteN + 1U) % 2U;
             m_rfEmbeddedData[m_rfEmbeddedWriteN].reset();
@@ -142,6 +145,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             m_slot->m_rfBits += 141U;
             m_slot->m_rfFrames++;
+
+            m_slot->m_rfTGHang.start();
+            m_slot->m_rfLastDstId = m_slot->m_data->m_rfLC->getDstId();
 
             // Get the LCSS from the EMB
             data::EMB emb;
@@ -381,6 +387,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_slot->writeNetworkRF(data, DT_VOICE, errors);
 
                 m_slot->m_rfState = RS_RF_AUDIO;
+
+                m_slot->m_rfTGHang.start();
                 m_slot->m_rfLastDstId = dstId;
 
                 if (m_slot->m_netState == RS_NET_IDLE) {
