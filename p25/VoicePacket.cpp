@@ -198,10 +198,20 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             // stop network frames from processing -- RF wants to transmit on a different talkgroup
             if (m_p25->m_netState != RS_NET_IDLE) {
-                LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
-                    m_p25->m_netLastDstId);
-                resetNet();
-                m_p25->writeRF_TDU(true);
+                if (m_netLC.getSrcId() == srcId && m_netLC.getDstId() == dstId) {
+                    LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                        srcId, dstId);
+                    resetRF();
+                    return false;
+                }
+                else {
+                    LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                        m_p25->m_netLastDstId);
+                    resetNet();
+/*
+                    m_p25->writeRF_TDU(true);
+*/
+                }
             }
 
             m_p25->m_trunk->setRFLC(m_rfLC);
@@ -607,13 +617,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
-    // don't process network frames if the RF modem isn't in a listening state
-    if (m_p25->m_rfState != RS_RF_LISTENING) {
-        LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic!");
-        resetNet();
-        return false;
-    }
-
     uint32_t count = 0U;
 
     switch (duid) {
@@ -729,10 +732,6 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                     m_p25->m_trunk->resetRF();
                     m_p25->m_trunk->resetNet();
 
-                    if (!m_p25->m_ccRunning) {
-                        m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
-                    }
-
                     writeNet_HDU(control, lsd);
                     if (m_p25->m_netState != RS_NET_IDLE) {
                         writeNet_LDU1(control, lsd);
@@ -749,6 +748,12 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
             break;
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
+            // don't process network frames if the RF modem isn't in a listening state
+            if (m_p25->m_rfState != RS_RF_LISTENING) {
+                resetNet();
+                return false;
+            }
+
             if (m_p25->m_control) {
                 m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
             }
@@ -955,6 +960,22 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, srcId = 0");
     }
 
+    // don't process network frames if the RF modem isn't in a listening state
+    if (m_p25->m_rfState != RS_RF_LISTENING) {
+        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                srcId, dstId);
+            resetNet();
+            return;
+        }
+        else {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                dstId);
+            resetNet();
+            return;
+        }
+    }
+
     uint8_t algId = m_netLDU2[126U];
     uint32_t kId = (m_netLDU2[127U] << 8) + m_netLDU2[128U];
     bool group = control.getLCO() == LC_GROUP;
@@ -1001,6 +1022,10 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
             LogWarning(LOG_NET, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
             return;
         }
+    }
+
+    if (!m_p25->m_ccRunning) {
+        m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
     }
 
     ::ActivityLog("P25", false, "received network transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
