@@ -32,7 +32,6 @@
 #include "edac/SHA256.h"
 #include "network/BaseNetwork.h"
 #include "Log.h"
-#include "StopWatch.h"
 #include "Utils.h"
 
 using namespace network;
@@ -71,7 +70,8 @@ BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debu
     m_p25StreamId(0U),
     m_rxDMRData(4000U, "DMR Net Buffer"),
     m_rxP25Data(4000U, "P25 Net Buffer"),
-    m_audio()
+    m_audio(),
+    m_random()
 {
     assert(id > 1000U);
 
@@ -79,12 +79,14 @@ BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debu
     m_salt = new uint8_t[sizeof(uint32_t)];
     m_streamId = new uint32_t[2U];
 
-    m_p25StreamId = 0U;
-    m_streamId[0U] = 0x00U;
-    m_streamId[1U] = 0x00U;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    m_random = mt;
 
-    StopWatch stopWatch;
-    ::srand((uint32_t)stopWatch.start());
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    m_p25StreamId = dist(m_random);
+    m_streamId[0U] = dist(m_random);
+    m_streamId[1U] = dist(m_random);
 }
 
 /// <summary>
@@ -256,12 +258,13 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 
     uint32_t slotIndex = slotNo - 1U;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (dataType == dmr::DT_VOICE_LC_HEADER) {
-        m_streamId[slotIndex] = ::rand() + 1U;
+        m_streamId[slotIndex] = dist(m_random);
     }
 
     if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
-        m_streamId[slotIndex] = ::rand() + 1U;
+        m_streamId[slotIndex] = dist(m_random);
     }
 
     return writeDMR(m_id, m_streamId[slotIndex], data);
@@ -279,8 +282,9 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = ::rand() + 1U;
+        m_p25StreamId = dist(m_random);
 
     m_streamId[0] = m_p25StreamId;
 
@@ -299,8 +303,9 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = ::rand() + 1U;
+        m_p25StreamId = dist(m_random);
 
     m_streamId[0] = m_p25StreamId;
 
@@ -318,8 +323,9 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = ::rand() + 1U;
+        m_p25StreamId = dist(m_random);
 
     m_streamId[0] = m_p25StreamId;
 
@@ -337,8 +343,9 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::TSBK& tsbk, const uint8_t* data)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = ::rand() + 1U;
+        m_p25StreamId = dist(m_random);
 
     m_streamId[0] = m_p25StreamId;
 
@@ -358,8 +365,9 @@ bool BaseNetwork::writeP25PDU(const uint32_t llId, const uint8_t dataType, const
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = ::rand() + 1U;
+        m_p25StreamId = dist(m_random);
 
     m_streamId[0] = m_p25StreamId;
 
@@ -398,11 +406,12 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
 {
     assert(slotNo == 1U || slotNo == 2U);
 
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (slotNo == 1U) {
-        m_streamId[0U] = ::rand() + 1U;
+        m_streamId[0U] = dist(m_random);
     }
     else {
-        m_streamId[1U] = ::rand() + 1U;
+        m_streamId[1U] = dist(m_random);
     }
 
     m_rxDMRData.clear();
@@ -413,7 +422,8 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
 /// </summary>
 void BaseNetwork::resetP25()
 {
-    m_p25StreamId = ::rand() + 1U;
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    m_p25StreamId = dist(m_random);
     m_streamId[0] = m_p25StreamId;
 
     m_rxP25Data.clear();

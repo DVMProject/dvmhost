@@ -46,10 +46,14 @@
 
 #include <string>
 #include <cstdint>
+#include <random>
 
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
+#define DVM_RAND_MIN 0x00000001
+#define DVM_RAND_MAX 0xfffffffe
+
 #define TAG_DMR_DATA            "DMRD"
 #define TAG_P25_DATA            "P25D"
 
@@ -238,6 +242,8 @@ namespace network
         RingBuffer<uint8_t> m_rxP25Data;
 
         p25::Audio m_audio;
+
+        std::mt19937 m_random;
 
         /// <summary>Writes DMR frame data to the network.</summary>
         bool writeDMR(const uint32_t id, const uint32_t streamId, const dmr::data::Data& data);

@@ -102,7 +102,7 @@ static bool LogOpen()
             ::fclose(m_fpLog);
     }
 
-    char filename[100U];
+    char filename[200U];
 #if defined(_WIN32) || defined(_WIN64)
     ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 #else
@@ -134,7 +134,7 @@ static bool ActivityLogOpen()
             ::fclose(m_actFpLog);
     }
 
-    char filename[100U];
+    char filename[200U];
 #if defined(_WIN32) || defined(_WIN64)
     ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.activity.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 #else
@@ -180,7 +180,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     assert(mode != NULL);
     assert(msg != NULL);
 
-    char buffer[400U];
+    char buffer[501U];
 #if defined(_WIN32) || defined(_WIN64)
     SYSTEMTIME st;
     ::GetSystemTime(&st);
@@ -198,7 +198,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     va_list vl;
     va_start(vl, msg);
 
-    ::vsprintf(buffer + ::strlen(buffer), msg, vl);
+    ::vsnprintf(buffer + ::strlen(buffer), 500, msg, vl);
 
     va_end(vl);
 
@@ -274,7 +274,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != NULL);
 
-    char buffer[300U];
+    char buffer[501U];
 #if defined(_WIN32) || defined(_WIN64)
     SYSTEMTIME st;
     ::GetSystemTime(&st);
@@ -302,7 +302,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     va_list vl;
     va_start(vl, fmt);
 
-    ::vsprintf(buffer + ::strlen(buffer), fmt, vl);
+    ::vsnprintf(buffer + ::strlen(buffer), 500, fmt, vl);
 
     va_end(vl);
 
