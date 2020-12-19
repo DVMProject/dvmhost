@@ -1209,9 +1209,14 @@ bool Host::createModem()
     if (!modemConf["txLevel"].isNone()) {
         cwIdTXLevel = dmrTXLevel = p25TXLevel = modemConf["txLevel"].as<float>(50.0F);
     }
+    uint8_t packetPlayoutTime = (uint8_t)modemConf["packetPlayoutTime"].as<uint32_t>(10U);
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
+
+    // make sure playout time is always greater than 1ms
+    if (packetPlayoutTime < 1U)
+        packetPlayoutTime = 1U;
 
     LogInfo("Modem Parameters");
     LogInfo("    Port: %s", port.c_str());
@@ -1228,13 +1233,14 @@ bool Host::createModem()
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
     LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
     LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
+    LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
     LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
-    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug);
+    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, packetPlayoutTime, disableOFlowReset, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);

@@ -115,13 +115,17 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
         m_p25->m_rfTGHang.start();
     }
 
+    if (duid == P25_DUID_HDU && m_lastDUID == P25_DUID_HDU) {
+        duid = P25_DUID_LDU1;
+    }
+
     // handle individual DUIDs
     if (duid == P25_DUID_HDU) {
         m_p25->m_trunk->resetStatusCommand();
 
         m_lastDUID = P25_DUID_HDU;
 
-        if (m_p25->m_rfState == RS_RF_LISTENING) {
+        if (m_p25->m_rfState == RS_RF_LISTENING && m_p25->m_ccRunning) {
             m_p25->m_modem->clearP25Data();
             m_p25->m_queue.clear();
             resetRF();

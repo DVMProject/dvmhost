@@ -449,7 +449,7 @@ void Slot::writeQueueRF(const uint8_t *data)
     uint32_t space = m_queue.freeSpace();
     if (space < (len + 1U)) {
         uint32_t queueLen = m_queue.length();
-        m_queue.resize(queueLen + 2500);
+        m_queue.resize(queueLen + QUEUE_RESIZE_SIZE);
 
         LogError(LOG_DMR, "Slot %u, overflow in the DMR slot RF queue; queue resized was %u is %u", m_slotNo, queueLen, m_queue.length());
         return;

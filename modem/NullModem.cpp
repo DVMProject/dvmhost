@@ -49,12 +49,13 @@ using namespace modem;
 /// <param name="cosLockout">Flag indicating whether the COS signal should be used to lockout the modem.</param>
 /// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
 /// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
+/// <param name="packetPlayoutTime">Length of time in MS between packets to send to modem.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="trace">Flag indicating whether modem DSP trace is enabled.</param>
 /// <param name="debug">Flag indicating whether modem DSP debug is enabled.</param>
 NullModem::NullModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug) :
-    Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, disableOFlowReset, trace, debug)
+    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug) :
+    Modem(port, duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, packetPlayoutTime, disableOFlowReset, trace, debug)
 {
     /* stub */
 }

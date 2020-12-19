@@ -163,7 +163,7 @@ namespace modem
     public:
         /// <summary>Initializes a new instance of the Modem class.</summary>
         Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug);
+            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug);
         /// <summary>Finalizes a instance of the Modem class.</summary>
         virtual ~Modem();
 
@@ -247,7 +247,7 @@ namespace modem
 
         /// <summary>Helper to create an instance of the Modem class.</summary>
         static Modem* createModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, bool disableOFlowReset, bool trace, bool debug);
+            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug);
 
     private:
         std::string m_port;

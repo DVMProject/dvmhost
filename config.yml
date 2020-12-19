@@ -109,6 +109,7 @@ system:
 #        dmrTxLevel: 50
 #        p25TxLevel: 50
         rssiMappingFile: RSSI.dat
+        packetPlayoutTime: 10
         disableOFlowReset: false
         trace: false
         debug: false

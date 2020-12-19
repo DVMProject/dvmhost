@@ -330,16 +330,16 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     }
 
     if (!sync && m_rfState == RS_RF_LISTENING) {
-        if (m_verbose) {
-            uint8_t sync[P25_SYNC_LENGTH_BYTES];
-            ::memcpy(sync, data + 2U, P25_SYNC_LENGTH_BYTES);
+        uint8_t sync[P25_SYNC_LENGTH_BYTES];
+        ::memcpy(sync, data + 2U, P25_SYNC_LENGTH_BYTES);
 
-            uint8_t errs = 0U;
-            for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
-                errs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
+        uint8_t errs = 0U;
+        for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
+            errs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
 
-            LogDebug(LOG_RF, "P25, possible sync word rejected, errs = %u", errs);
-        }
+        LogWarning(LOG_RF, "P25, possible sync word rejected, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", errs,
+            sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
+
         return false;
     }
 
@@ -626,7 +626,7 @@ void Control::writeQueueRF(const uint8_t* data, uint32_t length)
     uint32_t space = m_queue.freeSpace();
     if (space < (length + 1U)) {
         uint32_t queueLen = m_queue.length();
-        m_queue.resize(queueLen + 2500);
+        m_queue.resize(queueLen + QUEUE_RESIZE_SIZE);
 
         LogError(LOG_P25, "overflow in the P25 RF queue; queue resized was %u is %u", queueLen, m_queue.length());
         return;
