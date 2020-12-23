@@ -1244,7 +1244,8 @@ bool Host::createModem()
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setDMRParams(m_dmrColorCode);
+    m_modem->setDMRColorCode(m_dmrColorCode);
+    m_modem->setP25NAC(m_p25NAC);
 
     bool ret = m_modem->open();
     if (!ret) {

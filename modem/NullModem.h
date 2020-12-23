@@ -56,7 +56,7 @@ namespace modem
         /// <summary>Sets the modem DSP RF deviation levels.</summary>
         virtual void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel) { return; }
         /// <summary>Sets the modem DSP DMR color code.</summary>
-        virtual void setDMRParams(uint32_t colorCode) { return; }
+        virtual void setDMRColorCode(uint32_t colorCode) { return; }
         /// <summary>Sets the modem DSP RF receive deviation levels.</summary>
         virtual void setRXLevel(float rxLevel) { return; }
 

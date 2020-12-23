@@ -74,6 +74,7 @@ Modem::Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert,
     bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug) :
     m_port(port),
     m_dmrColorCode(0U),
+    m_p25NAC(0x293U),
     m_duplex(duplex),
     m_rxInvert(rxInvert),
     m_txInvert(txInvert),
@@ -170,11 +171,22 @@ void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float 
 /// Sets the modem DSP DMR color code.
 /// </summary>
 /// <param name="colorCode"></param>
-void Modem::setDMRParams(uint32_t colorCode)
+void Modem::setDMRColorCode(uint32_t colorCode)
 {
     assert(colorCode < 16U);
 
     m_dmrColorCode = colorCode;
+}
+
+/// <summary>
+/// Sets the modem DSP P25 NAC.
+/// </summary>
+/// <param name="nac"></param>
+void Modem::setP25NAC(uint32_t nac)
+{
+    assert(nac < 0xFFFU);
+
+    m_p25NAC = nac;
 }
 
 /// <summary>
@@ -1156,7 +1168,8 @@ bool Modem::writeConfig()
 
     buffer[10U] = m_dmrRxDelay;
 
-    buffer[11U] = 128U;           // Was OscOffset
+    buffer[11U] = (m_p25NAC >> 4) & 0xFFU;
+    buffer[12U] = (m_p25NAC << 4) & 0xF0U;
 
     buffer[13U] = (uint8_t)(m_dmrTXLevel * 2.55F + 0.5F);
     buffer[15U] = (uint8_t)(m_p25TXLevel * 2.55F + 0.5F);

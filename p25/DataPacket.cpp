@@ -849,7 +849,7 @@ void DataPacket::writeNet_PDU_Header()
 
         m_netBlocksToFollow = m_netDataHeader.getBlocksToFollow();
 
-        uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+        //uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
         m_netBitOffset = P25_PREAMBLE_LENGTH_BITS;
 
         ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);

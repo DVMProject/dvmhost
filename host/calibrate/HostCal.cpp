@@ -275,6 +275,13 @@ int HostCal::run()
                     writeConfig();
                 }
                 break;
+            case 'D':
+                {
+                    m_debug = !m_debug;
+                    LogMessage(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
+                    writeConfig();
+                }
+                break;
             case 'R':
                 setRXLevel(1);
                 break;
@@ -307,7 +314,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     if (m_mode == STATE_DMR_CAL) {
                         m_modeStr = DMR_SYM_LA_TST_STR;
@@ -330,8 +336,7 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
-
+                    
                     if (m_mode == STATE_DMR_CAL) {
                         m_modeStr = DMR_SYM_LB_TST_STR;
 
@@ -353,7 +358,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     if (m_mode == STATE_DMR_CAL) {
                         m_modeStr = DMR_SYM_LC_TST_STR;
@@ -376,7 +380,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
                 
                     if (m_mode == STATE_DMR_CAL) {
                         m_modeStr = DMR_SYM_LD_TST_STR;
@@ -403,7 +406,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -418,7 +420,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -433,7 +434,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -448,7 +448,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -463,7 +462,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -478,7 +476,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -499,7 +496,6 @@ int HostCal::run()
                     m_duplex = false;
                     m_dmrEnabled = true;
                     m_p25Enabled = false;
-                    m_debug = true;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -520,7 +516,6 @@ int HostCal::run()
                     m_duplex = false;
                     m_dmrEnabled = false;
                     m_p25Enabled = true;
-                    m_debug = true;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -535,7 +530,6 @@ int HostCal::run()
                     m_dmrRx1K = false;
                     m_p25Enabled = false;
                     m_p25Rx1K = false;
-                    m_debug = false;
 
                     LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
                     writeConfig();
@@ -571,6 +565,8 @@ int HostCal::run()
                 end = true;
                 break;
 
+            case 13:
+            case 10:
             case -1:
                 break;
             default:
@@ -802,8 +798,6 @@ bool HostCal::initModem()
 
     bool ret = writeConfig();
     if (!ret) {
-        LogMessage(LOG_CAL, " - Modem unresponsive, retrying...");
-        sleep(2500U);
         ret = writeConfig();
         if (!ret) {
             LogError(LOG_CAL, "Modem unresponsive to configuration set after 2 attempts, calibration may fail.");
@@ -1072,6 +1066,16 @@ void HostCal::processP25BER(const uint8_t* buffer)
 {
     using namespace p25;
 
+    uint8_t sync[P25_SYNC_LENGTH_BYTES];
+    ::memcpy(sync, buffer + 1U, P25_SYNC_LENGTH_BYTES);
+
+    uint8_t syncErrs = 0U;
+    for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
+        syncErrs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
+
+    LogMessage(LOG_CAL, "P25, sync word, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", syncErrs,
+        sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
+
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(buffer + 1U, nid, 48U, 114U);
     uint8_t duid = nid[1U] & 0x0FU;
@@ -1090,7 +1094,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_RF, "P25_DUID_HDU (Header), dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogMessage(LOG_CAL, "P25_DUID_HDU (Header), dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
         
         m_berBits = 0U;
@@ -1474,7 +1478,10 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     buffer[9U] = 1U;
 
     buffer[10U] = m_dmrRxDelay;
-    buffer[11U] = 128U;
+    
+    uint32_t nac = 0xF7EU;
+    buffer[11U] = (nac >> 4) & 0xFFU;
+    buffer[12U] = (nac << 4) & 0xF0U;
 
     buffer[13U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
     buffer[15U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);

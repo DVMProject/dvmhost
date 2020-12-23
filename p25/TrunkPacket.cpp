@@ -1858,6 +1858,8 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
         if (m_p25->m_rfLastDstId != 0U) {
             if (m_p25->m_rfLastDstId != m_rfTSBK.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+                writeRF_TSDU_Deny(P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                m_p25->checkAndReject();
                 m_rfTSBK.setLCO(lco);
                 return false;
             }

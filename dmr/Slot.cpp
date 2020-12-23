@@ -212,22 +212,21 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     bool voiceSync = (data[1U] & DMR_SYNC_VOICE) == DMR_SYNC_VOICE;
 
     if (!(dataSync || voiceSync) && m_rfState == RS_RF_LISTENING) {
-        if (m_verbose) {
-            uint8_t sync[DMR_SYNC_LENGTH_BYTES];
-            ::memcpy(sync, data + 2U, DMR_SYNC_LENGTH_BYTES);
+        uint8_t sync[DMR_SYNC_LENGTH_BYTES];
+        ::memcpy(sync, data + 2U, DMR_SYNC_LENGTH_BYTES);
 
-            // count data sync errors
-            uint8_t dataErrs = 0U;
-            for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
-                dataErrs += Utils::countBits8(sync[i] ^ DMR_MS_DATA_SYNC_BYTES[i]);
+        // count data sync errors
+        uint8_t dataErrs = 0U;
+        for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
+            dataErrs += Utils::countBits8(sync[i] ^ DMR_MS_DATA_SYNC_BYTES[i]);
 
-            // count voice sync errors
-            uint8_t voiceErrs = 0U;
-            for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
-                voiceErrs += Utils::countBits8(sync[i] ^ DMR_MS_VOICE_SYNC_BYTES[i]);
+        // count voice sync errors
+        uint8_t voiceErrs = 0U;
+        for (uint8_t i = 0U; i < DMR_SYNC_LENGTH_BYTES; i++)
+            voiceErrs += Utils::countBits8(sync[i] ^ DMR_MS_VOICE_SYNC_BYTES[i]);
 
-            LogDebug(LOG_RF, "DMR, sync word rejected, dataErrs = %u, voiceErrs = %u", dataErrs, voiceErrs);
-        }
+        LogWarning(LOG_RF, "DMR, possible sync word rejected, dataErrs = %u, voiceErrs = %u, sync word = %02X %02X %02X %02X %02X %02X", dataErrs, voiceErrs,
+            sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
     }
 
     if ((dataSync || voiceSync) && m_debug) {

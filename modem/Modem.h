@@ -140,6 +140,8 @@ namespace modem
         RSN_INVALID_DMR_START = 14U,
         RSN_INVALID_DMR_RX_DELAY = 15U,
 
+        RSN_INVALID_P25_NAC = 16U,
+
         RSN_DMR_DISABLED = 63U,
         RSN_P25_DISABLED = 64U,
     };
@@ -174,7 +176,9 @@ namespace modem
         /// <summary>Sets the modem DSP RF deviation levels.</summary>
         virtual void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
         /// <summary>Sets the modem DSP DMR color code.</summary>
-        virtual void setDMRParams(uint32_t colorCode);
+        virtual void setDMRColorCode(uint32_t colorCode);
+        /// <summary>Sets the modem DSP P25 NAC.</summary>
+        virtual void setP25NAC(uint32_t nac);
         /// <summary>Sets the modem DSP RF receive deviation levels.</summary>
         virtual void setRXLevel(float rxLevel);
 
@@ -253,6 +257,7 @@ namespace modem
         std::string m_port;
 
         uint32_t m_dmrColorCode;
+        uint32_t m_p25NAC;
 
         bool m_duplex;
 
