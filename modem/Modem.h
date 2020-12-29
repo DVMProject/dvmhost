@@ -93,6 +93,7 @@ namespace modem
         CMD_SET_CONFIG = 0x02U,
         CMD_SET_MODE = 0x03U,
 
+        CMD_SET_SYMLVLADJ = 0x04U,
         CMD_SET_RXLEVEL = 0x05U,
 
         CMD_CAL_DATA = 0x08U,
@@ -175,6 +176,8 @@ namespace modem
         virtual void setModeParams(bool dmrEnabled, bool p25Enabled);
         /// <summary>Sets the modem DSP RF deviation levels.</summary>
         virtual void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
+        /// <summary>Sets the modem DSP Symbol adjustment levels.</summary>
+        virtual void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
         /// <summary>Sets the modem DSP DMR color code.</summary>
         virtual void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the modem DSP P25 NAC.</summary>
@@ -285,6 +288,11 @@ namespace modem
         int m_rxDCOffset;
         int m_txDCOffset;
 
+        int m_dmrSymLevel3Adj;
+        int m_dmrSymLevel1Adj;
+        int m_p25SymLevel3Adj;
+        int m_p25SymLevel1Adj;
+
         uint32_t m_adcOverFlowCount;
         uint32_t m_dacOverFlowCount;
 
@@ -319,6 +327,8 @@ namespace modem
         bool getStatus();
         /// <summary>Write configuration to the modem DSP.</summary>
         bool writeConfig();
+        /// <summary>Write symbol level adjustments to the modem DSP.</summary>
+        bool writeSymbolAdjust();
 
         /// <summary></summary>
         void printDebug();

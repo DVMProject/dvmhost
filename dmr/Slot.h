@@ -64,7 +64,7 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the Slot class.</summary>
         Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
-            bool debug, bool verbose);
+            bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Slot class.</summary>
         ~Slot();
 
@@ -130,6 +130,7 @@ namespace dmr
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
 

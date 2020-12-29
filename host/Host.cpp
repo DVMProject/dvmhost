@@ -268,6 +268,7 @@ int Host::run()
         bool embeddedLCOnly = dmrProtocol["embeddedLCOnly"].as<bool>(false);
         bool dmrDumpDataPacket = dmrProtocol["dumpDataPacket"].as<bool>(false);
         bool dmrRepeatDataPacket = dmrProtocol["repeatDataPacket"].as<bool>(true);
+        bool dmrDumpCsbkData = dmrProtocol["dumpCsbkData"].as<bool>(false);
         bool dumpTAData = dmrProtocol["dumpTAData"].as<bool>(true);
         uint32_t callHang = dmrProtocol["callHang"].as<uint32_t>(3U);
         uint32_t txHang = dmrProtocol["txHang"].as<uint32_t>(4U);
@@ -289,6 +290,7 @@ int Host::run()
         LogInfo("    Dump Talker Alias Data: %s", dumpTAData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", dmrDumpDataPacket ? "yes" : "no");
         LogInfo("    Repeat Packet Data: %s", dmrRepeatDataPacket ? "yes" : "no");
+        LogInfo("    Dump CSBK Data: %s", dmrDumpCsbkData ? "yes" : "no");
         LogInfo("    Call Hang: %us", callHang);
         LogInfo("    TX Hang: %us", txHang);
         LogInfo("    Queue Size: %u", dmrQueueSize);
@@ -310,7 +312,8 @@ int Host::run()
         }
 
         dmr = new dmr::Control(m_dmrColorCode, callHang, dmrQueueSize, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDebug, dmrVerbose);
+            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
+            dmrDumpCsbkData, dmrDebug, dmrVerbose);
         m_dmrTXTimer.setTimeout(txHang);
 
         if (dmrVerbose) {
@@ -335,6 +338,7 @@ int Host::run()
         bool controlBcstContinuous = p25Protocol["control"]["continuous"].as<bool>(false);
         bool p25DumpDataPacket = p25Protocol["dumpDataPacket"].as<bool>(false);
         bool p25RepeatDataPacket = p25Protocol["repeatDataPacket"].as<bool>(true);
+        bool p25DumpTsbkData = p25Protocol["dumpTsbkData"].as<bool>(false);
         uint32_t callHang = p25Protocol["callHang"].as<uint32_t>(3U);
         uint32_t p25QueueSize = p25Protocol["queueSize"].as<uint32_t>(8192U);
         bool p25Verbose = p25Protocol["verbose"].as<bool>(true);
@@ -343,6 +347,7 @@ int Host::run()
         LogInfo("    TDU Preamble before Voice: %u", tduPreambleCount);
         LogInfo("    Dump Packet Data: %s", p25DumpDataPacket ? "yes" : "no");
         LogInfo("    Repeat Packet Data: %s", p25RepeatDataPacket ? "yes" : "no");
+        LogInfo("    Dump TSBK Data: %s", p25DumpTsbkData ? "yes" : "no");
         LogInfo("    Call Hang: %us", callHang);
         LogInfo("    Queue Size: %u", p25QueueSize);
 
@@ -372,7 +377,8 @@ int Host::run()
         }
 
         p25 = new p25::Control(m_p25NAC, callHang, p25QueueSize, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
-            p25ControlBcstInterval, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket, p25Debug, p25Verbose);
+            p25ControlBcstInterval, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
+            p25DumpTsbkData, p25Debug, p25Verbose);
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
             m_p25SiteId, m_channelId, m_channelNo, true);
 
@@ -1202,6 +1208,10 @@ bool Host::createModem()
     uint8_t dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
+    int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
+    int dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
+    int p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
+    int p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
@@ -1243,6 +1253,7 @@ bool Host::createModem()
     m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, packetPlayoutTime, disableOFlowReset, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
+    m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);

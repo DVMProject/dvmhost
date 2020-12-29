@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -87,6 +87,9 @@ namespace p25
             void setSiteChCnt(uint8_t chCnt);
 
         public:
+            /// <summary></summary>
+            __PROPERTY(bool, verbose, Verbose);
+
             /** Common Data */
             /// <summary>Flag indicating the link control data is protected.</summary>
             __PROPERTY(bool, protect, Protect);
@@ -104,6 +107,8 @@ namespace p25
             __PROPERTY(bool, lastBlock, LastBlock);
             /// <summary>Flag indicating this TSBK contains additional information.</summary>
             __PROPERTY(bool, aivFlag, AIV);
+            /// <summary>Flag indicating this TSBK contains extended addressing.</summary>
+            __PROPERTY(bool, extendedAddrFlag, EX);
 
             /// <summary>Service type.</summary>
             __PROPERTY(uint8_t, service, Service);

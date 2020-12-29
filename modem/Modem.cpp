@@ -94,6 +94,10 @@ Modem::Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert,
     m_p25Enabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
+    m_dmrSymLevel3Adj(0),
+    m_dmrSymLevel1Adj(0),
+    m_p25SymLevel3Adj(0),
+    m_p25SymLevel1Adj(0),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
     m_serial(port, SERIAL_115200, true),
@@ -165,6 +169,40 @@ void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float 
     m_cwIdTXLevel = cwIdTXLevel;
     m_dmrTXLevel = dmrTXLevel;
     m_p25TXLevel = p25TXLevel;
+}
+
+/// <summary>
+/// Sets the modem DSP Symbol adjustment levels
+/// </summary>
+/// <param name="dmrSymLevel3Adj"></param>
+/// <param name="dmrSymLevel1Adj"></param>
+/// <param name="p25SymLevel3Adj"></param>
+/// <param name="p25SymLevel1Adj"></param>
+void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj)
+{
+    m_dmrSymLevel3Adj = dmrSymLevel3Adj;
+    if (dmrSymLevel3Adj > 128)
+        m_dmrSymLevel3Adj = 0;
+    if (dmrSymLevel3Adj < -128)
+        m_dmrSymLevel3Adj = 0;
+
+    m_dmrSymLevel1Adj = dmrSymLevel1Adj;
+    if (dmrSymLevel1Adj > 128)
+        m_dmrSymLevel1Adj = 0;
+    if (dmrSymLevel1Adj < -128)
+        m_dmrSymLevel1Adj = 0;
+
+    m_p25SymLevel3Adj = p25SymLevel3Adj;
+    if (p25SymLevel3Adj > 128)
+        m_p25SymLevel3Adj = 0;
+    if (p25SymLevel3Adj < -128)
+        m_p25SymLevel3Adj = 0;
+
+    m_p25SymLevel1Adj = p25SymLevel1Adj;
+    if (p25SymLevel1Adj > 128)
+        m_p25SymLevel1Adj = 0;
+    if (p25SymLevel1Adj < -128)
+        m_p25SymLevel1Adj = 0;
 }
 
 /// <summary>
@@ -262,6 +300,8 @@ bool Modem::open()
         m_serial.close();
         return false;
     }
+
+    writeSymbolAdjust();
 
     m_statusTimer.start();
 
@@ -1125,7 +1165,7 @@ bool Modem::writeConfig()
     uint8_t buffer[20U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 16U;
+    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_CONFIG;
 
     buffer[3U] = 0x00U;
@@ -1177,10 +1217,10 @@ bool Modem::writeConfig()
     buffer[16U] = (uint8_t)(m_txDCOffset + 128);
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
-    // Utils::dump(1U, "Written", buffer, 16U);
+    // Utils::dump(1U, "Written", buffer, 17U);
 
-    int ret = m_serial.write(buffer, 16U);
-    if (ret != 16)
+    int ret = m_serial.write(buffer, 17U);
+    if (ret != 17)
         return false;
 
     uint32_t count = 0U;
@@ -1202,6 +1242,55 @@ bool Modem::writeConfig()
 
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
         LogError(LOG_MODEM, "NAK to the SET_CONFIG command from the modem");
+        return false;
+    }
+
+    m_playoutTimer.start();
+
+    return true;
+}
+
+/// <summary>
+/// Write symbol level adjustments to the modem DSP.
+/// </summary>
+/// <returns>True, if level adjustments are written, otherwise false.</returns>
+bool Modem::writeSymbolAdjust()
+{
+    uint8_t buffer[10U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 7U;
+    buffer[2U] = CMD_SET_SYMLVLADJ;
+
+    buffer[3U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
+    buffer[4U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
+
+    buffer[5U] = (uint8_t)(m_p25SymLevel3Adj + 128);
+    buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
+
+    int ret = m_serial.write(buffer, 7U);
+    if (ret <= 0)
+        return false;
+
+    uint32_t count = 0U;
+    RESP_TYPE_DVM resp;
+    do {
+        Thread::sleep(10U);
+
+        resp = getResponse();
+        if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
+            count++;
+            if (count >= MAX_RESPONSES) {
+                LogError(LOG_MODEM, "No response, SET_SYMLVLADJ command");
+                return false;
+            }
+        }
+    } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
+
+    // Utils::dump(1U, "Response", m_buffer, m_length);
+
+    if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
+        LogError(LOG_MODEM, "NAK to the SET_SYMLVLADJ command from the modem");
         return false;
     }
 

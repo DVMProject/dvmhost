@@ -58,6 +58,8 @@ namespace p25
             void encode(uint8_t* data);
 
             /// <summary>Sets the data format.</summary>
+            void setFormat(const uint8_t fmt);
+            /// <summary>Sets the data format from the data header.</summary>
             void setFormat(const DataHeader header);
             /// <summary>Gets the data format.</summary>
             uint8_t getFormat() const;

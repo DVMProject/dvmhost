@@ -86,6 +86,11 @@ private:
     int m_txDCOffset;
     int m_rxDCOffset;
 
+    int m_dmrSymLevel3Adj;
+    int m_dmrSymLevel1Adj;
+    int m_p25SymLevel3Adj;
+    int m_p25SymLevel1Adj;
+
     uint8_t m_fdmaPreamble;
     uint8_t m_dmrRxDelay;
 
@@ -117,6 +122,15 @@ private:
     /// <summary>Helper to toggle modem transmit mode.</summary>
     bool setTransmit();
 
+    /// <summary>Helper to change the DMR Symbol Level 3 adjust.</summary>
+    bool setDMRSymLevel3Adj(int incr);
+    /// <summary>Helper to change the DMR Symbol Level 1 adjust.</summary>
+    bool setDMRSymLevel1Adj(int incr);
+    /// <summary>Helper to change the P25 Symbol Level 3 adjust.</summary>
+    bool setP25SymLevel3Adj(int incr);
+    /// <summary>Helper to change the P25 Symbol Level 1 adjust.</summary>
+    bool setP25SymLevel1Adj(int incr);
+
     /// <summary>Initializes the modem DSP.</summary>
     bool initModem();
     /// <summary>Read data frames from the modem DSP.</summary>
@@ -135,6 +149,8 @@ private:
     bool writeConfig();
     /// <summary>Write configuration to the modem DSP.</summary>
     bool writeConfig(uint8_t modeOverride);
+    /// <summary>Write symbol level adjustments to the modem DSP.</summary>
+    bool writeSymbolAdjust();
     /// <summary></summary>
     void sleep(uint32_t ms);
 

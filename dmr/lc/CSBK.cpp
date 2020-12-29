@@ -32,6 +32,7 @@
 #include "dmr/lc/CSBK.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
+#include "Log.h"
 #include "Utils.h"
 
 using namespace dmr::lc;
@@ -46,8 +47,8 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the CSBK class.
 /// </summary>
-/// <param name="debug"></param>
-CSBK::CSBK(bool debug) :
+CSBK::CSBK() :
+    m_verbose(false),
     m_CSBKO(CSBKO_NONE),
     m_FID(0x00U),
     m_bsId(0U),
@@ -56,8 +57,7 @@ CSBK::CSBK(bool debug) :
     m_dstId(0U),
     m_dataContent(false),
     m_CBF(0U),
-    m_data(NULL),
-    m_debug(debug)
+    m_data(NULL)
 {
     m_data = new uint8_t[12U];
 }
@@ -95,6 +95,10 @@ bool CSBK::decode(const uint8_t* bytes)
     m_data[10U] ^= CSBK_CRC_MASK[0U];
     m_data[11U] ^= CSBK_CRC_MASK[1U];
 
+    if (m_verbose) {
+        Utils::dump(2U, "Decoded CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+    }
+
     m_CSBKO = m_data[0U] & 0x3FU;
     m_FID = m_data[1U];
 
@@ -105,8 +109,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = false;
         m_CBF = 0U;
-        if (m_debug)
-            Utils::dump(1U, "Downlink Activate CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_UU_V_REQ:
@@ -115,8 +117,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = false;
         m_CBF = 0U;
-        if (m_debug)
-            Utils::dump(1U, "Unit to Unit Service Request CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_UU_ANS_RSP:
@@ -125,8 +125,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = false;
         m_CBF = 0U;
-        if (m_debug)
-            Utils::dump(1U, "Unit to Unit Service Answer Response CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_PRECCSBK:
@@ -135,8 +133,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
         m_CBF = m_data[3U];
-        if (m_debug)
-            Utils::dump(1U, "Preamble CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_CALL_ALRT:
@@ -145,8 +141,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
         m_CBF = m_data[3U];
-        if (m_debug)
-            Utils::dump(1U, "Call Alert CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_ACK_RSP:
@@ -155,8 +149,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
         m_CBF = m_data[3U];
-        if (m_debug)
-            Utils::dump(1U, "ACK Response CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_EXT_FNCT:
@@ -165,8 +157,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
         m_CBF = m_data[3U];
-        if (m_debug)
-            Utils::dump(1U, "Extended Function CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     case CSBKO_NACK_RSP:
@@ -175,8 +165,6 @@ bool CSBK::decode(const uint8_t* bytes)
         m_dstId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
         m_dataContent = false;
         m_CBF = 0U;
-        if (m_debug)
-            Utils::dump(1U, "Negative Acknowledge Response CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
         break;
 
     default:
@@ -185,8 +173,7 @@ bool CSBK::decode(const uint8_t* bytes)
         m_dstId = 0U;
         m_dataContent = false;
         m_CBF = 0U;
-        if (m_debug)
-            Utils::dump("Unhandled CSBK type", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        LogError(LOG_DMR, "unknown CSBK type, csbko = $%02X", m_CSBKO);
         return true;
     }
 
@@ -240,6 +227,10 @@ void CSBK::encode(uint8_t* bytes) const
 
     m_data[10U] ^= CSBK_CRC_MASK[0U];
     m_data[11U] ^= CSBK_CRC_MASK[1U];
+
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+    }
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;

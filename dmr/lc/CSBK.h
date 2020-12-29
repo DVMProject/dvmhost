@@ -46,7 +46,7 @@ namespace dmr
         class HOST_SW_API CSBK {
         public:
             /// <summary>Initializes a new instance of the CSBK class.</summary>
-            CSBK(bool debug);
+            CSBK();
             /// <summary>Finalizes a instance of the CSBK class.</summary>
             ~CSBK();
 
@@ -56,6 +56,9 @@ namespace dmr
             void encode(uint8_t* bytes) const;
 
         public:
+            /// <summary></summary>
+            __PROPERTY(bool, verbose, Verbose);
+
             // Generic fields
             /// <summary>CSBK opcode.</summary>
             __PROPERTY(uint8_t, CSBKO, CSBKO);
@@ -82,7 +85,6 @@ namespace dmr
 
         private:
             uint8_t* m_data;
-            bool m_debug;
         };
     } // namespace lc
 } // namespace dmr

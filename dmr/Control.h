@@ -59,7 +59,7 @@ namespace dmr
         Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
             bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
             lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::RSSIInterpolator* rssi,
-            uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose);
+            uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
@@ -95,6 +95,7 @@ namespace dmr
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupIdLookup* m_tidLookup;
 
+        bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
     };

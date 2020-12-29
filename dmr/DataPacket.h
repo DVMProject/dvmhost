@@ -81,11 +81,12 @@ namespace dmr
         bool m_dumpDataPacket;
         bool m_repeatDataPacket;
 
+        bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
 
         /// <summary>Initializes a new instance of the DataPacket class.</summary>
-        DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose);
+        DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the DataPacket class.</summary>
         ~DataPacket();
 

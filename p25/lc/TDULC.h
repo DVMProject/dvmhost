@@ -80,6 +80,9 @@ namespace p25
             void setNetActive(bool netActive);
 
         public:
+            /// <summary></summary>
+            __PROPERTY(bool, verbose, Verbose);
+
             /** Common Data */
             /// <summary>Flag indicating the link control data is protected.</summary>
             __PROPERTY(bool, protect, Protect);

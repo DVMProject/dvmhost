@@ -85,10 +85,11 @@ bool Slot::m_voice2 = true;
 /// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
 /// <param name="dumpDataPacket"></param>
 /// <param name="repeatDataPacket"></param>
+/// <param name="dumpCSBKData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
-    bool debug, bool verbose) :
+    bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
     m_queue(queueSize, "DMR Slot"),
     m_rfState(RS_RF_LISTENING),
@@ -118,13 +119,14 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
 {
     m_interval.start();
 
     m_voice = new VoicePacket(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
-    m_data = new DataPacket(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
+    m_data = new DataPacket(this, m_network, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
 }
 
 /// <summary>
@@ -561,7 +563,8 @@ void Slot::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
     slotType.setColorCode(m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK(false);
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_EXT_FNCT);
     csbk.setFID(FID_DMRA);
 
@@ -609,7 +612,8 @@ void Slot::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     slotType.setColorCode(m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK(false);
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_CALL_ALRT);
     csbk.setFID(FID_DMRA);
 

@@ -177,6 +177,13 @@ void DataBlock::encode(uint8_t* data)
 }
 
 /// <summary>Sets the data format.</summary>
+/// <param name="fmt"></param>
+void DataBlock::setFormat(const uint8_t fmt)
+{
+    m_fmt = fmt;
+}
+
+/// <summary>Sets the data format from the data header.</summary>
 /// <param name="header"></param>
 void DataBlock::setFormat(const DataHeader header)
 {

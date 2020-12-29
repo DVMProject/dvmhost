@@ -34,6 +34,7 @@
 #include "Defines.h"
 #include "p25/data/DataBlock.h"
 #include "p25/data/DataHeader.h"
+#include "p25/data/DataRspHeader.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/lc/LC.h"
 #include "p25/Control.h"

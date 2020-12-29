@@ -377,7 +377,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getResponse(), srcId, dstId);
                 }
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_UU_ANS, true);
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_UU_ANS, false, true);
+                }
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
                     writeRF_TSDU_Grant(false, false);
@@ -401,14 +403,16 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getResponse(), srcId);
                 }
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, true);
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, false, true);
+                }
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
                     //writeRF_TSDU_Grant(false);
                     writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
                 }
                 else if (m_rfTSBK.getResponse() == P25_ANS_RSP_DENY) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, true);
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, false, true);
                 }
                 else if (m_rfTSBK.getResponse() == P25_ANS_RSP_WAIT) {
                     writeRF_TSDU_Queue(P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_TELE_INT_ANS);
@@ -429,7 +433,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 ::ActivityLog("P25", true, "received status update from %u", srcId);
 
                 if (!m_noStatusAck) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_STS_UPDT, false);
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_STS_UPDT, false, false);
                 }
 
                 if (m_statusCmdEnable) {
@@ -448,7 +452,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 }
 
                 if (!m_noMessageAck) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_MSG_UPDT, false);
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_MSG_UPDT, false, false);
                 }
 
                 ::ActivityLog("P25", true, "received message update from %u", srcId);
@@ -510,7 +514,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
                 ::ActivityLog("P25", true, "received cancel service request from %u", srcId);
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_CAN_SRV_REQ, true);
+                writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_CAN_SRV_REQ, false, true);
                 break;
             case TSBK_IOSP_EXT_FNCT:
                 if (m_verbose) {
@@ -552,7 +556,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_GRP_AFF, true);
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_GRP_AFF, true, true);
+                }
                 writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId);
                 break;
             case TSBK_ISP_GRP_AFF_Q_RSP:
@@ -578,7 +584,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     dstId = P25_WUID_SYS;
                 }
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_U_DEREG_REQ, true);
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_U_DEREG_REQ, true, true);
+                }
                 writeRF_TSDU_U_Dereg_Ack(srcId);
                 break;
             case TSBK_IOSP_U_REG:
@@ -589,7 +597,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_U_REG_REQ (Unit Registration Request), srcId = %u", srcId);
                 }
 
-                writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_U_REG, true);
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_U_REG, true, true);
+                }
                 writeRF_TSDU_U_Reg_Rsp(srcId);
                 break;
             case TSBK_ISP_LOC_REG_REQ:
@@ -1211,9 +1221,10 @@ void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint3
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
+/// <param name="dumpTSBKData"></param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
+TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
     m_p25(p25),
     m_network(network),
     m_patchSuperGroup(0xFFFFU),
@@ -1260,9 +1271,13 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool debug
     m_netTSBK.setSiteData(m_siteData);
     m_rfTSBK.setCallsign("CHANGEME");
     m_netTSBK.setCallsign("CHANGEME");
+    m_rfTSBK.setVerbose(dumpTSBKData);
+    m_netTSBK.setVerbose(dumpTSBKData);
 
     m_rfTDULC.setSiteData(m_siteData);
     m_netTDULC.setSiteData(m_siteData);
+    m_rfTDULC.setVerbose(dumpTSBKData);
+    m_netTDULC.setVerbose(dumpTSBKData);
 
     m_voiceChTable.clear();
  
@@ -1534,7 +1549,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     }
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
+    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, false, true);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(data + 2U, P25_SS0_START, true, true);
@@ -1637,7 +1652,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         P25Utils::encode(tsdu, data + 2U, 114U, 720U);
 
         // Add busy bits
-        m_p25->addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
+        m_p25->addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, false, true);
 
         // Add idle bits
         addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
@@ -1959,7 +1974,7 @@ void TrunkPacket::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 /// <param name="srcId"></param>
 /// <param name="service"></param>
 /// <param name="noNetwork"></param>
-void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool noNetwork)
+void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint8_t mfId = m_rfTSBK.getMFId();
@@ -1968,9 +1983,14 @@ void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool no
     m_rfTSBK.setMFId(P25_MFG_STANDARD);
     m_rfTSBK.setService(service);
 
+    if (extended) {
+        m_rfTSBK.setAIV(true);
+        m_rfTSBK.setEX(true);
+    }
+
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u",
-            m_rfTSBK.getAIV(), m_rfTSBK.getService(), srcId);
+        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, EX = %u, serviceType = $%02X, srcId = %u",
+            m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getService(), srcId);
     }
 
     writeRF_TSDU_SBF(noNetwork);
@@ -2086,9 +2106,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
         }
     }
 
-    // because Motorola -- we'll set both Source and Destination to the Source ID
-    // for the U_REG_RSP apparently should have the SUID set this way...
-    m_rfTSBK.setSrcId(srcId/*P25_WUID_REG*/);
+    m_rfTSBK.setSrcId(srcId);
     m_rfTSBK.setDstId(srcId);
 
     writeRF_TSDU_SBF(true);
@@ -2176,7 +2194,7 @@ void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
     m_rfTSBK.encode(data, true);
 
     // Add busy bits
-    m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(data, P25_SS0_START, true, true);
@@ -2255,7 +2273,7 @@ void TrunkPacket::writeNet_TSDU()
     m_netTSBK.encode(buffer + 2U, true);
 
     // Add busy bits
-    m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(buffer + 2U, P25_SS0_START, true, true);
@@ -2360,7 +2378,7 @@ bool TrunkPacket::processStatusCommand(uint32_t srcId, uint32_t dstId)
                 resetStatusCommand();
             }
 
-            writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_CALL_ALRT, false);
+            writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_CALL_ALRT, false, false);
             return true;
         }
         else {

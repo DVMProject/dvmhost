@@ -74,12 +74,13 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
 /// <param name="dumpPDUData"></param>
 /// <param name="repeatPDU"></param>
+/// <param name="dumpTSBKData"></param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
     uint32_t timeout, uint32_t tgHang, uint32_t ccBcstInterval, bool duplex, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
-    bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
+    bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
     m_voice(NULL),
     m_data(NULL),
     m_trunk(NULL),
@@ -94,6 +95,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_control(false),
     m_continuousControl(false),
     m_voiceOnControl(false),
+    m_ackTSBKRequests(true),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -135,7 +137,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
 
     m_voice = new VoicePacket(this, network, debug, verbose);
     m_data = new DataPacket(this, network, dumpPDUData, repeatPDU, debug, verbose);
-    m_trunk = new TrunkPacket(this, network, debug, verbose);
+    m_trunk = new TrunkPacket(this, network, dumpTSBKData, debug, verbose);
 }
 
 /// <summary>
@@ -208,6 +210,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     }
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
+    m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
 
@@ -224,6 +227,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
+            LogInfo("    Ack Requests: %s", m_ackTSBKRequests ? "yes" : "no");
         }
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
@@ -823,7 +827,15 @@ void Control::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != NULL);
 
+    // insert the "10" (Unknown, use for inbound or outbound) status bits 
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, true);  // 1
+        WRITE_BIT(data, ss1Pos, false); // 0
+    }
+
+    // interleave the requested status bits (every other)
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2)) {
         uint32_t ss1Pos = ss0Pos + 1U;
         WRITE_BIT(data, ss0Pos, b1);
         WRITE_BIT(data, ss1Pos, b2);

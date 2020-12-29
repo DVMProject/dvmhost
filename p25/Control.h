@@ -69,7 +69,7 @@ namespace p25
         Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
             uint32_t timeout, uint32_t tgHang, uint32_t ccBcstInterval, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
-            bool dumpPDUData, bool repeatPDU, bool debug, bool verbose);
+            bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
@@ -128,6 +128,7 @@ namespace p25
         bool m_control;
         bool m_continuousControl;
         bool m_voiceOnControl;
+        bool m_ackTSBKRequests;
 
         lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;

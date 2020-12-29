@@ -201,6 +201,22 @@ namespace p25
     const uint8_t   PDU_SAP_UNENC_KMM = 0x28U;
     const uint8_t   PDU_SAP_ENC_KMM = 0x29U;
 
+    // PDU ACK Class
+    const uint8_t   PDU_ACK_CLASS_ACK = 0x00U;
+    const uint8_t   PDU_ACK_CLASS_NACK = 0x01U;
+    const uint8_t   PDU_ACK_CLASS_ACK_RETRY = 0x02U;
+
+    // PDU ACK Type(s)
+    const uint8_t   PDU_ACK_TYPE_ACK = 0x01U;
+
+    const uint8_t   PDU_ACK_TYPE_NACK_ILLEGAL = 0x00U;      // Illegal Format
+    const uint8_t   PDU_ACK_TYPE_NACK_PACKET_CRC = 0x01U;   // Packet CRC
+    const uint8_t   PDU_ACK_TYPE_NACK_MEMORY_FULL = 0x02U;  // Memory Full
+    const uint8_t   PDU_ACK_TYPE_NACK_SEQ = 0x03U;          // Out of logical sequence FSN
+    const uint8_t   PDU_ACK_TYPE_NACK_UNDELIVERABLE = 0x04U;// Undeliverable
+    const uint8_t   PDU_ACK_TYPE_NACK_OUT_OF_SEQ = 0x05U;   // Out of sequence, N(S) != V(R) or V(R) + 1
+    const uint8_t   PDU_ACK_TYPE_NACK_INVL_USER = 0x06U;    // Invalid User disallowed by the system
+
     // PDU Registration Type(s)
     const uint8_t   PDU_REG_TYPE_REQ_CNCT = 0x00U;
     const uint8_t   PDU_REG_TYPE_REQ_DISCNCT = 0x01U;

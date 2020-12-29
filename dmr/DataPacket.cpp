@@ -273,7 +273,9 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
     }
     else if (dataType == DT_CSBK) {
         // generate a new CSBK and check validity
-        lc::CSBK csbk = lc::CSBK(m_debug);
+        lc::CSBK csbk = lc::CSBK();
+        csbk.setVerbose(m_dumpCSBKData);
+
         bool valid = csbk.decode(data + 2U);
         if (!valid)
             return false;
@@ -778,7 +780,9 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         writeEndNet();
     }
     else if (dataType == DT_CSBK) {
-        lc::CSBK csbk = lc::CSBK(m_debug);
+        lc::CSBK csbk = lc::CSBK();
+        csbk.setVerbose(m_dumpCSBKData);
+
         bool valid = csbk.decode(data + 2U);
         if (!valid) {
             LogError(LOG_NET, "DMR Slot %u, DT_CSBK, unable to decode the network CSBK", m_slot->m_slotNo);
@@ -1055,9 +1059,10 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpDataPacket"></param>
 /// <param name="repeatDataPacket"></param>
+/// <param name="dumpCSBKData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
-DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
+DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_slot(slot),
     m_rfLC(NULL),
     m_netLC(NULL),
@@ -1065,6 +1070,7 @@ DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataP
     m_pduDataOffset(0U),
     m_dumpDataPacket(dumpDataPacket),
     m_repeatDataPacket(repeatDataPacket),
+    m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
 {

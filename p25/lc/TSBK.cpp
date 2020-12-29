@@ -49,6 +49,7 @@ using namespace p25;
 /// Initializes a new instance of the TSBK class.
 /// </summary>
 TSBK::TSBK() :
+    m_verbose(false),
     m_protect(false),
     m_lco(LC_GROUP),
     m_mfId(P25_MFG_STANDARD),
@@ -56,6 +57,7 @@ TSBK::TSBK() :
     m_dstId(0U),
     m_lastBlock(false),
     m_aivFlag(true),
+    m_extendedAddrFlag(false),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
@@ -122,7 +124,9 @@ bool TSBK::decode(const uint8_t* data)
         return false;
     }
 
-    // Utils::dump(2U, "TSDU TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+    if (m_verbose) {
+        Utils::dump(2U, "Decoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+    }
 
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Protect Flag
@@ -357,7 +361,14 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     case TSBK_IOSP_ACK_RSP:
         tsbkValue = (m_service & 0x3F);                                             // Service Type
         tsbkValue |= (m_aivFlag) ? 0x80U : 0x00U;                                   // Additional Info. Valid Flag
-        tsbkValue = (tsbkValue << 32) + m_dstId;                                    // Target Radio Address
+        tsbkValue |= (m_extendedAddrFlag) ? 0x40U : 0x00U;                          // Extended Addressing Flag
+        if (m_aivFlag && m_extendedAddrFlag) {
+            tsbkValue = (tsbkValue << 20) + m_siteData.netId();                     // Network ID
+            tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                     // System ID
+        }
+        else {
+            tsbkValue = (tsbkValue << 32) + m_dstId;                                // Target Radio Address
+        }
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
         break;
     case TSBK_IOSP_EXT_FNCT:
@@ -688,7 +699,9 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
 
-    // Utils::dump(2U, "TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+    }
 
     uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
     ::memset(raw, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
@@ -724,6 +737,7 @@ void TSBK::reset()
 
     m_lastBlock = true;
     m_aivFlag = true;
+    m_extendedAddrFlag = false;
 
     m_service = 0U;
     m_response = P25_RSP_ACCEPT;

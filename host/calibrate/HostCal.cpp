@@ -148,6 +148,10 @@ HostCal::HostCal(const std::string& confFile) :
     m_p25Rx1K(false),
     m_txDCOffset(0),
     m_rxDCOffset(0),
+    m_dmrSymLevel3Adj(0),
+    m_dmrSymLevel1Adj(0),
+    m_p25SymLevel3Adj(0),
+    m_p25SymLevel1Adj(0),
     m_fdmaPreamble(80U),
     m_dmrRxDelay(7U),
     m_debug(false),
@@ -235,6 +239,11 @@ int HostCal::run()
     m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     m_txLevel = modemConf["txLevel"].as<float>(50.0F);
 
+    m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
+    m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
+    m_p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
+    m_p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
+
     m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
 
@@ -305,6 +314,32 @@ int HostCal::run()
                 break;
             case 'O':
                 setTXDCOffset(1);
+                break;
+
+            case '-':
+                setDMRSymLevel3Adj(-1);
+                break;
+            case '=':
+                setDMRSymLevel3Adj(1);
+                break;
+            case '_':
+                setDMRSymLevel1Adj(-1);
+                break;
+            case '+':
+                setDMRSymLevel1Adj(1);
+                break;
+
+            case '[':
+                setP25SymLevel3Adj(-1);
+                break;
+            case ']':
+                setP25SymLevel3Adj(1);
+                break;
+            case '{':
+                setP25SymLevel1Adj(-1);
+                break;
+            case '}':
+                setP25SymLevel1Adj(1);
                 break;
 
             case '1':
@@ -626,6 +661,15 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    b        %s", P25_FEC_STR);
     LogMessage(LOG_CAL, "    j        %s", P25_FEC_1K_STR);
     LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
+    LogMessage(LOG_CAL, "Engineering Commands:");
+    LogMessage(LOG_CAL, "    -/=      Increase/Decrease DMR +/- 3 Symbol Level");
+    LogMessage(LOG_CAL, "    _/+      Increase/Decrease DMR +/- 1 Symbol Level");
+    LogMessage(LOG_CAL, "    [/]      Increase/Decrease P25 +/- 3 Symbol Level");
+    LogMessage(LOG_CAL, "    {/}      Increase/Decrease P25 +/- 1 Symbol Level");
+    LogMessage(LOG_CAL, "    1        Transmit DMR/P25 +3 Symbols Only");
+    LogMessage(LOG_CAL, "    2        Transmit DMR/P25 +1 Symbols Only");
+    LogMessage(LOG_CAL, "    3        Transmit DMR/P25 -1 Symbols Only");
+    LogMessage(LOG_CAL, "    4        Transmit DMR/P25 +1 Symbols Only");
 }
 
 /// <summary>
@@ -731,6 +775,94 @@ bool HostCal::setRXDCOffset(int incr)
         m_rxDCOffset--;
         LogMessage(LOG_CAL, " - RX DC Offset: %d", m_rxDCOffset);
         return writeConfig();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the DMR Symbol Level 3 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setDMRSymLevel3Adj(int incr)
+{
+    if (incr > 0 && m_dmrSymLevel3Adj < 127) {
+        m_dmrSymLevel3Adj++;
+        LogMessage(LOG_CAL, " - DMR Symbol Level +/- 3 Adjust: %d", m_dmrSymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_dmrSymLevel3Adj > -127) {
+        m_dmrSymLevel3Adj--;
+        LogMessage(LOG_CAL, " - DMR Symbol Level +/- 3 Adjust: %d", m_dmrSymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the DMR Symbol Level 1 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setDMRSymLevel1Adj(int incr)
+{
+    if (incr > 0 && m_dmrSymLevel1Adj < 127) {
+        m_dmrSymLevel1Adj++;
+        LogMessage(LOG_CAL, " - DMR Symbol Level +/- 1 Adjust: %d", m_dmrSymLevel1Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_dmrSymLevel1Adj > -127) {
+        m_dmrSymLevel1Adj--;
+        LogMessage(LOG_CAL, " - DMR Symbol Level +/- 1 Adjust: %d", m_dmrSymLevel1Adj);
+        return writeSymbolAdjust();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the P25 Symbol Level 3 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setP25SymLevel3Adj(int incr)
+{
+    if (incr > 0 && m_p25SymLevel3Adj < 127) {
+        m_p25SymLevel3Adj++;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 3 Adjust: %d", m_p25SymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_p25SymLevel3Adj > -127) {
+        m_p25SymLevel3Adj--;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 3 Adjust: %d", m_p25SymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the P25 Symbol Level 1 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setP25SymLevel1Adj(int incr)
+{
+    if (incr > 0 && m_p25SymLevel1Adj < 127) {
+        m_p25SymLevel1Adj++;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 1 Adjust: %d", m_p25SymLevel1Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_p25SymLevel1Adj > -127) {
+        m_p25SymLevel1Adj--;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 1 Adjust: %d", m_p25SymLevel1Adj);
+        return writeSymbolAdjust();
     }
 
     return true;
@@ -1432,7 +1564,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     uint8_t buffer[50U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 16U;
+    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_CONFIG;
 
     buffer[3U] = 0x00U;
@@ -1491,7 +1623,52 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     m_conf["system"]["modem"]["rxDCOffset"] = __INT_STR(m_rxDCOffset);
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
-    int ret = m_serial.write(buffer, 16U);
+    int ret = m_serial.write(buffer, 17U);
+    if (ret <= 0)
+        return false;
+
+    sleep(10U);
+
+    ret = readModem(buffer, 50U);
+    if (ret <= 0)
+        return false;
+
+    if (buffer[2U] == CMD_NAK) {
+        LogError(LOG_CAL, "Got a NAK from the modem");
+        return false;
+    }
+
+    if (buffer[2U] != CMD_ACK) {
+        Utils::dump("Invalid response", buffer, ret);
+        return false;
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Write symbol level adjustments to the modem DSP.
+/// </summary>
+/// <returns>True, if level adjustments are written, otherwise false.</returns>
+bool HostCal::writeSymbolAdjust()
+{
+    uint8_t buffer[10U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 7U;
+    buffer[2U] = CMD_SET_SYMLVLADJ;
+
+    m_conf["system"]["modem"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
+    buffer[3U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
+    m_conf["system"]["modem"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
+    buffer[4U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
+
+    m_conf["system"]["modem"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
+    buffer[5U] = (uint8_t)(m_p25SymLevel3Adj + 128);
+    m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
+    buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
+
+    int ret = m_serial.write(buffer, 7U);
     if (ret <= 0)
         return false;
 
@@ -1571,9 +1748,12 @@ void HostCal::timerStop()
 /// </summary>
 void HostCal::printStatus()
 {
-    LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s, RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
-        m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no",
+    LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+        m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
+    LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
         m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
+    LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+        m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
     LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F);
     LogMessage(LOG_CAL, " - Operating Mode: %s", m_modeStr.c_str());
 

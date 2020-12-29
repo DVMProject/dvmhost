@@ -50,6 +50,7 @@ using namespace p25;
 /// Initializes a new instance of the TDULC class.
 /// </summary>
 TDULC::TDULC() :
+    m_verbose(false),
     m_protect(false),
     m_lco(LC_GROUP),
     m_mfId(P25_MFG_STANDARD),
@@ -107,7 +108,9 @@ bool TDULC::decode(const uint8_t* data)
         return false;
     }
 
-    // Utils::dump(2U, "TDULC", rs, P25_TDULC_LENGTH_BYTES);
+    if (m_verbose) {
+        Utils::dump(2U, "Decoded TDULC", rs, P25_TDULC_LENGTH_BYTES);
+    }
 
     return decodeLC(rs);
 }
@@ -126,7 +129,9 @@ void TDULC::encode(uint8_t * data)
 
     encodeLC(rs);
 
-    // Utils::dump(2U, "TDULC", rs, P25_TDULC_LENGTH_BYTES);
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded TDULC", rs, P25_TDULC_LENGTH_BYTES);
+    }
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);

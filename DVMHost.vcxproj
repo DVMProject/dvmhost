@@ -202,6 +202,7 @@
     <ClInclude Include="p25\acl\AccessControl.h" />
     <ClInclude Include="p25\data\DataBlock.h" />
     <ClInclude Include="p25\data\DataHeader.h" />
+    <ClInclude Include="p25\data\DataRspHeader.h" />
     <ClInclude Include="p25\data\LowSpeedData.h" />
     <ClInclude Include="p25\edac\Trellis.h" />
     <ClInclude Include="p25\lc\LC.h" />
@@ -272,6 +273,7 @@
     <ClCompile Include="p25\acl\AccessControl.cpp" />
     <ClCompile Include="p25\data\DataBlock.cpp" />
     <ClCompile Include="p25\data\DataHeader.cpp" />
+    <ClCompile Include="p25\data\DataRspHeader.cpp" />
     <ClCompile Include="p25\data\LowSpeedData.cpp" />
     <ClCompile Include="p25\edac\Trellis.cpp" />
     <ClCompile Include="p25\lc\LC.cpp" />

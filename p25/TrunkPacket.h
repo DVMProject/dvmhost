@@ -183,7 +183,7 @@ namespace p25
         bool m_debug;
 
         /// <summary>Initializes a new instance of the TrunkPacket class.</summary>
-        TrunkPacket(Control* p25, network::BaseNetwork* network, bool debug, bool verbose);
+        TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the TrunkPacket class.</summary>
         ~TrunkPacket();
 
@@ -213,7 +213,7 @@ namespace p25
         /// <summary>Helper to write a unit to unit answer request packet.</summary>
         void writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to write a acknowledge packet.</summary>
-        void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool noNetwork);
+        void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork);
         /// <summary>Helper to write a deny packet.</summary>
         void writeRF_TSDU_Deny(uint8_t reason, uint8_t service);
         /// <summary>Helper to write a group affiliation response packet.</summary>

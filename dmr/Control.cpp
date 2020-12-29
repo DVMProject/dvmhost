@@ -57,12 +57,13 @@ using namespace dmr;
 /// <param name="jitter"></param>
 /// <param name="dumpDataPacket"></param>
 /// <param name="repeatDataPacket"></param>
+/// <param name="dumpCSBKData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
     bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
     lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::RSSIInterpolator* rssi,
-    uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
+    uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
@@ -70,6 +71,7 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     m_slot2(NULL),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -81,8 +83,8 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
     Slot::init(colorCode, embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, rssi, jitter);
     
-    m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, debug, verbose);
-    m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, debug, verbose);
+    m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
+    m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
 }
 
 /// <summary>
@@ -108,7 +110,9 @@ bool Control::processWakeup(const uint8_t* data)
         return false;
 
     // generate a new CSBK and check validity
-    lc::CSBK csbk = lc::CSBK(m_debug);
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+
     bool valid = csbk.decode(data + 2U);
     if (!valid)
         return false;

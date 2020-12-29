@@ -326,6 +326,9 @@
     <ClInclude Include="network\BaseNetwork.h">
       <Filter>Header Files\network</Filter>
     </ClInclude>
+    <ClInclude Include="p25\data\DataRspHeader.h">
+      <Filter>Header Files\p25\data</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -522,6 +525,9 @@
     </ClCompile>
     <ClCompile Include="network\BaseNetwork.cpp">
       <Filter>Source Files\network</Filter>
+    </ClCompile>
+    <ClCompile Include="p25\data\DataRspHeader.cpp">
+      <Filter>Source Files\p25\data</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

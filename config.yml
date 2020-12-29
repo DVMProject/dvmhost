@@ -30,6 +30,7 @@ protocols:
         dumpTAData: true
         dumpDataPacket: false
         repeatDataPacket: true
+        dumpCsbkData: false
         callHang: 5
         txHang: 8
         queueSize: 10000
@@ -40,6 +41,7 @@ protocols:
         tduPreambleCount: 6
         control:
             enable: false
+            ackRequests: true
             continuous: false
             interval: 60
             duration: 1
@@ -51,6 +53,7 @@ protocols:
         verifyReg: false
         dumpDataPacket: false
         repeatDataPacket: true
+        dumpTsbkData: false
         callHang: 5
         noStatusAck: false
         noMessageAck: true
