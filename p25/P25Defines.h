@@ -120,6 +120,7 @@ namespace p25
     const uint8_t   P25_IDEN_UP_VU_BW_625K = 0x04U;
     const uint8_t   P25_IDEN_UP_VU_BW_125K = 0x05U;
 
+    const uint8_t   P25_SVC_CLS_INVALID = 0x00U;
     const uint8_t   P25_SVC_CLS_COMPOSITE = 0x01U;
     const uint8_t   P25_SVC_CLS_VOICE = 0x10U;
     const uint8_t   P25_SVC_CLS_DATA = 0x20U;
@@ -275,6 +276,7 @@ namespace p25
     const uint8_t   TSBK_OSP_SNDCP_CH_GNT = 0x14U;      // SNDCP CH GNT - SNDCP Data Channel Grant
     const uint8_t   TSBK_OSP_SNDCP_CH_ANN = 0x16U;      // SNDCP CH ANN - SNDCP Data Channel Announcement
     const uint8_t   TSBK_OSP_DENY_RSP = 0x27U;          // DENY RSP - Deny Response
+    const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit 
     const uint8_t   TSBK_OSP_GRP_AFF_Q = 0x2AU;         // GRP AFF Q - Group Affiliation Query
     const uint8_t   TSBK_OSP_LOC_REG_RSP = 0x2BU;       // LOC REG RSP - Location Registration Response
     const uint8_t   TSBK_OSP_U_REG_CMD = 0x2DU;         // U REG CMD - Unit Registration Command

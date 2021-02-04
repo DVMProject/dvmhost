@@ -463,7 +463,7 @@ bool Control::writeControlRF()
         return false;
     }
 
-    if (m_ccSeq == 5U) {
+    if (m_ccSeq == 6U) {
         m_ccSeq = 0U;
     }
 

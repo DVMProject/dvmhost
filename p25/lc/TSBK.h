@@ -146,6 +146,14 @@ namespace p25
             /// <summary>Adjacent site channel number.</summary>
             __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
 
+            /** SCCB Data */
+            /// <summary>SCCB channel ID 1.</summary>
+            __PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
+            /// <summary>SCCB channel ID 2.</summary>
+            __PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
+            /// <summary>Explicit SCCB channel number.</summary>
+            __PROPERTY(uint32_t, sccbChannelNo, SCCBChnNo);
+
             /** Patch Group data */
             /// <summary>Patch super group ID.</summary>
             __PROPERTY(uint32_t, patchSuperGroupId, PatchSuperGroupId);

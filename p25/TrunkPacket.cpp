@@ -682,6 +682,29 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 
                         m_adjSiteTable[site.siteId()] = site;
                         m_adjSiteUpdateCnt[site.siteId()] = ADJ_SITE_UPDATE_CNT;
+                    } else {
+                        /*
+                        ** treat same site adjacent site broadcast as a SCCB for this site
+                        */
+                        // update site table data
+                        SiteData site;
+                        try {
+                            site = m_sccbTable.at(m_netTSBK.getAdjSiteRFSSId());
+                        }
+                        catch (...) {
+                            site = SiteData();
+                        }
+
+                        if (m_verbose) {
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast), sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
+                                m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(), m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+                        }
+
+                        site.setAdjSite(m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(),
+                            m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+
+                        m_sccbTable[site.rfssId()] = site;
+                        m_sccbUpdateCnt[site.rfssId()] = ADJ_SITE_UPDATE_CNT;
                     }
 
                     return true;
@@ -1065,9 +1088,10 @@ void TrunkPacket::clock(uint32_t ms)
             releaseDstIdGrant(*it, false);
         }
 
-        // clock adjacent site update timers
+        // clock adjacent site and SCCB update timers
         m_adjSiteUpdateTimer.clock(ms);
         if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
+            // update adjacent site data
             for (auto it = m_adjSiteUpdateCnt.begin(); it != m_adjSiteUpdateCnt.end(); ++it) {
                 uint8_t siteId = it->first;
                 
@@ -1083,6 +1107,24 @@ void TrunkPacket::clock(uint32_t ms)
                 }
 
                 m_adjSiteUpdateCnt[siteId] = updateCnt;
+            }
+
+            // update SCCB data
+            for (auto it = m_sccbUpdateCnt.begin(); it != m_sccbUpdateCnt.end(); ++it) {
+                uint8_t rfssId = it->first;
+
+                uint8_t updateCnt = it->second;
+                if (updateCnt > 0U) {
+                    updateCnt--;
+                }
+
+                if (updateCnt == 0U) {
+                    SiteData siteData = m_sccbTable[rfssId];
+                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB (Secondary Control Channel Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
+                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo());
+                }
+
+                m_sccbUpdateCnt[rfssId] = updateCnt;
             }
 
             m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
@@ -1236,11 +1278,14 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_mbfCnt(0U),
     m_mbfIdenCnt(0U),
     m_mbfAdjSSCnt(0U),
+    m_mbfSCCBCnt(0U),
     m_rfTDULC(),
     m_netTDULC(),
     m_voiceChTable(),
     m_adjSiteTable(),
     m_adjSiteUpdateCnt(),
+    m_sccbTable(),
+    m_sccbUpdateCnt(),
     m_unitRegTable(),
     m_grpAffTable(),
     m_grantChTable(),
@@ -1283,6 +1328,9 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
  
     m_adjSiteTable.clear();
     m_adjSiteUpdateCnt.clear();
+
+    m_sccbTable.clear();
+    m_sccbUpdateCnt.clear();
  
     m_unitRegTable.clear();
     m_grpAffTable.clear();
@@ -1352,9 +1400,6 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
         switch (n)
         {
-        case 0:
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
-            break;
         case 1:
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
             break;
@@ -1368,7 +1413,17 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
             // write ADJSS
             if (adjSS) {
                 queueRF_TSBK_Ctrl_MBF(TSBK_OSP_ADJ_STS_BCAST);
+                break;
             }
+        case 5:
+            // write SCCB
+            if (adjSS) {
+                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SCCB_EXP);
+                break;
+            }
+        case 0:
+        default:
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
             break;
         }
         
@@ -1795,6 +1850,40 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
                         m_rfTSBK.setAdjSiteChnNo(site.channelNo());
 
                         m_mbfAdjSSCnt++;
+                        break;
+                    }
+                }
+            }
+            else {
+                return; // don't create anything
+            }
+            break;
+        case TSBK_OSP_SCCB_EXP:
+            // write SCCB
+            if (m_sccbTable.size() > 0) {
+                if (m_mbfSCCBCnt >= m_sccbTable.size())
+                    m_mbfSCCBCnt = 0U;
+
+                if (m_debug) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast)");
+                }
+
+                uint8_t i = 0U;
+                for (auto it = m_sccbTable.begin(); it != m_sccbTable.end(); ++it) {
+                    // no good very bad way of skipping entries...
+                    if (i != m_mbfSCCBCnt) {
+                        i++;
+                        continue;
+                    }
+                    else {
+                        SiteData site = it->second;
+
+                        // transmit SCCB broadcast
+                        m_rfTSBK.setLCO(TSBK_OSP_SCCB_EXP);
+                        m_rfTSBK.setSCCBChnId1(site.channelId());
+                        m_rfTSBK.setSCCBChnNo(site.channelNo());
+
+                        m_mbfSCCBCnt++;
                         break;
                     }
                 }

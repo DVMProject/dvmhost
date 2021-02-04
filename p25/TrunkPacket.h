@@ -143,6 +143,7 @@ namespace p25
 
         uint8_t m_mbfIdenCnt;
         uint8_t m_mbfAdjSSCnt;
+        uint8_t m_mbfSCCBCnt;
 
         lc::TDULC m_rfTDULC;
         lc::TDULC m_netTDULC;
@@ -151,6 +152,9 @@ namespace p25
 
         std::unordered_map<uint8_t, SiteData> m_adjSiteTable;
         std::unordered_map<uint8_t, uint8_t> m_adjSiteUpdateCnt;
+
+        std::unordered_map<uint8_t, SiteData> m_sccbTable;
+        std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
 
         std::vector<uint32_t> m_unitRegTable;
         std::unordered_map<uint32_t, uint32_t> m_grpAffTable;

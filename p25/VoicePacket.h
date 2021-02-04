@@ -96,6 +96,7 @@ namespace p25
         uint8_t* m_netLDU2;
         uint8_t m_lastDUID;
         uint8_t* m_lastIMBE;
+        bool m_hadVoice;
 
         uint32_t m_lastPatchGroup;
 

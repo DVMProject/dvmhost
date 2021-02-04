@@ -434,6 +434,24 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         }
     }
     break;
+    case TSBK_OSP_SCCB_EXP:
+        tsbkValue = m_siteData.rfssId();                                            // RF Sub-System ID
+        tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
+
+        tsbkValue = (tsbkValue << 4) + m_sccbChannelId1;                            // Channel (T) ID
+        tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                            // Channel (T) Number
+        tsbkValue = (tsbkValue << 12) + m_sccbChannelId1;                           // Channel (R) ID
+        tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                            // Channel (R) Number
+
+        if (m_sccbChannelId1 > 0) {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        }
+        else {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_INVALID);
+        }
+        break;
     case TSBK_OSP_GRP_AFF_Q:
         tsbkValue = 0U;
         tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Target Radio Address
@@ -488,6 +506,28 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = 0U;                                                             //
         tsbkValue = (tsbkValue << 16) + services;                                   // System Services Available
         tsbkValue = (tsbkValue << 24) + services;                                   // System Services Supported
+        break;
+    case TSBK_OSP_SCCB:
+        tsbkValue = m_siteData.rfssId();                                            // RF Sub-System ID
+        tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
+        tsbkValue = (tsbkValue << 16) + m_sccbChannelId1;                           // SCCB Channel ID 1
+        if (m_sccbChannelId1 > 0) {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        }
+        else {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_INVALID);
+        }
+        tsbkValue = (tsbkValue << 16) + m_sccbChannelId2;                           // SCCB Channel ID 2
+        if (m_sccbChannelId2 > 0) {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        }
+        else {
+            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
+                (P25_SVC_CLS_INVALID);
+        }
         break;
     case TSBK_OSP_RFSS_STS_BCAST:
         tsbkValue = m_siteData.lra();                                               // Location Registration Area

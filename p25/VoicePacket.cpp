@@ -319,6 +319,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 }
             }
 
+            m_hadVoice = true;
+
             m_p25->writeRF_Preamble();
 
             m_p25->m_rfState = RS_RF_AUDIO;
@@ -784,6 +786,12 @@ bool VoicePacket::writeEndRF()
 {
     if (m_p25->m_netState == RS_NET_IDLE && m_p25->m_rfState == RS_RF_LISTENING) {
         writeRF_EndOfVoice();
+        
+        // this should have been cleared by writeRF_EndOfVoice; but if it hasn't clear it
+        // to prevent badness
+        if (m_hadVoice) {
+            m_hadVoice = false; 
+        }
 
         if (!m_p25->m_ccRunning) {
             m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
@@ -833,6 +841,7 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
     m_netLDU2(NULL),
     m_lastDUID(P25_DUID_TDU),
     m_lastIMBE(NULL),
+    m_hadVoice(false),
     m_lastPatchGroup(0U),
     m_silenceThreshold(124U),
     m_verbose(verbose),
@@ -899,6 +908,10 @@ void VoicePacket::writeNetworkRF(const uint8_t *data, uint8_t duid)
 /// <returns></returns>
 void VoicePacket::writeRF_EndOfVoice()
 {
+    if (!m_hadVoice) {
+        return;
+    }
+
     bool grp = m_rfLC.getGroup();
     uint32_t srcId = m_rfLC.getSrcId();
     uint32_t dstId = m_rfLC.getDstId();
@@ -1089,6 +1102,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
     }
 
+    m_hadVoice = true;
     m_p25->m_netState = RS_NET_AUDIO;
     m_p25->m_netLastDstId = dstId;
     m_p25->m_netTimeout.start();
