@@ -55,11 +55,12 @@ using namespace network;
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
-/// <param name="transferActivityLog">Flag indicating that the system activity log will be sent to the network.</param>
+/// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
+/// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
 Network::Network(const std::string& address, uint32_t port, uint32_t local, uint32_t id, const std::string& password,
-    bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool updateLookup) :
-    BaseNetwork(local, id, duplex, debug, slot1, slot2, transferActivityLog),
+    bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
+    BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
     m_addressStr(address),
     m_address(),
     m_port(port),
@@ -275,16 +276,13 @@ void Network::clock(uint32_t ms)
         }
         else if (::memcmp(m_buffer, TAG_MASTER_NAK, 6U) == 0) {
             if (m_status == NET_STAT_RUNNING) {
-                LogWarning(LOG_NET, "Login to the master has failed, retrying login ...");
+                LogWarning(LOG_NET, "Master returned a NAK; attemping to relogin ...");
                 m_status = NET_STAT_WAITING_LOGIN;
                 m_timeoutTimer.start();
                 m_retryTimer.start();
             }
             else {
-                // Once the modem death spiral has been prevented in Modem.cpp
-                // the Network sometimes times out and reaches here.
-                // We want it to reconnect so...
-                LogError(LOG_NET, "Login to the master has failed, retrying network ...");
+                LogError(LOG_NET, "Master returned a NAK; network reconnect ...");
                 close();
                 open();
                 return;

@@ -62,6 +62,8 @@
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+/// <summary>Sets the instance of the Network class to transfer the activity log with.</summary>
+extern HOST_SW_API void LogSetNetwork(void* network);
 
 /// <summary>Initializes the activity log.</summary>
 extern HOST_SW_API bool ActivityLogInitialise(const std::string& filePath, const std::string& fileRoot);
@@ -69,14 +71,12 @@ extern HOST_SW_API bool ActivityLogInitialise(const std::string& filePath, const
 extern HOST_SW_API void ActivityLogFinalise();
 /// <summary>Writes a new entry to the activity log.</summary>
 extern HOST_SW_API void ActivityLog(const char* mode, const bool sourceRf, const char* msg, ...);
-/// <summary>Sets the instance of the Network class to transfer the activity log with.</summary>
-extern HOST_SW_API void ActivityLogSetNetwork(void* network);
 
-/// <summary>Initializes the detailed log.</summary>
+/// <summary>Initializes the diagnostics log.</summary>
 extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel);
-/// <summary>Finalizes the detailed log.</summary>
+/// <summary>Finalizes the diagnostics log.</summary>
 extern HOST_SW_API void LogFinalise();
-/// <summary>Writes a new entry to the detailed log.</summary>
+/// <summary>Writes a new entry to the diagnostics log.</summary>
 extern HOST_SW_API void Log(uint32_t level, const char* module, const char* fmt, ...);
 
 #endif // __LOG_H__

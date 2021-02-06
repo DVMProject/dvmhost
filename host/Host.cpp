@@ -1284,7 +1284,8 @@ bool Host::createNetwork()
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
     bool slot2 = networkConf["slot2"].as<bool>(true);
-    bool transferActivityLog = networkConf["transferActivityLog"].as<bool>(false);
+    bool allowActivityTransfer = networkConf["allowActivityTransfer"].as<bool>(false);
+    bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
@@ -1303,14 +1304,15 @@ bool Host::createNetwork()
     LogInfo("    DMR Jitter: %ums", jitter);
     LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
     LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
-    LogInfo("    Transfer Activity Log: %s", transferActivityLog ? "enabled" : "disabled");
+    LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "enabled" : "disabled");
+    LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "enabled" : "disabled");
     LogInfo("    Update Lookups: %s", updateLookup ? "enabled" : "disabled");
 
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
-    m_network = new Network(address, port, local, id, password, m_duplex, debug, slot1, slot2, transferActivityLog, updateLookup);
+    m_network = new Network(address, port, local, id, password, m_duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
     m_network->setConfig(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_power,
@@ -1325,7 +1327,7 @@ bool Host::createNetwork()
     }
 
     m_network->enable(true);
-    ::ActivityLogSetNetwork(m_network);
+    ::LogSetNetwork(m_network);
 
     // initialize network remote command
     m_remoteControl = new RemoteControl(rconAddress, rconPort);

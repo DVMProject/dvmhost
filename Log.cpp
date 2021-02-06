@@ -79,6 +79,7 @@ static char LEVELS[] = " DMIWEF";
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Helper to open the detailed log file, file handle.
 /// </summary>
@@ -144,6 +145,17 @@ static bool ActivityLogOpen()
     m_actTm = *tm;
 
     return m_actFpLog != NULL;
+}
+
+/// <summary>
+/// Sets the instance of the Network class to transfer the activity log with.
+/// </summary>
+/// <param name="network">Instance of the Network class.</param>
+void LogSetNetwork(void* network)
+{
+    // note: The Network class is passed here as a void so we can avoid including the Network.h
+    // header in Log.h. This is dirty and probably terrible...
+    m_network = (network::Network*)network;
 }
 
 /// <summary>
@@ -229,18 +241,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
 }
 
 /// <summary>
-/// Sets the instance of the Network class to transfer the activity log with.
-/// </summary>
-/// <param name="network">Instance of the Network class.</param>
-void ActivityLogSetNetwork(void* network)
-{
-    // Note: The Network class is passed here as a void so we can avoid including the Network.h
-    // header in Log.h. This is dirty and probably terrible...
-    m_network = (network::Network*)network;
-}
-
-/// <summary>
-/// Initializes the detailed log.
+/// Initializes the diagnostics log.
 /// </summary>
 /// <param name="filePath">Full-path to the detailed log file.</param>
 /// <param name="fileRoot">Prefix of the detailed log file name.</param>
@@ -256,7 +257,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
 }
 
 /// <summary>
-/// Finalizes the detailed log.
+/// Finalizes the diagnostics log.
 /// </summary>
 void LogFinalise()
 {
@@ -265,7 +266,7 @@ void LogFinalise()
 }
 
 /// <summary>
-/// Writes a new entry to the detailed log.
+/// Writes a new entry to the diagnostics log.
 /// </summary>
 /// <param name="level">Log level.</param>
 /// <param name="module">Module name the log entry was genearted from.</param>
@@ -305,6 +306,13 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     ::vsnprintf(buffer + ::strlen(buffer), 500, fmt, vl);
 
     va_end(vl);
+
+    if (m_network != NULL) {
+        // don't transfer debug data...
+        if (level > 1U) {
+            m_network->writeDiagLog(buffer);
+        }
+    }
 
     if (level >= m_fileLevel && m_fileLevel != 0U) {
         bool ret = ::LogOpen();

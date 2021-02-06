@@ -74,7 +74,8 @@
 #define TAG_REPEATER_CLOSING    "RPTCL"
 #define TAG_REPEATER_PING       "RPTPING"
 
-#define TAG_REPEATER_LOG        "TRNSLOG"//"RPTALOG"
+#define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
+#define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
 
 namespace network
 {
@@ -173,7 +174,7 @@ namespace network
     class HOST_SW_API BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the BaseNetwork class.</summary>
-        BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog);
+        BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog);
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 
@@ -201,6 +202,9 @@ namespace network
         /// <summary>Writes the local activity log to the network.</summary>
         virtual bool writeActLog(const char* message);
 
+        /// <summary>Writes the local activity log to the network.</summary>
+        virtual bool writeDiagLog(const char* message);
+
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         virtual void clock(uint32_t ms) = 0;
 
@@ -221,7 +225,8 @@ namespace network
         bool m_slot1;
         bool m_slot2;
 
-        bool m_transferActivityLog;
+        bool m_allowActivityTransfer;
+        bool m_allowDiagnosticTransfer;
 
         bool m_duplex;
         bool m_debug;

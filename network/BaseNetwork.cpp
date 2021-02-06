@@ -52,12 +52,14 @@ using namespace network;
 /// <param name="debug"></param>
 /// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
-/// <param name="transferActivityLog">Flag indicating that the system activity log will be sent to the network.</param>
-BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog) :
+/// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
+/// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
+BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer) :
     m_id(id),
     m_slot1(slot1),
     m_slot2(slot2),
-    m_transferActivityLog(transferActivityLog),
+    m_allowActivityTransfer(allowActivityTransfer),
+    m_allowDiagnosticTransfer(allowDiagnosticTransfer),
     m_duplex(duplex),
     m_debug(debug),
     m_socket(localPort),
@@ -381,7 +383,7 @@ bool BaseNetwork::writeP25PDU(const uint32_t llId, const uint8_t dataType, const
 /// <returns></returns>
 bool BaseNetwork::writeActLog(const char* message)
 {
-    if (!m_transferActivityLog)
+    if (!m_allowActivityTransfer)
         return false;
     if (m_status != NET_STAT_RUNNING)
         return false;
@@ -391,11 +393,35 @@ bool BaseNetwork::writeActLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
-    ::memcpy(buffer + 0U, TAG_REPEATER_LOG, 7U);
+    ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
     __SET_UINT32(m_id, buffer, 7U);
     ::strcpy(buffer + 11U, message);
 
     return write((uint8_t*)buffer, (uint32_t)len + 12U);
+}
+
+/// <summary>
+/// Writes the local diagnostics log to the network.
+/// </summary>
+/// <param name="message"></param>
+/// <returns></returns>
+bool BaseNetwork::writeDiagLog(const char* message)
+{
+    if (!m_allowDiagnosticTransfer)
+        return false;
+    if (m_status != NET_STAT_RUNNING)
+        return false;
+
+    assert(message != NULL);
+
+    char buffer[DATA_PACKET_LENGTH];
+    uint32_t len = ::strlen(message);
+
+    ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
+    __SET_UINT32(m_id, buffer, 8U);
+    ::strcpy(buffer + 12U, message);
+
+    return write((uint8_t*)buffer, (uint32_t)len + 13U);
 }
 
 /// <summary>

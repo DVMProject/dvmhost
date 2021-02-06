@@ -50,7 +50,7 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the Network class.</summary>
         Network(const std::string& address, uint32_t port, uint32_t local, uint32_t id, const std::string& password,
-            bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool updateLookup);
+            bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog, bool updateLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
 

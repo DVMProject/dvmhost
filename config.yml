@@ -16,8 +16,9 @@ network:
     password: "PASSWORD"
     slot1: true
     slot2: true
-    transferActivityLog: false
     updateLookups: false
+    allowActivityTransfer: false
+    allowDiagnosticTransfer: false
     debug: false
 protocols:
     dmr:
