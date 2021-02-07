@@ -72,15 +72,7 @@ OBJECTS = \
 		Utils.o \
 		HostMain.o
 
-BIN = ../bin
-
 all:	dvmhost
-		-cp -f dvmhost $(BIN)
-		if [ ! -e $(BIN)/config.yml ]; then cp -f config.yml $(BIN); fi
-		if [ ! -e $(BIN)/rid_acl.dat ]; then cp -f rid_acl.dat $(BIN); fi
-		if [ ! -e $(BIN)/tg_acl.dat ]; then cp -f tg_acl.dat $(BIN); fi
-		if [ ! -e $(BIN)/iden_table.dat ]; then cp -f iden_table.dat $(BIN); fi
-		if [ ! -e $(BIN)/RSSI.dat ]; then cp -f RSSI.dat $(BIN); fi
 
 dvmhost: $(OBJECTS) 
 		$(CXX) $(OBJECTS) $(CFLAGS) $(LIBS) -o dvmhost

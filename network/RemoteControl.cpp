@@ -29,6 +29,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "edac/SHA256.h"
 #include "RemoteControl.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -85,7 +86,10 @@ using namespace modem;
 #define RCD_P25_RELEASE_GRANTS      "p25-rel-grnts"
 #define RCD_P25_RELEASE_AFFS        "p25-rel-affs"
 
-const uint32_t RC_BUFFER_LENGTH = 100U;
+const uint32_t START_OF_TEXT = 0x02;
+const uint32_t REC_SEPARATOR = 0x1E;
+
+const uint32_t RC_BUFFER_LENGTH = 140U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -95,12 +99,31 @@ const uint32_t RC_BUFFER_LENGTH = 100U;
 /// </summary>
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
-RemoteControl::RemoteControl(const std::string& address, uint32_t port) :
+/// <param name="password">Authentication password.</param>
+/// <param name="debug"></param>
+RemoteControl::RemoteControl(const std::string& address, uint32_t port, const std::string& password, bool debug) :
     m_socket(address, port),
-    m_p25MFId(p25::P25_MFG_STANDARD)
+    m_p25MFId(p25::P25_MFG_STANDARD),
+    m_password(password),
+    m_passwordHash(NULL),
+    m_debug(debug)
 {
     assert(!address.empty());
     assert(port > 0U);
+
+    if (!password.empty()) {
+        size_t size = password.size();
+
+        uint8_t* in = new uint8_t[size];
+        for (size_t i = 0U; i < size; i++)
+            in[i] = password.at(i);
+
+        m_passwordHash = new uint8_t[32U];
+        ::memset(m_passwordHash, 0x00U, 32U);
+
+        edac::SHA256 sha256;
+        sha256.buffer(in, (uint32_t)(size), m_passwordHash);
+    }
 }
 
 /// <summary>
@@ -133,16 +156,51 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
     std::vector<std::string> args = std::vector<std::string>();
     args.clear();
 
-    char buffer[RC_BUFFER_LENGTH];
+    uint8_t buffer[RC_BUFFER_LENGTH];
     in_addr address;
     uint32_t port;
 
-    int ret = m_socket.read((uint8_t*)buffer, RC_BUFFER_LENGTH, address, port);
-    if (ret > 0) {
+    uint32_t ret = m_socket.read((uint8_t*)buffer, RC_BUFFER_LENGTH, address, port);
+    if (ret > 0U) {
         buffer[ret] = '\0';
 
+        if (m_debug)
+            Utils::dump(1U, "RCON Received", (uint8_t*)buffer, ret);
+
+        // make sure this is an RCON command
+        if (buffer[0U] != START_OF_TEXT) {
+            LogWarning(LOG_RCON, BAD_CMD_STR);
+            return;
+        }
+
+        // ensure we have at least 33 bytes
+        if (ret < 33U) {
+            LogWarning(LOG_RCON, BAD_CMD_STR);
+            return;
+        }
+
+        if (m_passwordHash != NULL) {
+            uint8_t hash[32U];
+            ::memset(hash, 0x00U, 32U);
+            if (::memcmp(m_passwordHash, buffer + 1U, 32U) != 0) {
+                LogError(LOG_RCON, CMD_FAILED_STR "Invalid authentication!");
+                return;
+            }
+        }
+
+        // make sure we have arguments after the hash
+        if ((buffer[33U] != REC_SEPARATOR) || (ret - 34U) <= 0U) {
+            LogWarning(LOG_RCON, BAD_CMD_STR);
+            return;
+        }
+
+        uint32_t size = ret - 34U;
+        char argBuffer[RC_BUFFER_LENGTH];
+        ::memset(argBuffer, 0x00U, RC_BUFFER_LENGTH);
+        ::memcpy(argBuffer, buffer + 34U, size);
+
         // parse the original command into a vector of strings.
-        char* b = buffer;
+        char* b = argBuffer;
         char* p = NULL;
         while ((p = ::strtok(b, " ")) != NULL) {
             b = NULL;
@@ -155,19 +213,21 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
         }
         else {
             std::string rcom = args.at(0);
+            uint32_t argCnt = args.size() - 1;
 
             // process command
-            if (rcom == RCD_MODE_CMD && args.size() >= 1U) {
+            if (rcom == RCD_MODE_CMD && argCnt >= 1U) {
+                std::string mode = getArgString(args, 0U);
                 // Command is in the form of: "mode <mode>"
-                if (args.at(1U) == RCD_MODE_OPT_IDLE) {
+                if (mode == RCD_MODE_OPT_IDLE) {
                     host->m_fixedMode = false;
                     host->setMode(STATE_IDLE);
                 }
-                else if (args.at(1U) == RCD_MODE_OPT_LCKOUT) {
+                else if (mode == RCD_MODE_OPT_LCKOUT) {
                     host->m_fixedMode = false;
                     host->setMode(HOST_STATE_LOCKOUT);
                 }
-                else if (args.at(1U) == RCD_MODE_OPT_FDMR) {
+                else if (mode == RCD_MODE_OPT_FDMR) {
                     if (dmr != NULL) {
                         host->m_fixedMode = true;
                         host->setMode(STATE_DMR);
@@ -176,7 +236,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                         LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                     }
                 }
-                else if (args.at(1U) == RCD_MODE_OPT_FP25) {
+                else if (mode == RCD_MODE_OPT_FP25) {
                     if (p25 != NULL) {
                         host->m_fixedMode = true;
                         host->setMode(STATE_P25);
@@ -191,7 +251,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 g_killed = true;
                 host->setMode(HOST_STATE_QUIT);
             }
-            else if (rcom == RCD_RID_WLIST_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_RID_WLIST_CMD && argCnt >= 1U) {
                 // Command is in the form of: "rid-whitelist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
@@ -201,7 +261,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, INVALID_OPT_STR "tried to whitelist RID 0!");
                 }
             }
-            else if (rcom == RCD_RID_BLIST_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_RID_BLIST_CMD && argCnt >= 1U) {
                 // Command is in the form of: "rid-blacklist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
@@ -229,7 +289,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_DMRD_MDM_INJ_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_DMRD_MDM_INJ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "dmrd-mdm-inj <slot> <bin file>
                 if (dmr != NULL) {
                     uint8_t slot = getArgUInt32(args, 0U);
@@ -293,7 +353,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25D_MDM_INJ_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25D_MDM_INJ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25d-mdm-inj <bin file>
                 if (p25 != NULL) {
                     const char* fileName = getArgString(args, 0U).c_str();
@@ -348,7 +408,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_DMR_RID_PAGE_CMD && args.size() >= 2U) {
+            else if (rcom == RCD_DMR_RID_PAGE_CMD && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-page <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -369,7 +429,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_DMR_RID_CHECK_CMD && args.size() >= 2U) {
+            else if (rcom == RCD_DMR_RID_CHECK_CMD && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-check <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -390,7 +450,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_DMR_RID_INHIBIT_CMD && args.size() >= 2U) {
+            else if (rcom == RCD_DMR_RID_INHIBIT_CMD && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-inhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -411,7 +471,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_DMR_RID_UNINHIBIT_CMD && args.size() >= 2U) {
+            else if (rcom == RCD_DMR_RID_UNINHIBIT_CMD && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-uninhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -432,7 +492,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_SET_MFID_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_SET_MFID_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-set-mfid <Mfg. ID>
                 if (p25 != NULL) {
                     uint8_t mfId = getArgUInt8(args, 0U);
@@ -449,7 +509,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_PAGE_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_PAGE_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-page <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -465,7 +525,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_CHECK_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_CHECK_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-check <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -481,7 +541,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_INHIBIT_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_INHIBIT_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-inhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -497,7 +557,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_UNINHIBIT_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_UNINHIBIT_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-uninhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -513,7 +573,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_GAQ_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_GAQ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-gaq <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -529,7 +589,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RID_UREG_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_RID_UREG_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-ureg <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -545,7 +605,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_PATCH_CMD && args.size() >= 1U) {
+            else if (rcom == RCD_P25_PATCH_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-patch <group 1> <group 2> <group 3>"
                 if (p25 != NULL) {
                     uint32_t group1 = getArgUInt32(args, 0U);

@@ -1277,8 +1277,11 @@ bool Host::createNetwork()
     std::string address = networkConf["address"].as<std::string>();
     uint32_t port = networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint32_t local = networkConf["local"].as<uint32_t>(0U);
+    bool rconEnable = networkConf["rconEnable"].as<bool>(false);
     std::string rconAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
     uint32_t rconPort = networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
+    std::string rconPassword = networkConf["rconPassword"].as<std::string>();
+    bool rconDebug = networkConf["rconDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(0U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
@@ -1299,14 +1302,21 @@ bool Host::createNetwork()
         LogInfo("    Local: %u", local);
     else
         LogInfo("    Local: random");
-    LogInfo("    RCON Address: %s", rconAddress.c_str());
-    LogInfo("    RCON Port: %u", rconPort);
+    LogInfo("    RCON Enabled: %s", rconEnable ? "yes" : "no");
+    if (rconEnable) {
+        LogInfo("    RCON Address: %s", rconAddress.c_str());
+        LogInfo("    RCON Port: %u", rconPort);
+    }
+
+    if (rconDebug) {
+        LogInfo("    RCON Debug: yes");
+    }
     LogInfo("    DMR Jitter: %ums", jitter);
     LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
     LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
-    LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "enabled" : "disabled");
-    LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "enabled" : "disabled");
-    LogInfo("    Update Lookups: %s", updateLookup ? "enabled" : "disabled");
+    LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
+    LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
+    LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
 
     if (debug) {
         LogInfo("    Debug: yes");
@@ -1315,8 +1325,11 @@ bool Host::createNetwork()
     m_network = new Network(address, port, local, id, password, m_duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
-    m_network->setConfig(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_power,
-        m_latitude, m_longitude, m_height, m_location);
+    m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
+        m_power, m_latitude, m_longitude, m_height, m_location);
+    if (rconEnable) {
+        m_network->setRconData(rconPassword, rconPort);
+    }
 
     bool ret = m_network->open();
     if (!ret) {
@@ -1330,14 +1343,19 @@ bool Host::createNetwork()
     ::LogSetNetwork(m_network);
 
     // initialize network remote command
-    m_remoteControl = new RemoteControl(rconAddress, rconPort);
-    m_remoteControl->setLookups(m_ridLookup, m_tidLookup);
-    ret = m_remoteControl->open();
-    if (!ret) {
-        delete m_remoteControl;
+    if (rconEnable) {
+        m_remoteControl = new RemoteControl(rconAddress, rconPort, rconPassword, rconDebug);
+        m_remoteControl->setLookups(m_ridLookup, m_tidLookup);
+        ret = m_remoteControl->open();
+        if (!ret) {
+            delete m_remoteControl;
+            m_remoteControl = NULL;
+            LogError(LOG_HOST, "failed to initialize remote command networking! remote command control will be unavailable!");
+            // remote command control failing isn't fatal -- we'll allow this to return normally
+        }
+    }
+    else {
         m_remoteControl = NULL;
-        LogError(LOG_HOST, "failed to initialize remote command networking! remote command control will be unavailable!");
-        // remote command control failing isn't fatal -- we'll allow this to return normally
     }
 
     return true;

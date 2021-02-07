@@ -67,16 +67,20 @@ Network::Network(const std::string& address, uint32_t port, uint32_t local, uint
     m_password(password),
     m_enabled(false),
     m_updateLookup(updateLookup),
-    m_callsign(),
+    m_identity(),
     m_rxFrequency(0U),
     m_txFrequency(0U),
     m_txOffsetMhz(0.0F),
     m_chBandwidthKhz(0.0F),
+    m_channelId(0U),
+    m_channelNo(0U),
     m_power(0U),
     m_latitude(0.0F),
     m_longitude(0.0F),
     m_height(0),
-    m_location()
+    m_location(),
+    m_rconPassword(),
+    m_rconPort(0)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -105,31 +109,48 @@ void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupId
 }
 
 /// <summary>
-/// Sets various configuration settings from the modem.
+/// Sets metadata configuration settings from the modem.
 /// </summary>
-/// <param name="callsign"></param>
+/// <param name="identity"></param>
 /// <param name="rxFrequency"></param>
 /// <param name="txFrequency"></param>
 /// <param name="txOffsetMhz"></param>
 /// <param name="chBandwidthKhz"></param>
+/// <param name="channelId"></param>
+/// <param name="channelNo"></param>
 /// <param name="power"></param>
 /// <param name="latitude"></param>
 /// <param name="longitude"></param>
 /// <param name="height"></param>
 /// <param name="location"></param>
-void Network::setConfig(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz,
-    float chBandwidthKhz, uint32_t power, float latitude, float longitude, int height, const std::string& location)
+void Network::setMetadata(const std::string& identity, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
+    uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location)
 {
-    m_callsign = callsign;
+    m_identity = identity;
     m_rxFrequency = rxFrequency;
     m_txFrequency = txFrequency;
+
     m_txOffsetMhz = txOffsetMhz;
     m_chBandwidthKhz = chBandwidthKhz;
+    m_channelId = channelId;
+    m_channelNo = channelNo;
+
     m_power = power;
     m_latitude = latitude;
     m_longitude = longitude;
     m_height = height;
     m_location = location;
+}
+
+/// <summary>
+/// Sets RCON configuration settings from the modem.
+/// </summary>
+/// <param name="password"></param>
+/// <param name="port"></param>
+void Network::setRconData(const std::string& password, uint16_t port)
+{
+    m_rconPassword = password;
+    m_rconPort = port;
 }
 
 /// <summary>
@@ -465,53 +486,48 @@ bool Network::writeAuthorisation()
 bool Network::writeConfig()
 {
     const char* software = "DVM_DMR_P25";
-    char slots = '0';
-    if (m_duplex) {
-        if (m_slot1 && m_slot2)
-            slots = '3';
-        else if (m_slot1 && !m_slot2)
-            slots = '1';
-        else if (!m_slot1 && m_slot2)
-            slots = '2';
-    }
-    else {
-        slots = '4';
-    }
-
-    char buffer[400U];
+    char buffer[168U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     __SET_UINT32(m_id, buffer, 4U);
 
-    char latitude[20U];
+    char latitude[11U];
     ::sprintf(latitude, "%08f", m_latitude);
 
-    char longitude[20U];
+    char longitude[11U];
     ::sprintf(longitude, "%09f", m_longitude);
 
-    char chBandwidthKhz[20U];
-    ::sprintf(chBandwidthKhz, "%03f", m_chBandwidthKhz);
+    char chBandwidthKhz[6U];
+    ::sprintf(chBandwidthKhz, "%02.02f", m_chBandwidthKhz);
 
-    char txOffsetMhz[20U];
-    ::sprintf(txOffsetMhz, "%03f", m_txOffsetMhz);
+    char txOffsetMhz[6U];
+    ::sprintf(txOffsetMhz, "%02.02f", m_txOffsetMhz);
 
-    uint32_t power = m_power;
-    if (power > 99U)
+    char channelId[4U];
+    ::sprintf(channelId, "%d", m_channelId);
+
+    char channelNo[5U];
+    ::sprintf(channelNo, "%d", m_channelNo);
+
+    int power = m_power;
+    if (m_power > 99U)
         power = 99U;
 
     int height = m_height;
-    if (height > 999)
+    if (m_height > 999)
         height = 999;
 
-    //                      CallsgRX  TX  TxOfChBndLatitLongiHghtLocationPowrReservedSlReserved  SoftwarePackage
-    ::sprintf(buffer + 8U, "%-8.8s%09u%09u%2.1s%2.1s%8.8s%9.9s%03d%-20.20s%02u%-17.17s%c%-124.124s%-40.40s%-40.40s", m_callsign.c_str(),
-        m_rxFrequency, m_txFrequency, txOffsetMhz, chBandwidthKhz, latitude, longitude, height, m_location.c_str(),
-        power, "", slots, "", software, software);
+    //                      IdntRX  TX  RsrvLatLngHghtLoctnRsrvTxOfChBnChIdChNoPowrSftwrRsrvRcnPsRcPt
+    ::sprintf(buffer + 8U, "%-8s%09u%09u%10s%8s%9s%03d%-20s%10s%-5s%-5s%-3s%-4s%02d%-16s%10s%-20s%05d", 
+            m_identity.c_str(), m_rxFrequency, m_txFrequency,
+        "", latitude, longitude, height, m_location.c_str(),
+        "", txOffsetMhz, chBandwidthKhz, channelId, channelNo, power, software,
+        "", m_rconPassword.c_str(), m_rconPort);
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, 11U);
+        Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, 168U);
 
-    return write((uint8_t*)buffer, 302U);
+    return write((uint8_t*)buffer, 168U);
 }
 
 /// <summary>

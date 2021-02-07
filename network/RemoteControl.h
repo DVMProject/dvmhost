@@ -57,7 +57,7 @@ namespace p25 { class HOST_SW_API Control; }
 class HOST_SW_API RemoteControl {
 public:
     /// <summary>Initializes a new instance of the RemoteControl class.</summary>
-    RemoteControl(const std::string& address, uint32_t port);
+    RemoteControl(const std::string& address, uint32_t port, const std::string& password, bool debug);
     /// <summary>Finalizes a instance of the RemoteControl class.</summary>
     ~RemoteControl();
 
@@ -76,6 +76,10 @@ public:
 private:
     network::UDPSocket m_socket;
     uint8_t m_p25MFId;
+
+    std::string m_password;
+    uint8_t* m_passwordHash;
+    bool m_debug;
 
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupIdLookup* m_tidLookup;
