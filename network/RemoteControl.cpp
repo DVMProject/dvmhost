@@ -215,6 +215,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             std::string rcom = args.at(0);
             uint32_t argCnt = args.size() - 1;
 
+            LogInfoEx(LOG_RCON, "RCON %s, argCnt = %u", rcom.c_str(), argCnt);
+
             // process command
             if (rcom == RCD_MODE_CMD && argCnt >= 1U) {
                 std::string mode = getArgString(args, 0U);
