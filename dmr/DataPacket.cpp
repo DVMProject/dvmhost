@@ -103,7 +103,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             return true;
 
         lc::FullLC fullLC;
-        lc::LC * lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+        lc::LC* lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
         if (lc == NULL)
             return false;
 
@@ -115,7 +115,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
         // validate source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
-            LogWarning(LOG_RF, "DMR Slot %u, DMR_SYNC_DATA denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+            LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
             delete lc;
             return false;
         }
@@ -123,11 +123,21 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         // validate target TID, if the target is a talkgroup
         if (flco == FLCO_GROUP) {
             if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                LogWarning(LOG_RF, "DMR Slot %u, DMR_SYNC_DATA denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 delete lc;
                 return false;
             }
         }
+
+        if (m_verbose) {
+            LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+        }
+
+        uint8_t fid = lc->getFID();
+
+        // NOTE: this is fiddly -- on Motorola a FID of 0x10 indicates a SU has transmitted with Enhanced Privacy enabled -- this might change
+        // and is not exact science!
+        bool encrypted = (fid & 0x10U) == 0x10U;
 
         m_rfLC = lc;
 
@@ -186,7 +196,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
         }
 
-        ::ActivityLog("DMR", true, "Slot %u, received RF voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+        ::ActivityLog("DMR", true, "Slot %u, received RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
         return true;
     }
     else if (dataType == DT_VOICE_PI_HEADER) {
@@ -585,6 +595,10 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
                 dmrData.getSrcId(), dmrData.getFLCO() == FLCO_GROUP ? "TG" : "", dmrData.getDstId(),
                 srcId, flco == FLCO_GROUP ? "TG" : "", dstId);
+
+        if (m_verbose) {
+            LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+        }
 
         m_netLC = lc;
 

@@ -262,7 +262,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 }
             }
 
-            ::ActivityLog("P25", true, "received RF voice transmission from %u to %s%u", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+            ::ActivityLog("P25", true, "received RF %svoice transmission from %u to %s%u", m_rfLC.getEncrypted() ? "encrypted ": "", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
 
             if (m_p25->m_control) {
                 if (m_rfLC.getGroup() && (m_lastPatchGroup != dstId) &&
@@ -1045,7 +1045,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
     }
 
-    ::ActivityLog("P25", false, "received network transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+    ::ActivityLog("P25", false, "received %snetwork transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
     m_rfLC.reset();
     m_rfLC.setMI(mi);
