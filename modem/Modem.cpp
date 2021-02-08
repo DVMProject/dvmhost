@@ -1126,8 +1126,31 @@ bool Modem::getFirmwareVersion()
             Thread::sleep(10U);
             RESP_TYPE_DVM resp = getResponse();
             if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
-                LogMessage(LOG_MODEM, MODEM_VERSION_STR, m_length - 4U, m_buffer + 4U, m_buffer[3U]);
-                return true;
+                uint8_t protoVer = m_buffer[3U];
+
+                switch (protoVer) {
+                case PROTOCOL_VERSION:
+                    LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, m_length - 21U, m_buffer + 21U, protoVer);
+                    switch (m_buffer[4U]) {
+                    case 0U:
+                        LogMessage(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
+                        break;
+                    case 1U:
+                        LogMessage(LOG_MODEM, "NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
+                        break;
+                    case 2U:
+                        LogMessage(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
+                        break;
+                    default:
+                        LogMessage(LOG_MODEM, "Unknown CPU type: %u", m_buffer[4U]);
+                        break;
+                    }
+                    return true;
+
+                default:
+                    LogError(LOG_MODEM, MODEM_UNSUPPORTED_STR, protoVer);
+                    return false;
+                }
             }
         }
 

@@ -39,7 +39,10 @@
 #include <string>
 
 #define MODEM_VERSION_STR "%.*s, Modem protocol: %u"
+#define MODEM_UNSUPPORTED_STR "Modem protocol: %u, unsupported! Stopping."
 #define NULL_MODEM "null"
+
+const uint8_t PROTOCOL_VERSION = 2U;
 
 namespace modem
 {
@@ -115,8 +118,6 @@ namespace modem
 
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,
-
-        CMD_SERIAL = 0x80U,
 
         CMD_DEBUG1 = 0xF1U,
         CMD_DEBUG2 = 0xF2U,

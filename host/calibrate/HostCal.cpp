@@ -1524,7 +1524,7 @@ bool HostCal::getFirmwareVersion()
 
         sleep(100U);
 
-        ret = readModem(buffer, 50U);
+        ret = readModem(buffer, 200U);
         if (ret < 0)
             return false;
         if (ret == 0)
@@ -1536,12 +1536,39 @@ bool HostCal::getFirmwareVersion()
         return false;
     }
 
+    int length = ret;
+
     if (buffer[2U] != CMD_GET_VERSION) {
         Utils::dump("Invalid response", buffer, ret);
         return false;
     }
 
-    LogMessage(LOG_CAL, MODEM_VERSION_STR, buffer[1U] - 4, buffer + 4U, buffer[3U]);
+    uint8_t protoVer = buffer[3U];
+
+    switch (protoVer) {
+    case PROTOCOL_VERSION:
+        LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, length - 21U, buffer + 21U, protoVer);
+        switch (buffer[4U]) {
+        case 0U:
+            LogMessage(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U], buffer[17U], buffer[18U], buffer[19U], buffer[20U]);
+            break;
+        case 1U:
+            LogMessage(LOG_MODEM, "NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U], buffer[17U], buffer[18U], buffer[19U], buffer[20U]);
+            break;
+        case 2U:
+            LogMessage(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U]);
+            break;
+        default:
+            LogMessage(LOG_MODEM, "Unknown CPU type: %u", buffer[4U]);
+            break;
+        }
+        return true;
+
+    default:
+        LogError(LOG_MODEM, MODEM_UNSUPPORTED_STR, protoVer);
+        return false;
+    }
+
     return true;
 }
 
