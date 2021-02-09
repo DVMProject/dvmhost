@@ -2245,6 +2245,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
 /// <param name="srcId"></param>
 void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 {
+    bool dereged = false;
     m_rfTSBK.setLCO(TSBK_OSP_U_DEREG_ACK);
 
     if (m_verbose) {
@@ -2252,27 +2253,34 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
             srcId, m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
     }
 
-    ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
-
     // remove dynamic unit registration table entry
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
         auto it = std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId);
         m_unitRegTable.erase(it);
+        dereged = true;
     }
 
     // remove dynamic affiliation table entry
     try {
         m_grpAffTable.at(srcId);
         m_grpAffTable.erase(srcId);
+        dereged = true;
     }
     catch (...) {
         // stub
     }
 
-    m_rfTSBK.setSrcId(P25_WUID_SYS);
-    m_rfTSBK.setDstId(srcId);
+    if (dereged) {
+        ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
-    writeRF_TSDU_SBF(false);
+        m_rfTSBK.setSrcId(P25_WUID_SYS);
+        m_rfTSBK.setDstId(srcId);
+
+        writeRF_TSDU_SBF(false);
+    }
+    else {
+        ::ActivityLog("P25", true, "unit deregistration request from %u denied", srcId);
+    }
 }
 
 /// <summary>
