@@ -788,20 +788,6 @@ void Control::writeRF_TDU(bool noNetwork)
 }
 
 /// <summary>
-///
-/// </summary> 
-void Control::checkAndReject()
-{
-    if (m_rfState != RS_RF_LISTENING && m_rfState != RS_RF_DATA) {
-        LogWarning(LOG_RF, "rejected operation (not setting RF rejection)");
-    }
-    else {
-        m_rfState = RS_RF_REJECTED;
-        LogWarning(LOG_RF, "rejected operation");
-    }
-}
-
-/// <summary>
 /// Helper to set the busy status bits on P25 frame data.
 /// </summary>
 /// <param name="data"></param>

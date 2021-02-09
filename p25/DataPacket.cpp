@@ -317,7 +317,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                 }
                 break;
                 default:
-                    ::ActivityLog("P25", true, "received RF data transmission from %u to %u, %u blocks", m_rfDataHeader.getLLId(), m_rfDataHeader.getLLId(), m_rfDataHeader.getBlocksToFollow());
+                    ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", m_rfDataHeader.getLLId(), m_rfDataHeader.getLLId(), m_rfDataHeader.getBlocksToFollow());
 
                     if (m_repeatPDU) {
                         if (m_verbose) {
@@ -327,7 +327,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                         writeRF_PDU(); // re-generate PDU and send it on
                     }
 
-                    ::ActivityLog("P25", true, "end RF data transmission");
+                    ::ActivityLog("P25", true, "end of RF data transmission");
                     break;
                 }
 
@@ -379,6 +379,7 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
                 }
                 else if (dataType == P25_DT_DATA) {
                     writeNet_PDU();
+                    ::ActivityLog("P25", false, "network data transmission from %u to %u, %u blocks", m_netDataHeader.getLLId(), m_netDataHeader.getLLId(), m_netDataHeader.getBlocksToFollow());
                 }
 
                 if (m_p25->m_netState == RS_NET_DATA) {
@@ -470,7 +471,7 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
                                 Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_PDU", pdu + 2U, newByteLength);
                             }
 
-                            ::ActivityLog("P25", true, "end RF data transmission");
+                            ::ActivityLog("P25", true, "end of RF data transmission");
 
                             m_netDataHeader.reset();
                             m_netSecondHeader.reset();
@@ -807,8 +808,6 @@ void DataPacket::writeNet_PDU_Header()
             m_p25->m_netState = RS_NET_IDLE;
             return;
         }
-
-        ::ActivityLog("P25", true, "received network data transmission from %u to %u, %u blocks", m_netDataHeader.getLLId(), m_netDataHeader.getLLId(), m_netDataHeader.getBlocksToFollow());
 
         if (m_verbose) {
             LogMessage(LOG_NET, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, hdrOffset = %u",

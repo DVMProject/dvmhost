@@ -52,7 +52,7 @@ using namespace p25;
     if (!m_p25->m_control) {                                                            \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, unsupported service, srcId = %u", _SRCID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT);                     \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -62,7 +62,7 @@ using namespace p25;
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID rejection, srcId = %u", _SRCID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_VALID, _PCKT);                      \
         denialInhibit(_SRCID);                                                          \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -71,7 +71,7 @@ using namespace p25;
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID rejection, dstId = %u", _DSTID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_NOT_VALID, _PCKT);                      \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -80,7 +80,7 @@ using namespace p25;
     if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, TGID rejection, dstId = %u", _DSTID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_TGT_GROUP_NOT_VALID, _PCKT);                     \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -90,7 +90,7 @@ using namespace p25;
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not registered, srcId = %u", _SRCID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);                       \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -100,7 +100,7 @@ using namespace p25;
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _SRCID, _DSTID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);                       \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
-        m_p25->checkAndReject();                                                        \
+        m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
 
@@ -337,8 +337,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                ::ActivityLog("P25", true, "received group grant request from %u to TG %u", srcId, dstId);
-
                 writeRF_TSDU_Grant(true, false);
                 break;
             case TSBK_IOSP_UU_VCH:
@@ -357,8 +355,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
-
-                ::ActivityLog("P25", true, "received unit-to-unit grant request from %u to %u", srcId, dstId);
 
                 writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 break;
@@ -430,7 +426,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u", m_rfTSBK.getStatus(), srcId);
                 }
 
-                ::ActivityLog("P25", true, "received status update from %u", srcId);
+                ::ActivityLog("P25", true, "status update from %u", srcId);
 
                 if (!m_noStatusAck) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_STS_UPDT, false, false);
@@ -455,7 +451,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_MSG_UPDT, false, false);
                 }
 
-                ::ActivityLog("P25", true, "received message update from %u", srcId);
+                ::ActivityLog("P25", true, "message update from %u", srcId);
                 break;
             case TSBK_IOSP_CALL_ALRT:
                 // validate the source RID
@@ -478,7 +474,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_CALL_ALRT (Call Alert), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                ::ActivityLog("P25", true, "received call alert request from %u to %u", srcId, dstId);
+                ::ActivityLog("P25", true, "call alert request from %u to %u", srcId, dstId);
 
                 writeRF_TSDU_Call_Alrt(srcId, dstId);
                 break;
@@ -494,7 +490,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getAIV(), m_rfTSBK.getService(), srcId, dstId);
                 }
 
-                ::ActivityLog("P25", true, "received ack response from %u to %u", srcId, dstId);
+                ::ActivityLog("P25", true, "ack response from %u to %u", srcId, dstId);
 
                 // bryanb: HACK -- for some reason, if the AIV is false and we have a dstId
                 // its very likely srcId and dstId are swapped so we'll swap them
@@ -512,7 +508,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getAIV(), m_rfTSBK.getService(), m_rfTSBK.getResponse(), srcId, dstId);
                 }
 
-                ::ActivityLog("P25", true, "received cancel service request from %u", srcId);
+                ::ActivityLog("P25", true, "cancel service request from %u", srcId);
 
                 writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_CAN_SRV_REQ, false, true);
                 break;
@@ -536,13 +532,13 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
                 // generate activity log entry
                 if (m_rfTSBK.getExtendedFunction() == P25_EXT_FNCT_CHECK_ACK) {
-                    ::ActivityLog("P25", true, "received radio check response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio check response from %u to %u", dstId, srcId);
                 }
                 else if (m_rfTSBK.getExtendedFunction() == P25_EXT_FNCT_INHIBIT_ACK) {
-                    ::ActivityLog("P25", true, "received radio inhibit response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio inhibit response from %u to %u", dstId, srcId);
                 }
                 else if (m_rfTSBK.getExtendedFunction() == P25_EXT_FNCT_UNINHIBIT_ACK) {
-                    ::ActivityLog("P25", true, "received radio uninhibit response from %u to %u", dstId, srcId);
+                    ::ActivityLog("P25", true, "radio uninhibit response from %u to %u", dstId, srcId);
                 }
 
                 writeRF_TSDU_SBF(true);
@@ -570,7 +566,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getPatchSuperGroupId());
                 }
 
-                ::ActivityLog("P25", true, "received group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
+                ::ActivityLog("P25", true, "group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
                 break;
             case TSBK_ISP_U_DEREG_REQ:
                 // make sure control data is supported
@@ -738,7 +734,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                                 m_netTSBK.getStatus(), srcId);
                         }
 
-                        ::ActivityLog("P25", false, "received status update from %u", srcId);
+                        ::ActivityLog("P25", false, "status update from %u", srcId);
                         break;
                     case TSBK_IOSP_MSG_UPDT:
                         // validate the source RID
@@ -749,7 +745,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                                 m_netTSBK.getMessage(), srcId, dstId);
                         }
 
-                        ::ActivityLog("P25", false, "received message update from %u", srcId);
+                        ::ActivityLog("P25", false, "message update from %u", srcId);
                         break;
                     case TSBK_IOSP_CALL_ALRT:
                         // validate the source RID
@@ -768,7 +764,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_CALL_ALRT (Call Alert), srcId = %u, dstId = %u", srcId, dstId);
                         }
 
-                        ::ActivityLog("P25", false, "received call alert request from %u to %u", srcId, dstId);
+                        ::ActivityLog("P25", false, "call alert request from %u to %u", srcId, dstId);
                         break;
                     case TSBK_IOSP_ACK_RSP:
                         // validate the source RID
@@ -782,7 +778,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                                 m_netTSBK.getAIV(), m_netTSBK.getService(), dstId, srcId);
                         }
 
-                        ::ActivityLog("P25", false, "received ack response from %u to %u", srcId, dstId);
+                        ::ActivityLog("P25", false, "ack response from %u to %u", srcId, dstId);
                         break;
                     case TSBK_IOSP_EXT_FNCT:
                         // validate the target RID
@@ -1144,7 +1140,7 @@ void TrunkPacket::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_CALL_ALRT (Call Alert), srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    ::ActivityLog("P25", true, "received call alert request from %u to %u", srcId, dstId);
+    ::ActivityLog("P25", true, "call alert request from %u to %u", srcId, dstId);
 
     m_rfTSBK.setLCO(TSBK_IOSP_CALL_ALRT);
     m_rfTSBK.setSrcId(srcId);
@@ -1177,13 +1173,13 @@ void TrunkPacket::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
 
     // generate activity log entry
     if (func == P25_EXT_FNCT_CHECK) {
-        ::ActivityLog("P25", true, "received radio check request from %u to %u", arg, dstId);
+        ::ActivityLog("P25", true, "radio check request from %u to %u", arg, dstId);
     }
     else if (func == P25_EXT_FNCT_INHIBIT) {
-        ::ActivityLog("P25", true, "received radio inhibit request from %u to %u", arg, dstId);
+        ::ActivityLog("P25", true, "radio inhibit request from %u to %u", arg, dstId);
     }
     else if (func == P25_EXT_FNCT_UNINHIBIT) {
-        ::ActivityLog("P25", true, "received radio uninhibit request from %u to %u", arg, dstId);
+        ::ActivityLog("P25", true, "radio uninhibit request from %u to %u", arg, dstId);
     }
 
     writeRF_TSDU_SBF(false);
@@ -1202,7 +1198,7 @@ void TrunkPacket::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_GRP_AFF_Q (Group Affiliation Query), dstId = %u", dstId);
     }
 
-    ::ActivityLog("P25", true, "received group affiliation query command from %u to %u", P25_WUID_SYS, dstId);
+    ::ActivityLog("P25", true, "group affiliation query command from %u to %u", P25_WUID_SYS, dstId);
 
     m_rfTSBK.setLCO(TSBK_OSP_GRP_AFF_Q);
     m_rfTSBK.setSrcId(P25_WUID_SYS);
@@ -1220,7 +1216,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_U_REG_CMD (Unit Registration Command), dstId = %u", dstId);
     }
 
-    ::ActivityLog("P25", true, "received unit registration command from %u to %u", P25_WUID_SYS, dstId);
+    ::ActivityLog("P25", true, "unit registration command from %u to %u", P25_WUID_SYS, dstId);
 
     m_rfTSBK.setLCO(TSBK_OSP_U_REG_CMD);
     m_rfTSBK.setSrcId(P25_WUID_SYS);
@@ -1946,7 +1942,10 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
             LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
             writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
-            m_p25->checkAndReject();
+
+            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+            m_p25->m_rfState = RS_RF_REJECTED;
+
             m_rfTSBK.setLCO(lco);
             return false;
         }
@@ -1954,7 +1953,10 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         if (m_p25->m_netState != RS_NET_IDLE && m_rfTSBK.getDstId() == m_p25->m_netLastDstId) {
             LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
             writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
-            m_p25->checkAndReject();
+
+            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+            m_p25->m_rfState = RS_RF_REJECTED;
+
             m_rfTSBK.setLCO(lco);
             return false;
         }
@@ -1963,7 +1965,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         if (m_p25->m_rfLastDstId != 0U) {
             if (m_p25->m_rfLastDstId != m_rfTSBK.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
                 writeRF_TSDU_Deny(P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
-                m_p25->checkAndReject();
+                m_p25->m_rfState = RS_RF_REJECTED;
                 m_rfTSBK.setLCO(lco);
                 return false;
             }
@@ -1974,14 +1976,20 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
                 if (grp) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
                     writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_GRP_VCH);
-                    m_p25->checkAndReject();
+
+                    ::ActivityLog("P25", true, "group grant request from %u to TG %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                    m_p25->m_rfState = RS_RF_REJECTED;
+
                     m_rfTSBK.setLCO(lco);
                     return false;
                 }
                 else {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
                     writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_UU_VCH);
-                    m_p25->checkAndReject();
+
+                    ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                    m_p25->m_rfState = RS_RF_REJECTED;
+
                     m_rfTSBK.setLCO(lco);
                     return false;
                 }
@@ -2010,6 +2018,8 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
     }
 
     if (grp) {
+        ::ActivityLog("P25", true, "group grant request from %u to TG %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+
         if (m_verbose) {
             LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                 m_rfTSBK.getEmergency(), m_rfTSBK.getEncrypted(), m_rfTSBK.getPriority(), m_rfTSBK.getGrpVchNo(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
@@ -2020,6 +2030,8 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         writeRF_TSDU_SBF(true, true);
     }
     else {
+        ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+
         if (m_verbose) {
             LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                 m_rfTSBK.getEmergency(), m_rfTSBK.getEncrypted(), m_rfTSBK.getPriority(), m_rfTSBK.getGrpVchNo(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
@@ -2126,20 +2138,23 @@ bool TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Response) denial, RID rejection, srcId = %u", srcId);
-        m_rfTSBK.setResponse(P25_RSP_DENY);
+        ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+        m_rfTSBK.setResponse(P25_RSP_REFUSED);
     }
 
     // validate the source RID is registered
     if (!hasSrcIdUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Response) denial, RID not registered, srcId = %u", srcId);
-        m_rfTSBK.setResponse(P25_RSP_DENY);
+        ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+        m_rfTSBK.setResponse(P25_RSP_REFUSED);
     }
 
     // validate the talkgroup ID
     if (m_rfTSBK.getGroup()) {
         if (!acl::AccessControl::validateTGId(dstId)) {
             LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Response) denial, TGID rejection, dstId = %u", dstId);
-            m_rfTSBK.setResponse(P25_RSP_REFUSED);
+            ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+            m_rfTSBK.setResponse(P25_RSP_DENY);
         }
     }
 
@@ -2149,7 +2164,7 @@ bool TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
                 m_patchSuperGroup, srcId, dstId);
         }
 
-        ::ActivityLog("P25", true, "received group affiliation request from %u to %s %u", srcId, "TG ", dstId);
+        ::ActivityLog("P25", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
         ret = true;
 
         // update dynamic affiliation table
@@ -2172,13 +2187,15 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
     // validate the system ID
     if (m_rfTSBK.getSysId() != m_siteData.sysId()) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_U_REG (Unit Registration Response) denial, SYSID rejection, sysId = $%03X", m_rfTSBK.getSysId());
+        ::ActivityLog("P25", true, "unit registration request from %u denied", srcId);
         m_rfTSBK.setResponse(P25_RSP_DENY);
     }
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_U_REG (Unit Registration Response) denial, RID rejection, srcId = %u", srcId);
-        m_rfTSBK.setResponse(P25_RSP_DENY);
+        ::ActivityLog("P25", true, "unit registration request from %u denied", srcId);
+        m_rfTSBK.setResponse(P25_RSP_REFUSED);
     }
 
     if (m_rfTSBK.getResponse() == P25_RSP_ACCEPT) {
@@ -2187,7 +2204,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
                 m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
         }
 
-        ::ActivityLog("P25", true, "received unit registration request from %u", srcId);
+        ::ActivityLog("P25", true, "unit registration request from %u", srcId);
 
         // update dynamic unit registration table
         if (!hasSrcIdUnitReg(srcId)) {
@@ -2219,7 +2236,7 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
             srcId, m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
     }
 
-    ::ActivityLog("P25", true, "received unit deregistration request from %u", srcId);
+    ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
     // remove dynamic unit registration table entry
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {

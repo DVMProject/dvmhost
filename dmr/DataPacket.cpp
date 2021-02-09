@@ -115,7 +115,14 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
         // validate source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
-            LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+            if (m_lastRejectId == 0U || m_lastRejectId == srcId) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+            }
+
+            m_slot->m_rfLastDstId = 0U;
+            m_slot->m_rfTGHang.stop();
+
             delete lc;
             return false;
         }
@@ -123,11 +130,20 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         // validate target TID, if the target is a talkgroup
         if (flco == FLCO_GROUP) {
             if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                if (m_lastRejectId == 0U || m_lastRejectId == dstId) {
+                    LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
+                }
+
+                m_slot->m_rfLastDstId = 0U;
+                m_slot->m_rfTGHang.stop();
+
                 delete lc;
                 return false;
             }
         }
+
+        m_lastRejectId = 0U;
 
         if (m_verbose) {
             LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
@@ -196,7 +212,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
         }
 
-        ::ActivityLog("DMR", true, "Slot %u, received RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+        ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
         return true;
     }
     else if (dataType == DT_VOICE_PI_HEADER) {
@@ -260,12 +276,12 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u, received RF end of voice transmission, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
+            ::ActivityLog("DMR", true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits),
                 m_slot->m_minRSSI, m_slot->m_maxRSSI, m_slot->m_aveRSSI / m_slot->m_rssiCount);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u, received RF end of voice transmission, %.1f seconds, BER: %.1f%%",
+            ::ActivityLog("DMR", true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%",
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
         }
 
@@ -361,7 +377,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u received call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
                 break;
             case CSBKO_ACK_RSP:
                 if (m_verbose) {
@@ -369,7 +385,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u received ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
                 break;
             case CSBKO_EXT_FNCT:
                 if (m_verbose) {
@@ -379,22 +395,22 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
                 // generate activity log entry
                 if (csbk.getCBF() == DMR_EXT_FNCT_CHECK) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_CHECK_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u received radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 break;
             case CSBKO_PRECCSBK:
@@ -476,13 +492,13 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             Utils::dump(2U, "!!! *TX DMR Frame - DT_DATA_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
         }
 
-        ::ActivityLog("DMR", true, "Slot %u, received RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
+        ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
 
         ::memset(m_pduUserData, 0x00U, DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_rfFrames == 0U) {
-            ::ActivityLog("DMR", true, "Slot %u, ended RF data transmission", m_slot->m_slotNo);
+            ::ActivityLog("DMR", true, "Slot %u ended RF data transmission", m_slot->m_slotNo);
             writeEndRF();
         }
 
@@ -662,7 +678,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             Utils::dump(2U, "!!! *TX DMR Network Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
         }
 
-        ::ActivityLog("DMR", false, "Slot %u, received network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
     }
     else if (dataType == DT_VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
@@ -723,7 +739,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_netLC->getFLCO(), true);
 
-            ::ActivityLog("DMR", false, "Slot %u, received network late entry from %u to %s%u",
+            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
         }
 
@@ -788,7 +804,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
         // We've received the voice header and terminator haven't we?
         m_slot->m_netFrames += 2U;
-        ::ActivityLog("DMR", false, "Slot %u, received network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
+        ::ActivityLog("DMR", false, "Slot %u network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
             m_slot->m_slotNo, float(m_slot->m_netFrames) / 16.667F, (m_slot->m_netLost * 100U) / m_slot->m_netFrames, float(m_slot->m_netErrs * 100U) / float(m_slot->m_netBits));
 
         writeEndNet();
@@ -878,7 +894,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", false, "Slot %u received call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
                 break;
             case CSBKO_ACK_RSP:
                 if (m_verbose) {
@@ -886,7 +902,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", false, "Slot %u received ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
                 break;
             case CSBKO_EXT_FNCT:
                 if (m_verbose) {
@@ -896,22 +912,22 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
                 // generate activity log entry
                 if (csbk.getCBF() == DMR_EXT_FNCT_CHECK) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_CHECK_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u received radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                    ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 }
                 break;
             case CSBKO_PRECCSBK:
@@ -975,14 +991,14 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             Utils::dump(2U, "!!! *TX DMR Network Frame - DT_DATA_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
         }
 
-        ::ActivityLog("DMR", false, "Slot %u, received network data header from %u to %s%u, %u blocks",
+        ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
 
         ::memset(m_pduUserData, 0x00U, DMR_MAX_PDU_COUNT * DMR_MAX_PDU_LENGTH + 2U);
         m_pduDataOffset = 0U;
 
         if (m_slot->m_netFrames == 0U) {
-            ::ActivityLog("DMR", false, "Slot %u, ended network data transmission", m_slot->m_slotNo);
+            ::ActivityLog("DMR", false, "Slot %u ended network data transmission", m_slot->m_slotNo);
             writeEndNet();
         }
     }
@@ -1082,6 +1098,7 @@ DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataP
     m_netLC(NULL),
     m_pduUserData(NULL),
     m_pduDataOffset(0U),
+    m_lastRejectId(0U),
     m_dumpDataPacket(dumpDataPacket),
     m_repeatDataPacket(repeatDataPacket),
     m_dumpCSBKData(dumpCSBKData),

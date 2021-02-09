@@ -77,6 +77,7 @@ namespace dmr
 
         uint8_t* m_pduUserData;
         uint32_t m_pduDataOffset;
+        uint32_t m_lastRejectId;
 
         bool m_dumpDataPacket;
         bool m_repeatDataPacket;

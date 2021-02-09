@@ -1009,7 +1009,6 @@ int Host::run()
             Thread::sleep(1U);
     }
 
-    ::ActivityLog("DVM", true, "Host is down and stopping");
     setMode(HOST_STATE_QUIT);
 
     delete dmr;

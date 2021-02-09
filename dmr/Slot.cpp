@@ -152,11 +152,11 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
     if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u, RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
+            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u, RF voice transmission lost, %.1f seconds, BER: %.1f%%", 
+            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%", 
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits));
         }
 
@@ -354,12 +354,12 @@ void Slot::clock()
             if (m_netState == RS_NET_AUDIO) {
                 // We've received the voice header haven't we?
                 m_netFrames += 1U;
-                ::ActivityLog("DMR", false, "Slot %u, network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%", 
+                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%", 
                     m_slotNo, float(m_netFrames) / 16.667F, (m_netLost * 100U) / m_netFrames, float(m_netErrs * 100U) / float(m_netBits));
                 m_data->writeEndNet(true);
             }
             else {
-                ::ActivityLog("DMR", false, "Slot %u, network watchdog has expired", m_slotNo);
+                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired", m_slotNo);
                 m_data->writeEndNet();
             }
         }
@@ -547,13 +547,13 @@ void Slot::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 
     // generate activity log entry
     if (func == DMR_EXT_FNCT_CHECK) {
-        ::ActivityLog("DMR", true, "Slot %u received radio check request from %u to %u", m_slotNo, arg, dstId);
+        ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slotNo, arg, dstId);
     }
     else if (func == DMR_EXT_FNCT_INHIBIT) {
-        ::ActivityLog("DMR", true, "Slot %u received radio inhibit request from %u to %u", m_slotNo, arg, dstId);
+        ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slotNo, arg, dstId);
     }
     else if (func == DMR_EXT_FNCT_UNINHIBIT) {
-        ::ActivityLog("DMR", true, "Slot %u received radio uninhibit request from %u to %u", m_slotNo, arg, dstId);
+        ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slotNo, arg, dstId);
     }
 
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -603,7 +603,7 @@ void Slot::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
             m_slotNo, srcId, dstId);
     }
 
-    ::ActivityLog("DMR", true, "Slot %u received call alert request from %u to %u", m_slotNo, srcId, dstId);
+    ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slotNo, srcId, dstId);
 
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);

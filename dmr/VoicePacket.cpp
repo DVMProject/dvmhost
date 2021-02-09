@@ -395,7 +395,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u, received RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+                ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
                 return true;
             }
         }
@@ -481,7 +481,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_data->m_netLC->getFLCO(), true);
 
-            ::ActivityLog("DMR", false, "Slot %u, received network late entry from %u to %s%u",
+            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_data->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
         }
 

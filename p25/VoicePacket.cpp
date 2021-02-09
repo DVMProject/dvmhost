@@ -222,10 +222,18 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             // validate the source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
-                LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
-                m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_VALID, (m_rfLC.getGroup() ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH));
-                m_p25->m_trunk->denialInhibit(srcId);
-                m_p25->checkAndReject();
+                if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
+                    LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
+                    m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_VALID, (m_rfLC.getGroup() ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH));
+                    m_p25->m_trunk->denialInhibit(srcId);
+
+                    ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+                    m_lastRejectId = srcId;
+                }
+
+                m_p25->m_rfLastDstId = 0U;
+                m_p25->m_rfTGHang.stop();
+                m_p25->m_rfState = RS_RF_REJECTED;
                 return false;
             }
 
@@ -233,18 +241,34 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (!m_rfLC.getGroup()) {
                 // validate the target RID
                 if (!acl::AccessControl::validateSrcId(dstId)) {
-                    LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
-                    m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH);
-                    m_p25->checkAndReject();
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
+                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH);
+
+                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfTGHang.stop();
+                    m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
             }
             else {
                 // validate the target ID, if the target is a talkgroup
                 if (!acl::AccessControl::validateTGId(dstId)) {
-                    LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
-                    m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH);
-                    m_p25->checkAndReject();
+                    if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
+                        LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
+                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH);
+
+                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+                        m_lastRejectId = dstId;
+                    }
+
+                    m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfTGHang.stop();
+                    m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
             }
@@ -254,15 +278,24 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (m_rfLC.getGroup() && m_p25->m_control) {
                 if (!m_p25->m_trunk->hasSrcIdGrpAff(srcId, dstId) &&
                     m_p25->m_trunk->m_verifyAff) {
-                    LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
-                    m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH);
-                    m_p25->m_trunk->writeRF_TSDU_U_Reg_Cmd(srcId);
-                    m_p25->checkAndReject();
+                    if (m_lastRejectId == 0 || m_lastRejectId != srcId) {
+                        LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
+                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH);
+                        m_p25->m_trunk->writeRF_TSDU_U_Reg_Cmd(srcId);
+
+                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+                        m_lastRejectId = srcId;
+                    }
+
+                    m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfTGHang.stop();
+                    m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
             }
 
-            ::ActivityLog("P25", true, "received RF %svoice transmission from %u to %s%u", m_rfLC.getEncrypted() ? "encrypted ": "", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
+            m_lastRejectId = 0U;
+            ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", m_rfLC.getEncrypted() ? "encrypted ": "", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
 
             if (m_p25->m_control) {
                 if (m_rfLC.getGroup() && (m_lastPatchGroup != dstId) &&
@@ -581,12 +614,12 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_AUDIO) {
             if (m_p25->m_rssi != 0U) {
-                ::ActivityLog("P25", true, "received RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm", 
+                ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm", 
                     float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits), m_p25->m_minRSSI, m_p25->m_maxRSSI, 
                     m_p25->m_aveRSSI / m_p25->m_rssiCount);
             }
             else {
-                ::ActivityLog("P25", true, "received RF end of transmission, %.1f seconds, BER: %.1f%%", 
+                ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%", 
                     float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
@@ -842,6 +875,7 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
     m_lastDUID(P25_DUID_TDU),
     m_lastIMBE(NULL),
     m_hadVoice(false),
+    m_lastRejectId(0U),
     m_lastPatchGroup(0U),
     m_silenceThreshold(124U),
     m_verbose(verbose),
@@ -1045,7 +1079,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
     }
 
-    ::ActivityLog("P25", false, "received %snetwork transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+    ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
     m_rfLC.reset();
     m_rfLC.setMI(mi);
