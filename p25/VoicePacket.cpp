@@ -666,39 +666,39 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 (data[70U] == 0x66U) && (data[87U] == 0x67U) &&
                 (data[104U] == 0x68U) && (data[121U] == 0x69U) &&
                 (data[138U] == 0x6AU)) {
-                // The '62' record
+                // The '62' record - IMBE Voice 1
                 ::memcpy(m_netLDU1 + 0U, data + count, 22U);
                 count += 22U;
 
-                // The '63' record
+                // The '63' record - IMBE Voice 2
                 ::memcpy(m_netLDU1 + 25U, data + count, 14U);
                 count += 14U;
 
-                // The '64' record
+                // The '64' record - IMBE Voice 3 + Link Control
                 ::memcpy(m_netLDU1 + 50U, data + count, 17U);
                 count += 17U;
 
-                // The '65' record
+                // The '65' record - IMBE Voice 4 + Link Control
                 ::memcpy(m_netLDU1 + 75U, data + count, 17U);
                 count += 17U;
 
-                // The '66' record
+                // The '66' record - IMBE Voice 5 + Link Control
                 ::memcpy(m_netLDU1 + 100U, data + count, 17U);
                 count += 17U;
 
-                // The '67' record
+                // The '67' record - IMBE Voice 6 + Link Control
                 ::memcpy(m_netLDU1 + 125U, data + count, 17U);
                 count += 17U;
 
-                // The '68' record
+                // The '68' record - IMBE Voice 7 + Link Control
                 ::memcpy(m_netLDU1 + 150U, data + count, 17U);
                 count += 17U;
 
-                // The '69' record
+                // The '69' record - IMBE Voice 8 + Link Control
                 ::memcpy(m_netLDU1 + 175U, data + count, 17U);
                 count += 17U;
 
-                // The '6A' record
+                // The '6A' record - IMBE Voice 9 + Low Speed Data
                 ::memcpy(m_netLDU1 + 200U, data + count, 16U);
                 count += 17U;
 
@@ -719,39 +719,39 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 (data[70U] == 0x6FU) && (data[87U] == 0x70U) &&
                 (data[104U] == 0x71U) && (data[121U] == 0x72U) &&
                 (data[138U] == 0x73U)) {
-                // The '6B' record
+                // The '6B' record - IMBE Voice 10
                 ::memcpy(m_netLDU2 + 0U, data + count, 22U);
                 count += 22U;
 
-                // The '6C' record
+                // The '6C' record - IMBE Voice 11
                 ::memcpy(m_netLDU2 + 25U, data + count, 14U);
                 count += 14U;
 
-                // The '6D' record
+                // The '6D' record - IMBE Voice 12 + Encryption Sync
                 ::memcpy(m_netLDU2 + 50U, data + count, 17U);
                 count += 17U;
 
-                // The '6E' record
+                // The '6E' record - IMBE Voice 13 + Encryption Sync
                 ::memcpy(m_netLDU2 + 75U, data + count, 17U);
                 count += 17U;
 
-                // The '6F' record
+                // The '6F' record - IMBE Voice 14 + Encryption Sync
                 ::memcpy(m_netLDU2 + 100U, data + count, 17U);
                 count += 17U;
 
-                // The '70' record
+                // The '70' record - IMBE Voice 15 + Encryption Sync
                 ::memcpy(m_netLDU2 + 125U, data + count, 17U);
                 count += 17U;
 
-                // The '71' record
+                // The '71' record - IMBE Voice 16 + Encryption Sync
                 ::memcpy(m_netLDU2 + 150U, data + count, 17U);
                 count += 17U;
 
-                // The '72' record
+                // The '72' record - IMBE Voice 17 + Encryption Sync
                 ::memcpy(m_netLDU2 + 175U, data + count, 17U);
                 count += 17U;
 
-                // The '73' record
+                // The '73' record - IMBE Voice 18 + Low Speed Data
                 ::memcpy(m_netLDU2 + 200U, data + count, 16U);
                 count += 17U;
 
@@ -1036,7 +1036,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
     ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
     ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
 
-    uint8_t serviceOptions = (uint8_t)(m_netLDU1[201U]);
+    uint8_t serviceOptions = (uint8_t)(m_netLDU1[53U]);
 
     m_netLC.reset();
     m_netLC.setMI(mi);
@@ -1266,7 +1266,7 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
         }
     }
 
-    uint8_t serviceOptions = (uint8_t)(m_netLDU1[201U]);
+    uint8_t serviceOptions = (uint8_t)(m_netLDU1[53U]);
 
     if (m_p25->m_control) {
         m_p25->m_trunk->touchDstIdGrant(m_rfLC.getDstId());

@@ -600,6 +600,7 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     ::memcpy(tempBuf, LDU1_REC64, 17U);
     tempBuf[1U] = control.getLCO();
     tempBuf[2U] = control.getMFId();
+    tempBuf[3U] = serviceOptions;
     m_audio.decode(data, tempBuf + 5U, 2U);
     ::memcpy(buffer + 60U, tempBuf, 17U);
     count += 17U;
@@ -642,7 +643,8 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
 
     // The '6A' record
     ::memcpy(tempBuf, LDU1_REC6A, 16U);
-    tempBuf[1U] = serviceOptions;
+    tempBuf[1U] = lsd.getLSD1();
+    tempBuf[2U] = lsd.getLSD2();
     m_audio.decode(data, tempBuf + 4U, 8U);
     ::memcpy(buffer + 162U, tempBuf, 16U);
     count += 16U;
@@ -768,6 +770,8 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
 
     // The '73' record
     ::memcpy(tempBuf, LDU2_REC73, 16U);
+    tempBuf[1U] = lsd.getLSD1();
+    tempBuf[2U] = lsd.getLSD2();
     m_audio.decode(data, tempBuf + 4U, 8U);
     ::memcpy(buffer + 162U, tempBuf, 16U);
 
