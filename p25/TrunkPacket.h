@@ -213,11 +213,11 @@ namespace p25
         void queueRF_TSBK_Ctrl_MBF(uint8_t lco);
 
         /// <summary>Helper to write a grant packet.</summary>
-        bool writeRF_TSDU_Grant(bool grp, bool skip);
+        bool writeRF_TSDU_Grant(bool grp, bool skip, bool net);
         /// <summary>Helper to write a unit to unit answer request packet.</summary>
         void writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to write a acknowledge packet.</summary>
-        void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork);
+        void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noActivityLog);
         /// <summary>Helper to write a deny packet.</summary>
         void writeRF_TSDU_Deny(uint8_t reason, uint8_t service);
         /// <summary>Helper to write a group affiliation response packet.</summary>

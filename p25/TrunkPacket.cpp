@@ -337,7 +337,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                writeRF_TSDU_Grant(true, false);
+                writeRF_TSDU_Grant(true, false, false);
                 break;
             case TSBK_IOSP_UU_VCH:
                 // make sure control data is supported
@@ -378,7 +378,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
-                    writeRF_TSDU_Grant(false, false);
+                    writeRF_TSDU_Grant(false, false, false);
                 }
                 else if (m_rfTSBK.getResponse() == P25_ANS_RSP_DENY) {
                     writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
@@ -1928,8 +1928,9 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
 /// </summary>
 /// <param name="grp"></param>
 /// <param name="skip"></param>
+/// <param name="net"></param>
 /// <returns></returns>
-bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
+bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -1940,22 +1941,26 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
     // are we skipping checking?
     if (!skip) {
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
-            writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+            if (!net) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
+                writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
-            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
-            m_p25->m_rfState = RS_RF_REJECTED;
+                ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                m_p25->m_rfState = RS_RF_REJECTED;
+            }
 
             m_rfTSBK.setLCO(lco);
             return false;
         }
 
         if (m_p25->m_netState != RS_NET_IDLE && m_rfTSBK.getDstId() == m_p25->m_netLastDstId) {
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
-            writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+            if (!net) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", m_rfTSBK.getDstId());
+                writeRF_TSDU_Deny(P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
-            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
-            m_p25->m_rfState = RS_RF_REJECTED;
+                ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                m_p25->m_rfState = RS_RF_REJECTED;
+            }
 
             m_rfTSBK.setLCO(lco);
             return false;
@@ -1964,8 +1969,11 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
         if (m_p25->m_rfLastDstId != 0U) {
             if (m_p25->m_rfLastDstId != m_rfTSBK.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-                writeRF_TSDU_Deny(P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
-                m_p25->m_rfState = RS_RF_REJECTED;
+                if (!net) {
+                    writeRF_TSDU_Deny(P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                }
+
                 m_rfTSBK.setLCO(lco);
                 return false;
             }
@@ -1974,21 +1982,25 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         if (!hasDstIdGranted(m_rfTSBK.getDstId())) {
             if (m_voiceChTable.empty()) {
                 if (grp) {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
-                    writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_GRP_VCH);
+                    if (!net) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
+                        writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_GRP_VCH);
 
-                    ::ActivityLog("P25", true, "group grant request from %u to TG %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
-                    m_p25->m_rfState = RS_RF_REJECTED;
+                        ::ActivityLog("P25", true, "group grant request from %u to TG %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                    }
 
                     m_rfTSBK.setLCO(lco);
                     return false;
                 }
                 else {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
-                    writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_UU_VCH);
+                    if (!net) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
+                        writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_UU_VCH);
 
-                    ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
-                    m_p25->m_rfState = RS_RF_REJECTED;
+                        ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                    }
 
                     m_rfTSBK.setLCO(lco);
                     return false;
@@ -2018,7 +2030,9 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
     }
 
     if (grp) {
-        ::ActivityLog("P25", true, "group grant request from %u to TG %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+        if (!net) {
+            ::ActivityLog("P25", true, "group grant request from %u to TG %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+        }
 
         if (m_verbose) {
             LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
@@ -2030,7 +2044,9 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip)
         writeRF_TSDU_SBF(true, true);
     }
     else {
-        ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+        if (!net) {
+            ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+        }
 
         if (m_verbose) {
             LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",

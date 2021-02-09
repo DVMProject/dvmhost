@@ -316,7 +316,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                             }
                         }                        
 
-                        if (!m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), false)) {
+                        if (!m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), false, false)) {
                             return false;
                         }
                     }
@@ -329,7 +329,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // single-channel trunking or voice on control support?
             if (m_p25->m_control && m_p25->m_voiceOnControl) {
                 m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-                m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true);
+                m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, false);
             }
 
             m_p25->m_trunk->writeRF_TDULC_ChanGrant(m_rfLC.getGroup(), srcId, dstId);
@@ -1104,7 +1104,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
             m_lastPatchGroup = dstId;
         }
 
-        if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false)) {
+        if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
             if (m_network != NULL)
                 m_network->resetP25();
 
@@ -1127,7 +1127,7 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
     // single-channel trunking or voice on control support?
     if (m_p25->m_control && m_p25->m_voiceOnControl) {
         m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-        m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true);
+        m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, true);
     }
 
     m_p25->m_trunk->writeRF_TDULC_ChanGrant(group, srcId, dstId);
