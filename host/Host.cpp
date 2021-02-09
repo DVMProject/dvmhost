@@ -114,9 +114,15 @@ Host::~Host()
 /// <returns>Zero if successful, otherwise error occurred.</returns>
 int Host::run()
 {
-    bool ret = yaml::Parse(m_conf, m_confFile.c_str());
-    if (!ret) {
-        ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
+    bool ret = false;
+    try {
+        ret = yaml::Parse(m_conf, m_confFile.c_str());
+        if (!ret) {
+            ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
+        }
+    }
+    catch (yaml::OperationException e) {
+        ::fatal("cannot read the configuration file, %s", e.message());
     }
 
     bool m_daemon = m_conf["daemon"].as<bool>(false);
