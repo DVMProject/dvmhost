@@ -47,44 +47,51 @@ using namespace modem;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define BAD_CMD_STR                 "Bad or invalid remote command."
-#define INVALID_OPT_STR             "Invalid command arguments: "
-#define CMD_FAILED_STR              "Remote command failed: "
+#define BAD_CMD_STR                     "Bad or invalid remote command."
+#define INVALID_OPT_STR                 "Invalid command arguments: "
+#define CMD_FAILED_STR                  "Remote command failed: "
 
-#define RCD_MODE_CMD                "mdm-mode"
-#define RCD_MODE_OPT_IDLE           "idle"
-#define RCD_MODE_OPT_LCKOUT         "lockout"
-#define RCD_MODE_OPT_FDMR           "dmr"
-#define RCD_MODE_OPT_FP25           "p25"
+#define RCD_MODE_CMD                    "mdm-mode"
+#define RCD_MODE_OPT_IDLE               "idle"
+#define RCD_MODE_OPT_LCKOUT             "lockout"
+#define RCD_MODE_OPT_FDMR               "dmr"
+#define RCD_MODE_OPT_FP25               "p25"
 
-#define RCD_KILL_CMD                "mdm-kill"
+#define RCD_KILL_CMD                    "mdm-kill"
 
-#define RCD_RID_WLIST_CMD           "rid-whitelist"
-#define RCD_RID_BLIST_CMD           "rid-blacklist"
+#define RCD_RID_WLIST_CMD               "rid-whitelist"
+#define RCD_RID_BLIST_CMD               "rid-blacklist"
 
-#define RCD_DMR_BEACON_CMD          "dmr-beacon"
-#define RCD_P25_CC_CMD              "p25-cc"
+#define RCD_DMR_BEACON_CMD              "dmr-beacon"
+#define RCD_P25_CC_CMD                  "p25-cc"
 
-#define RCD_DMRD_MDM_INJ_CMD        "dmrd-mdm-inj"
-#define RCD_P25D_MDM_INJ_CMD        "p25d-mdm-inj"
+#define RCD_DMRD_MDM_INJ_CMD            "dmrd-mdm-inj"
+#define RCD_P25D_MDM_INJ_CMD            "p25d-mdm-inj"
 
-#define RCD_DMR_RID_PAGE_CMD        "dmr-rid-page"
-#define RCD_DMR_RID_CHECK_CMD       "dmr-rid-check"
-#define RCD_DMR_RID_INHIBIT_CMD     "dmr-rid-inhibit"
-#define RCD_DMR_RID_UNINHIBIT_CMD   "dmr-rid-uninhibit"
+#define RCD_DMR_RID_PAGE_CMD            "dmr-rid-page"
+#define RCD_DMR_RID_CHECK_CMD           "dmr-rid-check"
+#define RCD_DMR_RID_INHIBIT_CMD         "dmr-rid-inhibit"
+#define RCD_DMR_RID_UNINHIBIT_CMD       "dmr-rid-uninhibit"
 
-#define RCD_P25_SET_MFID_CMD        "p25-set-mfid"
-#define RCD_P25_RID_PAGE_CMD        "p25-rid-page"
-#define RCD_P25_RID_CHECK_CMD       "p25-rid-check"
-#define RCD_P25_RID_INHIBIT_CMD     "p25-rid-inhibit"
-#define RCD_P25_RID_UNINHIBIT_CMD   "p25-rid-uninhibit"
-#define RCD_P25_RID_GAQ_CMD         "p25-rid-gaq"
-#define RCD_P25_RID_UREG_CMD        "p25-rid-ureg"
+#define RCD_P25_SET_MFID_CMD            "p25-set-mfid"
+#define RCD_P25_RID_PAGE_CMD            "p25-rid-page"
+#define RCD_P25_RID_CHECK_CMD           "p25-rid-check"
+#define RCD_P25_RID_INHIBIT_CMD         "p25-rid-inhibit"
+#define RCD_P25_RID_UNINHIBIT_CMD       "p25-rid-uninhibit"
+#define RCD_P25_RID_GAQ_CMD             "p25-rid-gaq"
+#define RCD_P25_RID_UREG_CMD            "p25-rid-ureg"
 
-#define RCD_P25_PATCH_CMD           "p25-patch"
+#define RCD_P25_PATCH_CMD               "p25-patch"
 
-#define RCD_P25_RELEASE_GRANTS      "p25-rel-grnts"
-#define RCD_P25_RELEASE_AFFS        "p25-rel-affs"
+#define RCD_P25_RELEASE_GRANTS_CMD      "p25-rel-grnts"
+#define RCD_P25_RELEASE_AFFS_CMD        "p25-rel-affs"
+
+#define RCD_P25_CC_DEDICATED_CMD        "p25-cc-dedicated"
+#define RCD_P25_CC_BCAST_CMD            "p25-cc-bcast"
+
+#define RCD_DMR_DEBUG                   "dmr-debug"
+#define RCD_P25_DEBUG                   "p25-debug"
+#define RCD_P25_DUMP_TSBK               "p25-dump-tsbk"
 
 const uint32_t START_OF_TEXT = 0x02;
 const uint32_t REC_SEPARATOR = 0x1E;
@@ -224,15 +231,18 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 if (mode == RCD_MODE_OPT_IDLE) {
                     host->m_fixedMode = false;
                     host->setMode(STATE_IDLE);
+                    LogInfoEx(LOG_RCON, "Dynamic mode, mode %u", host->m_mode);
                 }
                 else if (mode == RCD_MODE_OPT_LCKOUT) {
                     host->m_fixedMode = false;
                     host->setMode(HOST_STATE_LOCKOUT);
+                    LogInfoEx(LOG_RCON, "Lockout mode, mode %u", host->m_mode);
                 }
                 else if (mode == RCD_MODE_OPT_FDMR) {
                     if (dmr != NULL) {
                         host->m_fixedMode = true;
                         host->setMode(STATE_DMR);
+                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_mode);
                     }
                     else {
                         LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
@@ -242,6 +252,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     if (p25 != NULL) {
                         host->m_fixedMode = true;
                         host->setMode(STATE_P25);
+                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_mode);
                     }
                     else {
                         LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
@@ -276,7 +287,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_DMR_BEACON_CMD) {
                 // Command is in the form of: "dmr-beacon"
                 if (dmr != NULL) {
-                    g_fireDMRBeacon = true;
+                    if (host->m_dmrBeacons) {
+                        g_fireDMRBeacon = true;
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "DMR beacons is not enabled!");
+                    }
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
@@ -285,7 +301,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_P25_CC_CMD) {
                 // Command is in the form of: "p25-cc"
                 if (p25 != NULL) {
-                    g_fireP25Control = true;
+                    if (host->m_controlData) {
+                        g_fireP25Control = true;
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "P25 control data is not enabled!");
+                    }
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
@@ -626,7 +647,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RELEASE_GRANTS) {
+            else if (rcom == RCD_P25_RELEASE_GRANTS_CMD) {
                 // Command is in the form of: "p25-rel-grnts"
                 if (p25 != NULL) {
                     p25->trunk()->releaseDstIdGrant(0, true);
@@ -635,7 +656,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
-            else if (rcom == RCD_P25_RELEASE_AFFS) {
+            else if (rcom == RCD_P25_RELEASE_AFFS_CMD) {
                 // Command is in the form of: "p25-rel-affs <group>"
                 if (p25 != NULL) {
                     uint32_t grp = getArgUInt32(args, 0U);
@@ -646,6 +667,87 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     else {
                         p25->trunk()->clearGrpAff(grp, false);
                     }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_CC_DEDICATED_CMD) {
+                // Command is in the form of: "p25-cc-dedicated"
+                if (p25 != NULL) {
+                    if (host->m_controlData) {
+                        if (dmr != NULL) {
+                            LogError(LOG_RCON, CMD_FAILED_STR "Can't enable P25 control channel while DMR is enabled!");
+                        }
+                        else {
+                            host->m_p25CtrlChannel = !host->m_p25CtrlChannel;
+                            host->m_p25CtrlBroadcast = true;
+                            g_fireP25Control = true;
+                            g_interruptP25Control = false;
+
+                            LogInfoEx(LOG_RCON, "P25 CC is %s", host->m_p25CtrlChannel ? "enabled" : "disabled");
+                        }
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "P25 control data is not enabled!");
+                    }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_CC_BCAST_CMD) {
+                // Command is in the form of: "p25-cc-bcast"
+                if (p25 != NULL) {
+                    if (host->m_controlData) {
+                        host->m_p25CtrlBroadcast = !host->m_p25CtrlBroadcast;
+
+                        if (!host->m_p25CtrlBroadcast) {
+                            g_fireP25Control = false;
+                            g_interruptP25Control = true;
+                        }
+                        else {
+                            g_fireP25Control = true;
+                            g_interruptP25Control = false;
+                        }
+
+                        LogInfoEx(LOG_RCON, "P25 CC broadcast is %s", host->m_p25CtrlBroadcast ? "enabled" : "disabled");
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "P25 control data is not enabled!");
+                    }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_DMR_DEBUG) {
+                // Command is in the form of: "dmr-debug <debug 0/1> <trace 0/1>"
+                uint8_t debug = getArgUInt8(args, 0U);
+                uint8_t verbose = getArgUInt8(args, 1U);
+                if (dmr != NULL) {
+                    dmr->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_DEBUG) {
+                // Command is in the form of: "p25-debug <debug 0/1> <trace 0/1>"
+                uint8_t debug = getArgUInt8(args, 0U);
+                uint8_t verbose = getArgUInt8(args, 1U);
+                if (p25 != NULL) {
+                    p25->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_DUMP_TSBK) {
+                // Command is in the form of: "p25-dump-tsbk 0/1"
+                uint8_t verbose = getArgUInt8(args, 0U);
+                if (p25 != NULL) {
+                    p25->trunk()->setTSBKVerbose((verbose == 1U) ? true : false);
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");

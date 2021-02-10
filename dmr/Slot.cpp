@@ -435,6 +435,17 @@ void Slot::init(uint32_t colorCode, bool embeddedLCOnly, bool dumpTAData, uint32
 //  Private Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
+/// Helper to change the debug and verbose state.
+/// </summary>
+/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+void Slot::setDebugVerbose(bool debug, bool verbose)
+{
+    m_debug = m_voice->m_debug = m_data->m_debug = debug;
+    m_verbose = m_voice->m_verbose = m_data->m_verbose = verbose;
+}
+
+/// <summary>
 /// Write data processed from RF to the data ring buffer.
 /// </summary>
 /// <param name="data"></param>

@@ -106,6 +106,9 @@ namespace p25
         /// <summary></summary>
         TrunkPacket* trunk() { return m_trunk; }
 
+        /// <summary>Helper to change the debug and verbose state.</summary>
+        void setDebugVerbose(bool debug, bool verbose);
+
     private:
         friend class VoicePacket;
         VoicePacket* m_voice;

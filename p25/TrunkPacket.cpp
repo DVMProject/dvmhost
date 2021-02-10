@@ -1251,6 +1251,19 @@ void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint3
     m_rfTSBK.setMFId(P25_MFG_STANDARD);
 }
 
+/// <summary>
+/// Helper to change the TSBK verbose state.
+/// </summary>
+/// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
+void TrunkPacket::setTSBKVerbose(bool verbose)
+{
+    m_rfTSBK.setVerbose(verbose);
+    m_netTSBK.setVerbose(verbose);
+
+    m_rfTDULC.setVerbose(verbose);
+    m_netTDULC.setVerbose(verbose);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

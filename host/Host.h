@@ -79,7 +79,8 @@ private:
     bool m_dmrEnabled;
     bool m_p25Enabled;
 
-    bool m_p25CtrlBcstContinuous;
+    bool m_p25CtrlChannel;
+    bool m_p25CtrlBroadcast;
 
     bool m_duplex;
     bool m_fixedMode;

@@ -612,6 +612,17 @@ void Control::clock(uint32_t ms)
     m_trunk->clock(ms);
 }
 
+/// <summary>
+/// Helper to change the debug and verbose state.
+/// </summary>
+/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+void Control::setDebugVerbose(bool debug, bool verbose)
+{
+    m_debug = m_voice->m_debug = m_data->m_debug = m_trunk->m_debug = debug;
+    m_verbose = m_voice->m_verbose = m_data->m_verbose = m_trunk->m_verbose = verbose;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

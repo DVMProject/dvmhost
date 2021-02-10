@@ -74,7 +74,7 @@ Host::Host(const std::string& confFile) :
     m_cwIdTimer(1000U),
     m_dmrEnabled(false),
     m_p25Enabled(false),
-    m_p25CtrlBcstContinuous(false),
+    m_p25CtrlChannel(false),
     m_duplex(false),
     m_fixedMode(false),
     m_timeout(180U),
@@ -341,7 +341,8 @@ int Host::run()
         yaml::Node p25Protocol = protocolConf["p25"];
         uint32_t tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
         m_controlData = p25Protocol["control"]["enable"].as<bool>(false);
-        bool controlBcstContinuous = p25Protocol["control"]["continuous"].as<bool>(false);
+        bool p25CtrlChannel = p25Protocol["control"]["dedicated"].as<bool>(false);
+        bool p25CtrlBroadcast = p25Protocol["control"]["broadcast"].as<bool>(true);
         bool p25DumpDataPacket = p25Protocol["dumpDataPacket"].as<bool>(false);
         bool p25RepeatDataPacket = p25Protocol["repeatDataPacket"].as<bool>(true);
         bool p25DumpTsbkData = p25Protocol["dumpTsbkData"].as<bool>(false);
@@ -359,27 +360,35 @@ int Host::run()
 
         LogInfo("    Control: %s", m_controlData ? "yes" : "no");
 
-        uint32_t p25ControlBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(60U);
+        uint32_t p25ControlBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
         uint32_t p25ControlBcstDuration = p25Protocol["control"]["duration"].as<uint32_t>(1U);
         if (m_controlData) {
-            LogInfo("    Control Broadcast Continuous: %s", controlBcstContinuous ? "yes" : "no");
-            if (controlBcstContinuous) {
+            LogInfo("    Control Broadcast: %s", p25CtrlBroadcast ? "yes" : "no");
+            LogInfo("    Control Channel: %s", p25CtrlChannel ? "yes" : "no");
+            if (p25CtrlChannel) {
                 p25ControlBcstInterval = 30U;
                 p25ControlBcstDuration = 120U;
-                m_p25CtrlBcstContinuous = controlBcstContinuous;
+                m_p25CtrlChannel = p25CtrlChannel;
             }
             else {
                 LogInfo("    Control Broadcast Interval: %us", p25ControlBcstInterval);
                 LogInfo("    Control Broadcast Duration: %us", p25ControlBcstDuration);
             }
 
+            m_p25CtrlBroadcast = p25CtrlBroadcast;
             p25CCIntervalTimer.setTimeout(p25ControlBcstInterval);
             p25CCIntervalTimer.start();
 
             p25CCDurationTimer.setTimeout(p25ControlBcstDuration);
 
-            g_fireP25Control = true;
-            g_interruptP25Control = false;
+            if (p25CtrlBroadcast) {
+                g_fireP25Control = true;
+                g_interruptP25Control = false;
+            }
+            else {
+                g_fireP25Control = false;
+                g_interruptP25Control = false;
+            }
         }
 
         p25 = new p25::Control(m_p25NAC, callHang, p25QueueSize, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
@@ -401,7 +410,7 @@ int Host::run()
         g_killed = true;
     }
 
-    if (m_dmrEnabled && m_p25CtrlBcstContinuous) {
+    if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
         g_killed = true;
     }
@@ -422,7 +431,21 @@ int Host::run()
     }
 
     if (!g_killed) {
-        setMode(STATE_IDLE);
+        // fixed more or P25 control channel will force a mode change
+        if (m_fixedMode || m_p25CtrlChannel) {
+            if (m_p25CtrlChannel) {
+                m_fixedMode = true;
+            }
+
+            if (dmr != NULL)
+                setMode(STATE_DMR);
+            if (p25 != NULL)
+                setMode(STATE_P25);
+        }
+        else {
+            setMode(STATE_IDLE);
+        }
+
         ::LogInfoEx(LOG_HOST, "Host is performing late initialization and warmup");
 
         // perform early pumping of the modem clock (this is so the DSP has time to setup its buffers),
@@ -925,73 +948,75 @@ int Host::run()
 
         /** P25 */
         if (p25 != NULL) {
-            // clock and check P25 CC broadcast interval timer
-            p25CCIntervalTimer.clock(ms);
-            if ((p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) || g_fireP25Control) {
-                if (hasCw) {
-                    g_fireP25Control = false;
-                    p25CCIntervalTimer.start();
-                }
-                else {
-                    if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
-                        if (m_modeTimer.isRunning()) {
-                            m_modeTimer.stop();
-                        }
-
-                        if (m_mode != STATE_P25)
-                            setMode(STATE_P25);
-
-                        if (g_interruptP25Control) {
-                            g_interruptP25Control = false;
-                            LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
-                        }
-
-                        p25->writeAdjSSNetwork();
-                        p25->setCCRunning(true);
-
-                        // hide this message for continuous CC -- otherwise display every time we process
-                        if (!m_p25CtrlBcstContinuous) {
-                            LogMessage(LOG_HOST, "P25, start CC broadcast");
-                        }
-
+            if (m_p25CtrlBroadcast) {
+                // clock and check P25 CC broadcast interval timer
+                p25CCIntervalTimer.clock(ms);
+                if ((p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) || g_fireP25Control) {
+                    if (hasCw) {
                         g_fireP25Control = false;
                         p25CCIntervalTimer.start();
-                        p25CCDurationTimer.start();
+                    }
+                    else {
+                        if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
+                            if (m_modeTimer.isRunning()) {
+                                m_modeTimer.stop();
+                            }
 
-                        // if the CC is continuous -- clock one cycle into the duration timer
-                        if (m_p25CtrlBcstContinuous) {
-                            p25CCDurationTimer.clock(ms);
+                            if (m_mode != STATE_P25)
+                                setMode(STATE_P25);
+
+                            if (g_interruptP25Control) {
+                                g_interruptP25Control = false;
+                                LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
+                            }
+
+                            p25->writeAdjSSNetwork();
+                            p25->setCCRunning(true);
+
+                            // hide this message for continuous CC -- otherwise display every time we process
+                            if (!m_p25CtrlChannel) {
+                                LogMessage(LOG_HOST, "P25, start CC broadcast");
+                            }
+
+                            g_fireP25Control = false;
+                            p25CCIntervalTimer.start();
+                            p25CCDurationTimer.start();
+
+                            // if the CC is continuous -- clock one cycle into the duration timer
+                            if (m_p25CtrlChannel) {
+                                p25CCDurationTimer.clock(ms);
+                            }
                         }
                     }
                 }
-            }
 
-            // if the CC is continuous -- we don't clock the CC duration timer (which results in the CC
-            // broadcast running infinitely until stopped)
-            if (!m_p25CtrlBcstContinuous) {
-                // clock and check P25 CC broadcast duration timer
-                p25CCDurationTimer.clock(ms);
-                if (p25CCDurationTimer.isRunning() && p25CCDurationTimer.hasExpired()) {
-                    p25CCDurationTimer.stop();
+                // if the CC is continuous -- we don't clock the CC duration timer (which results in the CC
+                // broadcast running infinitely until stopped)
+                if (!m_p25CtrlChannel) {
+                    // clock and check P25 CC broadcast duration timer
+                    p25CCDurationTimer.clock(ms);
+                    if (p25CCDurationTimer.isRunning() && p25CCDurationTimer.hasExpired()) {
+                        p25CCDurationTimer.stop();
 
-                    p25->writeControlEndRF();
-                    p25->setCCRunning(false);
+                        p25->writeControlEndRF();
+                        p25->setCCRunning(false);
 
-                    if (m_mode == STATE_P25 && !m_modeTimer.isRunning()) {
-                        m_modeTimer.setTimeout(m_rfModeHang);
-                        m_modeTimer.start();
+                        if (m_mode == STATE_P25 && !m_modeTimer.isRunning()) {
+                            m_modeTimer.setTimeout(m_rfModeHang);
+                            m_modeTimer.start();
+                        }
                     }
-                }
 
-                if (p25CCDurationTimer.isPaused()) {
-                    p25CCDurationTimer.resume();
+                    if (p25CCDurationTimer.isPaused()) {
+                        p25CCDurationTimer.resume();
+                    }
                 }
             }
         }
 
         if (g_killed) {
             if (p25 != NULL) {
-                if (m_p25CtrlBcstContinuous && !hasTxShutdown) {
+                if (m_p25CtrlChannel && !hasTxShutdown) {
                     m_modem->clearP25Data();
                     p25->reset();
 
@@ -1374,9 +1399,9 @@ void Host::setMode(uint8_t mode)
 {
     assert(m_modem != NULL);
 
-    if (m_mode != mode) {
-        LogDebug(LOG_HOST, "setMode, m_mode = %u, mode = %u", m_mode, mode);
-    }
+    //if (m_mode != mode) {
+    //    LogDebug(LOG_HOST, "setMode, m_mode = %u, mode = %u", m_mode, mode);
+    //}
 
     switch (mode) {
         case STATE_DMR:
@@ -1403,7 +1428,7 @@ void Host::setMode(uint8_t mode)
             break;
 
         case HOST_STATE_LOCKOUT:
-            LogWarning(LOG_HOST, "Mode change, MODE_LOCKOUT");
+            LogWarning(LOG_HOST, "Mode change, HOST_STATE_LOCKOUT");
             if (m_network != NULL)
                 m_network->enable(false);
 
@@ -1420,7 +1445,7 @@ void Host::setMode(uint8_t mode)
             break;
 
         case HOST_STATE_ERROR:
-            LogWarning(LOG_HOST, "Mode change, MODE_ERROR");
+            LogWarning(LOG_HOST, "Mode change, HOST_STATE_ERROR");
             if (m_network != NULL)
                 m_network->enable(false);
 

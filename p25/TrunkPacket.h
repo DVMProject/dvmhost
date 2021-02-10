@@ -123,6 +123,9 @@ namespace p25
         /// <summary>Helper to write a Motorola patch packet.</summary>
         void writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3);
 
+        /// <summary>Helper to change the TSBK verbose state.</summary>
+        void setTSBKVerbose(bool verbose);
+
     private:
         friend class VoicePacket;
         friend class DataPacket;

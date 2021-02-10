@@ -83,6 +83,9 @@ namespace dmr
         /// <summary>Helper to write a DMR call alert packet on the RF interface.</summary>
         void writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId);
 
+        /// <summary>Helper to change the debug and verbose state.</summary>
+        void setDebugVerbose(bool debug, bool verbose);
+
     private:
         uint32_t m_colorCode;
 

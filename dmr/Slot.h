@@ -164,6 +164,9 @@ namespace dmr
         static uint8_t m_id2;
         static bool m_voice2;
 
+        /// <summary>Helper to change the debug and verbose state.</summary>
+        void setDebugVerbose(bool debug, bool verbose);
+
         /// <summary>Write data processed from RF to the data ring buffer.</summary>
         void writeQueueRF(const uint8_t* data);
         /// <summary>Write data processed from the network to the data ring buffer.</summary>

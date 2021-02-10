@@ -46,8 +46,9 @@ protocols:
         control:
             enable: false
             ackRequests: true
-            continuous: false
-            interval: 60
+            dedicated: false
+            broadcast: true
+            interval: 300
             duration: 1
         voiceOnControl: false
         inhibitIllegal: false

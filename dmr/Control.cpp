@@ -256,3 +256,16 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
         break;
     }
 }
+
+/// <summary>
+/// Helper to change the debug and verbose state.
+/// </summary>
+/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+void Control::setDebugVerbose(bool debug, bool verbose)
+{
+    m_debug = debug;
+    m_verbose = verbose;
+    m_slot1->setDebugVerbose(debug, verbose);
+    m_slot2->setDebugVerbose(debug, verbose);
+}
