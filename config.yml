@@ -37,7 +37,7 @@ protocols:
         dumpCsbkData: false
         callHang: 5
         txHang: 8
-        queueSize: 10000
+        queueSize: 5000
         verbose: true
         debug: false
     p25:
@@ -70,7 +70,7 @@ protocols:
             radioForceReg: 0
             radioForceDereg: 0
         silenceThreshold: 124
-        queueSize: 16000
+        queueSize: 5000
         verbose: true
         debug: false
 system:
