@@ -1518,35 +1518,6 @@ void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
 }
 
 /// <summary>
-/// Helper to write a P25 TDU w/ link control channel grant packet.
-/// </summary>
-/// <param name="grp"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-void TrunkPacket::writeRF_TDULC_ChanGrant(bool grp, uint32_t srcId, uint32_t dstId)
-{
-    m_p25->writeRF_TDU(true);
-    m_p25->m_voice->m_lastDUID = P25_DUID_TDU;
-
-    if ((srcId != 0U) && (dstId != 0U)) {
-        for (uint32_t i = 0; i < 4; i++) {
-            m_rfTDULC.setSrcId(srcId);
-            m_rfTDULC.setDstId(dstId);
-            m_rfTDULC.setEmergency(false);
-
-            if (grp) {
-                m_rfTDULC.setLCO(LC_GROUP);
-                writeRF_TDULC(P25_DUID_TDULC, true);
-            }
-            else {
-                m_rfTDULC.setLCO(LC_PRIVATE);
-                writeRF_TDULC(P25_DUID_TDULC, true);
-            }
-        }
-    }
-}
-
-/// <summary>
 /// Helper to write a P25 TDU w/ link control channel release packet.
 /// </summary>
 /// <param name="grp"></param>

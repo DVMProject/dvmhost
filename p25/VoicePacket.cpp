@@ -162,6 +162,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_p25->writeRF_TDU(true);
             }
 
+            m_p25->writeRF_Preamble();
+
             m_p25->m_rfTGHang.start();
             m_p25->m_rfLastDstId = m_rfLC.getDstId();
 
@@ -332,8 +334,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, false);
             }
 
-            m_p25->m_trunk->writeRF_TDULC_ChanGrant(m_rfLC.getGroup(), srcId, dstId);
-
             // perform lost/corrupt HDU checking
             if (m_rfLastHDU.getAlgId() != P25_ALGO_UNENCRYPT && m_rfLastHDU.getKId() != 0) {
                 if ((m_rfLC.getAlgId() == P25_ALGO_UNENCRYPT && m_rfLC.getAlgId() != m_rfLastHDU.getAlgId()) &&
@@ -353,8 +353,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             }
 
             m_hadVoice = true;
-
-            m_p25->writeRF_Preamble();
 
             m_p25->m_rfState = RS_RF_AUDIO;
 
@@ -1129,8 +1127,6 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
         m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, true);
     }
-
-    m_p25->m_trunk->writeRF_TDULC_ChanGrant(group, srcId, dstId);
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());

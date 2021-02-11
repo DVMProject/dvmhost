@@ -202,8 +202,6 @@ namespace p25
 
         /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
         void writeRF_TDULC(uint8_t duid, bool noNetwork);
-        /// <summary>Helper to write a P25 TDU w/ link control channel grant packet.</summary>
-        void writeRF_TDULC_ChanGrant(bool grp, uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
         void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
