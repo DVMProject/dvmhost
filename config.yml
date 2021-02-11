@@ -70,6 +70,7 @@ protocols:
             radioForceReg: 0
             radioForceDereg: 0
         silenceThreshold: 124
+        disableNetworkHDU: false
         queueSize: 5000
         verbose: true
         debug: false

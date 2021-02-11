@@ -117,8 +117,6 @@ namespace p25
         /// <summary>Helper to write end of voice frame data.</summary>
         void writeRF_EndOfVoice();
 
-        /// <summary>Helper to write a network P25 HDU packet.</summary>
-        void writeNet_HDU(const lc::LC& control, const data::LowSpeedData& lsd);
         /// <summary>Helper to write a network P25 TDU packet.</summary>
         void writeNet_TDU();
         /// <summary>Helper to check for an unflushed LDU1 packet.</summary>

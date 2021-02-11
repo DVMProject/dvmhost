@@ -1580,7 +1580,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     m_rfTSBK.encode(data + 2U, true);
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
+        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
     }
 
     // Add busy bits
@@ -1648,7 +1648,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         m_rfTSBK.encode(tsbk, false);
 
         if (m_debug) {
-            Utils::dump(2U, "!!! *TSDU MBF Last TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
+            Utils::dump(1U, "!!! *TSDU MBF Last TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
         }
 
         Utils::setBitRange(tsbk, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
@@ -1663,7 +1663,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
             Utils::getBitRange(m_rfMBF, tsbk, offset, P25_TSBK_FEC_LENGTH_BITS);
 
             if (m_debug) {
-                Utils::dump(2U, "!!! *TSDU (MBF) TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
+                Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
             }
                 
             // Add TSBK data
@@ -1716,7 +1716,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
     m_rfTSBK.encode(tsbk, false);
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *TSDU MBF Block Data", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
+        Utils::dump(1U, "!!! *TSDU MBF Block Data", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
     }
 
     Utils::setBitRange(tsbk, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);

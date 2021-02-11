@@ -334,8 +334,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, false);
             }
 
-            m_rfLC.reset();
-            m_rfLC.setDstId(m_rfLastHDU.getDstId());
+            if (m_rfLC.getDstId() != m_rfLastHDU.getDstId()) {
+                m_rfLC.setDstId(m_rfLastHDU.getDstId());
+            }
+
             m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
             m_rfLC.setKId(m_rfLastHDU.getKId());
 
@@ -354,9 +356,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
             ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
-
-            buffer[0U] = TAG_DATA;
-            buffer[1U] = 0x00U;
 
             // Generate Sync
             Sync::addP25Sync(buffer + 2U);
@@ -400,6 +399,30 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (!ret) {
                     LogWarning(LOG_RF, P25_LDU1_STR ", undecodable LC, using last LDU1 LC");
                     m_rfLC = m_rfLastLDU1;
+
+                    // ensure our srcId and dstId are sane from the last LDU1
+                    if (m_rfLastLDU1.getDstId() != 0U) {
+                        if (m_rfLC.getDstId() != m_rfLastLDU1.getDstId()) {
+                            LogWarning(LOG_RF, P25_LDU2_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
+                                m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
+                            m_rfLC.setDstId(m_rfLastLDU1.getDstId());
+                        }
+                    }
+                    else {
+                        LogWarning(LOG_RF, P25_LDU2_STR ", last LDU1 LC has bad data, dstId = 0");
+                    }
+
+                    if (m_rfLastLDU1.getSrcId() != 0U) {
+                        if (m_rfLC.getSrcId() != m_rfLastLDU1.getSrcId()) {
+                            LogWarning(LOG_RF, P25_LDU2_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
+                                m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
+                            m_rfLC.setSrcId(m_rfLastLDU1.getSrcId());
+                        }
+                    }
+                    else {
+                        LogWarning(LOG_RF, P25_LDU2_STR ", last LDU1 LC has bad data, srcId = 0");
+                    }
+
                     m_rfUndecodableLC++;
                 }
                 else {
@@ -491,30 +514,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (!ret) {
                 LogWarning(LOG_RF, P25_LDU2_STR ", undecodable LC, using last LDU2 LC");
                 m_rfLC = m_rfLastLDU2;
-
-                // ensure our srcId and dstId are sane from the last LDU1
-                if (m_rfLastLDU1.getDstId() != 0U) {
-                    if (m_rfLC.getDstId() != m_rfLastLDU1.getDstId()) {
-                        LogWarning(LOG_RF, P25_LDU2_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
-                            m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
-                        m_rfLC.setDstId(m_rfLastLDU1.getDstId());
-                    }
-                }
-                else {
-                    LogWarning(LOG_RF, P25_LDU2_STR ", last LDU1 LC has bad data, dstId = 0");
-                }
-
-                if (m_rfLastLDU1.getSrcId() != 0U) {
-                    if (m_rfLC.getSrcId() != m_rfLastLDU1.getSrcId()) {
-                        LogWarning(LOG_RF, P25_LDU2_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
-                            m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
-                        m_rfLC.setSrcId(m_rfLastLDU1.getSrcId());
-                    }
-                }
-                else {
-                    LogWarning(LOG_RF, P25_LDU2_STR ", last LDU1 LC has bad data, srcId = 0");
-                }
-
                 m_rfUndecodableLC++;
             }
             else {
@@ -762,10 +761,7 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                     m_p25->m_trunk->resetRF();
                     m_p25->m_trunk->resetNet();
 
-                    writeNet_HDU(control, lsd);
-                    if (m_p25->m_netState != RS_NET_IDLE) {
-                        writeNet_LDU1(control, lsd);
-                    }
+                    writeNet_LDU1(control, lsd);
                 }
                 else {
                     checkNet_LDU1(control, lsd);
@@ -956,210 +952,6 @@ void VoicePacket::writeRF_EndOfVoice()
 }
 
 /// <summary>
-/// Helper to write a network P25 HDU packet.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& lsd)
-{
-    uint8_t lco = control.getLCO();
-    uint8_t mfId = control.getMFId();
-    uint32_t dstId = control.getDstId();
-    uint32_t srcId = control.getSrcId();
-
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_p25->m_rfLastDstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            resetNet();
-            return;
-        }
-
-        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            m_p25->m_rfTGHang.start();
-        }
-    }
-
-    // ensure our srcId and dstId are sane from the last LDU1
-    if (m_netLastLDU1.getDstId() != 0U) {
-        if (dstId != m_netLastLDU1.getDstId()) {
-            LogWarning(LOG_NET, P25_HDU_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
-                m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
-            dstId = m_netLastLDU1.getDstId();
-        }
-    }
-    else {
-        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, dstId = 0");
-    }
-
-    if (m_netLastLDU1.getSrcId() != 0U) {
-        if (srcId != m_netLastLDU1.getSrcId()) {
-            LogWarning(LOG_NET, P25_HDU_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
-                m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
-            srcId = m_netLastLDU1.getSrcId();
-        }
-    }
-    else {
-        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, srcId = 0");
-    }
-
-    // don't process network frames if the RF modem isn't in a listening state
-    if (m_p25->m_rfState != RS_RF_LISTENING) {
-        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
-                srcId, dstId);
-            resetNet();
-            return;
-        }
-        else {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
-                dstId);
-            resetNet();
-            return;
-        }
-    }
-
-    uint8_t algId = m_netLDU2[126U];
-    uint32_t kId = (m_netLDU2[127U] << 8) + m_netLDU2[128U];
-    bool group = control.getLCO() == LC_GROUP;
-
-    uint8_t mi[P25_MI_LENGTH_BYTES];
-    ::memcpy(mi + 0U, m_netLDU2 + 51U, 3U);
-    ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
-    ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
-
-    // Utils::dump(1U, "HDU Network MI", mi, P25_MI_LENGTH_BYTES);
-
-    uint8_t serviceOptions = (uint8_t)(m_netLDU1[53U]);
-
-    m_netLC.reset();
-    m_netLC.setMI(mi);
-    m_netLC.setAlgId(algId);
-    m_netLC.setKId(kId);
-    m_netLC.setLCO(lco);
-    m_netLC.setMFId(mfId);
-    m_netLC.setSrcId(srcId);
-    m_netLC.setDstId(dstId);
-    m_netLC.setGroup(group);
-    m_netLC.setEmergency((serviceOptions & 0x80U) == 0x80U);
-    m_netLC.setEncrypted((serviceOptions & 0x40U) == 0x40U);
-    m_netLC.setPriority((serviceOptions & 0x07U));
-
-    m_p25->m_trunk->setNetLC(m_netLC);
-
-    // validate source RID
-    if (!acl::AccessControl::validateSrcId(srcId)) {
-        LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
-        return;
-    }
-
-    // is this a group or individual operation?
-    if (!group) {
-        // validate the target RID
-        if (!acl::AccessControl::validateSrcId(dstId)) {
-            LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
-            return;
-        }
-    }
-    else {
-        // validate the target ID, if the target is a talkgroup
-        if (!acl::AccessControl::validateTGId(dstId)) {
-            LogWarning(LOG_NET, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
-            return;
-        }
-    }
-
-    if (!m_p25->m_ccRunning) {
-        m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
-    }
-
-    m_p25->writeRF_Preamble();
-
-    ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-
-    m_rfLC.reset();
-    m_rfLC.setMI(mi);
-    m_rfLC.setAlgId(algId);
-    m_rfLC.setKId(kId);
-    m_rfLC.setMFId(mfId);
-    m_rfLC.setSrcId(srcId);
-    m_rfLC.setDstId(dstId);
-    m_rfLC.setGroup(group);
-    m_rfLC.setEmergency((serviceOptions & 0x80U) == 0x80U);
-    m_rfLC.setEncrypted((serviceOptions & 0x40U) == 0x40U);
-    m_rfLC.setPriority((serviceOptions & 0x07U));
-
-    m_p25->m_trunk->setRFLC(m_rfLC);
-
-    if (m_p25->m_control) {
-        if (group && (m_lastPatchGroup != dstId) &&
-            (dstId != m_p25->m_trunk->m_patchSuperGroup)) {
-            m_p25->m_trunk->writeRF_TSDU_Mot_Patch(dstId, 0U, 0U);
-            m_lastPatchGroup = dstId;
-        }
-
-        if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
-            if (m_network != NULL)
-                m_network->resetP25();
-
-            ::memset(m_netLDU1, 0x00U, 9U * 25U);
-            ::memset(m_netLDU2, 0x00U, 9U * 25U);
-
-            m_p25->m_netTimeout.stop();
-            m_p25->m_networkWatchdog.stop();
-            m_netLC.reset();
-            m_netLastLDU1.reset();
-            m_p25->m_netState = RS_NET_IDLE;
-            m_p25->m_netLastDstId = 0U;
-            if (m_p25->m_rfState == RS_RF_REJECTED) {
-                m_p25->m_rfState = RS_RF_LISTENING;
-            }
-            return;
-        }
-    }
-
-    // single-channel trunking or voice on control support?
-    if (m_p25->m_control && m_p25->m_voiceOnControl) {
-        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-        m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, true);
-    }
-
-    if (m_verbose) {
-        LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
-    }
-
-    m_hadVoice = true;
-    m_p25->m_netState = RS_NET_AUDIO;
-    m_p25->m_netLastDstId = dstId;
-    m_p25->m_netTimeout.start();
-    m_netFrames = 0U;
-    m_netLost = 0U;
-
-    uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
-
-    buffer[0U] = TAG_DATA;
-    buffer[1U] = 0x00U;
-
-    // Generate Sync
-    Sync::addP25Sync(buffer + 2U);
-
-    // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
-
-    // Generate header
-    m_netLC.encodeHDU(buffer + 2U);
-
-    // Add busy bits
-    m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
-
-    m_p25->writeQueueNet(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_HDU", buffer + 2U, P25_HDU_FRAME_LENGTH_BYTES);
-    }
-}
-
-/// <summary>
 /// Helper to write a network P25 TDU packet.
 /// </summary>
 void VoicePacket::writeNet_TDU()
@@ -1244,6 +1036,30 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
     uint8_t mfId = control.getMFId();
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
+    bool group = control.getLCO() == LC_GROUP;
+
+    // ensure our srcId and dstId are sane from the last LDU1
+    if (m_netLastLDU1.getDstId() != 0U) {
+        if (dstId != m_netLastLDU1.getDstId()) {
+            LogWarning(LOG_NET, P25_HDU_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
+                m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
+            dstId = m_netLastLDU1.getDstId();
+        }
+    }
+    else {
+        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, dstId = 0");
+    }
+
+    if (m_netLastLDU1.getSrcId() != 0U) {
+        if (srcId != m_netLastLDU1.getSrcId()) {
+            LogWarning(LOG_NET, P25_HDU_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
+                m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
+            srcId = m_netLastLDU1.getSrcId();
+        }
+    }
+    else {
+        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, srcId = 0");
+    }
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {
@@ -1257,27 +1073,174 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
         }
     }
 
+    // don't process network frames if the RF modem isn't in a listening state
+    if (m_p25->m_rfState != RS_RF_LISTENING) {
+        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                srcId, dstId);
+            resetNet();
+            return;
+        }
+        else {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                dstId);
+            resetNet();
+            return;
+        }
+    }
+
     uint8_t serviceOptions = (uint8_t)(m_netLDU1[53U]);
 
     if (m_p25->m_control) {
         m_p25->m_trunk->touchDstIdGrant(m_rfLC.getDstId());
     }
 
+    m_netLC.reset();
     m_netLC.setLCO(lco);
     m_netLC.setMFId(mfId);
     m_netLC.setSrcId(srcId);
     m_netLC.setDstId(dstId);
+    m_netLC.setGroup(group);
     m_netLC.setEmergency((serviceOptions & 0x80U) == 0x80U);
     m_netLC.setEncrypted((serviceOptions & 0x40U) == 0x40U);
     m_netLC.setPriority((serviceOptions & 0x07U));
+
+    m_rfLC.reset();
+    m_rfLC.setMFId(mfId);
+    m_rfLC.setSrcId(srcId);
+    m_rfLC.setDstId(dstId);
+    m_rfLC.setGroup(group);
+    m_rfLC.setEmergency((serviceOptions & 0x80U) == 0x80U);
+    m_rfLC.setEncrypted((serviceOptions & 0x40U) == 0x40U);
+    m_rfLC.setPriority((serviceOptions & 0x07U));
+
+    // if we are idle lets generate HDU data
+    if (m_p25->m_netState == RS_NET_IDLE) {
+        uint8_t algId = m_netLDU2[126U];
+        uint32_t kId = (m_netLDU2[127U] << 8) + m_netLDU2[128U];
+
+        uint8_t mi[P25_MI_LENGTH_BYTES];
+        ::memcpy(mi + 0U, m_netLDU2 + 51U, 3U);
+        ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
+        ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
+
+        // Utils::dump(1U, "HDU Network MI", mi, P25_MI_LENGTH_BYTES);
+
+        m_netLC.setMI(mi);
+        m_rfLC.setMI(mi);
+        m_netLC.setAlgId(algId);
+        m_rfLC.setAlgId(algId);
+        m_netLC.setKId(kId);
+        m_rfLC.setKId(kId);
+
+        m_p25->m_trunk->setNetLC(m_netLC);
+        m_p25->m_trunk->setRFLC(m_rfLC);
+
+        // validate source RID
+        if (!acl::AccessControl::validateSrcId(srcId)) {
+            LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
+            return;
+        }
+
+        // is this a group or individual operation?
+        if (!group) {
+            // validate the target RID
+            if (!acl::AccessControl::validateSrcId(dstId)) {
+                LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
+                return;
+            }
+        }
+        else {
+            // validate the target ID, if the target is a talkgroup
+            if (!acl::AccessControl::validateTGId(dstId)) {
+                LogWarning(LOG_NET, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
+                return;
+            }
+        }
+
+        m_p25->writeRF_Preamble();
+
+        ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+
+        if (m_p25->m_control) {
+            if (group && (m_lastPatchGroup != dstId) &&
+                (dstId != m_p25->m_trunk->m_patchSuperGroup)) {
+                m_p25->m_trunk->writeRF_TSDU_Mot_Patch(dstId, 0U, 0U);
+                m_lastPatchGroup = dstId;
+            }
+
+            if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
+                if (m_network != NULL)
+                    m_network->resetP25();
+
+                ::memset(m_netLDU1, 0x00U, 9U * 25U);
+                ::memset(m_netLDU2, 0x00U, 9U * 25U);
+
+                m_p25->m_netTimeout.stop();
+                m_p25->m_networkWatchdog.stop();
+                m_netLC.reset();
+                m_netLastLDU1.reset();
+                m_p25->m_netState = RS_NET_IDLE;
+                m_p25->m_netLastDstId = 0U;
+                if (m_p25->m_rfState == RS_RF_REJECTED) {
+                    m_p25->m_rfState = RS_RF_LISTENING;
+                }
+                return;
+            }
+        }
+
+        // single-channel trunking or voice on control support?
+        if (m_p25->m_control && m_p25->m_voiceOnControl) {
+            m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+            m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, true);
+        }
+
+        m_hadVoice = true;
+        m_p25->m_netState = RS_NET_AUDIO;
+        m_p25->m_netLastDstId = dstId;
+        m_p25->m_netTimeout.start();
+        m_netFrames = 0U;
+        m_netLost = 0U;
+
+        if (!m_p25->m_disableNetworkHDU) {
+            uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
+            ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+
+            // Generate Sync
+            Sync::addP25Sync(buffer + 2U);
+
+            // Generate NID
+            m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+
+            // Generate header
+            m_netLC.encodeHDU(buffer + 2U);
+
+            // Add busy bits
+            m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
+
+            buffer[0U] = TAG_DATA;
+            buffer[1U] = 0x00U;
+            m_p25->writeQueueNet(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+
+            if (m_verbose) {
+                LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+            }
+
+            if (m_debug) {
+                Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_HDU", buffer + 2U, P25_HDU_FRAME_LENGTH_BYTES);
+            }
+        }
+        else {
+            if (m_verbose) {
+                LogMessage(LOG_NET, P25_HDU_STR ", network does not transmit, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+            }
+        }
+    }
 
     insertMissingAudio(m_netLDU1);
 
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
-
-    buffer[0U] = TAG_DATA;
-    buffer[1U] = 0x00U;
 
     // Generate Sync
     Sync::addP25Sync(buffer + 2U);
@@ -1307,6 +1270,8 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
+    buffer[0U] = TAG_DATA;
+    buffer[1U] = 0x00U;
     m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
     if (m_verbose) {
@@ -1385,9 +1350,6 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
-    buffer[0U] = TAG_DATA;
-    buffer[1U] = 0x00U;
-
     // Generate Sync
     Sync::addP25Sync(buffer + 2U);
 
@@ -1416,6 +1378,8 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
+    buffer[0U] = TAG_DATA;
+    buffer[1U] = 0x00U;
     m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
     if (m_verbose) {

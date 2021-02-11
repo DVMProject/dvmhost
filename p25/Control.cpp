@@ -96,6 +96,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_continuousControl(false),
     m_voiceOnControl(false),
     m_ackTSBKRequests(true),
+    m_disableNetworkHDU(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -214,6 +215,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
 
+    m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
+
     std::vector<uint32_t> availCh = voiceChNo;
     m_trunk->m_voiceChCnt = (uint8_t)availCh.size();
     m_trunk->setSiteChCnt((uint8_t)availCh.size());
@@ -229,6 +232,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
             LogInfo("    Ack Requests: %s", m_ackTSBKRequests ? "yes" : "no");
         }
+
+        LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
