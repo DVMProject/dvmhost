@@ -719,6 +719,8 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     uint8_t mi[p25::P25_MI_LENGTH_BYTES];
     control.getMI(mi);
 
+    // Utils::dump(1U, "LDU2 Control MI", mi, p25::P25_MI_LENGTH_BYTES);
+
     // The '6D' record
     ::memcpy(tempBuf, LDU2_REC6D, 17U);
     tempBuf[1U] = mi[0U];
@@ -774,6 +776,7 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     tempBuf[2U] = lsd.getLSD2();
     m_audio.decode(data, tempBuf + 4U, 8U);
     ::memcpy(buffer + 162U, tempBuf, 16U);
+    count += 16U;
 
     buffer[23U] = count;
 

@@ -334,23 +334,16 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, false);
             }
 
-            // perform lost/corrupt HDU checking
-            if (m_rfLastHDU.getAlgId() != P25_ALGO_UNENCRYPT && m_rfLastHDU.getKId() != 0) {
-                if ((m_rfLC.getAlgId() == P25_ALGO_UNENCRYPT && m_rfLC.getAlgId() != m_rfLastHDU.getAlgId()) &&
-                    (m_rfLC.getKId() == 0 && m_rfLC.getKId() != m_rfLastHDU.getKId())) {
-                    LogWarning(LOG_RF, P25_HDU_STR ", lost or changed data, using last HDU LC");
-                    LogWarning(LOG_RF, P25_HDU_STR ", algo = $%02X, kid = $%04X doesn't match last HDU algo = $%02X, kid = $%04X, fixing",
-                            m_rfLC.getAlgId(), m_rfLC.getKId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
-                    m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
-                    m_rfLC.setKId(m_rfLastHDU.getKId());
+            m_rfLC.reset();
+            m_rfLC.setDstId(m_rfLastHDU.getDstId());
+            m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
+            m_rfLC.setKId(m_rfLastHDU.getKId());
 
-                    uint8_t mi[P25_MI_LENGTH_BYTES];
-                    m_rfLastHDU.getMI(mi);
-                    m_rfLC.setMI(mi);
+            uint8_t mi[P25_MI_LENGTH_BYTES];
+            m_rfLastHDU.getMI(mi);
+            m_rfLC.setMI(mi);
 
-                    m_rfLastHDU.reset();
-                }
-            }
+            m_rfLastHDU.reset();
 
             m_hadVoice = true;
 
@@ -474,8 +467,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_LDU1_STR ", audio, srcId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
-                    m_rfLC.getSrcId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
+                LogMessage(LOG_RF, P25_LDU1_STR ", audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
+                    m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
             }
 
             if (m_debug) {
@@ -698,7 +691,7 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 
                 // The '6A' record - IMBE Voice 9 + Low Speed Data
                 ::memcpy(m_netLDU1 + 200U, data + count, 16U);
-                count += 17U;
+                count += 16U;
 
                 m_p25->m_trunk->resetStatusCommand();
 
@@ -751,7 +744,7 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 
                 // The '73' record - IMBE Voice 18 + Low Speed Data
                 ::memcpy(m_netLDU2 + 200U, data + count, 16U);
-                count += 17U;
+                count += 16U;
 
                 m_p25->m_trunk->resetStatusCommand();
 
@@ -1034,6 +1027,8 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
     ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
     ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
 
+    // Utils::dump(1U, "HDU Network MI", mi, P25_MI_LENGTH_BYTES);
+
     uint8_t serviceOptions = (uint8_t)(m_netLDU1[53U]);
 
     m_netLC.reset();
@@ -1077,6 +1072,8 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
         m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
     }
 
+    m_p25->writeRF_Preamble();
+
     ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
     m_rfLC.reset();
@@ -1092,8 +1089,6 @@ void VoicePacket::writeNet_HDU(const lc::LC& control, const data::LowSpeedData& 
     m_rfLC.setPriority((serviceOptions & 0x07U));
 
     m_p25->m_trunk->setRFLC(m_rfLC);
-
-    m_p25->writeRF_Preamble();
 
     if (m_p25->m_control) {
         if (group && (m_lastPatchGroup != dstId) &&
@@ -1326,8 +1321,8 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
             }
         }
 
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, %u%% packet loss",
-            m_netLC.getSrcId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(), loss);
+        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, %u%% packet loss",
+            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(), loss);
     }
 
     if (m_debug) {
@@ -1378,6 +1373,8 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
     ::memcpy(mi + 0U, m_netLDU2 + 51U, 3U);
     ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
     ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
+
+    // Utils::dump(1U, "LDU2 Network MI", mi, P25_MI_LENGTH_BYTES);
 
     m_netLC.setMI(mi);
     m_netLC.setAlgId(algId);

@@ -155,6 +155,8 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
             return;
     }
 
+    // Utils::dump(2U, "Audio::decode()", temp, 18U);
+
     bool bit[144U];
 
     // De-interleave
@@ -333,6 +335,8 @@ void Audio::encode(uint8_t* data, const uint8_t* imbe, uint32_t n)
         uint32_t n = edac::IMBE_INTERLEAVE[i];
         WRITE_BIT(temp, n, bTemp[i]);
     }
+
+    // Utils::dump(2U, "Audio::encode()", temp, 18U);
 
     switch (n) {
         case 0U:
