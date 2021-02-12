@@ -606,7 +606,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_LOC_REG_REQ (Location Registration Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                writeRF_TSDU_U_Reg_Cmd(srcId);
+                writeRF_TSDU_Loc_Reg_Rsp(srcId, dstId);
                 break;
             default:
                 LogError(LOG_RF, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_rfTSBK.getMFId(), m_rfTSBK.getLCO());
@@ -2287,6 +2287,58 @@ void TrunkPacket::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
     writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
+}
+
+/// <summary>
+/// Helper to write a location registration response packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+bool TrunkPacket::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
+{
+    bool ret = false;
+
+    m_rfTSBK.setLCO(TSBK_OSP_LOC_REG_RSP);
+    m_rfTSBK.setResponse(P25_RSP_ACCEPT);
+    m_rfTSBK.setDstId(dstId);
+    m_rfTSBK.setSrcId(srcId);
+
+    // validate the source RID
+    if (!acl::AccessControl::validateSrcId(srcId)) {
+        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, RID rejection, srcId = %u", srcId);
+        ::ActivityLog("P25", true, "location registration request from %u denied", srcId);
+        m_rfTSBK.setResponse(P25_RSP_REFUSED);
+    }
+
+    // validate the source RID is registered
+    if (!hasSrcIdUnitReg(srcId)) {
+        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, RID not registered, srcId = %u", srcId);
+        ::ActivityLog("P25", true, "location registration request from %u denied", srcId);
+        writeRF_TSDU_U_Reg_Cmd(srcId);
+        return false;
+    }
+
+    // validate the talkgroup ID
+    if (m_rfTSBK.getGroup()) {
+        if (!acl::AccessControl::validateTGId(dstId)) {
+            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, TGID rejection, dstId = %u", dstId);
+            ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
+            m_rfTSBK.setResponse(P25_RSP_DENY);
+        }
+    }
+
+    if (m_rfTSBK.getResponse() == P25_RSP_ACCEPT) {
+        if (m_verbose) {
+            LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response), lra = %u, srcId = %u, dstId = %u",
+                m_rfTSBK.getLRA(), srcId, dstId);
+        }
+
+        ::ActivityLog("P25", true, "location registration request from %u", srcId);
+        ret = true;
+    }
+
+    writeRF_TSDU_SBF(false);
+    return ret;
 }
 
 /// <summary>

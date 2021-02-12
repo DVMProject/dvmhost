@@ -154,6 +154,10 @@ namespace p25
             /// <summary>Explicit SCCB channel number.</summary>
             __PROPERTY(uint32_t, sccbChannelNo, SCCBChnNo);
 
+            /** Location Data */
+            /// <summary>Location registration area.</summary>
+            __PROPERTY(uint8_t, lra, LRA);
+
             /** Patch Group data */
             /// <summary>Patch super group ID.</summary>
             __PROPERTY(uint32_t, patchSuperGroupId, PatchSuperGroupId);

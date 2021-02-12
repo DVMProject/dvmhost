@@ -237,7 +237,7 @@ bool TSBK::decode(const uint8_t* data)
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Target Radio Address
         break;
     case TSBK_IOSP_GRP_AFF:
-        m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
+        m_sysId = (uint32_t)((tsbkValue >> 40) & 0xFFFU);                           // System ID
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
@@ -273,6 +273,7 @@ bool TSBK::decode(const uint8_t* data)
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case TSBK_ISP_LOC_REG_REQ:
+        m_lra = (uint8_t)((tsbkValue >> 40) & 0xFFU);                               // LRA
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;

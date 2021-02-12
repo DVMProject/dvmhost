@@ -229,6 +229,8 @@ namespace p25
         void writeRF_TSDU_U_Dereg_Ack(uint32_t srcId);
         /// <summary>Helper to write a queue packet.</summary>
         void writeRF_TSDU_Queue(uint8_t reason, uint8_t service);
+        /// <summary>Helper to write a location registration response packet.</summary>
+        bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId);
 
         /// <summary>Helper to write a network TSDU from the RF data queue.</summary>
         void writeNet_TSDU_From_RF(uint8_t* data);
