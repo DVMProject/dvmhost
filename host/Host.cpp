@@ -1042,8 +1042,13 @@ int Host::run()
 
     setMode(HOST_STATE_QUIT);
 
-    delete dmr;
-    delete p25;
+    if (dmr != NULL) {
+        delete dmr;
+    }
+
+    if (p25 != NULL) {
+        delete p25;
+    }
 
     return EXIT_SUCCESS;
 }
@@ -1482,8 +1487,10 @@ void Host::setMode(uint8_t mode)
             m_modeTimer.stop();
 
             if (m_mode == HOST_STATE_QUIT) {
-                m_modem->close();
-                delete m_modem;
+                if (m_modem != NULL) {
+                    m_modem->close();
+                    delete m_modem;
+                }
 
                 if (m_tidLookup != NULL) {
                     m_tidLookup->stop();

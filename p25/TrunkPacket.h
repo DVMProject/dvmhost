@@ -69,6 +69,8 @@ namespace p25
         void setNetActive(bool active);
         /// <summary>Sets the total number of channels at the site.</summary>
         void setSiteChCnt(uint8_t chCnt);
+        /// <summary>Sets the service class for this site.</summary>
+        void setServiceClass(bool control, bool voiceOnControl);
 
         /// <summary>Resets the data states for the RF interface.</summary>
         void resetRF();

@@ -1834,25 +1834,25 @@ void HostCal::printDebug(const uint8_t* buffer, uint32_t length)
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %d", length - 5U, buffer + 3U, val1);
+        LogMessage(LOG_MODEM, "M: %.*s %X", length - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[length - 4U] << 8) | buffer[length - 3U];
         short val2 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %d %d", length - 7U, buffer + 3U, val1, val2);
+        LogMessage(LOG_MODEM, "M: %.*s %X %X", length - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[length - 6U] << 8) | buffer[length - 5U];
         short val2 = (buffer[length - 4U] << 8) | buffer[length - 3U];
         short val3 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %d %d %d", length - 9U, buffer + 3U, val1, val2, val3);
+        LogMessage(LOG_MODEM, "M: %.*s %X %X %X", length - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[length - 8U] << 8) | buffer[length - 7U];
         short val2 = (buffer[length - 6U] << 8) | buffer[length - 5U];
         short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
         short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %d %d %d %d", length - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogMessage(LOG_MODEM, "M: %.*s %X %X %X %X", length - 11U, buffer + 3U, val1, val2, val3, val4);
     }
 }
 

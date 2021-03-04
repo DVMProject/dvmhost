@@ -58,6 +58,7 @@ TSBK::TSBK() :
     m_lastBlock(false),
     m_aivFlag(true),
     m_extendedAddrFlag(false),
+    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
@@ -445,12 +446,10 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                            // Channel (R) Number
 
         if (m_sccbChannelId1 > 0) {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
         }
         else {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_INVALID);
+            tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
         }
         break;
     case TSBK_OSP_GRP_AFF_Q:
@@ -513,21 +512,17 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
         tsbkValue = (tsbkValue << 16) + m_sccbChannelId1;                           // SCCB Channel ID 1
         if (m_sccbChannelId1 > 0) {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
         }
         else {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_INVALID);
+            tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
         }
         tsbkValue = (tsbkValue << 16) + m_sccbChannelId2;                           // SCCB Channel ID 2
         if (m_sccbChannelId2 > 0) {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
         }
         else {
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_INVALID);
+            tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
         }
         break;
     case TSBK_OSP_RFSS_STS_BCAST:
@@ -539,8 +534,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
         tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel Number
-        tsbkValue = (tsbkValue << 8) +                                              // System Service Class
-            (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        tsbkValue = (tsbkValue << 8) + m_serviceClass;                              // System Service Class
         break;
     case TSBK_OSP_NET_STS_BCAST:
         tsbkValue = m_siteData.lra();                                               // Location Registration Area
@@ -548,8 +542,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
         tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel Number
-        tsbkValue = (tsbkValue << 8) +                                              // System Service Class
-            (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        tsbkValue = (tsbkValue << 8) + m_serviceClass;                              // System Service Class
         break;
     case TSBK_OSP_ADJ_STS_BCAST:
     {
@@ -565,8 +558,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             tsbkValue = (tsbkValue << 8) + m_adjSiteId;                             // Site ID
             tsbkValue = (tsbkValue << 4) + m_adjChannelId;                          // Channel ID
             tsbkValue = (tsbkValue << 12) + m_adjChannelNo;                         // Channel Number
-            tsbkValue = (tsbkValue << 8) +                                          // System Service Class
-                (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
         }
         else {
             LogError(LOG_P25, "invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X",

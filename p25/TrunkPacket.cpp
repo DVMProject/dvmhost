@@ -195,6 +195,29 @@ void TrunkPacket::setSiteChCnt(uint8_t chCnt)
 }
 
 /// <summary>
+/// Sets the service class for this site.
+/// </summary>
+/// <param name="control"></param>
+/// <param name="voiceOnControl"></param>
+void TrunkPacket::setServiceClass(bool control, bool voiceOnControl)
+{
+    uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
+    if (control) {
+        serviceClass |= P25_SVC_CLS_REG;
+    }
+
+    if (voiceOnControl) {
+        serviceClass |= P25_SVC_CLS_COMPOSITE;
+    }
+
+    m_rfTSBK.setServiceClass(serviceClass);
+    m_netTSBK.setServiceClass(serviceClass);
+
+    m_rfTDULC.setServiceClass(serviceClass);
+    m_netTDULC.setServiceClass(serviceClass);
+}
+
+/// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
 void TrunkPacket::resetRF()
@@ -796,6 +819,9 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         break;
                     case TSBK_OSP_U_DEREG_ACK:
                         // ignore a network user deregistration command
+                        break;
+                    case TSBK_OSP_LOC_REG_RSP:
+                        // ignore a network location registration command
                         break;
                     case TSBK_OSP_DENY_RSP:
                         if (m_verbose) {

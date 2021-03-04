@@ -113,6 +113,9 @@ namespace p25
             /// <summary>Service type.</summary>
             __PROPERTY(uint8_t, service, Service);
 
+            /// <summary>Service class.</summary>
+            __PROPERTY(uint8_t, serviceClass, ServiceClass);
+
             /// <summary>Response type.</summary>
             __PROPERTY(uint8_t, response, Response);
 

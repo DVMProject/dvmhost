@@ -56,6 +56,7 @@ TDULC::TDULC() :
     m_mfId(P25_MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
+    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
@@ -370,8 +371,7 @@ void TDULC::encodeLC(uint8_t* rs)
                 rsValue = (rsValue << 8) + m_adjSiteId;                             // Site ID
                 rsValue = (rsValue << 4) + m_adjChannelId;                          // Channel ID
                 rsValue = (rsValue << 12) + m_adjChannelNo;                         // Channel Number
-                rsValue = (rsValue << 8) +                                          // System Service Class
-                    (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+                rsValue = (rsValue << 8) + m_serviceClass;                          // System Service Class
             }
             else {
                 LogError(LOG_P25, "invalid values for LC_ADJ_STS_BCAST, tsbkAdjSiteRFSSId = $%02X, tsbkAdjSiteId = $%02X, tsbkAdjSiteChannel = $%02X",
@@ -388,8 +388,7 @@ void TDULC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 8) + m_siteData.siteId();                             // Site ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) +                                                  // System Service Class
-            (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
         break;
     case LC_NET_STS_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
@@ -398,8 +397,7 @@ void TDULC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) +                                                  // System Service Class
-            (P25_SVC_CLS_COMPOSITE | P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA | P25_SVC_CLS_REG);
+        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
         break;
     default:
         LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

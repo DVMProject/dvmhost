@@ -212,6 +212,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
+    m_trunk->setServiceClass(m_control, m_voiceOnControl);
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
 

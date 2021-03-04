@@ -1332,25 +1332,25 @@ void Modem::printDebug()
     }
     else if (m_buffer[2U] == CMD_DEBUG2) {
         short val1 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %d", m_length - 5U, m_buffer + 3U, val1);
+        LogDebug(LOG_MODEM, "M: %.*s %X", m_length - 5U, m_buffer + 3U, val1);
     }
     else if (m_buffer[2U] == CMD_DEBUG3) {
         short val1 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
         short val2 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %d %d", m_length - 7U, m_buffer + 3U, val1, val2);
+        LogDebug(LOG_MODEM, "M: %.*s %X %X", m_length - 7U, m_buffer + 3U, val1, val2);
     }
     else if (m_buffer[2U] == CMD_DEBUG4) {
         short val1 = (m_buffer[m_length - 6U] << 8) | m_buffer[m_length - 5U];
         short val2 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
         short val3 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %d %d %d", m_length - 9U, m_buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_MODEM, "M: %.*s %X %X %X", m_length - 9U, m_buffer + 3U, val1, val2, val3);
     }
     else if (m_buffer[2U] == CMD_DEBUG5) {
         short val1 = (m_buffer[m_length - 8U] << 8) | m_buffer[m_length - 7U];
         short val2 = (m_buffer[m_length - 6U] << 8) | m_buffer[m_length - 5U];
         short val3 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
         short val4 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %d %d %d %d", m_length - 11U, m_buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_MODEM, "M: %.*s %X %X %X %X", m_length - 11U, m_buffer + 3U, val1, val2, val3, val4);
     }
 }
 
