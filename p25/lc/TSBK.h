@@ -148,6 +148,8 @@ namespace p25
             __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
             /// <summary>Adjacent site channel number.</summary>
             __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
+            /// <summary>Adjacent site channel number.</summary>
+            __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
 
             /** SCCB Data */
             /// <summary>SCCB channel ID 1.</summary>

@@ -283,7 +283,8 @@ bool TSBK::decode(const uint8_t* data)
         m_adjRfssId = (uint8_t)((tsbkValue >> 32) & 0xFFU);                         // Site RFSS ID
         m_adjSiteId = (uint8_t)((tsbkValue >> 24) & 0xFFU);                         // Site ID
         m_adjChannelId = (uint8_t)((tsbkValue >> 20) & 0xFU);                       // Site Channel ID
-        m_adjChannelNo = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                     // Site Channel ID
+        m_adjChannelNo = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                     // Site Channel Number
+        m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                           // Site Service Class
         break;
     default:
         LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
@@ -558,11 +559,11 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             tsbkValue = (tsbkValue << 8) + m_adjSiteId;                             // Site ID
             tsbkValue = (tsbkValue << 4) + m_adjChannelId;                          // Channel ID
             tsbkValue = (tsbkValue << 12) + m_adjChannelNo;                         // Channel Number
-            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
+            tsbkValue = (tsbkValue << 8) + m_adjServiceClass;                       // System Service Class
         }
         else {
-            LogError(LOG_P25, "invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X",
-                m_adjRfssId, m_adjSiteId, m_adjChannelId, m_adjChannelNo);
+            LogError(LOG_P25, "invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
+                m_adjRfssId, m_adjSiteId, m_adjChannelId, m_adjChannelNo, m_adjServiceClass);
             return; // blatently ignore creating this TSBK
         }
     }
@@ -785,11 +786,12 @@ void TSBK::reset()
 
     m_extendedFunction = P25_EXT_FNCT_CHECK;
 
-    m_adjCFVA = P25_CFVA_CONV | P25_CFVA_FAILURE;
+    m_adjCFVA = P25_CFVA_FAILURE;
     m_adjRfssId = 0U;
     m_adjSiteId = 0U;
     m_adjChannelId = 0U;
     m_adjChannelNo = 0U;
+    m_adjServiceClass = P25_SVC_CLS_INVALID;
 
     /* TSBK Patch Group data */
     m_patchSuperGroupId = 0U;

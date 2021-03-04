@@ -181,7 +181,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 
     m_trunk->m_patchSuperGroup = pSuperGroup;
-    m_trunk->setSiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo);
 
     m_inhibitIllegal = p25Protocol["inhibitIllegal"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
@@ -217,6 +216,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
 
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
+
+    m_trunk->setSiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo);
 
     std::vector<uint32_t> availCh = voiceChNo;
     m_trunk->m_voiceChCnt = (uint8_t)availCh.size();

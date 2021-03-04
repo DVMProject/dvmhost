@@ -51,6 +51,7 @@ namespace p25
             m_siteId(1U),
             m_channelId(1U),
             m_channelNo(1U),
+            m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
             m_isAdjSite(false)
         {
             /* stub */
@@ -63,7 +64,8 @@ namespace p25
         /// <param name="lra">P25 Location Resource Area.</param>
         /// <param name="channelId">Channel ID.</param>
         /// <param name="channelNo">Channel Number.</param>
-        SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo) :
+        /// <param name="serviceClass">Service class.</param>
+        SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass) :
             m_lra(0U),
             m_netId(P25_WACN_STD_DEFAULT),
             m_sysId(P25_SID_STD_DEFAULT),
@@ -71,6 +73,7 @@ namespace p25
             m_siteId(1U),
             m_channelId(1U),
             m_channelNo(1U),
+            m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
             m_isAdjSite(false)
         {
             // lra clamping
@@ -121,6 +124,8 @@ namespace p25
 
             m_channelId = channelId;
             m_channelNo = channelNo;
+
+            m_serviceClass = serviceClass;
         }
 
         /// <summary>Helper to set adjacent site data.</summary>
@@ -129,7 +134,8 @@ namespace p25
         /// <param name="siteId">P25 Site ID.</param>
         /// <param name="channelId">Channel ID.</param>
         /// <param name="channelNo">Channel Number.</param>
-        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
+        /// <param name="serviceClass">Service class.</param>
+        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
             // sysId clamping
             if (sysId == 0U) // clamp to 1
@@ -170,6 +176,8 @@ namespace p25
             m_channelId = channelId;
             m_channelNo = channelNo;
 
+            m_serviceClass = serviceClass;
+
             m_isAdjSite = true;
         }
 
@@ -189,6 +197,8 @@ namespace p25
 
                 m_channelId = data.m_channelId;
                 m_channelNo = data.m_channelNo;
+
+                m_serviceClass = data.m_serviceClass;
 
                 m_isAdjSite = data.m_isAdjSite;
             }
@@ -211,6 +221,8 @@ namespace p25
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId, channelId);
         /// <summary>Channel number.</summary>
         __READONLY_PROPERTY_PLAIN(uint32_t, channelNo, channelNo);
+        /// <summary>Channel number.</summary>
+        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass, serviceClass);
         /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
         __READONLY_PROPERTY_PLAIN(bool, isAdjSite, isAdjSite);
     };

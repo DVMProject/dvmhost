@@ -151,7 +151,8 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 void TrunkPacket::setSiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra,
     uint8_t channelId, uint32_t channelNo)
 {
-    m_siteData = SiteData(netId, sysId, rfssId, siteId, lra, channelId, channelNo);
+    uint8_t serviceClass = m_rfTSBK.getServiceClass();
+    m_siteData = SiteData(netId, sysId, rfssId, siteId, lra, channelId, channelNo, serviceClass);
 
     m_rfTSBK.setSiteData(m_siteData);
     m_rfTDULC.setSiteData(m_siteData);
@@ -692,12 +693,12 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
-                                m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(), m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                                m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(), m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo(), m_netTSBK.getAdjSiteSvcClass());
                         }
 
                         site.setAdjSite(m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(),
-                            m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+                            m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo(), m_netTSBK.getAdjSiteSvcClass());
 
                         m_adjSiteTable[site.siteId()] = site;
                         m_adjSiteUpdateCnt[site.siteId()] = ADJ_SITE_UPDATE_CNT;
@@ -715,12 +716,12 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         }
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast), sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
-                                m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(), m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast), sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                                m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(), m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo(), m_netTSBK.getAdjSiteSvcClass());
                         }
 
                         site.setAdjSite(m_netTSBK.getAdjSiteSysId(), m_netTSBK.getAdjSiteRFSSId(),
-                            m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo());
+                            m_netTSBK.getAdjSiteId(), m_netTSBK.getAdjSiteChnId(), m_netTSBK.getAdjSiteChnNo(), m_netTSBK.getAdjSiteSvcClass());
 
                         m_sccbTable[site.rfssId()] = site;
                         m_sccbUpdateCnt[site.rfssId()] = ADJ_SITE_UPDATE_CNT;
@@ -863,19 +864,27 @@ void TrunkPacket::writeAdjSSNetwork()
     m_netTSBK.reset();
 
     if (m_network != NULL) {
+        uint8_t serviceClass = m_rfTSBK.getServiceClass();
+
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u", 
-                m_siteData.sysId(), m_siteData.rfssId(), m_siteData.siteId(), m_siteData.channelId(), m_siteData.channelNo());
+            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", 
+                m_siteData.sysId(), m_siteData.rfssId(), m_siteData.siteId(), m_siteData.channelId(), m_siteData.channelNo(), serviceClass);
+        }
+
+        uint8_t cfva = P25_CFVA_VALID;
+        if (m_p25->m_control && m_p25->m_voiceOnControl) {
+            cfva |= P25_CFVA_CONV;
         }
 
         // transmit adjacent site broadcast
         m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
-        m_rfTSBK.setAdjSiteCFVA(P25_CFVA_CONV | P25_CFVA_VALID);
+        m_rfTSBK.setAdjSiteCFVA(cfva);
         m_rfTSBK.setAdjSiteSysId(m_siteData.sysId());
         m_rfTSBK.setAdjSiteRFSSId(m_siteData.rfssId());
         m_rfTSBK.setAdjSiteId(m_siteData.siteId());
         m_rfTSBK.setAdjSiteChnId(m_siteData.channelId());
         m_rfTSBK.setAdjSiteChnNo(m_siteData.channelNo());
+        m_rfTSBK.setAdjSiteSvcClass(serviceClass);
         
         RF_TO_WRITE_NET();
     }
@@ -1124,8 +1133,8 @@ void TrunkPacket::clock(uint32_t ms)
                 
                 if (updateCnt == 0U) {
                     SiteData siteData = m_adjSiteTable[siteId];
-                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
-                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo());
+                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                 }
 
                 m_adjSiteUpdateCnt[siteId] = updateCnt;
@@ -1142,8 +1151,8 @@ void TrunkPacket::clock(uint32_t ms)
 
                 if (updateCnt == 0U) {
                     SiteData siteData = m_sccbTable[rfssId];
-                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB (Secondary Control Channel Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u",
-                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo());
+                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_SCCB (Secondary Control Channel Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                 }
 
                 m_sccbUpdateCnt[rfssId] = updateCnt;
@@ -1854,6 +1863,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
                         m_rfTSBK.setAdjSiteId(site.siteId());
                         m_rfTSBK.setAdjSiteChnId(site.channelId());
                         m_rfTSBK.setAdjSiteChnNo(site.channelNo());
+                        m_rfTSBK.setAdjSiteSvcClass(site.serviceClass());
 
                         m_mbfAdjSSCnt++;
                         break;
