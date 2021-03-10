@@ -50,6 +50,7 @@ using namespace p25;
 //  Constants
 // ---------------------------------------------------------------------------
 
+const uint8_t MAX_SYNC_BYTES_ERRS = 4U;
 const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
@@ -341,17 +342,25 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     }
 
     if (!sync && m_rfState == RS_RF_LISTENING) {
-        uint8_t sync[P25_SYNC_LENGTH_BYTES];
-        ::memcpy(sync, data + 2U, P25_SYNC_LENGTH_BYTES);
+        uint8_t syncBytes[P25_SYNC_LENGTH_BYTES];
+        ::memcpy(syncBytes, data + 2U, P25_SYNC_LENGTH_BYTES);
 
         uint8_t errs = 0U;
         for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
-            errs += Utils::countBits8(sync[i] ^ P25_SYNC_BYTES[i]);
+            errs += Utils::countBits8(syncBytes[i] ^ P25_SYNC_BYTES[i]);
 
-        LogWarning(LOG_RF, "P25, possible sync word rejected, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", errs,
-            sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
+        if (errs >= MAX_SYNC_BYTES_ERRS) {
+            LogWarning(LOG_RF, "P25, possible sync word rejected, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", errs,
+                syncBytes[0U], syncBytes[1U], syncBytes[2U], syncBytes[3U], syncBytes[4U], syncBytes[5U]);
 
-        return false;
+            return false;
+        }
+        else {
+            LogWarning(LOG_RF, "P25, possible sync word, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", errs,
+                syncBytes[0U], syncBytes[1U], syncBytes[2U], syncBytes[3U], syncBytes[4U], syncBytes[5U]);
+
+            sync = true; // we found a completly valid sync with no errors...
+        }
     }
 
     if (sync && m_debug) {
