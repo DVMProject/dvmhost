@@ -93,6 +93,7 @@ private:
 
     uint8_t m_fdmaPreamble;
     uint8_t m_dmrRxDelay;
+    uint8_t m_p25CorrCount;
 
     bool m_debug;
 

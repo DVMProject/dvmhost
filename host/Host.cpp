@@ -1241,6 +1241,7 @@ bool Host::createModem()
     bool cosLockout = modemConf["cosLockout"].as<bool>(false);
     uint8_t fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     uint8_t dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
+    uint8_t p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(4U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
     int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
@@ -1272,6 +1273,7 @@ bool Host::createModem()
     LogInfo("    COS Lockout: %s", cosLockout ? "yes" : "no");
     LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2083F);
     LogInfo("    DMR RX Delay: %u (%.1fms)", dmrRxDelay, float(dmrRxDelay) * 0.0416666F);
+    LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
     LogInfo("    RX DC Offset: %d", rxDCOffset);
     LogInfo("    TX DC Offset: %d", txDCOffset);
     LogInfo("    RX Level: %.1f%%", rxLevel);
@@ -1285,7 +1287,7 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, packetPlayoutTime, disableOFlowReset, trace, debug);
+    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, packetPlayoutTime, disableOFlowReset, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);

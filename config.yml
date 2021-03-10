@@ -110,6 +110,7 @@ system:
         cosLockout: false
         fdmaPreamble: 80
         dmrRxDelay: 7
+        p25CorrCount: 8
         rxDCOffset: 0
         txDCOffset: 0
         rxLevel: 50

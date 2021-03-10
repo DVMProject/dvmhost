@@ -154,6 +154,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_p25SymLevel1Adj(0),
     m_fdmaPreamble(80U),
     m_dmrRxDelay(7U),
+    m_p25CorrCount(5U),
     m_debug(false),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
@@ -246,6 +247,7 @@ int HostCal::run()
 
     m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
+    m_p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
 
     writeConfig();
 
@@ -1650,6 +1652,8 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     m_conf["system"]["modem"]["rxDCOffset"] = __INT_STR(m_rxDCOffset);
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
+    buffer[14U] = (uint8_t)m_p25CorrCount;
+
     int ret = m_serial.write(buffer, 17U);
     if (ret <= 0)
         return false;
@@ -1781,7 +1785,8 @@ void HostCal::printStatus()
         m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
     LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
         m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
-    LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F);
+    LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
+        m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
     LogMessage(LOG_CAL, " - Operating Mode: %s", m_modeStr.c_str());
 
     uint8_t buffer[50U];

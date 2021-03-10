@@ -1847,12 +1847,17 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
                     else {
                         SiteData site = it->second;
 
-                        uint8_t cfva = P25_CFVA_CONV | P25_CFVA_NETWORK;
+                        uint8_t cfva = P25_CFVA_NETWORK;
                         if (m_adjSiteUpdateCnt[site.siteId()] == 0U) {
                             cfva |= P25_CFVA_FAILURE;
                         }
                         else {
                             cfva |= P25_CFVA_VALID;
+                        }
+
+                        uint8_t serviceClass = site.serviceClass();
+                        if ((serviceClass & P25_SVC_CLS_COMPOSITE) == P25_SVC_CLS_COMPOSITE) {
+                            cfva |= P25_CFVA_CONV;
                         }
 
                         // transmit adjacent site broadcast
