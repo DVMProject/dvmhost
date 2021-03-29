@@ -15,6 +15,19 @@ The DVM Host software does not have any specific library dependancies and is wri
 
 Use the ```make``` command to build the software.
 
+## Notes
+
+Some extra notes for those who are using the Raspberry Pi, default Raspbian OS or Debian OS installations. You will not be able to flash or access the STM32 modem unless you do some things beforehand. 
+
+1. Disable the Bluetooth services. Bluetooth will share the GPIO serial interface on ```/dev/ttyAMA0```. On Rasbian OS or Debian OS, this is done by: ```systemctl disable bluetooth```
+2. The default Rasbian OS and Debian OS will have a getty instance listening on ```/dev/ttyAMA0```. This can conflict with the STM32, and is best if disabled. On Rasbian OS or Debian OS, this is done by: ```systemctl disable serial-getty@ttyAMA0.service```
+3. There's a default boot option which is also listening on the GPIO serial interface. This **must be disabled**. Open the ```/boot/config.txt``` file in your favorite editor (vi or pico) and change it from:
+ ```console=serial0,115200 console=tty1 root=PARTUUID=[this is dynamic per partition] rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait```
+ to
+ ```console=tty1 root=PARTUUID=[this is dynamic per partition] rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait```
+ 
+ All thats being done is to remove the ```console=serial0,115200``` part. Do not change anything else. Save the file, then reboot.
+
 ## License
 
 This project is licensed under the GPLv2 License - see the [LICENSE.md](LICENSE.md) file for details. Use of this project is intended, strictly for amateur and educational use ONLY. Any other use is at the risk of user and all commercial purposes are strictly forbidden.
