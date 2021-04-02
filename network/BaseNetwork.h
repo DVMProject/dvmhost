@@ -247,6 +247,8 @@ namespace network
         bool m_duplex;
         bool m_debug;
 
+        sockaddr_storage m_addr;
+        unsigned int m_addrLen;
         UDPSocket m_socket;
         NET_CONN_STATUS m_status;
 
@@ -280,9 +282,7 @@ namespace network
         bool writeP25PDU(const uint32_t id, const uint32_t streamId, const uint32_t llId, const uint8_t dataType, const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes data to the network.</summary>
-        virtual bool write(const uint8_t* data, uint32_t length) = 0;
-        /// <summary>Writes data to the network.</summary>
-        virtual bool write(const uint8_t* data, uint32_t length, const in_addr& address, uint32_t port);
+        virtual bool write(const uint8_t* data, uint32_t length);
     };
 } // namespace network
 

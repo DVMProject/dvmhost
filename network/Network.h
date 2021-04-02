@@ -77,9 +77,8 @@ namespace network
         void close();
 
     private:
-        std::string m_addressStr;
-        in_addr m_address;
-        uint32_t m_port;
+        std::string m_address;
+        unsigned int m_port;
 
         std::string m_password;
 
@@ -117,9 +116,6 @@ namespace network
         bool writeConfig();
         /// <summary>Writes a network stay-alive ping.</summary>
         bool writePing();
-
-        /// <summary>Writes data to the network.</summary>
-        bool write(const uint8_t* data, uint32_t length);
     };
 } // namespace network
 

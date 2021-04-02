@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2009-2011,2013,2015,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -39,13 +39,24 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <poll.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #else
-#include <winsock.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #endif
+
+#if !defined(UDP_SOCKET_MAX)
+#define UDP_SOCKET_MAX	1
+#endif
+
+enum IPMATCHTYPE {
+    IMT_ADDRESS_AND_PORT,
+    IMT_ADDRESS_ONLY
+};
 
 namespace network
 {
@@ -58,31 +69,54 @@ namespace network
     class HOST_SW_API UDPSocket {
     public:
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(const std::string& address, uint32_t port = 0U);
+        UDPSocket(const std::string& address, unsigned int port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(uint32_t port = 0U);
-        /// <summary>Finalizes a instance of the UDPSocket class.</summary>
+        UDPSocket(unsigned int port = 0U);
+        /// <summary>Initializes a new instance of the UDPSocket class.</summary>
         ~UDPSocket();
 
         /// <summary>Opens UDP socket connection.</summary>
-        bool open();
+        bool open(unsigned int af = AF_UNSPEC);
+        /// <summary>Opens UDP socket connection.</summary>
+        bool open(const sockaddr_storage& address);
+        /// <summary>Opens UDP socket connection.</summary>
+        bool open(const unsigned int index, const unsigned int af, const std::string& address, const unsigned int port);
 
         /// <summary>Read data from the UDP socket.</summary>
-        int  read(uint8_t* buffer, uint32_t length, in_addr& address, uint32_t& port);
+        int read(unsigned char* buffer, unsigned int length, sockaddr_storage& address, unsigned int& addrLen);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(const uint8_t* buffer, uint32_t length, const in_addr& address, uint32_t port);
+        bool write(const unsigned char* buffer, unsigned int length, const sockaddr_storage& address, unsigned int addrLen);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();
+        /// <summary>Closes the UDP socket connection.</summary>
+        void close(const unsigned int index);
+
+        /// <summary></summary>
+        static void startup();
+        /// <summary></summary>
+        static void shutdown();
 
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
-        static in_addr lookup(const std::string& hostName);
+        static int lookup(const std::string& hostName, unsigned int port, sockaddr_storage& address, unsigned int& addrLen);
+        /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
+        static int lookup(const std::string& hostName, unsigned int port, sockaddr_storage& address, unsigned int& addrLen, struct addrinfo& hints);
+
+        /// <summary></summary>
+        static bool match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type = IMT_ADDRESS_AND_PORT);
+
+        /// <summary></summary>
+        static bool isNone(const sockaddr_storage& addr);
 
     private:
-        std::string m_address;
-        uint16_t m_port;
-        int m_fd;
+        std::string    m_address_save;
+        unsigned short m_port_save;
+        std::string    m_address[UDP_SOCKET_MAX];
+        unsigned short m_port[UDP_SOCKET_MAX];
+        unsigned int   m_af[UDP_SOCKET_MAX];
+        int            m_fd[UDP_SOCKET_MAX];
+        unsigned int   m_counter;
     };
-} // namespace Net
+} // namespace network
 
 #endif // __UDP_SOCKET_H__

@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2006-2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -32,14 +32,14 @@
 #include "network/UDPSocket.h"
 #include "Log.h"
 
-using namespace network;
-
 #include <cassert>
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <cerrno>
 #include <cstring>
 #endif
+
+using namespace network;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -49,35 +49,34 @@ using namespace network;
 /// </summary>
 /// <param name="address">Hostname/IP address to connect to.</param>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(const std::string& address, uint32_t port) :
-    m_address(address),
-    m_port(port),
-    m_fd(-1)
+UDPSocket::UDPSocket(const std::string& address, unsigned int port) :
+    m_address_save(address),
+    m_port_save(port),
+    m_counter(0U)
 {
-    assert(!address.empty());
-#if defined(_WIN32) || defined(_WIN64)
-    WSAData data;
-    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
-    if (wsaRet != 0)
-        LogError(LOG_NET, "Error from WSAStartup");
-#endif
+    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
+        m_address[i] = "";
+        m_port[i] = 0U;
+        m_af[i] = 0U;
+        m_fd[i] = -1;
+    }
 }
 
 /// <summary>
 /// Initializes a new instance of the UDPSocket class.
 /// </summary>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(uint32_t port) :
-    m_address(),
-    m_port(port),
-    m_fd(-1)
+UDPSocket::UDPSocket(unsigned int port) :
+    m_address_save(),
+    m_port_save(port),
+    m_counter(0U)
 {
-#if defined(_WIN32) || defined(_WIN64)
-    WSAData data;
-    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
-    if (wsaRet != 0)
-        LogError(LOG_NET, "Error from WSAStartup");
-#endif
+    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
+        m_address[i] = "";
+        m_port[i] = 0U;
+        m_af[i] = 0U;
+        m_fd[i] = -1;
+    }
 }
 
 /// <summary>
@@ -85,19 +84,58 @@ UDPSocket::UDPSocket(uint32_t port) :
 /// </summary>
 UDPSocket::~UDPSocket()
 {
-#if defined(_WIN32) || defined(_WIN64)
-    ::WSACleanup();
-#endif
+    /* stub */
 }
 
 /// <summary>
 /// Opens UDP socket connection.
 /// </summary>
+/// <param name="address"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open()
+bool UDPSocket::open(const sockaddr_storage& address)
 {
-    m_fd = ::socket(PF_INET, SOCK_DGRAM, 0);
-    if (m_fd < 0) {
+    return open(address.ss_family);
+}
+
+/// <summary>
+/// Opens UDP socket connection.
+/// </summary>
+/// <param name="af"></param>
+/// <returns>True, if UDP socket is opened, otherwise false.</returns>
+bool UDPSocket::open(unsigned int af)
+{
+    return open(0, af, m_address_save, m_port_save);
+}
+
+/// <summary>
+/// Opens UDP socket connection.
+/// </summary>
+/// <param name="index"></param>
+/// <param name="af"></param>
+/// <param name="address"></param>
+/// <param name="port"></param>
+/// <returns>True, if UDP socket is opened, otherwise false.</returns>
+bool UDPSocket::open(const unsigned int index, const unsigned int af, const std::string& address, const unsigned int port)
+{
+    sockaddr_storage addr;
+    unsigned int addrlen;
+    struct addrinfo hints;
+
+    ::memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = af;
+
+    /* to determine protocol family, call lookup() first. */
+    int err = lookup(address, port, addr, addrlen, hints);
+    if (err != 0) {
+        LogError(LOG_NET, "The local address is invalid - %s", address.c_str());
+        return false;
+    }
+
+    close(index);
+
+    int fd = ::socket(addr.ss_family, SOCK_DGRAM, 0);
+    if (fd < 0) {
 #if defined(_WIN32) || defined(_WIN64)
         LogError(LOG_NET, "Cannot create the UDP socket, err: %lu", ::GetLastError());
 #else
@@ -106,27 +144,14 @@ bool UDPSocket::open()
         return false;
     }
 
-    if (m_port > 0U) {
-        sockaddr_in addr;
-        ::memset(&addr, 0x00, sizeof(sockaddr_in));
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(m_port);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    m_address[index] = address;
+    m_port[index] = port;
+    m_af[index] = addr.ss_family;
+    m_fd[index] = fd;
 
-        if (!m_address.empty()) {
-#if defined(_WIN32) || defined(_WIN64)
-            addr.sin_addr.s_addr = ::inet_addr(m_address.c_str());
-#else
-            addr.sin_addr.s_addr = ::inet_addr(m_address.c_str());
-#endif
-            if (addr.sin_addr.s_addr == INADDR_NONE) {
-                LogError(LOG_NET, "The local address is invalid - %s", m_address.c_str());
-                return false;
-            }
-        }
-
+    if (port > 0U) {
         int reuse = 1;
-        if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) == -1) {
+        if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)& reuse, sizeof(reuse)) == -1) {
 #if defined(_WIN32) || defined(_WIN64)
             LogError(LOG_NET, "Cannot set the UDP socket option, err: %lu", ::GetLastError());
 #else
@@ -135,7 +160,7 @@ bool UDPSocket::open()
             return false;
         }
 
-        if (::bind(m_fd, (sockaddr*)&addr, sizeof(sockaddr_in)) == -1) {
+        if (::bind(fd, (sockaddr*)& addr, addrlen) == -1) {
 #if defined(_WIN32) || defined(_WIN64)
             LogError(LOG_NET, "Cannot bind the UDP address, err: %lu", ::GetLastError());
 #else
@@ -143,6 +168,8 @@ bool UDPSocket::open()
 #endif
             return false;
         }
+
+        LogInfo("Opening UDP port on %u", port);
     }
 
     return true;
@@ -154,64 +181,81 @@ bool UDPSocket::open()
 /// <param name="buffer">Buffer to read data into.</param>
 /// <param name="length">Length of data to read.</param>
 /// <param name="address">IP address to read data from.</param>
-/// <param name="port">Port number for remote UDP socket.</param>
+/// <param name="addrLen"></param>
 /// <returns>Actual length of data read from remote UDP socket.</returns>
-int UDPSocket::read(uint8_t* buffer, uint32_t length, in_addr& address, uint32_t& port)
+int UDPSocket::read(unsigned char* buffer, unsigned int length, sockaddr_storage& address, unsigned int& addrLen)
 {
     assert(buffer != NULL);
     assert(length > 0U);
 
     // Check that the readfrom() won't block
-    fd_set readFds;
-    FD_ZERO(&readFds);
-#if defined(_WIN32) || defined(_WIN64)
-    FD_SET((uint32_t)m_fd, &readFds);
-#else
-    FD_SET(m_fd, &readFds);
-#endif
+    int i, n;
+    struct pollfd pfd[UDP_SOCKET_MAX];
+    for (i = n = 0; i < UDP_SOCKET_MAX; i++) {
+        if (m_fd[i] >= 0) {
+            pfd[n].fd = m_fd[i];
+            pfd[n].events = POLLIN;
+            n++;
+        }
+    }
+
+    // no socket descriptor to receive
+    if (n == 0)
+        return 0;
 
     // Return immediately
-    timeval tv;
-    tv.tv_sec = 0L;
-    tv.tv_usec = 0L;
-
-    int ret = ::select(m_fd + 1, &readFds, NULL, NULL, &tv);
+#if defined(_WIN32) || defined(_WIN64)
+    int ret = WSAPoll(pfd, n, 0);
+#else
+    int ret = ::poll(pfd, n, 0);
+#endif
     if (ret < 0) {
 #if defined(_WIN32) || defined(_WIN64)
-        LogError(LOG_NET, "Error returned from UDP select, err: %lu", ::GetLastError());
+        LogError(LOG_NET, "Error returned from UDP poll, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from UDP select, err: %d", errno);
+        LogError(LOG_NET, "Error returned from UDP poll, err: %d", errno);
 #endif
         return -1;
     }
 
-    if (ret == 0)
+    int index;
+    for (i = 0; i < n; i++) {
+        // round robin
+        index = (i + m_counter) % n;
+        if (pfd[index].revents & POLLIN)
+            break;
+    }
+    if (i == n)
         return 0;
 
-    sockaddr_in addr;
 #if defined(_WIN32) || defined(_WIN64)
-    int size = sizeof(sockaddr_in);
+    int size = sizeof(sockaddr_storage);
 #else
-    socklen_t size = sizeof(sockaddr_in);
+    socklen_t size = sizeof(sockaddr_storage);
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-    int len = ::recvfrom(m_fd, (char*)buffer, length, 0, (sockaddr *)&addr, &size);
+    int len = ::recvfrom(pfd[index].fd, (char*)buffer, length, 0, (sockaddr*)& address, &size);
 #else
-    ssize_t len = ::recvfrom(m_fd, (char*)buffer, length, 0, (sockaddr *)&addr, &size);
+    ssize_t len = ::recvfrom(pfd[index].fd, (char*)buffer, length, 0, (sockaddr*)& address, &size);
 #endif
     if (len <= 0) {
 #if defined(_WIN32) || defined(_WIN64)
         LogError(LOG_NET, "Error returned from recvfrom, err: %lu", ::GetLastError());
 #else
         LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
+
+        if (len == -1 && errno == ENOTSOCK) {
+            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_port);
+            close();
+            open();
+        }
 #endif
         return -1;
     }
 
-    address = addr.sin_addr;
-    port = ntohs(addr.sin_port);
-
+    m_counter++;
+    addrLen = size;
     return len;
 }
 
@@ -221,43 +265,44 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, in_addr& address, uint32_t
 /// <param name="buffer">Buffer containing data to write to socket.</param>
 /// <param name="length">Length of data to write.</param>
 /// <param name="address">IP address to write data to.</param>
-/// <param name="port">Port number for remote UDP socket.</param>
+/// <param name="addrLen"></param>
 /// <returns>Actual length of data written to remote UDP socket.</returns>
-bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const in_addr& address, uint32_t port)
+bool UDPSocket::write(const unsigned char* buffer, unsigned int length, const sockaddr_storage& address, unsigned int addrLen)
 {
     assert(buffer != NULL);
     assert(length > 0U);
 
-    sockaddr_in addr;
-    ::memset(&addr, 0x00, sizeof(sockaddr_in));
+    bool result = false;
 
-    addr.sin_family = AF_INET;
-    addr.sin_addr = address;
-    addr.sin_port = htons(port);
+    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
+        if (m_fd[i] < 0 || m_af[i] != address.ss_family)
+            continue;
 
 #if defined(_WIN32) || defined(_WIN64)
-    int ret = ::sendto(m_fd, (char *)buffer, length, 0, (sockaddr *)&addr, sizeof(sockaddr_in));
+        int ret = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
 #else
-    ssize_t ret = ::sendto(m_fd, (char *)buffer, length, 0, (sockaddr *)&addr, sizeof(sockaddr_in));
+        ssize_t ret = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
 #endif
-    if (ret < 0) {
+
+        if (ret < 0) {
 #if defined(_WIN32) || defined(_WIN64)
-        LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
+            LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
 #else
-        LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
+            LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
 #endif
-        return false;
+        }
+        else {
+#if defined(_WIN32) || defined(_WIN64)
+            if (ret == int(length))
+                result = true;
+#else
+            if (ret == ssize_t(length))
+                result = true;
+#endif
+        }
     }
 
-#if defined(_WIN32) || defined(_WIN64)
-    if (ret != int(length))
-        return false;
-#else
-    if (ret != ssize_t(length))
-        return false;
-#endif
-
-    return true;
+    return result;
 }
 
 /// <summary>
@@ -265,10 +310,47 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const in_addr& add
 /// </summary>
 void UDPSocket::close()
 {
+    for (int i = 0; i < UDP_SOCKET_MAX; i++)
+        close(i);
+}
+
+/// <summary>
+/// Closes the UDP socket connection.
+/// </summary>
+/// <param name="index"></param>
+void UDPSocket::close(const unsigned int index)
+{
+    if ((index < UDP_SOCKET_MAX) && (m_fd[index] >= 0)) {
 #if defined(_WIN32) || defined(_WIN64)
-    ::closesocket(m_fd);
+        ::closesocket(m_fd[index]);
 #else
-    ::close(m_fd);
+        ::close(m_fd[index]);
+#endif
+        m_fd[index] = -1;
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+void UDPSocket::startup()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    WSAData data;
+    int wsaRet = ::WSAStartup(MAKEWORD(2, 2), &data);
+    if (wsaRet != 0) {
+        LogError(LOG_NET, "Error from WSAStartup");
+    }
+#endif
+}
+
+/// <summary>
+/// 
+/// </summary>
+void UDPSocket::shutdown()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    ::WSACleanup();
 #endif
 }
 
@@ -276,43 +358,110 @@ void UDPSocket::close()
 /// Helper to lookup a hostname and resolve it to an IP address.
 /// </summary>
 /// <param name="hostname">String containing hostname to resolve.</param>
-/// <returns>IP address structure for containing resolved hostname.</returns>
-in_addr UDPSocket::lookup(const std::string& hostname)
+/// <param name="port">Numeric port number of service to resolve.</param>
+/// <param name="addr">Socket address structure.</param>
+/// <param name="addrLen"></param>
+/// <returns>Zero if no error during lookup, otherwise error.</returns>
+int UDPSocket::lookup(const std::string& hostname, unsigned int port, sockaddr_storage& addr, unsigned int& addrLen)
 {
-    in_addr addr;
-#if defined(_WIN32) || defined(_WIN64)
-    unsigned long address = ::inet_addr(hostname.c_str());
-    if (address != INADDR_NONE && address != INADDR_ANY) {
-        addr.s_addr = address;
-        return addr;
+    struct addrinfo hints;
+    ::memset(&hints, 0, sizeof(hints));
+
+    return lookup(hostname, port, addr, addrLen, hints);
+}
+
+/// <summary>
+/// Helper to lookup a hostname and resolve it to an IP address.
+/// </summary>
+/// <param name="hostname">String containing hostname to resolve.</param>
+/// <param name="port">Numeric port number of service to resolve.</param>
+/// <param name="addr">Socket address structure.</param>
+/// <param name="addrLen"></param>
+/// <param name="hints"></param>
+/// <returns>Zero if no error during lookup, otherwise error.</returns>
+int UDPSocket::lookup(const std::string& hostname, unsigned int port, sockaddr_storage& addr, unsigned int& addrLen, struct addrinfo& hints)
+{
+    std::string portstr = std::to_string(port);
+    struct addrinfo* res;
+
+    /* port is always digits, no needs to lookup service */
+    hints.ai_flags |= AI_NUMERICSERV;
+
+    int err = getaddrinfo(hostname.empty() ? NULL : hostname.c_str(), portstr.c_str(), &hints, &res);
+    if (err != 0) {
+        sockaddr_in* paddr = (sockaddr_in*)& addr;
+        ::memset(paddr, 0x00U, addrLen = sizeof(sockaddr_in));
+        paddr->sin_family = AF_INET;
+        paddr->sin_port = htons(port);
+        paddr->sin_addr.s_addr = htonl(INADDR_NONE);
+        LogError("Cannot find address for host %s", hostname.c_str());
+        return err;
     }
 
-    struct hostent* hp = ::gethostbyname(hostname.c_str());
-    if (hp != NULL) {
-        ::memcpy(&addr, hp->h_addr_list[0], sizeof(struct in_addr));
-        return addr;
+    ::memcpy(&addr, res->ai_addr, addrLen = res->ai_addrlen);
+
+    freeaddrinfo(res);
+
+    return 0;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="addr1"></param>
+/// <param name="addr2"></param>
+/// <param name="type"></param>
+/// <returns></returns>
+bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type)
+{
+    if (addr1.ss_family != addr2.ss_family)
+        return false;
+
+    if (type == IMT_ADDRESS_AND_PORT) {
+        switch (addr1.ss_family) {
+        case AF_INET:
+            struct sockaddr_in* in_1, * in_2;
+            in_1 = (struct sockaddr_in*) & addr1;
+            in_2 = (struct sockaddr_in*) & addr2;
+            return (in_1->sin_addr.s_addr == in_2->sin_addr.s_addr) && (in_1->sin_port == in_2->sin_port);
+        case AF_INET6:
+            struct sockaddr_in6* in6_1, *in6_2;
+            in6_1 = (struct sockaddr_in6*) & addr1;
+            in6_2 = (struct sockaddr_in6*) & addr2;
+            return IN6_ARE_ADDR_EQUAL(&in6_1->sin6_addr, &in6_2->sin6_addr) && (in6_1->sin6_port == in6_2->sin6_port);
+        default:
+            return false;
+        }
     }
-
-    LogError(LOG_NET, "Cannot find address for host %s", hostname.c_str());
-
-    addr.s_addr = INADDR_NONE;
-    return addr;
-#else
-    in_addr_t address = ::inet_addr(hostname.c_str());
-    if (address != in_addr_t(-1)) {
-        addr.s_addr = address;
-        return addr;
+    else if (type == IMT_ADDRESS_ONLY) {
+        switch (addr1.ss_family) {
+        case AF_INET:
+            struct sockaddr_in* in_1, * in_2;
+            in_1 = (struct sockaddr_in*) & addr1;
+            in_2 = (struct sockaddr_in*) & addr2;
+            return in_1->sin_addr.s_addr == in_2->sin_addr.s_addr;
+        case AF_INET6:
+            struct sockaddr_in6* in6_1, * in6_2;
+            in6_1 = (struct sockaddr_in6*) & addr1;
+            in6_2 = (struct sockaddr_in6*) & addr2;
+            return IN6_ARE_ADDR_EQUAL(&in6_1->sin6_addr, &in6_2->sin6_addr);
+        default:
+            return false;
+        }
     }
-
-    struct hostent* hp = ::gethostbyname(hostname.c_str());
-    if (hp != NULL) {
-        ::memcpy(&addr, hp->h_addr_list[0], sizeof(struct in_addr));
-        return addr;
+    else {
+        return false;
     }
+}
 
-    LogError(LOG_NET, "Cannot find address for host %s", hostname.c_str());
+/// <summary>
+///
+/// </summary>
+/// <param name="addr"></param>
+/// <returns></returns>
+bool UDPSocket::isNone(const sockaddr_storage& addr)
+{
+    struct sockaddr_in* in = (struct sockaddr_in*) & addr;
 
-    addr.s_addr = INADDR_NONE;
-    return addr;
-#endif
+    return ((addr.ss_family == AF_INET) && (in->sin_addr.s_addr == htonl(INADDR_NONE)));
 }

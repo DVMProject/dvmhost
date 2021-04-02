@@ -47,19 +47,6 @@ using namespace p25::data;
 #include <cstring>
 #include <ctime>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <netdb.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#else
-#include <winsock.h>
-#endif
-
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------

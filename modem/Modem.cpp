@@ -46,7 +46,8 @@ using namespace modem;
 #include <ctime>
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif

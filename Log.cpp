@@ -32,7 +32,8 @@
 #include "network/Network.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #else
 #include <sys/time.h>
 #endif

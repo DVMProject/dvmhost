@@ -62,6 +62,8 @@ BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debu
     m_allowDiagnosticTransfer(allowDiagnosticTransfer),
     m_duplex(duplex),
     m_debug(debug),
+    m_addr(),
+    m_addrLen(0U),
     m_socket(localPort),
     m_status(NET_STAT_INVALID),
     m_retryTimer(1000U, 10U),
@@ -948,19 +950,16 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 /// </summary>
 /// <param name="buffer">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
-/// <param name="address">IP address to write data to.</param>
-/// <param name="port">Port number for remote UDP socket.</param>
 /// <returns>True, if buffer is written to the network, otherwise false.</returns>
-bool BaseNetwork::write(const uint8_t* data, uint32_t length, const in_addr& address, uint32_t port)
+bool BaseNetwork::write(const uint8_t* data, uint32_t length)
 {
     assert(data != NULL);
     assert(length > 0U);
-    assert(port > 0U);
 
     // if (m_debug)
     //    Utils::dump(1U, "Network Transmitted", data, length);
 
-    bool ret = m_socket.write(data, length, address, port);
+    bool ret = m_socket.write(data, length, m_addr, m_addrLen);
     if (!ret) {
         LogError(LOG_NET, "Socket has failed when writing data to the peer, retrying connection");
         return false;

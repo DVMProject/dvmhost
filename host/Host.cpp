@@ -32,6 +32,7 @@
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "modem/SerialController.h"
+#include "network/UDPSocket.h"
 #include "lookups/RSSIInterpolator.h"
 #include "host/Host.h"
 #include "HostMain.h"
@@ -97,7 +98,7 @@ Host::Host(const std::string& confFile) :
     m_tidLookup(NULL),
     m_remoteControl(NULL)
 {
-    /* stub */
+    UDPSocket::startup();
 }
 
 /// <summary>
@@ -105,7 +106,7 @@ Host::Host(const std::string& confFile) :
 /// </summary>
 Host::~Host()
 {
-    /* stub */
+    UDPSocket::shutdown();
 }
 
 /// <summary>

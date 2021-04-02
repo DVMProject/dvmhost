@@ -61,8 +61,7 @@ using namespace network;
 Network::Network(const std::string& address, uint32_t port, uint32_t local, uint32_t id, const std::string& password,
     bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
     BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
-    m_addressStr(address),
-    m_address(),
+    m_address(address),
     m_port(port),
     m_password(password),
     m_enabled(false),
@@ -85,8 +84,6 @@ Network::Network(const std::string& address, uint32_t port, uint32_t local, uint
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
-
-    m_address = UDPSocket::lookup(address);
 }
 
 /// <summary>
@@ -171,7 +168,7 @@ void Network::clock(uint32_t ms)
     if (m_status == NET_STAT_WAITING_CONNECT) {
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
-            bool ret = m_socket.open();
+            bool ret = m_socket.open(m_addr.ss_family);
             if (ret) {
                 ret = writeLogin();
                 if (!ret)
@@ -187,9 +184,9 @@ void Network::clock(uint32_t ms)
         return;
     }
 
-    in_addr address;
-    uint32_t port;
-    int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, port);
+    sockaddr_storage address;
+    unsigned int addrLen;
+    int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length < 0) {
         LogError(LOG_NET, "Socket has failed, retrying connection to the master");
         close();
@@ -200,7 +197,12 @@ void Network::clock(uint32_t ms)
     if (m_debug && length > 0)
         Utils::dump(1U, "Network Received", m_buffer, length);
 
-    if (length > 0 && m_address.s_addr == address.s_addr && m_port == port) {
+    if (length > 0) {
+        if (!UDPSocket::match(m_addr, address)) {
+            LogError(LOG_NET, "Packet received from an invalid source");
+            return;
+        }
+
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {
             if (m_enabled) {
                 if (m_debug)
@@ -388,8 +390,9 @@ bool Network::open()
     if (m_debug)
         LogMessage(LOG_NET, "Opening Network");
 
-    if (m_address.s_addr == INADDR_NONE) {
-        m_address = UDPSocket::lookup(m_addressStr);
+    if (UDPSocket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
+        LogMessage(LOG_NET, "Could not lookup the address of the master");
+        return false;
     }
 
     m_status = NET_STAT_WAITING_CONNECT;
@@ -544,18 +547,4 @@ bool Network::writePing()
         Utils::dump(1U, "Network Transmitted, Ping", buffer, 11U);
 
     return write(buffer, 11U);
-}
-
-/// <summary>
-/// Writes data to the network.
-/// </summary>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <returns>True, if buffer is written to the network, otherwise false.</returns>
-bool Network::write(const uint8_t* data, uint32_t length)
-{
-    assert(data != NULL);
-    assert(length > 0U);
-
-    return BaseNetwork::write(data, length, m_address, m_port);
 }
