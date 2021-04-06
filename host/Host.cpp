@@ -949,77 +949,79 @@ int Host::run()
 
         /** P25 */
         if (p25 != NULL) {
-            p25CCIntervalTimer.clock(ms);
+            if (m_controlData) {
+                p25CCIntervalTimer.clock(ms);
 
-            if (m_p25CtrlBroadcast) {
-                if ((p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) || g_fireP25Control) {
-                    if (hasCw) {
-                        g_fireP25Control = false;
-                        p25CCIntervalTimer.start();
-                    }
-                    else {
-                        if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
-                            if (m_modeTimer.isRunning()) {
-                                m_modeTimer.stop();
-                            }
-
-                            if (m_mode != STATE_P25)
-                                setMode(STATE_P25);
-
-                            if (g_interruptP25Control) {
-                                g_interruptP25Control = false;
-                                LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
-                            }
-
-                            p25->writeAdjSSNetwork();
-                            p25->setCCRunning(true);
-
-                            // hide this message for continuous CC -- otherwise display every time we process
-                            if (!m_p25CtrlChannel) {
-                                LogMessage(LOG_HOST, "P25, start CC broadcast");
-                            }
-
+                if (m_p25CtrlBroadcast) {
+                    if ((p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) || g_fireP25Control) {
+                        if (hasCw) {
                             g_fireP25Control = false;
                             p25CCIntervalTimer.start();
-                            p25CCDurationTimer.start();
+                        }
+                        else {
+                            if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
+                                if (m_modeTimer.isRunning()) {
+                                    m_modeTimer.stop();
+                                }
 
-                            // if the CC is continuous -- clock one cycle into the duration timer
-                            if (m_p25CtrlChannel) {
-                                p25CCDurationTimer.clock(ms);
+                                if (m_mode != STATE_P25)
+                                    setMode(STATE_P25);
+
+                                if (g_interruptP25Control) {
+                                    g_interruptP25Control = false;
+                                    LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
+                                }
+
+                                p25->writeAdjSSNetwork();
+                                p25->setCCRunning(true);
+
+                                // hide this message for continuous CC -- otherwise display every time we process
+                                if (!m_p25CtrlChannel) {
+                                    LogMessage(LOG_HOST, "P25, start CC broadcast");
+                                }
+
+                                g_fireP25Control = false;
+                                p25CCIntervalTimer.start();
+                                p25CCDurationTimer.start();
+
+                                // if the CC is continuous -- clock one cycle into the duration timer
+                                if (m_p25CtrlChannel) {
+                                    p25CCDurationTimer.clock(ms);
+                                }
                             }
                         }
                     }
-                }
 
-                // if the CC is continuous -- we don't clock the CC duration timer (which results in the CC
-                // broadcast running infinitely until stopped)
-                if (!m_p25CtrlChannel) {
-                    // clock and check P25 CC duration timer
-                    p25CCDurationTimer.clock(ms);
-                    if (p25CCDurationTimer.isRunning() && p25CCDurationTimer.hasExpired()) {
-                        p25CCDurationTimer.stop();
+                    // if the CC is continuous -- we don't clock the CC duration timer (which results in the CC
+                    // broadcast running infinitely until stopped)
+                    if (!m_p25CtrlChannel) {
+                        // clock and check P25 CC duration timer
+                        p25CCDurationTimer.clock(ms);
+                        if (p25CCDurationTimer.isRunning() && p25CCDurationTimer.hasExpired()) {
+                            p25CCDurationTimer.stop();
 
-                        p25->writeControlEndRF();
-                        p25->setCCRunning(false);
+                            p25->writeControlEndRF();
+                            p25->setCCRunning(false);
 
-                        if (m_mode == STATE_P25 && !m_modeTimer.isRunning()) {
-                            m_modeTimer.setTimeout(m_rfModeHang);
-                            m_modeTimer.start();
+                            if (m_mode == STATE_P25 && !m_modeTimer.isRunning()) {
+                                m_modeTimer.setTimeout(m_rfModeHang);
+                                m_modeTimer.start();
+                            }
+                        }
+
+                        if (p25CCDurationTimer.isPaused()) {
+                            p25CCDurationTimer.resume();
                         }
                     }
-
-                    if (p25CCDurationTimer.isPaused()) {
-                        p25CCDurationTimer.resume();
-                    }
                 }
-            }
-            else {
-                // simply use the P25 CC interval timer in a non-broadcast state to transmit adjacent site data over
-                // the network
-                if (p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) {
-                    if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
-                        p25->writeAdjSSNetwork();
-                        p25CCIntervalTimer.start();
+                else {
+                    // simply use the P25 CC interval timer in a non-broadcast state to transmit adjacent site data over
+                    // the network
+                    if (p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) {
+                        if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
+                            p25->writeAdjSSNetwork();
+                            p25CCIntervalTimer.start();
+                        }
                     }
                 }
             }
