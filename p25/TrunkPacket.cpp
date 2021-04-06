@@ -1857,12 +1857,12 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
                         else {
                             cfva |= P25_CFVA_VALID;
                         }
-
+/*
                         uint8_t serviceClass = site.serviceClass();
                         if ((serviceClass & P25_SVC_CLS_COMPOSITE) == P25_SVC_CLS_COMPOSITE) {
                             cfva |= P25_CFVA_CONV;
                         }
-
+*/
                         // transmit adjacent site broadcast
                         m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
                         m_rfTSBK.setAdjSiteCFVA(cfva);
