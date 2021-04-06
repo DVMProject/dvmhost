@@ -275,8 +275,7 @@ bool TDULC::decodeLC(const uint8_t* rs)
 /// <param name="rs"></param>
 void TDULC::encodeLC(uint8_t* rs)
 {
-    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U |
-        P25_SYS_SRV_GROUP_DATA | P25_SYS_SRV_GROUP_VOICE | P25_SYS_SRV_IND_DATA | P25_SYS_SRV_IND_VOICE;
+    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
 
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO

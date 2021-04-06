@@ -302,8 +302,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
 {
     assert(data != NULL);
 
-    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U |
-        P25_SYS_SRV_GROUP_DATA | P25_SYS_SRV_GROUP_VOICE | P25_SYS_SRV_IND_DATA | P25_SYS_SRV_IND_VOICE;
+    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
