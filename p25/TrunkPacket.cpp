@@ -216,6 +216,9 @@ void TrunkPacket::setServiceClass(bool control, bool voiceOnControl)
 
     m_rfTDULC.setServiceClass(serviceClass);
     m_netTDULC.setServiceClass(serviceClass);
+
+    m_p25->m_voice->m_rfLC.setServiceClass(serviceClass);
+    m_p25->m_voice->m_netLC.setServiceClass(serviceClass);
 }
 
 /// <summary>

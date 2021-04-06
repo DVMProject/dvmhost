@@ -47,6 +47,12 @@ using namespace p25;
 #include <ctime>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t VOC_LDU1_COUNT = 3U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
@@ -62,6 +68,7 @@ void VoicePacket::resetRF()
     m_rfErrs = 0U;
     m_rfBits = 1U;
     m_rfUndecodableLC = 0U;
+    m_vocLDU1Count = 0U;
 }
 
 /// <summary>
@@ -73,6 +80,7 @@ void VoicePacket::resetNet()
     m_netLastLDU1.reset();
     m_netFrames = 0U;
     m_netLost = 0U;
+    m_vocLDU1Count = 0U;
 }
 
 /// <summary>
@@ -373,6 +381,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_rfErrs = 0U;
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
+            m_vocLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = P25_DUID_HDU;
 
@@ -434,6 +443,16 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_control) {
                 m_p25->m_trunk->touchDstIdGrant(m_rfLC.getDstId());
+            }
+
+            // single-channel trunking or voice on control support?
+            if (m_p25->m_control && m_p25->m_voiceOnControl) {
+                // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
+                m_vocLDU1Count++;
+                if (m_vocLDU1Count > VOC_LDU1_COUNT) {
+                    m_vocLDU1Count = 0U;
+                    m_rfLC.setLCO(LC_RFSS_STS_BCAST);
+                }
             }
 
             // Generate Sync
@@ -865,6 +884,7 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
     m_lastRejectId(0U),
     m_lastPatchGroup(0U),
     m_silenceThreshold(124U),
+    m_vocLDU1Count(0U),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1201,6 +1221,7 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
         m_p25->m_netTimeout.start();
         m_netFrames = 0U;
         m_netLost = 0U;
+        m_vocLDU1Count = 0U;
 
         if (!m_p25->m_disableNetworkHDU) {
             uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
@@ -1234,6 +1255,16 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
             if (m_verbose) {
                 LogMessage(LOG_NET, P25_HDU_STR ", network does not transmit, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
             }
+        }
+    }
+
+    // single-channel trunking or voice on control support?
+    if (m_p25->m_control && m_p25->m_voiceOnControl) {
+        // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
+        m_vocLDU1Count++;
+        if (m_vocLDU1Count > VOC_LDU1_COUNT) {
+            m_vocLDU1Count = 0U;
+            m_netLC.setLCO(LC_RFSS_STS_BCAST);
         }
     }
 

@@ -107,6 +107,9 @@ namespace p25
             /// <summary>Destination ID.</summary>
             __PROPERTY(uint32_t, dstId, DstId);
 
+            /// <summary>Service class.</summary>
+            __PROPERTY(uint8_t, serviceClass, ServiceClass);
+
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 

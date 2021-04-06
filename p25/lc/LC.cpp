@@ -57,6 +57,7 @@ LC::LC() :
     m_mfId(P25_MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
+    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
@@ -96,6 +97,8 @@ LC& LC::operator=(const LC& data)
 
         m_srcId = data.m_srcId;
         m_dstId = data.m_dstId;
+
+        m_serviceClass = data.m_serviceClass;
 
         m_grpVchNo = data.m_grpVchNo;
 
@@ -632,6 +635,16 @@ void LC::encodeLC(uint8_t * rs)
             (m_priority & 0x07U);                                                   // Priority
         rsValue = (rsValue << 16) + m_callTimer;                                    // Call Timer
         rsValue = (rsValue << 24) + m_srcId;                                        // Source/Target Radio Address
+        break;
+    case LC_RFSS_STS_BCAST:
+        rs[0U] |= 0x40U;                                                            // Implicit Operation
+        rsValue = m_siteData.lra();                                                 // Location Registration Area
+        rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
+        rsValue = (rsValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
+        rsValue = (rsValue << 8) + m_siteData.siteId();                             // Site ID
+        rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
+        rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
+        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
         break;
     default:
         LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
