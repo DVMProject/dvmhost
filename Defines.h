@@ -220,22 +220,22 @@ inline std::string __FLOAT_STR(const float& value) {
 /// <summary>Creates a read-only get property by reference.</summary>
 #define __READONLY_PROPERTY_BYREF(type, variableName, propName)                         \
         private: type m_##variableName;                                                 \
-		public: __forceinline type& get##propName(void) const { return m_##variableName; }
+        public: __forceinline type& get##propName(void) const { return m_##variableName; }
 
 /// <summary>Creates a get and set property.</summary>
 #define __PROPERTY(type, variableName, propName)                                        \
         private: type m_##variableName;                                                 \
-		public: __forceinline type get##propName(void) const { return m_##variableName; } \
-				__forceinline void set##propName(type val) { m_##variableName = val; }
+        public: __forceinline type get##propName(void) const { return m_##variableName; } \
+                __forceinline void set##propName(type val) { m_##variableName = val; }
 /// <summary>Creates a get and set property, does not use "get"/"set".</summary>
 #define __PROPERTY_PLAIN(type, variableName, propName)                                  \
         private: type m_##variableName;                                                 \
-		public: __forceinline type propName(void) const { return m_##variableName; }    \
-				__forceinline void propName(type val) { m_##variableName = val; }
+        public: __forceinline type propName(void) const { return m_##variableName; }    \
+                __forceinline void propName(type val) { m_##variableName = val; }
 /// <summary>Creates a get and set property by reference.</summary>
 #define __PROPERTY_BYREF(type, variableName, propName)                                  \
         private: type m_##variableName;                                                 \
-		public: __forceinline type& get##propName(void) const { return m_##variableName; } \
-		        __forceinline void set##propName(type& val) { m_##variableName = val; }
+        public: __forceinline type& get##propName(void) const { return m_##variableName; } \
+                __forceinline void set##propName(type& val) { m_##variableName = val; }
 
 #endif // __DEFINES_H__

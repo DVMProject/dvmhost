@@ -218,7 +218,7 @@ namespace network
         /// <summary>Writes the local activity log to the network.</summary>
         virtual bool writeActLog(const char* message);
 
-        /// <summary>Writes the local activity log to the network.</summary>
+        /// <summary>Writes the local diagnostic logs to the network.</summary>
         virtual bool writeDiagLog(const char* message);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>

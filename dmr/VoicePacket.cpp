@@ -83,7 +83,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DMR_SYNC_VOICE audio, sequence no = 0, errs = %u/141 (%.1f%%)",
+                    LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_SYNC audio, sequence no = 0, errs = %u/141 (%.1f%%)",
                         m_slot->m_slotNo, errors, float(errors) / 1.41F);
                 }
 
@@ -136,7 +136,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DMR_SYNC_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                    LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
                         m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
                 }
 
@@ -287,7 +287,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
-                    LogWarning(LOG_RF, "DMR Slot %u, DMR_DATA_SYNC denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                    LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
                     delete lc;
                     return false;
                 }
@@ -295,7 +295,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 // validate the target ID, if the target is a talkgroup
                 if (flco == FLCO_GROUP) {
                     if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                        LogWarning(LOG_RF, "DMR Slot %u, DMR_DATA_SYNC denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                         delete lc;
                         return false;
                     }
@@ -368,7 +368,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (fid == FID_ETSI || fid == FID_DMRA) {
                     errors = m_fec.regenerateDMR(data + 2U);
                     if (m_verbose) {
-                        LogMessage(LOG_RF, "DMR Slot %u, DMR_AUDIO_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                        LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
                             m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
                     }
 
@@ -490,7 +490,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DMR_SYNC_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                    LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_SYNC audio, sequence no = %u, errs = %u/141 (%.1f%%)",
                         m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
                 }
             }
@@ -535,7 +535,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         if (fid == FID_ETSI || fid == FID_DMRA) {
             m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, DMR_SYNC_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
                     m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
             }
         }

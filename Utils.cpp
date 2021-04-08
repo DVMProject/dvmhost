@@ -56,7 +56,7 @@ void getHostVersion()
 // ---------------------------------------------------------------------------
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="title"></param>
 /// <param name="data"></param>
 /// <param name="length"></param>
@@ -69,7 +69,7 @@ void Utils::dump(const std::string& title, const uint8_t* data, uint32_t length)
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="level"></param>
 /// <param name="title"></param>
 /// <param name="data"></param>
@@ -122,7 +122,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="title"></param>
 /// <param name="bits"></param>
 /// <param name="length"></param>
@@ -135,7 +135,7 @@ void Utils::dump(const std::string& title, const bool* bits, uint32_t length)
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="level"></param>
 /// <param name="title"></param>
 /// <param name="bits"></param>
@@ -154,7 +154,7 @@ void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="byte"></param>
 /// <param name="bits"></param>
 void Utils::byteToBitsBE(uint8_t byte, bool* bits)
@@ -173,7 +173,7 @@ void Utils::byteToBitsBE(uint8_t byte, bool* bits)
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="byte"></param>
 /// <param name="bits"></param>
 void Utils::byteToBitsLE(uint8_t byte, bool* bits)
@@ -192,7 +192,7 @@ void Utils::byteToBitsLE(uint8_t byte, bool* bits)
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="bits"></param>
 /// <param name="byte"></param>
 void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
@@ -211,7 +211,7 @@ void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
 
 /// <summary>
 ///
-/// <summary>
+/// </summary>
 /// <param name="bits"></param>
 /// <param name="byte"></param>
 void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
