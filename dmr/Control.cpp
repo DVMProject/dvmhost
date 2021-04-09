@@ -81,7 +81,7 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     assert(rssi != NULL);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
-    Slot::init(colorCode, embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, rssi, jitter);
+    Slot::init(colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, rssi, jitter);
     
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);

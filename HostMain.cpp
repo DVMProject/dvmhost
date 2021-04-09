@@ -87,11 +87,12 @@ static void sigHandler(int signum)
 void fatal(const char* msg, ...)
 {
     char buffer[400U];
+    ::memset(buffer, 0x20U, 400U);
 
     va_list vl;
     va_start(vl, msg);
 
-    ::vsprintf(buffer + ::strlen(buffer), msg, vl);
+    ::vsprintf(buffer, msg, vl);
 
     va_end(vl);
 

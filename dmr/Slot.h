@@ -33,6 +33,7 @@
 
 #include "Defines.h"
 #include "dmr/Control.h"
+#include "dmr/SiteData.h"
 #include "dmr/DataPacket.h"
 #include "dmr/VoicePacket.h"
 #include "modem/Modem.h"
@@ -80,7 +81,7 @@ namespace dmr
         void clock();
 
         /// <summary>Helper to initialize the slot processor.</summary>
-        static void init(uint32_t colorCode, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+        static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
             lookups::RSSIInterpolator* rssiMapper, uint32_t jitter);
 
@@ -136,6 +137,8 @@ namespace dmr
 
         static uint32_t m_colorCode;
 
+        static SiteData m_siteData;
+
         static bool m_embeddedLCOnly;
         static bool m_dumpTAData;
 
@@ -181,9 +184,13 @@ namespace dmr
         void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
         /// <summary>Helper to write a call alert packet on the RF interface.</summary>
         void writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId);
+        /// <summary>Helper to write a TSCC broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Broadcast(uint8_t anncType);
 
         /// <summary></summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
+        /// <summary></summary>
+        static void setShortLC_TSCC(SiteData siteData, uint16_t counter);
     };
 } // namespace dmr
 

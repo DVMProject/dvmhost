@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -51,15 +51,20 @@ CSBK::CSBK() :
     m_verbose(false),
     m_CSBKO(CSBKO_NONE),
     m_FID(0x00U),
+    m_lastBlock(true),
     m_bsId(0U),
     m_GI(false),
     m_srcId(0U),
     m_dstId(0U),
     m_dataContent(false),
     m_CBF(0U),
-    m_data(NULL)
+    m_data(NULL),
+    m_siteData(),
+    m_siteNetActive(false)
 {
     m_data = new uint8_t[12U];
+
+    reset();
 }
 
 /// <summary>
@@ -99,72 +104,86 @@ bool CSBK::decode(const uint8_t* bytes)
         Utils::dump(2U, "Decoded CSBK", m_data, DMR_LC_HEADER_LENGTH_BYTES);
     }
 
-    m_CSBKO = m_data[0U] & 0x3FU;
-    m_FID = m_data[1U];
+    m_CSBKO = m_data[0U] & 0x3FU;                                                   // CSBKO
+    m_lastBlock = (m_data[0U] & 0x80U) == 0x80U;                                    // Last Block Marker
+    m_FID = m_data[1U];                                                             // Feature ID
 
     switch (m_CSBKO) {
     case CSBKO_BSDWNACT:
         m_GI = false;
-        m_bsId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
+        m_bsId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                   // Base Station ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
         m_dataContent = false;
         m_CBF = 0U;
         break;
 
     case CSBKO_UU_V_REQ:
         m_GI = false;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
+        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Destination ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
         m_dataContent = false;
         m_CBF = 0U;
         break;
 
     case CSBKO_UU_ANS_RSP:
         m_GI = false;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
+        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Destination ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
         m_dataContent = false;
         m_CBF = 0U;
         break;
 
     case CSBKO_PRECCSBK:
         m_GI = (m_data[2U] & 0x40U) == 0x40U;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
+        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Destination ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
         m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
         m_CBF = m_data[3U];
         break;
 
-    case CSBKO_CALL_ALRT:
-        m_GI = (m_data[2U] & 0x40U) == 0x40U;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
-        m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
-        m_CBF = m_data[3U];
-        break;
+    case CSBKO_RAND: // CSBKO_CALL_ALRT when FID == FID_DMRA
+        switch (m_FID)
+        {
+        case FID_DMRA:
+            m_GI = (m_data[2U] & 0x40U) == 0x40U;                                   // Group or Individual
+            m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];              // Destination ID
+            m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];              // Source ID
+            m_dataContent = (m_data[2U] & 0x80U) == 0x80U;                          //
+            m_CBF = m_data[3U];                                                     // 
+            break;
+
+        /* Tier III */
+        case FID_ETSI:
+        default:
+            m_serviceOptions = m_data[2U];                                          // Service Options
+            m_targetAddress = (m_data[3U] >> 6 & 0x03U);                            // Target Address
+            m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];              // Destination ID
+            m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];              // Source ID
+            break;
+        }
 
     case CSBKO_ACK_RSP:
         m_GI = (m_data[2U] & 0x40U) == 0x40U;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
-        m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
-        m_CBF = m_data[3U];
+        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Destination ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
+        m_response = m_data[3U];                                                    // Response
+        m_dataContent = false;
         break;
 
     case CSBKO_EXT_FNCT:
         m_GI = false;
-        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
-        m_dataContent = (m_data[2U] & 0x80U) == 0x80U;
-        m_CBF = m_data[3U];
+        m_dstId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Destination ID
+        m_srcId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Source ID
+        m_dataContent = (m_data[2U] & 0x80U) == 0x80U;                              //
+        m_CBF = m_data[3U];                                                         //
         break;
 
     case CSBKO_NACK_RSP:
         m_GI = false;
-        m_srcId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];
-        m_dstId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];
+        m_srcId = m_data[4U] << 16 | m_data[5U] << 8 | m_data[6U];                  // Source ID
+        m_dstId = m_data[7U] << 16 | m_data[8U] << 8 | m_data[9U];                  // Destination ID
+        m_response = m_data[3U];                                                    // Response
         m_dataContent = false;
-        m_CBF = 0U;
         break;
 
     default:
@@ -184,40 +203,146 @@ bool CSBK::decode(const uint8_t* bytes)
 /// Encodes a DMR CSBK.
 /// </summary>
 /// <param name="bytes"></param>
-void CSBK::encode(uint8_t* bytes) const
+void CSBK::encode(uint8_t* bytes)
 {
     assert(bytes != NULL);
 
-    m_data[0U] = m_CSBKO;
-    m_data[1U] = m_FID;
+    m_data[0U] = m_CSBKO;                                                           // CSBKO
+    m_data[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                    // Last Block Marker
+    m_data[1U] = m_FID;                                                             // Feature ID
 
-    if (m_GI) {
-        m_data[2U] |= 0x40U;
-    }
+    switch (m_CSBKO) {
+    case CSBKO_ACK_RSP:
+        m_data[2U] = (uint8_t)(m_serviceType & 0x3FU);                              // Service Type
+        m_data[2U] |= 0x80U;                                                        // Additional Information Field (always 1)
+        if (m_GI) {
+            m_data[2U] |= 0x40U;                                                    // Source Type
+        }
+        m_data[3U] = m_response;                                                    // Reason Code
 
-    if (m_dataContent) {
-        m_data[2U] |= 0x80U;
-    }
-
-    m_data[3U] = m_CBF;
-
-    if (m_CSBKO == CSBKO_EXT_FNCT) {
-        m_data[4U] = (m_srcId >> 16) & 0xFFU;
+        m_data[4U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
         m_data[5U] = (m_srcId >> 8) & 0xFFU;
         m_data[6U] = (m_srcId >> 0) & 0xFFU;
 
-        m_data[7U] = (m_dstId >> 16) & 0xFFU;
+        m_data[7U] = (m_dstId >> 16) & 0xFFU;                                       // Destination ID
         m_data[8U] = (m_dstId >> 8) & 0xFFU;
         m_data[9U] = (m_dstId >> 0) & 0xFFU;
-    }
-    else {
-        m_data[4U] = (m_dstId >> 16) & 0xFFU;
+        break;
+
+    case CSBKO_EXT_FNCT:
+        if (m_GI) {
+            m_data[2U] |= 0x40U;                                                    // Group or Individual
+        }
+
+        if (m_dataContent) {
+            m_data[2U] |= 0x80U;                                                    //
+        }
+
+        m_data[3U] = m_CBF;                                                         //
+
+        m_data[4U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
+        m_data[5U] = (m_srcId >> 8) & 0xFFU;
+        m_data[6U] = (m_srcId >> 0) & 0xFFU;
+
+        m_data[7U] = (m_dstId >> 16) & 0xFFU;                                       // Destination ID
+        m_data[8U] = (m_dstId >> 8) & 0xFFU;
+        m_data[9U] = (m_dstId >> 0) & 0xFFU;
+        break;
+
+    case CSBKO_NACK_RSP:
+        m_data[2U] = (uint8_t)(m_serviceType & 0x3FU);                              // Service Type
+        m_data[2U] |= 0x80U;                                                        // Additional Information Field (always 1)
+        if (m_GI) {
+            m_data[2U] |= 0x40U;                                                    // Source Type
+        }
+        m_data[3U] = m_response;                                                    // Reason Code
+
+        m_data[4U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
+        m_data[5U] = (m_srcId >> 8) & 0xFFU;
+        m_data[6U] = (m_srcId >> 0) & 0xFFU;
+
+        m_data[7U] = (m_dstId >> 16) & 0xFFU;                                       // Destination ID
+        m_data[8U] = (m_dstId >> 8) & 0xFFU;
+        m_data[9U] = (m_dstId >> 0) & 0xFFU;
+        break;
+
+    default:
+        if (m_GI) {
+            m_data[2U] |= 0x40U;                                                    // Group or Individual
+        }
+
+        if (m_dataContent) {
+            m_data[2U] |= 0x80U;                                                    //
+        }
+
+        m_data[3U] = m_CBF;                                                         //
+
+        m_data[4U] = (m_dstId >> 16) & 0xFFU;                                       // Destination ID
         m_data[5U] = (m_dstId >> 8) & 0xFFU;
         m_data[6U] = (m_dstId >> 0) & 0xFFU;
 
-        m_data[7U] = (m_srcId >> 16) & 0xFFU;
+        m_data[7U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
         m_data[8U] = (m_srcId >> 8) & 0xFFU;
         m_data[9U] = (m_srcId >> 0) & 0xFFU;
+        break;
+
+    /* Tier III */
+    case CSBKO_ALOHA:
+    {
+        ulong64_t csbkValue = 0U;
+        csbkValue = (csbkValue << 2) + 0U;                                          // Reserved
+        csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                  // Site Time Slot Synchronization
+        csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                           // DMR Spec. Version (1.5.1)
+        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+        csbkValue = (csbkValue << 1) + ((m_siteNetActive) ? 1U : 0U);               // Site Networked
+        csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
+        csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
+        csbkValue = (csbkValue << 4) + 0U;                                          // 
+        csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
+        csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
+        csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
+        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source ID
+
+        // split value into bytes
+        m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+        m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+        m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+        m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+        m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+        m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+        m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+        m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+        break;
+    }
+    break;
+    case CSBKO_BROADCAST:
+    {
+        ulong64_t csbkValue = 0U;
+        csbkValue = m_anncType;                                                     // Announcement Type
+
+        switch (m_anncType)
+        {
+        case BCAST_ANNC_SITE_PARMS:
+            csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);        // Site Identity (Broadcast Parms 1)
+            csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
+            csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
+            csbkValue = (csbkValue << 1) + 0U;                                      // Roaming TG Subscription/Attach
+            csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
+            csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
+            break;
+        }
+
+        // split value into bytes
+        m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+        m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+        m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+        m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+        m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+        m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+        m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+        m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+    }
+    break;
     }
 
     m_data[10U] ^= CSBK_CRC_MASK[0U];
@@ -235,4 +360,40 @@ void CSBK::encode(uint8_t* bytes) const
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
     bptc.encode(m_data, bytes);
+}
+
+/// <summary>
+/// Helper to reset data values to defaults.
+/// </summary>
+void CSBK::reset()
+{
+    m_backoffNo = 1U;
+    m_serviceType = 0U;
+    m_serviceOptions = 0U;
+    m_targetAddress = TGT_ADRS_TGID;
+
+    m_response = 0U;
+
+    /* Broadcast */
+    m_anncType = BCAST_ANNC_SITE_PARMS;
+    m_hibernating = false;
+
+    /* Aloha */
+    m_siteTSSync = false;
+    m_siteOffsetTiming = false;
+}
+
+/** Local Site data */
+/// <summary>Sets local configured site data.</summary>
+/// <param name="siteData"></param>
+void CSBK::setSiteData(SiteData siteData)
+{
+    m_siteData = siteData;
+}
+
+/// <summary>Sets a flag indicating whether or not networking is active.</summary>
+/// <param name="netActive"></param>
+void CSBK::setNetActive(bool netActive)
+{
+    m_siteNetActive = netActive;
 }

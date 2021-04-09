@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -48,6 +48,8 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 
 uint32_t Slot::m_colorCode = 0U;
+
+SiteData Slot::m_siteData = SiteData();
 
 bool Slot::m_embeddedLCOnly = false;
 bool Slot::m_dumpTAData = true;
@@ -385,6 +387,7 @@ void Slot::clock()
 /// Helper to initialize the DMR slot processor.
 /// </summary>
 /// <param name="colorCode">DMR access color code.</param>
+/// <param name="siteData">DMR site data.</param>
 /// <param name="embeddedLCOnly"></param>
 /// <param name="dumpTAData"></param>
 /// <param name="callHang">Amount of hangtime for a DMR call.</param>
@@ -395,7 +398,7 @@ void Slot::clock()
 /// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
 /// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
 /// <param name="jitter"></param>
-void Slot::init(uint32_t colorCode, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
     network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
     lookups::RSSIInterpolator* rssiMapper, uint32_t jitter)
 {
@@ -405,6 +408,7 @@ void Slot::init(uint32_t colorCode, bool embeddedLCOnly, bool dumpTAData, uint32
     assert(rssiMapper != NULL);
 
     m_colorCode = colorCode;
+    m_siteData = siteData;
     m_embeddedLCOnly = embeddedLCOnly;
     m_dumpTAData = dumpTAData;
     m_modem = modem;
@@ -651,6 +655,50 @@ void Slot::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 }
 
 /// <summary>
+/// Helper to write a TSCC broadcast packet on the RF interface.
+/// </summary>
+/// <param name="anncType">Broadcast announcement type.</param>
+void Slot::writeRF_TSCC_Broadcast(uint8_t anncType)
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), anncType = %u",
+            m_slotNo, anncType);
+    }
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_BROADCAST);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setAnncType(anncType);
+    csbk.setSiteData(m_siteData);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_duplex);
+
+    m_rfSeqNo = 0U;
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_duplex)
+        writeQueueRF(data);
+}
+
+/// <summary>
 ///
 /// </summary>
 /// <param name="slotNo"></param>
@@ -696,7 +744,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
         return;
 
     uint8_t lc[5U];
-    lc[0U] = 0x01U;
+    lc[0U] = SLCO_ACT;
     lc[1U] = 0x00U;
     lc[2U] = 0x00U;
     lc[3U] = 0x00U;
@@ -733,6 +781,67 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
         }
     }
 
+    lc[4U] = edac::CRC::crc8(lc, 4U);
+
+    uint8_t sLC[9U];
+
+    lc::ShortLC shortLC;
+    shortLC.encode(lc, sLC);
+
+    m_modem->writeDMRShortLC(sLC);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="slotNo"></param>
+/// <param name="siteData"></param>
+/// <param name="counter"></param>
+void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
+{
+    assert(m_modem != NULL);
+
+    uint8_t lc[5U];
+    uint32_t lcValue = 0U;
+    lcValue = SLCO_TSCC;
+    lcValue = (lcValue << 2) + siteData.siteModel();
+
+    switch (siteData.siteModel())
+    {
+    case SITE_MODEL_TINY:
+    {
+        lcValue = (lcValue << 9) + siteData.netId();
+        lcValue = (lcValue << 3) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_SMALL:
+    {
+        lcValue = (lcValue << 7) + siteData.netId();
+        lcValue = (lcValue << 5) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_LARGE:
+    {
+        lcValue = (lcValue << 5) + siteData.netId();
+        lcValue = (lcValue << 7) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_HUGE:
+    {
+        lcValue = (lcValue << 2) + siteData.netId();
+        lcValue = (lcValue << 10) + siteData.siteId();
+    }
+    break;
+    }
+
+    lcValue = (lcValue << 1) + ((siteData.requireReg()) ? 1U : 0U);
+    lcValue = (lcValue << 9) + (counter & 0x1FFU);
+
+    // split value into bytes
+    lc[0U] = (uint8_t)((lcValue >> 24) & 0xFFU);
+    lc[1U] = (uint8_t)((lcValue >> 16) & 0xFFU);
+    lc[2U] = (uint8_t)((lcValue >> 8) & 0xFFU);
+    lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
 
     uint8_t sLC[9U];

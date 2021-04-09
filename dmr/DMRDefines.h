@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -130,6 +130,8 @@ namespace dmr
     const uint32_t  DMR_EXT_FNCT_UNINHIBIT_ACK = 0x00FEU;   // Radio Uninhibit Ack
     const uint32_t  DMR_EXT_FNCT_INHIBIT_ACK = 0x00FFU;     // Radio Inhibit Ack
 
+    const uint8_t   DMR_ALOHA_VER_151 = 0x00U;
+
     // Data Type(s)
     const uint8_t   DT_VOICE_PI_HEADER = 0x00U;
     const uint8_t   DT_VOICE_LC_HEADER = 0x01U;
@@ -145,6 +147,31 @@ namespace dmr
     const uint8_t   DT_VOICE_SYNC = 0xF0U;
     const uint8_t   DT_VOICE = 0xF1U;
 
+    // Site Models
+    const uint8_t   SITE_MODEL_TINY = 0x00U;
+    const uint8_t   SITE_MODEL_SMALL = 0x01U;
+    const uint8_t   SITE_MODEL_LARGE = 0x02U;
+    const uint8_t   SITE_MODEL_HUGE = 0x03U;
+
+    // Target Address
+    const uint8_t   TGT_ADRS_SYSCODE = 0x00U;
+    const uint8_t   TGT_ADRS_TGID = 0x01U;
+
+    // Short-Link Control Opcode(s)
+    const uint8_t   SLCO_NULL = 0x00U;
+    const uint8_t   SLCO_ACT = 0x01U;
+    const uint8_t   SLCO_TSCC = 0x02U;
+
+    // Broadcast Announcement Type(s)
+    const uint8_t   BCAST_ANNC_ANN_WD_TSCC = 0x00U;         // Announce/Withdraw TSCC
+    const uint8_t   BCAST_ANNC_CALL_TIMER_PARMS = 0x01U;    // Specify Call Timer Parameters
+    const uint8_t   BCAST_ANNC_VOTE_NOW = 0x02U;            // Vote Now Advice
+    const uint8_t   BCAST_ANNC_LOCAL_TIME = 0x03U;          // Broadcast Local Time
+    const uint8_t   BCAST_ANNC_MASS_REG = 0x04U;            // Mass Registration
+    const uint8_t   BCAST_ANNC_CHAN_FREQ = 0x05U;           // Announce a logical channel/frequency relationship
+    const uint8_t   BCAST_ANNC_ADJ_SITE = 0x06U;            // Adjacent Site information
+    const uint8_t   BCAST_ANNC_SITE_PARMS = 0x07U;          // General Site Parameters information
+
     // Full-Link Control Opcode(s)
     const uint8_t   FLCO_GROUP = 0x00U;                     // GRP VCH USER - Group Voice Channel User
     const uint8_t   FLCO_PRIVATE = 0x03U;                   // UU VCH USER - Unit-to-Unit Voice Channel User
@@ -159,12 +186,15 @@ namespace dmr
     const uint8_t   CSBKO_UU_V_REQ = 0x04U;                 // UU VCH REQ - Unit-to-Unit Voice Channel Request
     const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit to Unit Answer Response
     const uint8_t   CSBKO_CTCSBK = 0x07U;                   // CT CSBK - Channel Timing CSBK
-    const uint8_t   CSBKO_CALL_ALRT = 0x1FU;                // CALL ALRT - Call Alert
+    const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDUs for the random access protocol
+    const uint8_t   CSBKO_RAND = 0x1FU;                     // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
+    const uint8_t   CSBKO_CALL_ALRT = 0x1FU;                // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
-    const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // EXT FNCT - Extended Function
+    const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
+    const uint8_t   CSBKO_BROADCAST = 0x40U;                // BCAST - Announcement PDUs
 
     const uint8_t   TALKER_ID_NONE = 0x00U;
     const uint8_t   TALKER_ID_HEADER = 0x01U;

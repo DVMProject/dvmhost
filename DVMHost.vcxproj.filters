@@ -329,6 +329,9 @@
     <ClInclude Include="p25\data\DataRspHeader.h">
       <Filter>Header Files\p25\data</Filter>
     </ClInclude>
+    <ClInclude Include="dmr\SiteData.h">
+      <Filter>Header Files\dmr</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">

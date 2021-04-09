@@ -162,6 +162,7 @@
     <ClInclude Include="dmr\Control.h" />
     <ClInclude Include="dmr\DataPacket.h" />
     <ClInclude Include="dmr\DMRDefines.h" />
+    <ClInclude Include="dmr\SiteData.h" />
     <ClInclude Include="dmr\Slot.h" />
     <ClInclude Include="dmr\SlotType.h" />
     <ClInclude Include="dmr\Sync.h" />

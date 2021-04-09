@@ -130,7 +130,7 @@ bool TSBK::decode(const uint8_t* data)
     }
 
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO
-    m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Protect Flag
+    m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker
     m_mfId = tsbk[1U];                                                              // Mfg Id.
 
     ulong64_t tsbkValue = 0U;

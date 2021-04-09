@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
+#include "dmr/SiteData.h"
 
 namespace dmr
 {
@@ -53,7 +54,16 @@ namespace dmr
             /// <summary>Decodes a DMR CSBK.</summary>
             bool decode(const uint8_t* bytes);
             /// <summary>Encodes a DMR CSBK.</summary>
-            void encode(uint8_t* bytes) const;
+            void encode(uint8_t* bytes);
+
+            /// <summary>Helper to reset data values to defaults.</summary>
+            void reset();
+
+            /** Local Site data */
+            /// <summary>Sets local configured site data.</summary>
+            void setSiteData(SiteData siteData);
+            /// <summary>Sets a flag indicating whether or not networking is active.</summary>
+            void setNetActive(bool netActive);
 
         public:
             /// <summary></summary>
@@ -64,6 +74,9 @@ namespace dmr
             __PROPERTY(uint8_t, CSBKO, CSBKO);
             /// <summary>CSBK feature ID.</summayr>
             __PROPERTY(uint8_t, FID, FID);
+
+            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            __PROPERTY(bool, lastBlock, LastBlock);
 
             // For BS Dwn Act
             __READONLY_PROPERTY(uint32_t, bsId, BSId);
@@ -83,8 +96,38 @@ namespace dmr
             /// <summary>Sets the number of blocks to follow.</summary>
             __PROPERTY(uint8_t, CBF, CBF);
 
+            // Tier III
+            /// <summary>Backoff Number.</summary>
+            __PROPERTY(uint8_t, backoffNo, BackoffNo);
+
+            /// <summary>Service Type.</summary>
+            __PROPERTY(uint8_t, serviceType, serviceType);
+            /// <summary>Service type.</summary>
+            __PROPERTY(uint8_t, serviceOptions, ServiceOptions);
+            /// <summary>Destination/Target address type.</summary>
+            __PROPERTY(uint8_t, targetAddress, TargetAddress);
+
+            /// <summary>Response type.</summary>
+            __PROPERTY(uint8_t, response, Response);
+
+            /// <summary>Broadcast Announcment Type.</summary>
+            __PROPERTY(uint8_t, anncType, AnncType);
+            /// <summary>Broadcast Hibernation Flag.</summary>
+            __PROPERTY(bool, hibernating, Hibernating);
+
+            /// <summary>Aloha Site Time Slot Synchronization.</summary>
+            __PROPERTY(bool, siteTSSync, SiteTSSync);
+            /// <summary>Aloha site users offset timing.</summary>
+            __PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
+            /// <summary>Aloha MS mask.</summary>
+            __PROPERTY(uint8_t, alohaMask, AlohaMask);
+
         private:
             uint8_t* m_data;
+
+            /** Local Site data */
+            SiteData m_siteData;
+            bool m_siteNetActive;
         };
     } // namespace lc
 } // namespace dmr
