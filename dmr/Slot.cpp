@@ -478,10 +478,9 @@ void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, false);
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
-    uint8_t i = 0U;
     for (auto it = entries.begin(); it != entries.end(); ++it) {
         lookups::IdenTable entry = *it;
-        if (entry.channelId == channelId) {
+        if (entry.channelId() == channelId) {
             m_idenEntry = entry;
             break;
         }
