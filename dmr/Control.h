@@ -38,8 +38,10 @@
 #include "network/BaseNetwork.h"
 #include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
+#include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "yaml/Yaml.h"
 
 namespace dmr
 {
@@ -58,10 +60,13 @@ namespace dmr
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
             bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-            lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::RSSIInterpolator* rssi,
+            lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
+
+        /// <summary>Helper to set DMR configuration options.</summary>
+        void setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
 
         /// <summary>Helper to process wakeup frames from the RF interface.</summary>
         bool processWakeup(const uint8_t* data);
@@ -95,6 +100,7 @@ namespace dmr
         Slot* m_slot1;
         Slot* m_slot2;
 
+        lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupIdLookup* m_tidLookup;
 

@@ -92,6 +92,7 @@ system:
     config:
         channelId: 2
         channelNo: 1
+        dmrNetId: 1
         voiceChNo:
             - 1
         colorCode: 5

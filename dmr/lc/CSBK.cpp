@@ -54,6 +54,7 @@ CSBK::CSBK() :
     m_lastBlock(true),
     m_bsId(0U),
     m_GI(false),
+    m_Cdef(false),
     m_srcId(0U),
     m_dstId(0U),
     m_dataContent(false),
@@ -209,7 +210,9 @@ void CSBK::encode(uint8_t* bytes)
 
     m_data[0U] = m_CSBKO;                                                           // CSBKO
     m_data[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                    // Last Block Marker
-    m_data[1U] = m_FID;                                                             // Feature ID
+    if (!m_Cdef) {
+        m_data[1U] = m_FID;                                                         // Feature ID
+    }
 
     switch (m_CSBKO) {
     case CSBKO_ACK_RSP:
@@ -318,14 +321,75 @@ void CSBK::encode(uint8_t* bytes)
     case CSBKO_BROADCAST:
     {
         ulong64_t csbkValue = 0U;
-        csbkValue = m_anncType;                                                     // Announcement Type
+        if (!m_Cdef) {
+            csbkValue = m_anncType;                                                 // Announcement Type
+        }
 
         switch (m_anncType)
         {
+        case BCAST_ANNC_ANN_WD_TSCC:
+            if (!m_Cdef) {
+                // Broadcast Parms 1
+                csbkValue = (csbkValue << 4) + 0U;                                  // Reserved
+                csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 1
+                csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 2
+                csbkValue = (csbkValue << 1) + ((m_annWdCh1) ? 1U : 0U);            // Announce/Withdraw Channel 1
+                csbkValue = (csbkValue << 1) + ((m_annWdCh2) ? 1U : 0U);            // Announce/Withdraw Channel 2
+
+                csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U); // Require Registration
+                csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);               // Backoff Number
+                csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();        // Site Identity
+
+                // Broadcast Parms 2
+                csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);            // Logical Channel 1
+                csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);            // Logical Channel 2
+            }
+            else {
+                uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
+                float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
+                const uint32_t multiple = 100000;
+
+                // calculate Rx frequency
+                uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + calcTxOffset);
+
+                // generate frequency in mhz
+                uint32_t rxFreqMhz = rxFrequency + multiple / 2;
+                rxFreqMhz -= rxFreqMhz % multiple;
+                rxFreqMhz /= multiple * 10;
+
+                // generate khz offset
+                uint32_t rxFreqKhz = rxFrequency - (rxFreqMhz * 1000000);
+
+                // calculate Tx Frequency
+                uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)));
+
+                // generate frequency in mhz
+                uint32_t txFreqMhz = txFrequency + multiple / 2;
+                txFreqMhz -= txFreqMhz % multiple;
+                txFreqMhz /= multiple * 10;
+
+                // generate khz offset
+                uint32_t txFreqKhz = txFrequency - (txFreqMhz * 1000000);
+
+                csbkValue = (csbkValue << 8) + 0U;                                  // Reserved
+                csbkValue = (csbkValue << 4) + 0U;                                  // Cdef Type (always 0 for ANN_WD_TSCC)
+                csbkValue = (csbkValue << 2) + 0U;                                  // Reserved
+                csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);            // Logical Channel
+                csbkValue = (csbkValue << 10) + txFreqMhz;                          // Transmit Freq Mhz
+                csbkValue = (csbkValue << 13) + txFreqKhz;                          // Transmit Freq Offset Khz
+                csbkValue = (csbkValue << 10) + rxFreqMhz;                          // Receive Freq Mhz
+                csbkValue = (csbkValue << 13) + rxFreqKhz;                          // Receive Freq Khz
+            }
+            break;
         case BCAST_ANNC_SITE_PARMS:
+            // Broadcast Parms 1
             csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);        // Site Identity (Broadcast Parms 1)
+
+            csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);   // Require Registration
             csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
             csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
+
+            // Broadcast Parms 2
             csbkValue = (csbkValue << 1) + 0U;                                      // Roaming TG Subscription/Attach
             csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
             csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
@@ -367,6 +431,8 @@ void CSBK::encode(uint8_t* bytes)
 /// </summary>
 void CSBK::reset()
 {
+    m_colorCode = 0U;
+
     m_backoffNo = 1U;
     m_serviceType = 0U;
     m_serviceOptions = 0U;
@@ -377,6 +443,11 @@ void CSBK::reset()
     /* Broadcast */
     m_anncType = BCAST_ANNC_SITE_PARMS;
     m_hibernating = false;
+
+    m_annWdCh1 = false;
+    m_logicalCh1 = DMR_CHNULL;
+    m_annWdCh2 = false;
+    m_logicalCh2 = DMR_CHNULL;
 
     /* Aloha */
     m_siteTSSync = false;
@@ -389,6 +460,13 @@ void CSBK::reset()
 void CSBK::setSiteData(SiteData siteData)
 {
     m_siteData = siteData;
+}
+
+/// <summary></summary>
+/// <param name="entry"></param>
+void CSBK::setIdenTable(lookups::IdenTable entry)
+{
+    m_siteIdenEntry = entry;
 }
 
 /// <summary>Sets a flag indicating whether or not networking is active.</summary>

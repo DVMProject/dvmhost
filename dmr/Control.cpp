@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2020 by Bryan Biedenkapp <gatekeep@jmp.cx>
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp <gatekeep@jmp.cx>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -53,7 +53,8 @@ using namespace dmr;
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
-/// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
+/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
+/// <param name="rssiMapper">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
 /// <param name="dumpDataPacket"></param>
 /// <param name="repeatDataPacket"></param>
@@ -62,13 +63,14 @@ using namespace dmr;
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
     bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-    lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::RSSIInterpolator* rssi,
+    lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
     m_slot1(NULL),
     m_slot2(NULL),
+    m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_dumpCSBKData(dumpCSBKData),
@@ -78,10 +80,11 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     assert(modem != NULL);
     assert(ridLookup != NULL);
     assert(tidLookup != NULL);
-    assert(rssi != NULL);
+    assert(idenTable != NULL);
+    assert(rssiMapper != NULL);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
-    Slot::init(colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, rssi, jitter);
+    Slot::init(colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter);
     
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
@@ -94,6 +97,22 @@ Control::~Control()
 {
     delete m_slot2;
     delete m_slot1;
+}
+
+/// <summary>
+/// Helper to set DMR configuration options.
+/// </summary>
+/// <param name="conf">Instance of the ConfigINI class.</param>
+/// <param name="netId"></param>
+/// <param name="siteId"></param>
+/// <param name="channelId"></param>
+/// <param name="channelNo"></param>
+void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
+{
+    yaml::Node systemConf = conf["system"];
+    yaml::Node dmrProtocol = conf["protocols"]["dmr"];
+
+    Slot::setSiteData(netId, siteId, channelId, channelNo);
 }
 
 /// <summary>

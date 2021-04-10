@@ -131,6 +131,7 @@ namespace dmr
     const uint32_t  DMR_EXT_FNCT_INHIBIT_ACK = 0x00FFU;     // Radio Inhibit Ack
 
     const uint8_t   DMR_ALOHA_VER_151 = 0x00U;
+    const uint8_t   DMR_CHNULL = 0x00U;
 
     // Data Type(s)
     const uint8_t   DT_VOICE_PI_HEADER = 0x00U;
@@ -163,7 +164,7 @@ namespace dmr
     const uint8_t   SLCO_TSCC = 0x02U;
 
     // Broadcast Announcement Type(s)
-    const uint8_t   BCAST_ANNC_ANN_WD_TSCC = 0x00U;         // Announce/Withdraw TSCC
+    const uint8_t   BCAST_ANNC_ANN_WD_TSCC = 0x00U;         // Announce-WD TSCC Channel
     const uint8_t   BCAST_ANNC_CALL_TIMER_PARMS = 0x01U;    // Specify Call Timer Parameters
     const uint8_t   BCAST_ANNC_VOTE_NOW = 0x02U;            // Vote Now Advice
     const uint8_t   BCAST_ANNC_LOCAL_TIME = 0x03U;          // Broadcast Local Time
@@ -192,9 +193,9 @@ namespace dmr
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
+    const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDUs
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
-    const uint8_t   CSBKO_BROADCAST = 0x40U;                // BCAST - Announcement PDUs
 
     const uint8_t   TALKER_ID_NONE = 0x00U;
     const uint8_t   TALKER_ID_HEADER = 0x01U;

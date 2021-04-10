@@ -72,7 +72,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
-/// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
+/// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="dumpPDUData"></param>
 /// <param name="repeatPDU"></param>
 /// <param name="dumpTSBKData"></param>
@@ -169,7 +169,16 @@ void Control::reset()
 /// Helper to set P25 configuration options.
 /// </summary>
 /// <param name="conf">Instance of the ConfigINI class.</param>
-/// <param name="netOnly">Flag indicating this instance should operate in network only mode.</param>
+/// <param name="cwCallsign"></param>
+/// <param name="voiceChNo"></param>
+/// <param name="pSuperGroup"></param>
+/// <param name="netId"></param>
+/// <param name="sysId"></param>
+/// <param name="rfssId"></param>
+/// <param name="siteId"></param>
+/// <param name="channelId"></param>
+/// <param name="channelNo"></param>
+/// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
     uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId,
     uint32_t channelNo, bool printOptions)

@@ -319,8 +319,10 @@ int Host::run()
         }
 
         dmr = new dmr::Control(m_dmrColorCode, callHang, dmrQueueSize, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
+            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose);
+        dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo);
+
         m_dmrTXTimer.setTimeout(txHang);
 
         if (dmrVerbose) {
@@ -396,7 +398,7 @@ int Host::run()
             p25ControlBcstInterval, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose);
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
-            m_p25SiteId, m_channelId, m_channelNo, true);
+            m_siteId, m_channelId, m_channelNo, true);
 
         if (p25Verbose) {
             LogInfo("    Verbose: yes");
@@ -1186,7 +1188,22 @@ bool Host::readParams()
     }
     strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
 
+    m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
+    if (m_siteId == 0U) { // clamp to 1
+        m_siteId = 1U;
+    }
+    if (m_siteId > 0xFEU) { // clamp to $FE
+        m_siteId = 0xFEU;
+    }
+
     m_dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
+    m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
+    if (m_dmrNetId == 0U) { // clamp to 1
+        m_dmrNetId = 1U;
+    }
+    if (m_dmrNetId > 0x1FFU) { // clamp to $1FF
+        m_dmrNetId = 0x1FFU;
+    }
 
     m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
     m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
@@ -1211,13 +1228,6 @@ bool Host::readParams()
     if (m_p25RfssId > 0xFEU) { // clamp to $FE
         m_p25RfssId = 0xFEU;
     }
-    m_p25SiteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_p25SiteId == 0U) { // clamp to 1
-        m_p25SiteId = 1U;
-    }
-    if (m_p25SiteId > 0xFEU) { // clamp to $FE
-        m_p25SiteId = 0xFEU;
-    }
 
     LogInfo("System Config Parameters");
     LogInfo("    RX Frequency: %uHz", m_rxFrequency);
@@ -1229,13 +1239,14 @@ bool Host::readParams()
     LogInfo("    Channel Id: %u", m_channelId);
     LogInfo("    Channel No.: $%04X", m_channelNo);
     LogInfo("    Voice Channel No(s).: %s", strVoiceChNo.c_str());
+    LogInfo("    Site Id: $%02X", m_siteId);
     LogInfo("    DMR Color Code: %u", m_dmrColorCode);
+    LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
     LogInfo("    P25 NAC: $%03X", m_p25NAC);
     LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
     LogInfo("    P25 Network Id: $%05X", m_p25NetId);
     LogInfo("    P25 System Id: $%03X", m_p25SysId);
     LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
-    LogInfo("    P25 Site Id: $%02X", m_p25SiteId);
 
     return true;
 }

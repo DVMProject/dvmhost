@@ -113,13 +113,14 @@ private:
     bool m_dmrBeacons;
     bool m_controlData;
 
+    uint8_t m_siteId;
+    uint32_t m_dmrNetId;
     uint32_t m_dmrColorCode;
     uint32_t m_p25NAC;
     uint32_t m_p25PatchSuperGroup;
     uint32_t m_p25NetId;
     uint32_t m_p25SysId;
     uint8_t m_p25RfssId;
-    uint8_t m_p25SiteId;
 
     friend class RemoteControl;
     RemoteControl* m_remoteControl;

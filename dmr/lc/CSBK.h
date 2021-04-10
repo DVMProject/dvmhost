@@ -34,6 +34,7 @@
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/SiteData.h"
+#include "lookups/IdenTableLookup.h"
 
 namespace dmr
 {
@@ -62,6 +63,8 @@ namespace dmr
             /** Local Site data */
             /// <summary>Sets local configured site data.</summary>
             void setSiteData(SiteData siteData);
+            /// <summary></summary>
+            void setIdenTable(lookups::IdenTable entry);
             /// <summary>Sets a flag indicating whether or not networking is active.</summary>
             void setNetActive(bool netActive);
 
@@ -85,6 +88,10 @@ namespace dmr
             /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
             __PROPERTY(bool, GI, GI);
 
+            // For Cdef blocks
+            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
+            __PROPERTY(bool, Cdef, Cdef);
+
             /// <summary>Source ID.</summary>
             __PROPERTY(uint32_t, srcId, SrcId);
             /// <summary>Destination ID.</summary>
@@ -95,6 +102,9 @@ namespace dmr
 
             /// <summary>Sets the number of blocks to follow.</summary>
             __PROPERTY(uint8_t, CBF, CBF);
+
+            /// <summary>DMR access color code.</summary>
+            __PROPERTY(uint8_t, colorCode, ColorCode);
 
             // Tier III
             /// <summary>Backoff Number.</summary>
@@ -115,6 +125,15 @@ namespace dmr
             /// <summary>Broadcast Hibernation Flag.</summary>
             __PROPERTY(bool, hibernating, Hibernating);
 
+            /// <summary>Broadcast Announce/Withdraw Channel 1 Flag.</summary>
+            __PROPERTY(bool, annWdCh1, AnnWdCh1);
+            /// <summary>Broadcast Logical Channel ID 1.</summary>
+            __PROPERTY(uint16_t, logicalCh1, LogicalCh1);
+            /// <summary>Broadcast Announce/Withdraw Channel 2 Flag.</summary>
+            __PROPERTY(bool, annWdCh2, AnnWdCh2);
+            /// <summary>Broadcast Logical Channel ID 2.</summary>
+            __PROPERTY(uint16_t, logicalCh2, LogicalCh2);
+
             /// <summary>Aloha Site Time Slot Synchronization.</summary>
             __PROPERTY(bool, siteTSSync, SiteTSSync);
             /// <summary>Aloha site users offset timing.</summary>
@@ -127,6 +146,7 @@ namespace dmr
 
             /** Local Site data */
             SiteData m_siteData;
+            lookups::IdenTable m_siteIdenEntry;
             bool m_siteNetActive;
         };
     } // namespace lc

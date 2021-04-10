@@ -44,6 +44,12 @@ using namespace dmr;
 #include <cmath>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint16_t TSCC_MAX_CNT = 511U;
+
+// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
@@ -56,9 +62,15 @@ bool Slot::m_dumpTAData = true;
 
 modem::Modem* Slot::m_modem = NULL;
 network::BaseNetwork* Slot::m_network = NULL;
+
 bool Slot::m_duplex = true;
+
+lookups::IdenTableLookup* Slot::m_idenTable = NULL;
 lookups::RadioIdLookup* Slot::m_ridLookup = NULL;
 lookups::TalkgroupIdLookup* Slot::m_tidLookup = NULL;
+
+lookups::IdenTable Slot::m_idenEntry = lookups::IdenTable();
+
 uint32_t Slot::m_hangCount = 3U * 17U;
 
 lookups::RSSIInterpolator* Slot::m_rssiMapper = NULL;
@@ -74,6 +86,8 @@ bool Slot::m_voice1 = true;
 uint8_t Slot::m_flco2;
 uint8_t Slot::m_id2 = 0U;
 bool Slot::m_voice2 = true;
+
+uint16_t Slot::m_tsccCnt = 0U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -321,6 +335,14 @@ void Slot::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
+    // increment the TSCC counter on every slot 1 clock
+    if (m_slotNo == 1U) {
+        m_tsccCnt++;
+        if (m_tsccCnt == TSCC_MAX_CNT) {
+            m_tsccCnt = 0U;
+        }
+    }
+
     m_rfTimeoutTimer.clock(ms);
     if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
         if (!m_rfTimeout) {
@@ -396,26 +418,35 @@ void Slot::clock()
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
-/// <param name="rssi">Instance of the CRSSIInterpolator class.</param>
+/// <param name="idenTable">Instance of the IdenTableLookup class.</param>
+/// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
 void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
     network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-    lookups::RSSIInterpolator* rssiMapper, uint32_t jitter)
+    lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter)
 {
     assert(modem != NULL);
     assert(ridLookup != NULL);
     assert(tidLookup != NULL);
+    assert(idenTable != NULL);
     assert(rssiMapper != NULL);
 
     m_colorCode = colorCode;
+
     m_siteData = siteData;
+    
     m_embeddedLCOnly = embeddedLCOnly;
     m_dumpTAData = dumpTAData;
+
     m_modem = modem;
     m_network = network;
+
     m_duplex = duplex;
+
+    m_idenTable = idenTable;
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+
     m_hangCount = callHang * 17U;
 
     m_rssiMapper = rssiMapper;
@@ -433,6 +464,28 @@ void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool
     slotType.setColorCode(colorCode);
     slotType.setDataType(DT_IDLE);
     slotType.encode(m_idle + 2U);
+}
+
+/// <summary>
+/// Sets local configured site data.
+/// </summary>
+/// <param name="netId">DMR Network ID.</param>
+/// <param name="siteId">DMR Site ID.</param>
+/// <param name="channelId">Channel ID.</param>
+/// <param name="channelNo">Channel Number.</param>
+void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
+{
+    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, false);
+
+    std::vector<lookups::IdenTable> entries = m_idenTable->list();
+    uint8_t i = 0U;
+    for (auto it = entries.begin(); it != entries.end(); ++it) {
+        lookups::IdenTable entry = *it;
+        if (entry.channelId == channelId) {
+            m_idenEntry = entry;
+            break;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -655,14 +708,84 @@ void Slot::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 }
 
 /// <summary>
-/// Helper to write a TSCC broadcast packet on the RF interface.
+/// Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.
 /// </summary>
-/// <param name="anncType">Broadcast announcement type.</param>
-void Slot::writeRF_TSCC_Broadcast(uint8_t anncType)
+/// <param name="channelNo"></param>
+/// <param name="annWd"></param>
+void Slot::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 {
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), anncType = %u",
-            m_slotNo, anncType);
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_ANN_WD_TSCC (Announce-WD TSCC Channel), channelNo = %u, annWd = %u", 
+            m_slotNo, channelNo, annWd);
+    }
+
+    m_rfSeqNo = 0U;
+
+    SlotType slotType;
+    slotType.setColorCode(m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_BROADCAST);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setAnncType(BCAST_ANNC_ANN_WD_TSCC);
+    csbk.setSiteData(m_siteData);
+    csbk.setLogicalCh1(channelNo);
+    csbk.setAnnWdCh1(annWd);
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    // MBC frame 1
+    csbk.setLastBlock(false);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_duplex);
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_duplex)
+        writeQueueRF(data);
+
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    // MBC frame 2
+    csbk.setLastBlock(false);
+    csbk.setCdef(true);
+    csbk.setIdenTable(m_idenEntry);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_duplex);
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_duplex)
+        writeQueueRF(data);
+}
+
+/// <summary>
+/// Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.
+/// </summary>
+void Slot::writeRF_TSCC_Bcast_Sys_Parm()
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_SITE_PARMS (Announce Site Parms)", m_slotNo);
     }
 
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -677,7 +800,7 @@ void Slot::writeRF_TSCC_Broadcast(uint8_t anncType)
     csbk.setCSBKO(CSBKO_BROADCAST);
     csbk.setFID(FID_ETSI);
 
-    csbk.setAnncType(anncType);
+    csbk.setAnncType(BCAST_ANNC_SITE_PARMS);
     csbk.setSiteData(m_siteData);
 
     // Regenerate the CSBK data

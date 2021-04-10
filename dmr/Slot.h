@@ -39,6 +39,7 @@
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "lookups/RSSIInterpolator.h"
+#include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
 #include "RingBuffer.h"
@@ -83,7 +84,9 @@ namespace dmr
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-            lookups::RSSIInterpolator* rssiMapper, uint32_t jitter);
+            lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter);
+        /// <summary>Sets local configured site data.</summary>
+        static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
 
     private:
         friend class Control;
@@ -147,8 +150,11 @@ namespace dmr
 
         static bool m_duplex;
 
+        static lookups::IdenTableLookup* m_idenTable;
         static lookups::RadioIdLookup* m_ridLookup;
         static lookups::TalkgroupIdLookup* m_tidLookup;
+
+        static lookups::IdenTable m_idenEntry;
 
         static uint32_t m_hangCount;
 
@@ -167,6 +173,8 @@ namespace dmr
         static uint8_t m_id2;
         static bool m_voice2;
 
+        static uint16_t m_tsccCnt;
+
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
 
@@ -184,8 +192,10 @@ namespace dmr
         void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
         /// <summary>Helper to write a call alert packet on the RF interface.</summary>
         void writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId);
-        /// <summary>Helper to write a TSCC broadcast packet on the RF interface.</summary>
-        void writeRF_TSCC_Broadcast(uint8_t anncType);
+        /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
+        /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Bcast_Sys_Parm();
 
         /// <summary></summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
