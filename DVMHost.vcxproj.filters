@@ -332,6 +332,9 @@
     <ClInclude Include="dmr\SiteData.h">
       <Filter>Header Files\dmr</Filter>
     </ClInclude>
+    <ClInclude Include="dmr\ControlPacket.h">
+      <Filter>Header Files\dmr</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -531,6 +534,9 @@
     </ClCompile>
     <ClCompile Include="p25\data\DataRspHeader.cpp">
       <Filter>Source Files\p25\data</Filter>
+    </ClCompile>
+    <ClCompile Include="dmr\ControlPacket.cpp">
+      <Filter>Source Files\dmr</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

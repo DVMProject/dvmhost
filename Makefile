@@ -27,6 +27,7 @@ OBJECTS = \
 		dmr/lc/LC.o \
 		dmr/lc/ShortLC.o \
 		dmr/Control.o \
+		dmr/ControlPacket.o \
 		dmr/DataPacket.o \
 		dmr/Slot.o \
 		dmr/SlotType.o \

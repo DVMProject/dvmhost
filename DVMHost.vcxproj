@@ -155,6 +155,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="dmr\acl\AccessControl.h" />
+    <ClInclude Include="dmr\ControlPacket.h" />
     <ClInclude Include="dmr\data\Data.h" />
     <ClInclude Include="dmr\data\DataHeader.h" />
     <ClInclude Include="dmr\data\EMB.h" />
@@ -230,6 +231,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dmr\acl\AccessControl.cpp" />
+    <ClCompile Include="dmr\ControlPacket.cpp" />
     <ClCompile Include="dmr\data\Data.cpp" />
     <ClCompile Include="dmr\data\DataHeader.cpp" />
     <ClCompile Include="dmr\data\EMB.cpp" />

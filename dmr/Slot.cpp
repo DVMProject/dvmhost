@@ -112,7 +112,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_rfLC(NULL),
     m_rfSeqNo(0U),
+    m_netLC(NULL),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
@@ -142,7 +144,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_interval.start();
 
     m_voice = new VoicePacket(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
-    m_data = new DataPacket(this, m_network, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
+    m_data = new DataPacket(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
+    m_control = new ControlPacket(this, m_network, dumpCSBKData, debug, verbose);
 }
 
 /// <summary>
@@ -152,6 +155,7 @@ Slot::~Slot()
 {
     delete m_voice;
     delete m_data;
+    delete m_control;
 }
 
 /// <summary>
@@ -180,18 +184,18 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         if (m_rfTimeout) {
-            m_data->writeEndRF();
+            writeEndRF();
             return false;
         }
         else {
-            m_data->writeEndRF(true);
+            writeEndRF(true);
             return true;
         }
     }
 
     if (data[0U] == TAG_LOST && m_rfState == RS_RF_DATA) {
         ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
-        m_data->writeEndRF();
+        writeEndRF();
         return false;
     }
 
@@ -255,7 +259,23 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         m_rfTGHang.start();
 
     if (dataSync) {
-        return m_data->process(data, len);
+        uint8_t dataType = data[1U] & 0x0FU;
+
+        switch (dataType)
+        {
+        case DT_CSBK:
+            return m_control->process(data, len);
+        case DT_VOICE_LC_HEADER:
+        case DT_VOICE_PI_HEADER:
+            return m_voice->process(data, len);
+        case DT_TERMINATOR_WITH_LC:
+        case DT_DATA_HEADER:
+        case DT_RATE_12_DATA:
+        case DT_RATE_34_DATA:
+        case DT_RATE_1_DATA:
+        default:
+            return m_data->process(data, len);
+        }
     }
 
     return m_voice->process(data, len);
@@ -310,20 +330,23 @@ void Slot::processNetwork(const data::Data& dmrData)
 
     switch (dataType)
     {
+    case DT_CSBK:
+        m_control->processNetwork(dmrData);
+        break;
     case DT_VOICE_LC_HEADER:
     case DT_VOICE_PI_HEADER:
+    case DT_VOICE_SYNC:
+    case DT_VOICE:
+        m_voice->processNetwork(dmrData);
+        break;
     case DT_TERMINATOR_WITH_LC:
     case DT_DATA_HEADER:
-    case DT_CSBK:
     case DT_RATE_12_DATA:
     case DT_RATE_34_DATA:
     case DT_RATE_1_DATA:
+    default:
         m_data->processNetwork(dmrData);
         break;
-    case DT_VOICE_SYNC:
-    case DT_VOICE:
-    default:
-        m_voice->processNetwork(dmrData);
     }
 }
 
@@ -380,11 +403,11 @@ void Slot::clock()
                 m_netFrames += 1U;
                 ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%", 
                     m_slotNo, float(m_netFrames) / 16.667F, (m_netLost * 100U) / m_netFrames, float(m_netErrs * 100U) / float(m_netBits));
-                m_data->writeEndNet(true);
+                writeEndNet(true);
             }
             else {
                 ::ActivityLog("DMR", false, "Slot %u network watchdog has expired", m_slotNo);
-                m_data->writeEndNet();
+                writeEndNet();
             }
         }
     }
@@ -556,9 +579,9 @@ void Slot::writeQueueNet(const uint8_t *data)
 void Slot::writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t errors)
 {
     assert(data != NULL);
-    assert(m_data->m_rfLC != NULL);
+    assert(m_rfLC != NULL);
 
-    writeNetworkRF(data, dataType, m_data->m_rfLC->getFLCO(), m_data->m_rfLC->getSrcId(), m_data->m_rfLC->getDstId(), errors);
+    writeNetworkRF(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
 }
 
 /// <summary>
@@ -818,6 +841,116 @@ void Slot::writeRF_TSCC_Bcast_Sys_Parm()
 
     if (m_duplex)
         writeQueueRF(data);
+}
+
+/// <summary>
+/// Helper to write RF end of frame data.
+/// </summary>
+/// <param name="writeEnd"></param>
+void Slot::writeEndRF(bool writeEnd)
+{
+    m_rfState = RS_RF_LISTENING;
+
+    if (m_netState == RS_NET_IDLE) {
+        setShortLC(m_slotNo, 0U);
+    }
+
+    if (writeEnd) {
+        if (m_netState == RS_NET_IDLE && m_duplex && !m_rfTimeout) {
+            // Create a dummy start end frame
+            uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+
+            Sync::addDMRDataSync(data + 2U, m_duplex);
+
+            lc::FullLC fullLC;
+            fullLC.encode(*m_rfLC, data + 2U, DT_TERMINATOR_WITH_LC);
+
+            SlotType slotType;
+            slotType.setColorCode(m_colorCode);
+            slotType.setDataType(DT_TERMINATOR_WITH_LC);
+            slotType.encode(data + 2U);
+
+            data[0U] = TAG_EOT;
+            data[1U] = 0x00U;
+
+            for (uint32_t i = 0U; i < m_hangCount; i++)
+                writeQueueRF(data);
+        }
+    }
+
+    m_data->m_pduDataOffset = 0U;
+
+    if (m_network != NULL)
+        m_network->resetDMR(m_slotNo);
+
+    m_rfTimeoutTimer.stop();
+    m_rfTimeout = false;
+
+    m_rfFrames = 0U;
+    m_rfErrs = 0U;
+    m_rfBits = 1U;
+
+    delete m_rfLC;
+    m_rfLC = NULL;
+}
+
+/// <summary>
+/// Helper to write network end of frame data.
+/// </summary>
+/// <param name="writeEnd"></param>
+void Slot::writeEndNet(bool writeEnd)
+{
+    m_netState = RS_NET_IDLE;
+
+    setShortLC(m_slotNo, 0U);
+
+    m_voice->m_lastFrameValid = false;
+
+    if (writeEnd && !m_netTimeout) {
+        // Create a dummy start end frame
+        uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+
+        Sync::addDMRDataSync(data + 2U, m_duplex);
+
+        lc::FullLC fullLC;
+        fullLC.encode(*m_netLC, data + 2U, DT_TERMINATOR_WITH_LC);
+
+        SlotType slotType;
+        slotType.setColorCode(m_colorCode);
+        slotType.setDataType(DT_TERMINATOR_WITH_LC);
+        slotType.encode(data + 2U);
+
+        data[0U] = TAG_EOT;
+        data[1U] = 0x00U;
+
+        if (m_duplex) {
+            for (uint32_t i = 0U; i < m_hangCount; i++)
+                writeQueueNet(data);
+        }
+        else {
+            for (uint32_t i = 0U; i < 3U; i++)
+                writeQueueNet(data);
+        }
+    }
+
+    m_data->m_pduDataOffset = 0U;
+
+    if (m_network != NULL)
+        m_network->resetDMR(m_slotNo);
+
+    m_networkWatchdog.stop();
+    m_netTimeoutTimer.stop();
+    m_packetTimer.stop();
+    m_netTimeout = false;
+
+    m_netFrames = 0U;
+    m_netLost = 0U;
+
+    m_netErrs = 0U;
+    m_netBits = 1U;
+
+    delete m_netLC;
+    m_netLC = NULL;
 }
 
 /// <summary>

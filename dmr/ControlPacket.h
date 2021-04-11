@@ -28,15 +28,14 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__DMR_DATA_PACKET_H__)
-#define __DMR_DATA_PACKET_H__
+#if !defined(__DMR_CONTROL_PACKET_H__)
+#define __DMR_CONTROL_PACKET_H__
 
 #include "Defines.h"
 #include "dmr/data/Data.h"
 #include "dmr/data/EmbeddedData.h"
 #include "dmr/lc/LC.h"
 #include "dmr/Slot.h"
-#include "edac/AMBEFEC.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "RingBuffer.h"
@@ -52,16 +51,15 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    class HOST_SW_API VoicePacket;
-    class HOST_SW_API ControlPacket;
+    class HOST_SW_API DataPacket;
     class HOST_SW_API Slot;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements core logic for handling DMR data packets.
+    //      This class implements core logic for handling DMR control (CSBK) packets.
     // ---------------------------------------------------------------------------
 
-    class HOST_SW_API DataPacket {
+    class HOST_SW_API ControlPacket {
     public:
         /// <summary>Process a data frame from the RF interface.</summary>
         bool process(uint8_t* data, uint32_t len);
@@ -69,26 +67,19 @@ namespace dmr
         void processNetwork(const data::Data& dmrData);
 
     private:
-        friend class VoicePacket;
-        friend class ControlPacket;
+        friend class DataPacket;
         friend class Slot;
         Slot* m_slot;
 
-        uint8_t* m_pduUserData;
-        uint32_t m_pduDataOffset;
-        uint32_t m_lastRejectId;
-
-        bool m_dumpDataPacket;
-        bool m_repeatDataPacket;
-
+        bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
 
-        /// <summary>Initializes a new instance of the DataPacket class.</summary>
-        DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose);
+        /// <summary>Initializes a new instance of the ControlPacket class.</summary>
+        ControlPacket(Slot* slot, network::BaseNetwork* network, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the DataPacket class.</summary>
-        ~DataPacket();
+        ~ControlPacket();
     };
 } // namespace dmr
 
-#endif // __DMR_DATA_PACKET_H__
+#endif // __DMR_CONTROL_PACKET_H__

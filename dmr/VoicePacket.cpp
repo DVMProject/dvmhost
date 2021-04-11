@@ -56,6 +56,14 @@ using namespace dmr;
         return false;                                                                   \
     }
 
+#define CHECK_TG_HANG_DELLC(_DST_ID)                                                    \
+    if (m_slot->m_rfLastDstId != 0U) {                                                  \
+        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
+            delete lc;                                                                  \
+            return;                                                                     \
+        }                                                                               \
+    }
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -69,7 +77,166 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
+    bool dataSync = (data[1U] & DMR_SYNC_DATA) == DMR_SYNC_DATA;
     bool voiceSync = (data[1U] & DMR_SYNC_VOICE) == DMR_SYNC_VOICE;
+
+    if (dataSync) {
+        uint8_t dataType = data[1U] & 0x0FU;
+
+        SlotType slotType;
+        slotType.setColorCode(m_slot->m_colorCode);
+        slotType.setDataType(dataType);
+
+        if (dataType == DT_VOICE_LC_HEADER) {
+            if (m_slot->m_rfState == RS_RF_AUDIO)
+                return true;
+
+            lc::FullLC fullLC;
+            lc::LC * lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+            if (lc == NULL)
+                return false;
+
+            uint32_t srcId = lc->getSrcId();
+            uint32_t dstId = lc->getDstId();
+            uint8_t flco = lc->getFLCO();
+
+            CHECK_TRAFFIC_COLLISION_DELLC(dstId);
+
+            // validate source RID
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == srcId) {
+                    LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+                }
+
+                m_slot->m_rfLastDstId = 0U;
+                m_slot->m_rfTGHang.stop();
+
+                delete lc;
+                return false;
+            }
+
+            // validate target TID, if the target is a talkgroup
+            if (flco == FLCO_GROUP) {
+                if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
+                    if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == dstId) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
+                    }
+
+                    m_slot->m_rfLastDstId = 0U;
+                    m_slot->m_rfTGHang.stop();
+
+                    delete lc;
+                    return false;
+                }
+            }
+
+            m_slot->m_data->m_lastRejectId = 0U;
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+            }
+
+            uint8_t fid = lc->getFID();
+
+            // NOTE: this is fiddly -- on Motorola a FID of 0x10 indicates a SU has transmitted with Enhanced Privacy enabled -- this might change
+            // and is not exact science!
+            bool encrypted = (fid & 0x10U) == 0x10U;
+
+            m_slot->m_rfLC = lc;
+
+            // The standby LC data
+            m_slot->m_voice->m_rfEmbeddedLC.setLC(*m_slot->m_rfLC);
+            m_slot->m_voice->m_rfEmbeddedData[0U].setLC(*m_slot->m_rfLC);
+            m_slot->m_voice->m_rfEmbeddedData[1U].setLC(*m_slot->m_rfLC);
+
+            // Regenerate the LC data
+            fullLC.encode(*m_slot->m_rfLC, data + 2U, DT_VOICE_LC_HEADER);
+
+            // Regenerate the Slot Type
+            slotType.encode(data + 2U);
+
+            // Convert the Data Sync to be from the BS or MS as needed
+            Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+            data[0U] = TAG_DATA;
+            data[1U] = 0x00U;
+
+            m_slot->m_rfTimeoutTimer.start();
+            m_slot->m_rfTimeout = false;
+
+            m_slot->m_rfFrames = 0U;
+            m_slot->m_rfSeqNo = 0U;
+            m_slot->m_rfBits = 1U;
+            m_slot->m_rfErrs = 0U;
+
+            m_slot->m_voice->m_rfEmbeddedReadN = 0U;
+            m_slot->m_voice->m_rfEmbeddedWriteN = 1U;
+            m_slot->m_voice->m_rfTalkerId = TALKER_ID_NONE;
+
+            m_slot->m_minRSSI = m_slot->m_rssi;
+            m_slot->m_maxRSSI = m_slot->m_rssi;
+            m_slot->m_aveRSSI = m_slot->m_rssi;
+            m_slot->m_rssiCount = 1U;
+
+            if (m_slot->m_duplex) {
+                m_slot->m_queue.clear();
+                m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
+
+                for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
+                    m_slot->writeQueueRF(data);
+            }
+
+            m_slot->writeNetworkRF(data, DT_VOICE_LC_HEADER);
+
+            m_slot->m_rfState = RS_RF_AUDIO;
+            m_slot->m_rfLastDstId = dstId;
+
+            if (m_slot->m_netState == RS_NET_IDLE) {
+                m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
+            }
+
+            if (m_debug) {
+                Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            }
+
+            ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+            return true;
+        }
+        else if (dataType == DT_VOICE_PI_HEADER) {
+            if (m_slot->m_rfState != RS_RF_AUDIO)
+                return false;
+
+            // Regenerate the Slot Type
+            slotType.encode(data + 2U);
+
+            // Convert the Data Sync to be from the BS or MS as needed
+            Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+            // Regenerate the payload and the BPTC (196,96) FEC
+            edac::BPTC19696 bptc;
+            uint8_t payload[12U];
+            bptc.decode(data + 2U, payload);
+            bptc.encode(payload, data + 2U);
+
+            data[0U] = TAG_DATA;
+            data[1U] = 0x00U;
+
+            if (m_slot->m_duplex)
+                m_slot->writeQueueRF(data);
+
+            m_slot->writeNetworkRF(data, DT_VOICE_PI_HEADER);
+
+            if (m_debug) {
+                Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_PI_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
 
     if (voiceSync) {
         if (m_slot->m_rfState == RS_RF_AUDIO) {
@@ -79,7 +246,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             Sync::addDMRAudioSync(data + 2U, m_slot->m_duplex);
 
             uint32_t errors = 0U;
-            uint8_t fid = m_slot->m_data->m_rfLC->getFID();
+            uint8_t fid = m_slot->m_rfLC->getFID();
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
@@ -94,7 +261,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_slot->m_rfFrames++;
 
             m_slot->m_rfTGHang.start();
-            m_slot->m_rfLastDstId = m_slot->m_data->m_rfLC->getDstId();
+            m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
 
             m_rfEmbeddedReadN = (m_rfEmbeddedReadN + 1U) % 2U;
             m_rfEmbeddedWriteN = (m_rfEmbeddedWriteN + 1U) % 2U;
@@ -132,7 +299,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_lastRfN = m_rfN;
 
             uint32_t errors = 0U;
-            uint8_t fid = m_slot->m_data->m_rfLC->getFID();
+            uint8_t fid = m_slot->m_rfLC->getFID();
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
@@ -147,7 +314,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_slot->m_rfFrames++;
 
             m_slot->m_rfTGHang.start();
-            m_slot->m_rfLastDstId = m_slot->m_data->m_rfLC->getDstId();
+            m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
 
             // Get the LCSS from the EMB
             data::EMB emb;
@@ -177,7 +344,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     }
 
                     if (m_verbose) {
-                        logGPSPosition(m_slot->m_data->m_rfLC->getSrcId(), data);
+                        logGPSPosition(m_slot->m_rfLC->getSrcId(), data);
                     }
                     break;
 
@@ -301,12 +468,12 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     }
                 }
 
-                m_slot->m_data->m_rfLC = lc;
+                m_slot->m_rfLC = lc;
 
                 // The standby LC data
-                m_rfEmbeddedLC.setLC(*m_slot->m_data->m_rfLC);
-                m_rfEmbeddedData[0U].setLC(*m_slot->m_data->m_rfLC);
-                m_rfEmbeddedData[1U].setLC(*m_slot->m_data->m_rfLC);
+                m_rfEmbeddedLC.setLC(*m_slot->m_rfLC);
+                m_rfEmbeddedData[0U].setLC(*m_slot->m_rfLC);
+                m_rfEmbeddedData[1U].setLC(*m_slot->m_rfLC);
 
                 // Create a dummy start frame to replace the received frame
                 uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -314,7 +481,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
 
                 lc::FullLC fullLC;
-                fullLC.encode(*m_slot->m_data->m_rfLC, start + 2U, DT_VOICE_LC_HEADER);
+                fullLC.encode(*m_slot->m_rfLC, start + 2U, DT_VOICE_LC_HEADER);
 
                 SlotType slotType;
                 slotType.setColorCode(m_slot->m_colorCode);
@@ -364,7 +531,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
                 // Send the original audio frame out
                 uint32_t errors = 0U;
-                uint8_t fid = m_slot->m_data->m_rfLC->getFID();
+                uint8_t fid = m_slot->m_rfLC->getFID();
                 if (fid == FID_ETSI || fid == FID_DMRA) {
                     errors = m_fec.regenerateDMR(data + 2U);
                     if (m_verbose) {
@@ -415,19 +582,196 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
     
-    if (dataType == DT_VOICE_SYNC) {
+    if (dataType == DT_VOICE_LC_HEADER) {
+        if (m_slot->m_netState == RS_NET_AUDIO)
+            return;
+
+        lc::FullLC fullLC;
+        lc::LC * lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+        if (lc == NULL) {
+            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
+            lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+        }
+
+        uint32_t srcId = lc->getSrcId();
+        uint32_t dstId = lc->getDstId();
+        uint8_t flco = lc->getFLCO();
+
+        CHECK_TG_HANG_DELLC(dstId);
+
+        if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
+            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
+                dmrData.getSrcId(), dmrData.getFLCO() == FLCO_GROUP ? "TG" : "", dmrData.getDstId(),
+                srcId, flco == FLCO_GROUP ? "TG" : "", dstId);
+
+        if (m_verbose) {
+            LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+        }
+
+        m_slot->m_netLC = lc;
+
+        // The standby LC data
+        m_slot->m_voice->m_netEmbeddedLC.setLC(*m_slot->m_netLC);
+        m_slot->m_voice->m_netEmbeddedData[0U].setLC(*m_slot->m_netLC);
+        m_slot->m_voice->m_netEmbeddedData[1U].setLC(*m_slot->m_netLC);
+
+        // Regenerate the LC data
+        fullLC.encode(*m_slot->m_netLC, data + 2U, DT_VOICE_LC_HEADER);
+
+        // Regenerate the Slot Type
+        SlotType slotType;
+        slotType.setColorCode(m_slot->m_colorCode);
+        slotType.setDataType(DT_VOICE_LC_HEADER);
+        slotType.encode(data + 2U);
+
+        // Convert the Data Sync to be from the BS or MS as needed
+        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+        data[0U] = TAG_DATA;
+        data[1U] = 0x00U;
+
+        m_slot->m_voice->m_lastFrameValid = false;
+
+        m_slot->m_netTimeoutTimer.start();
+        m_slot->m_netTimeout = false;
+
+        m_slot->m_netFrames = 0U;
+        m_slot->m_netLost = 0U;
+        m_slot->m_netBits = 1U;
+        m_slot->m_netErrs = 0U;
+
+        m_slot->m_voice->m_netEmbeddedReadN = 0U;
+        m_slot->m_voice->m_netEmbeddedWriteN = 1U;
+        m_slot->m_voice->m_netTalkerId = TALKER_ID_NONE;
+
+        if (m_slot->m_duplex) {
+            m_slot->m_queue.clear();
+            m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
+        }
+
+        for (uint32_t i = 0U; i < m_slot->m_jitterSlots; i++)
+            m_slot->writeQueueNet(m_slot->m_idle);
+
+        if (m_slot->m_duplex) {
+            for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
+                m_slot->writeQueueNet(data);
+        }
+        else {
+            for (uint32_t i = 0U; i < NO_HEADERS_SIMPLEX; i++)
+                m_slot->writeQueueNet(data);
+        }
+
+        m_slot->m_netState = RS_NET_AUDIO;
+        m_slot->m_netLastDstId = dstId;
+
+        m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
+
+        if (m_debug) {
+            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        }
+
+        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
+    }
+    else if (dataType == DT_VOICE_PI_HEADER) {
+        if (m_slot->m_netState != RS_NET_AUDIO) {
+            lc::LC* lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+
+            uint32_t srcId = lc->getSrcId();
+            uint32_t dstId = lc->getDstId();
+
+            CHECK_TG_HANG_DELLC(dstId);
+
+            m_slot->m_netLC = lc;
+
+            m_slot->m_voice->m_lastFrameValid = false;
+
+            m_slot->m_netTimeoutTimer.start();
+            m_slot->m_netTimeout = false;
+
+            if (m_slot->m_duplex) {
+                m_slot->m_queue.clear();
+                m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
+            }
+
+            for (uint32_t i = 0U; i < m_slot->m_jitterSlots; i++)
+                m_slot->writeQueueNet(m_slot->m_idle);
+
+            // Create a dummy start frame
+            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+
+            Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
+
+            lc::FullLC fullLC;
+            fullLC.encode(*m_slot->m_netLC, start + 2U, DT_VOICE_LC_HEADER);
+
+            SlotType slotType;
+            slotType.setColorCode(m_slot->m_colorCode);
+            slotType.setDataType(DT_VOICE_LC_HEADER);
+            slotType.encode(start + 2U);
+
+            start[0U] = TAG_DATA;
+            start[1U] = 0x00U;
+
+            if (m_slot->m_duplex) {
+                for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
+                    m_slot->writeQueueRF(start);
+            }
+            else {
+                for (uint32_t i = 0U; i < NO_HEADERS_SIMPLEX; i++)
+                    m_slot->writeQueueRF(start);
+            }
+
+            m_slot->m_netFrames = 0U;
+            m_slot->m_netLost = 0U;
+            m_slot->m_netBits = 1U;
+            m_slot->m_netErrs = 0U;
+
+            m_slot->m_netState = RS_NET_AUDIO;
+            m_slot->m_netLastDstId = dstId;
+
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
+
+            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
+                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
+        }
+
+        // Regenerate the Slot Type
+        SlotType slotType;
+        slotType.setColorCode(m_slot->m_colorCode);
+        slotType.setDataType(DT_VOICE_PI_HEADER);
+        slotType.encode(data + 2U);
+
+        // Convert the Data Sync to be from the BS or MS as needed
+        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+        // Regenerate the payload and the BPTC (196,96) FEC
+        edac::BPTC19696 bptc;
+        uint8_t payload[12U];
+        bptc.decode(data + 2U, payload);
+        bptc.encode(payload, data + 2U);
+
+        data[0U] = TAG_DATA;
+        data[1U] = 0x00U;
+
+        m_slot->writeQueueNet(data);
+
+        if (m_debug) {
+            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_VOICE_PI_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        }
+    }
+    else if (dataType == DT_VOICE_SYNC) {
         if (m_slot->m_netState == RS_NET_IDLE) {
             lc::LC* lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
             uint32_t dstId = lc->getDstId();
             uint32_t srcId = lc->getSrcId();
 
-            m_slot->m_data->m_netLC = lc;
+            m_slot->m_netLC = lc;
 
             // The standby LC data
-            m_netEmbeddedLC.setLC(*m_slot->m_data->m_netLC);
-            m_netEmbeddedData[0U].setLC(*m_slot->m_data->m_netLC);
-            m_netEmbeddedData[1U].setLC(*m_slot->m_data->m_netLC);
+            m_netEmbeddedLC.setLC(*m_slot->m_netLC);
+            m_netEmbeddedData[0U].setLC(*m_slot->m_netLC);
+            m_netEmbeddedData[1U].setLC(*m_slot->m_netLC);
 
             m_lastFrameValid = false;
 
@@ -448,7 +792,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             Sync::addDMRDataSync(start + 2U, m_slot->m_duplex);
 
             lc::FullLC fullLC;
-            fullLC.encode(*m_slot->m_data->m_netLC, start + 2U, DT_VOICE_LC_HEADER);
+            fullLC.encode(*m_slot->m_netLC, start + 2U, DT_VOICE_LC_HEADER);
 
             SlotType slotType;
             slotType.setColorCode(m_slot->m_colorCode);
@@ -479,14 +823,14 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
 
-            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_data->m_netLC->getFLCO(), true);
+            m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
             ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
-                m_slot->m_slotNo, srcId, m_slot->m_data->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
+                m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
         }
 
         if (m_slot->m_netState == RS_NET_AUDIO) {
-            uint8_t fid = m_slot->m_data->m_netLC->getFID();
+            uint8_t fid = m_slot->m_netLC->getFID();
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
@@ -531,7 +875,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         if (m_slot->m_netState != RS_NET_AUDIO)
             return;
 
-        uint8_t fid = m_slot->m_data->m_netLC->getFID();
+        uint8_t fid = m_slot->m_netLC->getFID();
         if (fid == FID_ETSI || fid == FID_DMRA) {
             m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
             if (m_verbose) {
@@ -567,7 +911,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
                     Utils::dump(2U, text, data, 9U);
                 }
 
-                logGPSPosition(m_slot->m_data->m_netLC->getSrcId(), data);
+                logGPSPosition(m_slot->m_netLC->getSrcId(), data);
                 break;
             case FLCO_TALKER_ALIAS_HEADER:
                 if (!(m_netTalkerId & TALKER_ID_HEADER)) {
@@ -822,7 +1166,7 @@ void VoicePacket::insertSilence(uint32_t count)
 
     uint8_t n = (m_netN + 1U) % 6U;
 
-    uint8_t fid = m_slot->m_data->m_netLC->getFID();
+    uint8_t fid = m_slot->m_netLC->getFID();
 
     data::EMB emb;
     emb.setColorCode(m_slot->m_colorCode);

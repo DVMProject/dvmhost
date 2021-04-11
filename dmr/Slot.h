@@ -34,6 +34,7 @@
 #include "Defines.h"
 #include "dmr/Control.h"
 #include "dmr/SiteData.h"
+#include "dmr/ControlPacket.h"
 #include "dmr/DataPacket.h"
 #include "dmr/VoicePacket.h"
 #include "modem/Modem.h"
@@ -56,6 +57,7 @@ namespace dmr
     class HOST_SW_API Control;
     class HOST_SW_API VoicePacket;
     class HOST_SW_API DataPacket;
+    class HOST_SW_API ControlPacket;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -94,6 +96,8 @@ namespace dmr
         VoicePacket* m_voice;
         friend class DataPacket;
         DataPacket* m_data;
+        friend class ControlPacket;
+        ControlPacket* m_control;
 
         uint32_t m_slotNo;
 
@@ -104,7 +108,11 @@ namespace dmr
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
 
+        lc::LC* m_rfLC;
+
         uint8_t m_rfSeqNo;
+
+        lc::LC* m_netLC;
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;
@@ -196,6 +204,11 @@ namespace dmr
         void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
         /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
         void writeRF_TSCC_Bcast_Sys_Parm();
+
+        /// <summary>Helper to write RF end of frame data.</summary>
+        void writeEndRF(bool writeEnd = false);
+        /// <summary>Helper to write network end of frame data.</summary>
+        void writeEndNet(bool writeEnd = false);
 
         /// <summary></summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
