@@ -49,6 +49,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
 // Don't process RF frames if the network isn't in a idle state.
 #define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
     if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
@@ -56,24 +57,9 @@ using namespace dmr;
         return false;                                                                   \
     }
 
-#define CHECK_TRAFFIC_COLLISION_DELLC(_DST_ID)                                          \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        delete lc;                                                                      \
-        return false;                                                                   \
-    }
-
 #define CHECK_TG_HANG(_DST_ID)                                                          \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
         if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }
-
-#define CHECK_TG_HANG_DELLC(_DST_ID)                                                    \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            delete lc;                                                                  \
             return;                                                                     \
         }                                                                               \
     }
@@ -386,6 +372,113 @@ void ControlPacket::processNetwork(const data::Data & dmrData)
     }
 }
 
+/// <summary>
+/// Helper to write a extended function packet on the RF interface.
+/// </summary>
+/// <param name="func">Extended function opcode.</param>
+/// <param name="arg">Extended function argument.</param>
+/// <param name="dstId">Destination radio ID.</param>
+void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
+            m_slot->m_slotNo, func, arg, dstId);
+    }
+
+    // generate activity log entry
+    if (func == DMR_EXT_FNCT_CHECK) {
+        ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, arg, dstId);
+    }
+    else if (func == DMR_EXT_FNCT_INHIBIT) {
+        ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
+    }
+    else if (func == DMR_EXT_FNCT_UNINHIBIT) {
+        ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
+    }
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_EXT_FNCT);
+    csbk.setFID(FID_DMRA);
+
+    csbk.setGI(false);
+    csbk.setCBF(func);
+    csbk.setSrcId(arg);
+    csbk.setDstId(dstId);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->writeQueueRF(data);
+}
+
+/// <summary>
+/// Helper to write a call alert packet on the RF interface.
+/// </summary>
+/// <param name="srcId">Source radio ID.</param>
+/// <param name="dstId">Destination radio ID.</param>
+void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %u",
+            m_slot->m_slotNo, srcId, dstId);
+    }
+
+    ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_CALL_ALRT);
+    csbk.setFID(FID_DMRA);
+
+    csbk.setGI(false);
+    csbk.setSrcId(srcId);
+    csbk.setDstId(dstId);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->writeQueueRF(data);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -412,4 +505,118 @@ ControlPacket::ControlPacket(Slot * slot, network::BaseNetwork * network, bool d
 ControlPacket::~ControlPacket()
 {
     /* stub */
+}
+
+/// <summary>
+/// Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.
+/// </summary>
+/// <param name="channelNo"></param>
+/// <param name="annWd"></param>
+void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_ANN_WD_TSCC (Announce-WD TSCC Channel), channelNo = %u, annWd = %u",
+            m_slot->m_slotNo, channelNo, annWd);
+    }
+
+    m_slot->m_rfSeqNo = 0U;
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_BROADCAST);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setAnncType(BCAST_ANNC_ANN_WD_TSCC);
+    csbk.setSiteData(m_slot->m_siteData);
+    csbk.setLogicalCh1(channelNo);
+    csbk.setAnnWdCh1(annWd);
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    // MBC frame 1
+    csbk.setLastBlock(false);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->writeQueueRF(data);
+
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    // MBC frame 2
+    csbk.setLastBlock(false);
+    csbk.setCdef(true);
+    csbk.setIdenTable(m_slot->m_idenEntry);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->writeQueueRF(data);
+}
+
+/// <summary>
+/// Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.
+/// </summary>
+void ControlPacket::writeRF_TSCC_Bcast_Sys_Parm()
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_SITE_PARMS (Announce Site Parms)", m_slot->m_slotNo);
+    }
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK();
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_BROADCAST);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setAnncType(BCAST_ANNC_SITE_PARMS);
+    csbk.setSiteData(m_slot->m_siteData);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->writeQueueRF(data);
 }

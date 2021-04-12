@@ -244,10 +244,10 @@ void Control::writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uin
 {
     switch (slotNo) {
     case 1U:
-        m_slot1->writeRF_Ext_Func(func, arg, dstId);
+        m_slot1->control()->writeRF_Ext_Func(func, arg, dstId);
         break;
     case 2U:
-        m_slot2->writeRF_Ext_Func(func, arg, dstId);
+        m_slot2->control()->writeRF_Ext_Func(func, arg, dstId);
         break;
     default:
         LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
@@ -265,10 +265,10 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
 {
     switch (slotNo) {
     case 1U:
-        m_slot1->writeRF_Call_Alrt(srcId, dstId);
+        m_slot1->control()->writeRF_Call_Alrt(srcId, dstId);
         break;
     case 2U:
-        m_slot2->writeRF_Call_Alrt(srcId, dstId);
+        m_slot2->control()->writeRF_Call_Alrt(srcId, dstId);
         break;
     default:
         LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);

@@ -51,7 +51,6 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    class HOST_SW_API DataPacket;
     class HOST_SW_API Slot;
 
     // ---------------------------------------------------------------------------
@@ -66,8 +65,12 @@ namespace dmr
         /// <summary>Process a data frame from the network.</summary>
         void processNetwork(const data::Data& dmrData);
 
+        /// <summary>Helper to write a extended function packet on the RF interface.</summary>
+        void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
+        /// <summary>Helper to write a call alert packet on the RF interface.</summary>
+        void writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId);
+
     private:
-        friend class DataPacket;
         friend class Slot;
         Slot* m_slot;
 
@@ -79,6 +82,11 @@ namespace dmr
         ControlPacket(Slot* slot, network::BaseNetwork* network, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the DataPacket class.</summary>
         ~ControlPacket();
+
+        /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
+        /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Bcast_Sys_Parm();
     };
 } // namespace dmr
 

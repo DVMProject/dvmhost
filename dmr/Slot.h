@@ -54,7 +54,6 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    class HOST_SW_API Control;
     class HOST_SW_API VoicePacket;
     class HOST_SW_API DataPacket;
     class HOST_SW_API ControlPacket;
@@ -83,6 +82,12 @@ namespace dmr
         /// <summary>Updates the slot processor.</summary>
         void clock();
 
+        /// <summary></summary>
+        ControlPacket* control() { return m_control; }
+
+        /// <summary>Helper to change the debug and verbose state.</summary>
+        void setDebugVerbose(bool debug, bool verbose);
+
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
@@ -91,7 +96,6 @@ namespace dmr
         static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
 
     private:
-        friend class Control;
         friend class VoicePacket;
         VoicePacket* m_voice;
         friend class DataPacket;
@@ -183,9 +187,6 @@ namespace dmr
 
         static uint16_t m_tsccCnt;
 
-        /// <summary>Helper to change the debug and verbose state.</summary>
-        void setDebugVerbose(bool debug, bool verbose);
-
         /// <summary>Write data processed from RF to the data ring buffer.</summary>
         void writeQueueRF(const uint8_t* data);
         /// <summary>Write data processed from the network to the data ring buffer.</summary>
@@ -195,15 +196,6 @@ namespace dmr
         /// <summary>Write data processed from RF to the network.</summary>
         void writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
             uint32_t dstId, uint8_t errors = 0U);
-
-        /// <summary>Helper to write a extended function packet on the RF interface.</summary>
-        void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
-        /// <summary>Helper to write a call alert packet on the RF interface.</summary>
-        void writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId);
-        /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>
-        void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
-        /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
-        void writeRF_TSCC_Bcast_Sys_Parm();
 
         /// <summary>Helper to write RF end of frame data.</summary>
         void writeEndRF(bool writeEnd = false);
