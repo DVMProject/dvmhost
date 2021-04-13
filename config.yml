@@ -103,7 +103,15 @@ system:
         rfssId: 1
         siteId: 1
     modem:
-        port: null
+        protocol:
+            type: "null" # Valid values are "null", "uart", and "udp"
+            uart:
+                port: /dev/ttyUSB0
+                speed: 115200
+            udp:
+                mode: master # Valid values are "master", and "peer"
+                address: 0.0.0.0
+                port: 3334
         rxInvert: false
         txInvert: false
         pttInvert: false

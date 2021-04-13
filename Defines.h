@@ -115,6 +115,14 @@ typedef unsigned long long  ulong64_t;
 #define __forceinline __attribute__((always_inline))
 #endif
 
+#define NULL_PORT "null"
+#define UART_PORT "uart"
+#define UDP_PORT "udp"
+
+#define UDP_MODE_MASTER "master"
+#define UDP_MODE_PEER "peer"
+
+const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;
 const uint32_t  RCON_DEFAULT_PORT = 9990;
 

@@ -49,7 +49,7 @@ using namespace network;
 /// </summary>
 /// <param name="address">Hostname/IP address to connect to.</param>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(const std::string& address, unsigned int port) :
+UDPSocket::UDPSocket(const std::string& address, uint32_t port) :
     m_address_save(address),
     m_port_save(port),
     m_counter(0U)
@@ -66,7 +66,7 @@ UDPSocket::UDPSocket(const std::string& address, unsigned int port) :
 /// Initializes a new instance of the UDPSocket class.
 /// </summary>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(unsigned int port) :
+UDPSocket::UDPSocket(uint32_t port) :
     m_address_save(),
     m_port_save(port),
     m_counter(0U)
@@ -102,7 +102,7 @@ bool UDPSocket::open(const sockaddr_storage& address)
 /// </summary>
 /// <param name="af"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(unsigned int af)
+bool UDPSocket::open(uint32_t af)
 {
     return open(0, af, m_address_save, m_port_save);
 }
@@ -115,10 +115,10 @@ bool UDPSocket::open(unsigned int af)
 /// <param name="address"></param>
 /// <param name="port"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(const unsigned int index, const unsigned int af, const std::string& address, const unsigned int port)
+bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string& address, const uint32_t port)
 {
     sockaddr_storage addr;
-    unsigned int addrlen;
+    uint32_t addrlen;
     struct addrinfo hints;
 
     ::memset(&hints, 0, sizeof(hints));
@@ -183,7 +183,7 @@ bool UDPSocket::open(const unsigned int index, const unsigned int af, const std:
 /// <param name="address">IP address to read data from.</param>
 /// <param name="addrLen"></param>
 /// <returns>Actual length of data read from remote UDP socket.</returns>
-int UDPSocket::read(unsigned char* buffer, unsigned int length, sockaddr_storage& address, unsigned int& addrLen)
+int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen)
 {
     assert(buffer != NULL);
     assert(length > 0U);
@@ -267,7 +267,7 @@ int UDPSocket::read(unsigned char* buffer, unsigned int length, sockaddr_storage
 /// <param name="address">IP address to write data to.</param>
 /// <param name="addrLen"></param>
 /// <returns>Actual length of data written to remote UDP socket.</returns>
-bool UDPSocket::write(const unsigned char* buffer, unsigned int length, const sockaddr_storage& address, unsigned int addrLen)
+bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen)
 {
     assert(buffer != NULL);
     assert(length > 0U);
@@ -318,7 +318,7 @@ void UDPSocket::close()
 /// Closes the UDP socket connection.
 /// </summary>
 /// <param name="index"></param>
-void UDPSocket::close(const unsigned int index)
+void UDPSocket::close(const uint32_t index)
 {
     if ((index < UDP_SOCKET_MAX) && (m_fd[index] >= 0)) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -362,7 +362,7 @@ void UDPSocket::shutdown()
 /// <param name="addr">Socket address structure.</param>
 /// <param name="addrLen"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, unsigned int port, sockaddr_storage& addr, unsigned int& addrLen)
+int UDPSocket::lookup(const std::string& hostname, uint32_t port, sockaddr_storage& addr, uint32_t& addrLen)
 {
     struct addrinfo hints;
     ::memset(&hints, 0, sizeof(hints));
@@ -379,7 +379,7 @@ int UDPSocket::lookup(const std::string& hostname, unsigned int port, sockaddr_s
 /// <param name="addrLen"></param>
 /// <param name="hints"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, unsigned int port, sockaddr_storage& addr, unsigned int& addrLen, struct addrinfo& hints)
+int UDPSocket::lookup(const std::string& hostname, uint32_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
 {
     std::string portstr = std::to_string(port);
     struct addrinfo* res;
@@ -452,6 +452,42 @@ bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& add
     else {
         return false;
     }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="addr"></param>
+/// <returns></returns>
+std::string UDPSocket::address(const sockaddr_storage& addr)
+{
+    std::string address = std::string();
+    char str[INET_ADDRSTRLEN];
+
+
+
+    switch (addr.ss_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in* in;
+        in = (struct sockaddr_in*) & addr;
+        inet_ntop(AF_INET, &(in->sin_addr), str, INET_ADDRSTRLEN);
+        address = std::string(str);
+    }
+    break;
+    case AF_INET6:
+    {
+        struct sockaddr_in6* in6;
+        in6 = (struct sockaddr_in6*) & addr;
+        inet_ntop(AF_INET6, &(in6->sin6_addr), str, INET_ADDRSTRLEN);
+        address = std::string(str);
+    }
+    break;
+    default:
+        break;
+    }
+
+    return address;
 }
 
 /// <summary>

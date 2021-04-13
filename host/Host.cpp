@@ -31,7 +31,9 @@
 #include "Defines.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
-#include "modem/SerialController.h"
+#include "modem/port/ModemNullPort.h"
+#include "modem/port/UARTPort.h"
+#include "modem/port/UDPPort.h"
 #include "network/UDPSocket.h"
 #include "lookups/RSSIInterpolator.h"
 #include "host/Host.h"
@@ -47,6 +49,7 @@ using namespace lookups;
 
 #include <cstdio>
 #include <cstdarg>
+#include <algorithm>
 #include <vector>
 
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -68,6 +71,7 @@ Host::Host(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
     m_modem(NULL),
+    m_modemRemote(false),
     m_network(NULL),
     m_mode(STATE_IDLE),
     m_modeTimer(1000U),
@@ -194,6 +198,57 @@ int Host::run()
     ret = createModem();
     if (!ret)
         return EXIT_FAILURE;
+
+    // is the modem slaved to a remote DVM host?
+    if (m_modemRemote) {
+        ::LogInfoEx(LOG_HOST, "Host is up and running in remote modem mode");
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        bool killed = false;
+
+        // main execution loop
+        while (!killed) {
+            if (m_modem->hasLockout() && m_mode != HOST_STATE_LOCKOUT)
+                setMode(HOST_STATE_LOCKOUT);
+            else if (!m_modem->hasLockout() && m_mode == HOST_STATE_LOCKOUT)
+                setMode(STATE_IDLE);
+
+            if (m_modem->hasError() && m_mode != HOST_STATE_ERROR)
+                setMode(HOST_STATE_ERROR);
+            else if (!m_modem->hasError() && m_mode == HOST_STATE_ERROR)
+                setMode(STATE_IDLE);
+
+            uint32_t ms = stopWatch.elapsed();
+            if (ms > 1U)
+                m_modem->clock(ms);
+
+            // ------------------------------------------------------
+            //  -- Modem, DMR, P25 and Network Clocking           --
+            // ------------------------------------------------------
+
+            ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            m_modem->clock(ms);
+
+            if (g_killed) {
+                if (!m_modem->hasTX()) {
+                    killed = true;
+                }
+            }
+
+            m_modeTimer.clock(ms);
+
+            if (ms < 2U)
+                Thread::sleep(1U);
+        }
+
+        setMode(HOST_STATE_QUIT);
+
+        return EXIT_SUCCESS;
+    }
 
     yaml::Node systemConf = m_conf["system"];
 
@@ -1076,6 +1131,20 @@ int Host::run()
 /// </summary>
 bool Host::readParams()
 {
+    yaml::Node modemConf = m_conf["system"]["modem"];
+
+    yaml::Node modemProtocol = modemConf["protocol"];
+    std::string portType = modemProtocol["type"].as<std::string>("null");
+
+    yaml::Node udpProtocol = modemProtocol["udp"];
+    std::string udpMode = udpProtocol["mode"].as<std::string>("master");
+
+    bool udpMasterMode = false;
+    std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
+    if (portType == UDP_PORT && udpMode == UDP_MODE_MASTER) {
+        udpMasterMode = true;
+    }
+
     yaml::Node protocolConf = m_conf["protocols"];
     m_dmrEnabled = protocolConf["dmr"]["enable"].as<bool>(false);
     m_p25Enabled = protocolConf["p25"]["enable"].as<bool>(false);
@@ -1100,153 +1169,158 @@ bool Host::readParams()
     LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
     LogInfo("    P25: %s", m_p25Enabled ? "enabled" : "disabled");
     LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
-    LogInfo("    Timeout: %us", m_timeout);
-    LogInfo("    RF Mode Hang: %us", m_rfModeHang);
-    LogInfo("    RF Talkgroup Hang: %us", m_rfTalkgroupHang);
-    LogInfo("    Net Mode Hang: %us", m_netModeHang);
-    LogInfo("    Identity: %s", m_identity.c_str());
-    LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
-    LogInfo("    Lock Filename: %s", g_lockFile.c_str());
+    if (!udpMasterMode) {
+        LogInfo("    Timeout: %us", m_timeout);
+        LogInfo("    RF Mode Hang: %us", m_rfModeHang);
+        LogInfo("    RF Talkgroup Hang: %us", m_rfTalkgroupHang);
+        LogInfo("    Net Mode Hang: %us", m_netModeHang);
+        LogInfo("    Identity: %s", m_identity.c_str());
+        LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
+        LogInfo("    Lock Filename: %s", g_lockFile.c_str());
 
-    yaml::Node systemInfo = systemConf["info"];
-    m_latitude = systemInfo["latitude"].as<float>(0.0F);
-    m_longitude = systemInfo["longitude"].as<float>(0.0F);
-    m_height = systemInfo["height"].as<int>(0);
-    m_power = systemInfo["power"].as<uint32_t>(0U);
-    m_location = systemInfo["location"].as<std::string>();
+        yaml::Node systemInfo = systemConf["info"];
+        m_latitude = systemInfo["latitude"].as<float>(0.0F);
+        m_longitude = systemInfo["longitude"].as<float>(0.0F);
+        m_height = systemInfo["height"].as<int>(0);
+        m_power = systemInfo["power"].as<uint32_t>(0U);
+        m_location = systemInfo["location"].as<std::string>();
 
-    LogInfo("System Info Parameters");
-    LogInfo("    Latitude: %fdeg N", m_latitude);
-    LogInfo("    Longitude: %fdeg E", m_longitude);
-    LogInfo("    Height: %um", m_height);
-    LogInfo("    Power: %uW", m_power);
-    LogInfo("    Location: \"%s\"", m_location.c_str());
+        LogInfo("System Info Parameters");
+        LogInfo("    Latitude: %fdeg N", m_latitude);
+        LogInfo("    Longitude: %fdeg E", m_longitude);
+        LogInfo("    Height: %um", m_height);
+        LogInfo("    Power: %uW", m_power);
+        LogInfo("    Location: \"%s\"", m_location.c_str());
 
-    // try to load bandplan identity table
-    std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
-    uint32_t idenReloadTime = systemConf["iden_table"]["time"].as<uint32_t>(0U);
+        // try to load bandplan identity table
+        std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
+        uint32_t idenReloadTime = systemConf["iden_table"]["time"].as<uint32_t>(0U);
 
-    if (idenLookupFile.length() <= 0U) {
-        ::LogError(LOG_HOST, "No bandplan identity table? This must be defined!");
-        return false;
+        if (idenLookupFile.length() <= 0U) {
+            ::LogError(LOG_HOST, "No bandplan identity table? This must be defined!");
+            return false;
+        }
+
+        LogInfo("Iden Table Lookups");
+        LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
+        if (idenReloadTime > 0U)
+            LogInfo("    Reload: %u mins", idenReloadTime);
+
+        m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
+        m_idenTable->read();
+
+        yaml::Node rfssConfig = systemConf["config"];
+        m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
+        if (m_channelId > 15U) { // clamp to 15
+            m_channelId = 15U;
+        }
+
+        IdenTable entry = m_idenTable->find(m_channelId);
+        if (entry.baseFrequency() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
+            return false;
+        }
+
+        if (entry.txOffsetMhz() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+            return false;
+        }
+
+        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+
+        m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
+        if (m_channelNo == 0U) { // clamp to 1
+            m_channelNo = 1U;
+        }
+        if (m_channelNo > 4095U) { // clamp to 4095
+            m_channelNo = 4095U;
+        }
+
+        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+        m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+
+        yaml::Node & voiceChList = rfssConfig["voiceChNo"];
+        for (size_t i = 0; i < voiceChList.size(); i++) {
+            uint32_t chNo = (uint32_t)::strtoul(voiceChList[i].as<std::string>("1").c_str(), NULL, 16);
+            m_voiceChNo.push_back(chNo);
+        }
+
+        std::string strVoiceChNo = "";
+        for (auto it = m_voiceChNo.begin(); it != m_voiceChNo.end(); ++it) {
+            int decVal = ::atoi(std::to_string(*it).c_str());
+            char hexStr[8];
+
+            ::sprintf(hexStr, "$%04X", decVal);
+
+            strVoiceChNo.append(std::string(hexStr));
+            strVoiceChNo.append(",");
+        }
+        strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
+
+        m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
+        if (m_siteId == 0U) { // clamp to 1
+            m_siteId = 1U;
+        }
+        if (m_siteId > 0xFEU) { // clamp to $FE
+            m_siteId = 0xFEU;
+        }
+
+        m_dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
+        m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
+        if (m_dmrNetId == 0U) { // clamp to 1
+            m_dmrNetId = 1U;
+        }
+        if (m_dmrNetId > 0x1FFU) { // clamp to $1FF
+            m_dmrNetId = 0x1FFU;
+        }
+
+        m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
+        m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
+        m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
+        if (m_p25NetId == 0U) { // clamp to 1
+            m_p25NetId = 1U;
+        }
+        if (m_p25NetId > 0xFFFFEU) { // clamp to $FFFFE
+            m_p25NetId = 0xFFFFEU;
+        }
+        m_p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
+        if (m_p25SysId == 0U) { // clamp to 1
+            m_p25SysId = 1U;
+        }
+        if (m_p25SysId > 0xFFEU) { // clamp to $FFE
+            m_p25SysId = 0xFFEU;
+        }
+        m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
+        if (m_p25RfssId == 0U) { // clamp to 1
+            m_p25RfssId = 1U;
+        }
+        if (m_p25RfssId > 0xFEU) { // clamp to $FE
+            m_p25RfssId = 0xFEU;
+        }
+
+        LogInfo("System Config Parameters");
+        LogInfo("    RX Frequency: %uHz", m_rxFrequency);
+        LogInfo("    TX Frequency: %uHz", m_txFrequency);
+        LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
+        LogInfo("    TX Offset: %fMHz", entry.txOffsetMhz());
+        LogInfo("    Bandwidth: %fKHz", entry.chBandwidthKhz());
+        LogInfo("    Channel Spacing: %fKHz", entry.chSpaceKhz());
+        LogInfo("    Channel Id: %u", m_channelId);
+        LogInfo("    Channel No.: $%04X", m_channelNo);
+        LogInfo("    Voice Channel No(s).: %s", strVoiceChNo.c_str());
+        LogInfo("    Site Id: $%02X", m_siteId);
+        LogInfo("    DMR Color Code: %u", m_dmrColorCode);
+        LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
+        LogInfo("    P25 NAC: $%03X", m_p25NAC);
+        LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
+        LogInfo("    P25 Network Id: $%05X", m_p25NetId);
+        LogInfo("    P25 System Id: $%03X", m_p25SysId);
+        LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
     }
-
-    LogInfo("Iden Table Lookups");
-    LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
-    if (idenReloadTime > 0U)
-        LogInfo("    Reload: %u mins", idenReloadTime);
-
-    m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
-    m_idenTable->read();
-
-    yaml::Node rfssConfig = systemConf["config"];
-    m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
-    if (m_channelId > 15U) { // clamp to 15
-        m_channelId = 15U;
+    else {
+        LogInfo("    Modem Remote Control: yes");
     }
-
-    IdenTable entry = m_idenTable->find(m_channelId);
-    if (entry.baseFrequency() == 0U) {
-        ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
-        return false;
-    }
-
-    if (entry.txOffsetMhz() == 0U) {
-        ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
-        return false;
-    }
-
-    uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-    float calcTxOffset = entry.txOffsetMhz() * 1000000;
-
-    m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_channelNo == 0U) { // clamp to 1
-        m_channelNo = 1U;
-    }
-    if (m_channelNo > 4095U) { // clamp to 4095
-        m_channelNo = 4095U;
-    }
-
-    m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
-    m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
-
-    yaml::Node& voiceChList = rfssConfig["voiceChNo"];
-    for (size_t i = 0; i < voiceChList.size(); i++) {
-        uint32_t chNo = (uint32_t)::strtoul(voiceChList[i].as<std::string>("1").c_str(), NULL, 16);
-        m_voiceChNo.push_back(chNo);
-    }
-
-    std::string strVoiceChNo = "";
-    for (auto it = m_voiceChNo.begin(); it != m_voiceChNo.end(); ++it) {
-        int decVal = ::atoi(std::to_string(*it).c_str());
-        char hexStr[8];
-
-        ::sprintf(hexStr, "$%04X", decVal);
-
-        strVoiceChNo.append(std::string(hexStr));
-        strVoiceChNo.append(",");
-    }
-    strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
-
-    m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_siteId == 0U) { // clamp to 1
-        m_siteId = 1U;
-    }
-    if (m_siteId > 0xFEU) { // clamp to $FE
-        m_siteId = 0xFEU;
-    }
-
-    m_dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
-    m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_dmrNetId == 0U) { // clamp to 1
-        m_dmrNetId = 1U;
-    }
-    if (m_dmrNetId > 0x1FFU) { // clamp to $1FF
-        m_dmrNetId = 0x1FFU;
-    }
-
-    m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
-    m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
-    m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
-    if (m_p25NetId == 0U) { // clamp to 1
-        m_p25NetId = 1U;
-    }
-    if (m_p25NetId > 0xFFFFEU) { // clamp to $FFFFE
-        m_p25NetId = 0xFFFFEU;
-    }
-    m_p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
-    if (m_p25SysId == 0U) { // clamp to 1
-        m_p25SysId = 1U;
-    }
-    if (m_p25SysId > 0xFFEU) { // clamp to $FFE
-        m_p25SysId = 0xFFEU;
-    }
-    m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
-    if (m_p25RfssId == 0U) { // clamp to 1
-        m_p25RfssId = 1U;
-    }
-    if (m_p25RfssId > 0xFEU) { // clamp to $FE
-        m_p25RfssId = 0xFEU;
-    }
-
-    LogInfo("System Config Parameters");
-    LogInfo("    RX Frequency: %uHz", m_rxFrequency);
-    LogInfo("    TX Frequency: %uHz", m_txFrequency);
-    LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
-    LogInfo("    TX Offset: %fMHz", entry.txOffsetMhz());
-    LogInfo("    Bandwidth: %fKHz", entry.chBandwidthKhz());
-    LogInfo("    Channel Spacing: %fKHz", entry.chSpaceKhz());
-    LogInfo("    Channel Id: %u", m_channelId);
-    LogInfo("    Channel No.: $%04X", m_channelNo);
-    LogInfo("    Voice Channel No(s).: %s", strVoiceChNo.c_str());
-    LogInfo("    Site Id: $%02X", m_siteId);
-    LogInfo("    DMR Color Code: %u", m_dmrColorCode);
-    LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
-    LogInfo("    P25 NAC: $%03X", m_p25NAC);
-    LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
-    LogInfo("    P25 Network Id: $%05X", m_p25NetId);
-    LogInfo("    P25 System Id: $%03X", m_p25SysId);
-    LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
 
     return true;
 }
@@ -1257,7 +1331,19 @@ bool Host::readParams()
 bool Host::createModem()
 {
     yaml::Node modemConf = m_conf["system"]["modem"];
-    std::string port = modemConf["port"].as<std::string>();
+
+    yaml::Node modemProtocol = modemConf["protocol"];
+    std::string portType = modemProtocol["type"].as<std::string>("null");
+    
+    yaml::Node uartProtocol = modemProtocol["uart"];
+    std::string uartPort = uartProtocol["port"].as<std::string>();
+    uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
+
+    yaml::Node udpProtocol = modemProtocol["udp"];
+    std::string udpMode = udpProtocol["mode"].as<std::string>("master");
+    std::string udpAddress = udpProtocol["address"].as<std::string>();
+    uint32_t udpPort = udpProtocol["port"].as<uint32_t>(REMOTE_MODEM_PORT);
+
     bool rxInvert = modemConf["rxInvert"].as<bool>(false);
     bool txInvert = modemConf["txInvert"].as<bool>(false);
     bool pttInvert = modemConf["pttInvert"].as<bool>(false);
@@ -1289,7 +1375,81 @@ bool Host::createModem()
         packetPlayoutTime = 1U;
 
     LogInfo("Modem Parameters");
-    LogInfo("    Port: %s", port.c_str());
+    LogInfo("    Port Type: %s", portType.c_str());
+
+    port::IModemPort* modemPort = NULL;
+    std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
+    if (portType == NULL_PORT) {
+        modemPort = new port::ModemNullPort();
+    }
+    else if (portType == UART_PORT || portType == UDP_PORT) {
+        port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
+        switch (uartSpeed) {
+        case 1200:
+            serialSpeed = port::SERIAL_1200;
+            break;
+        case 2400:
+            serialSpeed = port::SERIAL_2400;
+            break;
+        case 4800:
+            serialSpeed = port::SERIAL_4800;
+            break;
+        case 9600:
+            serialSpeed = port::SERIAL_9600;
+            break;
+        case 19200:
+            serialSpeed = port::SERIAL_19200;
+            break;
+        case 38400:
+            serialSpeed = port::SERIAL_38400;
+            break;
+        case 76800:
+            serialSpeed = port::SERIAL_76800;
+            break;
+        case 230400:
+            serialSpeed = port::SERIAL_230400;
+            break;
+        case 460800:
+            serialSpeed = port::SERIAL_460800;
+            break;
+        default:
+            LogWarning(LOG_HOST, "Unsupported serial speed %u, defaulting to %u", uartSpeed, port::SERIAL_115200);
+            uartSpeed = 115200;
+        case 115200:
+            break;
+        }
+
+        modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+        LogInfo("    UART Port: %s", uartPort.c_str());
+        LogInfo("    UART Speed: %u", uartSpeed);
+    }
+    else {
+        LogError(LOG_HOST, "Invalid protocol port type, %s!", portType.c_str());
+        return false;
+    }
+
+    port::IModemPort* slavePort = NULL;
+    if (portType == UDP_PORT) {
+        std::transform(udpMode.begin(), udpMode.end(), udpMode.begin(), ::tolower);
+        if (udpMode == UDP_MODE_MASTER) {
+            slavePort = new port::UDPPort(udpAddress, udpPort);
+            m_modemRemote = true;
+        }
+        else if (udpMode == UDP_MODE_PEER) {
+            delete modemPort;
+            modemPort = new port::UDPPort(udpAddress, udpPort);
+            m_modemRemote = false;
+        }
+        else {
+            LogError(LOG_HOST, "Invalid UDP mode, %s!", udpMode.c_str());
+            return false;
+        }
+
+        LogInfo("    UDP Mode: %s", udpMode.c_str());
+        LogInfo("    UDP Address: %s", udpAddress.c_str());
+        LogInfo("    UDP Port: %u", udpPort);
+    }
+
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
     LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
     LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
@@ -1311,13 +1471,17 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = Modem::createModem(port, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, packetPlayoutTime, disableOFlowReset, trace, debug);
+    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, packetPlayoutTime, disableOFlowReset, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
+
+    if (m_modemRemote) {
+        m_modem->setSlavePort(slavePort);
+    }
 
     bool ret = m_modem->open();
     if (!ret) {

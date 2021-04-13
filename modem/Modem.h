@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2011-2017 by Jonathan Naylor G4KLX
+*   Copyright (C) 2011-2021 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2018 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 #define __MODEM_H__
 
 #include "Defines.h"
-#include "modem/SerialController.h"
+#include "modem/port/IModemPort.h"
 #include "RingBuffer.h"
 #include "Timer.h"
 
@@ -166,99 +166,100 @@ namespace modem
     class HOST_SW_API Modem {
     public:
         /// <summary>Initializes a new instance of the Modem class.</summary>
-        Modem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
+        Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
             bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug);
         /// <summary>Finalizes a instance of the Modem class.</summary>
-        virtual ~Modem();
+        ~Modem();
 
-        /// <summary>Sets the modem DSP RF DC offset parameters.</summary>
-        virtual void setDCOffsetParams(int txDCOffset, int rxDCOffset);
-        /// <summary>Sets the modem DSP enabled modes.</summary>
-        virtual void setModeParams(bool dmrEnabled, bool p25Enabled);
-        /// <summary>Sets the modem DSP RF deviation levels.</summary>
-        virtual void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
-        /// <summary>Sets the modem DSP Symbol adjustment levels.</summary>
-        virtual void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
-        /// <summary>Sets the modem DSP DMR color code.</summary>
-        virtual void setDMRColorCode(uint32_t colorCode);
-        /// <summary>Sets the modem DSP P25 NAC.</summary>
-        virtual void setP25NAC(uint32_t nac);
-        /// <summary>Sets the modem DSP RF receive deviation levels.</summary>
-        virtual void setRXLevel(float rxLevel);
+        /// <summary>Sets the RF DC offset parameters.</summary>
+        void setDCOffsetParams(int txDCOffset, int rxDCOffset);
+        /// <summary>Sets the enabled modes.</summary>
+        void setModeParams(bool dmrEnabled, bool p25Enabled);
+        /// <summary>Sets the RF deviation levels.</summary>
+        void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
+        /// <summary>Sets the symbol adjustment levels.</summary>
+        void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
+        /// <summary>Sets the DMR color code.</summary>
+        void setDMRColorCode(uint32_t colorCode);
+        /// <summary>Sets the P25 NAC.</summary>
+        void setP25NAC(uint32_t nac);
+        /// <summary>Sets the RF receive deviation levels.</summary>
+        void setRXLevel(float rxLevel);
+        /// <summary>Sets the slave port for remote operation.</summary>
+        void setSlavePort(port::IModemPort* slavePort);
 
-        /// <summary>Opens connection to the modem DSP.</summary>
-        virtual bool open();
+        /// <summary>Opens connection to the air interface modem.</summary>
+        bool open();
 
         /// <summary>Updates the modem by the passed number of milliseconds.</summary>
-        virtual void clock(uint32_t ms);
+        void clock(uint32_t ms);
 
-        /// <summary>Closes connection to the modem DSP.</summary>
-        virtual void close();
+        /// <summary>Closes connection to the air interface modem.</summary>
+        void close();
 
         /// <summary>Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer.</summary>
-        virtual uint32_t readDMRData1(uint8_t* data);
+        uint32_t readDMRData1(uint8_t* data);
         /// <summary>Reads DMR Slot 2 frame data from the DMR Slot 1 ring buffer.</summary>
-        virtual uint32_t readDMRData2(uint8_t* data);
+        uint32_t readDMRData2(uint8_t* data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        virtual uint32_t readP25Data(uint8_t* data);
+        uint32_t readP25Data(uint8_t* data);
 
         /// <summary>Helper to test if the DMR Slot 1 ring buffer has free space.</summary>
-        virtual bool hasDMRSpace1() const;
+        bool hasDMRSpace1() const;
         /// <summary>Helper to test if the DMR Slot 2 ring buffer has free space.</summary>
-        virtual bool hasDMRSpace2() const;
+        bool hasDMRSpace2() const;
         /// <summary>Helper to test if the P25 ring buffer has free space.</summary>
-        virtual bool hasP25Space() const;
+        bool hasP25Space() const;
 
-        /// <summary>Flag indicating whether or not the modem DSP is transmitting.</summary>
-        virtual bool hasTX() const;
-        /// <summary>Flag indicating whether or not the modem DSP has carrier detect.</summary>
-        virtual bool hasCD() const;
+        /// <summary>Flag indicating whether or not the air interface modem is transmitting.</summary>
+        bool hasTX() const;
+        /// <summary>Flag indicating whether or not the air interface modem has carrier detect.</summary>
+        bool hasCD() const;
 
-        /// <summary>Flag indicating whether or not the modem DSP is currently locked out.</summary>
-        virtual bool hasLockout() const;
-        /// <summary>Flag indicating whether or not the modem DSP is currently in an error condition.</summary>
-        virtual bool hasError() const;
+        /// <summary>Flag indicating whether or not the air interface modem is currently locked out.</summary>
+        bool hasLockout() const;
+        /// <summary>Flag indicating whether or not the air interface modem is currently in an error condition.</summary>
+        bool hasError() const;
 
-        /// <summary>Clears any buffered DMR Slot 1 frame data to be sent to the modem DSP.</summary>
+        /// <summary>Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.</summary>
         void clearDMRData1();
-        /// <summary>Clears any buffered DMR Slot 2 frame data to be sent to the modem DSP.</summary>
+        /// <summary>Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.</summary>
         void clearDMRData2();
-        /// <summary>Clears any buffered P25 frame data to be sent to the modem DSP.</summary>
+        /// <summary>Clears any buffered P25 frame data to be sent to the air interface modem.</summary>
         void clearP25Data();
 
-        /// <summary>Internal helper to inject DMR Slot 1 frame data as if it came from the modem DSP.</summary>
+        /// <summary>Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.</summary>
         void injectDMRData1(const uint8_t* data, uint32_t length);
-        /// <summary>Internal helper to inject DMR Slot 2 frame data as if it came from the modem DSP.</summary>
+        /// <summary>Internal helper to inject DMR Slot 2 frame data as if it came from the air interface modem.</summary>
         void injectDMRData2(const uint8_t* data, uint32_t length);
-        /// <summary>Internal helper to inject P25 frame data as if it came from the modem DSP.</summary>
+        /// <summary>Internal helper to inject P25 frame data as if it came from the air interface modem.</summary>
         void injectP25Data(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
-        virtual bool writeDMRData1(const uint8_t* data, uint32_t length);
+        bool writeDMRData1(const uint8_t* data, uint32_t length);
         /// <summary>Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.</summary>
-        virtual bool writeDMRData2(const uint8_t* data, uint32_t length);
+        bool writeDMRData2(const uint8_t* data, uint32_t length);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
-        virtual bool writeP25Data(const uint8_t* data, uint32_t length);
+        bool writeP25Data(const uint8_t* data, uint32_t length);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
-        virtual bool writeDMRStart(bool tx);
-        /// <summary>Writes a DMR short LC to the modem DSP.</summary>
-        virtual bool writeDMRShortLC(const uint8_t* lc);
-        /// <summary>Writes a DMR abort message for the given slot to the modem DSP.</summary>
-        virtual bool writeDMRAbort(uint32_t slotNo);
+        bool writeDMRStart(bool tx);
+        /// <summary>Writes a DMR short LC to the air interface modem.</summary>
+        bool writeDMRShortLC(const uint8_t* lc);
+        /// <summary>Writes a DMR abort message for the given slot to the air interface modem.</summary>
+        bool writeDMRAbort(uint32_t slotNo);
 
-        /// <summary>Sets the current operating mode for the modem DSP.</summary>
-        virtual bool setMode(DVM_STATE state);
+        /// <summary>Gets the current operating mode for the air interface modem.</summary>
+        DVM_STATE getMode() const;
+        /// <summary>Sets the current operating mode for the air interface modem.</summary>
+        bool setMode(DVM_STATE state);
 
         /// <summary>Transmits the given string as CW morse.</summary>
-        virtual bool sendCWId(const std::string& callsign);
-
-        /// <summary>Helper to create an instance of the Modem class.</summary>
-        static Modem* createModem(const std::string& port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug);
+        bool sendCWId(const std::string& callsign);
 
     private:
-        std::string m_port;
+        port::IModemPort* m_port;
+        port::IModemPort* m_remotePort;
 
         uint32_t m_dmrColorCode;
         uint32_t m_p25NAC;
@@ -298,7 +299,8 @@ namespace modem
         uint32_t m_adcOverFlowCount;
         uint32_t m_dacOverFlowCount;
 
-        CSerialController m_serial;
+        DVM_STATE m_modemState;
+
         uint8_t* m_buffer;
         uint32_t m_length;
         uint32_t m_offset;
@@ -323,13 +325,13 @@ namespace modem
         bool m_lockout;
         bool m_error;
 
-        /// <summary>Retrieve the modem DSP version.</summary>
+        /// <summary>Retrieve the air interface modem version.</summary>
         bool getFirmwareVersion();
-        /// <summary>Retrieve the current status from the modem DSP.</summary>
+        /// <summary>Retrieve the current status from the air interface modem.</summary>
         bool getStatus();
-        /// <summary>Write configuration to the modem DSP.</summary>
+        /// <summary>Write configuration to the air interface modem.</summary>
         bool writeConfig();
-        /// <summary>Write symbol level adjustments to the modem DSP.</summary>
+        /// <summary>Write symbol level adjustments to the air interface modem.</summary>
         bool writeSymbolAdjust();
 
         /// <summary></summary>

@@ -54,9 +54,12 @@ OBJECTS = \
 		p25/TrunkPacket.o \
 		p25/P25Utils.o \
 		p25/VoicePacket.o \
-		modem/SerialController.o \
+		modem/port/IModemPort.o \
+		modem/port/ISerialPort.o \
+		modem/port/ModemNullPort.o \
+		modem/port/UARTPort.o \
+		modem/port/UDPPort.o \
 		modem/Modem.o \
-		modem/NullModem.o \
 		network/UDPSocket.o \
 		network/RemoteControl.o \
 		network/BaseNetwork.o \
@@ -82,4 +85,4 @@ dvmhost: $(OBJECTS)
 		$(CXX) $(CFLAGS) -c -o $@ $<
 
 clean:
-		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o
+		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o modem/port/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o

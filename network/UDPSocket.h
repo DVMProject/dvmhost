@@ -69,28 +69,28 @@ namespace network
     class HOST_SW_API UDPSocket {
     public:
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(const std::string& address, unsigned int port = 0U);
+        UDPSocket(const std::string& address, uint32_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(unsigned int port = 0U);
+        UDPSocket(uint32_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
         ~UDPSocket();
 
         /// <summary>Opens UDP socket connection.</summary>
-        bool open(unsigned int af = AF_UNSPEC);
+        bool open(uint32_t af = AF_UNSPEC);
         /// <summary>Opens UDP socket connection.</summary>
         bool open(const sockaddr_storage& address);
         /// <summary>Opens UDP socket connection.</summary>
-        bool open(const unsigned int index, const unsigned int af, const std::string& address, const unsigned int port);
+        bool open(const uint32_t index, const uint32_t af, const std::string& address, const uint32_t port);
 
         /// <summary>Read data from the UDP socket.</summary>
-        int read(unsigned char* buffer, unsigned int length, sockaddr_storage& address, unsigned int& addrLen);
+        int read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(const unsigned char* buffer, unsigned int length, const sockaddr_storage& address, unsigned int addrLen);
+        bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();
         /// <summary>Closes the UDP socket connection.</summary>
-        void close(const unsigned int index);
+        void close(const uint32_t index);
 
         /// <summary></summary>
         static void startup();
@@ -98,24 +98,28 @@ namespace network
         static void shutdown();
 
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
-        static int lookup(const std::string& hostName, unsigned int port, sockaddr_storage& address, unsigned int& addrLen);
+        static int lookup(const std::string& hostName, uint32_t port, sockaddr_storage& address, uint32_t& addrLen);
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
-        static int lookup(const std::string& hostName, unsigned int port, sockaddr_storage& address, unsigned int& addrLen, struct addrinfo& hints);
+        static int lookup(const std::string& hostName, uint32_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints);
 
         /// <summary></summary>
         static bool match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type = IMT_ADDRESS_AND_PORT);
+        /// <summary></summary>
+        static std::string address(const sockaddr_storage& addr);
 
         /// <summary></summary>
         static bool isNone(const sockaddr_storage& addr);
 
     private:
-        std::string    m_address_save;
-        unsigned short m_port_save;
-        std::string    m_address[UDP_SOCKET_MAX];
-        unsigned short m_port[UDP_SOCKET_MAX];
-        unsigned int   m_af[UDP_SOCKET_MAX];
-        int            m_fd[UDP_SOCKET_MAX];
-        unsigned int   m_counter;
+        std::string m_address_save;
+        uint16_t m_port_save;
+        std::string m_address[UDP_SOCKET_MAX];
+        uint16_t m_port[UDP_SOCKET_MAX];
+
+        uint32_t m_af[UDP_SOCKET_MAX];
+        int m_fd[UDP_SOCKET_MAX];
+        
+        uint32_t m_counter;
     };
 } // namespace network
 

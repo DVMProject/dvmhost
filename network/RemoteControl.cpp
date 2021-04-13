@@ -166,7 +166,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
     uint8_t buffer[RC_BUFFER_LENGTH];
 
     sockaddr_storage address;
-    unsigned int addrLen;
+    uint32_t addrLen;
     uint32_t ret = m_socket.read((uint8_t*)buffer, RC_BUFFER_LENGTH, address, addrLen);
     if (ret > 0U) {
         buffer[ret] = '\0';

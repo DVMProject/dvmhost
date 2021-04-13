@@ -111,6 +111,12 @@
     <Filter Include="Source Files\host\calibrate">
       <UniqueIdentifier>{3a6ae793-a482-46fe-9fd3-93476ccb591d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\modem\port">
+      <UniqueIdentifier>{25f65018-5057-418b-ae56-b6ed06395099}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modem\port">
+      <UniqueIdentifier>{bd26735c-6610-4bfe-b1c4-27da1cb18e29}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h">
@@ -170,9 +176,6 @@
     <ClInclude Include="modem\Modem.h">
       <Filter>Header Files\modem</Filter>
     </ClInclude>
-    <ClInclude Include="modem\SerialController.h">
-      <Filter>Header Files\modem</Filter>
-    </ClInclude>
     <ClInclude Include="network\Network.h">
       <Filter>Header Files\network</Filter>
     </ClInclude>
@@ -181,9 +184,6 @@
     </ClInclude>
     <ClInclude Include="edac\RS634717.h">
       <Filter>Header Files\edac</Filter>
-    </ClInclude>
-    <ClInclude Include="modem\NullModem.h">
-      <Filter>Header Files\modem</Filter>
     </ClInclude>
     <ClInclude Include="network\RemoteControl.h">
       <Filter>Header Files\network</Filter>
@@ -335,6 +335,21 @@
     <ClInclude Include="dmr\ControlPacket.h">
       <Filter>Header Files\dmr</Filter>
     </ClInclude>
+    <ClInclude Include="modem\port\IModemPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
+    <ClInclude Include="modem\port\ISerialPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
+    <ClInclude Include="modem\port\UARTPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
+    <ClInclude Include="modem\port\ModemNullPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
+    <ClInclude Include="modem\port\UDPPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -394,14 +409,8 @@
     <ClCompile Include="modem\Modem.cpp">
       <Filter>Source Files\modem</Filter>
     </ClCompile>
-    <ClCompile Include="modem\SerialController.cpp">
-      <Filter>Source Files\modem</Filter>
-    </ClCompile>
     <ClCompile Include="edac\RS634717.cpp">
       <Filter>Source Files\edac</Filter>
-    </ClCompile>
-    <ClCompile Include="modem\NullModem.cpp">
-      <Filter>Source Files\modem</Filter>
     </ClCompile>
     <ClCompile Include="network\RemoteControl.cpp">
       <Filter>Source Files\network</Filter>
@@ -537,6 +546,21 @@
     </ClCompile>
     <ClCompile Include="dmr\ControlPacket.cpp">
       <Filter>Source Files\dmr</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\UARTPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\ModemNullPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\UDPPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\IModemPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\ISerialPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

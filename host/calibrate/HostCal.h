@@ -35,7 +35,7 @@
 #include "Defines.h"
 #include "edac/AMBEFEC.h"
 #include "modem/Modem.h"
-#include "modem/SerialController.h"
+#include "modem/port/UARTPort.h"
 #include "host/calibrate/Console.h"
 #include "host/Host.h"
 #include "yaml/Yaml.h"
@@ -61,8 +61,7 @@ private:
     const std::string& m_confFile;
     yaml::Node m_conf;
 
-    std::string m_port;
-    modem::CSerialController m_serial;
+    modem::port::UARTPort* m_serial;
 
     Console m_console;
     edac::AMBEFEC m_fec;

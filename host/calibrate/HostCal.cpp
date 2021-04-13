@@ -42,6 +42,7 @@
 using namespace modem;
 
 #include <cstdio>
+#include <algorithm>
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
@@ -130,8 +131,7 @@ unsigned char LDU2_1K[] = {
 HostCal::HostCal(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
-    m_port(),
-    m_serial(),
+    m_serial(NULL),
     m_console(),
     m_fec(),
     m_transmit(false),
@@ -174,7 +174,7 @@ HostCal::HostCal(const std::string& confFile) :
 /// </summary>
 HostCal::~HostCal()
 {
-    /* stub */
+    delete m_serial;
 }
 
 /// <summary>
@@ -188,10 +188,6 @@ int HostCal::run()
         ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
     }
 
-    yaml::Node modemConf = m_conf["system"]["modem"];
-    m_port = modemConf["port"].as<std::string>();
-    m_serial = CSerialController(m_port, SERIAL_115200);
-
     // initialize system logging
     ret = ::LogInitialise("", "", 0U, 2U);
     if (!ret) {
@@ -199,16 +195,76 @@ int HostCal::run()
         return 1;
     }
 
-    getHostVersion();
-    ::LogInfo(">> Modem Calibration");
+    yaml::Node modemConf = m_conf["system"]["modem"];
 
-    if (m_port == NULL_MODEM) {
+    yaml::Node modemProtocol = modemConf["protocol"];
+    std::string portType = modemProtocol["type"].as<std::string>("null");
+
+    yaml::Node uartProtocol = modemProtocol["uart"];
+    std::string uartPort = uartProtocol["port"].as<std::string>();
+    uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
+
+    std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
+    if (portType == NULL_PORT) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with the null modem!");
         return 2;
     }
+    else if (portType == UART_PORT) {
+        port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
+        switch (uartSpeed) {
+        case 1200:
+            serialSpeed = port::SERIAL_1200;
+            break;
+        case 2400:
+            serialSpeed = port::SERIAL_2400;
+            break;
+        case 4800:
+            serialSpeed = port::SERIAL_4800;
+            break;
+        case 9600:
+            serialSpeed = port::SERIAL_9600;
+            break;
+        case 19200:
+            serialSpeed = port::SERIAL_19200;
+            break;
+        case 38400:
+            serialSpeed = port::SERIAL_38400;
+            break;
+        case 76800:
+            serialSpeed = port::SERIAL_76800;
+            break;
+        case 230400:
+            serialSpeed = port::SERIAL_230400;
+            break;
+        case 460800:
+            serialSpeed = port::SERIAL_460800;
+            break;
+        default:
+            LogWarning(LOG_HOST, "Unsupported serial speed %u, defaulting to %u", uartSpeed, port::SERIAL_115200);
+            uartSpeed = 115200;
+        case 115200:
+            break;
+        }
+
+        m_serial = new port::UARTPort(uartPort, serialSpeed, true);
+        LogInfo("    UART Port: %s", uartPort.c_str());
+        LogInfo("    UART Speed: %u", uartSpeed);
+    }
+    else if (portType == UDP_PORT) {
+        ::LogError(LOG_HOST, "Calibration mode is unsupported with a remote modem!");
+        return 2;
+    }
+
+    if (m_serial == NULL) {
+        ::LogError(LOG_HOST, "Invalid modem port type, %s!", portType.c_str());
+        return 2;
+    }
+
+    getHostVersion();
+    ::LogInfo(">> Modem Calibration");
 
     // open serial connection to modem DSP and initialize
-    ret = m_serial.open();
+    ret = m_serial->open();
     if (!ret) {
         ::LogError(LOG_CAL, "Failed to open serial device");
         return 1;
@@ -217,14 +273,14 @@ int HostCal::run()
     ret = initModem();
     if (!ret) {
         ::LogError(LOG_CAL, "Modem is unresponsive");
-        m_serial.close();
+        m_serial->close();
         return 1;
     }
 
     // open terminal console
     ret = m_console.open();
     if (!ret) {
-        m_serial.close();
+        m_serial->close();
         return 1;
     }
 
@@ -621,7 +677,7 @@ int HostCal::run()
     if (m_transmit)
         setTransmit();
 
-    m_serial.close();
+    m_serial->close();
     m_console.close();
     return 0;
 }
@@ -890,7 +946,7 @@ bool HostCal::setTransmit()
     buffer[2U] = CMD_CAL_DATA;
     buffer[3U] = m_transmit ? 0x01U : 0x00U;
 
-    int ret = m_serial.write(buffer, 4U);
+    int ret = m_serial->write(buffer, 4U);
     if (ret <= 0)
         return false;
 
@@ -950,7 +1006,7 @@ bool HostCal::initModem()
 /// <returns>Zero if no data was read, otherwise returns length of data read.</returns>
 int HostCal::readModem(uint8_t *buffer, uint32_t length)
 {
-    int n = m_serial.read(buffer + 0U, 1U);
+    int n = m_serial->read(buffer + 0U, 1U);
     if (n <= 0)
         return n;
 
@@ -959,7 +1015,7 @@ int HostCal::readModem(uint8_t *buffer, uint32_t length)
 
     n = 0;
     for (uint32_t i = 0U; i < 20U && n == 0; i++) {
-        n = m_serial.read(buffer + 1U, 1U);
+        n = m_serial->read(buffer + 1U, 1U);
         if (n < 0)
             return n;
         if (n == 0)
@@ -973,7 +1029,7 @@ int HostCal::readModem(uint8_t *buffer, uint32_t length)
 
     uint32_t offset = 2U;
     for (uint32_t i = 0U; i < 20U && offset < len; i++) {
-        n = m_serial.read(buffer + offset, len - offset);
+        n = m_serial->read(buffer + offset, len - offset);
         if (n < 0)
             return n;
         if (n == 0)
@@ -1520,7 +1576,7 @@ bool HostCal::getFirmwareVersion()
         buffer[1U] = 3U;
         buffer[2U] = CMD_GET_VERSION;
 
-        ret = m_serial.write(buffer, 3U);
+        ret = m_serial->write(buffer, 3U);
         if (ret <= 0)
             return false;
 
@@ -1654,7 +1710,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     buffer[14U] = (uint8_t)m_p25CorrCount;
 
-    int ret = m_serial.write(buffer, 17U);
+    int ret = m_serial->write(buffer, 17U);
     if (ret <= 0)
         return false;
 
@@ -1699,7 +1755,7 @@ bool HostCal::writeSymbolAdjust()
     m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
     buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
-    int ret = m_serial.write(buffer, 7U);
+    int ret = m_serial->write(buffer, 7U);
     if (ret <= 0)
         return false;
 
@@ -1795,7 +1851,7 @@ void HostCal::printStatus()
     buffer[1U] = 4U;
     buffer[2U] = CMD_GET_STATUS;
 
-    int ret = m_serial.write(buffer, 4U);
+    int ret = m_serial->write(buffer, 4U);
     if (ret <= 0)
         return;
 

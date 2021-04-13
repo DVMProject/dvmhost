@@ -68,6 +68,7 @@ private:
     yaml::Node m_conf;
 
     modem::Modem* m_modem;
+    bool m_modemRemote;
     network::Network* m_network;
 
     uint8_t m_mode;

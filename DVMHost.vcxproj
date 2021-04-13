@@ -195,8 +195,11 @@
     <ClInclude Include="lookups\RSSIInterpolator.h" />
     <ClInclude Include="lookups\TalkgroupIdLookup.h" />
     <ClInclude Include="modem\Modem.h" />
-    <ClInclude Include="modem\NullModem.h" />
-    <ClInclude Include="modem\SerialController.h" />
+    <ClInclude Include="modem\port\IModemPort.h" />
+    <ClInclude Include="modem\port\ISerialPort.h" />
+    <ClInclude Include="modem\port\ModemNullPort.h" />
+    <ClInclude Include="modem\port\UARTPort.h" />
+    <ClInclude Include="modem\port\UDPPort.h" />
     <ClInclude Include="network\BaseNetwork.h" />
     <ClInclude Include="network\Network.h" />
     <ClInclude Include="network\RemoteControl.h" />
@@ -267,8 +270,11 @@
     <ClCompile Include="lookups\RSSIInterpolator.cpp" />
     <ClCompile Include="lookups\TalkgroupIdLookup.cpp" />
     <ClCompile Include="modem\Modem.cpp" />
-    <ClCompile Include="modem\NullModem.cpp" />
-    <ClCompile Include="modem\SerialController.cpp" />
+    <ClCompile Include="modem\port\IModemPort.cpp" />
+    <ClCompile Include="modem\port\ISerialPort.cpp" />
+    <ClCompile Include="modem\port\ModemNullPort.cpp" />
+    <ClCompile Include="modem\port\UARTPort.cpp" />
+    <ClCompile Include="modem\port\UDPPort.cpp" />
     <ClCompile Include="network\BaseNetwork.cpp" />
     <ClCompile Include="network\Network.cpp" />
     <ClCompile Include="network\RemoteControl.cpp" />
