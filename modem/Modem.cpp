@@ -1172,7 +1172,7 @@ bool Modem::getFirmwareVersion()
         buffer[1U] = 3U;
         buffer[2U] = CMD_GET_VERSION;
 
-        // Utils::dump(1U, "Written", buffer, 3U);
+        // Utils::dump(1U, "F/W Ver Written", buffer, 3U);
 
         int ret = m_port->write(buffer, 3U);
         if (ret != 3)
@@ -1429,6 +1429,9 @@ RESP_TYPE_DVM Modem::getResponse()
             return RTM_ERROR;
         }
 
+        // LogDebug(LOG_MODEM, "ret = %d", ret);
+        // Utils::dump(1U, "Response 0", m_buffer, 1U);
+
         if (ret == 0)
             return RTM_TIMEOUT;
 
@@ -1446,6 +1449,9 @@ RESP_TYPE_DVM Modem::getResponse()
             m_offset = 0U;
             return RTM_ERROR;
         }
+
+        // LogDebug(LOG_MODEM, "ret = %d", ret);
+        // Utils::dump(1U, "Response 1", m_buffer + 1U, 1U);
 
         if (ret == 0)
             return RTM_TIMEOUT;
@@ -1469,6 +1475,9 @@ RESP_TYPE_DVM Modem::getResponse()
             return RTM_ERROR;
         }
 
+        // LogDebug(LOG_MODEM, "ret = %d", ret);
+        // Utils::dump(1U, "Response 2", m_buffer + 2U, 1U);
+
         if (ret == 0)
             return RTM_TIMEOUT;
 
@@ -1485,6 +1494,9 @@ RESP_TYPE_DVM Modem::getResponse()
                 return RTM_ERROR;
             }
 
+            // LogDebug(LOG_MODEM, "ret = %d", ret);
+            // Utils::dump(1U, "Response 3", m_buffer + 3U, 2U);
+
             if (ret == 0)
                 return RTM_TIMEOUT;
 
@@ -1499,6 +1511,9 @@ RESP_TYPE_DVM Modem::getResponse()
                 m_offset = 0U;
                 return RTM_ERROR;
             }
+
+            // LogDebug(LOG_MODEM, "ret = %d", ret);
+            // Utils::dump(1U, "Response 4", m_buffer + m_offset, m_length - m_offset);
 
             if (ret == 0)
                 return RTM_TIMEOUT;
