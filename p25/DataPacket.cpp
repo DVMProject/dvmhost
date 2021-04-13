@@ -155,23 +155,9 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_DATA) {
             uint32_t blocksToFollow = m_rfDataHeader.getBlocksToFollow();
-
-            // confirmed extended addressing is unsupported
-            if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR &&
-                m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) {
-                LogWarning(LOG_RF, P25_PDU_STR ", unsupported confirmed enhanced addressing");
-
-                m_rfDataHeader.reset();
-                m_rfSecondHeader.reset();
-                m_rfDataBlockCnt = 0U;
-                m_rfPDUCount = 0U;
-                m_rfPDUBits = 0U;
-                m_p25->m_rfState = m_prevRfState;
-                return false;
-            }
-
             // process second header if we're using enhanced addressing
-            if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR) {
+            if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR &&
+                m_rfDataHeader.getFormat() == PDU_FMT_UNCONFIRMED) {
                 ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
                 Utils::getBitRange(m_rfPDU, buffer, offset, P25_PDU_FEC_LENGTH_BITS);
                 bool ret = m_rfSecondHeader.decode(buffer);
@@ -223,10 +209,10 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                         writeNetworkRF(P25_DT_DATA, buffer, P25_PDU_FEC_LENGTH_BYTES);
                     }
                     else {
-                        if (m_rfData[i].getHalfRateTrellis())
-                            LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");
-                        else
+                        if (m_rfData[i].getConfirmed())
                             LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (3/4 rate or CRC)");
+                        else
+                            LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");
 
                         if (m_dumpPDUData) {
                             Utils::dump(1U, "Unfixable PDU Data", buffer, P25_PDU_FEC_LENGTH_BYTES);
@@ -404,12 +390,10 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
                             }
 
                             // Generate the PDU data
-                            bool halfRate = m_netData[0].getHalfRateTrellis();
                             uint32_t dataOffset = 0U;
                             for (uint32_t i = 0U; i < blocksToFollow; i++) {
                                 m_netData[i].setFormat((m_netDataHeader.getSAP() == PDU_SAP_EXT_ADDR) ? m_netSecondHeader : m_netDataHeader);
                                 m_netData[i].setSerialNo(i);
-                                m_netData[i].setHalfRateTrellis(halfRate);
                                 m_netData[i].setData(m_pduUserData + dataOffset);
 
                                 ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -615,12 +599,10 @@ void DataPacket::writeRF_PDU()
     }
 
     // Generate the PDU data
-    bool halfRate = m_rfData[0].getHalfRateTrellis();
     uint32_t dataOffset = 0U;
     for (uint32_t i = 0U; i < blocksToFollow; i++) {
         m_rfData[i].setFormat((m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR) ? m_rfSecondHeader : m_rfDataHeader);
         m_rfData[i].setSerialNo(i);
-        m_rfData[i].setHalfRateTrellis(halfRate);
         m_rfData[i].setData(m_pduUserData + dataOffset);
 
         ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -719,7 +701,6 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     // Generate the PDU data
     m_rfData[0].setFormat(PDU_FMT_RSP);
     m_rfData[0].setSerialNo(0U);
-    m_rfData[0].setHalfRateTrellis(true);
     m_rfData[0].setData(buffer);
 
     ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -908,10 +889,10 @@ void DataPacket::writeNet_PDU()
             m_netDataBlockCnt++;
         }
         else {
-            if (m_netData[m_netDataBlockCnt].getHalfRateTrellis())
-                LogWarning(LOG_NET, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");
-            else
+            if (m_netData[m_netDataBlockCnt].getConfirmed())
                 LogWarning(LOG_NET, P25_PDU_STR ", unfixable PDU data (3/4 rate or CRC)");
+            else
+                LogWarning(LOG_NET, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");
 
             if (m_dumpPDUData) {
                 Utils::dump(1U, "Unfixable PDU Data", buffer, P25_PDU_FEC_LENGTH_BYTES);

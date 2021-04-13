@@ -70,16 +70,22 @@ namespace p25
             uint32_t getData(uint8_t* buffer) const;
 
         public:
-            /// <summary>Flag indicating whether or not the data block uses 1/2 rate Trellis.</summary>
-            __PROPERTY(bool, halfRateTrellis, HalfRateTrellis);
+            /// <summary>Flag indicating whether or not the data block is confirmed.</summary>
+            __PROPERTY(bool, confirmed, Confirmed);
 
             /// <summary>Sets the data block serial number.</summary>
             __PROPERTY(uint8_t, serialNo, SerialNo);
+
+            /// <summary>Logical link ID.</summary>
+            __PROPERTY(uint32_t, llId, LLId);
+            /// <summary>Service access point.</summary>
+            __PROPERTY(uint8_t, sap, SAP);
 
         private:
             edac::Trellis m_trellis;
 
             uint8_t m_fmt;
+            uint8_t m_headerSap;
 
             uint8_t* m_data;
         };

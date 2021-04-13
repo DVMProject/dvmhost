@@ -48,10 +48,13 @@ using namespace p25;
 /// Initializes a new instance of the DataBlock class.
 /// </summary>
 DataBlock::DataBlock() :
-    m_halfRateTrellis(false),
+    m_confirmed(false),
     m_serialNo(0U),
+    m_llId(0U),
+    m_sap(0U),
     m_trellis(),
     m_fmt(PDU_FMT_CONFIRMED),
+    m_headerSap(0U),
     m_data(NULL)
 {
     m_data = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
@@ -79,31 +82,37 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
     uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
     ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-    // decode 3/4 rate Trellis
-    m_halfRateTrellis = false;
-    bool valid = m_trellis.decode34(data, buffer);
-    if (!valid) {
-        // decode 1/2 rate Trellis
-        m_halfRateTrellis = true;
-        valid = m_trellis.decode12(data, buffer);
-        if (!valid) {
-            return false;
-        }
-    }
-
     // Utils::dump(1U, "PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
     m_fmt = header.getFormat();
+    m_headerSap = header.getSAP();
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
+        m_confirmed = true;
+        bool valid = m_trellis.decode34(data, buffer);
+        if (!valid) {
+            return false;
+        }
+
         m_serialNo = buffer[0] & 0xFEU;                                                  // Confirmed Data Serial No.
         uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                           // CRC-9 Check Sum
         uint32_t count = P25_PDU_CONFIRMED_LENGTH_BYTES;
         if (m_serialNo == (header.getBlocksToFollow() - 1))
             count = P25_PDU_CONFIRMED_LENGTH_BYTES - 4U;
 
-        for (uint32_t i = 2U; i < count; i++) {
-            m_data[i - 2U] = buffer[i];                                                  // Payload Data
+        if (m_headerSap == PDU_SAP_EXT_ADDR) {
+            m_sap = buffer[5U] & 0x3FU;                                                 // Service Access Point
+            m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];               // Logical Link ID
+
+            // re-copy buffer to remove SAP and llId
+            for (uint32_t i = 6U; i < count; i++) {
+                m_data[i - 6U] = buffer[i];                                             // Payload Data
+            }
+        }
+        else {
+            for (uint32_t i = 2U; i < count; i++) {
+                m_data[i - 2U] = buffer[i];                                             // Payload Data
+            }
         }
 
         // compute CRC-9 for the packet
@@ -116,6 +125,12 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
         LogMessage(LOG_P25, "P25_DUID_PDU, fmt = $%02X, crc = $%04X, computedCRC = $%04X", m_fmt, crc, computedCRC);
     }
     else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
+        m_confirmed = false;
+        bool valid = m_trellis.decode12(data, buffer);
+        if (!valid) {
+            return false;
+        }
+
         for (uint32_t i = 0U; i < P25_PDU_UNCONFIRMED_LENGTH_BYTES; i++) {
             m_data[i] = buffer[i];                                                       // Payload Data
         }
@@ -145,17 +160,24 @@ void DataBlock::encode(uint8_t* data)
         ::memcpy(buffer + 1U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         uint16_t crc = edac::CRC::crc9(buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-        ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-        buffer[0] = ((m_serialNo & 0x7FU) << 1) +                                        // Confirmed Data Serial No.
-            (crc >> 8);                                                                  // CRC-9 Check Sum (b8)
-        buffer[1] = (crc & 0xFFU);                                                       // CRC-9 Check Sum (b0 - b7)
+        if (m_headerSap == PDU_SAP_EXT_ADDR) {
+            buffer[5U] = m_sap & 0x3FU;                                                 // Service Access Point
 
-        if (!m_halfRateTrellis) {
-            m_trellis.encode34(buffer, data);
+            buffer[2U] = (m_llId >> 16) & 0xFFU;                                        // Logical Link ID
+            buffer[3U] = (m_llId >> 8) & 0xFFU;
+            buffer[4U] = (m_llId >> 0) & 0xFFU;
+
+            ::memcpy(buffer + 6U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U);
         }
         else {
-            m_trellis.encode12(buffer, data);
+            ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         }
+
+        buffer[0U] = ((m_serialNo & 0x7FU) << 1) +                                       // Confirmed Data Serial No.
+            (crc >> 8);                                                                  // CRC-9 Check Sum (b8)
+        buffer[1U] = (crc & 0xFFU);                                                      // CRC-9 Check Sum (b0 - b7)
+
+        m_trellis.encode34(buffer, data);
     }
     else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
@@ -163,12 +185,7 @@ void DataBlock::encode(uint8_t* data)
 
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
-        if (!m_halfRateTrellis) {
-            m_trellis.encode34(buffer, data);
-        }
-        else {
-            m_trellis.encode12(buffer, data);
-        }
+        m_trellis.encode12(buffer, data);
     }
     else {
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
@@ -188,6 +205,12 @@ void DataBlock::setFormat(const uint8_t fmt)
 void DataBlock::setFormat(const DataHeader header)
 {
     m_fmt = header.getFormat();
+    if (m_fmt == PDU_FMT_CONFIRMED) {
+        m_confirmed = true;
+    }
+    else {
+        m_confirmed = false;
+    }
 }
 
 /// <summary>Gets the data format.</summary>
