@@ -110,7 +110,7 @@ system:
                 speed: 115200
             udp:
                 mode: master # Valid values are "master", and "peer"
-                address: 0.0.0.0
+                endpointAddress: 0.0.0.0
                 port: 3334
         rxInvert: false
         txInvert: false

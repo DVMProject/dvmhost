@@ -1343,7 +1343,7 @@ bool Host::createModem()
 
     yaml::Node udpProtocol = modemProtocol["udp"];
     std::string udpMode = udpProtocol["mode"].as<std::string>("master");
-    std::string udpAddress = udpProtocol["address"].as<std::string>();
+    std::string udpAddress = udpProtocol["endpointAddress"].as<std::string>();
     uint32_t udpPort = udpProtocol["port"].as<uint32_t>(REMOTE_MODEM_PORT);
 
     bool rxInvert = modemConf["rxInvert"].as<bool>(false);
