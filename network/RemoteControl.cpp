@@ -230,19 +230,19 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 // Command is in the form of: "mode <mode>"
                 if (mode == RCD_MODE_OPT_IDLE) {
                     host->m_fixedMode = false;
-                    host->setMode(STATE_IDLE);
-                    LogInfoEx(LOG_RCON, "Dynamic mode, mode %u", host->m_mode);
+                    host->setState(STATE_IDLE);
+                    LogInfoEx(LOG_RCON, "Dynamic mode, mode %u", host->m_state);
                 }
                 else if (mode == RCD_MODE_OPT_LCKOUT) {
                     host->m_fixedMode = false;
-                    host->setMode(HOST_STATE_LOCKOUT);
-                    LogInfoEx(LOG_RCON, "Lockout mode, mode %u", host->m_mode);
+                    host->setState(HOST_STATE_LOCKOUT);
+                    LogInfoEx(LOG_RCON, "Lockout mode, mode %u", host->m_state);
                 }
                 else if (mode == RCD_MODE_OPT_FDMR) {
                     if (dmr != NULL) {
                         host->m_fixedMode = true;
-                        host->setMode(STATE_DMR);
-                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_mode);
+                        host->setState(STATE_DMR);
+                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_state);
                     }
                     else {
                         LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
@@ -251,8 +251,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 else if (mode == RCD_MODE_OPT_FP25) {
                     if (p25 != NULL) {
                         host->m_fixedMode = true;
-                        host->setMode(STATE_P25);
-                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_mode);
+                        host->setState(STATE_P25);
+                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_state);
                     }
                     else {
                         LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
@@ -262,7 +262,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_KILL_CMD) {
                 // Command is in the form of: "kill"
                 g_killed = true;
-                host->setMode(HOST_STATE_QUIT);
+                host->setState(HOST_STATE_QUIT);
             }
             else if (rcom == RCD_RID_WLIST_CMD && argCnt >= 1U) {
                 // Command is in the form of: "rid-whitelist <RID>"

@@ -94,8 +94,7 @@ namespace modem
 #endif
 
         protected:
-            /// <summary>Initializes a new instance of the UARTPort class.</summary>
-            UARTPort(SERIAL_SPEED speed, bool assertRTS = false);
+            bool m_isOpen;
 
             std::string m_device;
             SERIAL_SPEED m_speed;
@@ -112,8 +111,6 @@ namespace modem
 #else
             /// <summary></summary>
             bool canWrite();
-            /// <summary></summary>
-            bool setRaw();
 #endif
         }; // class HOST_SW_API UARTPort : public ISerialPort, public IModemPort
     } // namespace port

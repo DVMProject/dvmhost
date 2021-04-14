@@ -65,6 +65,7 @@ using namespace modem::port;
 /// <param name="speed">Serial port speed.</param>
 /// <param name="assertRTS"></param>
 UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
+    m_isOpen(false),
     m_device(device),
     m_speed(speed),
     m_assertRTS(assertRTS),
@@ -87,6 +88,9 @@ UARTPort::~UARTPort()
 /// <returns>True, if connection is opened, otherwise false.</returns>
 bool UARTPort::open()
 {
+    if (m_isOpen)
+        return true;
+
     assert(m_handle == INVALID_HANDLE_VALUE);
 
     DWORD errCode;
@@ -163,6 +167,7 @@ bool UARTPort::open()
 
     ::ClearCommError(m_handle, &errCode, NULL);
 
+    m_isOpen = true;
     return true;
 }
 
@@ -231,6 +236,9 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
 /// </summary>
 void UARTPort::close()
 {
+    if (!m_isOpen)
+        return;
+
     assert(m_handle != INVALID_HANDLE_VALUE);
 
     ::CloseHandle(m_handle);
@@ -246,6 +254,7 @@ void UARTPort::close()
 /// <param name="speed">Serial port speed.</param>
 /// <param name="assertRTS"></param>
 UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
+    m_isOpen(false),
     m_device(device),
     m_speed(speed),
     m_assertRTS(assertRTS),
@@ -267,6 +276,9 @@ UARTPort::~UARTPort()
 /// <returns>True, if connection is opened, otherwise false.</returns>
 bool UARTPort::open()
 {
+    if (m_isOpen)
+        return true;
+
     assert(m_fd == -1);
 
 #if defined(__APPLE__)
@@ -279,9 +291,106 @@ bool UARTPort::open()
         return false;
     }
 
-    if (::isatty(m_fd))
-        return setRaw();
+    if (::isatty(m_fd) == 0) {
+        LogError(LOG_HOST, "%s is not a TTY device", m_device.c_str());
+        ::close(m_fd);
+        return false;
+    }
 
+    termios termios;
+    if (::tcgetattr(m_fd, &termios) < 0) {
+        ::LogError(LOG_HOST, "Cannot get the attributes for %s", m_device.c_str());
+        ::close(m_fd);
+        return false;
+    }
+
+    termios.c_iflag &= ~(IGNBRK | BRKINT | IGNPAR | PARMRK | INPCK);
+    termios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
+    termios.c_iflag &= ~(IXON | IXOFF | IXANY);
+    termios.c_oflag &= ~(OPOST);
+    termios.c_cflag &= ~(CSIZE | CSTOPB | PARENB | CRTSCTS);
+    termios.c_cflag |= (CS8 | CLOCAL | CREAD);
+    termios.c_lflag &= ~(ISIG | ICANON | IEXTEN);
+    termios.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
+#if defined(__APPLE__)
+    termios.c_cc[VMIN] = 1;
+    termios.c_cc[VTIME] = 1;
+#else
+    termios.c_cc[VMIN] = 0;
+    termios.c_cc[VTIME] = 10;
+#endif
+
+    switch (m_speed) {
+    case SERIAL_1200:
+        ::cfsetospeed(&termios, B1200);
+        ::cfsetispeed(&termios, B1200);
+        break;
+    case SERIAL_2400:
+        ::cfsetospeed(&termios, B2400);
+        ::cfsetispeed(&termios, B2400);
+        break;
+    case SERIAL_4800:
+        ::cfsetospeed(&termios, B4800);
+        ::cfsetispeed(&termios, B4800);
+        break;
+    case SERIAL_9600:
+        ::cfsetospeed(&termios, B9600);
+        ::cfsetispeed(&termios, B9600);
+        break;
+    case SERIAL_19200:
+        ::cfsetospeed(&termios, B19200);
+        ::cfsetispeed(&termios, B19200);
+        break;
+    case SERIAL_38400:
+        ::cfsetospeed(&termios, B38400);
+        ::cfsetispeed(&termios, B38400);
+        break;
+    case SERIAL_115200:
+        ::cfsetospeed(&termios, B115200);
+        ::cfsetispeed(&termios, B115200);
+        break;
+    case SERIAL_230400:
+        ::cfsetospeed(&termios, B230400);
+        ::cfsetispeed(&termios, B230400);
+        break;
+    case SERIAL_460800:
+        ::cfsetospeed(&termios, B460800);
+        ::cfsetispeed(&termios, B460800);
+        break;
+    default:
+        ::LogError(LOG_HOST, "Unsupported serial port speed - %u", m_speed);
+        ::close(m_fd);
+        return false;
+    }
+
+    if (::tcsetattr(m_fd, TCSANOW, &termios) < 0) {
+        ::LogError(LOG_HOST, "Cannot set the attributes for %s", m_device.c_str());
+        ::close(m_fd);
+        return false;
+    }
+
+    if (m_assertRTS) {
+        uint32_t y;
+        if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot get the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+
+        y |= TIOCM_RTS;
+
+        if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
+            ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
+            ::close(m_fd);
+            return false;
+        }
+    }
+
+#if defined(__APPLE__)
+    setNonblock(false);
+#endif
+
+    m_isOpen = true;
     return true;
 }
 
@@ -378,6 +487,9 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
 /// </summary>
 void UARTPort::close()
 {
+    if (!m_isOpen)
+        return;
+
     assert(m_fd != -1);
 
     ::close(m_fd);
@@ -408,20 +520,6 @@ int UARTPort::setNonblock(bool nonblock)
 // ---------------------------------------------------------------------------
 
 #if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-/// Initializes a new instance of the UARTPort class.
-/// </summary>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
-UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
-    m_device(),
-    m_speed(speed),
-    m_assertRTS(assertRTS),
-    m_handle(INVALID_HANDLE_VALUE)
-{
-    /* stub */
-}
-
 /// <summary>
 ///
 /// </summary>
@@ -463,20 +561,6 @@ int UARTPort::readNonblock(uint8_t* buffer, uint32_t length)
 #else
 
 /// <summary>
-/// Initializes a new instance of the UARTPort class.
-/// </summary>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
-UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
-    m_device(),
-    m_speed(speed),
-    m_assertRTS(assertRTS),
-    m_fd(-1)
-{
-    /* stub */
-}
-
-/// <summary>
 ///
 /// </summary>
 /// <returns></returns>
@@ -499,107 +583,5 @@ bool UARTPort::canWrite()
 #else
     return true;
 #endif
-}
-
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
-bool UARTPort::setRaw()
-{
-    termios termios;
-    if (::tcgetattr(m_fd, &termios) < 0) {
-        ::LogError(LOG_HOST, "Cannot get the attributes for %s", m_device.c_str());
-        ::close(m_fd);
-        return false;
-    }
-
-    termios.c_iflag &= ~(IGNBRK | BRKINT | IGNPAR | PARMRK | INPCK);
-    termios.c_iflag &= ~(ISTRIP | INLCR | IGNCR | ICRNL);
-    termios.c_iflag &= ~(IXON | IXOFF | IXANY);
-    termios.c_oflag &= ~(OPOST);
-    termios.c_cflag &= ~(CSIZE | CSTOPB | PARENB | CRTSCTS);
-    termios.c_cflag |= (CS8 | CLOCAL | CREAD);
-    termios.c_lflag &= ~(ISIG | ICANON | IEXTEN);
-    termios.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
-#if defined(__APPLE__)
-    termios.c_cc[VMIN] = 1;
-    termios.c_cc[VTIME] = 1;
-#else
-    termios.c_cc[VMIN] = 0;
-    termios.c_cc[VTIME] = 10;
-#endif
-
-    switch (m_speed) {
-    case SERIAL_1200:
-        ::cfsetospeed(&termios, B1200);
-        ::cfsetispeed(&termios, B1200);
-        break;
-    case SERIAL_2400:
-        ::cfsetospeed(&termios, B2400);
-        ::cfsetispeed(&termios, B2400);
-        break;
-    case SERIAL_4800:
-        ::cfsetospeed(&termios, B4800);
-        ::cfsetispeed(&termios, B4800);
-        break;
-    case SERIAL_9600:
-        ::cfsetospeed(&termios, B9600);
-        ::cfsetispeed(&termios, B9600);
-        break;
-    case SERIAL_19200:
-        ::cfsetospeed(&termios, B19200);
-        ::cfsetispeed(&termios, B19200);
-        break;
-    case SERIAL_38400:
-        ::cfsetospeed(&termios, B38400);
-        ::cfsetispeed(&termios, B38400);
-        break;
-    case SERIAL_115200:
-        ::cfsetospeed(&termios, B115200);
-        ::cfsetispeed(&termios, B115200);
-        break;
-    case SERIAL_230400:
-        ::cfsetospeed(&termios, B230400);
-        ::cfsetispeed(&termios, B230400);
-        break;
-    case SERIAL_460800:
-        ::cfsetospeed(&termios, B460800);
-        ::cfsetispeed(&termios, B460800);
-        break;
-    default:
-        ::LogError(LOG_HOST, "Unsupported serial port speed - %u", m_speed);
-        ::close(m_fd);
-        return false;
-    }
-
-    if (::tcsetattr(m_fd, TCSANOW, &termios) < 0) {
-        ::LogError(LOG_HOST, "Cannot set the attributes for %s", m_device.c_str());
-        ::close(m_fd);
-        return false;
-    }
-
-    if (m_assertRTS) {
-        uint32_t y;
-        if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
-            ::LogError(LOG_HOST, "Cannot get the control attributes for %s", m_device.c_str());
-            ::close(m_fd);
-            return false;
-        }
-
-        y |= TIOCM_RTS;
-
-        if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
-            ::LogError(LOG_HOST, "Cannot set the control attributes for %s", m_device.c_str());
-            ::close(m_fd);
-            return false;
-        }
-    }
-
-#if defined(__APPLE__)
-    setNonblock(false);
-#endif
-
-    return true;
 }
 #endif

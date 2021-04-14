@@ -13,7 +13,7 @@
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 */
 #include "host/calibrate/HostCal.h"
 #include "dmr/DMRDefines.h"
+#include "modem/port/UARTPort.h"
 #include "p25/P25Defines.h"
 #include "p25/data/DataHeader.h"
 #include "p25/lc/LC.h"
@@ -131,7 +132,7 @@ unsigned char LDU2_1K[] = {
 HostCal::HostCal(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
-    m_serial(NULL),
+    m_modem(NULL),
     m_console(),
     m_fec(),
     m_transmit(false),
@@ -174,7 +175,7 @@ HostCal::HostCal(const std::string& confFile) :
 /// </summary>
 HostCal::~HostCal()
 {
-    delete m_serial;
+    delete m_modem;
 }
 
 /// <summary>
@@ -195,7 +196,16 @@ int HostCal::run()
         return 1;
     }
 
-    yaml::Node modemConf = m_conf["system"]["modem"];
+    getHostVersion();
+    ::LogInfo(">> Modem Calibration");
+
+    LogInfo("General Parameters");
+
+    yaml::Node systemConf = m_conf["system"];
+    std::string identity = systemConf["identity"].as<std::string>();
+    ::LogInfo("    Identity: %s", identity.c_str());
+
+    yaml::Node modemConf = systemConf["modem"];
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
@@ -204,6 +214,7 @@ int HostCal::run()
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
 
+    port::IModemPort* modemPort = NULL;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
     if (portType == NULL_PORT) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with the null modem!");
@@ -246,7 +257,8 @@ int HostCal::run()
             break;
         }
 
-        m_serial = new port::UARTPort(uartPort, serialSpeed, true);
+        modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+        LogInfo("Modem Parameters");
         LogInfo("    UART Port: %s", uartPort.c_str());
         LogInfo("    UART Speed: %u", uartSpeed);
     }
@@ -255,32 +267,27 @@ int HostCal::run()
         return 2;
     }
 
-    if (m_serial == NULL) {
+    if (modemPort == NULL) {
         ::LogError(LOG_HOST, "Invalid modem port type, %s!", portType.c_str());
         return 2;
     }
 
-    getHostVersion();
-    ::LogInfo(">> Modem Calibration");
+    m_modem = new Modem(modemPort, false, false, false, false, true, false, 80, 7, 4, 10, false, false, false);
 
-    // open serial connection to modem DSP and initialize
-    ret = m_serial->open();
-    if (!ret) {
-        ::LogError(LOG_CAL, "Failed to open serial device");
-        return 1;
-    }
+    m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemOpen, this));
+    m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemClose, this));
+    m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(HostCal::portModemHandler, this));
 
-    ret = initModem();
+    // open modem and initialize
+    ret = m_modem->open();
     if (!ret) {
-        ::LogError(LOG_CAL, "Modem is unresponsive");
-        m_serial->close();
+        ::LogError(LOG_CAL, "Failed to open modem");
         return 1;
     }
 
     // open terminal console
     ret = m_console.open();
     if (!ret) {
-        m_serial->close();
         return 1;
     }
 
@@ -640,7 +647,7 @@ int HostCal::run()
                 getHostVersion();
                 break;
             case 'v':
-                getFirmwareVersion();
+                m_modem->getFirmwareVersion();
                 break;
             case 'H':
             case 'h':
@@ -667,8 +674,7 @@ int HostCal::run()
                 break;
         }
 
-        uint8_t buffer[200U];
-        readModem(buffer, 200U);
+        m_modem->clock(0U);
 
         timerClock();
         sleep(5U);
@@ -677,7 +683,7 @@ int HostCal::run()
     if (m_transmit)
         setTransmit();
 
-    m_serial->close();
+    m_modem->close();
     m_console.close();
     return 0;
 }
@@ -685,6 +691,155 @@ int HostCal::run()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+bool HostCal::portModemOpen(Modem* modem)
+{
+    sleep(2000U);
+
+    bool ret = writeConfig();
+    if (!ret) {
+        ret = writeConfig();
+        if (!ret) {
+            LogError(LOG_MODEM, "Modem unresponsive to configuration set after 2 attempts. Stopping.");
+            m_modem->close();
+            return false;
+        }
+    }
+
+    LogMessage(LOG_MODEM, "Modem Ready [Calibration Mode]");
+
+    // handled modem open
+    return true;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+bool HostCal::portModemClose(Modem* modem)
+{
+    // handled modem close
+    return true;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+/// <param name="ms"></param>
+/// <param name="rspType"></param>
+/// <param name="rspDblLen"></param>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <returns></returns>
+bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
+{
+   if (rspType == RTM_OK && len > 0) {
+        switch (buffer[2U]) {
+        case CMD_CAL_DATA:
+        {
+            bool inverted = (buffer[3U] == 0x80U);
+            short high = buffer[4U] << 8 | buffer[5U];
+            short low = buffer[6U] << 8 | buffer[7U];
+            short diff = high - low;
+            short centre = (high + low) / 2;
+            LogMessage(LOG_CAL, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d", inverted ? "yes" : "no", high, low, diff, centre);
+        }
+        break;
+        case CMD_RSSI_DATA:
+        {
+            unsigned short max = buffer[3U] << 8 | buffer[4U];
+            unsigned short min = buffer[5U] << 8 | buffer[6U];
+            unsigned short ave = buffer[7U] << 8 | buffer[8U];
+            LogMessage(LOG_CAL, "RSSI: max: %u, min: %u, ave: %u", max, min, ave);
+        }
+        break;
+
+        case CMD_DMR_DATA1:
+        case CMD_DMR_DATA2:
+            processDMRBER(buffer + 4U, buffer[3]);
+            break;
+
+        case CMD_DMR_LOST1:
+        case CMD_DMR_LOST2:
+        {
+            LogMessage(LOG_CAL, "DMR Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+
+            if (m_dmrEnabled) {
+                m_berBits = 0U;
+                m_berErrs = 0U;
+                m_berFrames = 0U;
+                m_berUndecodableLC = 0U;
+                m_berUncorrectable = 0U;
+            }
+        }
+        break;
+
+        case CMD_P25_DATA:
+            processP25BER(buffer + 3U);
+            break;
+
+        case CMD_P25_LOST:
+        {
+            LogMessage(LOG_CAL, "P25 Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+
+            if (m_p25Enabled) {
+                m_berBits = 0U;
+                m_berErrs = 0U;
+                m_berFrames = 0U;
+                m_berUndecodableLC = 0U;
+                m_berUncorrectable = 0U;
+            }
+        }
+        break;
+
+        case CMD_GET_STATUS:
+        {
+            uint8_t modemState = buffer[4U];
+            bool tx = (buffer[5U] & 0x01U) == 0x01U;
+
+            bool adcOverflow = (buffer[5U] & 0x02U) == 0x02U;
+            bool rxOverflow = (buffer[5U] & 0x04U) == 0x04U;
+            bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
+            bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
+
+            LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d]",
+                modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow);
+        }
+        break;
+
+        case CMD_GET_VERSION:
+        case CMD_ACK:
+            break;
+
+        case CMD_NAK:
+            LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", buffer[3U], buffer[4U]);
+            break;
+
+        case CMD_DEBUG1:
+        case CMD_DEBUG2:
+        case CMD_DEBUG3:
+        case CMD_DEBUG4:
+        case CMD_DEBUG5:
+        case CMD_DEBUG_DUMP:
+            m_modem->printDebug(buffer, len);
+            break;
+
+        default:
+            LogWarning(LOG_MODEM, "Unknown message, type = %02X", buffer[2U]);
+            Utils::dump("Buffer dump", buffer, len);
+            break;
+        }
+    }
+
+    // handled modem response
+    return true;
+}
+
 /// <summary>
 /// Helper to print the calibration help to the console.
 /// </summary>
@@ -946,7 +1101,7 @@ bool HostCal::setTransmit()
     buffer[2U] = CMD_CAL_DATA;
     buffer[3U] = m_transmit ? 0x01U : 0x00U;
 
-    int ret = m_serial->write(buffer, 4U);
+    int ret = m_modem->write(buffer, 4U);
     if (ret <= 0)
         return false;
 
@@ -957,172 +1112,9 @@ bool HostCal::setTransmit()
     else
         LogMessage(LOG_CAL, " - Modem stop transmitting");
 
-    ret = readModem(buffer, 50U);
-    if (ret <= 0)
-        return false;
-
-    if (buffer[2U] == CMD_NAK) {
-        LogError(LOG_CAL, "Got a NAK from the modem");
-        return false;
-    }
-
-    if (buffer[2U] != CMD_ACK) {
-        Utils::dump("Invalid response", buffer, ret);
-        return false;
-    }
+    m_modem->clock(0U);
 
     return true;
-}
-
-/// <summary>
-/// Initializes the modem DSP.
-/// </summary>
-/// <returns>True, if modem DSP is initialized, otherwise false.</returns>
-bool HostCal::initModem()
-{
-    LogMessage(LOG_CAL, " - Initializing modem");
-    sleep(2000U);
-
-    if (!getFirmwareVersion())
-        return false;
-
-    bool ret = writeConfig();
-    if (!ret) {
-        ret = writeConfig();
-        if (!ret) {
-            LogError(LOG_CAL, "Modem unresponsive to configuration set after 2 attempts, calibration may fail.");
-        }
-    }
-
-    LogMessage(LOG_CAL, " - Modem Ready");
-    return true;
-}
-
-/// <summary>
-/// Read data frames from the modem DSP.
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="length"></param>
-/// <returns>Zero if no data was read, otherwise returns length of data read.</returns>
-int HostCal::readModem(uint8_t *buffer, uint32_t length)
-{
-    int n = m_serial->read(buffer + 0U, 1U);
-    if (n <= 0)
-        return n;
-
-    if (buffer[0U] != DVM_FRAME_START)
-        return 0;
-
-    n = 0;
-    for (uint32_t i = 0U; i < 20U && n == 0; i++) {
-        n = m_serial->read(buffer + 1U, 1U);
-        if (n < 0)
-            return n;
-        if (n == 0)
-            sleep(10U);
-    }
-
-    if (n == 0)
-        return -1;
-
-    uint32_t len = buffer[1U];
-
-    uint32_t offset = 2U;
-    for (uint32_t i = 0U; i < 20U && offset < len; i++) {
-        n = m_serial->read(buffer + offset, len - offset);
-        if (n < 0)
-            return n;
-        if (n == 0)
-            sleep(10U);
-        if (n > 0)
-            offset += n;
-    }
-
-    if (len > 0) {
-        switch (buffer[2U]) {
-            case CMD_CAL_DATA:
-                {
-                    bool inverted = (buffer[3U] == 0x80U);
-                    short high = buffer[4U] << 8 | buffer[5U];
-                    short low = buffer[6U] << 8 | buffer[7U];
-                    short diff = high - low;
-                    short centre = (high + low) / 2;
-                    LogMessage(LOG_CAL, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d", inverted ? "yes" : "no", high, low, diff, centre);
-                }
-                break;
-            case CMD_RSSI_DATA:
-                {
-                    unsigned short max = buffer[3U] << 8 | buffer[4U];
-                    unsigned short min = buffer[5U] << 8 | buffer[6U];
-                    unsigned short ave = buffer[7U] << 8 | buffer[8U];
-                    LogMessage(LOG_CAL, "RSSI: max: %u, min: %u, ave: %u", max, min, ave);
-                }
-                break;
-
-            case CMD_DMR_DATA1:
-            case CMD_DMR_DATA2:
-                processDMRBER(buffer + 4U, buffer[3]);
-                break;
-
-            case CMD_DMR_LOST1:
-            case CMD_DMR_LOST2:
-                {
-                    LogMessage(LOG_CAL, "DMR Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
-
-                    if (m_dmrEnabled) {
-                        m_berBits = 0U;
-                        m_berErrs = 0U;
-                        m_berFrames = 0U;
-                        m_berUndecodableLC = 0U;
-                        m_berUncorrectable = 0U;
-                    }
-                }
-                break;
-
-            case CMD_P25_DATA:
-                processP25BER(buffer + 3U);
-                break;
-
-            case CMD_P25_LOST:
-                {
-                    LogMessage(LOG_CAL, "P25 Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
-
-                    if (m_p25Enabled) {
-                        m_berBits = 0U;
-                        m_berErrs = 0U;
-                        m_berFrames = 0U;
-                        m_berUndecodableLC = 0U;
-                        m_berUncorrectable = 0U;
-                    }
-                }
-                break;
-
-            // These should not be received, but don't complain if we do
-            case CMD_GET_STATUS:
-            case CMD_GET_VERSION:
-            case CMD_ACK:
-                break;
-
-            case CMD_NAK:
-                LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", buffer[3U], buffer[4U]);
-                break;
-
-            case CMD_DEBUG1:
-            case CMD_DEBUG2:
-            case CMD_DEBUG3:
-            case CMD_DEBUG4:
-            case CMD_DEBUG5:
-                printDebug(buffer, len);
-                break;
-
-            default:
-                LogWarning(LOG_MODEM, "Unknown message, type = %02X", buffer[2U]);
-                Utils::dump("Buffer dump", buffer, len);
-                break;
-        }
-    }
-
-    return len;
 }
 
 /// <summary>
@@ -1563,74 +1555,6 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 }
 
 /// <summary>
-/// Retrieve the modem DSP version.
-/// </summary>
-/// <returns>True, if firmware version was recieved, otherwise false.</returns>
-bool HostCal::getFirmwareVersion()
-{
-    uint8_t buffer[150U];
-
-    int ret = 0;
-    for (uint32_t i = 0U; i < 5U && ret <= 0; i++) {
-        buffer[0U] = DVM_FRAME_START;
-        buffer[1U] = 3U;
-        buffer[2U] = CMD_GET_VERSION;
-
-        ret = m_serial->write(buffer, 3U);
-        if (ret <= 0)
-            return false;
-
-        sleep(100U);
-
-        ret = readModem(buffer, 200U);
-        if (ret < 0)
-            return false;
-        if (ret == 0)
-            sleep(1000U);
-    }
-
-    if (ret <= 0) {
-        LogError(LOG_CAL, "Unable to read the firmware version after 6 attempts");
-        return false;
-    }
-
-    int length = ret;
-
-    if (buffer[2U] != CMD_GET_VERSION) {
-        Utils::dump("Invalid response", buffer, ret);
-        return false;
-    }
-
-    uint8_t protoVer = buffer[3U];
-
-    switch (protoVer) {
-    case PROTOCOL_VERSION:
-        LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, length - 21U, buffer + 21U, protoVer);
-        switch (buffer[4U]) {
-        case 0U:
-            LogMessage(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U], buffer[17U], buffer[18U], buffer[19U], buffer[20U]);
-            break;
-        case 1U:
-            LogMessage(LOG_MODEM, "NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U], buffer[17U], buffer[18U], buffer[19U], buffer[20U]);
-            break;
-        case 2U:
-            LogMessage(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", buffer[5U], buffer[6U], buffer[7U], buffer[8U], buffer[9U], buffer[10U], buffer[11U], buffer[12U], buffer[13U], buffer[14U], buffer[15U], buffer[16U]);
-            break;
-        default:
-            LogMessage(LOG_MODEM, "Unknown CPU type: %u", buffer[4U]);
-            break;
-        }
-        return true;
-
-    default:
-        LogError(LOG_MODEM, MODEM_UNSUPPORTED_STR, protoVer);
-        return false;
-    }
-
-    return true;
-}
-
-/// <summary>
 /// Write configuration to the modem DSP.
 /// </summary>
 /// <returns>True, if configuration is written, otherwise false.</returns>
@@ -1710,26 +1634,13 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     buffer[14U] = (uint8_t)m_p25CorrCount;
 
-    int ret = m_serial->write(buffer, 17U);
+    int ret = m_modem->write(buffer, 17U);
     if (ret <= 0)
         return false;
 
     sleep(10U);
 
-    ret = readModem(buffer, 50U);
-    if (ret <= 0)
-        return false;
-
-    if (buffer[2U] == CMD_NAK) {
-        LogError(LOG_CAL, "Got a NAK from the modem");
-        return false;
-    }
-
-    if (buffer[2U] != CMD_ACK) {
-        Utils::dump("Invalid response", buffer, ret);
-        return false;
-    }
-
+    m_modem->clock(0U);
     return true;
 }
 
@@ -1755,26 +1666,13 @@ bool HostCal::writeSymbolAdjust()
     m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
     buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
-    int ret = m_serial->write(buffer, 7U);
+    int ret = m_modem->write(buffer, 7U);
     if (ret <= 0)
         return false;
 
     sleep(10U);
 
-    ret = readModem(buffer, 50U);
-    if (ret <= 0)
-        return false;
-
-    if (buffer[2U] == CMD_NAK) {
-        LogError(LOG_CAL, "Got a NAK from the modem");
-        return false;
-    }
-
-    if (buffer[2U] != CMD_ACK) {
-        Utils::dump("Invalid response", buffer, ret);
-        return false;
-    }
-
+    m_modem->clock(0U);
     return true;
 }
 
@@ -1851,70 +1749,13 @@ void HostCal::printStatus()
     buffer[1U] = 4U;
     buffer[2U] = CMD_GET_STATUS;
 
-    int ret = m_serial->write(buffer, 4U);
+    int ret = m_modem->write(buffer, 4U);
     if (ret <= 0)
         return;
 
     sleep(25U);
 
-    ret = readModem(buffer, 50U);
-    if (ret <= 0)
-        return;
-
-    if (buffer[2U] == CMD_NAK) {
-        LogError(LOG_CAL, "Got a NAK from the modem");
-        return;
-    }
-
-    if (buffer[2U] != CMD_GET_STATUS) {
-        Utils::dump("Invalid response", buffer, ret);
-        return;
-    }
-
-    uint8_t modemState = buffer[4U];
-    bool tx = (buffer[5U] & 0x01U) == 0x01U;
-
-    bool adcOverflow = (buffer[5U] & 0x02U) == 0x02U;
-    bool rxOverflow = (buffer[5U] & 0x04U) == 0x04U;
-    bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
-    bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
-
-    LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d]",
-        modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow);
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="length"></param>
-void HostCal::printDebug(const uint8_t* buffer, uint32_t length)
-{
-    if (buffer[2U] == CMD_DEBUG1) {
-        LogMessage(LOG_MODEM, "M: %.*s", length - 3U, buffer + 3U);
-    }
-    else if (buffer[2U] == CMD_DEBUG2) {
-        short val1 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %X", length - 5U, buffer + 3U, val1);
-    }
-    else if (buffer[2U] == CMD_DEBUG3) {
-        short val1 = (buffer[length - 4U] << 8) | buffer[length - 3U];
-        short val2 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %X %X", length - 7U, buffer + 3U, val1, val2);
-    }
-    else if (buffer[2U] == CMD_DEBUG4) {
-        short val1 = (buffer[length - 6U] << 8) | buffer[length - 5U];
-        short val2 = (buffer[length - 4U] << 8) | buffer[length - 3U];
-        short val3 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %X %X %X", length - 9U, buffer + 3U, val1, val2, val3);
-    }
-    else if (buffer[2U] == CMD_DEBUG5) {
-        short val1 = (buffer[length - 8U] << 8) | buffer[length - 7U];
-        short val2 = (buffer[length - 6U] << 8) | buffer[length - 5U];
-        short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
-        short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
-        LogMessage(LOG_MODEM, "M: %.*s %X %X %X %X", length - 11U, buffer + 3U, val1, val2, val3, val4);
-    }
+    m_modem->clock(0U);
 }
 
 /// <summary>

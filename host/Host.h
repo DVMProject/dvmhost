@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -71,7 +71,9 @@ private:
     bool m_modemRemote;
     network::Network* m_network;
 
-    uint8_t m_mode;
+    modem::port::IModemPort* m_modemRemotePort;
+
+    uint8_t m_state;
     
     Timer m_modeTimer;
     Timer m_dmrTXTimer;
@@ -133,8 +135,15 @@ private:
     /// <summary>Initializes network connectivity.</summary>
     bool createNetwork();
     
+    /// <summary></summary>
+    bool rmtPortModemOpen(modem::Modem* modem);
+    /// <summary></summary>
+    bool rmtPortModemClose(modem::Modem* modem);
+    /// <summary></summary>
+    bool rmtPortModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
+
     /// <summary>Helper to set the host/modem running state.</summary>
-    void setMode(uint8_t mode);
+    void setState(uint8_t mode);
 
     /// <summary></summary>
     void createLockFile(const char* mode) const;

@@ -13,7 +13,7 @@
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@
 #include "Defines.h"
 #include "edac/AMBEFEC.h"
 #include "modem/Modem.h"
-#include "modem/port/UARTPort.h"
 #include "host/calibrate/Console.h"
 #include "host/Host.h"
 #include "yaml/Yaml.h"
@@ -61,7 +60,7 @@ private:
     const std::string& m_confFile;
     yaml::Node m_conf;
 
-    modem::port::UARTPort* m_serial;
+    modem::Modem* m_modem;
 
     Console m_console;
     edac::AMBEFEC m_fec;
@@ -108,6 +107,13 @@ private:
     uint32_t m_timeout;
     uint32_t m_timer;
 
+    /// <summary></summary>
+    bool portModemOpen(modem::Modem* modem);
+    /// <summary></summary>
+    bool portModemClose(modem::Modem* modem);
+    /// <summary></summary>
+    bool portModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
+
     /// <summary>Helper to print the calibration help to the console.</summary>
     void displayHelp();
 
@@ -131,10 +137,6 @@ private:
     /// <summary>Helper to change the P25 Symbol Level 1 adjust.</summary>
     bool setP25SymLevel1Adj(int incr);
 
-    /// <summary>Initializes the modem DSP.</summary>
-    bool initModem();
-    /// <summary>Read data frames from the modem DSP.</summary>
-    int readModem(uint8_t* buffer, uint32_t length);
     /// <summary>Process DMR Rx BER.</summary>
     void processDMRBER(const uint8_t* buffer, uint8_t seq);
     /// <summary>Process DMR Tx 1011hz BER.</summary>
@@ -143,8 +145,7 @@ private:
     void processP25BER(const uint8_t* buffer);
     /// <summary>Process P25 Tx 1011hz BER.</summary>
     void processP251KBER(const uint8_t* buffer);
-    /// <summary>Retrieve the modem DSP version.</summary>
-    bool getFirmwareVersion();
+
     /// <summary>Write configuration to the modem DSP.</summary>
     bool writeConfig();
     /// <summary>Write configuration to the modem DSP.</summary>
@@ -163,8 +164,6 @@ private:
 
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
-    /// <summary></summary>
-    void printDebug(const uint8_t* buffer, uint32_t length);
 
     /// <summary></summary>
     unsigned char countErrs(unsigned char a, unsigned char b);

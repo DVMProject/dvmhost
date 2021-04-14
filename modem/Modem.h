@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2011-2021 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2018 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -37,12 +37,24 @@
 #include "Timer.h"
 
 #include <string>
+#include <functional>
 
 #define MODEM_VERSION_STR "%.*s, Modem protocol: %u"
 #define MODEM_UNSUPPORTED_STR "Modem protocol: %u, unsupported! Stopping."
 #define NULL_MODEM "null"
 
+#define MODEM_OC_PORT_HANDLER bool(modem::Modem* modem)
+#define MODEM_OC_PORT_HANDLER_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1)
+#define MODEM_RESP_HANDLER bool(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
+#define MODEM_RESP_HANDLER_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1, std::placeholders::_2, \
+    std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)
+
 const uint8_t PROTOCOL_VERSION = 2U;
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+class HOST_SW_API HostCal;
 
 namespace modem
 {
@@ -124,6 +136,7 @@ namespace modem
         CMD_DEBUG3 = 0xF3U,
         CMD_DEBUG4 = 0xF4U,
         CMD_DEBUG5 = 0xF5U,
+        CMD_DEBUG_DUMP = 0xFAU,
     };
 
     enum CMD_REASON_CODE {
@@ -185,8 +198,16 @@ namespace modem
         void setP25NAC(uint32_t nac);
         /// <summary>Sets the RF receive deviation levels.</summary>
         void setRXLevel(float rxLevel);
-        /// <summary>Sets the slave port for remote operation.</summary>
-        void setSlavePort(port::IModemPort* slavePort);
+
+        /// <summary>Sets a custom modem response handler.</summary>
+        /// <remarks>If the response handler returns true, processing will stop, otherwise it will continue.</remarks>
+        void setResponseHandler(std::function<MODEM_RESP_HANDLER> handler);
+        /// <summary>Sets a custom modem open port handler.</summary>
+        /// <remarks>If the open handler is set, it is the responsibility of the handler to complete air interface 
+        /// initialization (i.e. write configuration, etc).</remarks>
+        void setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler);
+        /// <summary>Sets a custom modem close port handler.</summary>
+        void setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler);
 
         /// <summary>Opens connection to the air interface modem.</summary>
         bool open();
@@ -249,17 +270,21 @@ namespace modem
         /// <summary>Writes a DMR abort message for the given slot to the air interface modem.</summary>
         bool writeDMRAbort(uint32_t slotNo);
 
-        /// <summary>Gets the current operating mode for the air interface modem.</summary>
-        DVM_STATE getMode() const;
-        /// <summary>Sets the current operating mode for the air interface modem.</summary>
-        bool setMode(DVM_STATE state);
+        /// <summary>Writes raw data to the air interface modem.</summary>
+        int write(const uint8_t* data, uint32_t length);
+
+        /// <summary>Gets the current operating state for the air interface modem.</summary>
+        DVM_STATE getState() const;
+        /// <summary>Sets the current operating state for the air interface modem.</summary>
+        bool setState(DVM_STATE state);
 
         /// <summary>Transmits the given string as CW morse.</summary>
         bool sendCWId(const std::string& callsign);
 
     private:
+        friend class ::HostCal;
+
         port::IModemPort* m_port;
-        port::IModemPort* m_remotePort;
 
         uint32_t m_dmrColorCode;
         uint32_t m_p25NAC;
@@ -283,8 +308,6 @@ namespace modem
         float m_p25TXLevel;
 
         bool m_disableOFlowReset;
-        bool m_trace;
-        bool m_debug;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;
@@ -302,8 +325,13 @@ namespace modem
         DVM_STATE m_modemState;
 
         uint8_t* m_buffer;
-        uint32_t m_length;
-        uint32_t m_offset;
+        uint16_t m_length;
+        bool m_rspDoubleLength;
+        DVM_COMMANDS m_rspType;
+
+        std::function<MODEM_OC_PORT_HANDLER> m_openPortHandler;
+        std::function<MODEM_OC_PORT_HANDLER> m_closePortHandler;
+        std::function<MODEM_RESP_HANDLER> m_rspHandler;
 
         RingBuffer<uint8_t> m_rxDMRData1;
         RingBuffer<uint8_t> m_rxDMRData2;
@@ -314,7 +342,6 @@ namespace modem
 
         Timer m_statusTimer;
         Timer m_inactivityTimer;
-        Timer m_playoutTimer;
 
         uint32_t m_dmrSpace1;
         uint32_t m_dmrSpace2;
@@ -335,10 +362,19 @@ namespace modem
         bool writeSymbolAdjust();
 
         /// <summary></summary>
-        void printDebug();
+        void printDebug(const uint8_t* buffer, uint16_t len);
 
         /// <summary></summary>
         RESP_TYPE_DVM getResponse();
+
+    public:
+        /// <summary>Flag indicating if modem trace is enabled.</summary>
+        __READONLY_PROPERTY(bool, trace, Trace);
+        /// <summary>Flag indicating if modem debugging is enabled.</summary>
+        __READONLY_PROPERTY(bool, debug, Debug);
+
+        /// <summary></summary>
+        __READONLY_PROPERTY(Timer, playoutTimer, PlayoutTimer);
     };
 } // namespace modem
 

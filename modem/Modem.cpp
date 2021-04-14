@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2011-2021 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -52,6 +52,18 @@ using namespace modem;
 #endif
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+enum RESP_STATE {
+    RESP_START,
+    RESP_LENGTH1,
+    RESP_LENGTH2,
+    RESP_TYPE,
+    RESP_DATA
+};
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
@@ -74,7 +86,6 @@ using namespace modem;
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
     bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug) :
     m_port(port),
-    m_remotePort(NULL),
     m_dmrColorCode(0U),
     m_p25NAC(0x293U),
     m_duplex(duplex),
@@ -91,8 +102,6 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_dmrTXLevel(0U),
     m_p25TXLevel(0U),
     m_disableOFlowReset(disableOFlowReset),
-    m_trace(trace),
-    m_debug(debug),
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_rxDCOffset(0),
@@ -106,7 +115,11 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_modemState(STATE_IDLE),
     m_buffer(NULL),
     m_length(0U),
-    m_offset(0U),
+    m_rspDoubleLength(false),
+    m_rspType(CMD_GET_STATUS),
+    m_openPortHandler(NULL),
+    m_closePortHandler(NULL),
+    m_rspHandler(NULL),
     m_rxDMRData1(1000U, "Modem RX DMR1"),
     m_rxDMRData2(1000U, "Modem RX DMR2"),
     m_txDMRData1(1000U, "Modem TX DMR1"),
@@ -115,14 +128,16 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_txP25Data(1000U, "Modem TX P25"),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
-    m_playoutTimer(1000U, 0U, packetPlayoutTime),
     m_dmrSpace1(0U),
     m_dmrSpace2(0U),
     m_p25Space(0U),
     m_tx(false),
     m_cd(false),
     m_lockout(false),
-    m_error(false)
+    m_error(false),
+    m_trace(trace),
+    m_debug(debug),
+    m_playoutTimer(1000U, 0U, packetPlayoutTime)
 {
     assert(port != NULL);
 
@@ -135,11 +150,6 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
 Modem::~Modem()
 {
     delete m_port;
-
-    if (m_remotePort != NULL) {
-        delete m_remotePort;
-    }
-
     delete[] m_buffer;
 }
 
@@ -254,7 +264,7 @@ void Modem::setRXLevel(float rxLevel)
 
     // Utils::dump(1U, "Written", buffer, 16U);
 
-    int ret = m_port->write(buffer, 16U);
+    int ret = write(buffer, 16U);
     if (ret != 16)
         return;
 
@@ -281,13 +291,43 @@ void Modem::setRXLevel(float rxLevel)
 }
 
 /// <summary>
-/// Sets the slave port for remote operation.
+/// Sets a custom modem response handler.
 /// </summary>
-void Modem::setSlavePort(port::IModemPort* slavePort)
+/// <remarks>
+/// If the response handler returns true, processing will stop, otherwise it will continue.
+/// </remarks>
+/// <param name="handler"></param>
+void Modem::setResponseHandler(std::function<MODEM_RESP_HANDLER> handler)
 {
-    assert(slavePort != NULL);
+    assert(handler != NULL);
 
-    m_remotePort = slavePort;
+    m_rspHandler = handler;
+}
+
+/// <summary>
+/// Sets a custom modem open port handler.
+/// </summary>
+/// <remarks>
+/// If the open handler is set, it is the responsibility of the handler to complete air interface
+/// initialization (i.e. write configuration, etc).
+/// </remarks>
+/// <param name="handler"></param>
+void Modem::setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
+{
+    assert(handler != NULL);
+
+    m_openPortHandler = handler;
+}
+
+/// <summary>
+/// Sets a custom modem close port handler.
+/// </summary>
+/// <param name="handler"></param>
+void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
+{
+    assert(handler != NULL);
+
+    m_closePortHandler = handler;
 }
 
 /// <summary>
@@ -313,18 +353,13 @@ bool Modem::open()
         m_inactivityTimer.stop();
     }
 
-    if (m_remotePort != NULL) {
-        ret = m_remotePort->open();
+    // do we have an open port handler?
+    if (m_openPortHandler) {
+        ret = m_openPortHandler(this);
         if (!ret)
             return false;
 
-        m_statusTimer.start();
-
         m_error = false;
-        m_offset = 0U;
-
-        LogMessage(LOG_MODEM, "Modem Ready [Remote Mode]");
-
         m_playoutTimer.start();
 
         return true;
@@ -332,9 +367,12 @@ bool Modem::open()
 
     ret = writeConfig();
     if (!ret) {
-        LogError(LOG_MODEM, "Modem is unresponsive");
-        m_port->close();
-        return false;
+        ret = writeConfig();
+        if (!ret) {
+            LogError(LOG_MODEM, "Modem unresponsive to configuration set after 2 attempts. Stopping.");
+            m_port->close();
+            return false;
+        }
     }
 
     writeSymbolAdjust();
@@ -342,7 +380,6 @@ bool Modem::open()
     m_statusTimer.start();
 
     m_error = false;
-    m_offset = 0U;
 
     LogMessage(LOG_MODEM, "Modem Ready [Direct Mode]");
     return true;
@@ -379,6 +416,15 @@ void Modem::clock(uint32_t ms)
     bool forceModemReset = false;
     RESP_TYPE_DVM type = getResponse();
 
+    // do we have a custom response handler?
+    if (m_rspHandler != NULL) {
+        // execute custom response handler
+        if (m_rspHandler(this, ms, type, m_rspDoubleLength, m_buffer, m_length)) {
+            // all logic handled by handler -- return
+            return;
+        }
+    }
+
     if (type == RTM_TIMEOUT) {
         // Nothing to do
     }
@@ -386,209 +432,225 @@ void Modem::clock(uint32_t ms)
         // Nothing to do
     }
     else {
-        if (m_remotePort != NULL) {
+        // type == RTM_OK
+        switch (m_buffer[2U]) {
+        /** Digital Mobile Radio */
+        case CMD_DMR_DATA1:
+        {
             if (m_trace)
-                Utils::dump(1U, "TX Remote Data", m_buffer, m_length);
-
-            // send entire modem packet over the slave port
-            m_remotePort->write(m_buffer, m_length);
-        }
-        else {
-            // type == RTM_OK
-            switch (m_buffer[2U]) {
-            /** Digital Mobile Radio */
-            case CMD_DMR_DATA1:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
-
-                uint8_t data = m_length - 2U;
-                m_rxDMRData1.addData(&data, 1U);
-
-                if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
-                    data = TAG_EOT;
-                else
-                    data = TAG_DATA;
-                m_rxDMRData1.addData(&data, 1U);
-
-                m_rxDMRData1.addData(m_buffer + 3U, m_length - 3U);
+                Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_DMR_DATA1 double length?; len = %u", m_length);
+                break;
             }
-            break;
 
-            case CMD_DMR_DATA2:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
+            uint8_t data = m_length - 2U;
+            m_rxDMRData1.addData(&data, 1U);
 
-                uint8_t data = m_length - 2U;
-                m_rxDMRData2.addData(&data, 1U);
-
-                if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
-                    data = TAG_EOT;
-                else
-                    data = TAG_DATA;
-                m_rxDMRData2.addData(&data, 1U);
-
-                m_rxDMRData2.addData(m_buffer + 3U, m_length - 3U);
-            }
-            break;
-
-            case CMD_DMR_LOST1:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
-
-                uint8_t data = 1U;
-                m_rxDMRData1.addData(&data, 1U);
-
-                data = TAG_LOST;
-                m_rxDMRData1.addData(&data, 1U);
-            }
-            break;
-
-            case CMD_DMR_LOST2:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
-
-                uint8_t data = 1U;
-                m_rxDMRData2.addData(&data, 1U);
-
-                data = TAG_LOST;
-                m_rxDMRData2.addData(&data, 1U);
-            }
-            break;
-
-            /** Project 25 */
-            case CMD_P25_DATA:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
-
-                uint8_t data = m_length - 2U;
-                m_rxP25Data.addData(&data, 1U);
-
+            if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
+                data = TAG_EOT;
+            else
                 data = TAG_DATA;
-                m_rxP25Data.addData(&data, 1U);
+            m_rxDMRData1.addData(&data, 1U);
 
-                m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
+            m_rxDMRData1.addData(m_buffer + 3U, m_length - 3U);
+        }
+        break;
+
+        case CMD_DMR_DATA2:
+        {
+            if (m_trace)
+                Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_DMR_DATA2 double length?; len = %u", m_length);
+                break;
             }
-            break;
 
-            case CMD_P25_LOST:
-            {
-                if (m_trace)
-                    Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
+            uint8_t data = m_length - 2U;
+            m_rxDMRData2.addData(&data, 1U);
 
-                uint8_t data = 1U;
-                m_rxP25Data.addData(&data, 1U);
+            if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
+                data = TAG_EOT;
+            else
+                data = TAG_DATA;
+            m_rxDMRData2.addData(&data, 1U);
 
-                data = TAG_LOST;
-                m_rxP25Data.addData(&data, 1U);
+            m_rxDMRData2.addData(m_buffer + 3U, m_length - 3U);
+        }
+        break;
+
+        case CMD_DMR_LOST1:
+        {
+            if (m_trace)
+                Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_DMR_LOST1 double length?; len = %u", m_length);
+                break;
             }
-            break;
 
-            /** General */
-            case CMD_GET_STATUS:
-            {
-                // if (m_trace)
-                //    Utils::dump(1U, "Get Status", m_buffer, m_length);
+            uint8_t data = 1U;
+            m_rxDMRData1.addData(&data, 1U);
 
-                m_modemState = (DVM_STATE)m_buffer[4U];
+            data = TAG_LOST;
+            m_rxDMRData1.addData(&data, 1U);
+        }
+        break;
 
-                m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
+        case CMD_DMR_LOST2:
+        {
+            if (m_trace)
+                Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_DMR_LOST2 double length?; len = %u", m_length);
+                break;
+            }
 
-                bool adcOverflow = (m_buffer[5U] & 0x02U) == 0x02U;
-                if (adcOverflow) {
-                    //LogError(LOG_MODEM, "ADC levels have overflowed");
-                    m_adcOverFlowCount++;
+            uint8_t data = 1U;
+            m_rxDMRData2.addData(&data, 1U);
 
-                    if (m_adcOverFlowCount >= MAX_ADC_OVERFLOW / 2U) {
-                        LogWarning(LOG_MODEM, "ADC overflow count > %u!", MAX_ADC_OVERFLOW / 2U);
-                    }
+            data = TAG_LOST;
+            m_rxDMRData2.addData(&data, 1U);
+        }
+        break;
 
-                    if (!m_disableOFlowReset) {
-                        if (m_adcOverFlowCount > MAX_ADC_OVERFLOW) {
-                            LogError(LOG_MODEM, "ADC overflow count > %u, resetting modem", MAX_ADC_OVERFLOW);
-                            forceModemReset = true;
-                        }
-                    }
-                    else {
-                        m_adcOverFlowCount = 0U;
+        /** Project 25 */
+        case CMD_P25_DATA:
+        {
+            if (m_trace)
+                Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_P25_DATA double length?; len = %u", m_length);
+                break;
+            }
+
+            uint8_t data = m_length - 2U;
+            m_rxP25Data.addData(&data, 1U);
+
+            data = TAG_DATA;
+            m_rxP25Data.addData(&data, 1U);
+
+            m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
+        }
+        break;
+
+        case CMD_P25_LOST:
+        {
+            if (m_trace)
+                Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_P25_LOST double length?; len = %u", m_length);
+                break;
+            }
+
+            uint8_t data = 1U;
+            m_rxP25Data.addData(&data, 1U);
+
+            data = TAG_LOST;
+            m_rxP25Data.addData(&data, 1U);
+        }
+        break;
+
+        /** General */
+        case CMD_GET_STATUS:
+        {
+            // if (m_trace)
+            //    Utils::dump(1U, "Get Status", m_buffer, m_length);
+
+            m_modemState = (DVM_STATE)m_buffer[4U];
+
+            m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
+
+            bool adcOverflow = (m_buffer[5U] & 0x02U) == 0x02U;
+            if (adcOverflow) {
+                //LogError(LOG_MODEM, "ADC levels have overflowed");
+                m_adcOverFlowCount++;
+
+                if (m_adcOverFlowCount >= MAX_ADC_OVERFLOW / 2U) {
+                    LogWarning(LOG_MODEM, "ADC overflow count > %u!", MAX_ADC_OVERFLOW / 2U);
+                }
+
+                if (!m_disableOFlowReset) {
+                    if (m_adcOverFlowCount > MAX_ADC_OVERFLOW) {
+                        LogError(LOG_MODEM, "ADC overflow count > %u, resetting modem", MAX_ADC_OVERFLOW);
+                        forceModemReset = true;
                     }
                 }
                 else {
-                    if (m_adcOverFlowCount != 0U) {
-                        m_adcOverFlowCount--;
-                    }
+                    m_adcOverFlowCount = 0U;
+                }
+            }
+            else {
+                if (m_adcOverFlowCount != 0U) {
+                    m_adcOverFlowCount--;
+                }
+            }
+
+            bool rxOverflow = (m_buffer[5U] & 0x04U) == 0x04U;
+            if (rxOverflow)
+                LogError(LOG_MODEM, "RX buffer has overflowed");
+
+            bool txOverflow = (m_buffer[5U] & 0x08U) == 0x08U;
+            if (txOverflow)
+                LogError(LOG_MODEM, "TX buffer has overflowed");
+
+            m_lockout = (m_buffer[5U] & 0x10U) == 0x10U;
+
+            bool dacOverflow = (m_buffer[5U] & 0x20U) == 0x20U;
+            if (dacOverflow) {
+                //LogError(LOG_MODEM, "DAC levels have overflowed");
+                m_dacOverFlowCount++;
+
+                if (m_dacOverFlowCount > MAX_DAC_OVERFLOW / 2U) {
+                    LogWarning(LOG_MODEM, "DAC overflow count > %u!", MAX_DAC_OVERFLOW / 2U);
                 }
 
-                bool rxOverflow = (m_buffer[5U] & 0x04U) == 0x04U;
-                if (rxOverflow)
-                    LogError(LOG_MODEM, "RX buffer has overflowed");
-
-                bool txOverflow = (m_buffer[5U] & 0x08U) == 0x08U;
-                if (txOverflow)
-                    LogError(LOG_MODEM, "TX buffer has overflowed");
-
-                m_lockout = (m_buffer[5U] & 0x10U) == 0x10U;
-
-                bool dacOverflow = (m_buffer[5U] & 0x20U) == 0x20U;
-                if (dacOverflow) {
-                    //LogError(LOG_MODEM, "DAC levels have overflowed");
-                    m_dacOverFlowCount++;
-
-                    if (m_dacOverFlowCount > MAX_DAC_OVERFLOW / 2U) {
-                        LogWarning(LOG_MODEM, "DAC overflow count > %u!", MAX_DAC_OVERFLOW / 2U);
-                    }
-
-                    if (!m_disableOFlowReset) {
-                        if (m_dacOverFlowCount > MAX_DAC_OVERFLOW) {
-                            LogError(LOG_MODEM, "DAC overflow count > %u, resetting modem", MAX_DAC_OVERFLOW);
-                            forceModemReset = true;
-                        }
-                    }
-                    else {
-                        m_dacOverFlowCount = 0U;
+                if (!m_disableOFlowReset) {
+                    if (m_dacOverFlowCount > MAX_DAC_OVERFLOW) {
+                        LogError(LOG_MODEM, "DAC overflow count > %u, resetting modem", MAX_DAC_OVERFLOW);
+                        forceModemReset = true;
                     }
                 }
                 else {
-                    if (m_dacOverFlowCount != 0U) {
-                        m_dacOverFlowCount--;
-                    }
+                    m_dacOverFlowCount = 0U;
                 }
-
-                m_cd = (m_buffer[5U] & 0x40U) == 0x40U;
-
-                m_dmrSpace1 = m_buffer[7U];
-                m_dmrSpace2 = m_buffer[8U];
-                m_p25Space = m_buffer[10U];
-
-                m_inactivityTimer.start();
             }
+            else {
+                if (m_dacOverFlowCount != 0U) {
+                    m_dacOverFlowCount--;
+                }
+            }
+
+            m_cd = (m_buffer[5U] & 0x40U) == 0x40U;
+
+            m_dmrSpace1 = m_buffer[7U];
+            m_dmrSpace2 = m_buffer[8U];
+            m_p25Space = m_buffer[10U];
+
+            m_inactivityTimer.start();
+        }
+        break;
+
+        case CMD_GET_VERSION:
+        case CMD_ACK:
             break;
 
-            case CMD_GET_VERSION:
-            case CMD_ACK:
-                break;
+        case CMD_NAK:
+            LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+            break;
 
-            case CMD_NAK:
-                LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
-                break;
+        case CMD_DEBUG1:
+        case CMD_DEBUG2:
+        case CMD_DEBUG3:
+        case CMD_DEBUG4:
+        case CMD_DEBUG5:
+        case CMD_DEBUG_DUMP:
+            printDebug(m_buffer, m_length);
+            break;
 
-            case CMD_DEBUG1:
-            case CMD_DEBUG2:
-            case CMD_DEBUG3:
-            case CMD_DEBUG4:
-            case CMD_DEBUG5:
-                printDebug();
-                break;
-
-            default:
-                LogWarning(LOG_MODEM, "Unknown message, type = %02X", m_buffer[2U]);
-                Utils::dump("Buffer dump", m_buffer, m_length);
-                break;
-            }
+        default:
+            LogWarning(LOG_MODEM, "Unknown message, type = %02X", m_buffer[2U]);
+            Utils::dump("Buffer dump", m_buffer, m_length);
+            break;
         }
     }
 
@@ -611,33 +673,6 @@ void Modem::clock(uint32_t ms)
     if (!m_playoutTimer.hasExpired())
         return;
 
-    // read any data from the slave port for the air interface
-    if (m_remotePort != NULL) {
-        uint8_t buffer[BUFFER_LENGTH];
-        ::memset(buffer, 0x00U, BUFFER_LENGTH);
-        
-        uint32_t ret = m_remotePort->read(buffer, BUFFER_LENGTH);
-        if (ret > 0) {
-            if (m_trace)
-                Utils::dump(1U, "RX Remote Data", (uint8_t*)buffer, ret);
-
-            if (ret < 3U) {
-                LogError(LOG_MODEM, "Illegal length of remote data must be >3 bytes");
-                Utils::dump("Buffer dump", buffer, ret);
-                return;
-            }
-
-            uint8_t len = buffer[1U];
-            int ret = m_port->write(buffer, len);
-            if (ret != int(len))
-                LogError(LOG_MODEM, "Error writing remote data data");
-        }
-
-        m_playoutTimer.start();
-
-        return;
-    }
-
     // write DMR slot 1 data to air interface
     if (m_dmrSpace1 > 1U && !m_txDMRData1.isEmpty()) {
         uint8_t len = 0U;
@@ -647,7 +682,7 @@ void Modem::clock(uint32_t ms)
         if (m_trace)
             Utils::dump(1U, "TX DMR Data 1", m_buffer, len);
 
-        int ret = m_port->write(m_buffer, len);
+        int ret = write(m_buffer, len);
         if (ret != int(len))
             LogError(LOG_MODEM, "Error writing DMR slot 1 data");
 
@@ -665,7 +700,7 @@ void Modem::clock(uint32_t ms)
         if (m_trace)
             Utils::dump(1U, "TX DMR Data 2", m_buffer, len);
 
-        int ret = m_port->write(m_buffer, len);
+        int ret = write(m_buffer, len);
         if (ret != int(len))
             LogError(LOG_MODEM, "Error writing DMR slot 2 data");
 
@@ -684,7 +719,7 @@ void Modem::clock(uint32_t ms)
             Utils::dump(1U, "TX P25 Data", m_buffer, len);
         }
 
-        int ret = m_port->write(m_buffer, len);
+        int ret = write(m_buffer, len);
         if (ret != int(len))
             LogError(LOG_MODEM, "Error writing P25 data");
 
@@ -702,8 +737,9 @@ void Modem::close()
     LogDebug(LOG_MODEM, "Closing the modem");
     m_port->close();
 
-    if (m_remotePort != NULL) {
-        m_remotePort->close();
+    // do we have a close port handler?
+    if (m_closePortHandler != NULL) {
+        m_closePortHandler(this);
     }
 }
 
@@ -866,7 +902,7 @@ void Modem::clearP25Data()
 
         // Utils::dump(1U, "Written", buffer, 3U);
 
-        m_port->write(buffer, 3U);
+        write(buffer, 3U);
     }
 }
 
@@ -1050,7 +1086,7 @@ bool Modem::writeDMRStart(bool tx)
 
     // Utils::dump(1U, "Written", buffer, 4U);
 
-    return m_port->write(buffer, 4U) == 4;
+    return write(buffer, 4U) == 4;
 }
 
 /// <summary>
@@ -1079,7 +1115,7 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
 
     // Utils::dump(1U, "Written", buffer, 12U);
 
-    return m_port->write(buffer, 12U) == 12;
+    return write(buffer, 12U) == 12;
 }
 
 /// <summary>
@@ -1103,15 +1139,35 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
 
     // Utils::dump(1U, "Written", buffer, 4U);
 
-    return m_port->write(buffer, 4U) == 4;
+    return write(buffer, 4U) == 4;
 }
 
 /// <summary>
-/// Sets the current operating mode for the air interface modem.
+/// Writes raw data to the air interface modem.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+/// <returns></returns>
+int Modem::write(const uint8_t* data, uint32_t length)
+{
+    return m_port->write(data, length);
+}
+
+/// <summary>
+/// Gets the current operating state for the air interface modem.
+/// </summary>
+/// <returns></returns>
+DVM_STATE Modem::getState() const
+{
+    return m_modemState;
+}
+
+/// <summary>
+/// Sets the current operating state for the air interface modem.
 /// </summary>
 /// <param name="state"></param>
 /// <returns></returns>
-bool Modem::setMode(DVM_STATE state)
+bool Modem::setState(DVM_STATE state)
 {
     uint8_t buffer[4U];
 
@@ -1122,7 +1178,7 @@ bool Modem::setMode(DVM_STATE state)
 
     // Utils::dump(1U, "Written", buffer, 4U);
 
-    return m_port->write(buffer, 4U) == 4;
+    return write(buffer, 4U) == 4;
 }
 
 /// <summary>
@@ -1151,7 +1207,7 @@ bool Modem::sendCWId(const std::string& callsign)
         Utils::dump(1U, "CW ID Data", buffer, length + 3U);
     }
 
-    return m_port->write(buffer, length + 3U) == int(length + 3U);
+    return write(buffer, length + 3U) == int(length + 3U);
 }
 
 // ---------------------------------------------------------------------------
@@ -1174,7 +1230,7 @@ bool Modem::getFirmwareVersion()
 
         // Utils::dump(1U, "F/W Ver Written", buffer, 3U);
 
-        int ret = m_port->write(buffer, 3U);
+        int ret = write(buffer, 3U);
         if (ret != 3)
             return false;
 
@@ -1235,7 +1291,7 @@ bool Modem::getStatus()
 
     // Utils::dump(1U, "Written", buffer, 3U);
 
-    return m_port->write(buffer, 3U) == 3;
+    return write(buffer, 3U) == 3;
 }
 
 /// <summary>
@@ -1303,7 +1359,7 @@ bool Modem::writeConfig()
 
     // Utils::dump(1U, "Written", buffer, 17U);
 
-    int ret = m_port->write(buffer, 17U);
+    int ret = write(buffer, 17U);
     if (ret != 17)
         return false;
 
@@ -1352,7 +1408,7 @@ bool Modem::writeSymbolAdjust()
     buffer[5U] = (uint8_t)(m_p25SymLevel3Adj + 128);
     buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
-    int ret = m_port->write(buffer, 7U);
+    int ret = write(buffer, 7U);
     if (ret <= 0)
         return false;
 
@@ -1386,32 +1442,56 @@ bool Modem::writeSymbolAdjust()
 /// <summary>
 /// 
 /// </summary>
-void Modem::printDebug()
+/// <param name="buffer"></param>
+/// <param name="len"></param>
+void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 {
-    if (m_buffer[2U] == CMD_DEBUG1) {
-        LogDebug(LOG_MODEM, "M: %.*s", m_length - 3U, m_buffer + 3U);
+    if (m_rspDoubleLength && buffer[3U] == CMD_DEBUG_DUMP) {
+        uint8_t data[512U];
+        ::memset(data, 0x00U, 512U);
+        ::memcpy(data, buffer, len);
+
+        Utils::dump(1U, "Modem Debug Dump", data, len);
+        return;
+    } 
+    else {
+        if (m_rspDoubleLength) {
+            LogError(LOG_MODEM, "Invalid debug data received from the modem, len = %u", len);
+            return;
+        }
     }
-    else if (m_buffer[2U] == CMD_DEBUG2) {
-        short val1 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %X", m_length - 5U, m_buffer + 3U, val1);
+
+    if (buffer[2U] == CMD_DEBUG1) {
+        LogDebug(LOG_MODEM, "M: %.*s", len - 3U, buffer + 3U);
     }
-    else if (m_buffer[2U] == CMD_DEBUG3) {
-        short val1 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
-        short val2 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %X %X", m_length - 7U, m_buffer + 3U, val1, val2);
+    else if (buffer[2U] == CMD_DEBUG2) {
+        short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
+        LogDebug(LOG_MODEM, "M: %.*s %X", len - 5U, buffer + 3U, val1);
     }
-    else if (m_buffer[2U] == CMD_DEBUG4) {
-        short val1 = (m_buffer[m_length - 6U] << 8) | m_buffer[m_length - 5U];
-        short val2 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
-        short val3 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %X %X %X", m_length - 9U, m_buffer + 3U, val1, val2, val3);
+    else if (buffer[2U] == CMD_DEBUG3) {
+        short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
+        short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
+        LogDebug(LOG_MODEM, "M: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
     }
-    else if (m_buffer[2U] == CMD_DEBUG5) {
-        short val1 = (m_buffer[m_length - 8U] << 8) | m_buffer[m_length - 7U];
-        short val2 = (m_buffer[m_length - 6U] << 8) | m_buffer[m_length - 5U];
-        short val3 = (m_buffer[m_length - 4U] << 8) | m_buffer[m_length - 3U];
-        short val4 = (m_buffer[m_length - 2U] << 8) | m_buffer[m_length - 1U];
-        LogDebug(LOG_MODEM, "M: %.*s %X %X %X %X", m_length - 11U, m_buffer + 3U, val1, val2, val3, val4);
+    else if (buffer[2U] == CMD_DEBUG4) {
+        short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
+        short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
+        short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
+        LogDebug(LOG_MODEM, "M: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
+    }
+    else if (buffer[2U] == CMD_DEBUG5) {
+        short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
+        short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
+        short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
+        short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
+        LogDebug(LOG_MODEM, "M: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
+    }
+    else if (buffer[2U] == CMD_DEBUG_DUMP) {
+        uint8_t data[255U];
+        ::memset(data, 0x00U, 255U);
+        ::memcpy(data, buffer, len);
+
+        Utils::dump(1U, "Modem Debug Dump", data, len);        
     }
 }
 
@@ -1421,16 +1501,18 @@ void Modem::printDebug()
 /// <returns></returns>
 RESP_TYPE_DVM Modem::getResponse()
 {
-    if (m_offset == 0U) {
-        // Get the start of the frame or nothing at all
+    RESP_STATE state = RESP_START;
+    uint16_t offset = 0U;
+
+    m_rspDoubleLength = false;
+
+    // get the start of the frame or nothing at all
+    if (state == RESP_START) {
         int ret = m_port->read(m_buffer + 0U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
             return RTM_ERROR;
         }
-
-        // LogDebug(LOG_MODEM, "ret = %d", ret);
-        // Utils::dump(1U, "Response 0", m_buffer, 1U);
 
         if (ret == 0)
             return RTM_TIMEOUT;
@@ -1438,94 +1520,99 @@ RESP_TYPE_DVM Modem::getResponse()
         if (m_buffer[0U] != DVM_FRAME_START)
             return RTM_TIMEOUT;
 
-        m_offset = 1U;
+        // LogDebug(LOG_MODEM, "getResponse(), RESP_START");
+
+        state = RESP_LENGTH1;
     }
 
-    if (m_offset == 1U) {
-        // Get the length of the frame
+    // get the length of the frame, 1/2
+    if (state == RESP_LENGTH1) {
         int ret = m_port->read(m_buffer + 1U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
-            m_offset = 0U;
             return RTM_ERROR;
         }
-
-        // LogDebug(LOG_MODEM, "ret = %d", ret);
-        // Utils::dump(1U, "Response 1", m_buffer + 1U, 1U);
 
         if (ret == 0)
             return RTM_TIMEOUT;
 
         if (m_buffer[1U] >= 250U) {
             LogError(LOG_MODEM, "Invalid length received from the modem, len = %u", m_buffer[1U]);
-            m_offset = 0U;
             return RTM_ERROR;
         }
 
         m_length = m_buffer[1U];
-        m_offset = 2U;
+
+        if (m_length == 0U)
+            state = RESP_LENGTH2;
+        else
+            state = RESP_TYPE;
+
+        // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH1, len = %u", m_length);
+
+        m_rspDoubleLength = false;
+        offset = 2U;
     }
 
-    if (m_offset == 2U) {
-        // Get the frame type
+    // get the length of the frame, 2/2
+    if (state == RESP_LENGTH2) {
         int ret = m_port->read(m_buffer + 2U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
-            m_offset = 0U;
             return RTM_ERROR;
         }
-
-        // LogDebug(LOG_MODEM, "ret = %d", ret);
-        // Utils::dump(1U, "Response 2", m_buffer + 2U, 1U);
 
         if (ret == 0)
             return RTM_TIMEOUT;
 
-        m_offset = 3U;
+        m_length = m_buffer[2U] + 255U;
+        state = RESP_TYPE;
+
+        // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH2, len = %u", m_length);
+
+        m_rspDoubleLength = true;
+        offset = 3U;
     }
 
-    if (m_offset >= 3U) {
-        // Use later two byte length field
-        if (m_length == 0U) {
-            int ret = m_port->read(m_buffer + 3U, 2U);
-            if (ret < 0) {
-                LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
-                m_offset = 0U;
-                return RTM_ERROR;
-            }
-
-            // LogDebug(LOG_MODEM, "ret = %d", ret);
-            // Utils::dump(1U, "Response 3", m_buffer + 3U, 2U);
-
-            if (ret == 0)
-                return RTM_TIMEOUT;
-
-            m_length = (m_buffer[3U] << 8) | m_buffer[4U];
-            m_offset = 5U;
+    // get the frame type
+    if (state == RESP_TYPE) {
+        int ret = m_port->read(m_buffer + offset, 1U);
+        if (ret < 0) {
+            LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+            return RTM_ERROR;
         }
 
-        while (m_offset < m_length) {
-            int ret = m_port->read(m_buffer + m_offset, m_length - m_offset);
+        if (ret == 0)
+            return RTM_TIMEOUT;
+
+        m_rspType = (DVM_COMMANDS)m_buffer[offset];
+
+        // LogDebug(LOG_MODEM, "getResponse(), RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
+
+        state = RESP_DATA;
+        offset++;
+    }
+
+    // get the frame data
+    if (state == RESP_DATA) {
+        // LogDebug(LOG_MODEM, "getResponse(), RESP_DATA, len = %u, type = %u", m_length, m_rspType);
+
+        while (offset < m_length) {
+            int ret = m_port->read(m_buffer + offset, m_length - offset);
             if (ret < 0) {
                 LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
-                m_offset = 0U;
                 return RTM_ERROR;
             }
-
-            // LogDebug(LOG_MODEM, "ret = %d", ret);
-            // Utils::dump(1U, "Response 4", m_buffer + m_offset, m_length - m_offset);
 
             if (ret == 0)
                 return RTM_TIMEOUT;
 
             if (ret > 0)
-                m_offset += ret;
+                offset += ret;
         }
+
+        // Utils::dump(1U, "Modem getResponse()", m_buffer, m_length);
     }
-
-    m_offset = 0U;
-
-    // Utils::dump(1U, "Received", m_buffer, m_length);
 
     return RTM_OK;
 }

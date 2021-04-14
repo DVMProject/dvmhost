@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ using namespace lookups;
 #include <cstdio>
 #include <cstdarg>
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -73,7 +74,8 @@ Host::Host(const std::string& confFile) :
     m_modem(NULL),
     m_modemRemote(false),
     m_network(NULL),
-    m_mode(STATE_IDLE),
+    m_modemRemotePort(NULL),
+    m_state(STATE_IDLE),
     m_modeTimer(1000U),
     m_dmrTXTimer(1000U),
     m_cwIdTimer(1000U),
@@ -210,15 +212,15 @@ int Host::run()
 
         // main execution loop
         while (!killed) {
-            if (m_modem->hasLockout() && m_mode != HOST_STATE_LOCKOUT)
-                setMode(HOST_STATE_LOCKOUT);
-            else if (!m_modem->hasLockout() && m_mode == HOST_STATE_LOCKOUT)
-                setMode(STATE_IDLE);
+            if (m_modem->hasLockout() && m_state != HOST_STATE_LOCKOUT)
+                setState(HOST_STATE_LOCKOUT);
+            else if (!m_modem->hasLockout() && m_state == HOST_STATE_LOCKOUT)
+                setState(STATE_IDLE);
 
-            if (m_modem->hasError() && m_mode != HOST_STATE_ERROR)
-                setMode(HOST_STATE_ERROR);
-            else if (!m_modem->hasError() && m_mode == HOST_STATE_ERROR)
-                setMode(STATE_IDLE);
+            if (m_modem->hasError() && m_state != HOST_STATE_ERROR)
+                setState(HOST_STATE_ERROR);
+            else if (!m_modem->hasError() && m_state == HOST_STATE_ERROR)
+                setState(STATE_IDLE);
 
             uint32_t ms = stopWatch.elapsed();
             if (ms > 1U)
@@ -245,7 +247,7 @@ int Host::run()
                 Thread::sleep(1U);
         }
 
-        setMode(HOST_STATE_QUIT);
+        setState(HOST_STATE_QUIT);
 
         return EXIT_SUCCESS;
     }
@@ -474,7 +476,7 @@ int Host::run()
     }
 
     if (m_fixedMode && m_dmrEnabled && m_p25Enabled) {
-        ::LogError(LOG_HOST, "Cannot have DMR enabled and P25 enabled when using fixed mode! Choose one protocol for fixed mode operation.");
+        ::LogError(LOG_HOST, "Cannot have DMR enabled and P25 enabled when using fixed state! Choose one protocol for fixed state operation.");
         g_killed = true;
     }
 
@@ -489,19 +491,19 @@ int Host::run()
     }
 
     if (!g_killed) {
-        // fixed more or P25 control channel will force a mode change
+        // fixed more or P25 control channel will force a state change
         if (m_fixedMode || m_p25CtrlChannel) {
             if (m_p25CtrlChannel) {
                 m_fixedMode = true;
             }
 
             if (dmr != NULL)
-                setMode(STATE_DMR);
+                setState(STATE_DMR);
             if (p25 != NULL)
-                setMode(STATE_P25);
+                setState(STATE_P25);
         }
         else {
-            setMode(STATE_IDLE);
+            setState(STATE_IDLE);
         }
 
         ::LogInfoEx(LOG_HOST, "Host is performing late initialization and warmup");
@@ -545,15 +547,15 @@ int Host::run()
 
     // main execution loop
     while (!killed) {
-        if (m_modem->hasLockout() && m_mode != HOST_STATE_LOCKOUT)
-            setMode(HOST_STATE_LOCKOUT);
-        else if (!m_modem->hasLockout() && m_mode == HOST_STATE_LOCKOUT)
-            setMode(STATE_IDLE);
+        if (m_modem->hasLockout() && m_state != HOST_STATE_LOCKOUT)
+            setState(HOST_STATE_LOCKOUT);
+        else if (!m_modem->hasLockout() && m_state == HOST_STATE_LOCKOUT)
+            setState(STATE_IDLE);
 
-        if (m_modem->hasError() && m_mode != HOST_STATE_ERROR)
-            setMode(HOST_STATE_ERROR);
-        else if (!m_modem->hasError() && m_mode == HOST_STATE_ERROR)
-            setMode(STATE_IDLE);
+        if (m_modem->hasError() && m_state != HOST_STATE_ERROR)
+            setState(HOST_STATE_ERROR);
+        else if (!m_modem->hasError() && m_state == HOST_STATE_ERROR)
+            setState(STATE_IDLE);
 
         uint32_t ms = stopWatch.elapsed();
         if (ms > 1U)
@@ -574,13 +576,13 @@ int Host::run()
             // write those frames to the DMR controller
             len = m_modem->readDMRData1(data);
             if (len > 0U) {
-                if (m_mode == STATE_IDLE) {
+                if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
                     if (m_duplex) {
                         bool ret = dmr->processWakeup(data);
                         if (ret) {
                             m_modeTimer.setTimeout(m_rfModeHang);
-                            setMode(STATE_DMR);
+                            setState(STATE_DMR);
 
                             dmrBeaconDurationTimer.stop();
                             INTERRUPT_P25_CONTROL;
@@ -589,14 +591,14 @@ int Host::run()
                     else {
                         // in simplex directly process slot 1 frames
                         m_modeTimer.setTimeout(m_rfModeHang);
-                        setMode(STATE_DMR);
+                        setState(STATE_DMR);
                         dmr->processFrame1(data, len);
 
                         dmrBeaconDurationTimer.stop();
                         p25CCDurationTimer.stop();
                     }
                 }
-                else if (m_mode == STATE_DMR) {
+                else if (m_state == STATE_DMR) {
                     // if the modem is in duplex, and hasn't started transmitting
                     // process wakeup CSBKs
                     if (m_duplex && !m_modem->hasTX()) {
@@ -619,8 +621,8 @@ int Host::run()
                         }
                     }
                 }
-                else if (m_mode != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "DMR modem data received, mode = %u", m_mode);
+                else if (m_state != HOST_STATE_LOCKOUT) {
+                    LogWarning(LOG_HOST, "DMR modem data received, state = %u", m_state);
                 }
             }
 
@@ -628,13 +630,13 @@ int Host::run()
             // write those frames to the DMR controller
             len = m_modem->readDMRData2(data);
             if (len > 0U) {
-                if (m_mode == STATE_IDLE) {
+                if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
                     if (m_duplex) {
                         bool ret = dmr->processWakeup(data);
                         if (ret) {
                             m_modeTimer.setTimeout(m_rfModeHang);
-                            setMode(STATE_DMR);
+                            setState(STATE_DMR);
 
                             dmrBeaconDurationTimer.stop();
                             INTERRUPT_P25_CONTROL;
@@ -643,14 +645,14 @@ int Host::run()
                     else {
                         // in simplex -- directly process slot 2 frames
                         m_modeTimer.setTimeout(m_rfModeHang);
-                        setMode(STATE_DMR);
+                        setState(STATE_DMR);
                         dmr->processFrame2(data, len);
 
                         dmrBeaconDurationTimer.stop();
                         INTERRUPT_P25_CONTROL;
                     }
                 }
-                else if (m_mode == STATE_DMR) {
+                else if (m_state == STATE_DMR) {
                     // if the modem is in duplex, and hasn't started transmitting
                     // process wakeup CSBKs
                     if (m_duplex && !m_modem->hasTX()) {
@@ -673,8 +675,8 @@ int Host::run()
                         }
                     }
                 }
-                else if (m_mode != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "DMR modem data received, mode = %u", m_mode);
+                else if (m_state != HOST_STATE_LOCKOUT) {
+                    LogWarning(LOG_HOST, "DMR modem data received, state = %u", m_state);
                 }
             }
         }
@@ -685,11 +687,11 @@ int Host::run()
         if (p25 != NULL) {
             len = m_modem->readP25Data(data);
             if (len > 0U) {
-                if (m_mode == STATE_IDLE) {
+                if (m_state == STATE_IDLE) {
                     bool ret = p25->processFrame(data, len);
                     if (ret) {
                         m_modeTimer.setTimeout(m_rfModeHang);
-                        setMode(STATE_P25);
+                        setState(STATE_P25);
 
                         dmrBeaconDurationTimer.stop();
                         INTERRUPT_P25_CONTROL;
@@ -699,12 +701,12 @@ int Host::run()
                         if (ret) {
                             dmrBeaconDurationTimer.stop();
 
-                            if (m_mode == STATE_IDLE) {
+                            if (m_state == STATE_IDLE) {
                                 m_modeTimer.setTimeout(m_rfModeHang);
-                                setMode(STATE_P25);
+                                setState(STATE_P25);
                             }
 
-                            if (m_mode == STATE_P25) {
+                            if (m_state == STATE_P25) {
                                 m_modeTimer.start();
                             }
 
@@ -730,7 +732,7 @@ int Host::run()
                         }
                     }
                 }
-                else if (m_mode == STATE_P25) {
+                else if (m_state == STATE_P25) {
                     bool ret = p25->processFrame(data, len);
                     if (ret) {
                         m_modeTimer.start();
@@ -739,19 +741,19 @@ int Host::run()
                     else {
                         ret = p25->writeEndRF();
                         if (ret) {
-                            if (m_mode == STATE_IDLE) {
+                            if (m_state == STATE_IDLE) {
                                 m_modeTimer.setTimeout(m_rfModeHang);
-                                setMode(STATE_P25);
+                                setState(STATE_P25);
                             }
 
-                            if (m_mode == STATE_P25) {
+                            if (m_state == STATE_P25) {
                                 m_modeTimer.start();
                             }
                         }
                     }
                 }
-                else if (m_mode != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "P25 modem data received, mode = %u", m_mode);
+                else if (m_state != HOST_STATE_LOCKOUT) {
+                    LogWarning(LOG_HOST, "P25 modem data received, state = %u", m_state);
                 }
             }
         }
@@ -762,12 +764,12 @@ int Host::run()
 
         if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
             if (!m_fixedMode) {
-                setMode(STATE_IDLE);
+                setState(STATE_IDLE);
             } else {
                 if (dmr != NULL)
-                    setMode(STATE_DMR);
+                    setState(STATE_DMR);
                 if (p25 != NULL)
-                    setMode(STATE_P25);
+                    setState(STATE_P25);
             }
         }
 
@@ -780,11 +782,11 @@ int Host::run()
             if (ret) {
                 len = dmr->getFrame1(data);
                 if (len > 0U) {
-                    if (m_mode == STATE_IDLE) {
+                    if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
-                        setMode(STATE_DMR);
+                        setState(STATE_DMR);
                     }
-                    if (m_mode == STATE_DMR) {
+                    if (m_state == STATE_DMR) {
                         // if the modem is in duplex -- write DMR sync start
                         if (m_duplex) {
                             m_modem->writeDMRStart(true);
@@ -799,8 +801,8 @@ int Host::run()
                         }
                         m_modeTimer.start();
                     }
-                    else if (m_mode != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "DMR data received, mode = %u", m_mode);
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
                     }
                 }
             }
@@ -812,11 +814,11 @@ int Host::run()
             if (ret) {
                 len = dmr->getFrame2(data);
                 if (len > 0U) {
-                    if (m_mode == STATE_IDLE) {
+                    if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
-                        setMode(STATE_DMR);
+                        setState(STATE_DMR);
                     }
-                    if (m_mode == STATE_DMR) {
+                    if (m_state == STATE_DMR) {
                         // if the modem is in duplex -- write DMR sync start
                         if (m_duplex) {
                             m_modem->writeDMRStart(true);
@@ -831,8 +833,8 @@ int Host::run()
                         }
                         m_modeTimer.start();
                     }
-                    else if (m_mode != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "DMR data received, mode = %u", m_mode);
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
                     }
                 }
             }
@@ -847,12 +849,12 @@ int Host::run()
             if (ret) {
                 len = p25->getFrame(data);
                 if (len > 0U) {
-                    if (m_mode == STATE_IDLE) {
+                    if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
-                        setMode(STATE_P25);
+                        setState(STATE_P25);
                     }
                     
-                    if (m_mode == STATE_P25) {
+                    if (m_state == STATE_P25) {
                         m_modem->writeP25Data(data, len);
 
                         dmrBeaconDurationTimer.stop();
@@ -862,12 +864,12 @@ int Host::run()
 
                         m_modeTimer.start();
                     }
-                    else if (m_mode != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "P25 data received, mode = %u", m_mode);
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "P25 data received, state = %u", m_state);
                     }
                 }
                 else {
-                    if (m_mode == STATE_IDLE || m_mode == STATE_P25) {
+                    if (m_state == STATE_IDLE || m_state == STATE_P25) {
                         // P25 control data, if control data is being transmitted
                         if (p25CCDurationTimer.isRunning() && !p25CCDurationTimer.hasExpired()) {
                             p25->setCCRunning(true);
@@ -877,12 +879,12 @@ int Host::run()
                         // P25 status data, tail on idle
                         ret = p25->writeEndRF();
                         if (ret) {
-                            if (m_mode == STATE_IDLE) {
+                            if (m_state == STATE_IDLE) {
                                 m_modeTimer.setTimeout(m_netModeHang);
-                                setMode(STATE_P25);
+                                setState(STATE_P25);
                             }
 
-                            if (m_mode == STATE_P25) {
+                            if (m_state == STATE_P25) {
                                 m_modeTimer.start();
                             }
                         }
@@ -943,14 +945,14 @@ int Host::run()
             if (dmrBeaconDurationTimer.isRunning() || p25CCDurationTimer.isRunning()) {
                 LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
 
-                setMode(STATE_IDLE);
+                setState(STATE_IDLE);
 
                 dmrBeaconDurationTimer.stop();
                 p25CCDurationTimer.stop();
                 //g_interruptP25Control = true;
             }
 
-            if (m_mode == STATE_IDLE && !m_modem->hasTX()) {
+            if (m_state == STATE_IDLE && !m_modem->hasTX()) {
                 hasCw = true;
                 m_modem->sendCWId(m_cwCallsign);
 
@@ -969,13 +971,13 @@ int Host::run()
                     dmrBeaconIntervalTimer.start();
                 }
                 else {
-                    if ((m_mode == STATE_IDLE || m_mode == STATE_DMR) && !m_modem->hasTX()) {
+                    if ((m_state == STATE_IDLE || m_state == STATE_DMR) && !m_modem->hasTX()) {
                         if (m_modeTimer.isRunning()) {
                             m_modeTimer.stop();
                         }
 
-                        if (m_mode != STATE_DMR)
-                            setMode(STATE_DMR);
+                        if (m_state != STATE_DMR)
+                            setState(STATE_DMR);
 
                         g_fireDMRBeacon = false;
                         LogDebug(LOG_HOST, "DMR, roaming beacon burst");
@@ -990,7 +992,7 @@ int Host::run()
             if (dmrBeaconDurationTimer.isRunning() && dmrBeaconDurationTimer.hasExpired()) {
                 dmrBeaconDurationTimer.stop();
 
-                if (m_mode == STATE_DMR && !m_modeTimer.isRunning()) {
+                if (m_state == STATE_DMR && !m_modeTimer.isRunning()) {
                     m_modeTimer.setTimeout(m_rfModeHang);
                     m_modeTimer.start();
                 }
@@ -1016,13 +1018,13 @@ int Host::run()
                             p25CCIntervalTimer.start();
                         }
                         else {
-                            if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
+                            if ((m_state == STATE_IDLE || m_state == STATE_P25) && !m_modem->hasTX()) {
                                 if (m_modeTimer.isRunning()) {
                                     m_modeTimer.stop();
                                 }
 
-                                if (m_mode != STATE_P25)
-                                    setMode(STATE_P25);
+                                if (m_state != STATE_P25)
+                                    setState(STATE_P25);
 
                                 if (g_interruptP25Control) {
                                     g_interruptP25Control = false;
@@ -1060,7 +1062,7 @@ int Host::run()
                             p25->writeControlEndRF();
                             p25->setCCRunning(false);
 
-                            if (m_mode == STATE_P25 && !m_modeTimer.isRunning()) {
+                            if (m_state == STATE_P25 && !m_modeTimer.isRunning()) {
                                 m_modeTimer.setTimeout(m_rfModeHang);
                                 m_modeTimer.start();
                             }
@@ -1075,7 +1077,7 @@ int Host::run()
                     // simply use the P25 CC interval timer in a non-broadcast state to transmit adjacent site data over
                     // the network
                     if (p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) {
-                        if ((m_mode == STATE_IDLE || m_mode == STATE_P25) && !m_modem->hasTX()) {
+                        if ((m_state == STATE_IDLE || m_state == STATE_P25) && !m_modem->hasTX()) {
                             p25->writeAdjSSNetwork();
                             p25CCIntervalTimer.start();
                         }
@@ -1110,7 +1112,7 @@ int Host::run()
             Thread::sleep(1U);
     }
 
-    setMode(HOST_STATE_QUIT);
+    setState(HOST_STATE_QUIT);
 
     if (dmr != NULL) {
         delete dmr;
@@ -1428,11 +1430,10 @@ bool Host::createModem()
         return false;
     }
 
-    port::IModemPort* slavePort = NULL;
     if (portType == UDP_PORT) {
         std::transform(udpMode.begin(), udpMode.end(), udpMode.begin(), ::tolower);
         if (udpMode == UDP_MODE_MASTER) {
-            slavePort = new port::UDPPort(udpAddress, udpPort);
+            m_modemRemotePort = new port::UDPPort(udpAddress, udpPort);
             m_modemRemote = true;
         }
         else if (udpMode == UDP_MODE_PEER) {
@@ -1480,7 +1481,9 @@ bool Host::createModem()
     m_modem->setP25NAC(m_p25NAC);
 
     if (m_modemRemote) {
-        m_modem->setSlavePort(slavePort);
+        m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));
+        m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemClose, this));
+        m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(Host::rmtPortModemHandler, this));
     }
 
     bool ret = m_modem->open();
@@ -1587,20 +1590,110 @@ bool Host::createNetwork()
 }
 
 /// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+bool Host::rmtPortModemOpen(Modem* modem)
+{
+    assert(m_modemRemotePort != NULL);
+
+    bool ret = m_modemRemotePort->open();
+    if (!ret)
+        return false;
+
+    LogMessage(LOG_MODEM, "Modem Ready [Remote Mode]");
+
+    // handled modem open
+    return true;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+bool Host::rmtPortModemClose(Modem* modem)
+{
+    assert(m_modemRemotePort != NULL);
+
+    m_modemRemotePort->close();
+
+    // handled modem close
+    return true;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="modem"></param>
+/// <param name="ms"></param>
+/// <param name="rspType"></param>
+/// <param name="rspDblLen"></param>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <returns></returns>
+bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
+{
+    assert(m_modemRemotePort != NULL);
+
+    if (rspType == RTM_OK && len > 0U) {
+        if (modem->getTrace())
+            Utils::dump(1U, "TX Remote Data", buffer, len);
+
+        // send entire modem packet over the remote port
+        m_modemRemotePort->write(buffer, len);
+
+        // Only feed data to the modem if the playout timer has expired
+        modem->getPlayoutTimer().clock(ms);
+        if (!modem->getPlayoutTimer().hasExpired()) {
+            // handled modem response
+            return true;
+        }
+    }
+
+    // read any data from the remote port for the air interface
+    uint8_t data[BUFFER_LENGTH];
+    ::memset(data, 0x00U, BUFFER_LENGTH);
+
+    uint32_t ret = m_modemRemotePort->read(data, BUFFER_LENGTH);
+    if (ret > 0) {
+        if (modem->getTrace())
+            Utils::dump(1U, "RX Remote Data", (uint8_t*)data, ret);
+
+        if (ret < 3U) {
+            LogError(LOG_MODEM, "Illegal length of remote data must be >3 bytes");
+            Utils::dump("Buffer dump", data, ret);
+
+            // handled modem response
+            return true;
+        }
+
+        uint8_t len = data[1U];
+        int ret = modem->write(data, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing remote data");
+    }
+
+    modem->getPlayoutTimer().start();
+
+    // handled modem response
+    return true;
+}
+
+/// <summary>
 /// Helper to set the host/modem running state.
 /// </summary>
-/// <param name="mode">Mode enumeration to switch the host/modem state to.</param>
-void Host::setMode(uint8_t mode)
+/// <param name="state">Mode enumeration to switch the host/modem state to.</param>
+void Host::setState(uint8_t state)
 {
     assert(m_modem != NULL);
 
-    //if (m_mode != mode) {
-    //    LogDebug(LOG_HOST, "setMode, m_mode = %u, mode = %u", m_mode, mode);
+    //if (m_state != state) {
+    //    LogDebug(LOG_HOST, "setState, m_state = %u, state = %u", m_state, state);
     //}
 
-    switch (mode) {
+    switch (state) {
         case STATE_DMR:
-            m_modem->setMode(STATE_DMR);
+            m_modem->setState(STATE_DMR);
 
             // if the modem is in duplex -- write DMR start sync
             if (m_duplex) {
@@ -1608,15 +1701,15 @@ void Host::setMode(uint8_t mode)
                 m_dmrTXTimer.start();
             }
             
-            m_mode = STATE_DMR;
+            m_state = STATE_DMR;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
             createLockFile("DMR");
             break;
 
         case STATE_P25:
-            m_modem->setMode(STATE_P25);
-            m_mode = STATE_P25;
+            m_modem->setState(STATE_P25);
+            m_state = STATE_P25;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
             createLockFile("P25");
@@ -1627,13 +1720,13 @@ void Host::setMode(uint8_t mode)
             if (m_network != NULL)
                 m_network->enable(false);
 
-            if (m_mode == STATE_DMR && m_duplex && m_modem->hasTX()) {
+            if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
                 m_modem->writeDMRStart(false);
                 m_dmrTXTimer.stop();
             }
 
-            m_modem->setMode(STATE_IDLE);
-            m_mode = HOST_STATE_LOCKOUT;
+            m_modem->setState(STATE_IDLE);
+            m_state = HOST_STATE_LOCKOUT;
             m_modeTimer.stop();
             //m_cwIdTimer.stop();
             removeLockFile();
@@ -1644,12 +1737,12 @@ void Host::setMode(uint8_t mode)
             if (m_network != NULL)
                 m_network->enable(false);
 
-            if (m_mode == STATE_DMR && m_duplex && m_modem->hasTX()) {
+            if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
                 m_modem->writeDMRStart(false);
                 m_dmrTXTimer.stop();
             }
             
-            m_mode = HOST_STATE_ERROR;
+            m_state = HOST_STATE_ERROR;
             m_modeTimer.stop();
             m_cwIdTimer.stop();
             removeLockFile();
@@ -1659,14 +1752,14 @@ void Host::setMode(uint8_t mode)
             if (m_network != NULL)
                 m_network->enable(true);
 
-            if (m_mode == STATE_DMR && m_duplex && m_modem->hasTX()) {
+            if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
                 m_modem->writeDMRStart(false);
                 m_dmrTXTimer.stop();
             }
             
-            m_modem->setMode(STATE_IDLE);
+            m_modem->setState(STATE_IDLE);
             
-            if (m_mode == HOST_STATE_ERROR) {
+            if (m_state == HOST_STATE_ERROR) {
                 m_modem->sendCWId(m_cwCallsign);
 
                 m_cwIdTimer.setTimeout(m_cwIdTime);
@@ -1676,7 +1769,7 @@ void Host::setMode(uint8_t mode)
             removeLockFile();
             m_modeTimer.stop();
 
-            if (m_mode == HOST_STATE_QUIT) {
+            if (m_state == HOST_STATE_QUIT) {
                 if (m_modem != NULL) {
                     m_modem->close();
                     delete m_modem;
@@ -1702,7 +1795,7 @@ void Host::setMode(uint8_t mode)
                 }
             }
             else {
-                m_mode = STATE_IDLE;
+                m_state = STATE_IDLE;
             }
             break;
     }
@@ -1711,7 +1804,7 @@ void Host::setMode(uint8_t mode)
 /// <summary>
 ///
 /// </summary>
-/// <param name="mode"></param>
+/// <param name="state"></param>
 void Host::createLockFile(const char* mode) const
 {
     FILE* fp = ::fopen(g_lockFile.c_str(), "wt");
