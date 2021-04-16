@@ -82,7 +82,7 @@ namespace dmr
         /// <summary>Updates the slot processor.</summary>
         void clock();
 
-        /// <summary></summary>
+        /// <summary>Gets instance of the ControlPacket class.</summary>
         ControlPacket* control() { return m_control; }
 
         /// <summary>Helper to change the debug and verbose state.</summary>
@@ -202,9 +202,9 @@ namespace dmr
         /// <summary>Helper to write network end of frame data.</summary>
         void writeEndNet(bool writeEnd = false);
 
-        /// <summary></summary>
+        /// <summary>Helper to set the DMR short LC.</summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
-        /// <summary></summary>
+        /// <summary>Helper to set the DMR short LC for TSCC.</summary>
         static void setShortLC_TSCC(SiteData siteData, uint16_t counter);
     };
 } // namespace dmr

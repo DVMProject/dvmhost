@@ -63,7 +63,7 @@ namespace dmr
 
             /// <summary>Add LC data (which may consist of 4 blocks) to the data store.</summary>
             bool addData(const uint8_t* data, uint8_t lcss);
-            /// <summary></summary>
+            /// <summary>Get LC data from the data store.</summary>
             uint8_t getData(uint8_t* data, uint8_t n) const;
 
             /// <summary>Sets link control data.</summary>
@@ -71,7 +71,7 @@ namespace dmr
             /// <summary>Gets link control data.</summary>
             lc::LC* getLC() const;
 
-            /// <summary></summary>
+            /// <summary>Get raw embeded data buffer.</summary>
             bool getRawData(uint8_t* data) const;
 
             /// <summary>Helper to reset data values to defaults.</summary>

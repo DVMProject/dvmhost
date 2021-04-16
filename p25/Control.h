@@ -101,9 +101,9 @@ namespace p25
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
-        /// <summary></summary>
+        /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
-        /// <summary></summary>
+        /// <summary>Gets instance of the TrunkPacket class.</summary>
         TrunkPacket* trunk() { return m_trunk; }
 
         /// <summary>Helper to change the debug and verbose state.</summary>

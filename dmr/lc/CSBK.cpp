@@ -455,22 +455,28 @@ void CSBK::reset()
 }
 
 /** Local Site data */
-/// <summary>Sets local configured site data.</summary>
-/// <param name="siteData"></param>
+/// <summary>
+/// Sets local configured site data.
+/// </summary>
+/// <param name="siteData">Site data.</param>
 void CSBK::setSiteData(SiteData siteData)
 {
     m_siteData = siteData;
 }
 
-/// <summary></summary>
-/// <param name="entry"></param>
+/// <summary>
+/// Sets the identity lookup table entry.
+/// </summary>
+/// <param name="entry">Identity table entry.</param>
 void CSBK::setIdenTable(lookups::IdenTable entry)
 {
     m_siteIdenEntry = entry;
 }
 
-/// <summary>Sets a flag indicating whether or not networking is active.</summary>
-/// <param name="netActive"></param>
+/// <summary>
+/// Sets a flag indicating whether or not networking is active.
+/// </summary>
+/// <param name="netActive">Network active flag.</param>
 void CSBK::setNetActive(bool netActive)
 {
     m_siteNetActive = netActive;

@@ -74,13 +74,13 @@ namespace p25
             /** Local Site data */
             /// <summary>Sets local configured site data.</summary>
             void setSiteData(SiteData siteData);
-            /// <summary></summary>
+            /// <summary>Sets the identity lookup table entry.</summary>
             void setIdenTable(lookups::IdenTable entry);
             /// <summary>Sets a flag indicating whether or not networking is active.</summary>
             void setNetActive(bool netActive);
 
         public:
-            /// <summary></summary>
+            /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);
 
             /** Common Data */

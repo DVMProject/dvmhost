@@ -1082,7 +1082,7 @@ void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
 }
 
 /// <summary>
-///
+/// Resets the state of the status commands.
 /// </summary>
 void TrunkPacket::resetStatusCommand()
 {

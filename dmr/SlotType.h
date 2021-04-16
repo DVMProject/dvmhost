@@ -55,7 +55,7 @@ namespace dmr
         /// <summary>DMR access color code.</summary>
         __PROPERTY(uint8_t, colorCode, ColorCode);
 
-        /// <summary></summary>
+        /// <summary>Slot data type.</summary>
         __PROPERTY(uint8_t, dataType, DataType);
     };
 } // namespace dmr

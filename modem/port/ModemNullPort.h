@@ -66,11 +66,11 @@ namespace modem
         private:
             RingBuffer<unsigned char> m_buffer;
 
-            /// <summary></summary>
+            /// <summary>Helper to return a faked modem version.</summary>
             void getVersion();
-            /// <summary></summary>
+            /// <summary>Helper to return a faked modem status.</summary>
             void getStatus();
-            /// <summary></summary>
+            /// <summary>Helper to write a faked modem acknowledge.</summary>
             void writeAck(uint8_t type);
         };
     } // namespace port

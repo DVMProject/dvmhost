@@ -361,10 +361,10 @@ namespace modem
         /// <summary>Write symbol level adjustments to the air interface modem.</summary>
         bool writeSymbolAdjust();
 
-        /// <summary></summary>
+        /// <summary>Print debug air interface messages to the host log.</summary>
         void printDebug(const uint8_t* buffer, uint16_t len);
 
-        /// <summary></summary>
+        /// <summary>Helper to get the raw response packet from modem.</summary>
         RESP_TYPE_DVM getResponse();
 
     public:
@@ -373,7 +373,7 @@ namespace modem
         /// <summary>Flag indicating if modem debugging is enabled.</summary>
         __READONLY_PROPERTY(bool, debug, Debug);
 
-        /// <summary></summary>
+        /// <summary>Modem packet playout timer.</summary>
         __READONLY_PROPERTY(Timer, playoutTimer, PlayoutTimer);
     };
 } // namespace modem

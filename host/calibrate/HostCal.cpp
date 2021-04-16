@@ -1677,9 +1677,9 @@ bool HostCal::writeSymbolAdjust()
 }
 
 /// <summary>
-///
+/// Helper to sleep the calibration thread.
 /// </summary>
-/// <param name="ms"></param>
+/// <param name="ms">Milliseconds to sleep.</param>
 void HostCal::sleep(uint32_t ms)
 {
 #if defined(_WIN32) || defined(_WIN64)
@@ -1690,7 +1690,7 @@ void HostCal::sleep(uint32_t ms)
 }
 
 /// <summary>
-///
+/// Helper to clock the calibration BER timer.
 /// </summary>
 void HostCal::timerClock()
 {
@@ -1712,7 +1712,7 @@ void HostCal::timerClock()
 }
 
 /// <summary>
-///
+/// Helper to start the calibration BER timer.
 /// </summary>
 void HostCal::timerStart()
 {
@@ -1721,7 +1721,7 @@ void HostCal::timerStart()
 }
 
 /// <summary>
-///
+/// Helper to stop the calibration BER timer.
 /// </summary>
 void HostCal::timerStop()
 {
@@ -1759,15 +1759,15 @@ void HostCal::printStatus()
 }
 
 /// <summary>
-///
+/// Counts the total number of bit errors between bytes.
 /// </summary>
 /// <param name="a"></param>
 /// <param name="b"></param>
 /// <returns></returns>
-unsigned char HostCal::countErrs(unsigned char a, unsigned char b)
+uint8_t HostCal::countErrs(uint8_t a, uint8_t b)
 {
     int cnt = 0;
-    unsigned char tmp = a ^ b;
+    uint8_t tmp = a ^ b;
     while (tmp) {
         if (tmp % 2 == 1)
             cnt++;

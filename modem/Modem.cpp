@@ -409,8 +409,10 @@ void Modem::clock(uint32_t ms)
         close();
 
         Thread::sleep(2000U);        // 2s
-        while (!open())
+        while (!open()) {
             Thread::sleep(5000U);    // 5s
+            close();
+        }
     }
 
     bool forceModemReset = false;
@@ -1440,7 +1442,7 @@ bool Modem::writeSymbolAdjust()
 }
 
 /// <summary>
-/// 
+/// Print debug air interface messages to the host log.
 /// </summary>
 /// <param name="buffer"></param>
 /// <param name="len"></param>
@@ -1496,9 +1498,9 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 }
 
 /// <summary>
-/// 
+/// Helper to get the raw response packet from modem.
 /// </summary>
-/// <returns></returns>
+/// <returns>Response type from modem.</returns>
 RESP_TYPE_DVM Modem::getResponse()
 {
     RESP_STATE state = RESP_START;

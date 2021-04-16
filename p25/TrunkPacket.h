@@ -105,13 +105,13 @@ namespace p25
         /// <summary>Helper to release group affiliations.</summary>
         void clearGrpAff(uint32_t dstId, bool releaseAll);
 
-        /// <summary></summary>
+        /// <summary>Resets the state of the status commands.</summary>
         void resetStatusCommand();
 
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
-        /// <summary></summary>
+        /// <summary>Helper to set the TSBK manufacturer ID.</summary>
         void setMFId(uint8_t val) { m_rfTSBK.setMFId(val); }
         /// <summary>Helper to write a call alert packet.</summary>
         void writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId);

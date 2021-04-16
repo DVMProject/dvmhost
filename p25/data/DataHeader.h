@@ -67,9 +67,9 @@ namespace p25
             void setBlocksToFollow(uint8_t blocksToFollow);
             /// <summary>Gets the total number of blocks to follow this header.</summary>
             uint8_t getBlocksToFollow() const;
-            /// <summary></summary>
+            /// <summary>Sets the count of block padding.</summary>
             void setPadCount(uint8_t padCount);
-            /// <summary></summary>
+            /// <summary>Gets the count of block padding.</summary>
             uint8_t getPadCount() const;
 
         public:
@@ -93,7 +93,7 @@ namespace p25
             __PROPERTY(uint8_t, n, N);
             /// <summary>Data packet sequence number.</summary>
             __PROPERTY(uint8_t, seqNo, SeqNo);
-            /// <summary></summary>
+            /// <summary>Offset of the header.</summary>
             __PROPERTY(uint8_t, headerOffset, HeaderOffset);
 
         private:

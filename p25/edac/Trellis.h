@@ -54,31 +54,31 @@ namespace p25
             void encode12(const uint8_t* payload, uint8_t* data);
 
         private:
-            /// <summary></summary>
+            /// <summary>Helper to deinterleave the input symbols into dibits.</summary>
             void deinterleave(const uint8_t* in, int8_t* dibits) const;
-            /// <summary></summary>
+            /// <summary>Helper to interleave the input dibits into symbols.</summary>
             void interleave(const int8_t* dibits, uint8_t* out) const;
-            /// <summary></summary>
+            /// <summary>Helper to map dibits to C4FM constellation points.</summary>
             void dibitsToPoints(const int8_t* dibits, uint8_t* points) const;
-            /// <summary></summary>
+            /// <summary>Helper to map C4FM constellation points to dibits.</summary>
             void pointsToDibits(const uint8_t* points, int8_t* dibits) const;
-            /// <summary></summary>
+            /// <summary>Helper to convert a byte payload into tribits.</summary>
             void bitsToTribits(const uint8_t* payload, uint8_t* tribits) const;
-            /// <summary></summary>
+            /// <summary>Helper to convert a byte payload into dibits.</summary>
             void bitsToDibits(const uint8_t* payload, uint8_t* dibits) const;
-            /// <summary></summary>
+            /// <summary>Helper to convert tribits into a byte payload.</summary>
             void tribitsToBits(const uint8_t* tribits, uint8_t* payload) const;
-            /// <summary></summary>
+            /// <summary>Helper to convert dibits into a byte payload.</summary>
             void dibitsToBits(const uint8_t* dibits, uint8_t* payload) const;
 
-            /// <summary></summary>
+            /// <summary>Helper to fix errors in Trellis coding.</summary>
             bool fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
-            /// <summary></summary>
+            /// <summary>Helper to detect errors in Trellis coding.</summary>
             uint32_t checkCode34(const uint8_t* points, uint8_t* tribits) const;
 
-            /// <summary></summary>
+            /// <summary>Helper to fix errors in Trellis coding.</summary>
             bool fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
-            /// <summary></summary>
+            /// <summary>Helper to detect errors in Trellis coding.</summary>
             uint32_t checkCode12(const uint8_t* points, uint8_t* dibits) const;
         };
     } // namespace edac

@@ -78,9 +78,9 @@ Trellis::~Trellis()
 /// <summary>
 /// Decodes 3/4 rate Trellis.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <returns></returns>
+/// <param name="data">Trellis symbol bytes.</param>
+/// <param name="payload">Output bytes.</param>
+/// <returns>True, if decoded, otherwise false.</returns>
 bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
 {
     assert(data != NULL);
@@ -118,9 +118,8 @@ bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
 /// <summary>
 /// Encodes 3/4 rate Trellis.
 /// </summary>
-/// <param name="payload"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/// <param name="payload">Input bytes.</param>
+/// <param name="data">Trellis symbol bytes.</param>
 void Trellis::encode34(const uint8_t* payload, uint8_t* data)
 {
     assert(payload != NULL);
@@ -149,9 +148,9 @@ void Trellis::encode34(const uint8_t* payload, uint8_t* data)
 /// <summary>
 /// Decodes 1/2 rate Trellis.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="payload"></param>
-/// <returns></returns>
+/// <param name="data">Trellis symbol bytes.</param>
+/// <param name="payload">Output bytes.</param>
+/// <returns>True, if decoded, otherwise false.</returns>
 bool Trellis::decode12(const uint8_t* data, uint8_t* payload)
 {
     assert(data != NULL);
@@ -189,9 +188,8 @@ bool Trellis::decode12(const uint8_t* data, uint8_t* payload)
 /// <summary>
 /// Encodes 1/2 rate Trellis.
 /// </summary>
-/// <param name="payload"></param>
-/// <param name="data"></param>
-/// <returns></returns>
+/// <param name="payload">Input bytes.</param>
+/// <param name="data">Trellis symbol bytes.</param>
 void Trellis::encode12(const uint8_t* payload, uint8_t* data)
 {
     assert(payload != NULL);
@@ -221,10 +219,10 @@ void Trellis::encode12(const uint8_t* payload, uint8_t* data)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
-///
+/// Helper to deinterleave the input symbols into dibits.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="dibits"></param>
+/// <param name="data">Trellis symbol bytes.</param>
+/// <param name="dibits">Dibits.</param>
 void Trellis::deinterleave(const uint8_t* data, int8_t* dibits) const
 {
     for (uint32_t i = 0U; i < 98U; i++) {
@@ -250,10 +248,10 @@ void Trellis::deinterleave(const uint8_t* data, int8_t* dibits) const
 }
 
 /// <summary>
-///
+/// Helper to interleave the input dibits into symbols.
 /// </summary>
-/// <param name="dibits"></param>
-/// <param name="data"></param>
+/// <param name="dibits">Dibits.</param>
+/// <param name="data">Trellis symbol bytes.</param>
 void Trellis::interleave(const int8_t* dibits, uint8_t* data) const
 {
     for (uint32_t i = 0U; i < 98U; i++) {
@@ -288,10 +286,10 @@ void Trellis::interleave(const int8_t* dibits, uint8_t* data) const
 }
 
 /// <summary>
-///
+/// Helper to map dibits to 4FSK constellation points.
 /// </summary>
-/// <param name="dibits"></param>
-/// <param name="points"></param>
+/// <param name="dibits">Dibits.</param>
+/// <param name="points">4FSK constellation points.</param>
 void Trellis::dibitsToPoints(const int8_t* dibits, uint8_t* points) const
 {
     for (uint32_t i = 0U; i < 49U; i++) {
@@ -331,10 +329,10 @@ void Trellis::dibitsToPoints(const int8_t* dibits, uint8_t* points) const
 }
 
 /// <summary>
-///
+/// Helper to map 4FSK constellation points to dibits.
 /// </summary>
-/// <param name="points"></param>
-/// <param name="dibits"></param>
+/// <param name="points">4FSK Constellation points.</param>
+/// <param name="dibits">Dibits.</param>
 void Trellis::pointsToDibits(const uint8_t* points, int8_t* dibits) const
 {
     for (uint32_t i = 0U; i < 49U; i++) {
@@ -408,10 +406,10 @@ void Trellis::pointsToDibits(const uint8_t* points, int8_t* dibits) const
 }
 
 /// <summary>
-///
+/// Helper to convert a byte payload into tribits.
 /// </summary>
-/// <param name="payload"></param>
-/// <param name="tribits"></param>
+/// <param name="payload">Byte payload.</param>
+/// <param name="tribits">Tribits.</param>
 void Trellis::bitsToTribits(const uint8_t* payload, uint8_t* tribits) const
 {
     for (uint32_t i = 0U; i < 48U; i++) {
@@ -435,10 +433,10 @@ void Trellis::bitsToTribits(const uint8_t* payload, uint8_t* tribits) const
 }
 
 /// <summary>
-///
+/// Helper to convert a byte payload into dibits.
 /// </summary>
-/// <param name="payload"></param>
-/// <param name="dibits"></param>
+/// <param name="payload">Byte payload.</param>
+/// <param name="dibits">Dibits.</param>
 void Trellis::bitsToDibits(const uint8_t* payload, uint8_t* dibits) const
 {
     for (uint32_t i = 0U; i < 48U; i++) {
@@ -459,10 +457,10 @@ void Trellis::bitsToDibits(const uint8_t* payload, uint8_t* dibits) const
 }
 
 /// <summary>
-///
+/// Helper to convert tribits into a byte payload.
 /// </summary>
-/// <param name="tribits"></param>
-/// <param name="payload"></param>
+/// <param name="tribits">Tribits.</param>
+/// <param name="payload">Byte payload.</param>
 void Trellis::tribitsToBits(const uint8_t* tribits, uint8_t* payload) const
 {
     for (uint32_t i = 0U; i < 48U; i++) {
@@ -483,10 +481,10 @@ void Trellis::tribitsToBits(const uint8_t* tribits, uint8_t* payload) const
 }
 
 /// <summary>
-///
+/// Helper to convert tribits into a byte payload.
 /// </summary>
-/// <param name="dibits"></param>
-/// <param name="payload"></param>
+/// <param name="dibits">Dibits.</param>
+/// <param name="payload">Byte payload.</param>
 void Trellis::dibitsToBits(const uint8_t* dibits, uint8_t* payload) const
 {
     for (uint32_t i = 0U; i < 48U; i++) {
@@ -504,12 +502,12 @@ void Trellis::dibitsToBits(const uint8_t* dibits, uint8_t* payload) const
 }
 
 /// <summary>
-///
+/// Helper to fix errors in Trellis coding.
 /// </summary>
-/// <param name="points"></param>
+/// <param name="points">4FSK constellation points.</param>
 /// <param name="failPos"></param>
-/// <param name="payload"></param>
-/// <returns></returns>
+/// <param name="payload">Byte payload.</param>
+/// <returns>True, if error corrected, otherwise false.</returns>
 bool Trellis::fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) const
 {
     for (unsigned j = 0U; j < 20U; j++) {
@@ -540,10 +538,10 @@ bool Trellis::fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) con
 }
 
 /// <summary>
-///
+/// Helper to detect errors in Trellis coding.
 /// </summary>
-/// <param name="points"></param>
-/// <param name="tribits"></param>
+/// <param name="points">4FSK constellation points.</param>
+/// <param name="tribits">Tribits.</param>
 /// <returns></returns>
 uint32_t Trellis::checkCode34(const uint8_t* points, uint8_t* tribits) const
 {
@@ -573,12 +571,12 @@ uint32_t Trellis::checkCode34(const uint8_t* points, uint8_t* tribits) const
 
 
 /// <summary>
-///
+/// Helper to fix errors in Trellis coding.
 /// </summary>
-/// <param name="points"></param>
+/// <param name="points">4FSK constellation points.</param>
 /// <param name="failPos"></param>
-/// <param name="payload"></param>
-/// <returns></returns>
+/// <param name="payload">Byte payload.</param>
+/// <returns>True, if error corrected, otherwise false.</returns>
 bool Trellis::fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) const
 {
     for (unsigned j = 0U; j < 20U; j++) {
@@ -609,10 +607,10 @@ bool Trellis::fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) con
 }
 
 /// <summary>
-///
+/// Helper to detect errors in Trellis coding.
 /// </summary>
-/// <param name="points"></param>
-/// <param name="tribits"></param>
+/// <param name="points">4FSK constellation points.</param>
+/// <param name="dibits">Dibits.</param>
 /// <returns></returns>
 uint32_t Trellis::checkCode12(const uint8_t* points, uint8_t* dibits) const
 {

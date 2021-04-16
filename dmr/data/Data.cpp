@@ -107,8 +107,10 @@ Data& Data::operator=(const Data& data)
     return *this;
 }
 
-/// <summary></summary>
-/// <param name="buffer"></param>
+/// <summary>
+/// Sets raw data.
+/// </summary>
+/// <param name="buffer">Data buffer.</param>
 void Data::setData(const uint8_t* buffer)
 {
     assert(buffer != NULL);
@@ -116,8 +118,10 @@ void Data::setData(const uint8_t* buffer)
     ::memcpy(m_data, buffer, DMR_FRAME_LENGTH_BYTES);
 }
 
-/// <summary></summary>
-/// <param name="buffer"></param>
+/// <summary>
+/// Gets raw data.
+/// </summary>
+/// <param name="buffer">Data buffer.</param>
 uint32_t Data::getData(uint8_t* buffer) const
 {
     assert(buffer != NULL);

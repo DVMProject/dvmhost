@@ -227,7 +227,7 @@ uint8_t DataHeader::getBlocksToFollow() const
     return m_blocksToFollow;
 }
 
-/// <summary></summary>
+/// <summary>Sets the count of block padding.</summary>
 /// <param name="padCount"></param>
 void DataHeader::setPadCount(uint8_t padCount)
 {
@@ -242,7 +242,7 @@ void DataHeader::setPadCount(uint8_t padCount)
     }
 }
 
-/// <summary></summary>
+/// <summary>Gets the count of block padding.</summary>
 /// <returns></returns>
 uint8_t DataHeader::getPadCount() const
 {

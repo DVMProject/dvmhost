@@ -71,7 +71,7 @@ namespace p25
             /// <summary>Helper to reset data values to defaults.</summary>
             void reset();
 
-            /// <summary></summary>
+            /// <summary>Sets the flag to skip vendor opcode processing.</summary>
             void setVendorSkip(bool skip);
 
             /** Local Site data */
@@ -79,7 +79,7 @@ namespace p25
             void setSiteData(SiteData siteData);
             /// <summary>Sets local configured site callsign.</summary>
             void setCallsign(std::string callsign);
-            /// <summary></summary>
+            /// <summary>Sets the identity lookup table entry.</summary>
             void setIdenTable(lookups::IdenTable entry);
             /// <summary>Sets a flag indicating whether or not networking is active.</summary>
             void setNetActive(bool netActive);
@@ -87,7 +87,7 @@ namespace p25
             void setSiteChCnt(uint8_t chCnt);
 
         public:
-            /// <summary></summary>
+            /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);
 
             /** Common Data */

@@ -80,10 +80,10 @@ namespace lookups
             return *this;
         }
 
-        /// <summary></summary>
-        /// <param name="tgEnabled"></param>
-        /// <param name="tgSlot"></param>
-        /// <param name="tgDefault"></param>
+        /// <summary>Sets talkgroup values.</summary>
+        /// <param name="tgEnabled">Talkgroup Enabled.</param>
+        /// <param name="tgSlot">Talkgroup DMR slot.</param>
+        /// <param name="tgDefault">Talkgroup Default.</param>
         void set(bool tgEnabled, uint8_t tgSlot, bool tgDefault)
         {
             m_tgEnabled = tgEnabled;
@@ -92,11 +92,11 @@ namespace lookups
         }
 
     public:
-        /// <summary></summary>
+        /// <summary>Flag indicating if the talkgroup is enabled.</summary>
         __READONLY_PROPERTY_PLAIN(bool, tgEnabled, tgEnabled);
-        /// <summary></summary>
+        /// <summary>Talkgroup DMR slot.</summary>
         __READONLY_PROPERTY_PLAIN(uint8_t, tgSlot, tgSlot);
-        /// <summary></summary>
+        /// <summary>Flag indicating if the talkgroup is default.</summary>
         __READONLY_PROPERTY_PLAIN(bool, tgDefault, tgDefault);
     };
 

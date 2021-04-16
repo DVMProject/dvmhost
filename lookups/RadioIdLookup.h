@@ -76,9 +76,9 @@ namespace lookups
             return *this;
         }
 
-        /// <summary></summary>
-        /// <param name="radioEnabled"></param>
-        /// <param name="radioDefault"></param>
+        /// <summary>Sets flag values.</summary>
+        /// <param name="radioEnabled">Radio enabled.</param>
+        /// <param name="radioDefault">Radio default.</param>
         void set(bool radioEnabled, bool radioDefault)
         {
             m_radioEnabled = radioEnabled;
@@ -86,9 +86,9 @@ namespace lookups
         }
 
     public:
-        /// <summary></summary>
+        /// <summary>Flag indicating if the radio is enabled.</summary>
         __READONLY_PROPERTY_PLAIN(bool, radioEnabled, radioEnabled);
-        /// <summary></summary>
+        /// <summary>Flag indicating if the radio is default.</summary>
         __READONLY_PROPERTY_PLAIN(bool, radioDefault, radioDefault);
     };
 

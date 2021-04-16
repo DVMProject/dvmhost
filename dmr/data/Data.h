@@ -49,9 +49,9 @@ namespace dmr
             /// <summary>Equals operator.</summary>
             Data& operator=(const Data& data);
 
-            /// <summary></summary>
+            /// <summary>Sets raw data.</summary>
             void setData(const uint8_t* buffer);
-            /// <summary></summary>
+            /// <summary>Gets raw data.</summary>
             uint32_t getData(uint8_t* buffer) const;
 
         public:
@@ -72,13 +72,13 @@ namespace dmr
             /// <summary>Sequence number.</summary>
             __PROPERTY(uint8_t, seqNo, SeqNo);
 
-            /// <summary></summary>
+            /// <summary>Embedded data type.</summary>
             __PROPERTY(uint8_t, dataType, DataType);
 
-            /// <summary></summary>
+            /// <summary>Bit Error Rate.</summary>
             __PROPERTY(uint8_t, ber, BER);
 
-            /// <summary></summary>
+            /// <summary>Received Signal Strength Indicator.</summary>
             __PROPERTY(uint8_t, rssi, RSSI);
 
         private:

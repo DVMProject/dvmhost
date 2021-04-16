@@ -135,19 +135,19 @@ private:
     /// <summary>Initializes network connectivity.</summary>
     bool createNetwork();
     
-    /// <summary></summary>
+    /// <summary>Modem port open callback.</summary>
     bool rmtPortModemOpen(modem::Modem* modem);
-    /// <summary></summary>
+    /// <summary>Modem port close callback.</summary>
     bool rmtPortModemClose(modem::Modem* modem);
-    /// <summary></summary>
+    /// <summary>Modem clock callback.</summary>
     bool rmtPortModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
     /// <summary>Helper to set the host/modem running state.</summary>
     void setState(uint8_t mode);
 
-    /// <summary></summary>
-    void createLockFile(const char* mode) const;
-    /// <summary></summary>
+    /// <summary>Helper to create the state lock file.</summary>
+    void createLockFile(const char* state) const;
+    /// <summary>Helper to remove the state lock file.</summary>
     void removeLockFile() const;
 };
 

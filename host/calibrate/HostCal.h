@@ -107,11 +107,11 @@ private:
     uint32_t m_timeout;
     uint32_t m_timer;
 
-    /// <summary></summary>
+    /// <summary>Modem port open callback.</summary>
     bool portModemOpen(modem::Modem* modem);
-    /// <summary></summary>
+    /// <summary>Modem port close callback.</summary>
     bool portModemClose(modem::Modem* modem);
-    /// <summary></summary>
+    /// <summary>Modem clock callback.</summary>
     bool portModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
     /// <summary>Helper to print the calibration help to the console.</summary>
@@ -152,21 +152,21 @@ private:
     bool writeConfig(uint8_t modeOverride);
     /// <summary>Write symbol level adjustments to the modem DSP.</summary>
     bool writeSymbolAdjust();
-    /// <summary></summary>
+    /// <summary>Helper to sleep the calibration thread.</summary>
     void sleep(uint32_t ms);
 
-    /// <summary></summary>
+    /// <summary>Helper to clock the calibration BER timer.</summary>
     void timerClock();
-    /// <summary></summary>
+    /// <summary>Helper to start the calibration BER timer.</summary>
     void timerStart();
-    /// <summary></summary>
+    /// <summary>Helper to stop the calibration BER timer.</summary>
     void timerStop();
 
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
 
-    /// <summary></summary>
-    unsigned char countErrs(unsigned char a, unsigned char b);
+    /// <summary>Counts the total number of bit errors between bytes.</summary>
+    uint8_t countErrs(uint8_t a, uint8_t b);
 };
 
 #endif // __HOST_CAL_H__

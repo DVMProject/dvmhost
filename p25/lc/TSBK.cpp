@@ -805,23 +805,29 @@ void TSBK::reset()
     m_group = true;
 }
 
-/// <summary></summary>
-/// <param name="skip"></param>
+/// <summary>
+/// Sets the flag to skip vendor opcode processing.
+/// </summary>
+/// <param name="skip">Flag indicating to skip vendor opcode processing.</param>
 void TSBK::setVendorSkip(bool skip)
 {
     m_vendorSkip = skip;
 }
 
 /** Local Site data */
-/// <summary>Sets local configured site data.</summary>
-/// <param name="siteData"></param>
+/// <summary>
+/// Sets local configured site data.
+/// </summary>
+/// <param name="siteData">Site data.</param>
 void TSBK::setSiteData(SiteData siteData)
 {
     m_siteData = siteData;
 }
 
-/// <summary>Sets local configured site callsign.</summary>
-/// <param name="callsign"></param>
+/// <summary>
+/// Sets local configured site callsign.
+/// </summary>
+/// <param name="callsign">Callsign.</param>
 void TSBK::setCallsign(std::string callsign)
 {
     uint32_t idLength = callsign.length();
@@ -835,22 +841,28 @@ void TSBK::setCallsign(std::string callsign)
     }
 }
 
-/// <summary></summary>
-/// <param name="entry"></param>
+/// <summary>
+/// Sets the identity lookup table entry.
+/// </summary>
+/// <param name="entry">Identity table entry.</param>
 void TSBK::setIdenTable(lookups::IdenTable entry)
 {
     m_siteIdenEntry = entry;
 }
 
-/// <summary>Sets a flag indicating whether or not networking is active.</summary>
-/// <param name="netActive"></param>
+/// <summary>
+/// Sets a flag indicating whether or not networking is active.
+/// </summary>
+/// <param name="netActive">Network active flag.</param>
 void TSBK::setNetActive(bool netActive)
 {
     m_siteNetActive = netActive;
 }
 
-/// <summary>Sets the total number of channels at the site.</summary>
-/// <param name="chCnt"></param>
+/// <summary>
+/// Sets the total number of channels at the site.
+/// </summary>
+/// <param name="chCnt">Channel count.</param>
 void TSBK::setSiteChCnt(uint8_t chCnt)
 {
     m_siteChCnt = chCnt;

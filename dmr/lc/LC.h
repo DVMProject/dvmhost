@@ -55,14 +55,14 @@ namespace dmr
             /// <summary>Finalizes a instance of the LC class.</summary>
             ~LC();
 
-            /// <summary></summary>
+            /// <summary>Gets LC data as bytes.</summary>
             void getData(uint8_t* bytes) const;
-            /// <summary></summary>
+            /// <summary>Gets LC data as bits.</summary>
             void getData(bool* bits) const;
 
-            /// <summary></summary>
+            /// <summary>Gets the OVCM flag.</summary>
             bool getOVCM() const;
-            /// <summary></summary>
+            /// <summary>Sets the OVCM flag.</summary>
             void setOVCM(bool ovcm);
         public:
             /// <summary>Flag indicating whether link protection is enabled.</summary>
@@ -74,9 +74,9 @@ namespace dmr
             /// <summary>CSBK feature ID.</summayr>
             __PROPERTY(uint8_t, FID, FID);
 
-            /// <summary>Sets the source ID.</summary>
+            /// <summary>Source ID.</summary>
             __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Sets the destination ID.</summary>
+            /// <summary>Destination ID.</summary>
             __PROPERTY(uint32_t, dstId, DstId);
 
         private:
