@@ -55,7 +55,8 @@ using namespace modem;
 
 #define DMR_CAL_STR         "[Tx] DMR 1200 Hz Tone Mode (2.75Khz Deviation)"
 #define P25_CAL_STR         "[Tx] P25 1200 Hz Tone Mode (2.83Khz Deviation)"
-#define LF_CAL_STR          "[Tx] DMR Low Frequency Mode (80 Hz square wave)"
+#define DMR_LF_CAL_STR      "[Tx] DMR Low Frequency Mode (80 Hz square wave)"
+#define P25_LF_CAL_STR      "[Tx] P25 Low Frequency Mode (80 Hz square wave)"
 #define DMR_CAL_1K_STR      "[Tx] DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define DMR_DMO_CAL_1K_STR  "[Tx] DMR MS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define P25_CAL_1K_STR      "[Tx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1)"
@@ -64,15 +65,6 @@ using namespace modem;
 #define P25_FEC_STR         "[Rx] P25 FEC BER Test Mode"
 #define P25_FEC_1K_STR      "[Rx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1)"
 #define RSSI_CAL_STR        "RSSI Calibration Mode"
-
-#define DMR_SYM_LA_TST_STR  "[Tx] DMR Symbol Test (Level A [+3])"
-#define P25_SYM_LA_TST_STR  "[Tx] P25 Symbol Test (Level A [+3])"
-#define DMR_SYM_LB_TST_STR  "[Tx] DMR Symbol Test (Level B [+1])"
-#define P25_SYM_LB_TST_STR  "[Tx] P25 Symbol Test (Level B [+1])"
-#define DMR_SYM_LC_TST_STR  "[Tx] DMR Symbol Test (Level C [-1])"
-#define P25_SYM_LC_TST_STR  "[Tx] P25 Symbol Test (Level C [-1])"
-#define DMR_SYM_LD_TST_STR  "[Tx] DMR Symbol Test (Level D [-3])"
-#define P25_SYM_LD_TST_STR  "[Tx] P25 Symbol Test (Level D [-3])"
 
 // Voice LC MS Header, CC: 1, srcID: 1, dstID: TG9
 const uint8_t VH_DMO1K[] = {
@@ -292,7 +284,7 @@ int HostCal::run()
     }
 
     displayHelp();
-    
+
     m_rxInvert = modemConf["rxInvert"].as<bool>(false);
     m_txInvert = modemConf["txInvert"].as<bool>(false);
     m_pttInvert = modemConf["pttInvert"].as<bool>(false);
@@ -321,357 +313,282 @@ int HostCal::run()
         int c = m_console.getChar();
         switch (c) {
             /** Level Adjustment Commands */
-            case 'I':
-                {
-                    m_txInvert = !m_txInvert;
-                    LogMessage(LOG_CAL, " - TX Invert: %s", m_txInvert ? "On" : "Off");
-                    writeConfig();
-                }
-                break;
-            case 'i':
-                {
-                    m_rxInvert = !m_rxInvert;
-                    LogMessage(LOG_CAL, " - RX Invert: %s", m_rxInvert ? "On" : "Off");
-                    writeConfig();
-                }
-                break;
-            case 'p':
-                {
-                    m_pttInvert = !m_pttInvert;
-                    LogMessage(LOG_CAL, " - PTT Invert: %s", m_pttInvert ? "On" : "Off");
-                    writeConfig();
-                }
-                break;
-            case 'd':
-                {
-                    m_dcBlocker = !m_dcBlocker;
-                    LogMessage(LOG_CAL, " - DC Blocker: %s", m_dcBlocker ? "On" : "Off");
-                    writeConfig();
-                }
-                break;
-            case 'D':
-                {
-                    m_debug = !m_debug;
-                    LogMessage(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
-                    writeConfig();
-                }
-                break;
-            case 'R':
-                setRXLevel(1);
-                break;
-            case 'r':
-                setRXLevel(-1);
-                break;
-            case 'T':
-                setTXLevel(1);
-                break;
-            case 't':
-                setTXLevel(-1);
-                break;
-            case 'c':
-                setRXDCOffset(-1);
-                break;
-            case 'C':
-                setRXDCOffset(1);
-                break;
-            case 'o':
-                setTXDCOffset(-1);
-                break;
-            case 'O':
-                setTXDCOffset(1);
-                break;
+        case 'I':
+        {
+            m_txInvert = !m_txInvert;
+            LogMessage(LOG_CAL, " - TX Invert: %s", m_txInvert ? "On" : "Off");
+            writeConfig();
+        }
+        break;
+        case 'i':
+        {
+            m_rxInvert = !m_rxInvert;
+            LogMessage(LOG_CAL, " - RX Invert: %s", m_rxInvert ? "On" : "Off");
+            writeConfig();
+        }
+        break;
+        case 'p':
+        {
+            m_pttInvert = !m_pttInvert;
+            LogMessage(LOG_CAL, " - PTT Invert: %s", m_pttInvert ? "On" : "Off");
+            writeConfig();
+        }
+        break;
+        case 'd':
+        {
+            m_dcBlocker = !m_dcBlocker;
+            LogMessage(LOG_CAL, " - DC Blocker: %s", m_dcBlocker ? "On" : "Off");
+            writeConfig();
+        }
+        break;
+        case 'D':
+        {
+            m_debug = !m_debug;
+            LogMessage(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
+            writeConfig();
+        }
+        break;
+        case 'R':
+            setRXLevel(1);
+            break;
+        case 'r':
+            setRXLevel(-1);
+            break;
+        case 'T':
+            setTXLevel(1);
+            break;
+        case 't':
+            setTXLevel(-1);
+            break;
+        case 'c':
+            setRXDCOffset(-1);
+            break;
+        case 'C':
+            setRXDCOffset(1);
+            break;
+        case 'o':
+            setTXDCOffset(-1);
+            break;
+        case 'O':
+            setTXDCOffset(1);
+            break;
 
-            case '-':
-                setDMRSymLevel3Adj(-1);
-                break;
-            case '=':
-                setDMRSymLevel3Adj(1);
-                break;
-            case '_':
-                setDMRSymLevel1Adj(-1);
-                break;
-            case '+':
-                setDMRSymLevel1Adj(1);
-                break;
+        case '-':
+            setDMRSymLevel3Adj(-1);
+            break;
+        case '=':
+            setDMRSymLevel3Adj(1);
+            break;
+        case '_':
+            setDMRSymLevel1Adj(-1);
+            break;
+        case '+':
+            setDMRSymLevel1Adj(1);
+            break;
 
-            case '[':
-                setP25SymLevel3Adj(-1);
-                break;
-            case ']':
-                setP25SymLevel3Adj(1);
-                break;
-            case '{':
-                setP25SymLevel1Adj(-1);
-                break;
-            case '}':
-                setP25SymLevel1Adj(1);
-                break;
-
-            case '1':
-                {
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
-
-                    if (m_mode == STATE_DMR_CAL) {
-                        m_modeStr = DMR_SYM_LA_TST_STR;
-                        
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_DMR_LEVELA);
-                    }
-                    else if (m_mode == STATE_P25_CAL) {
-                        m_modeStr = P25_SYM_LA_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_P25_LEVELA);
-                    }
-                }
-                break;
-            case '2':
-                {
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
-                    
-                    if (m_mode == STATE_DMR_CAL) {
-                        m_modeStr = DMR_SYM_LB_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_DMR_LEVELB);
-                    }
-                    else if (m_mode == STATE_P25_CAL) {
-                        m_modeStr = P25_SYM_LB_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_P25_LEVELB);
-                    }
-                }
-                break;
-            case '3':
-                {
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
-
-                    if (m_mode == STATE_DMR_CAL) {
-                        m_modeStr = DMR_SYM_LC_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_DMR_LEVELC);
-                    }
-                    else if (m_mode == STATE_P25_CAL) {
-                        m_modeStr = P25_SYM_LC_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_P25_LEVELC);
-                    }
-                }
-                break;
-            case '4':
-                {
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
-                
-                    if (m_mode == STATE_DMR_CAL) {
-                        m_modeStr = DMR_SYM_LD_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_DMR_LEVELD);
-                    }
-                    else if (m_mode == STATE_P25_CAL) {
-                        m_modeStr = P25_SYM_LD_TST_STR;
-
-                        LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                        writeConfig(STATE_P25_LEVELD);
-                    }
-                }
-                break;
+        case '[':
+            setP25SymLevel3Adj(-1);
+            break;
+        case ']':
+            setP25SymLevel3Adj(1);
+            break;
+        case '{':
+            setP25SymLevel1Adj(-1);
+            break;
+        case '}':
+            setP25SymLevel1Adj(1);
+            break;
 
             /** Mode Commands */
-            case 'Z':
-                {
-                    m_mode = STATE_DMR_CAL;
-                    m_modeStr = DMR_CAL_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+        case 'Z':
+        {
+            m_mode = STATE_DMR_CAL;
+            m_modeStr = DMR_CAL_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'z':
-                {
-                    m_mode = STATE_P25_CAL;
-                    m_modeStr = P25_CAL_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'z':
+        {
+            m_mode = STATE_P25_CAL;
+            m_modeStr = P25_CAL_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'l':
-                {
-                    m_mode = STATE_LF_CAL;
-                    m_modeStr = LF_CAL_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'L':
+        {
+            m_mode = STATE_DMR_LF_CAL;
+            m_modeStr = DMR_LF_CAL_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'M':
-                {
-                    m_mode = STATE_DMR_CAL_1K;
-                    m_modeStr = DMR_CAL_1K_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'l':
+        {
+            m_mode = STATE_P25_LF_CAL;
+            m_modeStr = P25_LF_CAL_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'm':
-                {
-                    m_mode = STATE_DMR_DMO_CAL_1K;
-                    m_modeStr = DMR_DMO_CAL_1K_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'M':
+        {
+            m_mode = STATE_DMR_CAL_1K;
+            m_modeStr = DMR_CAL_1K_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'P':
-                {
-                    m_mode = STATE_P25_CAL_1K;
-                    m_modeStr = P25_CAL_1K_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'm':
+        {
+            m_mode = STATE_DMR_DMO_CAL_1K;
+            m_modeStr = DMR_DMO_CAL_1K_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'B':
-            case 'J':
-                {
-                    m_mode = STATE_DMR;
-                    if (c == 'J') {
-                        m_modeStr = DMR_FEC_1K_STR;
-                        m_dmrRx1K = true;
-                    }
-                    else {
-                        m_modeStr = DMR_FEC_STR;
-                        m_dmrRx1K = false;
-                    }
-                    m_duplex = false;
-                    m_dmrEnabled = true;
-                    m_p25Enabled = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'P':
+        {
+            m_mode = STATE_P25_CAL_1K;
+            m_modeStr = P25_CAL_1K_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'b':
-            case 'j':
-                {
-                    m_mode = STATE_P25;
-                    if (c == 'j') {
-                        m_modeStr = P25_FEC_1K_STR;
-                        m_p25Rx1K = true;
-                    }
-                    else {
-                        m_modeStr = P25_FEC_STR;
-                        m_p25Rx1K = false;
-                    }
-                    m_duplex = false;
-                    m_dmrEnabled = false;
-                    m_p25Enabled = true;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'B':
+        case 'J':
+        {
+            m_mode = STATE_DMR;
+            if (c == 'J') {
+                m_modeStr = DMR_FEC_1K_STR;
+                m_dmrRx1K = true;
+            }
+            else {
+                m_modeStr = DMR_FEC_STR;
+                m_dmrRx1K = false;
+            }
+            m_duplex = false;
+            m_dmrEnabled = true;
+            m_p25Enabled = false;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
-            case 'x':
-                {
-                    m_mode = STATE_RSSI_CAL;
-                    m_modeStr = RSSI_CAL_STR;
-                    m_duplex = true;
-                    m_dmrEnabled = false;
-                    m_dmrRx1K = false;
-                    m_p25Enabled = false;
-                    m_p25Rx1K = false;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'b':
+        case 'j':
+        {
+            m_mode = STATE_P25;
+            if (c == 'j') {
+                m_modeStr = P25_FEC_1K_STR;
+                m_p25Rx1K = true;
+            }
+            else {
+                m_modeStr = P25_FEC_STR;
+                m_p25Rx1K = false;
+            }
+            m_duplex = false;
+            m_dmrEnabled = false;
+            m_p25Enabled = true;
 
-                    LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
-                    writeConfig();
-                }
-                break;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
+        case 'x':
+        {
+            m_mode = STATE_RSSI_CAL;
+            m_modeStr = RSSI_CAL_STR;
+            m_duplex = true;
+            m_dmrEnabled = false;
+            m_dmrRx1K = false;
+            m_p25Enabled = false;
+            m_p25Rx1K = false;
 
-            /** General Commands */
-            case ' ':
-                setTransmit();
-                break;
-            case '`':
-                printStatus();
-                break;
-            case 'V':
-                getHostVersion();
-                break;
-            case 'v':
-                m_modem->getFirmwareVersion();
-                break;
-            case 'H':
-            case 'h':
-                displayHelp();
-                break;
-            case 'S':
-            case 's':
-                {
-                    yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
-                    LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
-                }
-                break;
-            case 'Q':
-            case 'q':
-                end = true;
-                break;
+            LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+            writeConfig();
+        }
+        break;
 
-            case 13:
-            case 10:
-            case -1:
-                break;
-            default:
-                LogError(LOG_CAL, "Unknown command - %c (H/h for help)", c);
-                break;
+        /** General Commands */
+        case ' ':
+            setTransmit();
+            break;
+        case '`':
+            printStatus();
+            break;
+        case 'V':
+            getHostVersion();
+            break;
+        case 'v':
+            m_modem->getFirmwareVersion();
+            break;
+        case 'H':
+        case 'h':
+            displayHelp();
+            break;
+        case 'S':
+        case 's':
+        {
+            yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
+            LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
+        }
+        break;
+        case 'Q':
+        case 'q':
+            end = true;
+            break;
+
+        case 13:
+        case 10:
+        case -1:
+            break;
+        default:
+            LogError(LOG_CAL, "Unknown command - %c (H/h for help)", c);
+            break;
         }
 
         m_modem->clock(0U);
@@ -865,7 +782,8 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "Mode Commands:");
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
     LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
-    LogMessage(LOG_CAL, "    l        %s", LF_CAL_STR);
+    LogMessage(LOG_CAL, "    L        %s", DMR_LF_CAL_STR);
+    LogMessage(LOG_CAL, "    l        %s", P25_LF_CAL_STR);
     LogMessage(LOG_CAL, "    M        %s", DMR_CAL_1K_STR);
     LogMessage(LOG_CAL, "    m        %s", DMR_DMO_CAL_1K_STR);
     LogMessage(LOG_CAL, "    P        %s", P25_CAL_1K_STR);
@@ -879,10 +797,6 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    _/+      Increase/Decrease DMR +/- 1 Symbol Level");
     LogMessage(LOG_CAL, "    [/]      Increase/Decrease P25 +/- 3 Symbol Level");
     LogMessage(LOG_CAL, "    {/}      Increase/Decrease P25 +/- 1 Symbol Level");
-    LogMessage(LOG_CAL, "    1        Transmit DMR/P25 +3 Symbols Only");
-    LogMessage(LOG_CAL, "    2        Transmit DMR/P25 +1 Symbols Only");
-    LogMessage(LOG_CAL, "    3        Transmit DMR/P25 -1 Symbols Only");
-    LogMessage(LOG_CAL, "    4        Transmit DMR/P25 +1 Symbols Only");
 }
 
 /// <summary>

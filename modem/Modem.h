@@ -78,23 +78,13 @@ namespace modem
         // CW
         STATE_CW = 10U,
 
-        // Symbol Tests
-        STATE_DMR_LEVELA = 70U,
-        STATE_DMR_LEVELB = 71U,
-        STATE_DMR_LEVELC = 72U,
-        STATE_DMR_LEVELD = 73U,
-        STATE_P25_LEVELA = 74U,
-        STATE_P25_LEVELB = 75U,
-        STATE_P25_LEVELC = 77U,
-        STATE_P25_LEVELD = 78U,
-
         // Calibration States
+        STATE_P25_LF_CAL = 91U,
         STATE_P25_CAL_1K = 92U,
 
         STATE_DMR_DMO_CAL_1K = 93U,
         STATE_DMR_CAL_1K = 94U,
-
-        STATE_LF_CAL = 95U,
+        STATE_DMR_LF_CAL = 95U,
 
         STATE_RSSI_CAL = 96U,
 
