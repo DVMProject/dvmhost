@@ -80,6 +80,7 @@ namespace p25
         data::DataBlock* m_rfData;
         data::DataHeader m_rfDataHeader;
         data::DataHeader m_rfSecondHeader;
+        bool m_rfUseSecondHeader;
         uint8_t m_rfDataBlockCnt;
         uint8_t* m_rfPDU;
         uint32_t m_rfPDUCount;
@@ -116,6 +117,8 @@ namespace p25
         void writeRF_PDU();
         /// <summary>Helper to write a PDU registration response.</summary>
         void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr);
+        /// <summary>Helper to write a PDU acknowledge response.</summary>
+        void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId);
 
         /// <summary>Helper to write a network P25 PDU header packet.</summary>
         void writeNet_PDU_Header();

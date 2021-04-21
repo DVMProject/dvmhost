@@ -82,8 +82,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
     uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
     ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-    // Utils::dump(1U, "PDU Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
     m_fmt = header.getFormat();
     m_headerSap = header.getSAP();
 
@@ -94,13 +92,19 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             return false;
         }
 
-        m_serialNo = buffer[0] & 0xFEU;                                                  // Confirmed Data Serial No.
+        // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+
+        m_serialNo = (buffer[0] & 0xFEU) >> 1;                                           // Confirmed Data Serial No.
         uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                           // CRC-9 Check Sum
+
         uint32_t count = P25_PDU_CONFIRMED_LENGTH_BYTES;
         if (m_serialNo == (header.getBlocksToFollow() - 1))
             count = P25_PDU_CONFIRMED_LENGTH_BYTES - 4U;
 
-        if (m_headerSap == PDU_SAP_EXT_ADDR) {
+        ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+        // if this is extended addressing and the first block decode the SAP and LLId
+        if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
             m_sap = buffer[5U] & 0x3FU;                                                 // Service Access Point
             m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];               // Logical Link ID
 
@@ -116,13 +120,17 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
         }
 
         // compute CRC-9 for the packet
-        ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
+        uint8_t crcBuffer[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U];
+        ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U);
 
-        buffer[0U] = (m_serialNo & 0x7FU) << 1;
-        ::memcpy(buffer + 1U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-        uint16_t computedCRC = edac::CRC::crc9(buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+        crcBuffer[0U] = (m_serialNo & 0xFEU) << 1;
+        Utils::setBitRange(m_data, crcBuffer, 7U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8U);
 
-        LogMessage(LOG_P25, "P25_DUID_PDU, fmt = $%02X, crc = $%04X, computedCRC = $%04X", m_fmt, crc, computedCRC);
+        uint16_t computedCRC = edac::CRC::crc9(crcBuffer, 135U);
+
+        if (crc != computedCRC) {
+            LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, computedCRC);
+        }
     }
     else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
         m_confirmed = false;
@@ -130,6 +138,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
         if (!valid) {
             return false;
         }
+
+        // Utils::dump(1U, "PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
         for (uint32_t i = 0U; i < P25_PDU_UNCONFIRMED_LENGTH_BYTES; i++) {
             m_data[i] = buffer[i];                                                       // Payload Data
@@ -152,15 +162,24 @@ void DataBlock::encode(uint8_t* data)
     assert(m_data != NULL);
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
+        // compute CRC-9 for the packet
+        uint8_t crcBuffer[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U];
+        ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U);
+
+        crcBuffer[0U] = (m_serialNo & 0xFEU) << 1;
+        Utils::setBitRange(m_data, crcBuffer, 7U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8U);
+
+        uint16_t computedCRC = edac::CRC::crc9(crcBuffer, 135U);
+
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-        // compute CRC-9 for the packet
-        buffer[0U] = (m_serialNo & 0x7FU) << 1;
-        ::memcpy(buffer + 1U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
-        uint16_t crc = edac::CRC::crc9(buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+        buffer[0U] = ((m_serialNo & 0xFEU) << 1) +                                       // Confirmed Data Serial No.
+            (computedCRC >> 8);                                                          // CRC-9 Check Sum (b8)
+        buffer[1U] = (computedCRC & 0xFFU);                                              // CRC-9 Check Sum (b0 - b7)
 
-        if (m_headerSap == PDU_SAP_EXT_ADDR) {
+        // if this is extended addressing and the first block decode the SAP and LLId
+        if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
             buffer[5U] = m_sap & 0x3FU;                                                 // Service Access Point
 
             buffer[2U] = (m_llId >> 16) & 0xFFU;                                        // Logical Link ID
@@ -173,9 +192,7 @@ void DataBlock::encode(uint8_t* data)
             ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         }
 
-        buffer[0U] = ((m_serialNo & 0x7FU) << 1) +                                       // Confirmed Data Serial No.
-            (crc >> 8);                                                                  // CRC-9 Check Sum (b8)
-        buffer[1U] = (crc & 0xFFU);                                                      // CRC-9 Check Sum (b0 - b7)
+        // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
         m_trellis.encode34(buffer, data);
     }
@@ -184,6 +201,8 @@ void DataBlock::encode(uint8_t* data)
         ::memset(buffer, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+        // Utils::dump(1U, "PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
         m_trellis.encode12(buffer, data);
     }
