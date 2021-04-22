@@ -92,14 +92,16 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             return false;
         }
 
+        // determine the number of user data bytes
+        uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+        if (m_serialNo == (header.getBlocksToFollow() - 1) ||
+            (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U))
+            count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
+
         // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
         m_serialNo = (buffer[0] & 0xFEU) >> 1;                                           // Confirmed Data Serial No.
         uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                           // CRC-9 Check Sum
-
-        uint32_t count = P25_PDU_CONFIRMED_LENGTH_BYTES;
-        if (m_serialNo == (header.getBlocksToFollow() - 1))
-            count = P25_PDU_CONFIRMED_LENGTH_BYTES - 4U;
 
         ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
@@ -119,14 +121,10 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             }
         }
 
+        // Utils::dump(1U, "PDU Data", m_data, count);
+
         // compute CRC-9 for the packet
-        uint8_t crcBuffer[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U];
-        ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U);
-
-        crcBuffer[0U] = (m_serialNo & 0xFEU) << 1;
-        Utils::setBitRange(m_data, crcBuffer, 7U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8U);
-
-        uint16_t computedCRC = edac::CRC::crc9(crcBuffer, 135U);
+        uint16_t computedCRC = confirmedCRC9(buffer);
 
         if (crc != computedCRC) {
             LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, computedCRC);
@@ -162,21 +160,10 @@ void DataBlock::encode(uint8_t* data)
     assert(m_data != NULL);
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
-        // compute CRC-9 for the packet
-        uint8_t crcBuffer[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U];
-        ::memset(crcBuffer, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES + 1U);
-
-        crcBuffer[0U] = (m_serialNo & 0xFEU) << 1;
-        Utils::setBitRange(m_data, crcBuffer, 7U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8U);
-
-        uint16_t computedCRC = edac::CRC::crc9(crcBuffer, 135U);
-
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-        buffer[0U] = ((m_serialNo & 0xFEU) << 1) +                                       // Confirmed Data Serial No.
-            (computedCRC >> 8);                                                          // CRC-9 Check Sum (b8)
-        buffer[1U] = (computedCRC & 0xFFU);                                              // CRC-9 Check Sum (b0 - b7)
+        buffer[0U] = ((m_serialNo & 0xFEU) << 1);                                       // Confirmed Data Serial No.
 
         // if this is extended addressing and the first block decode the SAP and LLId
         if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
@@ -191,6 +178,10 @@ void DataBlock::encode(uint8_t* data)
         else {
             ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         }
+
+        uint16_t crc = confirmedCRC9(buffer);
+        buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                 // CRC-9 Check Sum (b8)
+        buffer[1U] = (crc & 0xFFU);                                                     // CRC-9 Check Sum (b0 - b7)
 
         // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
@@ -276,4 +267,26 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
         return 0U;
     }
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+/// <summary>
+///
+/// </summary>
+/// <param name="buffer"></param>
+uint16_t DataBlock::confirmedCRC9(const uint8_t* buffer)
+{
+    // generate 135-bit CRC buffer
+    uint8_t* crcBuffer = new uint8_t[17U];
+    ::memset(crcBuffer, 0x00U, 17U);
+
+    Utils::setBitRange(buffer, crcBuffer, 0U, 7U);
+
+    uint8_t* data = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+    Utils::getBitRange(buffer, data, 16U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8);
+    Utils::setBitRange(data, crcBuffer, 7U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * 8);
+
+    return edac::CRC::crc9(crcBuffer, 135U);
 }

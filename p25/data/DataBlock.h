@@ -88,6 +88,9 @@ namespace p25
             uint8_t m_headerSap;
 
             uint8_t* m_data;
+
+            /// <summary></summary>
+            uint16_t confirmedCRC9(const uint8_t* buffer);
         };
     } // namespace data
 } // namespace p25
