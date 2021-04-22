@@ -159,7 +159,7 @@ void DataBlock::encode(uint8_t* data)
     assert(data != NULL);
     assert(m_data != NULL);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
@@ -187,7 +187,7 @@ void DataBlock::encode(uint8_t* data)
 
         m_trellis.encode34(buffer, data);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
@@ -237,10 +237,10 @@ void DataBlock::setData(const uint8_t* buffer)
     assert(buffer != NULL);
     assert(m_data != NULL);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
         ::memcpy(m_data, buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
         ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
     else {
@@ -255,11 +255,11 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     assert(buffer != NULL);
     assert(m_data != NULL);
 
-    if (m_fmt == PDU_FMT_CONFIRMED) {
+    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     } 
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }

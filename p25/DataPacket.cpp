@@ -150,12 +150,6 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            /*
-            if (m_rfDataHeader.getAckNeeded()) {
-                writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, m_rfDataHeader.getLLId());
-            }
-            */
-
             writeNetworkRF(P25_DT_DATA_HEADER, buffer, P25_PDU_FEC_LENGTH_BYTES);
         }
 
@@ -274,12 +268,13 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                             if (!hasLLIdFNEReg(llId)) {
                                 // update dynamic FNE registration table entry
                                 m_fneRegTable[llId] = ipAddr;
-
-                                if (m_verbose) {
-                                    LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %u", llId, ipAddr);
-                                }
-                                writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
                             }
+
+                            if (m_verbose) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %u", llId, ipAddr);
+                            }
+
+                            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
                         }
                     }
                     break;
@@ -697,7 +692,13 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     rspHeader.setClass(PDU_ACK_CLASS_ACK);
     rspHeader.setType(PDU_ACK_TYPE_ACK);
     rspHeader.setLLId(llId);
-    rspHeader.setSrcLLId(P25_WUID_FNE);
+    if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR) {
+        rspHeader.setSrcLLId(P25_WUID_FNE);
+        rspHeader.setExtended(true);
+    }
+    else {
+        rspHeader.setExtended(false);
+    }
     rspHeader.setBlocksToFollow(1U);
 
     // Generate the PDU header and 1/2 rate Trellis
@@ -706,7 +707,7 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     offset += P25_PDU_FEC_LENGTH_BITS;
 
     // build registration response data
-    ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+    ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
     buffer[0U] = (regType << 4);                                                    // Registration Type & Options
     buffer[1U] = (llId >> 16) & 0xFFU;                                              // Logical Link ID
@@ -719,10 +720,11 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
         buffer[11U] = (ipAddr >> 0) & 0xFFU;
     }
 
-    edac::CRC::addCRC32(buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+    edac::CRC::addCRC32(buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
     // Generate the PDU data
     m_rfData[0].setFormat(PDU_FMT_RSP);
+    m_rfData[0].setConfirmed(true);
     m_rfData[0].setSerialNo(0U);
     m_rfData[0].setData(buffer);
 
