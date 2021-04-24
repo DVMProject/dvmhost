@@ -151,6 +151,14 @@ namespace modem
         RSN_P25_DISABLED = 64U,
     };
 
+    enum RESP_STATE {
+        RESP_START,
+        RESP_LENGTH1,
+        RESP_LENGTH2,
+        RESP_TYPE,
+        RESP_DATA
+    };
+
     const uint8_t DVM_FRAME_START = 0xFEU;
 
     const uint8_t MAX_FDMA_PREAMBLE = 255U;
@@ -316,6 +324,8 @@ namespace modem
 
         uint8_t* m_buffer;
         uint16_t m_length;
+        uint16_t m_rspOffset;
+        RESP_STATE m_rspState;
         bool m_rspDoubleLength;
         DVM_COMMANDS m_rspType;
 

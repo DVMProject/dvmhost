@@ -182,7 +182,7 @@ int HostCal::run()
     }
 
     // initialize system logging
-    ret = ::LogInitialise("", "", 0U, 2U);
+    ret = ::LogInitialise("", "", 0U, 1U);
     if (!ret) {
         ::fprintf(stderr, "unable to open the log file\n");
         return 1;

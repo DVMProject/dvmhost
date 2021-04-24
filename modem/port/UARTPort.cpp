@@ -414,11 +414,13 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(m_fd, &fds);
+
         int n;
         if (offset == 0U) {
             struct timeval tv;
             tv.tv_sec = 0;
             tv.tv_usec = 0;
+
             n = ::select(m_fd + 1, &fds, NULL, NULL, &tv);
             if (n == 0)
                 return 0;
@@ -487,7 +489,7 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
 /// </summary>
 void UARTPort::close()
 {
-    if (!m_isOpen)
+    if (!m_isOpen && m_fd == -1)
         return;
 
     assert(m_fd != -1);

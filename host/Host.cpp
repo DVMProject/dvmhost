@@ -566,6 +566,168 @@ int Host::run()
         bool ret;
         bool hasCw = false;
 
+        if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
+            if (!m_fixedMode) {
+                setState(STATE_IDLE);
+            }
+            else {
+                if (dmr != NULL)
+                    setState(STATE_DMR);
+                if (p25 != NULL)
+                    setState(STATE_P25);
+            }
+        }
+
+        // ------------------------------------------------------
+        //  -- Write to Modem Processing                      --
+        // ------------------------------------------------------
+
+        /** DMR */
+        if (dmr != NULL) {
+            // check if there is space on the modem for DMR slot 1 frames,
+            // if there is read frames from the DMR controller and write it
+            // to the modem
+            ret = m_modem->hasDMRSpace1();
+            if (ret) {
+                len = dmr->getFrame1(data);
+                if (len > 0U) {
+                    if (m_state == STATE_IDLE) {
+                        m_modeTimer.setTimeout(m_netModeHang);
+                        setState(STATE_DMR);
+                    }
+                    if (m_state == STATE_DMR) {
+                        // if the modem is in duplex -- write DMR sync start
+                        if (m_duplex) {
+                            m_modem->writeDMRStart(true);
+                            m_dmrTXTimer.start();
+                        }
+
+                        m_modem->writeDMRData1(data, len);
+
+                        dmrBeaconDurationTimer.stop();
+                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
+                            p25CCDurationTimer.pause();
+                        }
+                        m_modeTimer.start();
+                    }
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
+                    }
+                }
+            }
+
+            // check if there is space on the modem for DMR slot 2 frames,
+            // if there is read frames from the DMR controller and write it
+            // to the modem
+            ret = m_modem->hasDMRSpace2();
+            if (ret) {
+                len = dmr->getFrame2(data);
+                if (len > 0U) {
+                    if (m_state == STATE_IDLE) {
+                        m_modeTimer.setTimeout(m_netModeHang);
+                        setState(STATE_DMR);
+                    }
+                    if (m_state == STATE_DMR) {
+                        // if the modem is in duplex -- write DMR sync start
+                        if (m_duplex) {
+                            m_modem->writeDMRStart(true);
+                            m_dmrTXTimer.start();
+                        }
+
+                        m_modem->writeDMRData2(data, len);
+
+                        dmrBeaconDurationTimer.stop();
+                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
+                            p25CCDurationTimer.pause();
+                        }
+                        m_modeTimer.start();
+                    }
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
+                    }
+                }
+            }
+        }
+
+        /** P25 */
+        // check if there is space on the modem for P25 frames,
+        // if there is read frames from the P25 controller and write it
+        // to the modem
+        if (p25 != NULL) {
+            ret = m_modem->hasP25Space();
+            if (ret) {
+                len = p25->getFrame(data);
+                if (len > 0U) {
+                    if (m_state == STATE_IDLE) {
+                        m_modeTimer.setTimeout(m_netModeHang);
+                        setState(STATE_P25);
+                    }
+
+                    if (m_state == STATE_P25) {
+                        m_modem->writeP25Data(data, len);
+
+                        dmrBeaconDurationTimer.stop();
+                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
+                            p25CCDurationTimer.pause();
+                        }
+
+                        m_modeTimer.start();
+                    }
+                    else if (m_state != HOST_STATE_LOCKOUT) {
+                        LogWarning(LOG_HOST, "P25 data received, state = %u", m_state);
+                    }
+                }
+                else {
+                    if (m_state == STATE_IDLE || m_state == STATE_P25) {
+                        // P25 control data, if control data is being transmitted
+                        if (p25CCDurationTimer.isRunning() && !p25CCDurationTimer.hasExpired()) {
+                            p25->setCCRunning(true);
+                            p25->writeControlRF();
+                        }
+
+                        // P25 status data, tail on idle
+                        ret = p25->writeEndRF();
+                        if (ret) {
+                            if (m_state == STATE_IDLE) {
+                                m_modeTimer.setTimeout(m_netModeHang);
+                                setState(STATE_P25);
+                            }
+
+                            if (m_state == STATE_P25) {
+                                m_modeTimer.start();
+                            }
+                        }
+                    }
+                }
+
+
+                // if the modem is in duplex -- handle P25 CC burst control
+                if (m_duplex) {
+                    if (p25CCDurationTimer.isPaused() && !g_interruptP25Control) {
+                        LogDebug(LOG_HOST, "traffic complete, resume P25 CC, g_interruptP25Control = %u", g_interruptP25Control);
+                        p25CCDurationTimer.resume();
+                    }
+
+                    if (g_interruptP25Control) {
+                        g_fireP25Control = true;
+                    }
+
+                    if (g_fireP25Control) {
+                        m_modeTimer.stop();
+                    }
+                }
+            }
+        }
+
+        // ------------------------------------------------------
+        //  -- Modem Clocking                                 --
+        // ------------------------------------------------------
+
+        ms = stopWatch.elapsed();
+        stopWatch.start();
+
+        m_modem->clock(ms);
+
         // ------------------------------------------------------
         //  -- Read from Modem Processing                     --
         // ------------------------------------------------------
@@ -759,156 +921,16 @@ int Host::run()
         }
 
         // ------------------------------------------------------
-        //  -- Write to Modem Processing                      --
+        //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
 
-        if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
-            if (!m_fixedMode) {
-                setState(STATE_IDLE);
-            } else {
-                if (dmr != NULL)
-                    setState(STATE_DMR);
-                if (p25 != NULL)
-                    setState(STATE_P25);
-            }
-        }
+        if (m_network != NULL)
+            m_network->clock(ms);
 
-        /** DMR */
-        if (dmr != NULL) {
-            // check if there is space on the modem for DMR slot 1 frames,
-            // if there is read frames from the DMR controller and write it
-            // to the modem
-            ret = m_modem->hasDMRSpace1();
-            if (ret) {
-                len = dmr->getFrame1(data);
-                if (len > 0U) {
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_DMR);
-                    }
-                    if (m_state == STATE_DMR) {
-                        // if the modem is in duplex -- write DMR sync start
-                        if (m_duplex) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
-
-                        m_modem->writeDMRData1(data, len);
-
-                        dmrBeaconDurationTimer.stop();
-                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
-                            p25CCDurationTimer.pause();
-                        }
-                        m_modeTimer.start();
-                    }
-                    else if (m_state != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
-                    }
-                }
-            }
-
-            // check if there is space on the modem for DMR slot 2 frames,
-            // if there is read frames from the DMR controller and write it
-            // to the modem
-            ret = m_modem->hasDMRSpace2();
-            if (ret) {
-                len = dmr->getFrame2(data);
-                if (len > 0U) {
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_DMR);
-                    }
-                    if (m_state == STATE_DMR) {
-                        // if the modem is in duplex -- write DMR sync start
-                        if (m_duplex) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
-
-                        m_modem->writeDMRData2(data, len);
-
-                        dmrBeaconDurationTimer.stop();
-                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
-                            p25CCDurationTimer.pause();
-                        }
-                        m_modeTimer.start();
-                    }
-                    else if (m_state != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
-                    }
-                }
-            }
-        }
-
-        /** P25 */
-        // check if there is space on the modem for P25 frames,
-        // if there is read frames from the P25 controller and write it
-        // to the modem
-        if (p25 != NULL) {
-            ret = m_modem->hasP25Space();
-            if (ret) {
-                len = p25->getFrame(data);
-                if (len > 0U) {
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_P25);
-                    }
-                    
-                    if (m_state == STATE_P25) {
-                        m_modem->writeP25Data(data, len);
-
-                        dmrBeaconDurationTimer.stop();
-                        if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
-                            p25CCDurationTimer.pause();
-                        }
-
-                        m_modeTimer.start();
-                    }
-                    else if (m_state != HOST_STATE_LOCKOUT) {
-                        LogWarning(LOG_HOST, "P25 data received, state = %u", m_state);
-                    }
-                }
-                else {
-                    if (m_state == STATE_IDLE || m_state == STATE_P25) {
-                        // P25 control data, if control data is being transmitted
-                        if (p25CCDurationTimer.isRunning() && !p25CCDurationTimer.hasExpired()) {
-                            p25->setCCRunning(true);
-                            p25->writeControlRF();
-                        }
-
-                        // P25 status data, tail on idle
-                        ret = p25->writeEndRF();
-                        if (ret) {
-                            if (m_state == STATE_IDLE) {
-                                m_modeTimer.setTimeout(m_netModeHang);
-                                setState(STATE_P25);
-                            }
-
-                            if (m_state == STATE_P25) {
-                                m_modeTimer.start();
-                            }
-                        }
-                    }
-                }
-
-
-                // if the modem is in duplex -- handle P25 CC burst control
-                if (m_duplex) {
-                    if (p25CCDurationTimer.isPaused() && !g_interruptP25Control) {
-                        LogDebug(LOG_HOST, "traffic complete, resume P25 CC, g_interruptP25Control = %u", g_interruptP25Control);
-                        p25CCDurationTimer.resume();
-                    }
-
-                    if (g_interruptP25Control) {
-                        g_fireP25Control = true;
-                    }
-
-                    if (g_fireP25Control) {
-                        m_modeTimer.stop();
-                    }
-                }
-            }
-        }
+        if (dmr != NULL)
+            dmr->clock();
+        if (p25 != NULL)
+            p25->clock(ms);
 
         // ------------------------------------------------------
         //  -- Remote Control Processing                      --
@@ -917,23 +939,6 @@ int Host::run()
         if (m_remoteControl != NULL) {
             m_remoteControl->process(this, dmr, p25);
         }
-
-        // ------------------------------------------------------
-        //  -- Modem, DMR, P25 and Network Clocking           --
-        // ------------------------------------------------------
-
-        ms = stopWatch.elapsed();
-        stopWatch.start();
-
-        m_modem->clock(ms);
-
-        if (dmr != NULL)
-            dmr->clock();
-        if (p25 != NULL)
-            p25->clock(ms);
-
-        if (m_network != NULL)
-            m_network->clock(ms);
 
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --

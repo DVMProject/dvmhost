@@ -52,18 +52,6 @@ using namespace modem;
 #endif
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-enum RESP_STATE {
-    RESP_START,
-    RESP_LENGTH1,
-    RESP_LENGTH2,
-    RESP_TYPE,
-    RESP_DATA
-};
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
@@ -115,6 +103,8 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_modemState(STATE_IDLE),
     m_buffer(NULL),
     m_length(0U),
+    m_rspOffset(0U),
+    m_rspState(RESP_START),
     m_rspDoubleLength(false),
     m_rspType(CMD_GET_STATUS),
     m_openPortHandler(NULL),
@@ -352,6 +342,9 @@ bool Modem::open()
         // successfuly read prevents the death spiral of "no reply from modem..."
         m_inactivityTimer.stop();
     }
+
+    m_rspOffset = 0U;
+    m_rspState = RESP_START;
 
     // do we have an open port handler?
     if (m_openPortHandler) {
@@ -1503,16 +1496,14 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 /// <returns>Response type from modem.</returns>
 RESP_TYPE_DVM Modem::getResponse()
 {
-    RESP_STATE state = RESP_START;
-    uint16_t offset = 0U;
-
     m_rspDoubleLength = false;
 
     // get the start of the frame or nothing at all
-    if (state == RESP_START) {
+    if (m_rspState == RESP_START) {
         int ret = m_port->read(m_buffer + 0U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
@@ -1524,14 +1515,15 @@ RESP_TYPE_DVM Modem::getResponse()
 
         // LogDebug(LOG_MODEM, "getResponse(), RESP_START");
 
-        state = RESP_LENGTH1;
+        m_rspState = RESP_LENGTH1;
     }
 
     // get the length of the frame, 1/2
-    if (state == RESP_LENGTH1) {
+    if (m_rspState == RESP_LENGTH1) {
         int ret = m_port->read(m_buffer + 1U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
@@ -1546,21 +1538,22 @@ RESP_TYPE_DVM Modem::getResponse()
         m_length = m_buffer[1U];
 
         if (m_length == 0U)
-            state = RESP_LENGTH2;
+            m_rspState = RESP_LENGTH2;
         else
-            state = RESP_TYPE;
+            m_rspState = RESP_TYPE;
 
         // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH1, len = %u", m_length);
 
         m_rspDoubleLength = false;
-        offset = 2U;
+        m_rspOffset = 2U;
     }
 
     // get the length of the frame, 2/2
-    if (state == RESP_LENGTH2) {
+    if (m_rspState == RESP_LENGTH2) {
         int ret = m_port->read(m_buffer + 2U, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
@@ -1568,41 +1561,44 @@ RESP_TYPE_DVM Modem::getResponse()
             return RTM_TIMEOUT;
 
         m_length = m_buffer[2U] + 255U;
-        state = RESP_TYPE;
+        m_rspState = RESP_TYPE;
 
         // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH2, len = %u", m_length);
 
         m_rspDoubleLength = true;
-        offset = 3U;
+        m_rspOffset = 3U;
     }
 
     // get the frame type
-    if (state == RESP_TYPE) {
-        int ret = m_port->read(m_buffer + offset, 1U);
+    if (m_rspState == RESP_TYPE) {
+        int ret = m_port->read(m_buffer + m_rspOffset, 1U);
         if (ret < 0) {
             LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+            m_rspState = RESP_START;
             return RTM_ERROR;
         }
 
         if (ret == 0)
             return RTM_TIMEOUT;
 
-        m_rspType = (DVM_COMMANDS)m_buffer[offset];
+        m_rspType = (DVM_COMMANDS)m_buffer[m_rspOffset];
 
         // LogDebug(LOG_MODEM, "getResponse(), RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
 
-        state = RESP_DATA;
-        offset++;
+        m_rspState = RESP_DATA;
+        m_rspOffset++;
     }
 
     // get the frame data
-    if (state == RESP_DATA) {
-        // LogDebug(LOG_MODEM, "getResponse(), RESP_DATA, len = %u, type = %u", m_length, m_rspType);
+    if (m_rspState == RESP_DATA) {
+        if (m_debug && m_trace)
+            LogDebug(LOG_MODEM, "getResponse(), RESP_DATA, len = %u, offset = %u, type = %02X", m_length, m_rspOffset, m_rspType);
 
-        while (offset < m_length) {
-            int ret = m_port->read(m_buffer + offset, m_length - offset);
+        while (m_rspOffset < m_length) {
+            int ret = m_port->read(m_buffer + m_rspOffset, m_length - m_rspOffset);
             if (ret < 0) {
                 LogError(LOG_MODEM, "Error reading from the modem, ret = %d", ret);
+                m_rspState = RESP_START;
                 return RTM_ERROR;
             }
 
@@ -1610,11 +1606,15 @@ RESP_TYPE_DVM Modem::getResponse()
                 return RTM_TIMEOUT;
 
             if (ret > 0)
-                offset += ret;
+                m_rspOffset += ret;
         }
 
-        // Utils::dump(1U, "Modem getResponse()", m_buffer, m_length);
+        if (m_debug && m_trace)
+            Utils::dump(1U, "Modem getResponse()", m_buffer, m_length);
     }
+
+    m_rspState = RESP_START;
+    m_rspOffset = 0U;
 
     return RTM_OK;
 }
