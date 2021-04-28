@@ -248,7 +248,7 @@ namespace network
         bool m_debug;
 
         sockaddr_storage m_addr;
-        unsigned int m_addrLen;
+        uint32_t m_addrLen;
         UDPSocket m_socket;
         NET_CONN_STATUS m_status;
 

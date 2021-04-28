@@ -669,9 +669,9 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
         break;
         case CMD_RSSI_DATA:
         {
-            unsigned short max = buffer[3U] << 8 | buffer[4U];
-            unsigned short min = buffer[5U] << 8 | buffer[6U];
-            unsigned short ave = buffer[7U] << 8 | buffer[8U];
+            uint16_t max = buffer[3U] << 8 | buffer[4U];
+            uint16_t min = buffer[5U] << 8 | buffer[6U];
+            uint16_t ave = buffer[7U] << 8 | buffer[8U];
             LogMessage(LOG_CAL, "RSSI: max: %u, min: %u, ave: %u", max, min, ave);
         }
         break;

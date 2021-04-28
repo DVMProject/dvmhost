@@ -214,7 +214,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 {
     assert(in != NULL);
 
-    unsigned short total = 0U;
+    uint16_t total = 0U;
     for (uint32_t i = 0U; i < 72U; i += 8U) {
         uint8_t c;
         Utils::bitsToByteBE(in + i, c);
