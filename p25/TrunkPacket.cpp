@@ -315,6 +315,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
+    if (!m_p25->m_control)
+        return false;
+
     // Decode the NID
     bool valid = m_p25->m_nid.decode(data + 2U);
 
@@ -666,6 +669,8 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
+    if (!m_p25->m_control)
+        return false;
     if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
         return false;
 
@@ -1428,9 +1433,8 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
     uint8_t i = 0U, seqCnt = 0U;
 
-    if (!m_p25->m_control) {
+    if (!m_p25->m_control)
         return;
-    }
 
     // loop to generate 6 control sequences
     if (frameCnt == 255U) {
@@ -1565,26 +1569,28 @@ void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t d
 {
     uint32_t count = m_p25->m_hangCount / 2;
 
-    for (uint32_t i = 0; i < count; i++) {
-        if ((srcId != 0U) && (dstId != 0U)) {
-            m_rfTDULC.setSrcId(srcId);
-            m_rfTDULC.setDstId(dstId);
-            m_rfTDULC.setEmergency(false);
+    if (m_p25->m_control) {
+        for (uint32_t i = 0; i < count; i++) {
+            if ((srcId != 0U) && (dstId != 0U)) {
+                m_rfTDULC.setSrcId(srcId);
+                m_rfTDULC.setDstId(dstId);
+                m_rfTDULC.setEmergency(false);
 
-            if (grp) {
-                m_rfTDULC.setLCO(LC_GROUP);
-                writeRF_TDULC(P25_DUID_TDULC, true);
+                if (grp) {
+                    m_rfTDULC.setLCO(LC_GROUP);
+                    writeRF_TDULC(P25_DUID_TDULC, true);
+                }
+                else {
+                    m_rfTDULC.setLCO(LC_PRIVATE);
+                    writeRF_TDULC(P25_DUID_TDULC, true);
+                }
             }
-            else {
-                m_rfTDULC.setLCO(LC_PRIVATE);
-                writeRF_TDULC(P25_DUID_TDULC, true);
-            }
+
+            m_rfTDULC.setLCO(LC_NET_STS_BCAST);
+            writeRF_TDULC(P25_DUID_TDULC, true);
+            m_rfTDULC.setLCO(LC_RFSS_STS_BCAST);
+            writeRF_TDULC(P25_DUID_TDULC, true);
         }
-
-        m_rfTDULC.setLCO(LC_NET_STS_BCAST);
-        writeRF_TDULC(P25_DUID_TDULC, true);
-        m_rfTDULC.setLCO(LC_RFSS_STS_BCAST);
-        writeRF_TDULC(P25_DUID_TDULC, true);
     }
 
     if (m_verbose) {
@@ -1604,6 +1610,9 @@ void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t d
 /// <param name="clearBeforeWrite"></param>
 void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
 {
+    if (!m_p25->m_control)
+        return;
+
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
@@ -1663,12 +1672,18 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
 /// <param name="clearBeforeWrite"></param>
 void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
 {
+    if (!m_p25->m_control) {
+        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        m_mbfCnt = 0U;
+        return;
+    }
+
     uint8_t tsbk[P25_TSBK_FEC_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
 
     // LogDebug(LOG_P25, "writeRF_TSDU_MBF, mbfCnt = %u", m_mbfCnt);
 
-    // can't transmit MBF with duplex disabled
+    // trunking data is unsupported in simplex operation
     if (!m_p25->m_duplex) {
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
@@ -1767,6 +1782,9 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
 /// <param name="lco"></param>
 void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
 {
+    if (!m_p25->m_control)
+        return;
+
     m_rfTSBK.reset();
 
     switch (lco) {
@@ -2274,6 +2292,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
 void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 {
     bool dereged = false;
+
     m_rfTSBK.setLCO(TSBK_OSP_U_DEREG_ACK);
 
     if (m_verbose) {

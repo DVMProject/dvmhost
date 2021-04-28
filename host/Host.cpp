@@ -485,6 +485,11 @@ int Host::run()
         g_killed = true;
     }
 
+    if (!m_duplex && m_dmrBeacons) {
+        ::LogError(LOG_HOST, "Cannot have DMR roaming beacons and simplex mode at the same time.");
+        g_killed = true;
+    }
+
     if (!m_duplex && m_controlData) {
         ::LogError(LOG_HOST, "Cannot have P25 control and simplex mode at the same time.");
         g_killed = true;

@@ -246,7 +246,7 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
         LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
 
         if (len == -1 && errno == ENOTSOCK) {
-            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_port);
+            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_port[index]);
             close();
             open();
         }

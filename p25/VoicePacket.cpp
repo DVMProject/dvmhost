@@ -167,10 +167,15 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
                     m_p25->m_netLastDstId);
                 resetNet();
-                m_p25->writeRF_TDU(true);
+                
+                if (m_p25->m_duplex) {
+                    m_p25->writeRF_TDU(true);
+                }
             }
 
-            m_p25->writeRF_Preamble();
+            if (m_p25->m_duplex) {
+                m_p25->writeRF_Preamble();
+            }
 
             m_p25->m_rfTGHang.start();
             m_p25->m_rfLastDstId = m_rfLC.getDstId();
@@ -188,8 +193,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
         m_lastDUID = P25_DUID_LDU1;
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
-            if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
-                m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
+            if (m_p25->m_control) {
+                if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
+                    m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
+                }
             }
 
             bool ret = m_rfLC.decodeLDU1(data + 2U);
@@ -234,8 +241,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
-                    m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_VALID, (m_rfLC.getGroup() ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH));
-                    m_p25->m_trunk->denialInhibit(srcId);
+                    if (m_p25->m_control) {
+                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_VALID, (m_rfLC.getGroup() ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH));
+                        m_p25->m_trunk->denialInhibit(srcId);
+                    }
 
                     ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
@@ -253,7 +262,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (!acl::AccessControl::validateSrcId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
-                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH);
+                        if (m_p25->m_control) {
+                            m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH);
+                        }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
@@ -270,7 +281,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (!acl::AccessControl::validateTGId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
-                        m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH);
+                        if (m_p25->m_control) {
+                            m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH);
+                        }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, m_rfLC.getGroup() ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
@@ -832,7 +845,7 @@ bool VoicePacket::writeEndRF()
             m_hadVoice = false; 
         }
 
-        if (!m_p25->m_ccRunning) {
+        if (m_p25->m_control && !m_p25->m_ccRunning) {
             m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
             m_p25->writeControlEndRF();
         }
