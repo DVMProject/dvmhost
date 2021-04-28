@@ -57,7 +57,7 @@ namespace p25 { class HOST_SW_API Control; }
 class HOST_SW_API RemoteControl {
 public:
     /// <summary>Initializes a new instance of the RemoteControl class.</summary>
-    RemoteControl(const std::string& address, uint32_t port, const std::string& password, bool debug);
+    RemoteControl(const std::string& address, uint16_t port, const std::string& password, bool debug);
     /// <summary>Finalizes a instance of the RemoteControl class.</summary>
     ~RemoteControl();
 

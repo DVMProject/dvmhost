@@ -50,7 +50,7 @@ namespace modem
         class HOST_SW_API UDPPort : public IModemPort {
         public:
             /// <summary>Initializes a new instance of the UDPPort class.</summary>
-            UDPPort(const std::string& modemAddress, uint32_t modemPort);
+            UDPPort(const std::string& modemAddress, uint16_t modemPort);
             /// <summary>Finalizes a instance of the UDPPort class.</summary>
             virtual ~UDPPort();
 

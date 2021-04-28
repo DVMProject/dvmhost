@@ -190,7 +190,7 @@ namespace network
     class HOST_SW_API BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the BaseNetwork class.</summary>
-        BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog);
+        BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog);
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 

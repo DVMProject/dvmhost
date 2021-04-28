@@ -108,7 +108,7 @@ const uint32_t RC_BUFFER_LENGTH = 140U;
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
 /// <param name="debug"></param>
-RemoteControl::RemoteControl(const std::string& address, uint32_t port, const std::string& password, bool debug) :
+RemoteControl::RemoteControl(const std::string& address, uint16_t port, const std::string& password, bool debug) :
     m_socket(address, port),
     m_p25MFId(p25::P25_MFG_STANDARD),
     m_password(password),

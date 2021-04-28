@@ -1354,7 +1354,7 @@ bool Host::createModem()
     yaml::Node udpProtocol = modemProtocol["udp"];
     std::string udpMode = udpProtocol["mode"].as<std::string>("master");
     std::string udpAddress = udpProtocol["endpointAddress"].as<std::string>();
-    uint32_t udpPort = udpProtocol["port"].as<uint32_t>(REMOTE_MODEM_PORT);
+    uint16_t udpPort = (uint16_t)udpProtocol["port"].as<uint32_t>(REMOTE_MODEM_PORT);
 
     bool rxInvert = modemConf["rxInvert"].as<bool>(false);
     bool txInvert = modemConf["txInvert"].as<bool>(false);
@@ -1513,11 +1513,11 @@ bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
     std::string address = networkConf["address"].as<std::string>();
-    uint32_t port = networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
-    uint32_t local = networkConf["local"].as<uint32_t>(0U);
+    uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
+    uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
     bool rconEnable = networkConf["rconEnable"].as<bool>(false);
     std::string rconAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
-    uint32_t rconPort = networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
+    uint16_t rconPort = (uint16_t)networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
     std::string rconPassword = networkConf["rconPassword"].as<std::string>();
     bool rconDebug = networkConf["rconDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(0U);

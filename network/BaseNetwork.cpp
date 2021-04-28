@@ -54,7 +54,7 @@ using namespace network;
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-BaseNetwork::BaseNetwork(uint32_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer) :
+BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer) :
     m_id(id),
     m_slot1(slot1),
     m_slot2(slot2),

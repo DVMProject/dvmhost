@@ -49,7 +49,7 @@ using namespace network;
 /// </summary>
 /// <param name="address">Hostname/IP address to connect to.</param>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(const std::string& address, uint32_t port) :
+UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
     m_address_save(address),
     m_port_save(port),
     m_counter(0U)
@@ -66,7 +66,7 @@ UDPSocket::UDPSocket(const std::string& address, uint32_t port) :
 /// Initializes a new instance of the UDPSocket class.
 /// </summary>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(uint32_t port) :
+UDPSocket::UDPSocket(uint16_t port) :
     m_address_save(),
     m_port_save(port),
     m_counter(0U)
@@ -115,7 +115,7 @@ bool UDPSocket::open(uint32_t af)
 /// <param name="address"></param>
 /// <param name="port"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string& address, const uint32_t port)
+bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string& address, const uint16_t port)
 {
     sockaddr_storage addr;
     uint32_t addrlen;
@@ -362,7 +362,7 @@ void UDPSocket::shutdown()
 /// <param name="addr">Socket address structure.</param>
 /// <param name="addrLen"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, uint32_t port, sockaddr_storage& addr, uint32_t& addrLen)
+int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen)
 {
     struct addrinfo hints;
     ::memset(&hints, 0, sizeof(hints));
@@ -379,12 +379,12 @@ int UDPSocket::lookup(const std::string& hostname, uint32_t port, sockaddr_stora
 /// <param name="addrLen"></param>
 /// <param name="hints"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, uint32_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
+int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
 {
     std::string portstr = std::to_string(port);
     struct addrinfo* res;
 
-    /* port is always digits, no needs to lookup service */
+    // port is always digits, no needs to lookup service
     hints.ai_flags |= AI_NUMERICSERV;
 
     int err = getaddrinfo(hostname.empty() ? NULL : hostname.c_str(), portstr.c_str(), &hints, &res);
@@ -463,8 +463,6 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
 {
     std::string address = std::string();
     char str[INET_ADDRSTRLEN];
-
-
 
     switch (addr.ss_family) {
     case AF_INET:

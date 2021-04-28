@@ -49,7 +49,7 @@ namespace network
     class HOST_SW_API Network : public BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the Network class.</summary>
-        Network(const std::string& address, uint32_t port, uint32_t local, uint32_t id, const std::string& password,
+        Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
             bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog, bool updateLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
@@ -78,7 +78,7 @@ namespace network
 
     private:
         std::string m_address;
-        unsigned int m_port;
+        uint16_t m_port;
 
         std::string m_password;
 

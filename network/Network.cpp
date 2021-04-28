@@ -58,7 +58,7 @@ using namespace network;
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
-Network::Network(const std::string& address, uint32_t port, uint32_t local, uint32_t id, const std::string& password,
+Network::Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
     bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
     BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
     m_address(address),
@@ -185,7 +185,7 @@ void Network::clock(uint32_t ms)
     }
 
     sockaddr_storage address;
-    unsigned int addrLen;
+    uint32_t addrLen;
     int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length < 0) {
         LogError(LOG_NET, "Socket has failed, retrying connection to the master");

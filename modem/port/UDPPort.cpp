@@ -54,7 +54,7 @@ const uint32_t BUFFER_LENGTH = 2000U;
 /// <param name="address">Hostname/IP address to connect to.</param>
 /// <param name="modemPort">Port number.</param>
 /// <param name="master"></param>
-UDPPort::UDPPort(const std::string& address, uint32_t modemPort) :
+UDPPort::UDPPort(const std::string& address, uint16_t modemPort) :
     m_socket(modemPort),
     m_addr(),
     m_addrLen(0U),

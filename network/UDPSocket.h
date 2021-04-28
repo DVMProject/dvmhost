@@ -69,9 +69,9 @@ namespace network
     class HOST_SW_API UDPSocket {
     public:
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(const std::string& address, uint32_t port = 0U);
+        UDPSocket(const std::string& address, uint16_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
-        UDPSocket(uint32_t port = 0U);
+        UDPSocket(uint16_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
         ~UDPSocket();
 
@@ -80,7 +80,7 @@ namespace network
         /// <summary>Opens UDP socket connection.</summary>
         bool open(const sockaddr_storage& address);
         /// <summary>Opens UDP socket connection.</summary>
-        bool open(const uint32_t index, const uint32_t af, const std::string& address, const uint32_t port);
+        bool open(const uint32_t index, const uint32_t af, const std::string& address, const uint16_t port);
 
         /// <summary>Read data from the UDP socket.</summary>
         int read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen);
@@ -98,9 +98,9 @@ namespace network
         static void shutdown();
 
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
-        static int lookup(const std::string& hostName, uint32_t port, sockaddr_storage& address, uint32_t& addrLen);
+        static int lookup(const std::string& hostName, uint16_t port, sockaddr_storage& address, uint32_t& addrLen);
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
-        static int lookup(const std::string& hostName, uint32_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints);
+        static int lookup(const std::string& hostName, uint16_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints);
 
         /// <summary></summary>
         static bool match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type = IMT_ADDRESS_AND_PORT);
