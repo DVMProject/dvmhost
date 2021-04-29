@@ -134,10 +134,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             m_slot->m_data->m_lastRejectId = 0U;
 
-            if (m_verbose) {
-                LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
-            }
-
             uint8_t fid = lc->getFID();
 
             // NOTE: this is fiddly -- on Motorola a FID of 0x10 indicates a SU has transmitted with Enhanced Privacy enabled -- this might change
@@ -197,8 +193,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
             }
 
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
             }
 
             ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
@@ -228,8 +224,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             m_slot->writeNetworkRF(data, DT_VOICE_PI_HEADER);
 
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX DMR Frame - DT_VOICE_PI_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            if (m_verbose) {
+                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u", m_slot->m_slotNo);
             }
 
             return true;
@@ -250,8 +246,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE_SYNC audio, sequence no = 0, errs = %u/141 (%.1f%%)",
-                        m_slot->m_slotNo, errors, float(errors) / 1.41F);
+                    LogMessage(LOG_RF, DMR_DT_VOICE_SYNC ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = 0, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                        errors, float(errors) / 1.41F);
                 }
 
                 m_slot->m_rfErrs += errors;
@@ -303,8 +299,8 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (fid == FID_ETSI || fid == FID_DMRA) {
                 errors = m_fec.regenerateDMR(data + 2U);
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
-                        m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
+                    LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
+                        m_rfN, errors, float(errors) / 1.41F);
                 }
 
                 m_slot->m_rfErrs += errors;
@@ -333,8 +329,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 switch (flco) {
                 case FLCO_GROUP:
                 case FLCO_PRIVATE:
-                    // ::sprintf(text, "DMR Slot %u, Embedded LC", m_slotNo);
-                    // Utils::dump(1U, text, data, 9U);
                     break;
 
                 case FLCO_GPS_INFO:
@@ -666,8 +660,8 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
         m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_VOICE_LC_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
         }
 
         ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
@@ -755,8 +749,8 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
         m_slot->writeQueueNet(data);
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_VOICE_PI_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u", m_slot->m_slotNo);
         }
     }
     else if (dataType == DT_VOICE_SYNC) {
@@ -879,8 +873,8 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         if (fid == FID_ETSI || fid == FID_DMRA) {
             m_slot->m_netErrs += m_fec.regenerateDMR(data + 2U);
             if (m_verbose) {
-                LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
-                    m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
+                LogMessage(LOG_NET, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(),
+                    m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
             }
         }
         m_slot->m_netBits += 141U;
@@ -902,8 +896,6 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             switch (flco) {
             case FLCO_GROUP:
             case FLCO_PRIVATE:
-                // ::sprintf(text, "DMR Slot %u, Embedded LC", m_slotNo);
-                // Utils::dump(1U, text, data, 9U);
                 break;
             case FLCO_GPS_INFO:
                 if (m_dumpTAData) {

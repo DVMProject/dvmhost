@@ -155,6 +155,75 @@ void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t
 /// <summary>
 ///
 /// </summary>
+/// <param name="title"></param>
+/// <param name="data"></param>
+/// <param name="length"></param>
+void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t length)
+{
+    assert(data != NULL);
+
+    ::Log(2U, "SYMBOLS", "%s", title.c_str());
+
+    uint32_t offset = 0U;
+    uint32_t count = 0U;
+
+    std::string microslotHeader;
+    for (unsigned j = 0; j < 2; j++) {
+        char temp[27U];
+        ::sprintf(temp, "_____________%u____________", j);
+        microslotHeader += temp;
+
+        ::sprintf(temp, "    ");
+        microslotHeader += temp;
+    }
+
+    ::Log(2U, "SYMBOLS", "MCR: % s\r\n", microslotHeader.c_str());
+
+    uint32_t bufLen = length;
+    while (bufLen > 0U) {
+        std::string output;
+
+        uint32_t bytes = (bufLen > 18U) ? 18U : bufLen;
+
+        uint32_t symOffset = offset;
+
+        // iterate through bytes in groups of 2
+        for (unsigned j = 0; j < 2U; j++) {
+            if (symOffset + 1 > length) {
+                break;
+            }
+
+            for (unsigned i = 0U; i < 9U; i++) {
+                if (symOffset + i > length) {
+                    break;
+                }
+
+                char temp[10U];
+                ::sprintf(temp, "%02X ", data[symOffset + i]);
+                output += temp;
+            }
+
+            char temp[10U];
+            ::sprintf(temp, "   ");
+            output += temp;
+            symOffset += 9;
+        }
+
+        ::Log(2U, "SYMBOLS", "%03u:  %s\r\n", count, output.c_str());
+
+        offset += 18U;
+        count += 2U;
+
+        if (bufLen >= 18U)
+            bufLen -= 18U;
+        else
+            bufLen = 0U;
+    }
+}
+
+/// <summary>
+///
+/// </summary>
 /// <param name="byte"></param>
 /// <param name="bits"></param>
 void Utils::byteToBitsBE(uint8_t byte, bool* bits)

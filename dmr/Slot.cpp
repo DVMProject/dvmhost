@@ -168,8 +168,6 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
-    // Utils::dump(2U, "!!! *RX DMR Raw", data, len);
-
     if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
             ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
@@ -252,7 +250,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     }
 
     if ((dataSync || voiceSync) && m_debug) {
-        Utils::dump(1U, "!!! *RX DMR Modem Frame", data, len);
+        Utils::symbols("!!! *Rx DMR", data + 2U, len - 2U);
     }
 
     if ((dataSync || voiceSync) && m_rfState != RS_RF_LISTENING)
@@ -546,6 +544,10 @@ void Slot::writeQueueRF(const uint8_t *data)
         return;
     }
 
+    if (m_debug) {
+        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
+    }
+
     m_queue.addData(&len, 1U);
     m_queue.addData(data, len);
 }
@@ -564,6 +566,10 @@ void Slot::writeQueueNet(const uint8_t *data)
     if (space < (len + 1U)) {
         LogError(LOG_DMR, "Slot %u, overflow in the DMR slot RF queue", m_slotNo);
         return;
+    }
+
+    if (m_debug) {
+        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
     }
 
     m_queue.addData(&len, 1U);

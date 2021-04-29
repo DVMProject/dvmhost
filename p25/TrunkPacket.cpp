@@ -1554,8 +1554,8 @@ void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
         m_p25->writeQueueRF(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
     }
 
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_TDULC", data + 2U, P25_TDULC_FRAME_LENGTH_BYTES);
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_netTDULC.getLCO(), m_netTDULC.getSrcId());
     }
 }
 
@@ -1660,10 +1660,6 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
 
         m_p25->writeQueueRF(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
     }
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Frame - (SBF) P25_DUID_TSDU", data + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
-    }
 }
 
 /// <summary>
@@ -1754,10 +1750,6 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         }
 
         m_p25->writeQueueRF(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
-
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX P25 Frame - (MBF) P25_DUID_TSDU", data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
-        }
 
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
@@ -2458,10 +2450,6 @@ void TrunkPacket::writeNet_TDULC()
         LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_netTDULC.getLCO(), m_netTDULC.getSrcId());
     }
 
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_TDULC", buffer + 2U, P25_TDULC_FRAME_LENGTH_BYTES);
-    }
-
     if (m_p25->m_voice->m_netFrames > 0) {
         ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss", 
             float(m_p25->m_voice->m_netFrames) / 50.0F, (m_p25->m_voice->m_netLost * 100U) / m_p25->m_voice->m_netFrames);
@@ -2508,10 +2496,6 @@ void TrunkPacket::writeNet_TSDU()
     m_p25->setBusyBits(buffer + 2U, P25_SS0_START, true, true);
 
     m_p25->writeQueueNet(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_TSDU", buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
-    }
 
     if (m_network != NULL)
         m_network->resetP25();

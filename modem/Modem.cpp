@@ -432,8 +432,9 @@ void Modem::clock(uint32_t ms)
         /** Digital Mobile Radio */
         case CMD_DMR_DATA1:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_DMR_DATA1 double length?; len = %u", m_length);
                 break;
@@ -454,8 +455,9 @@ void Modem::clock(uint32_t ms)
 
         case CMD_DMR_DATA2:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_DMR_DATA2 double length?; len = %u", m_length);
                 break;
@@ -476,8 +478,9 @@ void Modem::clock(uint32_t ms)
 
         case CMD_DMR_LOST1:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_DMR_LOST1 double length?; len = %u", m_length);
                 break;
@@ -493,8 +496,9 @@ void Modem::clock(uint32_t ms)
 
         case CMD_DMR_LOST2:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_DMR_LOST2 double length?; len = %u", m_length);
                 break;
@@ -511,8 +515,9 @@ void Modem::clock(uint32_t ms)
         /** Project 25 */
         case CMD_P25_DATA:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_P25_DATA double length?; len = %u", m_length);
                 break;
@@ -530,8 +535,9 @@ void Modem::clock(uint32_t ms)
 
         case CMD_P25_LOST:
         {
-            if (m_trace)
-                Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
+            //if (m_trace)
+            //    Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
+
             if (m_rspDoubleLength) {
                 LogError(LOG_MODEM, "CMD_P25_LOST double length?; len = %u", m_length);
                 break;
@@ -548,8 +554,8 @@ void Modem::clock(uint32_t ms)
         /** General */
         case CMD_GET_STATUS:
         {
-            // if (m_trace)
-            //    Utils::dump(1U, "Get Status", m_buffer, m_length);
+            //if (m_trace)
+            //   Utils::dump(1U, "Get Status", m_buffer, m_length);
 
             m_modemState = (DVM_STATE)m_buffer[4U];
 
@@ -674,8 +680,8 @@ void Modem::clock(uint32_t ms)
         m_txDMRData1.getData(&len, 1U);
         m_txDMRData1.getData(m_buffer, len);
 
-        if (m_trace)
-            Utils::dump(1U, "TX DMR Data 1", m_buffer, len);
+        //if (m_trace)
+        //    Utils::dump(1U, "TX DMR Data 1", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -692,8 +698,8 @@ void Modem::clock(uint32_t ms)
         m_txDMRData2.getData(&len, 1U);
         m_txDMRData2.getData(m_buffer, len);
 
-        if (m_trace)
-            Utils::dump(1U, "TX DMR Data 2", m_buffer, len);
+        //if (m_trace)
+        //    Utils::dump(1U, "TX DMR Data 2", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -710,9 +716,8 @@ void Modem::clock(uint32_t ms)
         m_txP25Data.getData(&len, 1U);
         m_txP25Data.getData(m_buffer, len);
 
-        if (m_trace) {
-            Utils::dump(1U, "TX P25 Data", m_buffer, len);
-        }
+        //if (m_trace)
+        //    Utils::dump(1U, "TX P25 Data", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -1198,9 +1203,8 @@ bool Modem::sendCWId(const std::string& callsign)
     for (uint32_t i = 0U; i < length; i++)
         buffer[i + 3U] = callsign.at(i);
 
-    if (m_trace) {
-        Utils::dump(1U, "CW ID Data", buffer, length + 3U);
-    }
+    //if (m_trace)
+    //    Utils::dump(1U, "CW ID Data", buffer, length + 3U);
 
     return write(buffer, length + 3U) == int(length + 3U);
 }

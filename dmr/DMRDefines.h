@@ -33,6 +33,17 @@
 
 #include "Defines.h"
 
+// Data Type ID String(s)
+#define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
+#define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
+#define DMR_DT_RATE_12_DATA "DMR_DT_RATE_12_DATA (1/2-rate Data)"
+#define DMR_DT_RATE_34_DATA "DMR_DT_RATE_34_DATA (3/4-rate Data)"
+#define DMR_DT_RATE_1_DATA "DMR_DT_RATE_1_DATA (1-rate Data)"
+#define DMR_DT_VOICE_LC_HEADER "DMR_DT_VOICE_LC_HEADER (Voice Header with Link Control)"
+#define DMR_DT_VOICE_PI_HEADER "DMR_DT_VOICE_PI_HEADER (Voice Header with Privacy Indicator)"
+#define DMR_DT_VOICE_SYNC "DMR_DT_VOICE_SYNC (Voice Data with Sync)"
+#define DMR_DT_VOICE "DMR_DT_VOICE (Voice Data)"
+
 namespace dmr
 {
     // ---------------------------------------------------------------------------

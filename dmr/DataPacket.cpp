@@ -124,8 +124,8 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             }
         }
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Frame - DT_TERMINATOR_WITH_LC", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId());
         }
 
         if (m_slot->m_rssi != 0U) {
@@ -207,8 +207,9 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
         }
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Frame - DT_DATA_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dstId = %u, srcId = %u, group = %u, blocks = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getSrcId(),
+                m_slot->m_rfLC->getFLCO() == FLCO_GROUP, dataHeader.getBlocks());
         }
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
@@ -256,7 +257,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             }
             else {
                 LogWarning(LOG_RF, "DMR Slot %u, DT_RATE_34_DATA, unfixable RF rate 3/4 data", m_slot->m_slotNo);
-                Utils::dump(1U, "Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
+                Utils::dump(1U, "Unfixable PDU Data", data + 2U, DMR_FRAME_LENGTH_BYTES);
             }
 
             m_pduDataOffset += 18U;
@@ -288,8 +289,16 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             m_slot->writeEndRF();
         }
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Frame - DT_RATE_12/34_DATA", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            if (dataType == DT_RATE_12_DATA) {
+                LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_rfFrames + 1);
+            }
+            else if (dataType == DT_RATE_34_DATA) {
+                LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_rfFrames + 1);
+            }
+            else {
+                LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", block = %u", m_slot->m_rfFrames + 1);
+            }
         }
 
         return true;
@@ -340,8 +349,8 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             }
         }
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_TERMINATOR_WITH_LC", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_netLC->getDstId());
         }
 
         // We've received the voice header and terminator haven't we?
@@ -396,8 +405,9 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
         m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Network Frame - DT_DATA_HEADER", data + 2U, DMR_FRAME_LENGTH_BYTES);
+        if (m_verbose) {
+            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dstId = %u, srcId = %u, group = %u, blocks = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getSrcId(),
+                m_slot->m_rfLC->getFLCO() == FLCO_GROUP, dataHeader.getBlocks());
         }
 
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
@@ -468,8 +478,16 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
             m_slot->writeQueueNet(data);
 
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX DMR Network Frame - DT_RATE_12/34_DATA", data + 2U, DMR_FRAME_LENGTH_BYTES);
+            if (m_verbose) {
+                if (dataType == DT_RATE_12_DATA) {
+                    LogMessage(LOG_RF, DMR_DT_RATE_12_DATA ", block = %u", m_slot->m_netFrames + 1);
+                }
+                else if (dataType == DT_RATE_34_DATA) {
+                    LogMessage(LOG_RF, DMR_DT_RATE_34_DATA ", block = %u", m_slot->m_netFrames + 1);
+                }
+                else {
+                    LogMessage(LOG_RF, DMR_DT_RATE_1_DATA ", block = %u", m_slot->m_netFrames + 1);
+                }
             }
         }
 

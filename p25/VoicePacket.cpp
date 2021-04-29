@@ -409,10 +409,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
             }
-
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_HDU", buffer + 2U, P25_HDU_FRAME_LENGTH_BYTES);
-            }
         }
 
         if (m_p25->m_rfState == RS_RF_AUDIO) {
@@ -526,10 +522,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
             }
 
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_LDU1", data + 2U, P25_LDU_FRAME_LENGTH_BYTES);
-            }
-
             return true;
         }
     }
@@ -608,10 +600,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)", 
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
-            }
-
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_LDU2", data + 2U, P25_LDU_FRAME_LENGTH_BYTES);
             }
 
             return true;
@@ -1014,10 +1002,6 @@ void VoicePacket::writeNet_TDU()
         LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u", m_netLC.getSrcId());
     }
 
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_TDU", buffer + 2U, P25_TDU_FRAME_LENGTH_BYTES);
-    }
-
     if (m_netFrames > 0) {
         ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss", 
             float(m_netFrames) / 50.0F, (m_netLost * 100U) / m_netFrames);
@@ -1157,7 +1141,9 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
         ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
         ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
 
-        // Utils::dump(1U, "HDU Network MI", mi, P25_MI_LENGTH_BYTES);
+        if (m_verbose && m_debug) {
+            Utils::dump(1U, "Network HDU MI", mi, P25_MI_LENGTH_BYTES);
+        }
 
         m_netLC.setMI(mi);
         m_rfLC.setMI(mi);
@@ -1259,10 +1245,6 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
             if (m_verbose) {
                 LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
             }
-
-            if (m_debug) {
-                Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_HDU", buffer + 2U, P25_HDU_FRAME_LENGTH_BYTES);
-            }
         }
         else {
             if (m_verbose) {
@@ -1334,10 +1316,6 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
             m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(), loss);
     }
 
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_LDU1", buffer + 2U, P25_LDU_FRAME_LENGTH_BYTES);
-    }
-
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
 
     m_netFrames += 9U;
@@ -1383,7 +1361,9 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
     ::memcpy(mi + 3U, m_netLDU2 + 76U, 3U);
     ::memcpy(mi + 6U, m_netLDU2 + 101U, 3U);
 
-    // Utils::dump(1U, "LDU2 Network MI", mi, P25_MI_LENGTH_BYTES);
+    if (m_verbose && m_debug) {
+        Utils::dump(1U, "Network LDU2 MI", mi, P25_MI_LENGTH_BYTES);
+    }
 
     m_netLC.setMI(mi);
     m_netLC.setAlgId(algId);
@@ -1439,10 +1419,6 @@ void VoicePacket::writeNet_LDU2(const lc::LC& control, const data::LowSpeedData&
         }
 
         LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X, %u%% packet loss", m_netLC.getAlgId(), m_netLC.getKId(), loss);
-    }
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Network Frame - P25_DUID_LDU2", buffer + 2U, P25_LDU_FRAME_LENGTH_BYTES);
     }
 
     ::memset(m_netLDU2, 0x00U, 9U * 25U);

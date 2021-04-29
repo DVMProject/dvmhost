@@ -57,6 +57,9 @@ public:
     static void dump(int level, const std::string& title, const bool* bits, uint32_t length);
 
     /// <summary></summary>
+    static void symbols(const std::string& title, const uint8_t* data, uint32_t length);
+
+    /// <summary></summary>
     static void byteToBitsBE(uint8_t byte, bool* bits);
     /// <summary></summary>
     static void byteToBitsLE(uint8_t byte, bool* bits);

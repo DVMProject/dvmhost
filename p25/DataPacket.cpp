@@ -455,10 +455,6 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
                                 m_p25->writeRF_Nulls();
                             }
 
-                            if (m_debug) {
-                                Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_PDU", pdu + 2U, newByteLength);
-                            }
-
                             ::ActivityLog("P25", true, "end of RF data transmission");
 
                             m_netDataHeader.reset();
@@ -664,10 +660,6 @@ void DataPacket::writeRF_PDU()
     if (!m_p25->m_ccRunning) {
         m_p25->writeRF_Nulls();
     }
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_PDU", pdu + 2U, newByteLength);
-    }
 }
 
 /// <summary>
@@ -760,10 +752,6 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
         pdu[1U] = 0x00U;
         m_p25->writeQueueRF(pdu, newByteLength + 2U);
     }
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_PDU", pdu + 2U, newByteLength);
-    }
 }
 
 /// <summary>
@@ -822,10 +810,6 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
         pdu[0U] = TAG_DATA;
         pdu[1U] = 0x00U;
         m_p25->writeQueueRF(pdu, newByteLength + 2U);
-    }
-
-    if (m_debug) {
-        Utils::dump(2U, "!!! *TX P25 Frame - P25_DUID_PDU", pdu + 2U, newByteLength);
     }
 }
 

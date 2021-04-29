@@ -212,10 +212,6 @@ bool ControlPacket::process(uint8_t* data, uint32_t len)
             }
         }
 
-        if (m_debug) {
-            Utils::dump(2U, "!!! *TX DMR Frame - DT_CSBK", data + 2U, DMR_FRAME_LENGTH_BYTES);
-        }
-
         return true;
     }
 

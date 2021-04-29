@@ -285,8 +285,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
-    // Utils::dump(2U, "!!! *RX P25 Raw", data, len);
-
     bool sync = data[1U] == 0x01U;
 
     if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
@@ -373,7 +371,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     }
 
     if (sync && m_debug) {
-        Utils::dump(2U, "!!! *RX P25 Frame", data, len);
+        Utils::symbols("!!! *Rx P25", data + 2U, len - 2U);
     }
 
     // Decode the NID
@@ -672,6 +670,10 @@ void Control::writeQueueRF(const uint8_t* data, uint32_t length)
         return;
     }
 
+    if (m_debug) {
+        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
+    }
+
     uint8_t len = length;
     m_queue.addData(&len, 1U);
 
@@ -694,6 +696,10 @@ void Control::writeQueueNet(const uint8_t* data, uint32_t length)
     if (space < (length + 1U)) {
         LogError(LOG_P25, "network overflow in the P25 RF queue");
         return;
+    }
+
+    if (m_debug) {
+        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
     }
 
     uint8_t len = length;
@@ -729,7 +735,7 @@ void Control::processNetwork()
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *RX P25 Network Frame - Data Bytes", data, length);
+        Utils::dump(2U, "!!! *P25 Network Frame", data, length);
     }
 
     switch (duid) {
