@@ -249,6 +249,9 @@ namespace p25
     const uint8_t   PDU_TYPE_SNDCP_RF_UNCONFIRMED = 0x04U;
     const uint8_t   PDU_TYPE_SNDCP_RF_CONFIRMED = 0x05U;
 
+    const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
+    const uint8_t   LC_SVC_OPT_ENCRYPTION = 0x40U;
+
     // LDUx/TDULC Link Control Opcode(s)
     const uint8_t   LC_GROUP = 0x00U;                   // GRP VCH USER - Group Voice Channel User
     const uint8_t   LC_GROUP_UPDT = 0x02U;              // GRP VCH UPDT - Group Voice Channel Update

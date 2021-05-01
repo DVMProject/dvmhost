@@ -52,8 +52,12 @@ LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
     m_FID(0U),
     m_srcId(srcId),
     m_dstId(dstId),
-    m_R(false),
-    m_options(0U)
+    m_emergency(false),
+    m_encrypted(false),
+    m_broadcast(false),
+    m_ovcm(false),
+    m_priority(CALL_PRIORITY_2),
+    m_R(false)
 {
     /* stub */
 }
@@ -67,8 +71,12 @@ LC::LC(const uint8_t* bytes) :
     m_FID(0U),
     m_srcId(0U),
     m_dstId(0U),
-    m_R(false),
-    m_options(0U)
+    m_emergency(false),
+    m_encrypted(false),
+    m_broadcast(false),
+    m_ovcm(false),
+    m_priority(CALL_PRIORITY_2),
+    m_R(false)
 {
     assert(bytes != NULL);
 
@@ -79,10 +87,14 @@ LC::LC(const uint8_t* bytes) :
 
     m_FID = bytes[1U];
 
-    m_options = bytes[2U];
+    m_emergency = (bytes[2U] & 0x80U) == 0x80U;                                 // Emergency Flag
+    m_encrypted = (bytes[2U] & 0x40U) == 0x40U;                                 // Encryption Flag
+    m_broadcast = (bytes[2U] & 0x08U) == 0x08U;                                 // Broadcast Flag
+    m_ovcm = (bytes[2U] & 0x04U) == 0x04U;                                      // OVCM Flag
+    m_priority = (bytes[2U] & 0x03U);                                           // Priority
 
-    m_dstId = bytes[3U] << 16 | bytes[4U] << 8 | bytes[5U];
-    m_srcId = bytes[6U] << 16 | bytes[7U] << 8 | bytes[8U];
+    m_dstId = bytes[3U] << 16 | bytes[4U] << 8 | bytes[5U];                     // Destination Address
+    m_srcId = bytes[6U] << 16 | bytes[7U] << 8 | bytes[8U];                     // Source Address
 }
 /// <summary>
 /// Initializes a new instance of the LC class.
@@ -94,8 +106,12 @@ LC::LC(const bool* bits) :
     m_FID(0U),
     m_srcId(0U),
     m_dstId(0U),
-    m_R(false),
-    m_options(0U)
+    m_emergency(false),
+    m_encrypted(false),
+    m_broadcast(false),
+    m_ovcm(false),
+    m_priority(CALL_PRIORITY_2),
+    m_R(false)
 {
     assert(bits != NULL);
 
@@ -110,7 +126,12 @@ LC::LC(const bool* bits) :
     m_FID = temp2;
 
     Utils::bitsToByteBE(bits + 16U, temp3);
-    m_options = temp3;
+
+    m_emergency = (temp3 & 0x80U) == 0x80U;                                     // Emergency Flag
+    m_encrypted = (temp3 & 0x40U) == 0x40U;                                     // Encryption Flag
+    m_broadcast = (temp3 & 0x08U) == 0x08U;                                     // Broadcast Flag
+    m_ovcm = (temp3 & 0x04U) == 0x04U;                                          // OVCM Flag
+    m_priority = (temp3 & 0x03U);                                               // Priority
 
     uint8_t d1, d2, d3;
     Utils::bitsToByteBE(bits + 24U, d1);
@@ -122,8 +143,8 @@ LC::LC(const bool* bits) :
     Utils::bitsToByteBE(bits + 56U, s2);
     Utils::bitsToByteBE(bits + 64U, s3);
 
-    m_srcId = s1 << 16 | s2 << 8 | s3;
-    m_dstId = d1 << 16 | d2 << 8 | d3;
+    m_srcId = s1 << 16 | s2 << 8 | s3;                                          // Source Address
+    m_dstId = d1 << 16 | d2 << 8 | d3;                                          // Destination Address
 }
 /// <summary>
 /// Initializes a new instance of the LC class.
@@ -134,8 +155,12 @@ LC::LC() :
     m_FID(0U),
     m_srcId(0U),
     m_dstId(0U),
-    m_R(false),
-    m_options(0U)
+    m_emergency(false),
+    m_encrypted(false),
+    m_broadcast(false),
+    m_ovcm(false),
+    m_priority(CALL_PRIORITY_2),
+    m_R(false)
 {
     /* stub */
 }
@@ -166,15 +191,19 @@ void LC::getData(uint8_t* bytes) const
 
     bytes[1U] = m_FID;
 
-    bytes[2U] = m_options;
+    bytes[2U] = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
+        (m_encrypted ? 0x40U : 0x00U) +                                         // Encrypted Flag
+        (m_broadcast ? 0x08U : 0x00U) +                                         // Broadcast Flag
+        (m_ovcm ? 0x04U : 0x00U) +                                              // OVCM Flag
+        (m_priority & 0x03U);                                                   // Priority
 
-    bytes[3U] = m_dstId >> 16;
-    bytes[4U] = m_dstId >> 8;
-    bytes[5U] = m_dstId >> 0;
+    bytes[3U] = m_dstId >> 16;                                                  // Destination Address
+    bytes[4U] = m_dstId >> 8;                                                   // ..
+    bytes[5U] = m_dstId >> 0;                                                   // ..
 
-    bytes[6U] = m_srcId >> 16;
-    bytes[7U] = m_srcId >> 8;
-    bytes[8U] = m_srcId >> 0;
+    bytes[6U] = m_srcId >> 16;                                                  // Source Address
+    bytes[7U] = m_srcId >> 8;                                                   // ..
+    bytes[8U] = m_srcId >> 0;                                                   // ..
 }
 
 /// <summary>
@@ -197,25 +226,4 @@ void LC::getData(bool* bits) const
     Utils::byteToBitsBE(bytes[6U], bits + 48U);
     Utils::byteToBitsBE(bytes[7U], bits + 56U);
     Utils::byteToBitsBE(bytes[8U], bits + 64U);
-}
-
-/// <summary>
-///
-/// </summary>
-/// <returns></returns>
-bool LC::getOVCM() const
-{
-    return (m_options & 0x04U) == 0x04U;
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="ovcm"></param>
-void LC::setOVCM(bool ovcm)
-{
-    if (ovcm)
-        m_options |= 0x04U;
-    else
-        m_options &= 0xFBU;
 }

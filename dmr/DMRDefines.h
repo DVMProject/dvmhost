@@ -134,6 +134,16 @@ namespace dmr
     const uint8_t   FID_ETSI = 0x00U;                       // ETSI Standard Feature Set
     const uint8_t   FID_DMRA = 0x10U;                       //
 
+    const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
+    const uint8_t   LC_SVC_OPT_PRIVACY = 0x40U;
+    const uint8_t   LC_SVC_OPT_BCAST = 0x08U;
+    const uint8_t   LC_SVC_OPT_OVCM = 0x04U;
+
+    const uint8_t   CALL_PRIORITY_NONE = 0x00U;
+    const uint8_t   CALL_PRIORITY_1 = 0x01U;
+    const uint8_t   CALL_PRIORITY_2 = 0x02U;
+    const uint8_t   CALL_PRIORITY_3 = 0x03U;
+
     const uint32_t  DMR_EXT_FNCT_CHECK = 0x0000U;           // Radio Check
     const uint32_t  DMR_EXT_FNCT_UNINHIBIT = 0x007EU;       // Radio Uninhibit
     const uint32_t  DMR_EXT_FNCT_INHIBIT = 0x007FU;         // Radio Inhibit

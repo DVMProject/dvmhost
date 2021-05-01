@@ -60,10 +60,6 @@ namespace dmr
             /// <summary>Gets LC data as bits.</summary>
             void getData(bool* bits) const;
 
-            /// <summary>Gets the OVCM flag.</summary>
-            bool getOVCM() const;
-            /// <summary>Sets the OVCM flag.</summary>
-            void setOVCM(bool ovcm);
         public:
             /// <summary>Flag indicating whether link protection is enabled.</summary>
             __PROPERTY(bool, PF, PF);
@@ -79,10 +75,20 @@ namespace dmr
             /// <summary>Destination ID.</summary>
             __PROPERTY(uint32_t, dstId, DstId);
 
+            /** Service Options */
+            /// <summary>Flag indicating the emergency bits are set.</summary>
+            __PROPERTY(bool, emergency, Emergency);
+            /// <summary>Flag indicating that encryption is enabled.</summary>
+            __PROPERTY(bool, encrypted, Encrypted);
+            /// <summary>Priority level for the traffic.</summary>
+            __PROPERTY(uint8_t, priority, Priority);
+            /// <summary>Flag indicating broadcast operation.</summary>
+            __PROPERTY(bool, broadcast, Broadcast);
+            /// <summary>Flag indicating OVCM operation.</summary>
+            __PROPERTY(bool, ovcm, OVCM);
+
         private:
             bool m_R;
-
-            uint8_t m_options;
         };
     } // namespace lc
 } // namespace dmr

@@ -1555,7 +1555,7 @@ void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
     }
 
     //if (m_verbose) {
-    //    LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_netTDULC.getLCO(), m_netTDULC.getSrcId());
+    //    LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_rfTDULC.getLCO(), m_rfTDULC.getSrcId());
     //}
 }
 
