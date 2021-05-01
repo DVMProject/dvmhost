@@ -25,6 +25,7 @@ OBJECTS = \
 		dmr/lc/CSBK.o \
 		dmr/lc/FullLC.o \
 		dmr/lc/LC.o \
+		dmr/lc/PrivacyLC.o \
 		dmr/lc/ShortLC.o \
 		dmr/Control.o \
 		dmr/ControlPacket.o \

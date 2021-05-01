@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2020-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -49,7 +50,7 @@ using namespace dmr;
 LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
     m_PF(false),
     m_FLCO(flco),
-    m_FID(0U),
+    m_FID(FID_ETSI),
     m_srcId(srcId),
     m_dstId(dstId),
     m_emergency(false),
@@ -68,7 +69,7 @@ LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
 LC::LC(const uint8_t* bytes) :
     m_PF(false),
     m_FLCO(FLCO_GROUP),
-    m_FID(0U),
+    m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
     m_emergency(false),
@@ -103,7 +104,7 @@ LC::LC(const uint8_t* bytes) :
 LC::LC(const bool* bits) :
     m_PF(false),
     m_FLCO(FLCO_GROUP),
-    m_FID(0U),
+    m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
     m_emergency(false),
@@ -152,7 +153,7 @@ LC::LC(const bool* bits) :
 LC::LC() :
     m_PF(false),
     m_FLCO(FLCO_GROUP),
-    m_FID(0U),
+    m_FID(FID_ETSI),
     m_srcId(0U),
     m_dstId(0U),
     m_emergency(false),

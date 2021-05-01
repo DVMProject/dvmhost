@@ -131,6 +131,8 @@ namespace dmr
     const uint32_t  DMR_MAX_PDU_COUNT = 32U;
     const uint32_t  DMR_MAX_PDU_LENGTH = 512U;
 
+    const uint32_t  DMR_MI_LENGTH_BYTES = 4U;               // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
+
     const uint8_t   FID_ETSI = 0x00U;                       // ETSI Standard Feature Set
     const uint8_t   FID_DMRA = 0x10U;                       //
 

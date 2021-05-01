@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -113,10 +113,12 @@ namespace dmr
         uint32_t m_netLastDstId;
 
         lc::LC* m_rfLC;
+        lc::PrivacyLC* m_rfPrivacyLC;
 
         uint8_t m_rfSeqNo;
 
         lc::LC* m_netLC;
+        lc::PrivacyLC* m_netPrivacyLC;
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;

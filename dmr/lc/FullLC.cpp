@@ -13,6 +13,7 @@
 /*
 *   Copyright (C) 2012 by Ian Wraith
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2021 Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -32,6 +33,7 @@
 #include "dmr/DMRDefines.h"
 #include "dmr/lc/FullLC.h"
 #include "edac/RS129.h"
+#include "edac/CRC.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -134,6 +136,48 @@ void FullLC::encode(const LC& lc, uint8_t* data, uint8_t type)
             LogError(LOG_DMR, "Unsupported LC type, type = %d", int(type));
             return;
     }
+
+    // encode BPTC (196,96) FEC
+    m_bptc.encode(lcData, data);
+}
+
+/// <summary>
+/// Decode DMR privacy control data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="type"></param>
+/// <returns></returns>
+PrivacyLC* FullLC::decodePI(const uint8_t* data)
+{
+    assert(data != NULL);
+
+    // decode BPTC (196,96) FEC
+    uint8_t lcData[DMR_LC_HEADER_LENGTH_BYTES];
+    m_bptc.decode(data, lcData);
+
+    // check CRC-CCITT 16,2
+//    if (!edac::CRC::checkCCITT162(lcData, DMR_LC_HEADER_LENGTH_BYTES))
+//        return NULL;
+
+    return new PrivacyLC(lcData);
+}
+
+/// <summary>
+/// Encode DMR privacy control data.
+/// </summary>
+/// <param name="lc"></param>
+/// <param name="data"></param>
+/// <param name="type"></param>
+void FullLC::encodePI(const PrivacyLC& lc, uint8_t* data)
+{
+    assert(data != NULL);
+
+    uint8_t lcData[DMR_LC_HEADER_LENGTH_BYTES];
+    lc.getData(lcData);
+
+    // encode CRC-CCITT 16,2
+//    uint8_t parity[2U];
+//    edac::CRC::addCCITT162(lcData, 9U);
 
     // encode BPTC (196,96) FEC
     m_bptc.encode(lcData, data);

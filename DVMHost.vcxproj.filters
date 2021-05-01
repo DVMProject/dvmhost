@@ -350,6 +350,9 @@
     <ClInclude Include="modem\port\UDPPort.h">
       <Filter>Header Files\modem\port</Filter>
     </ClInclude>
+    <ClInclude Include="dmr\lc\PrivacyLC.h">
+      <Filter>Header Files\dmr\lc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -561,6 +564,9 @@
     </ClCompile>
     <ClCompile Include="modem\port\ISerialPort.cpp">
       <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="dmr\lc\PrivacyLC.cpp">
+      <Filter>Source Files\dmr\lc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

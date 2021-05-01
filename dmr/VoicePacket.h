@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@
 #include "dmr/data/Data.h"
 #include "dmr/data/EmbeddedData.h"
 #include "dmr/lc/LC.h"
+#include "dmr/lc/PrivacyLC.h"
 #include "dmr/Slot.h"
 #include "edac/AMBEFEC.h"
 #include "network/BaseNetwork.h"

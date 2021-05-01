@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2021 Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -32,6 +33,7 @@
 
 #include "Defines.h"
 #include "dmr/lc/LC.h"
+#include "dmr/lc/PrivacyLC.h"
 #include "dmr/SlotType.h"
 #include "edac/BPTC19696.h"
 
@@ -55,6 +57,11 @@ namespace dmr
             LC* decode(const uint8_t* data, uint8_t type);
             /// <summary>Encode DMR full-link control data.</summary>
             void encode(const LC& lc, uint8_t* data, uint8_t type);
+
+            /// <summary>Decode DMR privacy control data.</summary>
+            PrivacyLC* decodePI(const uint8_t* data);
+            /// <summary>Encode DMR privacy control data.</summary>
+            void encodePI(const PrivacyLC& lc, uint8_t* data);
 
         private:
             edac::BPTC19696 m_bptc;

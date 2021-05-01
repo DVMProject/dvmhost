@@ -183,8 +183,6 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
     while (bufLen > 0U) {
         std::string output;
 
-        uint32_t bytes = (bufLen > 18U) ? 18U : bufLen;
-
         uint32_t symOffset = offset;
 
         // iterate through bytes in groups of 2

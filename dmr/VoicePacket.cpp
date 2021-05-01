@@ -204,6 +204,14 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             if (m_slot->m_rfState != RS_RF_AUDIO)
                 return false;
 
+            lc::FullLC fullLC;
+            lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
+/*
+            if (lc == NULL)
+                return false;
+*/
+            m_slot->m_rfPrivacyLC = lc;
+
             // Regenerate the Slot Type
             slotType.encode(data + 2U);
 
@@ -225,7 +233,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_slot->writeNetworkRF(data, DT_VOICE_PI_HEADER);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u", m_slot->m_slotNo);
+                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
             }
 
             return true;
@@ -729,6 +737,17 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO_GROUP ? "TG " : "", dstId);
         }
 
+        lc::FullLC fullLC;
+        lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
+/*
+        if (lc == NULL) {
+            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
+            lc = new lc::PrivacyLC();
+            lc->setDstId(dmrData.getDstId());
+        }
+*/
+        m_slot->m_netPrivacyLC = lc;
+
         // Regenerate the Slot Type
         SlotType slotType;
         slotType.setColorCode(m_slot->m_colorCode);
@@ -750,7 +769,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         m_slot->writeQueueNet(data);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u", m_slot->m_slotNo);
+            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
         }
     }
     else if (dataType == DT_VOICE_SYNC) {
