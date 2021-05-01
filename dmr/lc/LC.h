@@ -80,12 +80,12 @@ namespace dmr
             __PROPERTY(bool, emergency, Emergency);
             /// <summary>Flag indicating that encryption is enabled.</summary>
             __PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Priority level for the traffic.</summary>
-            __PROPERTY(uint8_t, priority, Priority);
             /// <summary>Flag indicating broadcast operation.</summary>
             __PROPERTY(bool, broadcast, Broadcast);
             /// <summary>Flag indicating OVCM operation.</summary>
             __PROPERTY(bool, ovcm, OVCM);
+            /// <summary>Priority level for the traffic.</summary>
+            __PROPERTY(uint8_t, priority, Priority);
 
         private:
             bool m_R;
