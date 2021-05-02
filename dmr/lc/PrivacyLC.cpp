@@ -127,7 +127,7 @@ PrivacyLC::PrivacyLC() :
     m_kId(0U),
     m_mi(NULL)
 {
-    /* stub */
+    m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -135,7 +135,7 @@ PrivacyLC::PrivacyLC() :
 /// </summary>
 PrivacyLC::~PrivacyLC()
 {
-    /* stub */
+    delete m_mi;
 }
 
 /// <summary>

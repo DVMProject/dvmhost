@@ -177,7 +177,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
         microslotHeader += temp;
     }
 
-    ::Log(2U, "SYMBOLS", "MCR: % s\r\n", microslotHeader.c_str());
+    ::Log(2U, "SYMBOLS", "MCR: % s", microslotHeader.c_str());
 
     uint32_t bufLen = length;
     while (bufLen > 0U) {
@@ -207,7 +207,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
             symOffset += 9;
         }
 
-        ::Log(2U, "SYMBOLS", "%03u:  %s\r\n", count, output.c_str());
+        ::Log(2U, "SYMBOLS", "%03u:  %s", count, output.c_str());
 
         offset += 18U;
         count += 2U;

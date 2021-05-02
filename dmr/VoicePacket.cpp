@@ -206,23 +206,22 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             lc::FullLC fullLC;
             lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
-/*
-            if (lc == NULL)
-                return false;
-*/
+            if (lc == NULL) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
+                lc = new lc::PrivacyLC();
+                lc->setDstId(m_slot->m_rfLC->getDstId());
+            }
+
             m_slot->m_rfPrivacyLC = lc;
+
+            // Regenerate the LC data
+            fullLC.encodePI(*m_slot->m_rfPrivacyLC, data + 2U);
 
             // Regenerate the Slot Type
             slotType.encode(data + 2U);
 
             // Convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-            // Regenerate the payload and the BPTC (196,96) FEC
-            edac::BPTC19696 bptc;
-            uint8_t payload[12U];
-            bptc.decode(data + 2U, payload);
-            bptc.encode(payload, data + 2U);
 
             data[0U] = TAG_DATA;
             data[1U] = 0x00U;
@@ -739,14 +738,16 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
         lc::FullLC fullLC;
         lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
-/*
         if (lc == NULL) {
-            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
+            LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
             lc = new lc::PrivacyLC();
             lc->setDstId(dmrData.getDstId());
         }
-*/
+
         m_slot->m_netPrivacyLC = lc;
+
+        // Regenerate the LC data
+        fullLC.encodePI(*m_slot->m_netPrivacyLC, data + 2U);
 
         // Regenerate the Slot Type
         SlotType slotType;
@@ -756,12 +757,6 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-        // Regenerate the payload and the BPTC (196,96) FEC
-        edac::BPTC19696 bptc;
-        uint8_t payload[12U];
-        bptc.decode(data + 2U, payload);
-        bptc.encode(payload, data + 2U);
 
         data[0U] = TAG_DATA;
         data[1U] = 0x00U;

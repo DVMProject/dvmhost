@@ -155,9 +155,19 @@ PrivacyLC* FullLC::decodePI(const uint8_t* data)
     uint8_t lcData[DMR_LC_HEADER_LENGTH_BYTES];
     m_bptc.decode(data, lcData);
 
-    // check CRC-CCITT 16,2
-//    if (!edac::CRC::checkCCITT162(lcData, DMR_LC_HEADER_LENGTH_BYTES))
-//        return NULL;
+    // make sure the CRC-CCITT 16 was actually included (the network tends to zero the CRC)
+    if (lcData[10U] != 0x00U && lcData[11U] != 0x00U) {
+        // validate the CRC-CCITT 16
+        lcData[10U] ^= PI_HEADER_CRC_MASK[0U];
+        lcData[11U] ^= PI_HEADER_CRC_MASK[1U];
+
+        if (!edac::CRC::checkCCITT162(lcData, DMR_LC_HEADER_LENGTH_BYTES))
+            return NULL;
+
+        // restore the checksum
+        lcData[10U] ^= PI_HEADER_CRC_MASK[0U];
+        lcData[11U] ^= PI_HEADER_CRC_MASK[1U];
+    }
 
     return new PrivacyLC(lcData);
 }
@@ -175,9 +185,15 @@ void FullLC::encodePI(const PrivacyLC& lc, uint8_t* data)
     uint8_t lcData[DMR_LC_HEADER_LENGTH_BYTES];
     lc.getData(lcData);
 
-    // encode CRC-CCITT 16,2
-//    uint8_t parity[2U];
-//    edac::CRC::addCCITT162(lcData, 9U);
+    // compute CRC-CCITT 16
+    lcData[10U] ^= PI_HEADER_CRC_MASK[0U];
+    lcData[11U] ^= PI_HEADER_CRC_MASK[1U];
+
+    edac::CRC::addCCITT162(lcData, DMR_LC_HEADER_LENGTH_BYTES);
+
+    // restore the checksum
+    lcData[10U] ^= PI_HEADER_CRC_MASK[0U];
+    lcData[11U] ^= PI_HEADER_CRC_MASK[1U];
 
     // encode BPTC (196,96) FEC
     m_bptc.encode(lcData, data);
