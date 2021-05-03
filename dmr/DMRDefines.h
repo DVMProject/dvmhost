@@ -120,6 +120,15 @@ namespace dmr
     const uint8_t   DMR_SLOT1 = 0x00U;
     const uint8_t   DMR_SLOT2 = 0x80U;
 
+    const uint32_t  DMR_MAX_PDU_COUNT = 32U;
+    const uint32_t  DMR_MAX_PDU_LENGTH = 512U;
+
+    const uint32_t  DMR_MI_LENGTH_BYTES = 4U;               // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
+
+    const uint8_t   DMR_ALOHA_VER_151 = 0x00U;
+    const uint8_t   DMR_CHNULL = 0x00U;
+
+    // PDU Data Formats
     const uint8_t   DPF_UDT = 0x00U;
     const uint8_t   DPF_RESPONSE = 0x01U;
     const uint8_t   DPF_UNCONFIRMED_DATA = 0x02U;
@@ -128,33 +137,42 @@ namespace dmr
     const uint8_t   DPF_DEFINED_RAW = 0x0EU;
     const uint8_t   DPF_PROPRIETARY = 0x0FU;
 
-    const uint32_t  DMR_MAX_PDU_COUNT = 32U;
-    const uint32_t  DMR_MAX_PDU_LENGTH = 512U;
+    // PDU ACK Class
+    const uint8_t   PDU_ACK_CLASS_ACK = 0x00U;
+    const uint8_t   PDU_ACK_CLASS_NACK = 0x01U;
+    const uint8_t   PDU_ACK_CLASS_ACK_RETRY = 0x02U;
 
-    const uint32_t  DMR_MI_LENGTH_BYTES = 4U;               // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
+    // PDU ACK Type(s)
+    const uint8_t   PDU_ACK_TYPE_ACK = 0x01U;
 
+    const uint8_t   PDU_ACK_TYPE_NACK_ILLEGAL = 0x00U;      // Illegal Format
+    const uint8_t   PDU_ACK_TYPE_NACK_PACKET_CRC = 0x01U;   // Packet CRC
+    const uint8_t   PDU_ACK_TYPE_NACK_MEMORY_FULL = 0x02U;  // Memory Full
+    const uint8_t   PDU_ACK_TYPE_NACK_UNDELIVERABLE = 0x04U;// Undeliverable
+
+    // Feature IDs
     const uint8_t   FID_ETSI = 0x00U;                       // ETSI Standard Feature Set
     const uint8_t   FID_DMRA = 0x10U;                       //
 
+    // LC Service Options
     const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
     const uint8_t   LC_SVC_OPT_PRIVACY = 0x40U;
     const uint8_t   LC_SVC_OPT_BCAST = 0x08U;
     const uint8_t   LC_SVC_OPT_OVCM = 0x04U;
 
+    // Call Priorities
     const uint8_t   CALL_PRIORITY_NONE = 0x00U;
     const uint8_t   CALL_PRIORITY_1 = 0x01U;
     const uint8_t   CALL_PRIORITY_2 = 0x02U;
     const uint8_t   CALL_PRIORITY_3 = 0x03U;
 
+    // FID_DMRA Extended Function Opcodes
     const uint32_t  DMR_EXT_FNCT_CHECK = 0x0000U;           // Radio Check
     const uint32_t  DMR_EXT_FNCT_UNINHIBIT = 0x007EU;       // Radio Uninhibit
     const uint32_t  DMR_EXT_FNCT_INHIBIT = 0x007FU;         // Radio Inhibit
     const uint32_t  DMR_EXT_FNCT_CHECK_ACK = 0x0080U;       // Radio Check Ack
     const uint32_t  DMR_EXT_FNCT_UNINHIBIT_ACK = 0x00FEU;   // Radio Uninhibit Ack
     const uint32_t  DMR_EXT_FNCT_INHIBIT_ACK = 0x00FFU;     // Radio Inhibit Ack
-
-    const uint8_t   DMR_ALOHA_VER_151 = 0x00U;
-    const uint8_t   DMR_CHNULL = 0x00U;
 
     // Data Type(s)
     const uint8_t   DT_VOICE_PI_HEADER = 0x00U;

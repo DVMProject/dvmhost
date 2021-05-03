@@ -13,6 +13,7 @@
 /*
 *   Copyright (C) 2012 by Ian Wraith
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
+*   Copyright (C) 2021 Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -57,16 +58,29 @@ const uint8_t UDTF_NMEA = 0x05U;
 /// </summary>
 DataHeader::DataHeader() :
     m_GI(false),
+    m_DPF(DPF_UDT),
+    m_sap(0U),
+    m_fsn(0U),
+    m_Ns(0U),
+    m_padCount(0U),
+    m_F(false),
+    m_S(false),
+    m_dataFormat(0U),
     m_srcId(0U),
     m_dstId(0U),
     m_blocks(0U),
+    m_rspClass(PDU_ACK_CLASS_NACK),
+    m_rspType(PDU_ACK_TYPE_NACK_ILLEGAL),
+    m_rspStatus(0U),
+    m_srcPort(0U),
+    m_dstPort(0U),
     m_data(NULL),
     m_A(false),
-    m_F(false),
-    m_S(false),
-    m_Ns(0U)
+    m_SF(false),
+    m_PF(false),
+    m_UDTO(0U)
 {
-    m_data = new uint8_t[12U];
+    m_data = new uint8_t[DMR_LC_HEADER_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -85,15 +99,29 @@ DataHeader::~DataHeader()
 DataHeader& DataHeader::operator=(const DataHeader& header)
 {
     if (&header != this) {
-        ::memcpy(m_data, header.m_data, 12U);
         m_GI = header.m_GI;
-        m_A = header.m_A;
+        m_DPF = header.m_DPF;
+        m_sap = header.m_sap;
+        m_fsn = header.m_fsn;
+        m_Ns = header.m_Ns;
+        m_padCount = header.m_padCount;
+        m_F = header.m_F;
+        m_S = header.m_S;
+        m_dataFormat = header.m_dataFormat;
         m_srcId = header.m_srcId;
         m_dstId = header.m_dstId;
         m_blocks = header.m_blocks;
-        m_F = header.m_F;
-        m_S = header.m_S;
-        m_Ns = header.m_Ns;
+        m_rspClass = header.m_rspClass;
+        m_rspType = header.m_rspType;
+        m_rspStatus = header.m_rspStatus;
+        m_srcPort = header.m_srcPort;
+        m_dstPort = header.m_dstPort;
+
+        ::memcpy(m_data, header.m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_A = header.m_A;
+        m_SF = header.m_SF;
+        m_PF = header.m_PF;
+        m_UDTO = header.m_UDTO;
     }
 
     return *this;
@@ -112,74 +140,95 @@ bool DataHeader::decode(const uint8_t* bytes)
     edac::BPTC19696 bptc;
     bptc.decode(bytes, m_data);
 
-    // validate the CRC-CCITT 16
-    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
-    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+    // make sure the CRC-CCITT 16 was actually included (the network tends to zero the CRC)
+    if (m_data[10U] != 0x00U && m_data[11U] != 0x00U) {
+        // validate the CRC-CCITT 16
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
 
-    bool valid = edac::CRC::checkCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
-    if (!valid)
-        return false;
+        bool valid = edac::CRC::checkCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        if (!valid)
+            return false;
 
-    // restore the checksum
-    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
-    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+        // restore the checksum
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+    }
 
-    m_GI = (m_data[0U] & 0x80U) == 0x80U;
+    m_GI = (m_data[0U] & 0x80U) == 0x80U;                                       // Group/Individual Flag
     m_A = (m_data[0U] & 0x40U) == 0x40U;
 
-    uint8_t dpf = m_data[0U] & 0x0FU;
-    if (dpf == DPF_PROPRIETARY)
+    m_DPF = m_data[0U] & 0x0FU;                                                 // Data Packet Format
+    if (m_DPF == DPF_PROPRIETARY)
         return true;
 
-    m_dstId = m_data[2U] << 16 | m_data[3U] << 8 | m_data[4U];
-    m_srcId = m_data[5U] << 16 | m_data[6U] << 8 | m_data[7U];
+    m_dstId = m_data[2U] << 16 | m_data[3U] << 8 | m_data[4U];                  // Destination ID
+    m_srcId = m_data[5U] << 16 | m_data[6U] << 8 | m_data[7U];                  // Source ID
 
-    switch (dpf) {
-        case DPF_UNCONFIRMED_DATA:
-            Utils::dump(1U, "DMR, Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_F = (m_data[8U] & 0x80U) == 0x80U;
-            m_blocks = m_data[8U] & 0x7FU;
-            break;
+    switch (m_DPF) {
+    case DPF_UDT:
+        // Utils::dump(1U, "DMR, Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_dataFormat = (m_data[1U] & 0x0FU);                                    // UDT Format
+        m_blocks = (m_data[8U] & 0x03U) + 1U;                                   // Blocks To Follow
+        m_padCount = (m_data[8U] & 0xF8U) >> 3;                                 // Pad Nibble
+        m_SF = (m_data[9U] & 0x80U) == 0x80U;                                   // Supplemental Flag
+        m_PF = (m_data[9U] & 0x40U) == 0x40U;                                   // Protect Flag
+        m_UDTO = m_data[9U] & 0x3FU;                                            // UDT Opcode
+        break;
 
-        case DPF_CONFIRMED_DATA:
-            Utils::dump(1U, "DMR, Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_F = (m_data[8U] & 0x80U) == 0x80U;
-            m_blocks = m_data[8U] & 0x7FU;
-            m_S = (m_data[9U] & 0x80U) == 0x80U;
-            m_Ns = (m_data[9U] >> 4) & 0x07U;
-            break;
+    case DPF_UNCONFIRMED_DATA:
+        // Utils::dump(1U, "DMR, Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
+        m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
+        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_fsn = m_data[9U] & 0x0FU;                                             // Fragment Sequence Number
+        break;
 
-        case DPF_RESPONSE:
-            Utils::dump(1U, "DMR, Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_blocks = m_data[8U] & 0x7FU;
-            break;
+    case DPF_CONFIRMED_DATA:
+        // Utils::dump(1U, "DMR, Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
+        m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
+        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_S = (m_data[9U] & 0x80U) == 0x80U;                                    // Synchronize Flag
+        m_Ns = (m_data[9U] >> 4) & 0x07U;                                       // Send Sequence Number
+        m_fsn = m_data[9U] & 0x0FU;                                             // Fragement Sequence Number
+        break;
 
-        case DPF_PROPRIETARY:
-            Utils::dump(1U, "DMR, Proprietary Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            break;
+    case DPF_RESPONSE:
+        // Utils::dump(1U, "DMR, Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
+        m_rspClass = (m_data[9U] >> 6) & 0x03U;                                 // Response Class
+        m_rspType = (m_data[9U] >> 3) & 0x07U;                                  // Response Type
+        m_rspStatus = m_data[9U] & 0x07U;                                       // Response Status
+        break;
 
-        case DPF_DEFINED_RAW:
-            Utils::dump(1U, "DMR, Raw or Status/Precoded Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);
-            m_F = (m_data[8U] & 0x01U) == 0x01U;
-            m_S = (m_data[8U] & 0x02U) == 0x02U;
-            break;
+    case DPF_DEFINED_SHORT:
+        // Utils::dump(1U, "DMR, Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
+        m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
+        m_S = (m_data[8U] & 0x02U) == 0x02U;                                    // Synchronize Flag
+        m_dataFormat = (m_data[8U] & 0xFCU) >> 2;                               // Defined Data Format
+        m_padCount = m_data[9U];                                                // Bit Padding
+        break;
 
-        case DPF_DEFINED_SHORT:
-            Utils::dump(1U, "DMR, Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);
-            m_F = (m_data[8U] & 0x01U) == 0x01U;
-            m_S = (m_data[8U] & 0x02U) == 0x02U;
-            break;
+    case DPF_DEFINED_RAW:
+        // Utils::dump(1U, "DMR, Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
+        m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
+        m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
+        m_S = (m_data[8U] & 0x02U) == 0x02U;                                    // Synchronize Flag
+        m_dstPort = (m_data[8U] & 0x1CU) >> 2;                                  // Destination Port
+        m_srcPort = (m_data[8U] & 0xE0U) >> 5;                                  // Source Port
+        break;
 
-        case DPF_UDT:
-            Utils::dump(1U, "DMR, Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            m_blocks = (m_data[8U] & 0x03U) + 1U;
-            break;
-
-        default:
-            Utils::dump("DMR, Unknown Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
-            break;
+    default:
+        Utils::dump("DMR, Unknown Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
     }
 
     return true;
@@ -192,6 +241,120 @@ bool DataHeader::decode(const uint8_t* bytes)
 void DataHeader::encode(uint8_t* bytes) const
 {
     assert(bytes != NULL);
+
+    // perform no processing other then regenerating FEC
+    if (m_DPF == DPF_PROPRIETARY) {
+        m_data[10U] = m_data[11U] = 0x00U;
+
+        // compute CRC-CCITT 16
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+
+        edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
+
+        // restore the checksum
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+
+        // encode BPTC (196,96) FEC
+        edac::BPTC19696 bptc;
+        bptc.encode(m_data, bytes);
+        return;
+    }
+    else {
+        ::memset(m_data, 0x00U, DMR_LC_HEADER_LENGTH_BYTES);
+    }
+
+    m_data[0U] = (m_GI ? 0x80U : 0x00U) +                                       // Group/Individual Flag
+        (m_A ? 0x40U : 0x00U) +
+        (m_DPF & 0x0F);                                                         // Data Packet Format
+
+    m_data[2U] = (m_dstId >> 16) & 0xFFU;                                       // Destination ID
+    m_data[3U] = (m_dstId >> 8) & 0xFFU;
+    m_data[4U] = (m_dstId >> 0) & 0xFFU;
+    m_data[5U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
+    m_data[6U] = (m_srcId >> 8) & 0xFFU;
+    m_data[7U] = (m_srcId >> 0) & 0xFFU;
+
+    switch (m_DPF) {
+    case DPF_UDT:
+        m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
+            (m_dataFormat & 0x0FU);                                             // UDT Format
+        m_data[8U] = ((m_padCount & 0x1FU) << 3) +                              // Pad Nibble
+            (m_blocks - 1U);                                                    // Blocks To Follow
+        m_data[9U] = (m_SF ? 0x80U : 0x00U) +                                   // Supplemental Flag
+            (m_PF ? 0x40U : 0x00U) +                                            // Protect Flag
+            (m_UDTO & 0x3F);                                                    // UDT Opcode
+        // Utils::dump(1U, "DMR, Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    case DPF_UNCONFIRMED_DATA:
+        m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
+        m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
+            (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
+        m_data[8U] = (m_F ? 0x80U : 0x00U) +                                    // Full Message Flag
+            (m_blocks & 0x7FU);                                                 // Blocks To Follow
+        m_data[9U] = m_fsn;                                                     // Fragment Sequence Number
+        // Utils::dump(1U, "DMR, Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    case DPF_CONFIRMED_DATA:
+        m_data[0U] = m_data[0U] + (m_padCount & 0x10U);                         // Octet Pad Count MSB
+        m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
+            (m_padCount & 0x0FU);                                               // Octet Pad Count LSB
+        m_data[8U] = (m_F ? 0x80U : 0x00U) +                                    // Full Message Flag
+            (m_blocks & 0x7FU);                                                 // Blocks To Follow
+        m_data[9U] = (m_S ? 0x80U : 0x00U) +                                    // Synchronize Flag
+            ((m_Ns & 0x07U) << 4) +                                             // Send Sequence Number
+            (m_fsn & 0x0FU);                                                    // Fragment Sequence Number
+        // Utils::dump(1U, "DMR, Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    case DPF_RESPONSE:
+        m_data[1U] = ((m_sap & 0x0FU) << 4);                                    // Service Access Point
+        m_data[8U] = m_blocks & 0x7FU;                                          // Blocks To Follow
+        m_data[9U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
+            ((m_rspType & 0x07U) << 3) +                                        // Response Type
+            ((m_rspStatus & 0x07U));                                            // Response Status
+        // Utils::dump(1U, "DMR, Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    case DPF_DEFINED_SHORT:
+        m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
+        m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
+            (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
+        m_data[8U] = (m_F ? 0x01U : 0x00U) +                                    // Full Message Flag
+            (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
+            ((m_dataFormat & 0xFCU) << 2);                                      // Defined Data Format
+        m_data[9U] = m_padCount;                                                // Bit Padding
+        // Utils::dump(1U, "DMR, Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    case DPF_DEFINED_RAW:
+        m_data[0U] = m_data[0U] + (m_blocks & 0x30U);                           // Blocks To Follow MSB
+        m_data[1U] = ((m_sap & 0x0FU) << 4) +                                   // Service Access Point
+            (m_blocks & 0x0FU);                                                 // Blocks To Follow LSB
+        m_data[8U] = (m_F ? 0x01U : 0x00U) +                                    // Full Message Flag
+            (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
+            ((m_dstPort & 0x07U) << 2) +                                        // Destination Port
+            ((m_srcPort & 0x07U) << 5);                                         // Source Port
+        // Utils::dump(1U, "DMR, Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+
+    default:
+        Utils::dump("DMR, Unknown Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        break;
+    }
+
+    // compute CRC-CCITT 16
+    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+
+    edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
+
+    // restore the checksum
+    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;

@@ -208,8 +208,9 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dstId = %u, srcId = %u, group = %u, blocks = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getSrcId(),
-                m_slot->m_rfLC->getFLCO() == FLCO_GROUP, dataHeader.getBlocks());
+            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                m_slot->m_slotNo, dataHeader.getDPF(), dataHeader.getSAP(), dataHeader.getFullMesage(), dataHeader.getBlocks(), dataHeader.getPadCount(), dataHeader.getFSN(),
+                dstId, srcId, gi);
         }
 
         ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
