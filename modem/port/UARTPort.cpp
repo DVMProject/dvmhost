@@ -209,8 +209,12 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
 /// <returns>Actual length of data written to the serial port.</returns>
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
-    assert(m_handle != INVALID_HANDLE_VALUE);
     assert(buffer != NULL);
+
+    if (m_isOpen && m_handle == INVALID_HANDLE_VALUE)
+        return 0;
+
+    assert(m_handle != INVALID_HANDLE_VALUE);
 
     if (length == 0U)
         return 0;
@@ -236,13 +240,14 @@ int UARTPort::write(const uint8_t* buffer, uint32_t length)
 /// </summary>
 void UARTPort::close()
 {
-    if (!m_isOpen)
+    if (!m_isOpen && m_handle == INVALID_HANDLE_VALUE)
         return;
 
     assert(m_handle != INVALID_HANDLE_VALUE);
 
     ::CloseHandle(m_handle);
     m_handle = INVALID_HANDLE_VALUE;
+    m_isOpen = false;
 }
 
 #else
@@ -460,6 +465,10 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
     assert(buffer != NULL);
+
+    if (m_isOpen && m_fd == -1)
+        return 0;
+
     assert(m_fd != -1);
 
     if (length == 0U)
@@ -496,6 +505,7 @@ void UARTPort::close()
 
     ::close(m_fd);
     m_fd = -1;
+    m_isOpen = false;
 }
 
 #if defined(__APPLE__)

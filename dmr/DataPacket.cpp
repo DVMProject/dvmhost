@@ -26,7 +26,6 @@
 #include "Defines.h"
 #include "dmr/DataPacket.h"
 #include "dmr/acl/AccessControl.h"
-#include "dmr/data/DataHeader.h"
 #include "dmr/data/EMB.h"
 #include "dmr/edac/Trellis.h"
 #include "dmr/lc/ShortLC.h"
@@ -56,24 +55,9 @@ using namespace dmr;
         return false;                                                                   \
     }
 
-#define CHECK_TRAFFIC_COLLISION_DELLC(_DST_ID)                                          \
-    if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
-        LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        delete lc;                                                                      \
-        return false;                                                                   \
-    }
-
 #define CHECK_TG_HANG(_DST_ID)                                                          \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
         if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            return;                                                                     \
-        }                                                                               \
-    }
-
-#define CHECK_TG_HANG_DELLC(_DST_ID)                                                    \
-    if (m_slot->m_rfLastDstId != 0U) {                                                  \
-        if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            delete lc;                                                                  \
             return;                                                                     \
         }                                                                               \
     }
@@ -154,14 +138,16 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         if (m_slot->m_rfState == RS_RF_DATA)
             return true;
 
-        data::DataHeader dataHeader;
-        bool valid = dataHeader.decode(data + 2U);
+        data::DataHeader* dataHeader = new data::DataHeader();
+        bool valid = dataHeader->decode(data + 2U);
         if (!valid)
             return false;
 
-        bool gi = dataHeader.getGI();
-        uint32_t srcId = dataHeader.getSrcId();
-        uint32_t dstId = dataHeader.getDstId();
+        m_slot->m_rfDataHeader = dataHeader;
+
+        bool gi = dataHeader->getGI();
+        uint32_t srcId = dataHeader->getSrcId();
+        uint32_t dstId = dataHeader->getDstId();
 
         CHECK_TRAFFIC_COLLISION(dstId);
 
@@ -179,12 +165,12 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             }
         }
 
-        m_slot->m_rfFrames = dataHeader.getBlocks();
+        m_slot->m_rfFrames = dataHeader->getBlocks();
         m_slot->m_rfSeqNo = 0U;
         m_slot->m_rfLC = new lc::LC(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
-        dataHeader.encode(data + 2U);
+        dataHeader->encode(data + 2U);
 
         // Regenerate the Slot Type
         slotType.encode(data + 2U);
@@ -209,7 +195,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
         if (m_verbose) {
             LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
-                m_slot->m_slotNo, dataHeader.getDPF(), dataHeader.getSAP(), dataHeader.getFullMesage(), dataHeader.getBlocks(), dataHeader.getPadCount(), dataHeader.getFSN(),
+                m_slot->m_slotNo, dataHeader->getDPF(), dataHeader->getSAP(), dataHeader->getFullMesage(), dataHeader->getBlocks(), dataHeader->getPadCount(), dataHeader->getFSN(),
                 dstId, srcId, gi);
         }
 
@@ -365,23 +351,26 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         if (m_slot->m_netState == RS_NET_DATA)
             return;
 
-        data::DataHeader dataHeader;
-        bool valid = dataHeader.decode(data + 2U);
+        data::DataHeader* dataHeader = new data::DataHeader();
+        bool valid = dataHeader->decode(data + 2U);
         if (!valid) {
             LogError(LOG_NET, "DMR Slot %u, DT_DATA_HEADER, unable to decode the network data header", m_slot->m_slotNo);
             return;
         }
 
-        bool gi = dataHeader.getGI();
-        uint32_t srcId = dataHeader.getSrcId();
-        uint32_t dstId = dataHeader.getDstId();
+        m_slot->m_netDataHeader = dataHeader;
+
+        bool gi = dataHeader->getGI();
+        uint32_t srcId = dataHeader->getSrcId();
+        uint32_t dstId = dataHeader->getDstId();
 
         CHECK_TG_HANG(dstId);
 
-        m_slot->m_netFrames = dataHeader.getBlocks();
+        m_slot->m_netFrames = dataHeader->getBlocks();
+        m_slot->m_netLC = new lc::LC(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
-        dataHeader.encode(data + 2U);
+        dataHeader->encode(data + 2U);
 
         // Regenerate the Slot Type
         SlotType slotType;
@@ -407,8 +396,9 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, DMR_DT_DATA_HEADER ", slot = %u, dstId = %u, srcId = %u, group = %u, blocks = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getSrcId(),
-                m_slot->m_rfLC->getFLCO() == FLCO_GROUP, dataHeader.getBlocks());
+            LogMessage(LOG_NET, DMR_DT_DATA_HEADER ", slot = %u, dpf = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, seqNo = %u, dstId = %u, srcId = %u, group = %u",
+                m_slot->m_slotNo, dataHeader->getDPF(), dataHeader->getSAP(), dataHeader->getFullMesage(), dataHeader->getBlocks(), dataHeader->getPadCount(), dataHeader->getFSN(),
+                dstId, srcId, gi);
         }
 
         ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",

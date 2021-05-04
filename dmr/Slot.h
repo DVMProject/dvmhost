@@ -114,11 +114,13 @@ namespace dmr
 
         lc::LC* m_rfLC;
         lc::PrivacyLC* m_rfPrivacyLC;
+        data::DataHeader* m_rfDataHeader;
 
         uint8_t m_rfSeqNo;
 
         lc::LC* m_netLC;
         lc::PrivacyLC* m_netPrivacyLC;
+        data::DataHeader* m_netDataHeader;
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;

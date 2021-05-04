@@ -84,18 +84,24 @@ namespace p25
         uint32_t m_netLost;
 
         Audio m_audio;
+
         lc::LC m_rfLC;
         lc::LC m_rfLastHDU;
         lc::LC m_rfLastLDU1;
         lc::LC m_rfLastLDU2;
+
         lc::LC m_netLC;
         lc::LC m_netLastLDU1;
+
         data::LowSpeedData m_rfLSD;
         data::LowSpeedData m_netLSD;
+
         uint8_t* m_netLDU1;
         uint8_t* m_netLDU2;
+
         uint8_t m_lastDUID;
         uint8_t* m_lastIMBE;
+
         bool m_hadVoice;
         uint32_t m_lastRejectId;
 

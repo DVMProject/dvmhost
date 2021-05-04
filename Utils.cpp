@@ -177,7 +177,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
         microslotHeader += temp;
     }
 
-    ::Log(2U, "SYMBOLS", "MCR: % s", microslotHeader.c_str());
+    ::Log(2U, "SYMBOLS", "MCR: %s", microslotHeader.c_str());
 
     uint32_t bufLen = length;
     while (bufLen > 0U) {

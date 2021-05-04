@@ -114,9 +114,11 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_netLastDstId(0U),
     m_rfLC(NULL),
     m_rfPrivacyLC(NULL),
+    m_rfDataHeader(NULL),
     m_rfSeqNo(0U),
     m_netLC(NULL),
     m_netPrivacyLC(NULL),
+    m_netDataHeader(NULL),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
@@ -678,7 +680,14 @@ void Slot::writeEndRF(bool writeEnd)
     m_rfBits = 1U;
 
     delete m_rfLC;
+    if (m_rfPrivacyLC != NULL)
+        delete m_rfPrivacyLC;
+    if (m_rfDataHeader != NULL)
+        delete m_rfDataHeader;
+
     m_rfLC = NULL;
+    m_rfPrivacyLC = NULL;
+    m_rfDataHeader = NULL;
 }
 
 /// <summary>
@@ -737,7 +746,14 @@ void Slot::writeEndNet(bool writeEnd)
     m_netBits = 1U;
 
     delete m_netLC;
+    if (m_netPrivacyLC != NULL)
+        delete m_netPrivacyLC;
+    if (m_netDataHeader != NULL)
+        delete m_netDataHeader;
+
     m_netLC = NULL;
+    m_netPrivacyLC = NULL;
+    m_netDataHeader = NULL;
 }
 
 /// <summary>

@@ -92,7 +92,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 return true;
 
             lc::FullLC fullLC;
-            lc::LC * lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+            lc::LC* lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
             if (lc == NULL)
                 return false;
 
