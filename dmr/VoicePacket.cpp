@@ -588,7 +588,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             return;
 
         lc::FullLC fullLC;
-        lc::LC * lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+        lc::LC* lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
         if (lc == NULL) {
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
             lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());

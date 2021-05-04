@@ -49,26 +49,49 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the TDULC class.
 /// </summary>
-TDULC::TDULC() :
-    m_verbose(false),
-    m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
-    m_srcId(0U),
-    m_dstId(0U),
-    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
-    m_emergency(false),
-    m_encrypted(false),
-    m_priority(4U),
-    m_group(true),
-    m_rs(),
-    m_callTimer(0U),
-    m_siteData(),
-    m_siteNetActive(false)
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+TDULC::TDULC(SiteData siteData, lookups::IdenTable entry) : TDULC(siteData)
 {
-    m_siteIdenEntry = lookups::IdenTable();
+    m_siteIdenEntry = entry;
+    m_grpVchNo = m_siteData.channelNo();
+}
 
-    reset();
+/// <summary>
+/// Initializes a new instance of the TDULC class.
+/// </summary>
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+/// <param name="verbose"></param>
+TDULC::TDULC(SiteData siteData, lookups::IdenTable entry, bool verbose) : TDULC(siteData)
+{
+    m_verbose = verbose;
+    m_siteIdenEntry = entry;
+    m_grpVchNo = m_siteData.channelNo();
+}
+
+/// <summary>
+/// Initializes a new instance of the TDULC class.
+/// </summary>
+/// <param name="lc"></param>
+TDULC::TDULC(LC* lc) : TDULC(lc->siteData())
+{
+    m_protect = lc->m_protect;
+    m_lco = lc->m_lco;
+    m_mfId = lc->m_mfId;
+
+    m_srcId = lc->m_srcId;
+    m_dstId = lc->m_dstId;
+
+    m_grpVchNo = lc->m_grpVchNo;
+
+    m_emergency = lc->m_emergency;
+    m_encrypted = lc->m_encrypted;
+    m_priority = lc->m_priority;
+
+    m_group = lc->m_group;
+
+    m_callTimer = lc->m_callTimer;
 }
 
 /// <summary>
@@ -77,6 +100,46 @@ TDULC::TDULC() :
 TDULC::~TDULC()
 {
     /* stub */
+}
+
+/// <summary>
+/// Equals operator.
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+TDULC& TDULC::operator=(const TDULC& data)
+{
+    if (this != &data) {
+        m_verbose = data.m_verbose;
+        m_protect = data.m_protect;
+        m_lco = data.m_lco;
+        m_mfId = data.m_mfId;
+
+        m_srcId = data.m_srcId;
+        m_dstId = data.m_dstId;
+
+        m_grpVchNo = data.m_grpVchNo;
+
+        m_adjCFVA = data.m_adjCFVA;
+        m_adjRfssId = data.m_adjRfssId;
+        m_adjSiteId = data.m_adjSiteId;
+        m_adjChannelId = data.m_adjChannelId;
+        m_adjChannelNo = data.m_adjChannelNo;
+        m_adjServiceClass = data.m_adjServiceClass;
+
+        m_emergency = data.m_emergency;
+        m_encrypted = data.m_encrypted;
+        m_priority = data.m_priority;
+
+        m_group = data.m_group;
+
+        m_callTimer = data.m_callTimer;
+
+        m_siteData = data.m_siteData;
+        m_siteIdenEntry = data.m_siteIdenEntry;
+    }
+
+    return *this;
 }
 
 /// <summary>
@@ -151,66 +214,39 @@ void TDULC::encode(uint8_t * data)
     // Utils::dump(2U, "TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
-void TDULC::reset()
-{
-    m_protect = false;
-    m_lco = LC_GROUP;
-    m_mfId = P25_MFG_STANDARD;
-
-    m_srcId = 0U;
-    m_dstId = 0U;
-
-    m_callTimer = 0U;
-
-    m_grpVchNo = m_siteData.channelNo();
-
-    m_adjCFVA = P25_CFVA_CONV | P25_CFVA_FAILURE;
-    m_adjRfssId = 0U;
-    m_adjSiteId = 0U;
-    m_adjChannelId = 0U;
-    m_adjChannelNo = 0U;
-
-    /* Service Options */
-    m_emergency = false;
-    m_encrypted = false;
-    m_priority = 4U;
-    m_group = true;
-}
-
-/** Local Site data */
-/// <summary>
-/// Sets local configured site data.
-/// </summary>
-/// <param name="siteData">Site data.</param>
-void TDULC::setSiteData(SiteData siteData)
-{
-    m_siteData = siteData;
-}
-
-/// <summary>
-/// Sets the identity lookup table entry.
-/// </summary>
-/// <param name="entry">Identity table entry.</param>
-void TDULC::setIdenTable(lookups::IdenTable entry)
-{
-    m_siteIdenEntry = entry;
-}
-
-/// <summary>
-/// Sets a flag indicating whether or not networking is active.
-/// </summary>
-/// <param name="netActive">Network active flag.</param>
-void TDULC::setNetActive(bool netActive)
-{
-    m_siteNetActive = netActive;
-}
-
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+/// <summary>
+/// Initializes a new instance of the TDULC class.
+/// </summary>
+/// <param name="siteData"></param>
+TDULC::TDULC(SiteData siteData) :
+    m_verbose(false),
+    m_protect(false),
+    m_lco(LC_GROUP),
+    m_mfId(P25_MFG_STANDARD),
+    m_srcId(0U),
+    m_dstId(0U),
+    m_grpVchNo(0U),
+    m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjRfssId(0U),
+    m_adjSiteId(0U),
+    m_adjChannelId(0U),
+    m_adjChannelNo(0U),
+    m_adjServiceClass(P25_SVC_CLS_INVALID),
+    m_emergency(false),
+    m_encrypted(false),
+    m_priority(4U),
+    m_group(true),
+    m_siteData(siteData),
+    m_siteIdenEntry(),
+    m_rs(),
+    m_callTimer(0U)
+{
+    m_grpVchNo = m_siteData.channelNo();
+}
+
 /// <summary>
 /// Decode link control.
 /// </summary>
@@ -281,7 +317,7 @@ bool TDULC::decodeLC(const uint8_t* rs)
 /// <param name="rs"></param>
 void TDULC::encodeLC(uint8_t* rs)
 {
-    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
+    const uint32_t services = (m_siteData.netActive()) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
 
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO
@@ -376,7 +412,7 @@ void TDULC::encodeLC(uint8_t* rs)
                 rsValue = (rsValue << 8) + m_adjSiteId;                             // Site ID
                 rsValue = (rsValue << 4) + m_adjChannelId;                          // Channel ID
                 rsValue = (rsValue << 12) + m_adjChannelNo;                         // Channel Number
-                rsValue = (rsValue << 8) + m_serviceClass;                          // System Service Class
+                rsValue = (rsValue << 8) + m_adjServiceClass;                       // System Service Class
             }
             else {
                 LogError(LOG_P25, "invalid values for LC_ADJ_STS_BCAST, tsbkAdjSiteRFSSId = $%02X, tsbkAdjSiteId = $%02X, tsbkAdjSiteChannel = $%02X",
@@ -393,7 +429,7 @@ void TDULC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 8) + m_siteData.siteId();                             // Site ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
+        rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
         break;
     case LC_NET_STS_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
@@ -402,7 +438,7 @@ void TDULC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
+        rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
         break;
     default:
         LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

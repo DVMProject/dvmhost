@@ -47,25 +47,23 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the CSBK class.
 /// </summary>
-CSBK::CSBK() :
-    m_verbose(false),
-    m_CSBKO(CSBKO_NONE),
-    m_FID(0x00U),
-    m_lastBlock(true),
-    m_bsId(0U),
-    m_GI(false),
-    m_Cdef(false),
-    m_srcId(0U),
-    m_dstId(0U),
-    m_dataContent(false),
-    m_CBF(0U),
-    m_data(NULL),
-    m_siteData(),
-    m_siteNetActive(false)
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+CSBK::CSBK(SiteData siteData, lookups::IdenTable entry) : CSBK(siteData)
 {
-    m_data = new uint8_t[12U];
+    m_siteIdenEntry = entry;
+}
 
-    reset();
+/// <summary>
+/// Initializes a new instance of the CSBK class.
+/// </summary>
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+/// <param name="verbose"></param>
+CSBK::CSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : CSBK(siteData)
+{
+    m_verbose = verbose;
+    m_siteIdenEntry = entry;
 }
 
 /// <summary>
@@ -297,7 +295,7 @@ void CSBK::encode(uint8_t* bytes)
         csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                  // Site Time Slot Synchronization
         csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                           // DMR Spec. Version (1.5.1)
         csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 1) + ((m_siteNetActive) ? 1U : 0U);               // Site Networked
+        csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);        // Site Networked
         csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
         csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
         csbkValue = (csbkValue << 4) + 0U;                                          // 
@@ -426,58 +424,43 @@ void CSBK::encode(uint8_t* bytes)
     bptc.encode(m_data, bytes);
 }
 
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
 /// <summary>
-/// Helper to reset data values to defaults.
+/// Initializes a new instance of the CSBK class.
 /// </summary>
-void CSBK::reset()
+/// <param name="siteData"></param>
+CSBK::CSBK(SiteData siteData) :
+    m_verbose(false),
+    m_CSBKO(CSBKO_NONE),
+    m_FID(0x00U),
+    m_lastBlock(true),
+    m_bsId(0U),
+    m_GI(false),
+    m_Cdef(false),
+    m_srcId(0U),
+    m_dstId(0U),
+    m_dataContent(false),
+    m_CBF(0U),
+    m_colorCode(0U),
+    m_backoffNo(1U),
+    m_serviceType(0U),
+    m_serviceOptions(0U),
+    m_targetAddress(TGT_ADRS_TGID),
+    m_response(0U),
+    m_anncType(BCAST_ANNC_SITE_PARMS),
+    m_hibernating(false),
+    m_annWdCh1(false),
+    m_logicalCh1(DMR_CHNULL),
+    m_annWdCh2(false),
+    m_logicalCh2(DMR_CHNULL),
+    m_siteTSSync(false),
+    m_siteOffsetTiming(false),
+    m_alohaMask(0U),
+    m_siteData(siteData),
+    m_siteIdenEntry(lookups::IdenTable()),
+    m_data(NULL)
 {
-    m_colorCode = 0U;
-
-    m_backoffNo = 1U;
-    m_serviceType = 0U;
-    m_serviceOptions = 0U;
-    m_targetAddress = TGT_ADRS_TGID;
-
-    m_response = 0U;
-
-    /* Broadcast */
-    m_anncType = BCAST_ANNC_SITE_PARMS;
-    m_hibernating = false;
-
-    m_annWdCh1 = false;
-    m_logicalCh1 = DMR_CHNULL;
-    m_annWdCh2 = false;
-    m_logicalCh2 = DMR_CHNULL;
-
-    /* Aloha */
-    m_siteTSSync = false;
-    m_siteOffsetTiming = false;
-}
-
-/** Local Site data */
-/// <summary>
-/// Sets local configured site data.
-/// </summary>
-/// <param name="siteData">Site data.</param>
-void CSBK::setSiteData(SiteData siteData)
-{
-    m_siteData = siteData;
-}
-
-/// <summary>
-/// Sets the identity lookup table entry.
-/// </summary>
-/// <param name="entry">Identity table entry.</param>
-void CSBK::setIdenTable(lookups::IdenTable entry)
-{
-    m_siteIdenEntry = entry;
-}
-
-/// <summary>
-/// Sets a flag indicating whether or not networking is active.
-/// </summary>
-/// <param name="netActive">Network active flag.</param>
-void CSBK::setNetActive(bool netActive)
-{
-    m_siteNetActive = netActive;
+    m_data = new uint8_t[12U];
 }

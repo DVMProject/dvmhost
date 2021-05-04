@@ -59,25 +59,21 @@ namespace p25
         class HOST_SW_API TDULC {
         public:
             /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC();
+            TDULC(SiteData siteData, lookups::IdenTable entry);
+            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            TDULC(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            TDULC(LC* lc);
             /// <summary>Finalizes a instance of the TDULC class.</summary>
             ~TDULC();
+
+            /// <summary>Equals operator.</summary>
+            TDULC& operator=(const TDULC& data);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data);
             /// <summary>Encode a trunking signalling block.</summary>
             void encode(uint8_t* data);
-
-            /// <summary>Helper to reset data values to defaults.</summary>
-            void reset();
-
-            /** Local Site data */
-            /// <summary>Sets local configured site data.</summary>
-            void setSiteData(SiteData siteData);
-            /// <summary>Sets the identity lookup table entry.</summary>
-            void setIdenTable(lookups::IdenTable entry);
-            /// <summary>Sets a flag indicating whether or not networking is active.</summary>
-            void setNetActive(bool netActive);
 
         public:
             /// <summary>Flag indicating verbose log output.</summary>
@@ -96,9 +92,6 @@ namespace p25
             /// <summary>Destination ID.</summary>
             __PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Service class.</summary>
-            __PROPERTY(uint8_t, serviceClass, ServiceClass);
-
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
@@ -115,6 +108,8 @@ namespace p25
             __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
             /// <summary>Adjacent site channel number.</summary>
             __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
+            /// <summary>Adjacent site service class.</summary>
+            __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
 
             /** Service Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>
@@ -126,17 +121,21 @@ namespace p25
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
             __PROPERTY(bool, group, Group);
 
+            /** Local Site data */
+            /// <summary>Local Site Data.</summary>
+            __PROPERTY_PLAIN(SiteData, siteData, siteData);
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
         private:
+            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            TDULC(SiteData siteData);
+
             friend class LC;
             friend class TSBK;
             edac::RS634717 m_rs;
 
             uint32_t m_callTimer;
-
-            /** Local Site data */
-            SiteData m_siteData;
-            lookups::IdenTable m_siteIdenEntry;
-            bool m_siteNetActive;
 
             /// <summary>Decode link control.</summary>
             bool decodeLC(const uint8_t* rs);

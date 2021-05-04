@@ -101,6 +101,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_idenEntry(),
     m_queue(queueSize, "P25 Control"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
@@ -119,6 +120,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_nid(nac),
+    m_siteData(),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
     m_maxRSSI(0U),
@@ -160,7 +162,6 @@ void Control::reset()
     m_rfState = RS_RF_LISTENING;
 
     m_voice->resetRF();
-    m_trunk->resetRF();
     m_data->resetRF();
     m_queue.clear();
 }
@@ -186,8 +187,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
 
-    m_trunk->setCallsign(cwCallsign);
-
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 
     m_trunk->m_patchSuperGroup = pSuperGroup;
@@ -202,14 +201,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_trunk->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
 
-    yaml::Node statusCmd = p25Protocol["statusCmd"];
-    m_trunk->m_statusCmdEnable = statusCmd["enable"].as<bool>(false);
-    m_trunk->m_statusRadioCheck = (uint8_t)statusCmd["radioCheck"].as<uint32_t>(0U);
-    m_trunk->m_statusRadioInhibit = (uint8_t)statusCmd["radioInhibit"].as<uint32_t>(0U);
-    m_trunk->m_statusRadioUninhibit = (uint8_t)statusCmd["radioUninhibit"].as<uint32_t>(0U);
-    m_trunk->m_statusRadioForceReg = (uint8_t)statusCmd["radioForceReg"].as<uint32_t>(0U);
-    m_trunk->m_statusRadioForceDereg = (uint8_t)statusCmd["radioForceDereg"].as<uint32_t>(0U);
-
     yaml::Node control = p25Protocol["control"];
     m_control = control["enable"].as<bool>(false);
     if (m_control) {
@@ -221,17 +212,35 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
-    m_trunk->setServiceClass(m_control, m_voiceOnControl);
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
 
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
-    m_trunk->setSiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo);
+    uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
+    if (m_control) {
+        serviceClass |= P25_SVC_CLS_REG;
+    }
+
+    if (m_voiceOnControl) {
+        serviceClass |= P25_SVC_CLS_COMPOSITE;
+    }
+
+    m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass);
+    m_siteData.setCallsign(cwCallsign);
+
+    std::vector<lookups::IdenTable> entries = m_idenTable->list();
+    for (auto it = entries.begin(); it != entries.end(); ++it) {
+        lookups::IdenTable entry = *it;
+        if (entry.channelId() == channelId) {
+            m_idenEntry = entry;
+            break;
+        }
+    }
 
     std::vector<uint32_t> availCh = voiceChNo;
     m_trunk->m_voiceChCnt = (uint8_t)availCh.size();
-    m_trunk->setSiteChCnt((uint8_t)availCh.size());
+    m_siteData.setChCnt((uint8_t)availCh.size());
 
     for (auto it = availCh.begin(); it != availCh.end(); ++it) {
         m_trunk->m_voiceChTable.push_back(*it);
@@ -255,15 +264,14 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
-        LogInfo("    Status Command Support: %s", m_trunk->m_statusCmdEnable ? "yes" : "no");
-        if (m_trunk->m_statusCmdEnable) {
-            LogInfo("    Status Radio Check: $%02X", m_trunk->m_statusRadioCheck);
-            LogInfo("    Status Radio Inhibit: $%02X", m_trunk->m_statusRadioInhibit);
-            LogInfo("    Status Radio Uninhibit: $%02X", m_trunk->m_statusRadioUninhibit);
-            LogInfo("    Status Radio Force Register: $%02X", m_trunk->m_statusRadioForceReg);
-            LogInfo("    Status Radio Force Deregister: $%02X", m_trunk->m_statusRadioForceDereg);
-        }
     }
+
+    m_voice->resetRF();
+    m_voice->resetNet();
+    m_data->resetRF();
+
+    m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
+    m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
 }
 
 /// <summary>
@@ -342,8 +350,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_rfState = RS_RF_LISTENING;
 
         m_voice->resetRF();
-        m_trunk->resetRF();
         m_data->resetRF();
+
+        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
 
         return false;
     }
@@ -561,10 +570,10 @@ void Control::clock(uint32_t ms)
         processNetwork();
 
         if (m_network->getStatus() == network::NET_STAT_RUNNING) {
-            m_trunk->setNetActive(true);
+            m_siteData.setNetActive(true);
         }
         else {
-            m_trunk->setNetActive(false);
+            m_siteData.setNetActive(false);
         }
     }
 
@@ -610,7 +619,8 @@ void Control::clock(uint32_t ms)
             m_tailOnIdle = true;
 
             m_voice->resetNet();
-            m_trunk->resetNet();
+
+            m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
 
             m_netTimeout.stop();
         }
@@ -620,11 +630,12 @@ void Control::clock(uint32_t ms)
         m_queue.clear();
 
         m_voice->resetRF();
-        m_voice->m_rfLastHDU.reset();
         m_voice->resetNet();
-        m_trunk->resetRF();
-        m_trunk->resetNet();
+
         m_data->resetRF();
+
+        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
+        m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
 
         if (m_network != NULL)
             m_network->resetP25();
@@ -633,6 +644,17 @@ void Control::clock(uint32_t ms)
     }
 
     m_trunk->clock(ms);
+
+    // if the states are "idle" ensure LC data isn't being held in memory
+    if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+        m_voice->resetRF();
+        m_voice->resetNet();
+
+        m_data->resetRF();
+
+        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
+        m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
+    }
 }
 
 /// <summary>

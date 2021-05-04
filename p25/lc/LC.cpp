@@ -51,29 +51,39 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
+/// <param name="siteData"></param>
 LC::LC() :
     m_protect(false),
     m_lco(LC_GROUP),
     m_mfId(P25_MFG_STANDARD),
     m_srcId(0U),
     m_dstId(0U),
-    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
+    m_grpVchNo(0U),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
     m_group(true),
     m_algId(P25_ALGO_UNENCRYPT),
     m_kId(0U),
+    m_siteData(SiteData()),
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
     m_callTimer(0U),
-    m_mi(NULL),
-    m_siteData()
+    m_mi(NULL)
 {
     m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
+    ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+}
 
-    reset();
+/// <summary>
+/// Initializes a new instance of the LC class.
+/// </summary>
+/// <param name="siteData"></param>
+LC::LC(SiteData siteData) : LC()
+{
+    m_siteData = siteData;
+    m_grpVchNo = m_siteData.channelNo();
 }
 
 /// <summary>
@@ -97,8 +107,6 @@ LC& LC::operator=(const LC& data)
 
         m_srcId = data.m_srcId;
         m_dstId = data.m_dstId;
-
-        m_serviceClass = data.m_serviceClass;
 
         m_grpVchNo = data.m_grpVchNo;
 
@@ -130,6 +138,8 @@ LC& LC::operator=(const LC& data)
                 m_encrypted = false;
             }
         }
+
+        m_siteData = data.m_siteData;
     }
 
     return *this;
@@ -457,46 +467,6 @@ void LC::encodeLDU2(uint8_t * data)
     // Utils::dump(2U, "LDU2 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
 }
 
-/// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
-void LC::reset()
-{
-    m_encryptOverride = false;
-    m_tsbkVendorSkip = false;
-
-    m_protect = false;
-    m_lco = LC_GROUP;
-    m_mfId = P25_MFG_STANDARD;
-
-    m_srcId = 0U;
-    m_dstId = 0U;
-
-    m_callTimer = 0U;
-
-    m_grpVchNo = m_siteData.channelNo();
-
-    /* Service Options */
-    m_emergency = false;
-    m_encrypted = false;
-    m_priority = 4U;
-    m_group = true;
-
-    /* HDU/LDU2 data */
-    m_algId = P25_ALGO_UNENCRYPT;
-    m_kId = 0x0000U;
-
-    ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-}
-
-/** Local Site data */
-/// <summary>Sets local configured site data.</summary>
-/// <param name="siteData"></param>
-void LC::setSiteData(SiteData siteData)
-{
-    m_siteData = siteData;
-}
-
 /** Encryption data */
 /// <summary>Sets the encryption message indicator.</summary>
 /// <param name="mi"></param>
@@ -644,7 +614,7 @@ void LC::encodeLC(uint8_t * rs)
         rsValue = (rsValue << 8) + m_siteData.siteId();                             // Site ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
-        rsValue = (rsValue << 8) + m_serviceClass;                                  // System Service Class
+        rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
         break;
     default:
         LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

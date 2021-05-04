@@ -129,8 +129,7 @@ bool Control::processWakeup(const uint8_t* data)
         return false;
 
     // generate a new CSBK and check validity
-    lc::CSBK csbk = lc::CSBK();
-    csbk.setVerbose(m_dumpCSBKData);
+    lc::CSBK csbk = lc::CSBK(SiteData(), lookups::IdenTable(), m_dumpCSBKData);
 
     bool valid = csbk.decode(data + 2U);
     if (!valid)

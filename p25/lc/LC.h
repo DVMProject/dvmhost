@@ -59,6 +59,8 @@ namespace p25
         public:
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC();
+            /// <summary>Initializes a new instance of the LC class.</summary>
+            LC(SiteData siteData);
             /// <summary>Finalizes a instance of the LC class.</summary>
             ~LC();
 
@@ -80,13 +82,6 @@ namespace p25
             /// <summary>Encode a logical link data unit 2.</summary>
             void encodeLDU2(uint8_t* data);
 
-            /// <summary>Helper to reset data values to defaults.</summary>
-            void reset();
-
-            /** Local Site data */
-            /// <summary>Sets local configured site data.</summary>
-            void setSiteData(SiteData siteData);
-
             /** Encryption data */
             /// <summary>Sets the encryption message indicator.</summary>
             void setMI(const uint8_t* mi);
@@ -107,9 +102,6 @@ namespace p25
             /// <summary>Destination ID.</summary>
             __PROPERTY(uint32_t, dstId, DstId);
 
-            /// <summary>Service class.</summary>
-            __PROPERTY(uint8_t, serviceClass, ServiceClass);
-
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
@@ -129,6 +121,10 @@ namespace p25
             /// <summary>Encryption key ID.</summary>
             __PROPERTY(uint32_t, kId, KId);
 
+            /** Local Site data */
+            /// <summary>Local Site Data.</summary>
+            __PROPERTY_PLAIN(SiteData, siteData, siteData);
+
         private:
             friend class TSBK;
             friend class TDULC;
@@ -140,9 +136,6 @@ namespace p25
 
             /** Encryption data */
             uint8_t* m_mi;
-
-            /** Local Site data */
-            SiteData m_siteData;
 
             /// <summary>Decode link control.</summary>
             bool decodeLC(const uint8_t* rs);

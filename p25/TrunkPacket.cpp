@@ -139,173 +139,6 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
-/// Sets local configured site data.
-/// </summary>
-/// <param name="netId">P25 Network ID.</param>
-/// <param name="sysId">P25 System ID.</param>
-/// <param name="rfssId">P25 RFSS ID.</param>
-/// <param name="siteId">P25 Site ID.</param>
-/// <param name="lra">P25 Location Resource Area.</param>
-/// <param name="channelId">Channel ID.</param>
-/// <param name="channelNo">Channel Number.</param>
-void TrunkPacket::setSiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra,
-    uint8_t channelId, uint32_t channelNo)
-{
-    uint8_t serviceClass = m_rfTSBK.getServiceClass();
-    m_siteData = SiteData(netId, sysId, rfssId, siteId, lra, channelId, channelNo, serviceClass);
-
-    m_rfTSBK.setSiteData(m_siteData);
-    m_rfTDULC.setSiteData(m_siteData);
-    m_p25->m_voice->m_rfLC.setSiteData(m_siteData);
-
-    m_netTSBK.setSiteData(m_siteData);
-    m_netTDULC.setSiteData(m_siteData);
-    m_p25->m_voice->m_netLC.setSiteData(m_siteData);
-}
-
-/// <summary>
-/// Sets local configured site callsign.
-/// </summary>
-/// <param name="callsign"></param>
-void TrunkPacket::setCallsign(std::string callsign)
-{
-    m_rfTSBK.setCallsign(callsign);
-    m_netTSBK.setCallsign(callsign);
-}
-
-/// <summary>
-/// Sets a flag indicating whether or not networking is active.
-/// </summary>
-/// <param name="active"></param>
-void TrunkPacket::setNetActive(bool active)
-{
-    m_rfTSBK.setNetActive(active);
-    m_rfTDULC.setNetActive(active);
-    m_netTSBK.setNetActive(active);
-    m_netTDULC.setNetActive(active);
-}
-
-/// <summary>
-/// Sets the total number of channels at the site.
-/// </summary>
-/// <param name="chCnt"></param>
-void TrunkPacket::setSiteChCnt(uint8_t chCnt)
-{
-    m_rfTSBK.setSiteChCnt(chCnt);
-    m_netTSBK.setSiteChCnt(chCnt);
-}
-
-/// <summary>
-/// Sets the service class for this site.
-/// </summary>
-/// <param name="control"></param>
-/// <param name="voiceOnControl"></param>
-void TrunkPacket::setServiceClass(bool control, bool voiceOnControl)
-{
-    uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
-    if (control) {
-        serviceClass |= P25_SVC_CLS_REG;
-    }
-
-    if (voiceOnControl) {
-        serviceClass |= P25_SVC_CLS_COMPOSITE;
-    }
-
-    m_rfTSBK.setServiceClass(serviceClass);
-    m_netTSBK.setServiceClass(serviceClass);
-
-    m_rfTDULC.setServiceClass(serviceClass);
-    m_netTDULC.setServiceClass(serviceClass);
-
-    m_p25->m_voice->m_rfLC.setServiceClass(serviceClass);
-    m_p25->m_voice->m_netLC.setServiceClass(serviceClass);
-}
-
-/// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
-void TrunkPacket::resetRF()
-{
-    m_rfTSBK.reset();
-    m_rfTDULC.reset();
-}
-
-/// <summary>
-/// Resets the data states for the network.
-/// </summary>
-void TrunkPacket::resetNet()
-{
-    m_netTSBK.reset();
-    m_netTDULC.reset();
-}
-
-/// <summary>
-/// Sets the RF TSBK and TDULC data to match the given LC data.
-/// </summary>
-/// <param name="lc"></param>
-void TrunkPacket::setRFLC(const lc::LC& lc)
-{
-    m_rfTSBK.reset();
-    m_rfTDULC.reset();
-
-    m_rfTSBK.setProtect(lc.getProtect());
-    m_rfTDULC.setProtect(lc.getProtect());
-    m_rfTSBK.setMFId(lc.getMFId());
-    m_rfTDULC.setMFId(lc.getMFId());
-
-    m_rfTSBK.setSrcId(lc.getSrcId());
-    m_rfTDULC.setSrcId(lc.getSrcId());
-    m_rfTSBK.setDstId(lc.getDstId());
-    m_rfTDULC.setDstId(lc.getDstId());
-
-    m_rfTSBK.setGrpVchNo(lc.getGrpVchNo());
-    m_rfTDULC.setGrpVchNo(lc.getGrpVchNo());
-
-    m_rfTSBK.setEmergency(lc.getEmergency());
-    m_rfTDULC.setEmergency(lc.getEmergency());
-    m_rfTSBK.setEncrypted(lc.getEncrypted());
-    m_rfTDULC.setEncrypted(lc.getEmergency());
-    m_rfTSBK.setPriority(lc.getPriority());
-    m_rfTDULC.setPriority(lc.getPriority());
-
-    m_rfTSBK.setGroup(lc.getGroup());
-    m_rfTDULC.setGroup(lc.getGroup());
-}
-
-/// <summary>
-/// Sets the network TSBK and TDULC data to match the given LC data.
-/// </summary>
-/// <param name="lc"></param>
-void TrunkPacket::setNetLC(const lc::LC& lc)
-{
-    m_netTSBK.reset();
-    m_netTDULC.reset();
-
-    m_netTSBK.setProtect(lc.getProtect());
-    m_netTDULC.setProtect(lc.getProtect());
-    m_netTSBK.setMFId(lc.getMFId());
-    m_netTDULC.setMFId(lc.getMFId());
-
-    m_netTSBK.setSrcId(lc.getSrcId());
-    m_netTDULC.setSrcId(lc.getSrcId());
-    m_netTSBK.setDstId(lc.getDstId());
-    m_netTDULC.setDstId(lc.getDstId());
-
-    m_netTSBK.setGrpVchNo(lc.getGrpVchNo());
-    m_netTDULC.setGrpVchNo(lc.getGrpVchNo());
-
-    m_netTSBK.setEmergency(lc.getEmergency());
-    m_netTDULC.setEmergency(lc.getEmergency());
-    m_netTSBK.setEncrypted(lc.getEncrypted());
-    m_netTDULC.setEncrypted(lc.getEmergency());
-    m_netTSBK.setPriority(lc.getPriority());
-    m_netTDULC.setPriority(lc.getPriority());
-
-    m_netTSBK.setGroup(lc.getGroup());
-    m_netTDULC.setGroup(lc.getGroup());
-}
-
-/// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
@@ -334,8 +167,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
         }
 
         m_p25->m_queue.clear();
-        m_rfTSBK.reset();
-        m_netTSBK.reset();
+
+        m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+        m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
         bool ret = m_rfTSBK.decode(data + 2U);
         if (!ret) {
@@ -346,8 +180,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
         uint32_t srcId = m_rfTSBK.getSrcId();
         uint32_t dstId = m_rfTSBK.getDstId();
-
-        resetStatusCommand(m_rfTSBK);
 
         switch (m_rfTSBK.getLCO()) {
             case TSBK_IOSP_GRP_VCH:
@@ -448,23 +280,17 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_STS_UPDT (Status Update)", TSBK_IOSP_STS_UPDT, srcId);
 
-                if ((m_statusSrcId == 0U) && (m_statusValue == 0U)) {
-                    RF_TO_WRITE_NET();
-                }
+                RF_TO_WRITE_NET();
 
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u", m_rfTSBK.getStatus(), srcId);
                 }
 
-                ::ActivityLog("P25", true, "status update from %u", srcId);
-
                 if (!m_noStatusAck) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_STS_UPDT, false, false);
                 }
 
-                if (m_statusCmdEnable) {
-                    preprocessStatusCommand();
-                }
+                ::ActivityLog("P25", true, "status update from %u", srcId);
                 break;
             case TSBK_IOSP_MSG_UPDT:
                 // validate the source RID
@@ -486,16 +312,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
             case TSBK_IOSP_CALL_ALRT:
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_CALL_ALRT (Call Alert)", TSBK_IOSP_CALL_ALRT, srcId);
-
-                // is status command mode enabled with status data?
-                if (m_statusCmdEnable) {
-                    if (processStatusCommand(srcId, dstId)) {
-                        m_p25->m_rfState = prevRfState;
-                        return true;
-                    }
-
-                    resetStatusCommand();
-                }
 
                 // validate the target RID
                 VALID_DSTID("TSBK_IOSP_CALL_ALRT (Call Alert)", TSBK_IOSP_CALL_ALRT, dstId);
@@ -548,18 +364,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         m_rfTSBK.getExtendedFunction(), dstId, srcId);
                 }
 
-                // is status control mode enabled with status data?
-                if (m_statusCmdEnable && (m_statusValue != 0U)) {
-                    m_rfTSBK.setLCO(TSBK_IOSP_ACK_RSP);
-                    m_rfTSBK.setAIV(true);
-                    m_rfTSBK.setService(TSBK_IOSP_CALL_ALRT);
-
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), serviceType = $%02X, srcId = %u", 
-                            m_rfTSBK.getService(), m_statusSrcId);
-                    }
-                }
-
                 // generate activity log entry
                 if (m_rfTSBK.getExtendedFunction() == P25_EXT_FNCT_CHECK_ACK) {
                     ::ActivityLog("P25", true, "radio check response from %u to %u", dstId, srcId);
@@ -572,7 +376,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 }
 
                 writeRF_TSDU_SBF(true);
-                resetStatusCommand();
                 break;
             case TSBK_IOSP_GRP_AFF:
                 // make sure control data is supported
@@ -677,8 +480,8 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
     switch (duid) {
         case P25_DUID_TSDU:
             if (m_p25->m_netState == RS_NET_IDLE) {
-                m_rfTSBK.reset();
-                m_netTSBK.reset();
+                m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+                m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
                 bool ret = m_netTSBK.decode(data);
                 if (!ret) {
@@ -691,7 +494,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         return false;
                     }
 
-                    if (m_netTSBK.getAdjSiteId() != m_siteData.siteId()) {
+                    if (m_netTSBK.getAdjSiteId() != m_p25->m_siteData.siteId()) {
                         // update site table data
                         SiteData site;
                         try {
@@ -740,8 +543,6 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 
                 uint32_t srcId = m_netTSBK.getSrcId();
                 uint32_t dstId = m_netTSBK.getDstId();
-
-                resetStatusCommand(m_netTSBK);
 
                 switch (m_netTSBK.getLCO()) {
                     case TSBK_IOSP_UU_ANS:
@@ -820,8 +621,6 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), serviceType = $%02X, arg = %u, tgt = %u", 
                                 m_netTSBK.getService(), srcId, dstId);
                         }
-
-                        resetStatusCommand();
                         break;
                     case TSBK_IOSP_GRP_AFF:
                         // ignore a network group affiliation command
@@ -868,15 +667,13 @@ void TrunkPacket::writeAdjSSNetwork()
         return;
     }
 
-    m_rfTSBK.reset();
-    m_netTSBK.reset();
+    m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+    m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
     if (m_network != NULL) {
-        uint8_t serviceClass = m_rfTSBK.getServiceClass();
-
         if (m_verbose) {
             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", 
-                m_siteData.sysId(), m_siteData.rfssId(), m_siteData.siteId(), m_siteData.channelId(), m_siteData.channelNo(), serviceClass);
+                m_p25->m_siteData.sysId(), m_p25->m_siteData.rfssId(), m_p25->m_siteData.siteId(), m_p25->m_siteData.channelId(), m_p25->m_siteData.channelNo(), m_p25->m_siteData.serviceClass());
         }
 
         uint8_t cfva = P25_CFVA_VALID;
@@ -887,12 +684,12 @@ void TrunkPacket::writeAdjSSNetwork()
         // transmit adjacent site broadcast
         m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
         m_rfTSBK.setAdjSiteCFVA(cfva);
-        m_rfTSBK.setAdjSiteSysId(m_siteData.sysId());
-        m_rfTSBK.setAdjSiteRFSSId(m_siteData.rfssId());
-        m_rfTSBK.setAdjSiteId(m_siteData.siteId());
-        m_rfTSBK.setAdjSiteChnId(m_siteData.channelId());
-        m_rfTSBK.setAdjSiteChnNo(m_siteData.channelNo());
-        m_rfTSBK.setAdjSiteSvcClass(serviceClass);
+        m_rfTSBK.setAdjSiteSysId(m_p25->m_siteData.sysId());
+        m_rfTSBK.setAdjSiteRFSSId(m_p25->m_siteData.rfssId());
+        m_rfTSBK.setAdjSiteId(m_p25->m_siteData.siteId());
+        m_rfTSBK.setAdjSiteChnId(m_p25->m_siteData.channelId());
+        m_rfTSBK.setAdjSiteChnNo(m_p25->m_siteData.channelNo());
+        m_rfTSBK.setAdjSiteSvcClass(m_p25->m_siteData.serviceClass());
         
         RF_TO_WRITE_NET();
     }
@@ -1039,11 +836,11 @@ void TrunkPacket::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
 
         if (m_voiceGrantChCnt > 0U) {
             m_voiceGrantChCnt--;
-            setSiteChCnt(m_voiceChCnt + m_voiceGrantChCnt);
+            m_p25->m_siteData.setChCnt(m_voiceChCnt + m_voiceGrantChCnt);
         }
         else {
             m_voiceGrantChCnt = 0U;
-            setSiteChCnt(m_voiceChCnt);
+            m_p25->m_siteData.setChCnt(m_voiceChCnt);
         }
 
         m_grantTimers[dstId].stop();
@@ -1083,24 +880,6 @@ void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
     // release affiliations
     for (auto it = srcToRel.begin(); it != srcToRel.end(); ++it) {
         writeRF_TSDU_U_Dereg_Ack(*it);
-    }
-}
-
-/// <summary>
-/// Resets the state of the status commands.
-/// </summary>
-void TrunkPacket::resetStatusCommand()
-{
-    // reset status control data
-    if (m_statusCmdEnable) {
-        if (m_statusSrcId != 0U && m_statusValue != 0U) {
-            if (m_verbose) {
-                LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), canceled command mode, statusCurrentStatus = $%02X", m_statusValue);
-            }
-        }
-
-        m_statusSrcId = 0U;
-        m_statusValue = 0U;
     }
 }
 
@@ -1300,11 +1079,7 @@ void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint3
 /// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
 void TrunkPacket::setTSBKVerbose(bool verbose)
 {
-    m_rfTSBK.setVerbose(verbose);
-    m_netTSBK.setVerbose(verbose);
-
-    m_rfTDULC.setVerbose(verbose);
-    m_netTDULC.setVerbose(verbose);
+    m_dumpTSBK = verbose;
 }
 
 // ---------------------------------------------------------------------------
@@ -1324,15 +1099,13 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_patchSuperGroup(0xFFFFU),
     m_verifyAff(false),
     m_verifyReg(false),
-    m_rfTSBK(),
-    m_netTSBK(),
+    m_rfTSBK(SiteData(), lookups::IdenTable()),
+    m_netTSBK(SiteData(), lookups::IdenTable()),
     m_rfMBF(NULL),
     m_mbfCnt(0U),
     m_mbfIdenCnt(0U),
     m_mbfAdjSSCnt(0U),
     m_mbfSCCBCnt(0U),
-    m_rfTDULC(),
-    m_netTDULC(),
     m_voiceChTable(),
     m_adjSiteTable(),
     m_adjSiteUpdateCnt(),
@@ -1346,35 +1119,14 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_voiceGrantChCnt(0U),
     m_noStatusAck(false),
     m_noMessageAck(true),
-    m_statusCmdEnable(false),
-    m_statusRadioCheck(0U),
-    m_statusRadioInhibit(0U),
-    m_statusRadioUninhibit(0U),
-    m_statusRadioForceReg(0U),
-    m_statusRadioForceDereg(0U),
-    m_statusSrcId(0U),
-    m_statusValue(0U),
-    m_siteData(),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
+    m_dumpTSBK(false),
     m_verbose(verbose),
     m_debug(debug)
 {
     m_rfMBF = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-
-    // set metadata defaults
-    m_rfTSBK.setSiteData(m_siteData);
-    m_netTSBK.setSiteData(m_siteData);
-    m_rfTSBK.setCallsign("CHANGEME");
-    m_netTSBK.setCallsign("CHANGEME");
-    m_rfTSBK.setVerbose(dumpTSBKData);
-    m_netTSBK.setVerbose(dumpTSBKData);
-
-    m_rfTDULC.setSiteData(m_siteData);
-    m_netTDULC.setSiteData(m_siteData);
-    m_rfTDULC.setVerbose(dumpTSBKData);
-    m_netTDULC.setVerbose(dumpTSBKData);
 
     m_voiceChTable.clear();
  
@@ -1443,7 +1195,7 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     do
     {
-        m_rfTSBK.reset();
+        m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
         if (m_debug) {
             LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
@@ -1523,9 +1275,9 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// <summary>
 /// Helper to write a P25 TDU w/ link control packet.
 /// </summary>
-/// <param name="duid"></param>
+/// <param name="lc"></param>
 /// <param name="noNetwork"></param>
-void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
+void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 {
     uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
@@ -1537,7 +1289,7 @@ void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
     m_p25->m_nid.encode(data + 2U, P25_DUID_TDULC);
 
     // Generate TDULC Data
-    m_rfTDULC.encode(data + 2U);
+    lc.encode(data + 2U);
 
     // Add busy bits
     m_p25->addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
@@ -1568,39 +1320,38 @@ void TrunkPacket::writeRF_TDULC(uint8_t duid, bool noNetwork)
 void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
 {
     uint32_t count = m_p25->m_hangCount / 2;
+    lc::TDULC lc = lc::TDULC(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
     if (m_p25->m_control) {
         for (uint32_t i = 0; i < count; i++) {
             if ((srcId != 0U) && (dstId != 0U)) {
-                m_rfTDULC.setSrcId(srcId);
-                m_rfTDULC.setDstId(dstId);
-                m_rfTDULC.setEmergency(false);
+                lc.setSrcId(srcId);
+                lc.setDstId(dstId);
+                lc.setEmergency(false);
 
                 if (grp) {
-                    m_rfTDULC.setLCO(LC_GROUP);
-                    writeRF_TDULC(P25_DUID_TDULC, true);
+                    lc.setLCO(LC_GROUP);
+                    writeRF_TDULC(lc, true);
                 }
                 else {
-                    m_rfTDULC.setLCO(LC_PRIVATE);
-                    writeRF_TDULC(P25_DUID_TDULC, true);
+                    lc.setLCO(LC_PRIVATE);
+                    writeRF_TDULC(lc, true);
                 }
             }
 
-            m_rfTDULC.setLCO(LC_NET_STS_BCAST);
-            writeRF_TDULC(P25_DUID_TDULC, true);
-            m_rfTDULC.setLCO(LC_RFSS_STS_BCAST);
-            writeRF_TDULC(P25_DUID_TDULC, true);
+            lc.setLCO(LC_NET_STS_BCAST);
+            writeRF_TDULC(lc, true);
+            lc.setLCO(LC_RFSS_STS_BCAST);
+            writeRF_TDULC(lc, true);
         }
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", m_rfTDULC.getSrcId(), m_rfTDULC.getDstId());
+        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
     }
 
-    m_rfTDULC.setLCO(LC_CALL_TERM);
-    writeRF_TDULC(P25_DUID_TDULC, true);
-
-    m_rfTDULC.reset();
+    lc.setLCO(LC_CALL_TERM);
+    writeRF_TDULC(lc, true);
 }
 
 /// <summary>
@@ -1777,7 +1528,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
     if (!m_p25->m_control)
         return;
 
-    m_rfTSBK.reset();
+    m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 
     switch (lco) {
         case TSBK_OSP_IDEN_UP:
@@ -1805,14 +1556,14 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
 
                         // handle 700/800/900 identities
                         if (entry.baseFrequency() >= 762000000U) {
-                            m_rfTSBK.setIdenTable(entry);
+                            m_rfTSBK.siteIdenEntry(entry);
 
                             // transmit channel ident broadcast
                             m_rfTSBK.setLCO(TSBK_OSP_IDEN_UP);
                         }
                         else {
                             // handle as a VHF/UHF identity
-                            m_rfTSBK.setIdenTable(entry);
+                            m_rfTSBK.siteIdenEntry(entry);
 
                             // transmit channel ident broadcast
                             m_rfTSBK.setLCO(TSBK_OSP_IDEN_UP_VU);
@@ -1867,12 +1618,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
                         else {
                             cfva |= P25_CFVA_VALID;
                         }
-/*
-                        uint8_t serviceClass = site.serviceClass();
-                        if ((serviceClass & P25_SVC_CLS_COMPOSITE) == P25_SVC_CLS_COMPOSITE) {
-                            cfva |= P25_CFVA_CONV;
-                        }
-*/
+
                         // transmit adjacent site broadcast
                         m_rfTSBK.setLCO(TSBK_OSP_ADJ_STS_BCAST);
                         m_rfTSBK.setAdjSiteCFVA(cfva);
@@ -2056,7 +1802,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
                 m_grantTimers[m_rfTSBK.getDstId()].start();
 
                 m_voiceGrantChCnt++;
-                setSiteChCnt(m_voiceChCnt + m_voiceGrantChCnt);
+                m_p25->m_siteData.setChCnt(m_voiceChCnt + m_voiceGrantChCnt);
             }
         }
         else {
@@ -2239,7 +1985,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
     m_rfTSBK.setResponse(P25_RSP_ACCEPT);
 
     // validate the system ID
-    if (m_rfTSBK.getSysId() != m_siteData.sysId()) {
+    if (m_rfTSBK.getSysId() != m_p25->m_siteData.sysId()) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_U_REG (Unit Registration Response) denial, SYSID rejection, sysId = $%03X", m_rfTSBK.getSysId());
         ::ActivityLog("P25", true, "unit registration request from %u denied", srcId);
         m_rfTSBK.setResponse(P25_RSP_DENY);
@@ -2424,7 +2170,8 @@ void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
 /// <summary>
 /// Helper to write a network P25 TDU w/ link control packet.
 /// </summary>
-void TrunkPacket::writeNet_TDULC()
+/// <param name="lc"></param>
+void TrunkPacket::writeNet_TDULC(lc::TDULC lc)
 {
     uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
@@ -2439,7 +2186,7 @@ void TrunkPacket::writeNet_TDULC()
     m_p25->m_nid.encode(buffer + 2U, P25_DUID_TDULC);
 
     // Regenerate TDULC Data
-    m_netTDULC.encode(buffer + 2U);
+    lc.encode(buffer + 2U);
 
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
@@ -2447,7 +2194,7 @@ void TrunkPacket::writeNet_TDULC()
     m_p25->writeQueueNet(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_netTDULC.getLCO(), m_netTDULC.getSrcId());
+        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc.getLCO(), lc.getSrcId());
     }
 
     if (m_p25->m_voice->m_netFrames > 0) {
@@ -2463,7 +2210,6 @@ void TrunkPacket::writeNet_TDULC()
 
     m_p25->m_netTimeout.stop();
     m_p25->m_networkWatchdog.stop();
-    m_netTDULC.reset();
     m_p25->m_netState = RS_NET_IDLE;
     m_p25->m_tailOnIdle = true;
 }
@@ -2516,93 +2262,6 @@ void TrunkPacket::denialInhibit(uint32_t srcId)
         LogWarning(LOG_P25, P25_TSDU_STR ", denial, system auto-inhibit RID, srcId = %u", srcId);
         writeRF_TSDU_Ext_Func(P25_EXT_FNCT_INHIBIT, P25_WUID_SYS, srcId);
     }
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="tsbk"></param>
-void TrunkPacket::resetStatusCommand(const lc::TSBK& tsbk)
-{
-    // reset status control data if the status current mode is set and the LCO isn't CALL ALERT
-    if (m_statusCmdEnable && ((m_rfTSBK.getLCO() != TSBK_IOSP_CALL_ALRT) && (m_rfTSBK.getLCO() != TSBK_IOSP_EXT_FNCT))) {
-        resetStatusCommand();
-    }
-}
-
-/// <summary>
-///
-/// </summary>
-void TrunkPacket::preprocessStatusCommand()
-{
-    if (m_statusCmdEnable) {
-        m_statusSrcId = m_rfTSBK.getSrcId();
-        m_statusValue = m_rfTSBK.getStatus();
-
-        if (m_statusValue != 0U) {
-            if ((m_statusValue == m_statusRadioCheck) ||
-                (m_statusValue == m_statusRadioInhibit) || (m_statusValue == m_statusRadioUninhibit) ||
-                (m_statusValue == m_statusRadioForceReg) || (m_statusValue == m_statusRadioForceDereg)) {
-                if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), command mode, statusCurrentStatus = $%02X", m_statusValue);
-                }
-            }
-            else {
-                resetStatusCommand();
-            }
-        }
-    }
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <returns></returns>
-bool TrunkPacket::processStatusCommand(uint32_t srcId, uint32_t dstId)
-{
-    // is status command mode enabled with status data?
-    if (m_statusCmdEnable && (m_statusValue != 0U)) {
-        // if the status srcId isn't the CALL ALERT srcId ignore
-        if (m_statusSrcId == srcId) {
-            if ((m_statusRadioCheck != 0U) && (m_statusValue == m_statusRadioCheck)) {
-                writeRF_TSDU_Ext_Func(P25_EXT_FNCT_CHECK, srcId, dstId);
-            }
-            else if ((m_statusRadioInhibit != 0U) && (m_statusValue == m_statusRadioInhibit)) {
-                writeRF_TSDU_Ext_Func(P25_EXT_FNCT_INHIBIT, P25_WUID_SYS, dstId);
-            }
-            else if ((m_statusRadioUninhibit != 0U) && (m_statusValue == m_statusRadioUninhibit)) {
-                writeRF_TSDU_Ext_Func(P25_EXT_FNCT_UNINHIBIT, P25_WUID_SYS, dstId);
-            }
-            else if ((m_statusRadioForceReg != 0U) && (m_statusValue == m_statusRadioForceReg)) {
-                // update dynamic unit registration table
-                if (!hasSrcIdUnitReg(srcId)) {
-                    m_unitRegTable.push_back(srcId);
-                }
-
-                writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId);
-            }
-            else if ((m_statusRadioForceDereg != 0U) && (m_statusValue == m_statusRadioForceDereg)) {
-                writeRF_TSDU_U_Dereg_Ack(srcId);
-            }
-            else {
-                LogError(LOG_P25, P25_TSDU_STR ", unhandled command mode, statusCurrentStatus = $%02X, srcId = %u, dstId = %u", m_statusValue, srcId, dstId);
-                resetStatusCommand();
-            }
-
-            writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_CALL_ALRT, false, false);
-            return true;
-        }
-        else {
-            if (m_verbose) {
-                LogWarning(LOG_P25, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), illegal attempt by srcId = %u to access status command", srcId);
-            }
-        }
-    }
-
-    resetStatusCommand();
-    return false;
 }
 
 /// <summary>

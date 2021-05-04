@@ -86,8 +86,7 @@ bool ControlPacket::process(uint8_t* data, uint32_t len)
 
     if (dataType == DT_CSBK) {
         // generate a new CSBK and check validity
-        lc::CSBK csbk = lc::CSBK();
-        csbk.setVerbose(m_dumpCSBKData);
+        lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
 
         bool valid = csbk.decode(data + 2U);
         if (!valid)
@@ -230,7 +229,7 @@ void ControlPacket::processNetwork(const data::Data & dmrData)
     dmrData.getData(data + 2U);
 
     if (dataType == DT_CSBK) {
-        lc::CSBK csbk = lc::CSBK();
+        lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
         csbk.setVerbose(m_dumpCSBKData);
 
         bool valid = csbk.decode(data + 2U);
@@ -399,7 +398,7 @@ void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK();
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_EXT_FNCT);
     csbk.setFID(FID_DMRA);
@@ -448,7 +447,7 @@ void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK();
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_CALL_ALRT);
     csbk.setFID(FID_DMRA);
@@ -521,13 +520,12 @@ void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK();
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_BROADCAST);
     csbk.setFID(FID_ETSI);
 
     csbk.setAnncType(BCAST_ANNC_ANN_WD_TSCC);
-    csbk.setSiteData(m_slot->m_siteData);
     csbk.setLogicalCh1(channelNo);
     csbk.setAnnWdCh1(annWd);
 
@@ -557,7 +555,6 @@ void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     // MBC frame 2
     csbk.setLastBlock(false);
     csbk.setCdef(true);
-    csbk.setIdenTable(m_slot->m_idenEntry);
 
     // Regenerate the CSBK data
     csbk.encode(data + 2U);
@@ -591,13 +588,12 @@ void ControlPacket::writeRF_TSCC_Bcast_Sys_Parm()
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(DT_CSBK);
 
-    lc::CSBK csbk = lc::CSBK();
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_BROADCAST);
     csbk.setFID(FID_ETSI);
 
     csbk.setAnncType(BCAST_ANNC_SITE_PARMS);
-    csbk.setSiteData(m_slot->m_siteData);
 
     // Regenerate the CSBK data
     csbk.encode(data + 2U);

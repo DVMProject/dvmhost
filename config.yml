@@ -62,13 +62,6 @@ protocols:
         callHang: 5
         noStatusAck: false
         noMessageAck: true
-        statusCmd:
-            enable: true
-            radioCheck: 1
-            radioInhibit: 0
-            radioUninhibit: 0
-            radioForceReg: 0
-            radioForceDereg: 0
         silenceThreshold: 124
         disableNetworkHDU: false
         queueSize: 5000

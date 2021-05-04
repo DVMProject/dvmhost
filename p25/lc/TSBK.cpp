@@ -48,46 +48,45 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the TSBK class.
 /// </summary>
-TSBK::TSBK() :
-    m_verbose(false),
-    m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
-    m_srcId(0U),
-    m_dstId(0U),
-    m_lastBlock(false),
-    m_aivFlag(true),
-    m_extendedAddrFlag(false),
-    m_serviceClass(P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA),
-    m_emergency(false),
-    m_encrypted(false),
-    m_priority(4U),
-    m_group(true),
-    m_rs(),
-    m_trellis(),
-    m_vendorSkip(false),
-    m_sndcpAutoAccess(true),
-    m_sndcpReqAccess(false),
-    m_sndcpDAC(1U),
-    m_siteData(),
-    m_siteNetActive(false),
-    m_siteChCnt(1U)
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+TSBK::TSBK(SiteData siteData, lookups::IdenTable entry) : TSBK(siteData)
 {
-    m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
-    ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+    m_siteIdenEntry = entry;
+}
 
-    m_siteCallsign[0] = 'C';
-    m_siteCallsign[1] = 'H';
-    m_siteCallsign[2] = 'A';
-    m_siteCallsign[3] = 'N';
-    m_siteCallsign[4] = 'G';
-    m_siteCallsign[5] = 'E';
-    m_siteCallsign[6] = 'M';
-    m_siteCallsign[7] = 'E';
+/// <summary>
+/// Initializes a new instance of the TSBK class.
+/// </summary>
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+/// <param name="verbose"></param>
+TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : TSBK(siteData)
+{
+    m_verbose = verbose;
+    m_siteIdenEntry = entry;
+}
 
-    m_siteIdenEntry = lookups::IdenTable();
+/// <summary>
+/// Initializes a new instance of the TSBK class.
+/// </summary>
+/// <param name="lc"></param>
+TSBK::TSBK(LC* lc) : TSBK(lc->siteData())
+{
+    m_protect = lc->m_protect;
+    m_lco = lc->m_lco;
+    m_mfId = lc->m_mfId;
 
-    reset();
+    m_srcId = lc->m_srcId;
+    m_dstId = lc->m_dstId;
+
+    m_grpVchNo = lc->m_grpVchNo;
+
+    m_emergency = lc->m_emergency;
+    m_encrypted = lc->m_encrypted;
+    m_priority = lc->m_priority;
+
+    m_group = lc->m_group;
 }
 
 /// <summary>
@@ -96,6 +95,73 @@ TSBK::TSBK() :
 TSBK::~TSBK()
 {
     delete[] m_siteCallsign;
+}
+
+/// <summary>
+/// Equals operator.
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+TSBK& TSBK::operator=(const TSBK& data)
+{
+    if (this != &data) {
+        m_verbose = data.m_verbose;
+        m_protect = data.m_protect;
+        m_lco = data.m_lco;
+        m_mfId = data.m_mfId;
+
+        m_srcId = data.m_srcId;
+        m_dstId = data.m_dstId;
+
+        m_lastBlock = data.m_lastBlock;
+        m_aivFlag = data.m_aivFlag;
+        m_extendedAddrFlag = data.m_extendedAddrFlag;
+
+        m_service = data.m_service;
+        m_response = data.m_response;
+
+        m_netId = data.m_netId;
+        m_sysId = data.m_sysId;
+
+        m_grpVchNo = data.m_grpVchNo;
+
+        m_messageValue = data.m_messageValue;
+        m_statusValue = data.m_statusValue;
+
+        m_extendedFunction = data.m_extendedFunction;
+
+        m_adjCFVA = data.m_adjCFVA;
+        m_adjRfssId = data.m_adjRfssId;
+        m_adjSiteId = data.m_adjSiteId;
+        m_adjChannelId = data.m_adjChannelId;
+        m_adjChannelNo = data.m_adjChannelNo;
+        m_adjServiceClass = data.m_adjServiceClass;
+
+        m_sccbChannelId1 = data.m_sccbChannelId1;
+        m_sccbChannelId2 = data.m_sccbChannelId2;
+        m_sccbChannelNo = data.m_sccbChannelNo;
+
+        m_lra = data.m_lra;
+
+        m_patchSuperGroupId = data.m_patchSuperGroupId;
+        m_patchGroup1Id = data.m_patchGroup1Id;
+        m_patchGroup2Id = data.m_patchGroup2Id;
+        m_patchGroup3Id = data.m_patchGroup3Id;
+
+        m_emergency = data.m_emergency;
+        m_encrypted = data.m_encrypted;
+        m_priority = data.m_priority;
+
+        m_group = data.m_group;
+
+        m_siteData = data.m_siteData;
+        m_siteIdenEntry = data.m_siteIdenEntry;
+
+        m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
+        ::memcpy(m_siteCallsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
+    }
+
+    return *this;
 }
 
 /// <summary>
@@ -302,7 +368,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
 {
     assert(data != NULL);
 
-    const uint32_t services = (m_siteNetActive) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
+    const uint32_t services = (m_siteData.netActive()) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -446,7 +512,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 12) + m_sccbChannelNo;                            // Channel (R) Number
 
         if (m_sccbChannelId1 > 0) {
-            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
+            tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();               // System Service Class
         }
         else {
             tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
@@ -512,14 +578,14 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
         tsbkValue = (tsbkValue << 16) + m_sccbChannelId1;                           // SCCB Channel ID 1
         if (m_sccbChannelId1 > 0) {
-            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
+            tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();               // System Service Class
         }
         else {
             tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
         }
         tsbkValue = (tsbkValue << 16) + m_sccbChannelId2;                           // SCCB Channel ID 2
         if (m_sccbChannelId2 > 0) {
-            tsbkValue = (tsbkValue << 8) + m_serviceClass;                          // System Service Class
+            tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();               // System Service Class
         }
         else {
             tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                   // System Service Class
@@ -528,13 +594,13 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     case TSBK_OSP_RFSS_STS_BCAST:
         tsbkValue = m_siteData.lra();                                               // Location Registration Area
         tsbkValue = (tsbkValue << 4) +
-            (m_siteNetActive) ? P25_CFVA_NETWORK : 0U;                              // CFVA
+            (m_siteData.netActive()) ? P25_CFVA_NETWORK : 0U;                       // CFVA
         tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
         tsbkValue = (tsbkValue << 8) + m_siteData.rfssId();                         // RF Sub-System ID
         tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                         // Site ID
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
         tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel Number
-        tsbkValue = (tsbkValue << 8) + m_serviceClass;                              // System Service Class
+        tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                   // System Service Class
         break;
     case TSBK_OSP_NET_STS_BCAST:
         tsbkValue = m_siteData.lra();                                               // Location Registration Area
@@ -542,7 +608,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
         tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel Number
-        tsbkValue = (tsbkValue << 8) + m_serviceClass;                              // System Service Class
+        tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                   // System Service Class
         break;
     case TSBK_OSP_ADJ_STS_BCAST:
     {
@@ -755,57 +821,6 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
 }
 
 /// <summary>
-/// Helper to reset data values to defaults.
-/// </summary>
-void TSBK::reset()
-{
-    m_vendorSkip = false;
-
-    m_protect = false;
-    m_lco = LC_GROUP;
-    m_mfId = P25_MFG_STANDARD;
-
-    m_srcId = 0U;
-    m_dstId = 0U;
-
-    m_lastBlock = true;
-    m_aivFlag = true;
-    m_extendedAddrFlag = false;
-
-    m_service = 0U;
-    m_response = P25_RSP_ACCEPT;
-
-    m_netId = P25_WACN_STD_DEFAULT;
-    m_sysId = P25_SID_STD_DEFAULT;
-
-    m_grpVchNo = m_siteData.channelNo();
-
-    m_messageValue = 0U;
-    m_statusValue = 0U;
-
-    m_extendedFunction = P25_EXT_FNCT_CHECK;
-
-    m_adjCFVA = P25_CFVA_FAILURE;
-    m_adjRfssId = 0U;
-    m_adjSiteId = 0U;
-    m_adjChannelId = 0U;
-    m_adjChannelNo = 0U;
-    m_adjServiceClass = P25_SVC_CLS_INVALID;
-
-    /* TSBK Patch Group data */
-    m_patchSuperGroupId = 0U;
-    m_patchGroup1Id = 0U;
-    m_patchGroup2Id = 0U;
-    m_patchGroup3Id = 0U;
-
-    /* Service Options */
-    m_emergency = false;
-    m_encrypted = false;
-    m_priority = 4U;
-    m_group = true;
-}
-
-/// <summary>
 /// Sets the flag to skip vendor opcode processing.
 /// </summary>
 /// <param name="skip">Flag indicating to skip vendor opcode processing.</param>
@@ -814,18 +829,8 @@ void TSBK::setVendorSkip(bool skip)
     m_vendorSkip = skip;
 }
 
-/** Local Site data */
 /// <summary>
-/// Sets local configured site data.
-/// </summary>
-/// <param name="siteData">Site data.</param>
-void TSBK::setSiteData(SiteData siteData)
-{
-    m_siteData = siteData;
-}
-
-/// <summary>
-/// Sets local configured site callsign.
+/// Sets the callsign.
 /// </summary>
 /// <param name="callsign">Callsign.</param>
 void TSBK::setCallsign(std::string callsign)
@@ -841,29 +846,60 @@ void TSBK::setCallsign(std::string callsign)
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
 /// <summary>
-/// Sets the identity lookup table entry.
+/// Initializes a new instance of the TSBK class.
 /// </summary>
-/// <param name="entry">Identity table entry.</param>
-void TSBK::setIdenTable(lookups::IdenTable entry)
+/// <param name="siteData"></param>
+TSBK::TSBK(SiteData siteData) :
+    m_verbose(false),
+    m_protect(false),
+    m_lco(LC_GROUP),
+    m_mfId(P25_MFG_STANDARD),
+    m_srcId(0U),
+    m_dstId(0U),
+    m_lastBlock(false),
+    m_aivFlag(true),
+    m_extendedAddrFlag(false),
+    m_service(0U),
+    m_response(P25_RSP_ACCEPT),
+    m_netId(P25_WACN_STD_DEFAULT),
+    m_sysId(P25_SID_STD_DEFAULT),
+    m_grpVchNo(0U),
+    m_messageValue(0U),
+    m_statusValue(0U),
+    m_extendedFunction(P25_EXT_FNCT_CHECK),
+    m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjRfssId(0U),
+    m_adjSiteId(0U),
+    m_adjChannelId(0U),
+    m_adjChannelNo(0U),
+    m_adjServiceClass(P25_SVC_CLS_INVALID),
+    m_sccbChannelId1(0U),
+    m_sccbChannelId2(0U),
+    m_sccbChannelNo(0U),
+    m_lra(0U),
+    m_patchSuperGroupId(0U),
+    m_patchGroup1Id(0U),
+    m_patchGroup2Id(0U),
+    m_patchGroup3Id(0U),
+    m_emergency(false),
+    m_encrypted(false),
+    m_priority(4U),
+    m_group(true),
+    m_siteData(siteData),
+    m_siteIdenEntry(),
+    m_rs(),
+    m_trellis(),
+    m_vendorSkip(false),
+    m_sndcpAutoAccess(true),
+    m_sndcpReqAccess(false),
+    m_sndcpDAC(1U),
+    m_siteCallsign(NULL)
 {
-    m_siteIdenEntry = entry;
-}
-
-/// <summary>
-/// Sets a flag indicating whether or not networking is active.
-/// </summary>
-/// <param name="netActive">Network active flag.</param>
-void TSBK::setNetActive(bool netActive)
-{
-    m_siteNetActive = netActive;
-}
-
-/// <summary>
-/// Sets the total number of channels at the site.
-/// </summary>
-/// <param name="chCnt">Channel count.</param>
-void TSBK::setSiteChCnt(uint8_t chCnt)
-{
-    m_siteChCnt = chCnt;
+    m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
+    ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+    setCallsign(siteData.callsign());
 }

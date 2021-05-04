@@ -360,6 +360,15 @@ void Slot::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
+    if (m_network != NULL) {
+        if (m_network->getStatus() == network::NET_STAT_RUNNING) {
+            m_siteData.setNetActive(true);
+        }
+        else {
+            m_siteData.setNetActive(false);
+        }
+    }
+
     // increment the TSCC counter on every slot 1 clock
     if (m_slotNo == 1U) {
         m_tsccCnt++;

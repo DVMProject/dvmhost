@@ -1349,7 +1349,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_TSDU) {
         timerStop();
 
-        lc::TSBK tsbk = lc::TSBK();
+        lc::TSBK tsbk = lc::TSBK(SiteData(), lookups::IdenTable());
         bool ret = tsbk.decode(buffer + 1U);
         if (!ret) {
             LogWarning(LOG_CAL, "P25_DUID_TSDU (Trunking System Data Unit), undecodable LC");

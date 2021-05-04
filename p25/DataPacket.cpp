@@ -91,8 +91,6 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
     // handle individual DUIDs
     if (duid == P25_DUID_PDU) {
-        m_p25->m_trunk->resetStatusCommand();
-
         if (m_p25->m_rfState != RS_RF_DATA) {
             m_rfDataHeader.reset();
             m_rfDataBlockCnt = 0U;

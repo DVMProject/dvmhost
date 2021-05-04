@@ -59,32 +59,27 @@ namespace p25
         class HOST_SW_API TSBK {
         public:
             /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK();
+            TSBK(SiteData siteData, lookups::IdenTable entry);
+            /// <summary>Initializes a new instance of the TSBK class.</summary>
+            TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            /// <summary>Initializes a new instance of the TSBK class.</summary>
+            TSBK(LC* lc);
             /// <summary>Finalizes a instance of the TSBK class.</summary>
             ~TSBK();
+
+            /// <summary>Equals operator.</summary>
+            TSBK& operator=(const TSBK& data);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data);
             /// <summary>Encode a trunking signalling block.</summary>
             void encode(uint8_t* data, bool singleBlock);
 
-            /// <summary>Helper to reset data values to defaults.</summary>
-            void reset();
-
             /// <summary>Sets the flag to skip vendor opcode processing.</summary>
             void setVendorSkip(bool skip);
 
-            /** Local Site data */
-            /// <summary>Sets local configured site data.</summary>
-            void setSiteData(SiteData siteData);
-            /// <summary>Sets local configured site callsign.</summary>
+            /// <summary>Sets the callsign.</summary>
             void setCallsign(std::string callsign);
-            /// <summary>Sets the identity lookup table entry.</summary>
-            void setIdenTable(lookups::IdenTable entry);
-            /// <summary>Sets a flag indicating whether or not networking is active.</summary>
-            void setNetActive(bool netActive);
-            /// <summary>Sets the total number of channels at the site.</summary>
-            void setSiteChCnt(uint8_t chCnt);
 
         public:
             /// <summary>Flag indicating verbose log output.</summary>
@@ -112,10 +107,6 @@ namespace p25
 
             /// <summary>Service type.</summary>
             __PROPERTY(uint8_t, service, Service);
-
-            /// <summary>Service class.</summary>
-            __PROPERTY(uint8_t, serviceClass, ServiceClass);
-
             /// <summary>Response type.</summary>
             __PROPERTY(uint8_t, response, Response);
 
@@ -148,7 +139,7 @@ namespace p25
             __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
             /// <summary>Adjacent site channel number.</summary>
             __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
-            /// <summary>Adjacent site channel number.</summary>
+            /// <summary>Adjacent site service class.</summary>
             __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
 
             /** SCCB Data */
@@ -183,7 +174,16 @@ namespace p25
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
             __PROPERTY(bool, group, Group);
 
+            /** Local Site data */
+            /// <summary>Local Site Data.</summary>
+            __PROPERTY_PLAIN(SiteData, siteData, siteData);
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
         private:
+            /// <summary>Initializes a new instance of the TSBK class.</summary>
+            TSBK(SiteData siteData);
+
             friend class LC;
             friend class TDULC;
             edac::RS634717 m_rs;
@@ -195,11 +195,7 @@ namespace p25
             uint16_t m_sndcpDAC;
 
             /** Local Site data */
-            SiteData m_siteData;
             uint8_t* m_siteCallsign;
-            lookups::IdenTable m_siteIdenEntry;
-            bool m_siteNetActive;
-            uint8_t m_siteChCnt;
         };
     } // namespace lc
 } // namespace p25

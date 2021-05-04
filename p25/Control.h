@@ -36,6 +36,7 @@
 #include "p25/DataPacket.h"
 #include "p25/VoicePacket.h"
 #include "p25/NID.h"
+#include "p25/SiteData.h"
 #include "network/BaseNetwork.h"
 #include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
@@ -138,6 +139,8 @@ namespace p25
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupIdLookup* m_tidLookup;
 
+        lookups::IdenTable m_idenEntry;
+
         RingBuffer<uint8_t> m_queue;
 
         RPT_RF_STATE m_rfState;
@@ -162,6 +165,8 @@ namespace p25
         uint8_t m_ccSeq;
 
         NID m_nid;
+
+        SiteData m_siteData;
 
         lookups::RSSIInterpolator* m_rssiMapper;
         uint8_t m_rssi;

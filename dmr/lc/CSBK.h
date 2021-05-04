@@ -48,7 +48,9 @@ namespace dmr
         class HOST_SW_API CSBK {
         public:
             /// <summary>Initializes a new instance of the CSBK class.</summary>
-            CSBK();
+            CSBK(SiteData siteData, lookups::IdenTable entry);
+            /// <summary>Initializes a new instance of the CSBK class.</summary>
+            CSBK(SiteData siteData, lookups::IdenTable entry, bool verbose);
             /// <summary>Finalizes a instance of the CSBK class.</summary>
             ~CSBK();
 
@@ -56,17 +58,6 @@ namespace dmr
             bool decode(const uint8_t* bytes);
             /// <summary>Encodes a DMR CSBK.</summary>
             void encode(uint8_t* bytes);
-
-            /// <summary>Helper to reset data values to defaults.</summary>
-            void reset();
-
-            /** Local Site data */
-            /// <summary>Sets local configured site data.</summary>
-            void setSiteData(SiteData siteData);
-            /// <summary>Sets the identity lookup table entry.</summary>
-            void setIdenTable(lookups::IdenTable entry);
-            /// <summary>Sets a flag indicating whether or not networking is active.</summary>
-            void setNetActive(bool netActive);
 
         public:
             /// <summary>Flag indicating verbose log output.</summary>
@@ -141,13 +132,17 @@ namespace dmr
             /// <summary>Aloha MS mask.</summary>
             __PROPERTY(uint8_t, alohaMask, AlohaMask);
 
-        private:
-            uint8_t* m_data;
-
             /** Local Site data */
-            SiteData m_siteData;
-            lookups::IdenTable m_siteIdenEntry;
-            bool m_siteNetActive;
+            /// <summary>Local Site Data.</summary>
+            __PROPERTY_PLAIN(SiteData, siteData, siteData);
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
+        private:
+            /// <summary>Initializes a new instance of the CSBK class.</summary>
+            CSBK(SiteData siteData);
+
+            uint8_t* m_data;
         };
     } // namespace lc
 } // namespace dmr

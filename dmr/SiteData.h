@@ -48,7 +48,8 @@ namespace dmr
             m_netId(1U),
             m_siteId(1U),
             m_parId(3U),
-            m_requireReg(false)
+            m_requireReg(false),
+            m_netActive(false)
         {
             /* stub */
         }
@@ -63,7 +64,8 @@ namespace dmr
             m_netId(netId),
             m_siteId(siteId),
             m_parId(parId),
-            m_requireReg(requireReq)
+            m_requireReg(requireReq),
+            m_netActive(false)
         {
             // siteModel clamping
             if (siteModel > SITE_MODEL_HUGE)
@@ -143,6 +145,13 @@ namespace dmr
                 parId = 3U;
         }
 
+        /// <summary>Helper to set the site network active flag.</summary>
+        /// <param name="netActive">Network active.</param>
+        void setNetActive(bool netActive)
+        {
+            m_netActive = netActive;
+        }
+
         /// <summary>Returns the DMR system identity value.</summary>
         /// <param name="msb"></param>
         /// <returns></returns>
@@ -197,6 +206,8 @@ namespace dmr
                 m_siteId = data.m_siteId;
 
                 m_requireReg = data.m_requireReg;
+
+                m_netActive = data.m_netActive;
             }
 
             return *this;
@@ -213,6 +224,8 @@ namespace dmr
         __READONLY_PROPERTY_PLAIN(uint8_t, parId, parId);
         /// <summary>DMR require registration.</summary>
         __READONLY_PROPERTY_PLAIN(bool, requireReg, requireReg);
+        /// <summary>Flag indicating whether this site is a linked active network member.</summary>
+        __READONLY_PROPERTY_PLAIN(bool, netActive, netActive);
     };
 } // namespace dmr
 

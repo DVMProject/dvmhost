@@ -34,7 +34,6 @@
 #include "p25/lc/TSBK.h"
 #include "p25/lc/TDULC.h"
 #include "p25/Control.h"
-#include "p25/SiteData.h"
 #include "network/BaseNetwork.h"
 #include "network/RemoteControl.h"
 #include "Timer.h"
@@ -60,27 +59,6 @@ namespace p25
 
     class HOST_SW_API TrunkPacket {
     public:
-        /// <summary>Sets local configured site data.</summary>
-        void setSiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra,
-            uint8_t channelId, uint32_t channelNo);
-        /// <summary>Sets local configured site callsign.</summary>
-        void setCallsign(std::string callsign);
-        /// <summary>Sets a flag indicating whether or not networking is active.</summary>
-        void setNetActive(bool active);
-        /// <summary>Sets the total number of channels at the site.</summary>
-        void setSiteChCnt(uint8_t chCnt);
-        /// <summary>Sets the service class for this site.</summary>
-        void setServiceClass(bool control, bool voiceOnControl);
-
-        /// <summary>Resets the data states for the RF interface.</summary>
-        void resetRF();
-        /// <summary>Resets the data states for the network.</summary>
-        void resetNet();
-        /// <summary>Sets the RF TSBK and TDULC data to match the given LC data.</summary>
-        void setRFLC(const lc::LC& lc);
-        /// <summary>Sets the network TSBK and TDULC data to match the given LC data.</summary>
-        void setNetLC(const lc::LC& lc);
-
         /// <summary>Process a data frame from the RF interface.</summary>
         bool process(uint8_t* data, uint32_t len);
         /// <summary>Process a data frame from the network.</summary>
@@ -104,9 +82,6 @@ namespace p25
         void releaseDstIdGrant(uint32_t dstId, bool releaseAll);
         /// <summary>Helper to release group affiliations.</summary>
         void clearGrpAff(uint32_t dstId, bool releaseAll);
-
-        /// <summary>Resets the state of the status commands.</summary>
-        void resetStatusCommand();
 
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -150,9 +125,6 @@ namespace p25
         uint8_t m_mbfAdjSSCnt;
         uint8_t m_mbfSCCBCnt;
 
-        lc::TDULC m_rfTDULC;
-        lc::TDULC m_netTDULC;
-
         std::vector<uint32_t> m_voiceChTable;
 
         std::unordered_map<uint8_t, SiteData> m_adjSiteTable;
@@ -173,20 +145,10 @@ namespace p25
         bool m_noStatusAck;
         bool m_noMessageAck;
 
-        bool m_statusCmdEnable;
-        uint8_t m_statusRadioCheck;
-        uint8_t m_statusRadioInhibit;
-        uint8_t m_statusRadioUninhibit;
-        uint8_t m_statusRadioForceReg;
-        uint8_t m_statusRadioForceDereg;
-
-        uint32_t m_statusSrcId;
-        uint8_t m_statusValue;
-
-        SiteData m_siteData;
-
         Timer m_adjSiteUpdateTimer;
         uint32_t m_adjSiteUpdateInterval;
+
+        bool m_dumpTSBK;
 
         bool m_verbose;
         bool m_debug;
@@ -203,7 +165,7 @@ namespace p25
         void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
         /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
-        void writeRF_TDULC(uint8_t duid, bool noNetwork);
+        void writeRF_TDULC(lc::TDULC lc, bool noNetwork);
         /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
         void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
@@ -238,19 +200,12 @@ namespace p25
         void writeNet_TSDU_From_RF(uint8_t* data);
 
         /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
-        void writeNet_TDULC();
+        void writeNet_TDULC(lc::TDULC lc);
         /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
         void writeNet_TSDU();
 
         /// <summary>Helper to automatically inhibit a source ID on a denial.</summary>
         void denialInhibit(uint32_t srcId);
-
-        /// <summary></summary>
-        void resetStatusCommand(const lc::TSBK& tsbk);
-        /// <summary></summary>
-        void preprocessStatusCommand();
-        /// <summary></summary>
-        bool processStatusCommand(uint32_t srcId, uint32_t dstId);
 
         /// <summary>Helper to add the idle status bits on P25 frame data.</summary>
         void addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2);
