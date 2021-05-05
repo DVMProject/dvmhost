@@ -59,6 +59,11 @@ namespace p25
 
     class HOST_SW_API TrunkPacket {
     public:
+        /// <summary>Resets the data states for the RF interface.</summary>
+        void resetRF();
+        /// <summary>Resets the data states for the network.</summary>
+        void resetNet();
+
         /// <summary>Process a data frame from the RF interface.</summary>
         bool process(uint8_t* data, uint32_t len);
         /// <summary>Process a data frame from the network.</summary>

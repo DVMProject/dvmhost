@@ -157,8 +157,12 @@ TSBK& TSBK::operator=(const TSBK& data)
         m_siteData = data.m_siteData;
         m_siteIdenEntry = data.m_siteIdenEntry;
 
-        m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
-        ::memcpy(m_siteCallsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
+        delete[] m_siteCallsign;
+
+        uint8_t* callsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
+        ::memcpy(callsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
+
+        m_siteCallsign = callsign;
     }
 
     return *this;

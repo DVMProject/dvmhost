@@ -139,6 +139,24 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
+/// Resets the data states for the RF interface.
+/// </summary>
+void TrunkPacket::resetRF()
+{
+    lc::TSBK tsbk = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+    m_rfTSBK = tsbk;
+}
+
+/// <summary>
+/// Resets the data states for the network.
+/// </summary>
+void TrunkPacket::resetNet()
+{
+    lc::TSBK tsbk = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+    m_netTSBK = tsbk;
+}
+
+/// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
@@ -168,9 +186,9 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
         m_p25->m_queue.clear();
 
-        m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
-        m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
-
+        resetRF();
+        resetNet();
+        
         bool ret = m_rfTSBK.decode(data + 2U);
         if (!ret) {
             LogWarning(LOG_RF, P25_TSDU_STR ", undecodable LC");
@@ -480,8 +498,8 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
     switch (duid) {
         case P25_DUID_TSDU:
             if (m_p25->m_netState == RS_NET_IDLE) {
-                m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
-                m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+                resetRF();
+                resetNet();
 
                 bool ret = m_netTSBK.decode(data);
                 if (!ret) {
@@ -667,8 +685,8 @@ void TrunkPacket::writeAdjSSNetwork()
         return;
     }
 
-    m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
-    m_netTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+    resetRF();
+    resetNet();
 
     if (m_network != NULL) {
         if (m_verbose) {
@@ -1195,7 +1213,7 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     do
     {
-        m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+        resetRF();
 
         if (m_debug) {
             LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
@@ -1528,7 +1546,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
     if (!m_p25->m_control)
         return;
 
-    m_rfTSBK = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+    resetRF();
 
     switch (lco) {
         case TSBK_OSP_IDEN_UP:

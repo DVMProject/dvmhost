@@ -60,10 +60,12 @@ const uint32_t VOC_LDU1_COUNT = 3U;
 /// </summary>
 void VoicePacket::resetRF()
 {
-    m_rfLC = lc::LC(m_p25->m_siteData);
-    //m_rfLastHDU = lc::LC(m_p25->m_siteData);
-    m_rfLastLDU1 = lc::LC(m_p25->m_siteData);
-    m_rfLastLDU2 = lc::LC(m_p25->m_siteData);;
+    lc::LC lc = lc::LC(m_p25->m_siteData);
+
+    m_rfLC = lc;
+    //m_rfLastHDU = lc;
+    m_rfLastLDU1 = lc;
+    m_rfLastLDU2 = lc;
 
     m_rfFrames = 0U;
     m_rfErrs = 0U;
@@ -77,8 +79,10 @@ void VoicePacket::resetRF()
 /// </summary>
 void VoicePacket::resetNet()
 {
-    m_netLC = lc::LC(m_p25->m_siteData);
-    m_netLastLDU1 = lc::LC(m_p25->m_siteData);
+    lc::LC lc = lc::LC(m_p25->m_siteData);
+
+    m_netLC = lc;
+    m_netLastLDU1 = lc;
 
     m_netFrames = 0U;
     m_netLost = 0U;

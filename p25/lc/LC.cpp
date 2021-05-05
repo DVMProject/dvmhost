@@ -120,8 +120,12 @@ LC& LC::operator=(const LC& data)
 
         m_algId = data.m_algId;
         if (m_algId != P25_ALGO_UNENCRYPT) {
-            ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-            ::memcpy(m_mi, data.m_mi, P25_MI_LENGTH_BYTES);
+            delete[] m_mi;
+
+            uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
+            ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
+
+            m_mi = mi;
 
             m_kId = data.m_kId;
             if (!m_encrypted) {
@@ -130,7 +134,12 @@ LC& LC::operator=(const LC& data)
             }
         }
         else {
+            delete[] m_mi;
+
+            uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
             ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+
+            m_mi = mi;
 
             m_kId = 0x0000U;
             if (m_encrypted) {

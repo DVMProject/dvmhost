@@ -269,9 +269,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_voice->resetRF();
     m_voice->resetNet();
     m_data->resetRF();
-
-    m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
-    m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
+    m_trunk->resetRF();
+    m_trunk->resetNet();
 }
 
 /// <summary>
