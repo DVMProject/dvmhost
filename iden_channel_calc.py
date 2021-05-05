@@ -35,7 +35,7 @@ if __name__ == '__main__':
     import argparse
     import os
 
-    MAX_FREQ_GAP = 70000000
+    MAX_FREQ_GAP = 25500000
     HZ_MHZ = float(1000000)
 
     print('Digital Voice Modem -> Identity Table Calculator D01.00')
@@ -55,7 +55,7 @@ if __name__ == '__main__':
         quit()
     if (cli_args.TxFrequency > (cli_args.BaseFrequency + MAX_FREQ_GAP)):
         print ('ERROR: Tx Frequency (' + '%.5f' % float(cli_args.TxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
-            'Tx Frequency must be no more then 70 Mhz higher then the base frequency!')
+            'Tx Frequency must be no more then 25.5 Mhz higher then the base frequency!')
         quit()
 
     print ('\r\nIdentity Data:')
