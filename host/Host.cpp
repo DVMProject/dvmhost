@@ -62,6 +62,13 @@ using namespace lookups;
 #endif
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define IDLE_SLEEP_MS 5U
+#define ACTIVE_SLEEP_MS 1U
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
@@ -526,8 +533,7 @@ int Host::run()
             if (m_network != NULL)
                 m_network->clock(ms);
 
-            if (ms < 2U)
-                Thread::sleep(1U);
+            Thread::sleep(IDLE_SLEEP_MS);
 
             if (elapsedMs > 15000U)
                 break;
@@ -1118,8 +1124,10 @@ int Host::run()
 
         m_modeTimer.clock(ms);
 
-        if (ms < 2U)
-            Thread::sleep(1U);
+        if ((m_state != STATE_IDLE) && ms <= 1U)
+            Thread::sleep(ACTIVE_SLEEP_MS);
+        if (m_state == STATE_IDLE)
+            Thread::sleep(IDLE_SLEEP_MS);
     }
 
     setState(HOST_STATE_QUIT);

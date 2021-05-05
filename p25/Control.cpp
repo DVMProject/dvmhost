@@ -644,17 +644,6 @@ void Control::clock(uint32_t ms)
     }
 
     m_trunk->clock(ms);
-
-    // if the states are "idle" ensure LC data isn't being held in memory
-    if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
-        m_voice->resetRF();
-        m_voice->resetNet();
-
-        m_data->resetRF();
-
-        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
-        m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
-    }
 }
 
 /// <summary>
