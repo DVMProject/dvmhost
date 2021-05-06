@@ -46,17 +46,25 @@ if __name__ == '__main__':
     parser.add_argument('--spacing', action = 'store', dest = 'Spacing', type = float, help = 'Channel Spacing (in KHz)', required = True)
     parser.add_argument('--offset', action = 'store', dest = 'InputOffset', type = float, help = 'Input Offset (in MHz)', required = True)
     parser.add_argument('--bandwidth', action = 'store', dest = 'Bandwidth', type = float, help = 'Bandwidth (in KHz)', required = True)
-    parser.add_argument('--tx', action = 'store', dest = 'TxFrequency', type = int, help = 'Transmit Frequency (in Hz, this should be within the band of the Base Frequency)', required = True)
+    parser.add_argument('--tx', action = 'store', dest = 'TxFrequency', type = int, help = 'Transmit Frequency (in Hz, this should be within the band of the Base Frequency)', required = False)
+    parser.add_argument('--ch-no', action = 'store', dest = 'ChannelNo', type = str, help = 'Logical Channel Number', required = False)
     cli_args = parser.parse_args()
 
-    if (cli_args.TxFrequency < cli_args.BaseFrequency):
-        print ('ERROR: Tx Frequency (' + '%.5f' % float(cli_args.TxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
-            'Tx Frequency must be greater then the base frequency!')
+    if (not cli_args.TxFrequency) and (not cli_args.ChannelNo):
+        print ('ERROR: Tx Frequency or Channel Number must be spcified!')
         quit()
-    if (cli_args.TxFrequency > (cli_args.BaseFrequency + MAX_FREQ_GAP)):
-        print ('ERROR: Tx Frequency (' + '%.5f' % float(cli_args.TxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
-            'Tx Frequency must be no more then 25.5 Mhz higher then the base frequency!')
+    if (cli_args.TxFrequency) and (cli_args.ChannelNo):
+        print ('ERROR: Tx Frequency or Channel Number must be spcified!')
         quit()
+    if (cli_args.TxFrequency):
+        if (cli_args.TxFrequency < cli_args.BaseFrequency):
+            print ('ERROR: Tx Frequency (' + '%.5f' % float(cli_args.TxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
+                'Tx Frequency must be greater then the base frequency!')
+            quit()
+        if (cli_args.TxFrequency > (cli_args.BaseFrequency + MAX_FREQ_GAP)):
+            print ('ERROR: Tx Frequency (' + '%.5f' % float(cli_args.TxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
+                'Tx Frequency must be no more then 25.5 Mhz higher then the base frequency!')
+            quit()
 
     print ('\r\nIdentity Data:')
 
@@ -69,16 +77,29 @@ if __name__ == '__main__':
            '%.3f' % cli_args.InputOffset + ',' + str(cli_args.Bandwidth) + ',"')
 
     print ('\r\nChannel Data:')
-
     offsetHz = cli_args.InputOffset * HZ_MHZ
-    rxFrequency = int(cli_args.TxFrequency + offsetHz)
-    print ('Tx Frequency: ' + '%.5f' % (float(cli_args.TxFrequency / HZ_MHZ)) + ' MHz' +
-           '\r\nRx Frequency: ' + '%.5f' % (float(rxFrequency / HZ_MHZ)) + ' MHz')
 
-    spaceHz = int(cli_args.Spacing * 1000)
-    offsetHz = int(cli_args.InputOffset * HZ_MHZ)
+    if cli_args.ChannelNo:
+        space = cli_args.Spacing / 0.125
+        chNo = int(cli_args.ChannelNo, 16)
 
-    rootFreq = cli_args.TxFrequency - cli_args.BaseFrequency
-    chNo = rootFreq / spaceHz
+        rxFrequency = (cli_args.BaseFrequency + ((space * 125) * chNo)) + offsetHz
+        txFrequency = (cli_args.BaseFrequency + ((space * 125) * chNo))
+        
+        print ('\r\nChannel Number: ' + '%x' % chNo)
 
-    print ('\r\nChannel Number: ' + '%x' % chNo)
+        print ('\r\nTx Frequency: ' + '%.5f' % (float(txFrequency / HZ_MHZ)) + ' MHz' +
+               '\r\nRx Frequency: ' + '%.5f' % (float(rxFrequency / HZ_MHZ)) + ' MHz')
+    else:
+        rxFrequency = int(cli_args.TxFrequency + offsetHz)
+
+        print ('Tx Frequency: ' + '%.5f' % (float(cli_args.TxFrequency / HZ_MHZ)) + ' MHz' +
+               '\r\nRx Frequency: ' + '%.5f' % (float(rxFrequency / HZ_MHZ)) + ' MHz')
+
+        spaceHz = int(cli_args.Spacing * 1000)
+        offsetHz = int(cli_args.InputOffset * HZ_MHZ)
+
+        rootFreq = cli_args.TxFrequency - cli_args.BaseFrequency
+        chNo = rootFreq / spaceHz
+
+        print ('\r\nChannel Number: ' + '%x' % chNo)

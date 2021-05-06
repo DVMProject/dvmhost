@@ -1241,14 +1241,6 @@ bool Host::readParams()
             return false;
         }
 
-        if (entry.txOffsetMhz() == 0U) {
-            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
-            return false;
-        }
-
-        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-        float calcTxOffset = entry.txOffsetMhz() * 1000000;
-
         m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
         if (m_channelNo == 0U) { // clamp to 1
             m_channelNo = 1U;
@@ -1257,10 +1249,26 @@ bool Host::readParams()
             m_channelNo = 4095U;
         }
 
-        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
-        m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        if (m_duplex) {
+            if (entry.txOffsetMhz() == 0U) {
+                ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+                return false;
+            }
 
-        yaml::Node & voiceChList = rfssConfig["voiceChNo"];
+            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+            float calcTxOffset = entry.txOffsetMhz() * 1000000;
+
+            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+            m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        }
+        else {
+            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+
+            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+            m_txFrequency = m_rxFrequency;
+        }
+
+        yaml::Node& voiceChList = rfssConfig["voiceChNo"];
         for (size_t i = 0; i < voiceChList.size(); i++) {
             uint32_t chNo = (uint32_t)::strtoul(voiceChList[i].as<std::string>("1").c_str(), NULL, 16);
             m_voiceChNo.push_back(chNo);
