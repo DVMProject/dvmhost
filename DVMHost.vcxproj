@@ -314,6 +314,7 @@
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <None Include="cpp.hint" />
+    <None Include="iden_channel_calc.py" />
     <None Include="Makefile" />
     <None Include="Makefile.arm" />
     <None Include="Makefile.rpi-arm" />

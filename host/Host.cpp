@@ -1183,6 +1183,13 @@ bool Host::readParams()
     m_identity = systemConf["identity"].as<std::string>();
     m_fixedMode = systemConf["fixedMode"].as<bool>(false);
 
+    if (m_identity.length() > 8) {
+        std::string identity = m_identity;
+        m_identity = identity.substr(0, 8);
+
+        ::LogWarning(LOG_HOST, "System Identity \"%s\" is too long; truncating to 8 characters, \"%s\".", identity.c_str(), m_identity.c_str());
+    }
+
     removeLockFile();
 
     LogInfo("General Parameters");

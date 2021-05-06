@@ -574,6 +574,7 @@
     <None Include="Makefile.arm" />
     <None Include="Makefile.rpi-arm" />
     <None Include="cpp.hint" />
+    <None Include="iden_channel_calc.py" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="iden_table.dat" />
