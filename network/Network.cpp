@@ -53,18 +53,22 @@ using namespace network;
 /// <param name="id">Unique ID of this modem on the network.</param>
 /// <param name="password">Network authentication password.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="dmr">Flag indicating whether DMR is enabled.</param>
+/// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
 Network::Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
-    bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
+    bool duplex, bool debug, bool dmr, bool p25, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
     BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
     m_address(address),
     m_port(port),
     m_password(password),
     m_enabled(false),
+    m_dmrEnabled(dmr),
+    m_p25Enabled(p25),
     m_updateLookup(updateLookup),
     m_identity(),
     m_rxFrequency(0U),
@@ -204,7 +208,7 @@ void Network::clock(uint32_t ms)
         }
 
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {
-            if (m_enabled) {
+            if (m_enabled && m_dmrEnabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, DMR", m_buffer, length);
 
@@ -214,7 +218,7 @@ void Network::clock(uint32_t ms)
             }
         }
         else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {
-            if (m_enabled) {
+            if (m_enabled && m_p25Enabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, P25", m_buffer, length);
 

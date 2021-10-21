@@ -1583,7 +1583,7 @@ bool Host::createNetwork()
         LogInfo("    Debug: yes");
     }
 
-    m_network = new Network(address, port, local, id, password, m_duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
+    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
     m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
