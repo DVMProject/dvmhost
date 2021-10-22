@@ -68,6 +68,8 @@ using namespace lookups;
 #define IDLE_SLEEP_MS 5U
 #define ACTIVE_SLEEP_MS 1U
 
+#define CW_IDLE_SLEEP_MS 50U
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -546,14 +548,26 @@ int Host::run()
     bool killed = false;
     bool hasTxShutdown = false;
 
-    #define INTERRUPT_P25_CONTROL                                                                                   \
-        if (g_interruptP25Control) {                                                                                \
-            p25CCDurationTimer.stop();                                                                              \
-            if (p25CCDurationTimer.isRunning() && !p25CCDurationTimer.hasExpired()) {                               \
-                LogDebug(LOG_HOST, "traffic interrupts P25 CC, g_interruptP25Control = %u", g_interruptP25Control); \
-                m_modem->clearP25Data();                                                                            \
-                p25->reset();                                                                                       \
-            }                                                                                                       \
+    // Macro to interrupt a running P25 control channel transmission
+    #define INTERRUPT_P25_CONTROL                                                                                       \
+        if (p25 != NULL) {                                                                                              \
+            if (g_interruptP25Control) {                                                                                \
+                p25CCDurationTimer.stop();                                                                              \
+                if (p25CCDurationTimer.isRunning() && !p25CCDurationTimer.hasExpired()) {                               \
+                    LogDebug(LOG_HOST, "traffic interrupts P25 CC, g_interruptP25Control = %u", g_interruptP25Control); \
+                    m_modem->clearP25Data();                                                                            \
+                    p25->reset();                                                                                       \
+                }                                                                                                       \
+            }                                                                                                           \
+        }
+
+    // Macro to start DMR duplex idle transmission (or beacon)
+    #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
+        if (dmr != NULL) {                                                                                              \
+            if (m_duplex) {                                                                                             \
+                m_modem->writeDMRStart(x);                                                                              \
+                m_dmrTXTimer.start();                                                                                   \
+            }                                                                                                           \
         }
 
     // main execution loop
@@ -575,17 +589,21 @@ int Host::run()
         uint8_t data[220U];
         uint32_t len;
         bool ret;
-        bool hasCw = false;
 
-        if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
-            if (!m_fixedMode) {
+        if (!m_fixedMode) {
+            if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
                 setState(STATE_IDLE);
             }
-            else {
-                if (dmr != NULL)
-                    setState(STATE_DMR);
-                if (p25 != NULL)
-                    setState(STATE_P25);
+        }
+        else {
+            m_modeTimer.stop();
+            if (dmr != NULL && m_state != STATE_DMR && !m_modem->hasTX()) {
+                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_DMR);
+                setState(STATE_DMR);
+            }
+            if (p25 != NULL && m_state != STATE_P25 && !m_modem->hasTX()) {
+                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_P25);
+                setState(STATE_P25);
             }
         }
 
@@ -605,13 +623,10 @@ int Host::run()
                     if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
                         setState(STATE_DMR);
+                        START_DMR_DUPLEX_IDLE(true);
                     }
                     if (m_state == STATE_DMR) {
-                        // if the modem is in duplex -- write DMR sync start
-                        if (m_duplex) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
+                        START_DMR_DUPLEX_IDLE(true);
 
                         m_modem->writeDMRData1(data, len);
 
@@ -621,9 +636,11 @@ int Host::run()
                         }
                         m_modeTimer.start();
                     }
+/*
                     else if (m_state != HOST_STATE_LOCKOUT) {
                         LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
                     }
+*/
                 }
             }
 
@@ -637,13 +654,10 @@ int Host::run()
                     if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
                         setState(STATE_DMR);
+                        START_DMR_DUPLEX_IDLE(true);
                     }
                     if (m_state == STATE_DMR) {
-                        // if the modem is in duplex -- write DMR sync start
-                        if (m_duplex) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
+                        START_DMR_DUPLEX_IDLE(true);
 
                         m_modem->writeDMRData2(data, len);
 
@@ -653,9 +667,11 @@ int Host::run()
                         }
                         m_modeTimer.start();
                     }
+/*
                     else if (m_state != HOST_STATE_LOCKOUT) {
                         LogWarning(LOG_HOST, "DMR data received, state = %u", m_state);
                     }
+*/
                 }
             }
         }
@@ -684,9 +700,11 @@ int Host::run()
 
                         m_modeTimer.start();
                     }
+/*
                     else if (m_state != HOST_STATE_LOCKOUT) {
                         LogWarning(LOG_HOST, "P25 data received, state = %u", m_state);
                     }
+*/
                 }
                 else {
                     if (m_state == STATE_IDLE || m_state == STATE_P25) {
@@ -710,7 +728,6 @@ int Host::run()
                         }
                     }
                 }
-
 
                 // if the modem is in duplex -- handle P25 CC burst control
                 if (m_duplex) {
@@ -756,6 +773,7 @@ int Host::run()
                         if (ret) {
                             m_modeTimer.setTimeout(m_rfModeHang);
                             setState(STATE_DMR);
+                            START_DMR_DUPLEX_IDLE(true);
 
                             dmrBeaconDurationTimer.stop();
                             INTERRUPT_P25_CONTROL;
@@ -765,6 +783,8 @@ int Host::run()
                         // in simplex directly process slot 1 frames
                         m_modeTimer.setTimeout(m_rfModeHang);
                         setState(STATE_DMR);
+                        START_DMR_DUPLEX_IDLE(true);
+
                         dmr->processFrame1(data, len);
 
                         dmrBeaconDurationTimer.stop();
@@ -810,6 +830,7 @@ int Host::run()
                         if (ret) {
                             m_modeTimer.setTimeout(m_rfModeHang);
                             setState(STATE_DMR);
+                            START_DMR_DUPLEX_IDLE(true);
 
                             dmrBeaconDurationTimer.stop();
                             INTERRUPT_P25_CONTROL;
@@ -819,6 +840,8 @@ int Host::run()
                         // in simplex -- directly process slot 2 frames
                         m_modeTimer.setTimeout(m_rfModeHang);
                         setState(STATE_DMR);
+                        START_DMR_DUPLEX_IDLE(true);
+
                         dmr->processFrame2(data, len);
 
                         dmrBeaconDurationTimer.stop();
@@ -958,19 +981,44 @@ int Host::run()
         // clock and check CW timer
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
-            if (dmrBeaconDurationTimer.isRunning() || p25CCDurationTimer.isRunning()) {
-                LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
+            if (!m_modem->hasTX()) {
+                if (dmrBeaconDurationTimer.isRunning() || p25CCDurationTimer.isRunning()) {
+                    LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
+
+                    dmrBeaconDurationTimer.stop();
+                    p25CCDurationTimer.stop();
+                }
+
+                LogDebug(LOG_HOST, "CW, start transmitting");
 
                 setState(STATE_IDLE);
-
-                dmrBeaconDurationTimer.stop();
-                p25CCDurationTimer.stop();
-                //g_interruptP25Control = true;
-            }
-
-            if (m_state == STATE_IDLE && !m_modem->hasTX()) {
-                hasCw = true;
                 m_modem->sendCWId(m_cwCallsign);
+
+                Thread::sleep(CW_IDLE_SLEEP_MS);
+
+                bool first = true;
+                do {
+                    // ------------------------------------------------------
+                    //  -- Modem Clocking                                 --
+                    // ------------------------------------------------------
+
+                    ms = stopWatch.elapsed();
+                    stopWatch.start();
+
+                    m_modem->clock(ms);
+
+                    if (!first && !m_modem->hasTX()) {
+                        LogDebug(LOG_HOST, "CW, finished transmitting");
+                        break;
+                    }
+
+                    if (first) {
+                        first = false;
+                        Thread::sleep(200U + CW_IDLE_SLEEP_MS); // ~250ms; poll time of the modem
+                    }
+                    else
+                        Thread::sleep(CW_IDLE_SLEEP_MS);
+                } while (true);
 
                 m_cwIdTimer.setTimeout(m_cwIdTime);
                 m_cwIdTimer.start();
@@ -982,24 +1030,21 @@ int Host::run()
             // clock and check DMR roaming beacon interval timer
             dmrBeaconIntervalTimer.clock(ms);
             if ((dmrBeaconIntervalTimer.isRunning() && dmrBeaconIntervalTimer.hasExpired()) || g_fireDMRBeacon) {
-                if (hasCw) {
-                    g_fireDMRBeacon = false;
-                    dmrBeaconIntervalTimer.start();
-                }
-                else {
-                    if ((m_state == STATE_IDLE || m_state == STATE_DMR) && !m_modem->hasTX()) {
-                        if (m_modeTimer.isRunning()) {
-                            m_modeTimer.stop();
-                        }
-
-                        if (m_state != STATE_DMR)
-                            setState(STATE_DMR);
-
-                        g_fireDMRBeacon = false;
-                        LogDebug(LOG_HOST, "DMR, roaming beacon burst");
-                        dmrBeaconIntervalTimer.start();
-                        dmrBeaconDurationTimer.start();
+                if ((m_state == STATE_IDLE || m_state == STATE_DMR) && !m_modem->hasTX()) {
+                    if (m_modeTimer.isRunning()) {
+                        m_modeTimer.stop();
                     }
+
+                    if (m_fixedMode)
+                        START_DMR_DUPLEX_IDLE(true);
+
+                    if (m_state != STATE_DMR)
+                        setState(STATE_DMR);
+
+                    g_fireDMRBeacon = false;
+                    LogDebug(LOG_HOST, "DMR, roaming beacon burst");
+                    dmrBeaconIntervalTimer.start();
+                    dmrBeaconDurationTimer.start();
                 }
             }
 
@@ -1008,9 +1053,11 @@ int Host::run()
             if (dmrBeaconDurationTimer.isRunning() && dmrBeaconDurationTimer.hasExpired()) {
                 dmrBeaconDurationTimer.stop();
 
-                if (m_state == STATE_DMR && !m_modeTimer.isRunning()) {
-                    m_modeTimer.setTimeout(m_rfModeHang);
-                    m_modeTimer.start();
+                if (!m_fixedMode) {
+                    if (m_state == STATE_DMR && !m_modeTimer.isRunning()) {
+                        m_modeTimer.setTimeout(m_rfModeHang);
+                        m_modeTimer.start();
+                    }
                 }
             }
 
@@ -1029,40 +1076,34 @@ int Host::run()
 
                 if (m_p25CtrlBroadcast) {
                     if ((p25CCIntervalTimer.isRunning() && p25CCIntervalTimer.hasExpired()) || g_fireP25Control) {
-                        if (hasCw) {
+                        if ((m_state == STATE_IDLE || m_state == STATE_P25) && !m_modem->hasTX()) {
+                            if (m_modeTimer.isRunning()) {
+                                m_modeTimer.stop();
+                            }
+
+                            if (m_state != STATE_P25)
+                                setState(STATE_P25);
+
+                            if (g_interruptP25Control) {
+                                g_interruptP25Control = false;
+                                LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
+                            }
+
+                            p25->writeAdjSSNetwork();
+                            p25->setCCRunning(true);
+
+                            // hide this message for continuous CC -- otherwise display every time we process
+                            if (!m_p25CtrlChannel) {
+                                LogMessage(LOG_HOST, "P25, start CC broadcast");
+                            }
+
                             g_fireP25Control = false;
                             p25CCIntervalTimer.start();
-                        }
-                        else {
-                            if ((m_state == STATE_IDLE || m_state == STATE_P25) && !m_modem->hasTX()) {
-                                if (m_modeTimer.isRunning()) {
-                                    m_modeTimer.stop();
-                                }
+                            p25CCDurationTimer.start();
 
-                                if (m_state != STATE_P25)
-                                    setState(STATE_P25);
-
-                                if (g_interruptP25Control) {
-                                    g_interruptP25Control = false;
-                                    LogDebug(LOG_HOST, "traffic complete, restart P25 CC broadcast, g_interruptP25Control = %u", g_interruptP25Control);
-                                }
-
-                                p25->writeAdjSSNetwork();
-                                p25->setCCRunning(true);
-
-                                // hide this message for continuous CC -- otherwise display every time we process
-                                if (!m_p25CtrlChannel) {
-                                    LogMessage(LOG_HOST, "P25, start CC broadcast");
-                                }
-
-                                g_fireP25Control = false;
-                                p25CCIntervalTimer.start();
-                                p25CCDurationTimer.start();
-
-                                // if the CC is continuous -- clock one cycle into the duration timer
-                                if (m_p25CtrlChannel) {
-                                    p25CCDurationTimer.clock(ms);
-                                }
+                            // if the CC is continuous -- clock one cycle into the duration timer
+                            if (m_p25CtrlChannel) {
+                                p25CCDurationTimer.clock(ms);
                             }
                         }
                     }
@@ -1727,13 +1768,6 @@ void Host::setState(uint8_t state)
     switch (state) {
         case STATE_DMR:
             m_modem->setState(STATE_DMR);
-
-            // if the modem is in duplex -- write DMR start sync
-            if (m_duplex) {
-                m_modem->writeDMRStart(true);
-                m_dmrTXTimer.start();
-            }
-            
             m_state = STATE_DMR;
             m_modeTimer.start();
             //m_cwIdTimer.stop();
