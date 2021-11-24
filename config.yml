@@ -30,6 +30,10 @@ protocols:
             enable: false
             interval: 60
             duration: 3
+        control: 
+            dedicated: false
+            enable: false
+            slot: 1
         embeddedLCOnly: false
         dumpTAData: true
         dumpDataPacket: false

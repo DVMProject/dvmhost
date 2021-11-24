@@ -211,6 +211,9 @@ void CSBK::encode(uint8_t* bytes)
     if (!m_Cdef) {
         m_data[1U] = m_FID;                                                         // Feature ID
     }
+    else {
+        m_data[1U] = m_colorCode & 0x0FU;                                           // Cdef uses Color Code
+    }
 
     switch (m_CSBKO) {
     case CSBKO_ACK_RSP:
@@ -267,6 +270,175 @@ void CSBK::encode(uint8_t* bytes)
         m_data[9U] = (m_dstId >> 0) & 0xFFU;
         break;
 
+    /* Tier III */
+    case CSBKO_ALOHA:
+        {
+            ulong64_t csbkValue = 0U;
+            csbkValue = (csbkValue << 2) + 0U;                                          // Reserved
+            csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                  // Site Time Slot Synchronization
+            csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                           // DMR Spec. Version (1.5.1)
+            csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+            csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);        // Site Networked
+            csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
+            csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
+            csbkValue = (csbkValue << 4) + 0U;                                          // 
+            csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
+            csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
+            csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
+            csbkValue = (csbkValue << 24) + m_srcId;                                    // Source ID
+
+            // split value into bytes
+            m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+            m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+            m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+            m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+            m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+            m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+            m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+            m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+        }
+        break;
+
+    case CSBKO_PV_GRANT:
+        {
+            ulong64_t csbkValue = 0U;
+            csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
+            csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
+            csbkValue = (csbkValue << 1) + 0U;                                          // Reserved
+            csbkValue = (csbkValue << 1) + 0U;                                          // Emergency
+            csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+            csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
+            csbkValue = (csbkValue << 24) + m_srcId;                                    // Source ID
+
+            // split value into bytes
+            m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+            m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+            m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+            m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+            m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+            m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+            m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+            m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+        }
+        break;
+
+    case CSBKO_TV_GRANT:
+    case CSBKO_BTV_GRANT:
+        {
+            ulong64_t csbkValue = 0U;
+            csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
+            csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
+            csbkValue = (csbkValue << 1) + 0U;                                          // Late Entry
+            csbkValue = (csbkValue << 1) + 0U;                                          // Emergency
+            csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+            csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
+            csbkValue = (csbkValue << 24) + m_srcId;                                    // Source ID
+
+            // split value into bytes
+            m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+            m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+            m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+            m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+            m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+            m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+            m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+            m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+        }
+        break;
+
+    case CSBKO_BROADCAST:
+        {
+            ulong64_t csbkValue = 0U;
+            if (!m_Cdef) {
+                csbkValue = m_anncType;                                                 // Announcement Type
+            }
+
+            switch (m_anncType)
+            {
+            case BCAST_ANNC_ANN_WD_TSCC:
+                {
+                    // Broadcast Parms 1
+                    csbkValue = (csbkValue << 4) + 0U;                                  // Reserved
+                    csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 1
+                    csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 2
+                    csbkValue = (csbkValue << 1) + ((m_annWdCh1) ? 1U : 0U);            // Announce/Withdraw Channel 1
+                    csbkValue = (csbkValue << 1) + ((m_annWdCh2) ? 1U : 0U);            // Announce/Withdraw Channel 2
+
+                    csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U); // Require Registration
+                    csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);               // Backoff Number
+                    csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();        // Site Identity
+
+                    // Broadcast Parms 2
+                    csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);            // Logical Channel 1
+                    csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);            // Logical Channel 2
+                }
+                break;
+            case BCAST_ANNC_CHAN_FREQ:
+                {
+                    uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
+                    float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
+                    const uint32_t multiple = 100000;
+
+                    // calculate Rx frequency
+                    uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + calcTxOffset);
+
+                    // generate frequency in mhz
+                    uint32_t rxFreqMhz = rxFrequency + multiple / 2;
+                    rxFreqMhz -= rxFreqMhz % multiple;
+                    rxFreqMhz /= multiple * 10;
+
+                    // generate khz offset
+                    uint32_t rxFreqKhz = rxFrequency - (rxFreqMhz * 1000000);
+
+                    // calculate Tx Frequency
+                    uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)));
+
+                    // generate frequency in mhz
+                    uint32_t txFreqMhz = txFrequency + multiple / 2;
+                    txFreqMhz -= txFreqMhz % multiple;
+                    txFreqMhz /= multiple * 10;
+
+                    // generate khz offset
+                    uint32_t txFreqKhz = txFrequency - (txFreqMhz * 1000000);
+
+                    csbkValue = 0U;                                                         // Cdef Type (always 0 for ANN_WD_TSCC)
+                    csbkValue = (csbkValue << 2) + 0U;                                      // Reserved
+                    csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                // Logical Channel
+                    csbkValue = (csbkValue << 10) + (txFreqMhz & 0x7FFU);                   // Transmit Freq Mhz
+                    csbkValue = (csbkValue << 13) + (txFreqKhz & 0x3FFFU);                  // Transmit Freq Offset Khz
+                    csbkValue = (csbkValue << 10) + (rxFreqMhz & 0x7FFU);                   // Receive Freq Mhz
+                    csbkValue = (csbkValue << 13) + (rxFreqKhz & 0x3FFFU);                  // Receive Freq Khz
+                }
+                break;
+            case BCAST_ANNC_SITE_PARMS:
+                {
+                    // Broadcast Parms 1
+                    csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);        // Site Identity (Broadcast Parms 1)
+
+                    csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);   // Require Registration
+                    csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
+                    csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
+
+                    // Broadcast Parms 2
+                    csbkValue = (csbkValue << 1) + 0U;                                      // Roaming TG Subscription/Attach
+                    csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
+                    csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
+                }
+                break;
+            }
+
+            // split value into bytes
+            m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+            m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+            m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+            m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+            m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+            m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+            m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+            m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+        }
+        break;
+
     default:
         if (m_GI) {
             m_data[2U] |= 0x40U;                                                    // Group or Individual
@@ -286,125 +458,6 @@ void CSBK::encode(uint8_t* bytes)
         m_data[8U] = (m_srcId >> 8) & 0xFFU;
         m_data[9U] = (m_srcId >> 0) & 0xFFU;
         break;
-
-    /* Tier III */
-    case CSBKO_ALOHA:
-    {
-        ulong64_t csbkValue = 0U;
-        csbkValue = (csbkValue << 2) + 0U;                                          // Reserved
-        csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                  // Site Time Slot Synchronization
-        csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                           // DMR Spec. Version (1.5.1)
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);        // Site Networked
-        csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
-        csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
-        csbkValue = (csbkValue << 4) + 0U;                                          // 
-        csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
-        csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
-        csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source ID
-
-        // split value into bytes
-        m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
-        m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
-        m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
-        m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
-        m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
-        m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
-        m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
-        m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
-        break;
-    }
-    break;
-    case CSBKO_BROADCAST:
-    {
-        ulong64_t csbkValue = 0U;
-        if (!m_Cdef) {
-            csbkValue = m_anncType;                                                 // Announcement Type
-        }
-
-        switch (m_anncType)
-        {
-        case BCAST_ANNC_ANN_WD_TSCC:
-            if (!m_Cdef) {
-                // Broadcast Parms 1
-                csbkValue = (csbkValue << 4) + 0U;                                  // Reserved
-                csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 1
-                csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);               // Color Code 2
-                csbkValue = (csbkValue << 1) + ((m_annWdCh1) ? 1U : 0U);            // Announce/Withdraw Channel 1
-                csbkValue = (csbkValue << 1) + ((m_annWdCh2) ? 1U : 0U);            // Announce/Withdraw Channel 2
-
-                csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U); // Require Registration
-                csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);               // Backoff Number
-                csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();        // Site Identity
-
-                // Broadcast Parms 2
-                csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);            // Logical Channel 1
-                csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);            // Logical Channel 2
-            }
-            else {
-                uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-                float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
-                const uint32_t multiple = 100000;
-
-                // calculate Rx frequency
-                uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + calcTxOffset);
-
-                // generate frequency in mhz
-                uint32_t rxFreqMhz = rxFrequency + multiple / 2;
-                rxFreqMhz -= rxFreqMhz % multiple;
-                rxFreqMhz /= multiple * 10;
-
-                // generate khz offset
-                uint32_t rxFreqKhz = rxFrequency - (rxFreqMhz * 1000000);
-
-                // calculate Tx Frequency
-                uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)));
-
-                // generate frequency in mhz
-                uint32_t txFreqMhz = txFrequency + multiple / 2;
-                txFreqMhz -= txFreqMhz % multiple;
-                txFreqMhz /= multiple * 10;
-
-                // generate khz offset
-                uint32_t txFreqKhz = txFrequency - (txFreqMhz * 1000000);
-
-                csbkValue = (csbkValue << 8) + 0U;                                  // Reserved
-                csbkValue = (csbkValue << 4) + 0U;                                  // Cdef Type (always 0 for ANN_WD_TSCC)
-                csbkValue = (csbkValue << 2) + 0U;                                  // Reserved
-                csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);            // Logical Channel
-                csbkValue = (csbkValue << 10) + txFreqMhz;                          // Transmit Freq Mhz
-                csbkValue = (csbkValue << 13) + txFreqKhz;                          // Transmit Freq Offset Khz
-                csbkValue = (csbkValue << 10) + rxFreqMhz;                          // Receive Freq Mhz
-                csbkValue = (csbkValue << 13) + rxFreqKhz;                          // Receive Freq Khz
-            }
-            break;
-        case BCAST_ANNC_SITE_PARMS:
-            // Broadcast Parms 1
-            csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);        // Site Identity (Broadcast Parms 1)
-
-            csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);   // Require Registration
-            csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
-            csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
-
-            // Broadcast Parms 2
-            csbkValue = (csbkValue << 1) + 0U;                                      // Roaming TG Subscription/Attach
-            csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
-            csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
-            break;
-        }
-
-        // split value into bytes
-        m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
-        m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
-        m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
-        m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
-        m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
-        m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
-        m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
-        m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
-    }
-    break;
     }
 
     m_data[10U] ^= CSBK_CRC_MASK[0U];
@@ -455,6 +508,7 @@ CSBK::CSBK(SiteData siteData) :
     m_logicalCh1(DMR_CHNULL),
     m_annWdCh2(false),
     m_logicalCh2(DMR_CHNULL),
+    m_slotNo(0U),
     m_siteTSSync(false),
     m_siteOffsetTiming(false),
     m_alohaMask(0U),

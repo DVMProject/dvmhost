@@ -91,6 +91,7 @@ Host::Host(const std::string& confFile) :
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_p25CtrlChannel(false),
+    m_dmrCtrlChannel(false),
     m_duplex(false),
     m_fixedMode(false),
     m_timeout(180U),
@@ -108,9 +109,13 @@ Host::Host(const std::string& confFile) :
     m_rxFrequency(0U),
     m_txFrequency(0U),
     m_channelId(0U),
+    m_channelNo(0U),
     m_idenTable(NULL),
     m_ridLookup(NULL),
     m_tidLookup(NULL),
+    m_dmrBeacons(false),
+    m_dmrTSCCData(false),
+    m_controlData(false),
     m_remoteControl(NULL)
 {
     UDPSocket::startup();
@@ -338,6 +343,8 @@ int Host::run()
     if (m_dmrEnabled) {
         yaml::Node dmrProtocol = protocolConf["dmr"];
         m_dmrBeacons = dmrProtocol["beacons"]["enable"].as<bool>(false);
+        m_dmrTSCCData = dmrProtocol["control"]["enable"].as<bool>(false);
+        bool dmrCtrlChannel = dmrProtocol["control"]["dedicated"].as<bool>(false);
         bool embeddedLCOnly = dmrProtocol["embeddedLCOnly"].as<bool>(false);
         bool dmrDumpDataPacket = dmrProtocol["dumpDataPacket"].as<bool>(false);
         bool dmrRepeatDataPacket = dmrProtocol["repeatDataPacket"].as<bool>(true);
@@ -384,10 +391,19 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
+        LogInfo("    TSCC Control: %s", m_dmrTSCCData ? "yes" : "no");
+
+        if (m_dmrTSCCData) {
+            LogInfo("    TSCC Control Channel: %s", dmrCtrlChannel ? "yes" : "no");
+            if (dmrCtrlChannel) {
+                m_dmrCtrlChannel = dmrCtrlChannel;
+            }
+        }
+
         dmr = new dmr::Control(m_dmrColorCode, callHang, dmrQueueSize, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose);
-        dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo);
+        dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
 
         m_dmrTXTimer.setTimeout(txHang);
 
@@ -479,16 +495,42 @@ int Host::run()
         g_killed = true;
     }
 
-    if (m_dmrEnabled && m_p25CtrlChannel) {
-        ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
-        g_killed = true;
-    }
-
     if (m_fixedMode && m_dmrEnabled && m_p25Enabled) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled and P25 enabled when using fixed state! Choose one protocol for fixed state operation.");
         g_killed = true;
     }
 
+    // P25 control channel checks
+    if (m_dmrEnabled && m_p25CtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
+        g_killed = true;
+    }
+
+    if (!m_fixedMode && m_p25CtrlChannel) {
+        ::LogWarning(LOG_HOST, "Fixed mode should be enabled when using dedicated P25 control!");
+    }
+
+    if (!m_duplex && m_controlData) {
+        ::LogError(LOG_HOST, "Cannot have P25 control and simplex mode at the same time.");
+        g_killed = true;
+    }
+
+    // DMR TSCC checks
+    if (m_p25Enabled && m_dmrCtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have P25 enabled when using dedicated DMR TSCC control!");
+        g_killed = true;
+    }
+
+    if (!m_fixedMode && m_dmrCtrlChannel) {
+        ::LogWarning(LOG_HOST, "Fixed mode should be enabled when using dedicated DMR TSCC control!");
+    }
+
+    if (!m_duplex && m_dmrTSCCData) {
+        ::LogError(LOG_HOST, "Cannot have DMR TSCC control and simplex mode at the same time.");
+        g_killed = true;
+    }
+
+    // DMR beacon checks
     if (m_dmrBeacons && m_controlData) {
         ::LogError(LOG_HOST, "Cannot have DMR roaming becaons and P25 control at the same time.");
         g_killed = true;
@@ -496,11 +538,6 @@ int Host::run()
 
     if (!m_duplex && m_dmrBeacons) {
         ::LogError(LOG_HOST, "Cannot have DMR roaming beacons and simplex mode at the same time.");
-        g_killed = true;
-    }
-
-    if (!m_duplex && m_controlData) {
-        ::LogError(LOG_HOST, "Cannot have P25 control and simplex mode at the same time.");
         g_killed = true;
     }
 
@@ -559,6 +596,16 @@ int Host::run()
                     p25->reset();                                                                                       \
                 }                                                                                                       \
             }                                                                                                           \
+        }
+
+    // Macro to interrupt a running DMR roaming beacon
+    #define INTERRUPT_DMR_BEACON                                                                                        \
+        if (dmr != NULL) {                                                                                              \
+            if (dmrBeaconDurationTimer.isRunning() && !dmrBeaconDurationTimer.hasExpired()) {                           \
+                if (m_dmrTSCCData && !m_dmrCtrlChannel)                                                                 \
+                    dmr->setCCRunning(false);                                                                           \
+            }                                                                                                           \
+            dmrBeaconDurationTimer.stop();                                                                              \
         }
 
     // Macro to start DMR duplex idle transmission (or beacon)
@@ -630,10 +677,14 @@ int Host::run()
 
                         m_modem->writeDMRData1(data, len);
 
-                        dmrBeaconDurationTimer.stop();
+                        if (!dmr->getCCRunning()) {
+                            INTERRUPT_DMR_BEACON;
+                        }
+
                         if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
                             p25CCDurationTimer.pause();
                         }
+
                         m_modeTimer.start();
                     }
 /*
@@ -661,10 +712,14 @@ int Host::run()
 
                         m_modem->writeDMRData2(data, len);
 
-                        dmrBeaconDurationTimer.stop();
+                        if (!dmr->getCCRunning()) {
+                            INTERRUPT_DMR_BEACON;
+                        }
+
                         if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
                             p25CCDurationTimer.pause();
                         }
+
                         m_modeTimer.start();
                     }
 /*
@@ -693,7 +748,8 @@ int Host::run()
                     if (m_state == STATE_P25) {
                         m_modem->writeP25Data(data, len);
 
-                        dmrBeaconDurationTimer.stop();
+                        INTERRUPT_DMR_BEACON;
+
                         if (g_interruptP25Control && p25CCDurationTimer.isRunning()) {
                             p25CCDurationTimer.pause();
                         }
@@ -775,7 +831,7 @@ int Host::run()
                             setState(STATE_DMR);
                             START_DMR_DUPLEX_IDLE(true);
 
-                            dmrBeaconDurationTimer.stop();
+                            INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
                         }
                     }
@@ -787,7 +843,7 @@ int Host::run()
 
                         dmr->processFrame1(data, len);
 
-                        dmrBeaconDurationTimer.stop();
+                        INTERRUPT_DMR_BEACON;
                         p25CCDurationTimer.stop();
                     }
                 }
@@ -805,7 +861,7 @@ int Host::run()
                         // process slot 1 frames
                         bool ret = dmr->processFrame1(data, len);
                         if (ret) {
-                            dmrBeaconDurationTimer.stop();
+                            INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
 
                             m_modeTimer.start();
@@ -832,7 +888,7 @@ int Host::run()
                             setState(STATE_DMR);
                             START_DMR_DUPLEX_IDLE(true);
 
-                            dmrBeaconDurationTimer.stop();
+                            INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
                         }
                     }
@@ -844,7 +900,7 @@ int Host::run()
 
                         dmr->processFrame2(data, len);
 
-                        dmrBeaconDurationTimer.stop();
+                        INTERRUPT_DMR_BEACON;
                         INTERRUPT_P25_CONTROL;
                     }
                 }
@@ -862,7 +918,7 @@ int Host::run()
                         // process slot 2 frames
                         bool ret = dmr->processFrame2(data, len);
                         if (ret) {
-                            dmrBeaconDurationTimer.stop();
+                            INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
 
                             m_modeTimer.start();
@@ -889,13 +945,13 @@ int Host::run()
                         m_modeTimer.setTimeout(m_rfModeHang);
                         setState(STATE_P25);
 
-                        dmrBeaconDurationTimer.stop();
+                        INTERRUPT_DMR_BEACON;
                         INTERRUPT_P25_CONTROL;
                     }
                     else {
                         ret = p25->writeEndRF();
                         if (ret) {
-                            dmrBeaconDurationTimer.stop();
+                            INTERRUPT_DMR_BEACON;
 
                             if (m_state == STATE_IDLE) {
                                 m_modeTimer.setTimeout(m_rfModeHang);
@@ -1027,6 +1083,15 @@ int Host::run()
 
         /** DMR */
         if (dmr != NULL) {
+            if (m_dmrTSCCData && m_dmrCtrlChannel) {
+                if (m_state != STATE_DMR)
+                    setState(STATE_DMR);
+
+                if (!m_modem->hasTX()) {
+                    START_DMR_DUPLEX_IDLE(true);
+                }
+            }
+
             // clock and check DMR roaming beacon interval timer
             dmrBeaconIntervalTimer.clock(ms);
             if ((dmrBeaconIntervalTimer.isRunning() && dmrBeaconIntervalTimer.hasExpired()) || g_fireDMRBeacon) {
@@ -1035,11 +1100,16 @@ int Host::run()
                         m_modeTimer.stop();
                     }
 
-                    if (m_fixedMode)
-                        START_DMR_DUPLEX_IDLE(true);
-
                     if (m_state != STATE_DMR)
                         setState(STATE_DMR);
+
+                    if (m_fixedMode) {
+                        START_DMR_DUPLEX_IDLE(true);
+                    }
+
+                    if (m_dmrTSCCData) {
+                        dmr->setCCRunning(true);
+                    }
 
                     g_fireDMRBeacon = false;
                     LogDebug(LOG_HOST, "DMR, roaming beacon burst");
@@ -1058,6 +1128,10 @@ int Host::run()
                         m_modeTimer.setTimeout(m_rfModeHang);
                         m_modeTimer.start();
                     }
+                }
+
+                if (m_dmrTSCCData) {
+                    dmr->setCCRunning(false);
                 }
             }
 

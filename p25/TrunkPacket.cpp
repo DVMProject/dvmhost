@@ -1408,7 +1408,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     if (!noNetwork)
         writeNetworkRF(data + 2U, true);
 
-    if (m_p25->m_continuousControl) {
+    if (m_p25->m_dedicatedControl) {
         writeRF_TSDU_MBF(clearBeforeWrite);
         return;
     }

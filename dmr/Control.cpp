@@ -73,6 +73,8 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_tsccSlotNo(0U),
+    m_ccRunning(false),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -107,12 +109,60 @@ Control::~Control()
 /// <param name="siteId"></param>
 /// <param name="channelId"></param>
 /// <param name="channelNo"></param>
-void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
+/// <param name="printOptions"></param>
+void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
 
     Slot::setSiteData(netId, siteId, channelId, channelNo);
+
+    yaml::Node control = dmrProtocol["control"];
+    bool enableTSCC = control["enable"].as<bool>(false);
+    bool dedicatedTSCC = false;
+    if (enableTSCC) {
+        dedicatedTSCC = control["dedicated"].as<bool>(false);
+    }
+    else {
+        dedicatedTSCC = false;
+    }
+
+    m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
+    switch (m_tsccSlotNo) {
+    case 1U:
+        m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
+        break;
+    case 2U:
+        m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        break;
+    }
+
+    if (printOptions) {
+        LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
+    }
+}
+
+/// <summary>
+/// Sets a flag indicating whether the DMR control channel is running.
+/// </summary>
+/// <param name="ccRunning"></param>
+void Control::setCCRunning(bool ccRunning)
+{
+    m_ccRunning = ccRunning;
+    switch (m_tsccSlotNo) {
+    case 1U:
+        m_slot1->setCCRunning(ccRunning);
+        break;
+    case 2U:
+        m_slot2->setCCRunning(ccRunning);
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        break;
+    }
 }
 
 /// <summary>
@@ -151,6 +201,7 @@ bool Control::processWakeup(const uint8_t* data)
     if (m_verbose) {
         LogMessage(LOG_RF, "DMR, CSBKO_BSDWNACT, srcId = %u", srcId);
     }
+
     return true;
 }
 

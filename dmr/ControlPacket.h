@@ -83,6 +83,8 @@ namespace dmr
         /// <summary>Finalizes a instance of the DataPacket class.</summary>
         ~ControlPacket();
 
+        /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
+        void writeRF_TSCC_Aloha();
         /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>
         void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
         /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>

@@ -130,7 +130,7 @@ namespace p25
 
         bool m_duplex;
         bool m_control;
-        bool m_continuousControl;
+        bool m_dedicatedControl;
         bool m_voiceOnControl;
         bool m_ackTSBKRequests;
         bool m_disableNetworkHDU;

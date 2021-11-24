@@ -125,6 +125,9 @@ namespace dmr
             /// <summary>Broadcast Logical Channel ID 2.</summary>
             __PROPERTY(uint16_t, logicalCh2, LogicalCh2);
 
+            /// <summary>Logical Channel Slot Number.</summary>
+            __PROPERTY(uint8_t, slotNo, SlotNo);
+
             /// <summary>Aloha Site Time Slot Synchronization.</summary>
             __PROPERTY(bool, siteTSSync, SiteTSSync);
             /// <summary>Aloha site users offset timing.</summary>
