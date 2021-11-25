@@ -84,6 +84,7 @@ private:
 
     bool m_p25CtrlChannel;
     bool m_p25CtrlBroadcast;
+    bool m_dmrCtrlChannel;
 
     bool m_duplex;
     bool m_fixedMode;
@@ -114,6 +115,7 @@ private:
     lookups::TalkgroupIdLookup* m_tidLookup;
 
     bool m_dmrBeacons;
+    bool m_dmrTSCCData;
     bool m_controlData;
 
     uint8_t m_siteId;

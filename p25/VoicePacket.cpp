@@ -651,7 +651,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
                 m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
-            if (m_p25->m_continuousControl) {
+            if (m_p25->m_dedicatedControl) {
                 m_p25->m_tailOnIdle = false;
                 writeRF_EndOfVoice();
             }

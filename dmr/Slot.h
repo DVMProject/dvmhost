@@ -71,6 +71,9 @@ namespace dmr
         /// <summary>Finalizes a instance of the Slot class.</summary>
         ~Slot();
 
+        /// <summary>Sets a flag indicating whether the DMR control channel is running.</summary>
+        void setCCRunning(bool ccRunning);
+
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
         /// <summary>Get frame data from data ring buffer.</summary>
@@ -87,6 +90,9 @@ namespace dmr
 
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
+
+        /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
+        void setTSCC(bool enable, bool dedicated);
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
@@ -150,6 +156,12 @@ namespace dmr
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        uint8_t m_ccSeq;
+        bool m_ccRunning;
+
+        bool m_enableTSCC;
+        bool m_dedicatedTSCC;
+
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
@@ -157,6 +169,7 @@ namespace dmr
         static uint32_t m_colorCode;
 
         static SiteData m_siteData;
+        static uint32_t m_channelNo;
 
         static bool m_embeddedLCOnly;
         static bool m_dumpTAData;
@@ -205,6 +218,9 @@ namespace dmr
         void writeEndRF(bool writeEnd = false);
         /// <summary>Helper to write network end of frame data.</summary>
         void writeEndNet(bool writeEnd = false);
+
+        /// <summary>Helper to write control channel packet data.</summary>
+        void writeRF_ControlData(uint16_t frameCnt, uint8_t n);
 
         /// <summary>Helper to set the DMR short LC.</summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);

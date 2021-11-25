@@ -94,7 +94,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_legacyGroupReg(false),
     m_duplex(duplex),
     m_control(false),
-    m_continuousControl(false),
+    m_dedicatedControl(false),
     m_voiceOnControl(false),
     m_ackTSBKRequests(true),
     m_disableNetworkHDU(false),
@@ -204,10 +204,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     yaml::Node control = p25Protocol["control"];
     m_control = control["enable"].as<bool>(false);
     if (m_control) {
-        m_continuousControl = control["continuous"].as<bool>(false);
+        m_dedicatedControl = control["dedicated"].as<bool>(false);
     }
     else {
-        m_continuousControl = false;
+        m_dedicatedControl = false;
     }
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
@@ -609,7 +609,7 @@ void Control::clock(uint32_t ms)
                 m_trunk->releaseDstIdGrant(m_voice->m_netLC.getDstId(), false);
             }
 
-            if (m_continuousControl) {
+            if (m_dedicatedControl) {
                 if (m_network != NULL)
                     m_network->resetP25();
             }

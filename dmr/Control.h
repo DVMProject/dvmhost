@@ -66,7 +66,11 @@ namespace dmr
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
-        void setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
+        void setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
+        bool getCCRunning() { return m_ccRunning; }
+        /// <summary>Sets a flag indicating whether the DMR control channel is running.</summary>
+        void setCCRunning(bool ccRunning);
 
         /// <summary>Helper to process wakeup frames from the RF interface.</summary>
         bool processWakeup(const uint8_t* data);
@@ -103,6 +107,9 @@ namespace dmr
         lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupIdLookup* m_tidLookup;
+
+        uint8_t m_tsccSlotNo;
+        bool m_ccRunning;
 
         bool m_dumpCSBKData;
         bool m_verbose;

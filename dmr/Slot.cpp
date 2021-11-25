@@ -56,6 +56,7 @@ const uint16_t TSCC_MAX_CNT = 511U;
 uint32_t Slot::m_colorCode = 0U;
 
 SiteData Slot::m_siteData = SiteData();
+uint32_t Slot::m_channelNo = 0U;
 
 bool Slot::m_embeddedLCOnly = false;
 bool Slot::m_dumpTAData = true;
@@ -141,6 +142,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_ccSeq(0U),
+    m_ccRunning(false),
+    m_enableTSCC(false),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -160,6 +164,15 @@ Slot::~Slot()
     delete m_voice;
     delete m_data;
     delete m_control;
+}
+
+/// <summary>
+/// Sets a flag indicating whether the DMR control channel is running.
+/// </summary>
+/// <param name="ccRunning"></param>
+void Slot::setCCRunning(bool ccRunning)
+{
+    m_ccRunning = ccRunning;
 }
 
 /// <summary>
@@ -259,6 +272,24 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
     if ((dataSync || voiceSync) && m_rfState != RS_RF_LISTENING)
         m_rfTGHang.start();
+
+    // write and process TSCC CSBKs and short LC
+    if (m_enableTSCC && m_dedicatedTSCC)
+    {
+        if (dataSync) {
+            uint8_t dataType = data[1U] & 0x0FU;
+
+            switch (dataType)
+            {
+            case DT_CSBK:
+                return m_control->process(data, len);
+            default:
+                break;
+            }
+        }
+
+        return false;
+    }
 
     if (dataSync) {
         uint8_t dataType = data[1U] & 0x0FU;
@@ -369,12 +400,30 @@ void Slot::clock()
         }
     }
 
-    // increment the TSCC counter on every slot 1 clock
-    if (m_slotNo == 1U) {
+    if (m_enableTSCC)
+    {
+        // increment the TSCC counter on every slot 1 clock
         m_tsccCnt++;
         if (m_tsccCnt == TSCC_MAX_CNT) {
             m_tsccCnt = 0U;
         }
+
+        if (m_ccSeq == 3U) {
+            m_ccSeq = 0U;
+        }
+
+        if (m_dedicatedTSCC) {
+            setShortLC_TSCC(m_siteData, m_tsccCnt);
+            writeRF_ControlData(m_tsccCnt, m_ccSeq);
+        }
+        else {
+            if (m_ccRunning) {
+                setShortLC_TSCC(m_siteData, m_tsccCnt);
+                writeRF_ControlData(m_tsccCnt, m_ccSeq);
+            }
+        }
+
+        m_ccSeq++;
     }
 
     m_rfTimeoutTimer.clock(ms);
@@ -451,6 +500,17 @@ void Slot::setDebugVerbose(bool debug, bool verbose)
 }
 
 /// <summary>
+/// Helper to enable and configure TSCC support for this slot.
+/// </summary>
+/// <param name="enable">Flag indicating whether DMR TSCC is enabled on this slot.</param>
+/// <param name="enable">Flag indicating whether DMR TSCC is dedicated on this slot.</param>
+void Slot::setTSCC(bool enable, bool dedicated)
+{
+    m_enableTSCC = enable;
+    m_dedicatedTSCC = dedicated;
+}
+
+/// <summary>
 /// Helper to initialize the DMR slot processor.
 /// </summary>
 /// <param name="colorCode">DMR access color code.</param>
@@ -521,6 +581,7 @@ void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool
 void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, false);
+    m_channelNo = channelNo;
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
@@ -650,7 +711,10 @@ void Slot::writeEndRF(bool writeEnd)
     m_rfState = RS_RF_LISTENING;
 
     if (m_netState == RS_NET_IDLE) {
-        setShortLC(m_slotNo, 0U);
+        if (m_enableTSCC)
+            setShortLC_TSCC(m_siteData, m_tsccCnt);
+        else
+            setShortLC(m_slotNo, 0U);
     }
 
     if (writeEnd) {
@@ -763,6 +827,49 @@ void Slot::writeEndNet(bool writeEnd)
     m_netLC = NULL;
     m_netPrivacyLC = NULL;
     m_netDataHeader = NULL;
+}
+
+/// <summary>
+/// Helper to write control channel packet data.
+/// </summary>
+/// <param name="frameCnt"></param>
+/// <param name="n"></param>
+void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
+{
+    uint8_t i = 0U, seqCnt = 0U;
+
+    if (!m_enableTSCC)
+        return;
+
+    // loop to generate 2 control sequences
+    if (frameCnt == 511U) {
+        seqCnt = 3U;
+    }
+
+    do
+    {
+        if (m_debug) {
+            LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u", frameCnt, n);
+        }
+
+        switch (n)
+        {
+        case 2:
+            m_control->writeRF_TSCC_Bcast_Ann_Wd(m_channelNo, true);
+            break;
+        case 1:
+            m_control->writeRF_TSCC_Aloha();
+            break;
+        case 0:
+        default:
+            m_control->writeRF_TSCC_Bcast_Sys_Parm();
+            break;
+        }
+
+        if (seqCnt > 0U)
+            n++;
+        i++;
+    } while (i <= seqCnt);
 }
 
 /// <summary>
