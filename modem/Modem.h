@@ -100,6 +100,7 @@ namespace modem
 
         CMD_SET_SYMLVLADJ = 0x04U,
         CMD_SET_RXLEVEL = 0x05U,
+        CMD_SET_FREQUENCY = 0x06U,
 
         CMD_CAL_DATA = 0x08U,
         CMD_RSSI_DATA = 0x09U,
@@ -183,7 +184,7 @@ namespace modem
         ~Modem();
 
         /// <summary>Sets the RF DC offset parameters.</summary>
-        void setDCOffsetParams(int txDCOffset, int rxDCOffset);
+        void setRFParams(unsigned int rxFrequency, unsigned int txFrequency, int txDCOffset, int rxDCOffset);
         /// <summary>Sets the enabled modes.</summary>
         void setModeParams(bool dmrEnabled, bool p25Enabled);
         /// <summary>Sets the RF deviation levels.</summary>
@@ -312,6 +313,9 @@ namespace modem
         int m_rxDCOffset;
         int m_txDCOffset;
 
+        uint32_t m_rxFrequency;
+        uint32_t m_txFrequency;
+
         int m_dmrSymLevel3Adj;
         int m_dmrSymLevel1Adj;
         int m_p25SymLevel3Adj;
@@ -360,6 +364,7 @@ namespace modem
         bool writeConfig();
         /// <summary>Write symbol level adjustments to the air interface modem.</summary>
         bool writeSymbolAdjust();
+        bool writeFrequency();
 
         /// <summary>Print debug air interface messages to the host log.</summary>
         void printDebug(const uint8_t* buffer, uint16_t len);

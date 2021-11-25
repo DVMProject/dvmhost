@@ -1550,7 +1550,7 @@ bool Host::createModem()
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
-    m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, txDCOffset, rxDCOffset);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

@@ -94,6 +94,8 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25Enabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
+    m_rxFrequency(0U),
+    m_txFrequency(0U),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -148,8 +150,10 @@ Modem::~Modem()
 /// </summary>
 /// <param name="txDCOffset"></param>
 /// <param name="rxDCOffset"></param>
-void Modem::setDCOffsetParams(int txDCOffset, int rxDCOffset)
+void Modem::setRFParams(unsigned int rxFrequency, unsigned int txFrequency, int txDCOffset, int rxDCOffset)
 {
+    m_rxFrequency = rxFrequency;
+	m_txFrequency = txFrequency;
     m_txDCOffset = txDCOffset;
     m_rxDCOffset = rxDCOffset;
 }
@@ -356,6 +360,16 @@ bool Modem::open()
         m_playoutTimer.start();
 
         return true;
+    }
+
+    ret = writeFrequency();
+    if (!ret) {
+        ret = writeFrequency();
+        if (!ret) {
+            LogError(LOG_MODEM, "Modem unresponsive to frequency set after 2 attempts. Stopping.");
+            m_port->close();
+            return false;
+        }
     }
 
     ret = writeConfig();
@@ -1230,15 +1244,17 @@ bool Modem::getFirmwareVersion()
         // Utils::dump(1U, "F/W Ver Written", buffer, 3U);
 
         int ret = write(buffer, 3U);
+        //LogMessage(LOG_MODEM, "Asking for F/W");
         if (ret != 3)
             return false;
 
         for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
             Thread::sleep(10U);
             RESP_TYPE_DVM resp = getResponse();
-            if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
-                uint8_t protoVer = m_buffer[3U];
 
+            if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
+                LogMessage(LOG_MODEM, "Proto ver: %02x, cpu: %02X", m_buffer[3U], m_buffer[4U]);
+                uint8_t protoVer = m_buffer[3U];
                 switch (protoVer) {
                 case PROTOCOL_VERSION:
                     LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, m_length - 21U, m_buffer + 21U, protoVer);
@@ -1291,6 +1307,65 @@ bool Modem::getStatus()
     // Utils::dump(1U, "Written", buffer, 3U);
 
     return write(buffer, 3U) == 3;
+}
+
+bool Modem::writeFrequency()
+{
+	unsigned char buffer[20U];
+	unsigned char len;
+	//buffer[12U]  = (unsigned char)(m_rfLevel * 2.55F + 0.5F);
+    // RF level 100 is probably fine, i'm too lazy to implement it rn
+    buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F);
+
+	len = 17U;
+
+	buffer[0U]  = DVM_FRAME_START;
+
+	buffer[1U]  = len;
+
+	buffer[2U]  = CMD_SET_FREQUENCY;
+
+	buffer[3U]  = 0x00U;
+
+	buffer[4U]  = (m_rxFrequency >> 0) & 0xFFU;
+	buffer[5U]  = (m_rxFrequency >> 8) & 0xFFU;
+	buffer[6U]  = (m_rxFrequency >> 16) & 0xFFU;
+	buffer[7U]  = (m_rxFrequency >> 24) & 0xFFU;
+
+	buffer[8U]  = (m_txFrequency >> 0) & 0xFFU;
+	buffer[9U]  = (m_txFrequency >> 8) & 0xFFU;
+	buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
+	buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
+
+	// CUtils::dump(1U, "Written", buffer, len);
+
+	int ret = m_port->write(buffer, len);
+	if (ret != len)
+		return false;
+
+	unsigned int count = 0U;
+	RESP_TYPE_DVM resp;
+	do {
+		Thread::sleep(10U);
+
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				LogError(LOG_MODEM, "The MMDVM is not responding to the SET_FREQ command");
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK);
+
+	// CUtils::dump(1U, "Response", m_buffer, m_length);
+
+	if (resp == RTM_OK && m_buffer[2U] == RSN_NAK) {
+		LogError(LOG_MODEM, "Received a NAK to the SET_FREQ command from the modem");
+		return false;
+	}
+
+	return true;
 }
 
 /// <summary>
@@ -1502,6 +1577,8 @@ RESP_TYPE_DVM Modem::getResponse()
 {
     m_rspDoubleLength = false;
 
+    //LogDebug(LOG_MODEM, "getResponse(), checking if we have data");
+
     // get the start of the frame or nothing at all
     if (m_rspState == RESP_START) {
         int ret = m_port->read(m_buffer + 0U, 1U);
@@ -1511,17 +1588,22 @@ RESP_TYPE_DVM Modem::getResponse()
             return RTM_ERROR;
         }
 
-        if (ret == 0)
+        if (ret == 0) {
+            //LogDebug(LOG_MODEM, "getResponse(), no data available");
             return RTM_TIMEOUT;
+        }
 
-        if (m_buffer[0U] != DVM_FRAME_START)
+        if (m_buffer[0U] != DVM_FRAME_START) {
+            LogDebug(LOG_MODEM, "getResponse(), first byte not a frame start");
             return RTM_TIMEOUT;
+        }
 
-        // LogDebug(LOG_MODEM, "getResponse(), RESP_START");
+        //LogDebug(LOG_MODEM, "getResponse(), RESP_START");
 
         m_rspState = RESP_LENGTH1;
     }
 
+    //LogDebug(LOG_MODEM, "getResponse(), getting frame length 1/2");
     // get the length of the frame, 1/2
     if (m_rspState == RESP_LENGTH1) {
         int ret = m_port->read(m_buffer + 1U, 1U);
@@ -1546,12 +1628,12 @@ RESP_TYPE_DVM Modem::getResponse()
         else
             m_rspState = RESP_TYPE;
 
-        // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH1, len = %u", m_length);
+        //LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH1, len = %u", m_length);
 
         m_rspDoubleLength = false;
         m_rspOffset = 2U;
     }
-
+    //LogDebug(LOG_MODEM, "getResponse(), getting frame length 2/2");
     // get the length of the frame, 2/2
     if (m_rspState == RESP_LENGTH2) {
         int ret = m_port->read(m_buffer + 2U, 1U);
@@ -1567,12 +1649,12 @@ RESP_TYPE_DVM Modem::getResponse()
         m_length = m_buffer[2U] + 255U;
         m_rspState = RESP_TYPE;
 
-        // LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH2, len = %u", m_length);
+        //LogDebug(LOG_MODEM, "getResponse(), RESP_LENGTH2, len = %u", m_length);
 
         m_rspDoubleLength = true;
         m_rspOffset = 3U;
     }
-
+    //LogDebug(LOG_MODEM, "getResponse(), getting frame type");
     // get the frame type
     if (m_rspState == RESP_TYPE) {
         int ret = m_port->read(m_buffer + m_rspOffset, 1U);
@@ -1587,11 +1669,12 @@ RESP_TYPE_DVM Modem::getResponse()
 
         m_rspType = (DVM_COMMANDS)m_buffer[m_rspOffset];
 
-        // LogDebug(LOG_MODEM, "getResponse(), RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
+        //LogDebug(LOG_MODEM, "getResponse(), RESP_TYPE, len = %u, type = %u", m_length, m_rspType);
 
         m_rspState = RESP_DATA;
         m_rspOffset++;
     }
+    //LogDebug(LOG_MODEM, "getResponse(), getting frame data");
 
     // get the frame data
     if (m_rspState == RESP_DATA) {

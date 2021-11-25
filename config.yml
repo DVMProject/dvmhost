@@ -22,10 +22,10 @@ network:
     updateLookups: false
     allowActivityTransfer: false
     allowDiagnosticTransfer: false
-    debug: false
+    debug: true
 protocols:
     dmr:
-        enable: true
+        enable: false
         beacons:
             enable: false
             interval: 60
@@ -58,7 +58,7 @@ protocols:
         verifyReg: false
         dumpDataPacket: false
         repeatDataPacket: true
-        dumpTsbkData: false
+        dumpTsbkData: true
         callHang: 5
         noStatusAck: false
         noMessageAck: true
@@ -66,7 +66,7 @@ protocols:
         disableNetworkHDU: false
         queueSize: 5000
         verbose: true
-        debug: false
+        debug: true
 system:
     identity: ABCD123
     timeout: 180
@@ -83,11 +83,11 @@ system:
         power: 10
         location: "Repeater Site, USA"
     config:
-        channelId: 2
-        channelNo: 1
+        channelId: 3
+        channelNo: 50
         dmrNetId: 1
         voiceChNo:
-            - 1
+            - 80
         colorCode: 5
         nac: 293
         pSuperGroup: FFFF
@@ -97,9 +97,9 @@ system:
         siteId: 1
     modem:
         protocol:
-            type: "null" # Valid values are "null", "uart", and "udp"
+            type: "uart" # Valid values are "null", "uart", and "udp"
             uart:
-                port: /dev/ttyUSB0
+                port: '/dev/ttyAMA0'
                 speed: 115200
             udp:
                 mode: master # Valid values are "master", and "peer"
@@ -110,7 +110,7 @@ system:
         pttInvert: false
         dcBlocker: true
         cosLockout: false
-        fdmaPreamble: 80
+        fdmaPreamble: 100
         dmrRxDelay: 7
         p25CorrCount: 8
         rxDCOffset: 0
@@ -124,9 +124,9 @@ system:
         packetPlayoutTime: 10
         disableOFlowReset: false
         trace: false
-        debug: false
+        debug: true
     cwId:
-        enable: true
+        enable: false
         time: 15
         callsign: ABCD123
     iden_table:
