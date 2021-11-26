@@ -485,6 +485,22 @@ void Slot::clock()
             m_packetTimer.start();
         }
     }
+
+    if (m_rfState == RS_RF_REJECTED) {
+        m_queue.clear();
+
+        m_rfFrames = 0U;
+        m_rfErrs = 0U;
+        m_rfBits = 1U;
+
+        m_netFrames = 0U;
+        m_netLost = 0U;
+
+        if (m_network != NULL)
+            m_network->resetDMR(m_slotNo);
+
+        m_rfState = RS_RF_LISTENING;
+    }
 }
 
 /// <summary>
