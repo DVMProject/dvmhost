@@ -13,6 +13,7 @@
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2021 by Nat Moore <https://github.com/jelimoore>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -1504,6 +1505,7 @@ bool Host::createModem()
     uint8_t p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(4U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
+    uint8_t rfPower = (uint8_t)modemConf["rfPower"].as<uint32_t>(100U);
     int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
     int dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
     int p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
@@ -1523,6 +1525,13 @@ bool Host::createModem()
     // make sure playout time is always greater than 1ms
     if (packetPlayoutTime < 1U)
         packetPlayoutTime = 1U;
+
+    if (rfPower == 0U) { // clamp to 1
+        rfPower = 1U;
+    }
+    if (rfPower > 100U) { // clamp to 100
+        rfPower = 100U;
+    }
 
     LogInfo("Modem Parameters");
     LogInfo("    Port Type: %s", portType.c_str());
@@ -1609,6 +1618,7 @@ bool Host::createModem()
     LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
     LogInfo("    RX DC Offset: %d", rxDCOffset);
     LogInfo("    TX DC Offset: %d", txDCOffset);
+    LogInfo("    RF Power Level: %u", rfPower);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
     LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
@@ -1625,6 +1635,7 @@ bool Host::createModem()
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rfPower);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

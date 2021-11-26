@@ -13,6 +13,7 @@
 /*
 *   Copyright (C) 2011-2021 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2021 by Nat Moore <https://github.com/jelimoore>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -94,6 +95,9 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25Enabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
+    m_rxFrequency(0U),
+    m_txFrequency(0U),
+    m_rfPower(0U),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -212,6 +216,19 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
         m_p25SymLevel1Adj = 0;
     if (p25SymLevel1Adj < -128)
         m_p25SymLevel1Adj = 0;
+}
+
+/// <summary>
+/// Sets the RF parameters.
+/// </summary>
+/// <param name="rxFreq"></param>
+/// <param name="txFreq"></param>
+/// <param name="rfPower"></param>
+void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower)
+{
+    m_rfPower = rfPower;
+    m_rxFrequency = rxFreq;
+    m_txFrequency = txFreq;
 }
 
 /// <summary>
@@ -356,6 +373,16 @@ bool Modem::open()
         m_playoutTimer.start();
 
         return true;
+    }
+
+    ret = writeRFParams();
+    if (!ret) {
+        ret = writeRFParams();
+        if (!ret) {
+            LogError(LOG_MODEM, "Modem unresponsive to RF parameters set after 2 attempts. Stopping.");
+            m_port->close();
+            return false;
+        }
     }
 
     ret = writeConfig();
@@ -1434,6 +1461,63 @@ bool Modem::writeSymbolAdjust()
     }
 
     m_playoutTimer.start();
+
+    return true;
+}
+
+/// <summary>
+/// Write RF parameters to the air interface modem.
+/// </summary>
+/// <returns></returns>
+bool Modem::writeRFParams()
+{
+    unsigned char buffer[13U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 13U;
+    buffer[2U] = CMD_SET_RFPARAMS;
+
+    buffer[3U] = 0x00U;
+
+    buffer[4U] = (m_rxFrequency >> 0) & 0xFFU;
+    buffer[5U] = (m_rxFrequency >> 8) & 0xFFU;
+    buffer[6U] = (m_rxFrequency >> 16) & 0xFFU;
+    buffer[7U] = (m_rxFrequency >> 24) & 0xFFU;
+
+    buffer[8U] = (m_txFrequency >> 0) & 0xFFU;
+    buffer[9U] = (m_txFrequency >> 8) & 0xFFU;
+    buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
+    buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
+
+    buffer[12U] = (unsigned char)(m_rfPower * 2.55F + 0.5F);
+
+    // CUtils::dump(1U, "Written", buffer, len);
+
+    int ret = m_port->write(buffer, 13U);
+    if (ret <= 0)
+        return false;
+
+    unsigned int count = 0U;
+    RESP_TYPE_DVM resp;
+    do {
+        Thread::sleep(10U);
+
+        resp = getResponse();
+        if (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK) {
+            count++;
+            if (count >= MAX_RESPONSES) {
+                LogError(LOG_MODEM, "The DVM is not responding to the SET_RFPARAMS command");
+                return false;
+            }
+        }
+    } while (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK);
+
+    // CUtils::dump(1U, "Response", m_buffer, m_length);
+
+    if (resp == RTM_OK && m_buffer[2U] == RSN_NAK) {
+        LogError(LOG_MODEM, "Received a NAK to the SET_RFPARAMS command from the modem");
+        return false;
+    }
 
     return true;
 }
