@@ -400,8 +400,7 @@ void Slot::clock()
         }
     }
 
-    if (m_enableTSCC)
-    {
+    if (m_enableTSCC) {
         // increment the TSCC counter on every slot 1 clock
         m_tsccCnt++;
         if (m_tsccCnt == TSCC_MAX_CNT) {
@@ -840,6 +839,16 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 
     if (!m_enableTSCC)
         return;
+
+    // don't add any frames if the queue is full
+    uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
+    uint32_t space = m_queue.freeSpace();
+    if (space < (len + 1U)) {
+        m_ccSeq--;
+        if (m_ccSeq < 0U)
+            m_ccSeq = 0U;
+        return;
+    }
 
     // loop to generate 2 control sequences
     if (frameCnt == 511U) {
