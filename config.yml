@@ -48,9 +48,9 @@ protocols:
         enable: true
         tduPreambleCount: 6
         control:
-            enable: false
+            enable: true
             ackRequests: true
-            dedicated: false
+            dedicated: true
             broadcast: true
             interval: 300
             duration: 1
@@ -70,7 +70,7 @@ protocols:
         disableNetworkHDU: false
         queueSize: 5000
         verbose: true
-        debug: true
+        debug: false
 system:
     identity: ABCD123
     timeout: 180
@@ -99,6 +99,8 @@ system:
         sysId: 001
         rfssId: 1
         siteId: 1
+        txTuning: 0 # freq offset for the hotspot, in hz
+        rxTuning: 0
     modem:
         protocol:
             type: "uart" # Valid values are "null", "uart", and "udp"
