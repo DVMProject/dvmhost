@@ -152,10 +152,8 @@ Modem::~Modem()
 /// </summary>
 /// <param name="txDCOffset"></param>
 /// <param name="rxDCOffset"></param>
-void Modem::setRFParams(unsigned int rxFrequency, unsigned int txFrequency, int txDCOffset, int rxDCOffset)
+void Modem::setDCOffsetParams(int txDCOffset, int rxDCOffset)
 {
-    m_rxFrequency = rxFrequency;
-	m_txFrequency = txFrequency;
     m_txDCOffset = txDCOffset;
     m_rxDCOffset = rxDCOffset;
 }
@@ -1322,65 +1320,6 @@ bool Modem::getStatus()
     // Utils::dump(1U, "Written", buffer, 3U);
 
     return write(buffer, 3U) == 3;
-}
-
-bool Modem::writeFrequency()
-{
-	unsigned char buffer[20U];
-	unsigned char len;
-	//buffer[12U]  = (unsigned char)(m_rfLevel * 2.55F + 0.5F);
-    // RF level 100 is probably fine, i'm too lazy to implement it rn
-    buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F);
-
-	len = 17U;
-
-	buffer[0U]  = DVM_FRAME_START;
-
-	buffer[1U]  = len;
-
-	buffer[2U]  = CMD_SET_FREQUENCY;
-
-	buffer[3U]  = 0x00U;
-
-	buffer[4U]  = (m_rxFrequency >> 0) & 0xFFU;
-	buffer[5U]  = (m_rxFrequency >> 8) & 0xFFU;
-	buffer[6U]  = (m_rxFrequency >> 16) & 0xFFU;
-	buffer[7U]  = (m_rxFrequency >> 24) & 0xFFU;
-
-	buffer[8U]  = (m_txFrequency >> 0) & 0xFFU;
-	buffer[9U]  = (m_txFrequency >> 8) & 0xFFU;
-	buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
-	buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
-
-	// CUtils::dump(1U, "Written", buffer, len);
-
-	int ret = m_port->write(buffer, len);
-	if (ret != len)
-		return false;
-
-	unsigned int count = 0U;
-	RESP_TYPE_DVM resp;
-	do {
-		Thread::sleep(10U);
-
-		resp = getResponse();
-		if (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK) {
-			count++;
-			if (count >= MAX_RESPONSES) {
-				LogError(LOG_MODEM, "The MMDVM is not responding to the SET_FREQ command");
-				return false;
-			}
-		}
-	} while (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK);
-
-	// CUtils::dump(1U, "Response", m_buffer, m_length);
-
-	if (resp == RTM_OK && m_buffer[2U] == RSN_NAK) {
-		LogError(LOG_MODEM, "Received a NAK to the SET_FREQ command from the modem");
-		return false;
-	}
-
-	return true;
 }
 
 /// <summary>

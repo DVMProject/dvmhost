@@ -1505,6 +1505,8 @@ bool Host::createModem()
     uint8_t p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(4U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
+    int rxTuning = modemConf["rxTuning"].as<int>(0);
+    int txTuning = modemConf["txTuning"].as<int>(0);
     uint8_t rfPower = (uint8_t)modemConf["rfPower"].as<uint32_t>(100U);
     int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
     int dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
@@ -1608,6 +1610,10 @@ bool Host::createModem()
         LogInfo("    UDP Port: %u", udpPort);
     }
 
+    // apply the frequency tuning offsets
+    int adjustedRx = m_rxFrequency + rxTuning;
+    int adjustedTx = m_txFrequency + txTuning;
+
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
     LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
     LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
@@ -1618,6 +1624,10 @@ bool Host::createModem()
     LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
     LogInfo("    RX DC Offset: %d", rxDCOffset);
     LogInfo("    TX DC Offset: %d", txDCOffset);
+    LogInfo("    RX Tuning Offset: %dhz", rxTuning);
+    LogInfo("    TX Tuning Offset: %dhz", txTuning);
+    LogInfo("    RX Effective Frequency: %dhz", adjustedRx);
+    LogInfo("    TX Effective Frequency: %dhz", adjustedTx);
     LogInfo("    RF Power Level: %u", rfPower);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
@@ -1635,7 +1645,7 @@ bool Host::createModem()
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rfPower);
+    m_modem->setRFParams(adjustedRx, adjustedTx, rfPower);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

@@ -185,7 +185,7 @@ namespace modem
         ~Modem();
 
         /// <summary>Sets the RF DC offset parameters.</summary>
-        void setRFParams(unsigned int rxFrequency, unsigned int txFrequency, int txDCOffset, int rxDCOffset);
+        void setDCOffsetParams(int txDCOffset, int rxDCOffset);
         /// <summary>Sets the enabled modes.</summary>
         void setModeParams(bool dmrEnabled, bool p25Enabled);
         /// <summary>Sets the RF deviation levels.</summary>

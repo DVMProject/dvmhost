@@ -99,8 +99,6 @@ system:
         sysId: 001
         rfssId: 1
         siteId: 1
-        txTuning: 0 # freq offset for the hotspot, in hz
-        rxTuning: 0
     modem:
         protocol:
             type: "uart" # Valid values are "null", "uart", and "udp"
@@ -123,6 +121,8 @@ system:
         txDCOffset: 0
         rxLevel: 50
         txLevel: 50
+        txTuning: 0 # freq offset for the hotspot, in hz
+        rxTuning: 0
 #        cwIdTxLevel: 50
 #        dmrTxLevel: 50
 #        p25TxLevel: 50
