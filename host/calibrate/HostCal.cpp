@@ -41,6 +41,7 @@
 #include "Utils.h"
 
 using namespace modem;
+using namespace lookups;
 
 #include <cstdio>
 #include <algorithm>
@@ -151,6 +152,11 @@ HostCal::HostCal(const std::string& confFile) :
     m_debug(false),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
+    m_rxFrequency(0U),
+    m_txFrequency(0U),
+    m_channelId(0U),
+    m_channelNo(0U),
+    m_idenTable(NULL),
     m_berFrames(0U),
     m_berBits(0U),
     m_berErrs(0U),
@@ -191,11 +197,74 @@ int HostCal::run()
     getHostVersion();
     ::LogInfo(">> Modem Calibration");
 
+    yaml::Node systemConf = m_conf["system"];
+
+    // try to load bandplan identity table
+    std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
+    uint32_t idenReloadTime = systemConf["iden_table"]["time"].as<uint32_t>(0U);
+
+    if (idenLookupFile.length() <= 0U) {
+        ::LogError(LOG_HOST, "No bandplan identity table? This must be defined!");
+        return 1;
+    }
+
+    LogInfo("Iden Table Lookups");
+    LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
+    if (idenReloadTime > 0U)
+        LogInfo("    Reload: %u mins", idenReloadTime);
+
+    m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
+    m_idenTable->read();
+
     LogInfo("General Parameters");
 
-    yaml::Node systemConf = m_conf["system"];
     std::string identity = systemConf["identity"].as<std::string>();
     ::LogInfo("    Identity: %s", identity.c_str());
+
+    yaml::Node rfssConfig = systemConf["config"];
+    m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
+    if (m_channelId > 15U) { // clamp to 15
+        m_channelId = 15U;
+    }
+
+    IdenTable entry = m_idenTable->find(m_channelId);
+    if (entry.baseFrequency() == 0U) {
+        ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
+        return false;
+    }
+
+    m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
+    if (m_channelNo == 0U) { // clamp to 1
+        m_channelNo = 1U;
+    }
+    if (m_channelNo > 4095U) { // clamp to 4095
+        m_channelNo = 4095U;
+    }
+
+    if (m_duplex) {
+        if (entry.txOffsetMhz() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+            return false;
+        }
+
+        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+
+        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+        m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+    }
+    else {
+        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+
+        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        m_txFrequency = m_rxFrequency;
+    }
+
+    LogInfo("System Config Parameters");
+    LogInfo("    RX Frequency: %uHz", m_rxFrequency);
+    LogInfo("    TX Frequency: %uHz", m_txFrequency);
+    LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
+    LogInfo("    TX Offset: %fMHz", entry.txOffsetMhz());
 
     yaml::Node modemConf = systemConf["modem"];
 
@@ -617,7 +686,17 @@ bool HostCal::portModemOpen(Modem* modem)
 {
     sleep(2000U);
 
-    bool ret = writeConfig();
+    bool ret = writeRFParams();
+    if (!ret) {
+        ret = writeRFParams();
+        if (!ret) {
+            LogError(LOG_MODEM, "Modem unresponsive to RF parameters set after 2 attempts. Stopping.");
+            m_modem->close();
+            return false;
+        }
+    }
+
+    ret = writeConfig();
     if (!ret) {
         ret = writeConfig();
         if (!ret) {
@@ -1559,6 +1638,44 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 }
 
 /// <summary>
+/// Write RF parameters to the air interface modem.
+/// </summary>
+/// <returns></returns>
+bool HostCal::writeRFParams()
+{
+    unsigned char buffer[13U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 13U;
+    buffer[2U] = CMD_SET_RFPARAMS;
+
+    buffer[3U] = 0x00U;
+
+    buffer[4U] = (m_rxFrequency >> 0) & 0xFFU;
+    buffer[5U] = (m_rxFrequency >> 8) & 0xFFU;
+    buffer[6U] = (m_rxFrequency >> 16) & 0xFFU;
+    buffer[7U] = (m_rxFrequency >> 24) & 0xFFU;
+
+    buffer[8U] = (m_txFrequency >> 0) & 0xFFU;
+    buffer[9U] = (m_txFrequency >> 8) & 0xFFU;
+    buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
+    buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
+
+    buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F); // cal sets power fixed to 100
+
+    // CUtils::dump(1U, "Written", buffer, len);
+
+    int ret = m_modem->write(buffer, 13U);
+    if (ret <= 0)
+        return false;
+
+    sleep(10U);
+
+    m_modem->clock(0U);
+    return true;
+}
+
+/// <summary>
 /// Write symbol level adjustments to the modem DSP.
 /// </summary>
 /// <returns>True, if level adjustments are written, otherwise false.</returns>
@@ -1655,7 +1772,7 @@ void HostCal::printStatus()
         m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
     LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
         m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
-    LogMessage(LOG_CAL, " - Operating Mode: %s", m_modeStr.c_str());
+    LogMessage(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Operating Mode: %s", m_rxFrequency, m_txFrequency, m_modeStr.c_str());
 
     uint8_t buffer[50U];
 

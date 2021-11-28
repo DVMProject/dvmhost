@@ -154,6 +154,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
             LogWarning(LOG_RF, "DMR Slot %u, DT_DATA_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+            m_slot->m_rfState = RS_RF_REJECTED;
             return false;
         }
 
@@ -161,6 +162,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         if (gi) {
             if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
                 LogWarning(LOG_RF, "DMR Slot %u, DT_DATA_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
         }

@@ -113,6 +113,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfTGHang.stop();
 
                 delete lc;
+                m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
 
@@ -128,6 +129,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfTGHang.stop();
 
                     delete lc;
+                    m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
             }
@@ -457,6 +459,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (!acl::AccessControl::validateSrcId(srcId)) {
                     LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
                     delete lc;
+                    m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
 
@@ -465,6 +468,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                         delete lc;
+                        m_slot->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
                 }
