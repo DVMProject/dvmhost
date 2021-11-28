@@ -13,6 +13,7 @@
 /*
 *   Copyright (C) 2011-2021 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2021 by Nat Moore <https://github.com/jelimoore>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -100,7 +101,7 @@ namespace modem
 
         CMD_SET_SYMLVLADJ = 0x04U,
         CMD_SET_RXLEVEL = 0x05U,
-        CMD_SET_FREQUENCY = 0x06U,
+        CMD_SET_RFPARAMS = 0x06U,
 
         CMD_CAL_DATA = 0x08U,
         CMD_RSSI_DATA = 0x09U,
@@ -191,6 +192,8 @@ namespace modem
         void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
         /// <summary>Sets the symbol adjustment levels.</summary>
         void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
+        /// <summary>Sets the RF parameters.</summary>
+        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
@@ -315,6 +318,7 @@ namespace modem
 
         uint32_t m_rxFrequency;
         uint32_t m_txFrequency;
+        uint8_t m_rfPower;
 
         int m_dmrSymLevel3Adj;
         int m_dmrSymLevel1Adj;
@@ -364,7 +368,8 @@ namespace modem
         bool writeConfig();
         /// <summary>Write symbol level adjustments to the air interface modem.</summary>
         bool writeSymbolAdjust();
-        bool writeFrequency();
+        /// <summary>Write RF parameters to the air interface modem.</summary>
+        bool writeRFParams();
 
         /// <summary>Print debug air interface messages to the host log.</summary>
         void printDebug(const uint8_t* buffer, uint16_t len);

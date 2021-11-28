@@ -37,6 +37,7 @@
 #include "modem/Modem.h"
 #include "host/calibrate/Console.h"
 #include "host/Host.h"
+#include "lookups/IdenTableLookup.h"
 #include "yaml/Yaml.h"
 
 #include <string>
@@ -98,6 +99,13 @@ private:
     uint8_t m_mode;
     std::string m_modeStr;
 
+    uint32_t m_rxFrequency;
+    uint32_t m_txFrequency;
+    uint8_t m_channelId;
+    uint32_t m_channelNo;
+
+    lookups::IdenTableLookup* m_idenTable;
+
     uint32_t m_berFrames;
     uint32_t m_berBits;
     uint32_t m_berErrs;
@@ -150,6 +158,8 @@ private:
     bool writeConfig();
     /// <summary>Write configuration to the modem DSP.</summary>
     bool writeConfig(uint8_t modeOverride);
+    /// <summary>Write RF parameters to the air interface modem.</summary>
+    bool writeRFParams();
     /// <summary>Write symbol level adjustments to the modem DSP.</summary>
     bool writeSymbolAdjust();
     /// <summary>Helper to sleep the calibration thread.</summary>
