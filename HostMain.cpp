@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2020,2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include "HostMain.h"
 #include "host/Host.h"
 #include "host/calibrate/HostCal.h"
+#include "host/setup/HostSetup.h"
 #include "Log.h"
 
 using namespace network;
@@ -61,6 +62,7 @@ using namespace lookups;
 
 int g_signal = 0;
 bool g_calibrate = false;
+bool g_setup = false;
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
 std::string g_lockFile = std::string(DEFAULT_LOCK_FILE);
@@ -109,9 +111,10 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-v] [-f] [--cal] [-c <configuration file>]\n\n"
+    ::fprintf(stdout, "usage: %s [-v] [-f] [--cal] [--setup] [-c <configuration file>]\n\n"
         "  -f       foreground mode\n"
         "  --cal    calibration mode\n"
+        "  --setup  setup mode\n"
         "\n"
         "  -v       show version information\n"
         "  -h       show this screen\n"
@@ -143,6 +146,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("--cal")) {
             g_calibrate = true;
+        }
+        else if (IS("--setup")) {
+            g_setup = true;
         }
         else if (IS("-c")) {
             if (argc-- <= 0)
@@ -209,10 +215,17 @@ int main(int argc, char** argv)
     do {
         g_signal = 0;
 
-        if (g_calibrate) {
-            HostCal* cal = new HostCal(g_iniFile);
-            ret = cal->run();
-            delete cal;
+        if (g_calibrate || g_setup) {
+            if (g_setup) {
+                HostSetup* setup = new HostSetup(g_iniFile);
+                ret = setup->run();
+                delete setup;
+            }
+            else {
+                HostCal* cal = new HostCal(g_iniFile);
+                ret = cal->run();
+                delete cal;
+            }
         }
         else {
             Host* host = new Host(g_iniFile);

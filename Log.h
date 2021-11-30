@@ -46,6 +46,7 @@
 #define LOG_P25     "P25"
 #define LOG_DMR     "DMR"
 #define LOG_CAL     "CAL"
+#define LOG_SETUP   "SETUP"
 
 // ---------------------------------------------------------------------------
 //  Macros

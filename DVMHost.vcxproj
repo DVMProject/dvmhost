@@ -190,6 +190,7 @@
     <ClInclude Include="host\calibrate\Console.h" />
     <ClInclude Include="host\calibrate\HostCal.h" />
     <ClInclude Include="host\Host.h" />
+    <ClInclude Include="host\setup\HostSetup.h" />
     <ClInclude Include="lookups\IdenTableLookup.h" />
     <ClInclude Include="lookups\LookupTable.h" />
     <ClInclude Include="lookups\RadioIdLookup.h" />
@@ -267,6 +268,7 @@
     <ClCompile Include="host\calibrate\Console.cpp" />
     <ClCompile Include="host\calibrate\HostCal.cpp" />
     <ClCompile Include="host\Host.cpp" />
+    <ClCompile Include="host\setup\HostSetup.cpp" />
     <ClCompile Include="lookups\IdenTableLookup.cpp" />
     <ClCompile Include="lookups\RadioIdLookup.cpp" />
     <ClCompile Include="lookups\RSSIInterpolator.cpp" />

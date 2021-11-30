@@ -68,6 +68,7 @@ OBJECTS = \
 		yaml/Yaml.o \
 		host/calibrate/Console.o \
 		host/calibrate/HostCal.o \
+		host/setup/HostSetup.o \
 		host/Host.o \
 		Log.o \
 		Mutex.o \
@@ -86,4 +87,4 @@ dvmhost: $(OBJECTS)
 		$(CXX) $(CFLAGS) -c -o $@ $<
 
 clean:
-		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o modem/port/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o
+		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o modem/port/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o host/setup/*.o

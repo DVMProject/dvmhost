@@ -198,6 +198,7 @@ int HostCal::run()
     ::LogInfo(">> Modem Calibration");
 
     yaml::Node systemConf = m_conf["system"];
+    m_duplex = systemConf["duplex"].as<bool>(true);
 
     // try to load bandplan identity table
     std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
@@ -442,6 +443,7 @@ int HostCal::run()
             setTXDCOffset(1);
             break;
 
+            /** Engineering Commands */
         case '-':
             setDMRSymLevel3Adj(-1);
             break;

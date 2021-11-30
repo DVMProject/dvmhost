@@ -117,6 +117,12 @@
     <Filter Include="Source Files\modem\port">
       <UniqueIdentifier>{bd26735c-6610-4bfe-b1c4-27da1cb18e29}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\host\setup">
+      <UniqueIdentifier>{fdb4c489-755e-4655-a0e3-b1174c8e7acc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\host\setup">
+      <UniqueIdentifier>{145b73dd-7759-4018-9df2-af162f652699}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h">
@@ -353,6 +359,9 @@
     <ClInclude Include="dmr\lc\PrivacyLC.h">
       <Filter>Header Files\dmr\lc</Filter>
     </ClInclude>
+    <ClInclude Include="host\setup\HostSetup.h">
+      <Filter>Header Files\host\setup</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -567,6 +576,9 @@
     </ClCompile>
     <ClCompile Include="dmr\lc\PrivacyLC.cpp">
       <Filter>Source Files\dmr\lc</Filter>
+    </ClCompile>
+    <ClCompile Include="host\setup\HostSetup.cpp">
+      <Filter>Source Files\host\setup</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

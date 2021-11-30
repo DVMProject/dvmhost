@@ -43,7 +43,6 @@
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
-
 #if defined(_WIN32) || defined(_WIN64)
 /// <summary>
 /// Initializes a new instance of the Console class.
@@ -174,3 +173,72 @@ void Console::close()
         ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
 }
 #endif
+
+/// <summary>
+/// Retrieves an array of characters input on the keyboard.
+/// </summary>
+/// <param name="line"></param>
+/// <param name="max"></param>
+/// <param name="mask"></param>
+/// <returns></returns>
+int Console::getLine(char line[], int max, char mask)
+{
+    int nch = 0;
+    int c;
+    bool skipNext = false;
+    max = max - 1; /* leave room for '\0' */
+
+    while ((c = getChar()) != '\n') {
+        if (c != -1) {
+            if (c == 10 || c == 13)
+                break;
+
+            // skip "double-byte" control characters
+            if (c == 224) {
+                skipNext = true;
+                continue;
+            }
+
+            if (skipNext) {
+                skipNext = false;
+                continue;
+            }
+
+            // has characters and backspace character?
+            if (nch > 0 && (c == 127 || c == 8)) {
+                // handle backspace
+                ::fputc(0x8, stdout);
+                ::fputc(' ', stdout);
+                ::fputc(0x8, stdout);
+                ::fflush(stdout);
+
+                line[--nch] = 0;
+            }
+            else {
+                // skip control characters
+                if (iscntrl(c))
+                    continue;
+
+                if (nch < max) {
+                    // valid mask character?
+                    if (' ' - 1 < mask && mask < 127)
+                        ::fputc(mask, stdout);
+                    else
+                        ::fputc(c, stdout);
+                    ::fflush(stdout);
+
+                    line[nch++] = c;
+                }
+            }
+        }
+    }
+
+    if (c == EOF && nch == 0)
+        return EOF;
+
+    ::fputc('\n', stdout);
+    ::fflush(stdout);
+
+    line[nch] = '\0';
+    return nch;
+}

@@ -55,6 +55,9 @@ public:
     /// <summary>Retrieves a character input on the keyboard.</summary>
     int getChar();
 
+    /// <summary>Retrieves an array of characters input on the keyboard.</summary>
+    int getLine(char line[], int max, char mask);
+
     /// <summary>Closes the terminal console.</summary>
     void close();
 
