@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2018-2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2018-2019,2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -29,6 +29,10 @@
 */
 #if !defined(__LOOKUP_TABLE_H__)
 #define __LOOKUP_TABLE_H__
+
+#if _MSC_VER > 1910
+#pragma warning(disable : 4834) // [[nodiscard]] warning -- we don't care about this here
+#endif
 
 #include "Defines.h"
 #include "Log.h"

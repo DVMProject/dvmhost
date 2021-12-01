@@ -297,13 +297,13 @@ int HostSetup::run()
             uint32_t prevTxFrequency = m_txFrequency;
             m_txFrequency = txFrequency;
             uint32_t prevRxFrequency = m_rxFrequency;
-            m_rxFrequency = m_txFrequency + (entry.txOffsetMhz() * 1000000);
+            m_rxFrequency = m_txFrequency + (uint32_t)(entry.txOffsetMhz() * 1000000);
 
             float spaceHz = entry.chSpaceKhz() * 1000;
 
             uint32_t rootFreq = m_txFrequency - entry.baseFrequency();
             uint8_t prevChannelNo = m_channelNo;
-            m_channelNo = rootFreq / spaceHz;
+            m_channelNo = (uint32_t)(rootFreq / spaceHz);
 
             if (m_channelNo < 0 || m_channelNo > 4096) {
                 ::LogError(LOG_SETUP, "Channel No %u is invalid.", m_channelNo);

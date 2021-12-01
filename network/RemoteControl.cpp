@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2019 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019,2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -85,6 +85,9 @@ using namespace modem;
 
 #define RCD_P25_RELEASE_GRANTS_CMD      "p25-rel-grnts"
 #define RCD_P25_RELEASE_AFFS_CMD        "p25-rel-affs"
+
+#define RCD_DMR_CC_DEDICATED_CMD        "dmr-cc-dedicated"
+#define RCD_DMR_CC_BCAST_CMD            "dmr-cc-bcast"
 
 #define RCD_P25_CC_DEDICATED_CMD        "p25-cc-dedicated"
 #define RCD_P25_CC_BCAST_CMD            "p25-cc-bcast"
@@ -316,7 +319,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 // Command is in the form of: "dmrd-mdm-inj <slot> <bin file>
                 if (dmr != NULL) {
                     uint8_t slot = getArgUInt32(args, 0U);
-                    const char* fileName = getArgString(args, 1U).c_str();
+                    std::string argString = getArgString(args, 1U);
+                    const char* fileName = argString.c_str();
                     if (fileName != NULL) {
                         FILE* file = ::fopen(fileName, "r");
                         if (file != NULL) {
@@ -365,7 +369,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                                     LogError(LOG_RCON, CMD_FAILED_STR "DMR failed to open DMR data!");
                                 }
 
-                                delete buffer;
+                                delete[] buffer;
                             }
 
                             ::fclose(file);
@@ -379,7 +383,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_P25D_MDM_INJ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25d-mdm-inj <bin file>
                 if (p25 != NULL) {
-                    const char* fileName = getArgString(args, 0U).c_str();
+                    std::string argString = getArgString(args, 0U);
+                    const char* fileName = argString.c_str();
                     if (fileName != NULL) {
                         FILE* file = ::fopen(fileName, "r");
                         if (file != NULL) {
@@ -420,7 +425,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                                     LogError(LOG_RCON, CMD_FAILED_STR "P25 failed to open P25 data!");
                                 }
 
-                                delete buffer;
+                                delete[] buffer;
                             }
 
                             ::fclose(file);
@@ -670,6 +675,36 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_DMR_CC_DEDICATED_CMD) {
+                // Command is in the form of: "dmr-cc-dedicated"
+                if (dmr != NULL) {
+                    if (host->m_dmrTSCCData) {
+                        if (p25 != NULL) {
+                            LogError(LOG_RCON, CMD_FAILED_STR "Can't enable DMR control channel while P25 is enabled!");
+                        }
+                        else {
+                            host->m_dmrCtrlChannel = !host->m_dmrCtrlChannel;
+                            LogInfoEx(LOG_RCON, "DMR CC is %s", host->m_p25CtrlChannel ? "enabled" : "disabled");
+                        }
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "DMR control data is not enabled!");
+                    }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_DMR_CC_BCAST_CMD) {
+                // Command is in the form of: "dmr-cc-bcast"
+                if (dmr != NULL) {
+                    host->m_dmrTSCCData = !host->m_dmrTSCCData;
+                    LogInfoEx(LOG_RCON, "DMR CC broadcast is %s", host->m_dmrTSCCData ? "enabled" : "disabled");
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
             else if (rcom == RCD_P25_CC_DEDICATED_CMD) {
