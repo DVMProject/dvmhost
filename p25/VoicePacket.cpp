@@ -889,7 +889,7 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
     m_hadVoice(false),
     m_lastRejectId(0U),
     m_lastPatchGroup(0U),
-    m_silenceThreshold(124U),
+    m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_vocLDU1Count(0U),
     m_verbose(verbose),
     m_debug(debug)

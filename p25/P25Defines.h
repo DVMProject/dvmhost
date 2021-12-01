@@ -202,6 +202,7 @@ namespace p25
     const uint32_t  P25_TGID_ALL = 0xFFFFU;
 
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
+    const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
 
     // PDU Format Type(s)
     const uint8_t   PDU_FMT_RSP = 0x03U;

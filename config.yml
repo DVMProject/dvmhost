@@ -41,6 +41,7 @@ protocols:
         dumpCsbkData: false
         callHang: 5
         txHang: 8
+        silenceThreshold: 21
         queueSize: 5000
         verbose: true
         debug: false
@@ -92,7 +93,7 @@ system:
         dmrNetId: 1
         voiceChNo:
             - 1
-        colorCode: 5
+        colorCode: 1
         nac: 293
         pSuperGroup: FFFF
         netId: BB800

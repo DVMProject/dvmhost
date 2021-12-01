@@ -105,6 +105,8 @@ namespace dmr
         /// <summary></summary>
         void logGPSPosition(const uint32_t srcId, const uint8_t* data);
 
+        /// <summary>Helper to insert AMBE null frames for missing audio.</summary>
+        void insertNullAudio(uint8_t* data);
         /// <summary>Helper to insert DMR AMBE silence frames.</summary>
         bool insertSilence(const uint8_t* data, uint8_t seqNo);
         /// <summary>Helper to insert DMR AMBE silence frames.</summary>

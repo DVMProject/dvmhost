@@ -214,6 +214,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
+    if (m_voice->m_silenceThreshold > MAX_P25_VOICE_ERRORS) {
+        LogWarning(LOG_P25, "Silence threshold > %u, defaulting to %u", p25::MAX_P25_VOICE_ERRORS, p25::DEFAULT_SILENCE_THRESHOLD);
+        m_voice->m_silenceThreshold = p25::DEFAULT_SILENCE_THRESHOLD;
+    }
 
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 

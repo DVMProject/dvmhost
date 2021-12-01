@@ -142,6 +142,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_ccSeq(0U),
     m_ccRunning(false),
     m_enableTSCC(false),
@@ -523,6 +524,15 @@ void Slot::setTSCC(bool enable, bool dedicated)
 {
     m_enableTSCC = enable;
     m_dedicatedTSCC = dedicated;
+}
+
+/// <summary>
+/// Helper to set the voice error silence threshold.
+/// </summary>
+/// <param name="threshold"></param>
+void Slot::setSilenceThreshold(uint32_t threshold)
+{
+    m_silenceThreshold = threshold;
 }
 
 /// <summary>

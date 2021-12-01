@@ -93,6 +93,8 @@ namespace dmr
 
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
+        /// <summary>Helper to set the voice error silence threshold.</summary>
+        void setSilenceThreshold(uint32_t threshold);
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
@@ -155,6 +157,8 @@ namespace dmr
         uint8_t m_minRSSI;
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
+
+        uint32_t m_silenceThreshold;
 
         uint8_t m_ccSeq;
         bool m_ccRunning;

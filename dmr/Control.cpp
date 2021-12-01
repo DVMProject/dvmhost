@@ -136,12 +136,22 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
         m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         break;
     }
 
+    uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
+    if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {
+        LogWarning(LOG_DMR, "Silence threshold > %u, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS, dmr::DEFAULT_SILENCE_THRESHOLD);
+        silenceThreshold = dmr::DEFAULT_SILENCE_THRESHOLD;
+    }
+
+    m_slot1->setSilenceThreshold(silenceThreshold);
+    m_slot2->setSilenceThreshold(silenceThreshold);
+
     if (printOptions) {
         LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
+        LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
     }
 }
 

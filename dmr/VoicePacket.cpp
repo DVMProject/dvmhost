@@ -259,6 +259,13 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                         errors, float(errors) / 1.41F);
                 }
 
+                if (errors > m_slot->m_silenceThreshold) {
+                    insertNullAudio(data + 2U);
+                    m_fec.regenerateDMR(data + 2U);
+
+                    LogWarning(LOG_RF, DMR_DT_VOICE_SYNC ", exceeded lost audio threshold, filling in");
+                }
+
                 m_slot->m_rfErrs += errors;
             }
 
@@ -310,6 +317,20 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (m_verbose) {
                     LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, srcId = %u, dstId = %u, seqNo = %u, errs = %u/141 (%.1f%%)", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(),
                         m_rfN, errors, float(errors) / 1.41F);
+                }
+
+                if (errors > m_slot->m_silenceThreshold) {
+                    // Get the LCSS from the EMB
+                    data::EMB emb;
+                    emb.decode(data + 2U);
+
+                    insertNullAudio(data + 2U);
+                    m_fec.regenerateDMR(data + 2U);
+
+                    // Regenerate EMB
+                    emb.encode(data + 2U);
+
+                    LogWarning(LOG_RF, DMR_DT_VOICE ", exceeded lost audio threshold, filling in");
                 }
 
                 m_slot->m_rfErrs += errors;
@@ -540,8 +561,22 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 if (fid == FID_ETSI || fid == FID_DMRA) {
                     errors = m_fec.regenerateDMR(data + 2U);
                     if (m_verbose) {
-                        LogMessage(LOG_RF, "DMR Slot %u, DT_VOICE audio, sequence no = %u, errs = %u/141 (%.1f%%)",
+                        LogMessage(LOG_RF, DMR_DT_VOICE ", audio, slot = %u, sequence no = %u, errs = %u/141 (%.1f%%)",
                             m_slot->m_slotNo, m_rfN, errors, float(errors) / 1.41F);
+                    }
+
+                    if (errors > m_slot->m_silenceThreshold) {
+                        // Get the LCSS from the EMB
+                        data::EMB emb;
+                        emb.decode(data + 2U);
+
+                        insertNullAudio(data + 2U);
+                        m_fec.regenerateDMR(data + 2U);
+
+                        // Regenerate EMB
+                        emb.encode(data + 2U);
+
+                        LogWarning(LOG_RF, DMR_DT_VOICE ", exceeded lost audio threshold, filling in");
                     }
 
                     m_slot->m_rfErrs += errors;
@@ -1119,6 +1154,27 @@ void VoicePacket::logGPSPosition(const uint32_t srcId, const uint8_t* data)
     latitude *= float(latitudeVal);
 
     LogMessage(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
+}
+
+/// <summary>
+/// Helper to insert AMBE null frames for missing audio.
+/// </summary>
+/// <param name="data"></param>
+void VoicePacket::insertNullAudio(uint8_t* data)
+{
+    uint8_t* ambeBuffer = new uint8_t[dmr::DMR_AMBE_LENGTH_BYTES];
+    ::memset(ambeBuffer, 0x00U, dmr::DMR_AMBE_LENGTH_BYTES);
+
+    for (uint32_t i = 0; i < 3U; i++) {
+        ::memcpy(ambeBuffer + (i * 9U), DMR_NULL_AMBE, 9U);
+    }
+
+    ::memcpy(data, ambeBuffer, 13U);
+    data[13U] = ambeBuffer[13U] & 0xF0U;
+    data[19U] = ambeBuffer[13U] & 0x0FU;
+    ::memcpy(data + 20U, ambeBuffer + 14U, 13U);
+
+    delete[] ambeBuffer;
 }
 
 /// <summary>
