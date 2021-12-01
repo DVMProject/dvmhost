@@ -362,6 +362,9 @@
     <ClInclude Include="host\setup\HostSetup.h">
       <Filter>Header Files\host\setup</Filter>
     </ClInclude>
+    <ClInclude Include="dmr\DMRUtils.h">
+      <Filter>Header Files\dmr</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">

@@ -31,7 +31,9 @@
 */
 #include "Defines.h"
 #include "dmr/Control.h"
+#include "dmr/DMRUtils.h"
 #include "p25/Control.h"
+#include "p25/P25Utils.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
 #include "modem/port/UDPPort.h"
@@ -1410,59 +1412,26 @@ bool Host::readParams()
         strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
 
         m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
-        if (m_siteId == 0U) { // clamp to 1
-            m_siteId = 1U;
-        }
-        if (m_siteId > 0xFEU) { // clamp to $FE
-            m_siteId = 0xFEU;
-        }
+        m_siteId = p25::P25Utils::siteId(m_siteId);
 
         m_dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
-        if (m_dmrColorCode < 0U) { // clamp to 0
-            m_dmrColorCode = 0U;
-        }
-        if (m_dmrColorCode > 15U) { // clamp to 15
-            m_dmrColorCode = 15U;
-        }
+        m_dmrColorCode = dmr::DMRUtils::colorCode(m_dmrColorCode);
 
         m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
-        if (m_dmrNetId == 0U) { // clamp to 1
-            m_dmrNetId = 1U;
-        }
-        if (m_dmrNetId > 0x1FFU) { // clamp to $1FF
-            m_dmrNetId = 0x1FFU;
-        }
+        m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::SITE_MODEL_TINY);
 
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
-        if (m_p25NAC < 0U) { // clamp to $000
-            m_p25NAC = 0U;
-        }
-        if (m_p25NAC > 0xF7DU) { // clamp to $F7D
-            m_p25NAC = 0xF7DU;
-        }
+        m_p25NAC = p25::P25Utils::nac(m_p25NAC);
 
         m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
-        if (m_p25NetId == 0U) { // clamp to 1
-            m_p25NetId = 1U;
-        }
-        if (m_p25NetId > 0xFFFFEU) { // clamp to $FFFFE
-            m_p25NetId = 0xFFFFEU;
-        }
+        m_p25NetId = p25::P25Utils::netId(m_p25NetId);
+
         m_p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
-        if (m_p25SysId == 0U) { // clamp to 1
-            m_p25SysId = 1U;
-        }
-        if (m_p25SysId > 0xFFEU) { // clamp to $FFE
-            m_p25SysId = 0xFFEU;
-        }
+        m_p25SysId = p25::P25Utils::sysId(m_p25SysId);
+
         m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
-        if (m_p25RfssId == 0U) { // clamp to 1
-            m_p25RfssId = 1U;
-        }
-        if (m_p25RfssId > 0xFEU) { // clamp to $FE
-            m_p25RfssId = 0xFEU;
-        }
+        m_p25RfssId = p25::P25Utils::rfssId(m_p25RfssId);
 
         LogInfo("System Config Parameters");
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
@@ -1625,8 +1594,8 @@ bool Host::createModem()
     }
 
     // apply the frequency tuning offsets
-    int adjustedRx = m_rxFrequency + rxTuning;
-    int adjustedTx = m_txFrequency + txTuning;
+    uint32_t rxActualFreq = m_rxFrequency + rxTuning;
+    uint32_t txActualFreq = m_txFrequency + txTuning;
 
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
     LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
@@ -1640,8 +1609,8 @@ bool Host::createModem()
     LogInfo("    TX DC Offset: %d", txDCOffset);
     LogInfo("    RX Tuning Offset: %dhz", rxTuning);
     LogInfo("    TX Tuning Offset: %dhz", txTuning);
-    LogInfo("    RX Effective Frequency: %dhz", adjustedRx);
-    LogInfo("    TX Effective Frequency: %dhz", adjustedTx);
+    LogInfo("    RX Effective Frequency: %uhz", rxActualFreq);
+    LogInfo("    TX Effective Frequency: %uhz", txActualFreq);
     LogInfo("    RF Power Level: %u", rfPower);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
@@ -1659,7 +1628,7 @@ bool Host::createModem()
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(adjustedRx, adjustedTx, rfPower);
+    m_modem->setRFParams(rxActualFreq, txActualFreq, rfPower);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

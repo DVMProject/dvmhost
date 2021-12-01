@@ -163,6 +163,7 @@
     <ClInclude Include="dmr\Control.h" />
     <ClInclude Include="dmr\DataPacket.h" />
     <ClInclude Include="dmr\DMRDefines.h" />
+    <ClInclude Include="dmr\DMRUtils.h" />
     <ClInclude Include="dmr\lc\PrivacyLC.h" />
     <ClInclude Include="dmr\SiteData.h" />
     <ClInclude Include="dmr\Slot.h" />

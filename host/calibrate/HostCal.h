@@ -99,8 +99,13 @@ private:
     uint8_t m_mode;
     std::string m_modeStr;
 
+    int m_rxTuning;
+    int m_txTuning;
+
     uint32_t m_rxFrequency;
+    uint32_t m_rxAdjustedFreq;
     uint32_t m_txFrequency;
+    uint32_t m_txAdjustedFreq;
     uint8_t m_channelId;
     uint32_t m_channelNo;
 

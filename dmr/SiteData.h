@@ -32,6 +32,7 @@
 
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
+#include "dmr/DMRUtils.h"
 
 namespace dmr
 {
@@ -72,71 +73,10 @@ namespace dmr
                 siteModel = SITE_MODEL_SMALL;
 
             // netId clamping
-            if (netId == 0U) // clamp to 1
-                netId = 1U;
-
-            switch (siteModel) {
-            case SITE_MODEL_TINY:
-            {
-                if (netId > 0x1FFU) // clamp to $1FF
-                    netId = 0x1FFU;
-            }
-            break;
-            case SITE_MODEL_SMALL:
-            {
-                if (netId > 0x7FU) // clamp to $7F
-                    netId = 0x7FU;
-            }
-            break;
-            case SITE_MODEL_LARGE:
-            {
-                if (netId > 0x1FU) // clamp to $1F
-                    netId = 0x1FU;
-            }
-            break;
-            case SITE_MODEL_HUGE:
-            {
-                if (netId > 0x03U) // clamp to $3
-                    netId = 0x03U;
-            }
-            break;
-            }
-
-            m_netId = netId;
+            m_netId = DMRUtils::netId(netId, siteModel);
 
             // siteId clamping
-            if (siteId == 0U) // clamp to 1
-                siteId = 1U;
-
-            switch (siteModel)
-            {
-            case SITE_MODEL_TINY:
-            {
-                if (siteId > 0x07U) // clamp to $7
-                    siteId = 0x07U;
-            }
-            break;
-            case SITE_MODEL_SMALL:
-            {
-                if (siteId > 0x1FU) // clamp to $1F
-                    siteId = 0x1FU;
-            }
-            break;
-            case SITE_MODEL_LARGE:
-            {
-                if (siteId > 0xFFU) // clamp to $FF
-                    siteId = 0xFFU;
-            }
-            break;
-            case SITE_MODEL_HUGE:
-            {
-                if (siteId > 0x7FFU) // clamp to $7FF
-                    siteId = 0x7FFU;
-            }
-            break;
-            }
-
-            m_siteId = siteId;
+            m_siteId = DMRUtils::siteId(siteId, siteModel);
 
             // parId clamping
             if (parId == 0U)

@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -36,12 +37,77 @@ namespace p25
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      This class implements various helper functions for interleaving P25
-    //      data.
+    //      This class implements various helper functions for validating and
+    //      for interleaving P25 data.
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API P25Utils {
     public:
+        /// <summary>Helper to test and clamp a P25 NAC.</summary>
+        static uint32_t nac(uint32_t nac)
+        {
+            if (nac < 0U) { // clamp to $000
+                nac = 0U;
+            }
+            if (nac > 0xF7DU) { // clamp to $F7D
+                nac = 0xF7DU;
+            }
+
+            return nac;
+        }
+
+        /// <summary>Helper to test and clamp a P25 site ID.</summary>
+        static uint8_t siteId(uint8_t id)
+        {
+            if (id == 0U) { // clamp to 1
+                id = 1U;
+            }
+            if (id > 0xFEU) { // clamp to $FE
+                id = 0xFEU;
+            }
+
+            return id;
+        }
+
+        /// <summary>Helper to test and clamp a P25 network ID.</summary>
+        static uint32_t netId(uint32_t id)
+        {
+            if (id == 0U) { // clamp to 1
+                id = 1U;
+            }
+            if (id > 0xFFFFEU) { // clamp to $FFFFE
+                id = 0xFFFFEU;
+            }
+
+            return id;
+        }
+
+        /// <summary>Helper to test and clamp a P25 system ID.</summary>
+        static uint32_t sysId(uint32_t id)
+        {
+            if (id == 0U) { // clamp to 1
+                id = 1U;
+            }
+            if (id > 0xFFEU) { // clamp to $FFE
+                id = 0xFFEU;
+            }
+
+            return id;
+        }
+
+        /// <summary>Helper to test and clamp a P25 RFSS ID.</summary>
+        static uint8_t rfssId(uint8_t id)
+        {
+            if (id == 0U) { // clamp to 1
+                id = 1U;
+            }
+            if (id > 0xFEU) { // clamp to $FE
+                id = 0xFEU;
+            }
+
+            return id;
+        }
+
         /// <summary>Decode bit interleaving.</summary>
         static uint32_t decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop);
         /// <summary>Encode bit interleaving.</summary>

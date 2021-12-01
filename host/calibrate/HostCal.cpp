@@ -152,8 +152,12 @@ HostCal::HostCal(const std::string& confFile) :
     m_debug(false),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
+    m_rxTuning(0),
+    m_txTuning(0),
     m_rxFrequency(0U),
+    m_rxAdjustedFreq(0U),
     m_txFrequency(0U),
+    m_txAdjustedFreq(0U),
     m_channelId(0U),
     m_channelNo(0U),
     m_idenTable(NULL),
@@ -268,6 +272,18 @@ int HostCal::run()
     LogInfo("    TX Offset: %fMHz", entry.txOffsetMhz());
 
     yaml::Node modemConf = systemConf["modem"];
+
+    m_rxTuning = modemConf["rxTuning"].as<int>(0);
+    m_txTuning = modemConf["txTuning"].as<int>(0);
+
+    // apply the frequency tuning offsets
+    m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
+    m_txAdjustedFreq = m_txFrequency + m_txTuning;
+
+    LogInfo("    RX Tuning Offset: %dhz", m_rxTuning);
+    LogInfo("    TX Tuning Offset: %dhz", m_txTuning);
+    LogInfo("    RX Effective Frequency: %uhz", m_rxAdjustedFreq);
+    LogInfo("    TX Effective Frequency: %uhz", m_txAdjustedFreq);
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
@@ -442,6 +458,105 @@ int HostCal::run()
         case 'O':
             setTXDCOffset(1);
             break;
+
+        case 'N':
+        {
+            char value[5] = { '\0' };
+            ::fprintf(stdout, "> FDMA Preambles [%u] ? ", m_fdmaPreamble);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                // bryanb: appease the compiler...
+                uint32_t fdmaPreamble = m_fdmaPreamble;
+                sscanf(value, "%u", &fdmaPreamble);
+
+                m_fdmaPreamble = (uint8_t)fdmaPreamble;
+
+                writeConfig();
+            }
+        }
+        break;
+
+        case 'W':
+        {
+            char value[5] = { '\0' };
+            ::fprintf(stdout, "> DMR Rx Delay [%u] ? ", m_dmrRxDelay);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                // bryanb: appease the compiler...
+                uint32_t dmrRxDelay = m_dmrRxDelay;
+                sscanf(value, "%u", &dmrRxDelay);
+
+                m_dmrRxDelay = (uint8_t)dmrRxDelay;
+
+                writeConfig();
+            }
+        }
+        break;
+
+        case 'w':
+        {
+            char value[5] = { '\0' };
+            ::fprintf(stdout, "> P25 Correlation Count [%u] ? ", m_p25CorrCount);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                // bryanb: appease the compiler...
+                uint32_t p25CorrCount = m_p25CorrCount;
+                sscanf(value, "%u", &p25CorrCount);
+
+                m_p25CorrCount = (uint8_t)p25CorrCount;
+
+                writeConfig();
+            }
+        }
+        break;
+
+        case 'F':
+        {
+            char value[10] = { '\0' };
+            ::fprintf(stdout, "> Rx Frequency Offset [%dHz] (Hz) ? ", m_rxTuning);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 10, 0);
+            if (value[0] != '\0') {
+                int rxTuning = m_rxTuning;
+                sscanf(value, "%d", &rxTuning);
+
+                m_rxTuning = rxTuning;
+                m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
+
+                writeRFParams();
+            }
+
+            printStatus();
+        }
+        break;
+
+        case 'f':
+        {
+            char value[10] = { '\0' };
+            ::fprintf(stdout, "> Tx Frequency Offset [%dHz] (Hz) ? ", m_txTuning);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 10, 0);
+            if (value[0] != '\0') {
+                int txTuning = m_txTuning;
+                sscanf(value, "%d", &txTuning);
+
+                m_txTuning = txTuning;
+                m_txAdjustedFreq = m_txFrequency + m_txTuning;
+
+                writeRFParams();
+            }
+
+            printStatus();
+        }
+        break;
 
             /** Engineering Commands */
         case '-':
@@ -860,6 +975,11 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    T/t      Increase/Decrease transmit level");
     LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
     LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
+    LogMessage(LOG_CAL, "    N        Set FDMA Preambles");
+    LogMessage(LOG_CAL, "    W        Set DMR Rx Delay");
+    LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
+    LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment (affects hotspots only!)");
+    LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment (affects hotspots only!)");
     LogMessage(LOG_CAL, "Mode Commands:");
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
     LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
@@ -1601,6 +1721,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
         m_fdmaPreamble = MAX_FDMA_PREAMBLE;
     }
 
+    m_conf["system"]["modem"]["fdmaPreamble"] = __INT_STR(m_fdmaPreamble);
     buffer[5U] = m_fdmaPreamble;
 
     buffer[6U] = modeOverride;
@@ -1613,6 +1734,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     buffer[9U] = 1U;
 
+    m_conf["system"]["modem"]["dmrRxDelay"] = __INT_STR(m_dmrRxDelay);
     buffer[10U] = m_dmrRxDelay;
     
     uint32_t nac = 0xF7EU;
@@ -1627,6 +1749,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     m_conf["system"]["modem"]["rxDCOffset"] = __INT_STR(m_rxDCOffset);
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
+    m_conf["system"]["modem"]["p25CorrCount"] = __INT_STR(m_p25CorrCount);
     buffer[14U] = (uint8_t)m_p25CorrCount;
 
     int ret = m_modem->write(buffer, 17U);
@@ -1653,15 +1776,15 @@ bool HostCal::writeRFParams()
 
     buffer[3U] = 0x00U;
 
-    buffer[4U] = (m_rxFrequency >> 0) & 0xFFU;
-    buffer[5U] = (m_rxFrequency >> 8) & 0xFFU;
-    buffer[6U] = (m_rxFrequency >> 16) & 0xFFU;
-    buffer[7U] = (m_rxFrequency >> 24) & 0xFFU;
+    buffer[4U] = (m_rxAdjustedFreq >> 0) & 0xFFU;
+    buffer[5U] = (m_rxAdjustedFreq >> 8) & 0xFFU;
+    buffer[6U] = (m_rxAdjustedFreq >> 16) & 0xFFU;
+    buffer[7U] = (m_rxAdjustedFreq >> 24) & 0xFFU;
 
-    buffer[8U] = (m_txFrequency >> 0) & 0xFFU;
-    buffer[9U] = (m_txFrequency >> 8) & 0xFFU;
-    buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
-    buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
+    buffer[8U] = (m_txAdjustedFreq >> 0) & 0xFFU;
+    buffer[9U] = (m_txAdjustedFreq >> 8) & 0xFFU;
+    buffer[10U] = (m_txAdjustedFreq >> 16) & 0xFFU;
+    buffer[11U] = (m_txAdjustedFreq >> 24) & 0xFFU;
 
     buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F); // cal sets power fixed to 100
 
@@ -1766,15 +1889,30 @@ void HostCal::timerStop()
 /// </summary>
 void HostCal::printStatus()
 {
-    LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
-        m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
-    LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
-        m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
-    LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
-        m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
-    LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
-        m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
-    LogMessage(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Operating Mode: %s", m_rxFrequency, m_txFrequency, m_modeStr.c_str());
+    yaml::Node systemConf = m_conf["system"];
+    {
+        yaml::Node modemConfig = m_conf["system"]["modem"];
+        std::string type = modemConfig["protocol"]["type"].as<std::string>();
+
+        yaml::Node uartConfig = modemConfig["protocol"]["uart"];
+        std::string modemPort = uartConfig["port"].as<std::string>();
+        uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
+
+        LogMessage(LOG_CAL, " - Operating Mode: %s, Port Type: %s, Modem Port: %s, Port Speed: %u", m_modeStr.c_str(), type.c_str(), modemPort.c_str(), portSpeed);
+    }
+
+    {
+        LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+            m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
+        LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
+            m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
+        LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+            m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+        LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
+            m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
+        LogMessage(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning);
+        LogMessage(LOG_CAL, " - Rx Effective Freq: %uHz, Tx Effective Freq: %uHz", m_rxAdjustedFreq, m_txAdjustedFreq);
+    }
 
     uint8_t buffer[50U];
 

@@ -32,6 +32,7 @@
 
 #include "Defines.h"
 #include "p25/P25Defines.h"
+#include "p25/P25Utils.h"
 
 namespace p25
 {
@@ -87,38 +88,28 @@ namespace p25
                 lra = 0xFFU;
 
             // netId clamping
-            if (netId == 0U) // clamp to 1
-                netId = 1U;
-            if (netId > 0xFFFFEU) // clamp to $FFFFE
-                netId = 0xFFFFEU;
+            netId = P25Utils::netId(netId);
 
             // sysId clamping
-            if (sysId == 0U) // clamp to 1
-                sysId = 1U;
-            if (sysId > 0xFFEU) // clamp to $FFE
-                sysId = 0xFFEU;
+            sysId = P25Utils::sysId(sysId);
 
             // rfssId clamping
-            if (rfssId == 0U) // clamp to 1
-                rfssId = 1U;
-            if (rfssId > 0xFEU) // clamp to $FE
-                rfssId = 0xFEU;
+            rfssId = P25Utils::rfssId(rfssId);
 
             // siteId clamping
-            if (siteId == 0U) // clamp to 1
-                siteId = 1U;
-            if (siteId > 0xFEU) // clamp to $FE
-                siteId = 0xFEU;
+            siteId = P25Utils::siteId(siteId);
 
             // channel id clamping
             if (channelId > 15U)
                 channelId = 15U;
 
             // channel number clamping
-            if (channelNo == 0U) // clamp to 1
-                channelNo = 1U;
-            if (channelNo > 4095U) // clamp to 4096
-                channelNo = 4095U;
+            if (m_channelNo == 0U) { // clamp to 1
+                m_channelNo = 1U;
+            }
+            if (m_channelNo > 4095U) { // clamp to 4095
+                m_channelNo = 4095U;
+            }
 
             m_lra = lra;
 
@@ -165,32 +156,25 @@ namespace p25
         void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
             // sysId clamping
-            if (sysId == 0U) // clamp to 1
-                sysId = 1U;
-            if (sysId > 0xFFEU) // clamp to $FFE
-                sysId = 0xFFEU;
+            sysId = P25Utils::sysId(sysId);
 
             // rfssId clamping
-            if (rfssId == 0U) // clamp to 1
-                rfssId = 1U;
-            if (rfssId > 0xFEU) // clamp to $FE
-                rfssId = 0xFEU;
+            rfssId = P25Utils::rfssId(rfssId);
 
             // siteId clamping
-            if (siteId == 0U) // clamp to 1
-                siteId = 1U;
-            if (siteId > 0xFEU) // clamp to $FE
-                siteId = 0xFEU;
+            siteId = P25Utils::siteId(siteId);
 
             // channel id clamping
             if (channelId > 15U)
                 channelId = 15U;
 
             // channel number clamping
-            if (channelNo == 0U) // clamp to 1
-                channelNo = 1U;
-            if (channelNo > 4095U) // clamp to 4096
-                channelNo = 4095U;
+            if (m_channelNo == 0U) { // clamp to 1
+                m_channelNo = 1U;
+            }
+            if (m_channelNo > 4095U) { // clamp to 4095
+                m_channelNo = 4095U;
+            }
 
             m_lra = 0U;
 

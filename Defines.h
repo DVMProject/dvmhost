@@ -178,6 +178,12 @@ inline std::string __INT_STR(const int& value) {
     return ss.str();
 }
 
+inline std::string __INT_HEX_STR(const int& value) {
+    std::stringstream ss;
+    ss << std::hex << value;
+    return ss.str();
+}
+
 inline std::string __FLOAT_STR(const float& value) {
     std::stringstream ss;
     ss << value;

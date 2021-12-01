@@ -74,8 +74,6 @@ private:
     /// <summary>Helper to calculate the Rx/Tx frequencies.</summary>
     bool calculateRxTxFreq();
 
-    /// <summary>Write configuration file.</summary>
-    bool writeConfig();
     /// <summary>Helper to sleep the thread.</summary>
     void sleep(uint32_t ms);
 
