@@ -236,6 +236,7 @@ int Console::getLine(char line[], int max, char mask)
     if (c == EOF && nch == 0)
         return EOF;
 
+    ::fputc('\r', stdout);
     ::fputc('\n', stdout);
     ::fflush(stdout);
 

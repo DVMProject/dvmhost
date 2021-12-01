@@ -1418,6 +1418,13 @@ bool Host::readParams()
         }
 
         m_dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
+        if (m_dmrColorCode < 0U) { // clamp to 0
+            m_dmrColorCode = 0U;
+        }
+        if (m_dmrColorCode > 15U) { // clamp to 15
+            m_dmrColorCode = 15U;
+        }
+
         m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
         if (m_dmrNetId == 0U) { // clamp to 1
             m_dmrNetId = 1U;
@@ -1427,6 +1434,13 @@ bool Host::readParams()
         }
 
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
+        if (m_p25NAC < 0U) { // clamp to $000
+            m_p25NAC = 0U;
+        }
+        if (m_p25NAC > 0xF7DU) { // clamp to $F7D
+            m_p25NAC = 0xF7DU;
+        }
+
         m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         if (m_p25NetId == 0U) { // clamp to 1

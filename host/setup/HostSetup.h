@@ -61,9 +61,6 @@ private:
 
     bool m_duplex;
 
-    std::string m_identity;
-    std::string m_callsign;
-
     uint32_t m_rxFrequency;
     uint32_t m_txFrequency;
     uint8_t m_channelId;

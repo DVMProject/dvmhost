@@ -53,8 +53,6 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_conf(),
     m_console(),
     m_duplex(true),
-    m_identity("ABCD123"),
-    m_callsign("ABCD123"),
     m_rxFrequency(0U),
     m_txFrequency(0U),
     m_channelId(0U),
@@ -115,18 +113,18 @@ int HostSetup::run()
 
     LogInfo("General Parameters");
 
-    m_identity = systemConf["identity"].as<std::string>();
-    ::LogInfo("    Identity: %s", m_identity.c_str());
+    std::string identity = systemConf["identity"].as<std::string>();
+    ::LogInfo("    Identity: %s", identity.c_str());
 
     yaml::Node cwId = systemConf["cwId"];
-    uint32_t time = systemConf["cwId"].as<uint32_t>(10U);
-    m_callsign = systemConf["cwId"].as<std::string>();
+    bool cwEnabled = cwId["enable"].as<bool>(false);
+    uint32_t cwTime = cwId["time"].as<uint32_t>(10U);
+    std::string callsign = cwId["callsign"].as<std::string>();
 
     LogInfo("CW Id Parameters");
-    LogInfo("    Time: %u mins", time);
-    LogInfo("    Callsign: %s", m_callsign.c_str());
-
-    m_callsign = cwId["callsign"].as<std::string>();
+    LogInfo("    Enabled: %s", cwEnabled ? "enabled" : "disabled");
+    LogInfo("    Time: %u mins", cwTime);
+    LogInfo("    Callsign: %s", callsign.c_str());
 
     yaml::Node rfssConfig = systemConf["config"];
     m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
@@ -181,7 +179,49 @@ int HostSetup::run()
             ::fflush(stdout);
 
             m_console.getLine(value, 9, 0);
-            m_identity = std::string(value);
+            std::string identity = std::string(value);
+            if (identity.length() > 0) {
+                m_conf["system"]["identity"] = identity;
+            }
+
+            writeConfig();
+        }
+        break;
+
+        case 'C':
+        {
+            bool enabled = cwId["enable"].as<bool>(false);
+
+            char value[9] = { '\0' };
+            ::fprintf(stdout, "> Callsign ? ");
+            ::fflush(stdout);
+
+            m_console.getLine(value, 9, 0);
+            std::string callsign = std::string(value);
+            if (callsign.length() > 0) {
+                m_conf["system"]["cwId"]["callsign"] = callsign;
+            }
+
+            ::fprintf(stdout, "> CW Enabled (Y/N) ? ");
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                enabled = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["system"]["cwId"]["enable"] = __BOOL_STR(enabled);
+
+            ::fprintf(stdout, "> CW Interval (minutes) ? ");
+            ::fflush(stdout);
+
+            m_console.getLine(value, 4, 0);
+            uint32_t time = cwTime;
+            sscanf(value, "%u", &time);
+            if (value > 0) {
+                m_conf["system"]["cwId"]["time"] = __INT_STR(time);
+            }
+
             writeConfig();
         }
         break;
@@ -333,6 +373,7 @@ void HostSetup::displayHelp()
     LogMessage(LOG_SETUP, "    Q/q      Quit");
     LogMessage(LOG_SETUP, "Setup Commands:");
     LogMessage(LOG_SETUP, "    I        Set identity (logical name)");
+    LogMessage(LOG_SETUP, "    C        Set callsign and CW configuration");
     LogMessage(LOG_SETUP, "    i        Set logical channel ID");
     LogMessage(LOG_SETUP, "    c        Set logical channel number (by channel number)");
     LogMessage(LOG_SETUP, "    f        Set logical channel number (by Tx frequency)");
@@ -384,8 +425,6 @@ bool HostSetup::calculateRxTxFreq()
 /// <returns>True, if configuration is written, otherwise false.</returns>
 bool HostSetup::writeConfig()
 {
-    m_conf["system"]["identity"] = m_identity;
-
     m_conf["system"]["config"]["channelId"] = __INT_STR(m_channelId);
     m_conf["system"]["config"]["channelNo"] = __INT_STR(m_channelNo);
 
@@ -411,6 +450,9 @@ void HostSetup::sleep(uint32_t ms)
 /// </summary>
 void HostSetup::printStatus()
 {
+    yaml::Node systemConf = m_conf["system"];
+    std::string identity = systemConf["identity"].as<std::string>();
+
     IdenTable entry = m_idenTable->find(m_channelId);
     if (entry.baseFrequency() == 0U) {
         ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
@@ -418,7 +460,17 @@ void HostSetup::printStatus()
 
     calculateRxTxFreq();
 
+    LogMessage(LOG_SETUP, " - Identity: %s", identity.c_str());
     LogMessage(LOG_SETUP, " - Channel ID: %u, Channel No: %u", m_channelId, m_channelNo);
     LogMessage(LOG_SETUP, " - Base Freq: %uHz, TX Offset: %fMHz, Bandwidth: %fKHz, Channel Spacing: %fKHz", entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
-    LogMessage(LOG_SETUP, " - Rx Freq: %uHz, Tx Freq: %uHz, Identity: %s, Callsign: %s", m_rxFrequency, m_txFrequency, m_identity.c_str(), m_callsign.c_str());
+    LogMessage(LOG_SETUP, " - Rx Freq: %uHz, Tx Freq: %uHz", m_rxFrequency, m_txFrequency);
+    
+    {
+        yaml::Node cwId = systemConf["cwId"];
+        bool enabled = cwId["enable"].as<bool>(false);
+        uint32_t cwTime = cwId["time"].as<uint32_t>(10U);
+        std::string callsign = cwId["callsign"].as<std::string>();
+
+        LogMessage(LOG_SETUP, " - Callsign: %s, CW Interval: %u mins, CW Enabled: %u", callsign.c_str(), cwTime, enabled);
+    }
 }
