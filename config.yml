@@ -22,10 +22,10 @@ network:
     updateLookups: false
     allowActivityTransfer: false
     allowDiagnosticTransfer: false
-    debug: true
+    debug: false
 protocols:
     dmr:
-        enable: false
+        enable: true
         beacons:
             enable: false
             interval: 60
@@ -48,9 +48,9 @@ protocols:
         enable: true
         tduPreambleCount: 6
         control:
-            enable: true
+            enable: false
             ackRequests: true
-            dedicated: true
+            dedicated: false
             broadcast: true
             interval: 300
             duration: 1
@@ -62,7 +62,7 @@ protocols:
         verifyReg: false
         dumpDataPacket: false
         repeatDataPacket: true
-        dumpTsbkData: true
+        dumpTsbkData: false
         callHang: 5
         noStatusAck: false
         noMessageAck: true
@@ -87,11 +87,11 @@ system:
         power: 10
         location: "Repeater Site, USA"
     config:
-        channelId: 3
-        channelNo: 50
+        channelId: 2
+        channelNo: 1
         dmrNetId: 1
         voiceChNo:
-            - 80
+            - 1
         colorCode: 5
         nac: 293
         pSuperGroup: FFFF
@@ -101,9 +101,9 @@ system:
         siteId: 1
     modem:
         protocol:
-            type: "uart" # Valid values are "null", "uart", and "udp"
+            type: "null" # Valid values are "null", "uart", and "udp"
             uart:
-                port: '/dev/ttyAMA0'
+                port: /dev/ttyUSB0
                 speed: 115200
             udp:
                 mode: master # Valid values are "master", and "peer"
@@ -114,15 +114,15 @@ system:
         pttInvert: false
         dcBlocker: true
         cosLockout: false
-        fdmaPreamble: 100
+        fdmaPreamble: 80
         dmrRxDelay: 7
         p25CorrCount: 8
         rxDCOffset: 0
         txDCOffset: 0
-        rxLevel: 50
-        txLevel: 50
         txTuning: 0 # freq offset for the hotspot, in hz
         rxTuning: 0
+        rxLevel: 50
+        txLevel: 50
 #        cwIdTxLevel: 50
 #        dmrTxLevel: 50
 #        p25TxLevel: 50
@@ -130,9 +130,9 @@ system:
         packetPlayoutTime: 10
         disableOFlowReset: false
         trace: false
-        debug: true
+        debug: false
     cwId:
-        enable: false
+        enable: true
         time: 15
         callsign: ABCD123
     iden_table:

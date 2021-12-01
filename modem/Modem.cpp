@@ -1257,7 +1257,7 @@ bool Modem::getFirmwareVersion()
         // Utils::dump(1U, "F/W Ver Written", buffer, 3U);
 
         int ret = write(buffer, 3U);
-        //LogMessage(LOG_MODEM, "Asking for F/W");
+        // LogMessage(LOG_MODEM, "Asking for F/W");
         if (ret != 3)
             return false;
 
@@ -1644,6 +1644,7 @@ RESP_TYPE_DVM Modem::getResponse()
         m_rspDoubleLength = false;
         m_rspOffset = 2U;
     }
+
     //LogDebug(LOG_MODEM, "getResponse(), getting frame length 2/2");
     // get the length of the frame, 2/2
     if (m_rspState == RESP_LENGTH2) {
@@ -1665,6 +1666,7 @@ RESP_TYPE_DVM Modem::getResponse()
         m_rspDoubleLength = true;
         m_rspOffset = 3U;
     }
+
     //LogDebug(LOG_MODEM, "getResponse(), getting frame type");
     // get the frame type
     if (m_rspState == RESP_TYPE) {
@@ -1685,6 +1687,7 @@ RESP_TYPE_DVM Modem::getResponse()
         m_rspState = RESP_DATA;
         m_rspOffset++;
     }
+
     //LogDebug(LOG_MODEM, "getResponse(), getting frame data");
 
     // get the frame data
@@ -1716,3 +1719,4 @@ RESP_TYPE_DVM Modem::getResponse()
 
     return RTM_OK;
 }
+
