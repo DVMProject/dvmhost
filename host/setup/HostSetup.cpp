@@ -451,6 +451,8 @@ int HostSetup::run()
                     m_rxFrequency = prevRxFrequency;
                     break;
                 }
+
+                m_conf["system"]["config"]["channelNo"] = __INT_HEX_STR(m_channelNo);
             }
 
             printStatus();
