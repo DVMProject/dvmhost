@@ -13,6 +13,10 @@ The DVM Host software does not have any specific library dependancies and is wri
 
 * Makefile - This makefile is used for building binaries for the native installed GCC.
 * Makefile.arm - This makefile is used for cross-compiling for a ARM platform.
+* Makefile.rpi-arm - This makefile is used for cross-compiling for a Raspberry Pi.
+
+* For RPi using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically arm-gcc-none-eabi).
+  1. Switch to "/opt" and checkout ```https://github.com/raspberrypi/tools.git```.
 
 Use the ```make``` command to build the software.
 
