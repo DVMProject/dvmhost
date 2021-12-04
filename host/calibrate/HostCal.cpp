@@ -142,6 +142,11 @@ HostCal::HostCal(const std::string& confFile) :
     m_p25Rx1K(false),
     m_txDCOffset(0),
     m_rxDCOffset(0),
+    m_isHotspot(false),
+    m_dmrDiscBWAdj(0),
+    m_p25DiscBWAdj(0),
+    m_dmrPostBWAdj(0),
+    m_p25PostBWAdj(0),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -369,8 +374,6 @@ int HostCal::run()
         return 1;
     }
 
-    displayHelp();
-
     m_rxInvert = modemConf["rxInvert"].as<bool>(false);
     m_txInvert = modemConf["txInvert"].as<bool>(false);
     m_pttInvert = modemConf["pttInvert"].as<bool>(false);
@@ -380,6 +383,11 @@ int HostCal::run()
     m_txDCOffset = modemConf["txDCOffset"].as<int>(0);
     m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     m_txLevel = modemConf["txLevel"].as<float>(50.0F);
+
+    m_dmrDiscBWAdj = modemConf["dmrDiscBWAdj"].as<int>(0);
+    m_p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
+    m_dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
+    m_p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
 
     m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
     m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
@@ -392,6 +400,8 @@ int HostCal::run()
 
     writeConfig();
 
+    displayHelp();
+
     printStatus();
 
     bool end = false;
@@ -401,30 +411,38 @@ int HostCal::run()
             /** Level Adjustment Commands */
         case 'I':
         {
-            m_txInvert = !m_txInvert;
-            LogMessage(LOG_CAL, " - TX Invert: %s", m_txInvert ? "On" : "Off");
-            writeConfig();
+            if (!m_isHotspot) {
+                m_txInvert = !m_txInvert;
+                LogMessage(LOG_CAL, " - TX Invert: %s", m_txInvert ? "On" : "Off");
+                writeConfig();
+            }
         }
         break;
         case 'i':
         {
-            m_rxInvert = !m_rxInvert;
-            LogMessage(LOG_CAL, " - RX Invert: %s", m_rxInvert ? "On" : "Off");
-            writeConfig();
+            if (!m_isHotspot) {
+                m_rxInvert = !m_rxInvert;
+                LogMessage(LOG_CAL, " - RX Invert: %s", m_rxInvert ? "On" : "Off");
+                writeConfig();
+            }
         }
         break;
         case 'p':
         {
-            m_pttInvert = !m_pttInvert;
-            LogMessage(LOG_CAL, " - PTT Invert: %s", m_pttInvert ? "On" : "Off");
-            writeConfig();
+            if (!m_isHotspot) {
+                m_pttInvert = !m_pttInvert;
+                LogMessage(LOG_CAL, " - PTT Invert: %s", m_pttInvert ? "On" : "Off");
+                writeConfig();
+            }
         }
         break;
         case 'd':
         {
-            m_dcBlocker = !m_dcBlocker;
-            LogMessage(LOG_CAL, " - DC Blocker: %s", m_dcBlocker ? "On" : "Off");
-            writeConfig();
+            if (!m_isHotspot) {
+                m_dcBlocker = !m_dcBlocker;
+                LogMessage(LOG_CAL, " - DC Blocker: %s", m_dcBlocker ? "On" : "Off");
+                writeConfig();
+            }
         }
         break;
         case 'D':
@@ -560,30 +578,126 @@ int HostCal::run()
 
             /** Engineering Commands */
         case '-':
-            setDMRSymLevel3Adj(-1);
+            if (!m_isHotspot)
+                setDMRSymLevel3Adj(-1);
             break;
         case '=':
-            setDMRSymLevel3Adj(1);
+            if (!m_isHotspot)
+                setDMRSymLevel3Adj(1);
             break;
         case '_':
-            setDMRSymLevel1Adj(-1);
+            if (!m_isHotspot)
+                setDMRSymLevel1Adj(-1);
             break;
         case '+':
-            setDMRSymLevel1Adj(1);
+            if (!m_isHotspot)
+                setDMRSymLevel1Adj(1);
             break;
 
         case '[':
-            setP25SymLevel3Adj(-1);
+            if (!m_isHotspot)
+                setP25SymLevel3Adj(-1);
             break;
         case ']':
-            setP25SymLevel3Adj(1);
+            if (!m_isHotspot)
+                setP25SymLevel3Adj(1);
             break;
         case '{':
-            setP25SymLevel1Adj(-1);
+            if (!m_isHotspot)
+                setP25SymLevel1Adj(-1);
             break;
         case '}':
-            setP25SymLevel1Adj(1);
+            if (!m_isHotspot)
+                setP25SymLevel1Adj(1);
             break;
+
+        case '1':
+        {
+            if (m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> DMR Discriminator BW Offset [%d] ? ", m_dmrDiscBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_dmrDiscBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_dmrDiscBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+
+                printStatus();
+            }
+        }
+        break;
+
+        case '2':
+        {
+            if (m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> P25 Discriminator BW Offset [%d] ? ", m_p25DiscBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_p25DiscBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_p25DiscBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+
+                printStatus();
+            }
+        }
+        break;
+
+        case '3':
+        {
+            if (m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> DMR Post Demodulation BW Offset [%d] ? ", m_dmrPostBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_dmrPostBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_dmrPostBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+
+                printStatus();
+            }
+        }
+        break;
+
+        case '4':
+        {
+            if (m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> P25 Post Demodulation BW Offset [%d] ? ", m_p25PostBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_p25PostBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_p25PostBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+
+                printStatus();
+            }
+        }
+        break;
 
             /** Mode Commands */
         case 'Z':
@@ -912,7 +1026,10 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
 
         case CMD_GET_STATUS:
         {
+            m_isHotspot = (buffer[3U] & 0x01U) == 0x01U;
+
             uint8_t modemState = buffer[4U];
+
             bool tx = (buffer[5U] & 0x01U) == 0x01U;
 
             bool adcOverflow = (buffer[5U] & 0x02U) == 0x02U;
@@ -920,8 +1037,8 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
             bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
             bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
 
-            LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d]",
-                modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow);
+            LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
+                modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_isHotspot);
         }
         break;
 
@@ -967,19 +1084,25 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    S/s      Save calibration settings to configuration file");
     LogMessage(LOG_CAL, "    Q/q      Quit");
     LogMessage(LOG_CAL, "Level Adjustment Commands:");
-    LogMessage(LOG_CAL, "    I        Toggle transmit inversion");
-    LogMessage(LOG_CAL, "    i        Toggle receive inversion");
-    LogMessage(LOG_CAL, "    p        Toggle PTT inversion");
-    LogMessage(LOG_CAL, "    d        Toggle DC blocker");
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    I        Toggle transmit inversion");
+        LogMessage(LOG_CAL, "    i        Toggle receive inversion");
+        LogMessage(LOG_CAL, "    p        Toggle PTT inversion");
+        LogMessage(LOG_CAL, "    d        Toggle DC blocker");
+    }
     LogMessage(LOG_CAL, "    R/r      Increase/Decrease receive level");
     LogMessage(LOG_CAL, "    T/t      Increase/Decrease transmit level");
-    LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
-    LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
+        LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
+    }
     LogMessage(LOG_CAL, "    N        Set FDMA Preambles");
     LogMessage(LOG_CAL, "    W        Set DMR Rx Delay");
     LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
-    LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment (affects hotspots only!)");
-    LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment (affects hotspots only!)");
+    if (m_isHotspot) {
+        LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment (hotspot modems only!)");
+    }
     LogMessage(LOG_CAL, "Mode Commands:");
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
     LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
@@ -994,10 +1117,18 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    j        %s", P25_FEC_1K_STR);
     LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
     LogMessage(LOG_CAL, "Engineering Commands:");
-    LogMessage(LOG_CAL, "    -/=      Increase/Decrease DMR +/- 3 Symbol Level");
-    LogMessage(LOG_CAL, "    _/+      Increase/Decrease DMR +/- 1 Symbol Level");
-    LogMessage(LOG_CAL, "    [/]      Increase/Decrease P25 +/- 3 Symbol Level");
-    LogMessage(LOG_CAL, "    {/}      Increase/Decrease P25 +/- 1 Symbol Level");
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    -/=      Inc/Dec DMR +/- 3 Symbol Level (dedicated modems only!)");
+        LogMessage(LOG_CAL, "    _/+      Inc/Dec DMR +/- 1 Symbol Level (dedicated modems only!)");
+        LogMessage(LOG_CAL, "    [/]      Inc/Dec P25 +/- 3 Symbol Level (dedicated modems only!)");
+        LogMessage(LOG_CAL, "    {/}      Inc/Dec P25 +/- 1 Symbol Level (dedicated modems only!)");
+    }
+    else {
+        LogMessage(LOG_CAL, "    1        Set DMR Disc. Bandwidth Offset (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    2        Set P25 Disc. Bandwidth Offset (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset (hotspot modems only!)");
+    }
 }
 
 /// <summary>
@@ -1768,10 +1899,10 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 /// <returns></returns>
 bool HostCal::writeRFParams()
 {
-    unsigned char buffer[13U];
+    unsigned char buffer[17U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 13U;
+    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1788,9 +1919,18 @@ bool HostCal::writeRFParams()
 
     buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F); // cal sets power fixed to 100
 
+    m_conf["system"]["modem"]["m_dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
+    buffer[13U] = (uint8_t)(m_dmrDiscBWAdj + 128);
+    m_conf["system"]["modem"]["m_p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
+    buffer[14U] = (uint8_t)(m_p25DiscBWAdj + 128);
+    m_conf["system"]["modem"]["m_dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
+    buffer[15U] = (uint8_t)(m_dmrPostBWAdj + 128);
+    m_conf["system"]["modem"]["m_p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
+    buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
+
     // CUtils::dump(1U, "Written", buffer, len);
 
-    int ret = m_modem->write(buffer, 13U);
+    int ret = m_modem->write(buffer, 17U);
     if (ret <= 0)
         return false;
 

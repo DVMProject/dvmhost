@@ -85,6 +85,13 @@ private:
     int m_txDCOffset;
     int m_rxDCOffset;
 
+    bool m_isHotspot;
+
+    int8_t m_dmrDiscBWAdj;
+    int8_t m_p25DiscBWAdj;
+    int8_t m_dmrPostBWAdj;
+    int8_t m_p25PostBWAdj;
+
     int m_dmrSymLevel3Adj;
     int m_dmrSymLevel1Adj;
     int m_p25SymLevel3Adj;

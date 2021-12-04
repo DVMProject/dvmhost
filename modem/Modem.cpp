@@ -95,9 +95,14 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25Enabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
+    m_isHotspot(false),
     m_rxFrequency(0U),
     m_txFrequency(0U),
     m_rfPower(0U),
+    m_dmrDiscBWAdj(0),
+    m_p25DiscBWAdj(0),
+    m_dmrPostBWAdj(0),
+    m_p25PostBWAdj(0),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -224,11 +229,20 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
 /// <param name="rxFreq"></param>
 /// <param name="txFreq"></param>
 /// <param name="rfPower"></param>
-void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower)
+/// <param name="dmrDiscBWAdj"></param>
+/// <param name="p25DiscBWAdj"></param>
+/// <param name="dmrPostBWAdj"></param>
+/// <param name="p25PostBWAdj"></param>
+void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj)
 {
     m_rfPower = rfPower;
     m_rxFrequency = rxFreq;
     m_txFrequency = txFreq;
+
+    m_dmrDiscBWAdj = dmrDiscBWAdj;
+    m_p25DiscBWAdj = p25DiscBWAdj;
+    m_dmrPostBWAdj = dmrPostBWAdj;
+    m_p25PostBWAdj = p25PostBWAdj;
 }
 
 /// <summary>
@@ -583,6 +597,8 @@ void Modem::clock(uint32_t ms)
         {
             //if (m_trace)
             //   Utils::dump(1U, "Get Status", m_buffer, m_length);
+
+            m_isHotspot = (m_buffer[3U] & 0x01U) == 0x01U;
 
             m_modemState = (DVM_STATE)m_buffer[4U];
 
@@ -1473,10 +1489,10 @@ bool Modem::writeSymbolAdjust()
 /// <returns></returns>
 bool Modem::writeRFParams()
 {
-    unsigned char buffer[13U];
+    unsigned char buffer[17U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 13U;
+    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1493,9 +1509,14 @@ bool Modem::writeRFParams()
 
     buffer[12U] = (unsigned char)(m_rfPower * 2.55F + 0.5F);
 
+    buffer[13U] = (uint8_t)(m_dmrDiscBWAdj + 128);
+    buffer[14U] = (uint8_t)(m_p25DiscBWAdj + 128);
+    buffer[15U] = (uint8_t)(m_dmrPostBWAdj + 128);
+    buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
+
     // CUtils::dump(1U, "Written", buffer, len);
 
-    int ret = m_port->write(buffer, 13U);
+    int ret = m_port->write(buffer, 17U);
     if (ret <= 0)
         return false;
 

@@ -193,7 +193,7 @@ namespace modem
         /// <summary>Sets the symbol adjustment levels.</summary>
         void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
         /// <summary>Sets the RF parameters.</summary>
-        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower);
+        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
@@ -316,9 +316,16 @@ namespace modem
         int m_rxDCOffset;
         int m_txDCOffset;
 
+        bool m_isHotspot;
+
         uint32_t m_rxFrequency;
         uint32_t m_txFrequency;
         uint8_t m_rfPower;
+
+        int8_t m_dmrDiscBWAdj;
+        int8_t m_p25DiscBWAdj;
+        int8_t m_dmrPostBWAdj;
+        int8_t m_p25PostBWAdj;
 
         int m_dmrSymLevel3Adj;
         int m_dmrSymLevel1Adj;
