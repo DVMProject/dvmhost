@@ -278,6 +278,8 @@ int HostCal::run()
 
     yaml::Node modemConf = systemConf["modem"];
 
+    m_debug = modemConf["debug"].as<bool>(false);
+
     m_rxTuning = modemConf["rxTuning"].as<int>(0);
     m_txTuning = modemConf["txTuning"].as<int>(0);
 
@@ -549,6 +551,7 @@ int HostCal::run()
                 sscanf(value, "%d", &rxTuning);
 
                 m_rxTuning = rxTuning;
+                m_conf["system"]["modem"]["rxTuning"] = __INT_STR(m_rxTuning);
                 m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
 
                 writeRFParams();
@@ -570,6 +573,7 @@ int HostCal::run()
                 sscanf(value, "%d", &txTuning);
 
                 m_txTuning = txTuning;
+                m_conf["system"]["modem"]["txTuning"] = __INT_STR(m_txTuning);
                 m_txAdjustedFreq = m_txFrequency + m_txTuning;
 
                 writeRFParams();

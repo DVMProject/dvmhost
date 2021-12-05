@@ -149,6 +149,8 @@ namespace modem
 
         RSN_INVALID_P25_CORR_COUNT = 16U,
 
+        RSN_HS_NO_DUAL_MODE = 32U,
+
         RSN_DMR_DISABLED = 63U,
         RSN_P25_DISABLED = 64U,
     };

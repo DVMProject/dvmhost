@@ -1425,7 +1425,7 @@ bool Modem::writeConfig()
     // Utils::dump(1U, "Response", m_buffer, m_length);
 
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK to the SET_CONFIG command from the modem");
+        LogError(LOG_MODEM, "NAK to the SET_CONFIG command from the modem, reason = %u", resp);
         return false;
     }
 
