@@ -400,8 +400,9 @@ int HostCal::run()
 
     writeConfig();
 
-    displayHelp();
+    getStatus();
 
+    displayHelp();
     printStatus();
 
     bool end = false;
@@ -517,19 +518,21 @@ int HostCal::run()
 
         case 'w':
         {
-            char value[5] = { '\0' };
-            ::fprintf(stdout, "> P25 Correlation Count [%u] ? ", m_p25CorrCount);
-            ::fflush(stdout);
+            if (!m_isHotspot) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> P25 Correlation Count [%u] ? ", m_p25CorrCount);
+                ::fflush(stdout);
 
-            m_console.getLine(value, 5, 0);
-            if (value[0] != '\0') {
-                // bryanb: appease the compiler...
-                uint32_t p25CorrCount = m_p25CorrCount;
-                sscanf(value, "%u", &p25CorrCount);
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    // bryanb: appease the compiler...
+                    uint32_t p25CorrCount = m_p25CorrCount;
+                    sscanf(value, "%u", &p25CorrCount);
 
-                m_p25CorrCount = (uint8_t)p25CorrCount;
+                    m_p25CorrCount = (uint8_t)p25CorrCount;
 
-                writeConfig();
+                    writeConfig();
+                }
             }
         }
         break;
@@ -1098,10 +1101,12 @@ void HostCal::displayHelp()
     }
     LogMessage(LOG_CAL, "    N        Set FDMA Preambles");
     LogMessage(LOG_CAL, "    W        Set DMR Rx Delay");
-    LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
+    }
     if (m_isHotspot) {
-        LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment (hotspot modems only!)");
-        LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment");
+        LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment");
     }
     LogMessage(LOG_CAL, "Mode Commands:");
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
@@ -1118,16 +1123,16 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
     LogMessage(LOG_CAL, "Engineering Commands:");
     if (!m_isHotspot) {
-        LogMessage(LOG_CAL, "    -/=      Inc/Dec DMR +/- 3 Symbol Level (dedicated modems only!)");
-        LogMessage(LOG_CAL, "    _/+      Inc/Dec DMR +/- 1 Symbol Level (dedicated modems only!)");
-        LogMessage(LOG_CAL, "    [/]      Inc/Dec P25 +/- 3 Symbol Level (dedicated modems only!)");
-        LogMessage(LOG_CAL, "    {/}      Inc/Dec P25 +/- 1 Symbol Level (dedicated modems only!)");
+        LogMessage(LOG_CAL, "    -/=      Inc/Dec DMR +/- 3 Symbol Level");
+        LogMessage(LOG_CAL, "    _/+      Inc/Dec DMR +/- 1 Symbol Level");
+        LogMessage(LOG_CAL, "    [/]      Inc/Dec P25 +/- 3 Symbol Level");
+        LogMessage(LOG_CAL, "    {/}      Inc/Dec P25 +/- 1 Symbol Level");
     }
     else {
-        LogMessage(LOG_CAL, "    1        Set DMR Disc. Bandwidth Offset (hotspot modems only!)");
-        LogMessage(LOG_CAL, "    2        Set P25 Disc. Bandwidth Offset (hotspot modems only!)");
-        LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset (hotspot modems only!)");
-        LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset (hotspot modems only!)");
+        LogMessage(LOG_CAL, "    1        Set DMR Disc. Bandwidth Offset");
+        LogMessage(LOG_CAL, "    2        Set P25 Disc. Bandwidth Offset");
+        LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset");
+        LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset");
     }
 }
 
@@ -2025,6 +2030,26 @@ void HostCal::timerStop()
 }
 
 /// <summary>
+/// Retrieve the current status from the air interface modem.
+/// </summary>
+void HostCal::getStatus()
+{
+    uint8_t buffer[50U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 4U;
+    buffer[2U] = CMD_GET_STATUS;
+
+    int ret = m_modem->write(buffer, 4U);
+    if (ret <= 0)
+        return;
+
+    sleep(25U);
+
+    m_modem->clock(0U);
+}
+
+/// <summary>
 /// Prints the current status of the calibration.
 /// </summary>
 void HostCal::printStatus()
@@ -2046,27 +2071,21 @@ void HostCal::printStatus()
             m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
         LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
             m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
-        LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
-            m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+        if (!m_isHotspot) {
+            LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+                m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+        }
+        if (m_isHotspot) {
+            LogMessage(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
+                m_dmrDiscBWAdj, m_p25DiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj);
+        }
         LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
             m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
         LogMessage(LOG_CAL, " - Rx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning);
         LogMessage(LOG_CAL, " - Rx Effective Freq: %uHz, Tx Effective Freq: %uHz", m_rxAdjustedFreq, m_txAdjustedFreq);
     }
 
-    uint8_t buffer[50U];
-
-    buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 4U;
-    buffer[2U] = CMD_GET_STATUS;
-
-    int ret = m_modem->write(buffer, 4U);
-    if (ret <= 0)
-        return;
-
-    sleep(25U);
-
-    m_modem->clock(0U);
+    getStatus();
 }
 
 /// <summary>

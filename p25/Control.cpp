@@ -498,7 +498,8 @@ bool Control::writeControlRF()
         return false;
     }
 
-    if (m_ccSeq == 6U) {
+    const uint8_t maxSeq = 7U;
+    if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }
 
@@ -508,8 +509,12 @@ bool Control::writeControlRF()
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
-        m_ccFrameCnt++;
+        
         m_ccSeq++;
+        if (m_ccSeq == maxSeq) {
+            m_ccFrameCnt++;
+        }
+        
         return true;
     }
 

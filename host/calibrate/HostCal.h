@@ -184,6 +184,8 @@ private:
     /// <summary>Helper to stop the calibration BER timer.</summary>
     void timerStop();
 
+    /// <summary>Retrieve the current status from the air interface modem.</summary>
+    void getStatus();
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
 

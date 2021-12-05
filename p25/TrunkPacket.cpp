@@ -1139,7 +1139,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_noMessageAck(true),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
-    m_dumpTSBK(false),
+    m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1201,66 +1201,70 @@ void TrunkPacket::writeNetworkRF(const uint8_t* data, bool autoReset)
 /// <param name="adjSS"></param>
 void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
-    uint8_t i = 0U, seqCnt = 0U;
-
     if (!m_p25->m_control)
         return;
 
-    // loop to generate 6 control sequences
-    if (frameCnt == 255U) {
-        seqCnt = 6U;
+    resetRF();
+
+    if (m_debug) {
+        LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
     }
 
-    do
+    bool forcePad = false;
+    bool alt = (frameCnt % 2U) > 0U;
+    switch (n)
     {
-        resetRF();
-
-        if (m_debug) {
-            LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
-        }
-
-        switch (n)
-        {
-        case 1:
+    /** required data */
+    case 0:
+    default:
+        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
+        break;
+    case 1:
+        if (alt)
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-            break;
-        case 2:
+        else
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+        break;
+    case 2:
+        if (alt)
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+        else
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+        break;
+    case 3:
+        if (alt)
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+        else
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+        break;
+    /** extra data */
+    case 4:
+        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SNDCP_CH_ANN);
+        break;
+    case 5:
+        // write ADJSS
+        if (adjSS && m_adjSiteTable.size() > 0) {
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_ADJ_STS_BCAST);
             break;
-        case 3:
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SNDCP_CH_ANN);
-            break;
-        case 4:
-            // write ADJSS
-            if (adjSS) {
-                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_ADJ_STS_BCAST);
-                break;
-            }
-        case 5:
-            // write SCCB
-            if (adjSS) {
-                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SCCB_EXP);
-                break;
-            }
-        case 0:
-        default:
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
+        } else {
+            forcePad = true;
+        }
+    case 6:
+        // write SCCB
+        if (adjSS && m_sccbTable.size() > 0) {
+            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SCCB_EXP);
             break;
         }
-        
-        if (seqCnt > 0U)
-            n++;
-        i++;
-    } while (i <= seqCnt);
+    }
 
     // should we insert the BSI bursts?
-    bool bsi = (frameCnt % 64U) == 0U;
-    if (bsi || frameCnt == 255U) {
+    bool bsi = (frameCnt % 127U) == 0U;
+    if (bsi && n > 3U) {
         queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_CC_BSI);
     }
 
     // add padding after the 4th sequence
-    if (seqCnt > 4U) {
+    if (n == 6U || forcePad) {
         // pad MBF if we have 1 queued TSDUs
         if (m_mbfCnt == 1U) {
             queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
