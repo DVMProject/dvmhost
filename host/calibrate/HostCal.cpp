@@ -1924,13 +1924,13 @@ bool HostCal::writeRFParams()
 
     buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F); // cal sets power fixed to 100
 
-    m_conf["system"]["modem"]["m_dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
+    m_conf["system"]["modem"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
     buffer[13U] = (uint8_t)(m_dmrDiscBWAdj + 128);
-    m_conf["system"]["modem"]["m_p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
+    m_conf["system"]["modem"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
     buffer[14U] = (uint8_t)(m_p25DiscBWAdj + 128);
-    m_conf["system"]["modem"]["m_dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
+    m_conf["system"]["modem"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
     buffer[15U] = (uint8_t)(m_dmrPostBWAdj + 128);
-    m_conf["system"]["modem"]["m_p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
+    m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
     buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
 
     // CUtils::dump(1U, "Written", buffer, len);
