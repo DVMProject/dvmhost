@@ -544,19 +544,7 @@ int Host::run()
         g_killed = true;
     }
 
-    // check if the modem is a hotspot
-    if (m_modem->isHotspot()) {
-        if (m_dmrEnabled && m_p25Enabled) {
-            ::LogError(LOG_HOST, "Dual-mode (DMR and P25) is not supported for hotspots!");
-            g_killed = true;
-        }
-        else {
-            if (!m_fixedMode) {
-                ::LogInfoEx(LOG_HOST, "Host is running on a hotspot modem! Fixed mode is forced.");
-                m_fixedMode = true;
-            }
-        }
-    }
+    bool killed = false;
 
     if (!g_killed) {
         // fixed more or P25 control channel will force a state change
@@ -595,11 +583,26 @@ int Host::run()
                 break;
         }
 
+        // check if the modem is a hotspot (this check must always be done after late init)
+        if (m_modem->isHotspot())
+        {
+            if (m_dmrEnabled && m_p25Enabled) {
+                ::LogError(LOG_HOST, "Dual-mode (DMR and P25) is not supported for hotspots!");
+                g_killed = true;
+                killed = true;
+            }
+            else {
+                if (!m_fixedMode) {
+                    ::LogInfoEx(LOG_HOST, "Host is running on a hotspot modem! Fixed mode is forced.");
+                    m_fixedMode = true;
+                }
+            }
+        }
+
         ::LogInfoEx(LOG_HOST, "Host is up and running");
         stopWatch.start();
     }
 
-    bool killed = false;
     bool hasTxShutdown = false;
 
     // Macro to interrupt a running P25 control channel transmission
@@ -1933,6 +1936,8 @@ void Host::setState(uint8_t state)
             m_modeTimer.stop();
 
             if (m_state == HOST_STATE_QUIT) {
+                ::LogInfoEx(LOG_HOST, "Host is shutting down");
+
                 if (m_modem != NULL) {
                     m_modem->close();
                     delete m_modem;
