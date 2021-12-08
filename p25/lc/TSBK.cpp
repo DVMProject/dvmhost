@@ -185,8 +185,16 @@ bool TSBK::decode(const uint8_t* data)
     // decode 1/2 rate Trellis & check CRC-CCITT 16
     try {
         bool ret = m_trellis.decode12(raw, tsbk);
-        if (ret)
+        if (m_verbose && !ret) {
+            LogDebug(LOG_P25, "TSBK::decode(): failed to decode Trellis 1/2 rate");
+        }
+
+        if (ret) {
             ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+            if (m_verbose && !ret) {
+                LogDebug(LOG_P25, "TSBK::decode(): CRC CCITT-162 failed to match");
+            }
+        }
         if (!ret)
             return false;
     }

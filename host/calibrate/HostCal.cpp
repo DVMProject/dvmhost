@@ -1527,11 +1527,11 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         bool ret = lc.decodeHDU(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_HDU (Header), undecodable LC");
+            LogWarning(LOG_CAL, P25_HDU_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_HDU (Header), dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogMessage(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
         
         m_berBits = 0U;
@@ -1542,7 +1542,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
     }
     else if (duid == P25_DUID_TDU) {
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, "P25_DUID_TDU (Terminator Data Unit), total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1559,11 +1559,11 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         bool ret = lc.decodeLDU1(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), undecodable LC");
+            LogWarning(LOG_CAL, P25_LDU1_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1) LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u", 
+            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u", 
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
@@ -1596,9 +1596,9 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogMessage(LOG_CAL, P25_LDU1_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
-            LogWarning(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), uncorrectable audio");
+            LogWarning(LOG_CAL, P25_LDU1_STR ", uncorrectable audio");
             m_berUncorrectable++;
         }
 
@@ -1611,11 +1611,11 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         bool ret = lc.decodeLDU2(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), undecodable LC");
+            LogWarning(LOG_CAL, P25_LDU2_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2) LC, mfId = $%02X, algo = %X, kid = %X", 
+            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X", 
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
@@ -1648,9 +1648,9 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogMessage(LOG_CAL, P25_LDU2_STR ", audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
-            LogWarning(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), uncorrectable audio");
+            LogWarning(LOG_CAL, P25_LDU2_STR ", uncorrectable audio");
             m_berUncorrectable++;
         }
 
@@ -1676,11 +1676,11 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         bool ret = dataHeader.decode(rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES);
         if (!ret) {
-            LogWarning(LOG_RF, "P25_DUID_PDU (Packet Data Unit), unfixable RF 1/2 rate header data");
+            LogWarning(LOG_RF, P25_PDU_STR ", unfixable RF 1/2 rate header data");
             Utils::dump(1U, "Unfixable PDU Data", rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES, P25_PDU_HEADER_LENGTH_BYTES);
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_PDU (Packet Data Unit), fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u",
+            LogMessage(LOG_CAL, P25_PDU_STR ", fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u",
                 dataHeader.getFormat(), dataHeader.getSAP(), dataHeader.getFullMessage(), dataHeader.getBlocksToFollow(), dataHeader.getPadCount(),
                 dataHeader.getN(), dataHeader.getSeqNo());
         }
@@ -1691,13 +1691,17 @@ void HostCal::processP25BER(const uint8_t* buffer)
         timerStop();
 
         lc::TSBK tsbk = lc::TSBK(SiteData(), lookups::IdenTable());
+        tsbk.setVerbose(true); // always verbose in CAL
+
+        Utils::dump(1U, "Raw TSBK Dump", buffer + 1U, P25_TSDU_FRAME_LENGTH_BYTES);
+
         bool ret = tsbk.decode(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_TSDU (Trunking System Data Unit), undecodable LC");
+            LogWarning(LOG_CAL, P25_TSDU_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_TSDU (Trunking System Data Unit), mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, status = %u, message = %u, extFunc = %u, netId = %u, sysId = %u",
+            LogMessage(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, status = %u, message = %u, extFunc = %u, netId = %u, sysId = %u",
                 tsbk.getMFId(), tsbk.getLCO(), tsbk.getSrcId(), tsbk.getDstId(), tsbk.getService(), tsbk.getStatus(), tsbk.getMessage(), tsbk.getExtendedFunction(),
                 tsbk.getNetId(), tsbk.getSysId());
         }
@@ -1724,11 +1728,11 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 
         bool ret = lc.decodeHDU(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_HDU (Header), undecodable LC");
+            LogWarning(LOG_CAL, P25_HDU_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_RF, "P25_DUID_HDU (Header), dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
 
         m_berBits = 0U;
@@ -1739,7 +1743,7 @@ void HostCal::processP251KBER(const uint8_t* buffer)
     }
     else if (duid == P25_DUID_TDU) {
         if (m_berFrames != 0U) {
-            LogMessage(LOG_CAL, "P25_DUID_TDU (Terminator Data Unit), total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+            LogMessage(LOG_CAL, P25_TDU_STR ", total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
         }
 
         timerStop();
@@ -1756,11 +1760,11 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 
         bool ret = lc.decodeLDU1(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), undecodable LC");
+            LogWarning(LOG_CAL, P25_LDU1_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1) LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
+            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
@@ -1769,9 +1773,9 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogMessage(LOG_CAL, P25_LDU1_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
-            LogWarning(LOG_CAL, "P25_DUID_LDU1 (Logical Data Unit 1), uncorrectable audio");
+            LogWarning(LOG_CAL, P25_LDU1_STR ", uncorrectable audio");
             m_berUncorrectable++;
         }
 
@@ -1784,11 +1788,11 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 
         bool ret = lc.decodeLDU2(buffer + 1U);
         if (!ret) {
-            LogWarning(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), undecodable LC");
+            LogWarning(LOG_CAL, P25_LDU2_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2) LC, mfId = $%02X, algo = %X, kid = %X",
+            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
@@ -1797,9 +1801,9 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
-            LogMessage(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
+            LogMessage(LOG_CAL, P25_LDU2_STR ", 1011 Test Pattern BER (errs): %.3f%% (%u/1233)", ber, errs);
         else {
-            LogWarning(LOG_CAL, "P25_DUID_LDU2 (Logical Data Unit 2), uncorrectable audio");
+            LogWarning(LOG_CAL, P25_LDU2_STR ", uncorrectable audio");
             m_berUncorrectable++;
         }
 
