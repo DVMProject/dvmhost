@@ -1597,7 +1597,7 @@ namespace yaml
                 postProcessLines();
                 parseRoot(root);
             }
-            catch (Exception e)
+            catch (Exception const& e)
             {
                 root.clear();
                 throw;
@@ -2269,7 +2269,7 @@ namespace yaml
             delete pImp;
             return true;
         }
-        catch (const Exception e)
+        catch (Exception const& e)
         {
             delete pImp;
             return false;

@@ -874,6 +874,15 @@ bool Modem::hasP25Space() const
 }
 
 /// <summary>
+/// Helper to test if the modem is a hotspot.
+/// </summary>
+/// <returns>True, if the modem is a hotspot, otherwise false.</returns>
+bool Modem::isHotspot() const
+{
+    return m_isHotspot;
+}
+
+/// <summary>
 /// Flag indicating whether or not the air interface modem is transmitting.
 /// </summary>
 /// <returns>True, if air interface modem is transmitting, otherwise false.</returns>

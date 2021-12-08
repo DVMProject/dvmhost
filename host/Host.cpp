@@ -145,7 +145,7 @@ int Host::run()
             ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
         }
     }
-    catch (yaml::OperationException e) {
+    catch (yaml::OperationException const& e) {
         ::fatal("cannot read the configuration file, %s", e.message());
     }
 
@@ -542,6 +542,20 @@ int Host::run()
     if (!m_duplex && m_dmrBeacons) {
         ::LogError(LOG_HOST, "Cannot have DMR roaming beacons and simplex mode at the same time.");
         g_killed = true;
+    }
+
+    // check if the modem is a hotspot
+    if (m_modem->isHotspot()) {
+        if (m_dmrEnabled && m_p25Enabled) {
+            ::LogError(LOG_HOST, "Dual-mode (DMR and P25) is not supported for hotspots!");
+            g_killed = true;
+        }
+        else {
+            if (!m_fixedMode) {
+                ::LogInfoEx(LOG_HOST, "Host is running on a hotspot modem! Fixed mode is forced.");
+                m_fixedMode = true;
+            }
+        }
     }
 
     if (!g_killed) {

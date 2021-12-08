@@ -493,7 +493,7 @@ bool Network::writeAuthorisation()
 bool Network::writeConfig()
 {
     const char* software = "DVM_DMR_P25";
-    char buffer[168U];
+    char buffer[176U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     __SET_UINT32(m_id, buffer, 4U);
@@ -532,9 +532,9 @@ bool Network::writeConfig()
         "", m_rconPassword.c_str(), m_rconPort);
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, 168U);
+        Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, 176U);
 
-    return write((uint8_t*)buffer, 168U);
+    return write((uint8_t*)buffer, 176U);
 }
 
 /// <summary>

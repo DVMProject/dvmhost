@@ -235,6 +235,9 @@ namespace modem
         bool hasDMRSpace2() const;
         /// <summary>Helper to test if the P25 ring buffer has free space.</summary>
         bool hasP25Space() const;
+        
+        /// <summary>Helper to test if the modem is a hotspot.</summary>
+        bool isHotspot() const;
 
         /// <summary>Flag indicating whether or not the air interface modem is transmitting.</summary>
         bool hasTX() const;
