@@ -1295,7 +1295,7 @@ bool Modem::getFirmwareVersion()
             RESP_TYPE_DVM resp = getResponse();
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
-                LogMessage(LOG_MODEM, "Proto ver: %02x, cpu: %02X", m_buffer[3U], m_buffer[4U]);
+                LogMessage(LOG_MODEM, "Protocol: %02x, CPU: %02X", m_buffer[3U], m_buffer[4U]);
                 uint8_t protoVer = m_buffer[3U];
                 switch (protoVer) {
                 case PROTOCOL_VERSION:
