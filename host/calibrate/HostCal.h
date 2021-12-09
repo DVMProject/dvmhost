@@ -129,6 +129,8 @@ private:
     uint32_t m_timeout;
     uint32_t m_timer;
 
+    bool m_hasFetchedStatus;
+
     /// <summary>Modem port open callback.</summary>
     bool portModemOpen(modem::Modem* modem);
     /// <summary>Modem port close callback.</summary>

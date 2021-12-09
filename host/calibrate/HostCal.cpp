@@ -173,7 +173,8 @@ HostCal::HostCal(const std::string& confFile) :
     m_berUndecodableLC(0U),
     m_berUncorrectable(0U),
     m_timeout(300U),
-    m_timer(0U)
+    m_timer(0U),
+    m_hasFetchedStatus(false)
 {
     /* stub */
 }
@@ -288,10 +289,31 @@ int HostCal::run()
     m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
     m_txAdjustedFreq = m_txFrequency + m_txTuning;
 
-    LogInfo("    RX Tuning Offset: %dhz", m_rxTuning);
-    LogInfo("    TX Tuning Offset: %dhz", m_txTuning);
-    LogInfo("    RX Effective Frequency: %uhz", m_rxAdjustedFreq);
-    LogInfo("    TX Effective Frequency: %uhz", m_txAdjustedFreq);
+    m_rxInvert = modemConf["rxInvert"].as<bool>(false);
+    m_txInvert = modemConf["txInvert"].as<bool>(false);
+    m_pttInvert = modemConf["pttInvert"].as<bool>(false);
+    m_dcBlocker = modemConf["dcBlocker"].as<bool>(true);
+
+    m_rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
+    m_txDCOffset = modemConf["txDCOffset"].as<int>(0);
+    m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
+    m_txLevel = modemConf["txLevel"].as<float>(50.0F);
+
+    m_dmrDiscBWAdj = modemConf["dmrDiscBWAdj"].as<int>(0);
+    m_p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
+    m_dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
+    m_p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
+
+    m_adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
+
+    m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
+    m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
+    m_p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
+    m_p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
+
+    m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
+    m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
+    m_p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
@@ -347,6 +369,21 @@ int HostCal::run()
         LogInfo("Modem Parameters");
         LogInfo("    UART Port: %s", uartPort.c_str());
         LogInfo("    UART Speed: %u", uartSpeed);
+        LogInfo("    RX Invert: %s", m_rxInvert ? "yes" : "no");
+        LogInfo("    TX Invert: %s", m_txInvert ? "yes" : "no");
+        LogInfo("    PTT Invert: %s", m_pttInvert ? "yes" : "no");
+        LogInfo("    DC Blocker: %s", m_dcBlocker ? "yes" : "no");
+        LogInfo("    FDMA Preambles: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F);
+        LogInfo("    DMR RX Delay: %u (%.1fms)", m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F);
+        LogInfo("    P25 Corr. Count: %u (%.1fms)", m_p25CorrCount, float(m_p25CorrCount) * 0.667F);
+        LogInfo("    RX DC Offset: %d", m_rxDCOffset);
+        LogInfo("    TX DC Offset: %d", m_txDCOffset);
+        LogInfo("    RX Tuning Offset: %dhz", m_rxTuning);
+        LogInfo("    TX Tuning Offset: %dhz", m_txTuning);
+        LogInfo("    RX Effective Frequency: %uhz", m_rxAdjustedFreq);
+        LogInfo("    TX Effective Frequency: %uhz", m_txAdjustedFreq);
+        LogInfo("    RX Level: %.1f%%", m_rxLevel);
+        LogInfo("    TX Level: %.1f%%", m_txLevel);
     }
     else if (portType == UDP_PORT) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with a remote modem!");
@@ -377,35 +414,14 @@ int HostCal::run()
         return 1;
     }
 
-    m_rxInvert = modemConf["rxInvert"].as<bool>(false);
-    m_txInvert = modemConf["txInvert"].as<bool>(false);
-    m_pttInvert = modemConf["pttInvert"].as<bool>(false);
-    m_dcBlocker = modemConf["dcBlocker"].as<bool>(true);
-
-    m_rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
-    m_txDCOffset = modemConf["txDCOffset"].as<int>(0);
-    m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
-    m_txLevel = modemConf["txLevel"].as<float>(50.0F);
-
-    m_dmrDiscBWAdj = modemConf["dmrDiscBWAdj"].as<int>(0);
-    m_p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
-    m_dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
-    m_p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
-
-    m_adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
-
-    m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
-    m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
-    m_p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
-    m_p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
-
-    m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
-    m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
-    m_p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
-
     writeConfig();
+    writeRFParams();
 
     getStatus();
+    while (!m_hasFetchedStatus) {
+        m_modem->clock(0U);
+        sleep(5U);
+    }
 
     displayHelp();
     printStatus();
@@ -559,8 +575,6 @@ int HostCal::run()
 
                 writeRFParams();
             }
-
-            printStatus();
         }
         break;
 
@@ -581,8 +595,6 @@ int HostCal::run()
 
                 writeRFParams();
             }
-
-            printStatus();
         }
         break;
 
@@ -637,8 +649,6 @@ int HostCal::run()
 
                     writeRFParams();
                 }
-
-                printStatus();
             }
         }
         break;
@@ -659,8 +669,6 @@ int HostCal::run()
 
                     writeRFParams();
                 }
-
-                printStatus();
             }
         }
         break;
@@ -681,8 +689,6 @@ int HostCal::run()
 
                     writeRFParams();
                 }
-
-                printStatus();
             }
         }
         break;
@@ -703,8 +709,6 @@ int HostCal::run()
 
                     writeRFParams();
                 }
-
-                printStatus();
             }
         }
         break;
@@ -729,8 +733,6 @@ int HostCal::run()
                         writeRFParams();
                     }
                 }
-
-                printStatus();
             }
         }
         break;
@@ -915,6 +917,8 @@ int HostCal::run()
         break;
         case 'Q':
         case 'q':
+            m_mode = STATE_IDLE;
+            writeConfig();
             end = true;
             break;
 
@@ -1073,8 +1077,12 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
             bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
             bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
 
-            LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
-                modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_isHotspot);
+            if (m_hasFetchedStatus) {
+                LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
+                    modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_isHotspot);
+            }
+
+            m_hasFetchedStatus = true;
         }
         break;
 
@@ -2092,6 +2100,7 @@ void HostCal::getStatus()
 /// <summary>
 /// Prints the current status of the calibration.
 /// </summary>
+/// <param name="status">Flag indicating that the current modem status should be fetched.</param>
 void HostCal::printStatus()
 {
     yaml::Node systemConf = m_conf["system"];
