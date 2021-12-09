@@ -153,6 +153,8 @@ namespace p25
         Timer m_adjSiteUpdateTimer;
         uint32_t m_adjSiteUpdateInterval;
 
+        bool m_ctrlTSDUMBF;
+
         bool m_dumpTSBK;
 
         bool m_verbose;
@@ -176,11 +178,11 @@ namespace p25
 
         /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
         void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false);
-        /// <summary>Helper to write a multi-block P25 TSDU packet.</summary>
+        /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
         void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
 
-        /// <summary>Helper to queue the given control TSBK into the MBF queue.</summary>
-        void queueRF_TSBK_Ctrl_MBF(uint8_t lco);
+        /// <summary>Helper to generate the given control TSBK into the TSDU frame queue.</summary>
+        void queueRF_TSBK_Ctrl(uint8_t lco);
 
         /// <summary>Helper to write a grant packet.</summary>
         bool writeRF_TSDU_Grant(bool grp, bool skip, bool net);

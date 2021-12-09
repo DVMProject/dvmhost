@@ -212,6 +212,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
+    m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_P25_VOICE_ERRORS) {
@@ -259,6 +260,9 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         }
 
         LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");
+        if (!m_trunk->m_ctrlTSDUMBF) {
+            LogInfo("    Disable Multi-Block TSDUs: yes");
+        }
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
@@ -533,7 +537,7 @@ bool Control::writeControlEndRF()
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         for (uint32_t i = 0; i < TSBK_PCH_CCH_CNT; i++) {
-            m_trunk->queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_PSH_CCH);
+            m_trunk->queueRF_TSBK_Ctrl(TSBK_OSP_MOT_PSH_CCH);
         }
 
         writeRF_Nulls();

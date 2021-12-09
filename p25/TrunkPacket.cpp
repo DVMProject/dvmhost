@@ -1139,6 +1139,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_noMessageAck(true),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
+    m_ctrlTSDUMBF(true),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -1217,34 +1218,34 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
     /** required data */
     case 0:
     default:
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
+        queueRF_TSBK_Ctrl(TSBK_OSP_IDEN_UP);
         break;
     case 1:
         if (alt)
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_RFSS_STS_BCAST);
         else
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
         break;
     case 2:
         if (alt)
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
         else
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_RFSS_STS_BCAST);
         break;
     case 3:
         if (alt)
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_RFSS_STS_BCAST);
         else
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
         break;
     /** extra data */
     case 4:
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SNDCP_CH_ANN);
+        queueRF_TSBK_Ctrl(TSBK_OSP_SNDCP_CH_ANN);
         break;
     case 5:
         // write ADJSS
         if (adjSS && m_adjSiteTable.size() > 0) {
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_ADJ_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_ADJ_STS_BCAST);
             break;
         } else {
             forcePad = true;
@@ -1252,7 +1253,7 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
     case 6:
         // write SCCB
         if (adjSS && m_sccbTable.size() > 0) {
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_SCCB_EXP);
+            queueRF_TSBK_Ctrl(TSBK_OSP_SCCB_EXP);
             break;
         }
     }
@@ -1260,15 +1261,17 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
     // should we insert the BSI bursts?
     bool bsi = (frameCnt % 127U) == 0U;
     if (bsi && n > 3U) {
-        queueRF_TSBK_Ctrl_MBF(TSBK_OSP_MOT_CC_BSI);
+        queueRF_TSBK_Ctrl(TSBK_OSP_MOT_CC_BSI);
     }
 
-    // add padding after the 4th sequence
-    if (n == 6U || forcePad) {
+    // add padding after the last sequence or if forced; and only
+    // if we're doing multiblock frames (MBF)
+    if ((n == 6U || forcePad) && m_ctrlTSDUMBF)
+    {
         // pad MBF if we have 1 queued TSDUs
         if (m_mbfCnt == 1U) {
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
-            queueRF_TSBK_Ctrl_MBF(TSBK_OSP_NET_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_RFSS_STS_BCAST);
+            queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
             if (m_debug) {
                 LogDebug(LOG_P25, "writeRF_ControlData, have 1 pad 2, mbfCnt = %u", m_mbfCnt);
             }
@@ -1278,10 +1281,10 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         if (m_mbfCnt == 2U) {
             std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
             if (entries.size() > 1U) {
-                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_IDEN_UP);
+                queueRF_TSBK_Ctrl(TSBK_OSP_IDEN_UP);
             }
             else {
-                queueRF_TSBK_Ctrl_MBF(TSBK_OSP_RFSS_STS_BCAST);
+                queueRF_TSBK_Ctrl(TSBK_OSP_RFSS_STS_BCAST);
             }
 
             if (m_debug) {
@@ -1404,7 +1407,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     }
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, false, true);
+    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(data + 2U, P25_SS0_START, true, true);
@@ -1412,12 +1415,12 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     if (!noNetwork)
         writeNetworkRF(data + 2U, true);
 
-    if (m_p25->m_dedicatedControl) {
+    if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
         writeRF_TSDU_MBF(clearBeforeWrite);
         return;
     }
 
-    if (m_p25->m_ccRunning) {
+    if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
         writeRF_TSDU_MBF(clearBeforeWrite);
         return;
     }
@@ -1436,7 +1439,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
 }
 
 /// <summary>
-/// Helper to write a multi-block P25 TSDU packet.
+/// Helper to write a multi-block (3-block) P25 TSDU packet.
 /// </summary>
 /// <param name="clearBeforeWrite"></param>
 void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
@@ -1509,7 +1512,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         P25Utils::encode(tsdu, data + 2U, 114U, 720U);
 
         // Add busy bits
-        m_p25->addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, false, true);
+        m_p25->addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
 
         // Add idle bits
         addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
@@ -1542,10 +1545,10 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
 }
 
 /// <summary>
-/// Helper to queue the given control TSBK into the MBF queue.
+/// Helper to generate the given control TSBK into the TSDU frame queue.
 /// </summary>
 /// <param name="lco"></param>
-void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
+void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
 {
     if (!m_p25->m_control)
         return;
@@ -1726,7 +1729,14 @@ void TrunkPacket::queueRF_TSBK_Ctrl_MBF(uint8_t lco)
     }
 
     m_rfTSBK.setLastBlock(true); // always set last block
-    writeRF_TSDU_MBF();
+
+    // are we transmitting CC as a multi-block?
+    if (m_ctrlTSDUMBF) {
+        writeRF_TSDU_MBF();
+    }
+    else {
+        writeRF_TSDU_SBF(false);
+    }
 }
 
 /// <summary>
@@ -2183,7 +2193,7 @@ void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
     m_rfTSBK.encode(data, true);
 
     // Add busy bits
-    m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+    m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(data, P25_SS0_START, true, true);
@@ -2258,7 +2268,7 @@ void TrunkPacket::writeNet_TSDU()
     m_netTSBK.encode(buffer + 2U, true);
 
     // Add busy bits
-    m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
+    m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
 
     // Set first busy bits to 1,1
     m_p25->setBusyBits(buffer + 2U, P25_SS0_START, true, true);
