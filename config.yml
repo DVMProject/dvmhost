@@ -118,9 +118,18 @@ system:
         fdmaPreamble: 80
         dmrRxDelay: 7
         p25CorrCount: 8
-        rxDCOffset: 0
-        txDCOffset: 0
-        txTuning: 0 # freq offset for the hotspot, in hz
+        dmrDiscBWAdj: 0 # Valid values between -128 and 128
+        dmrPostBWAdj: 0 # Valid values between -128 and 128
+        p25DiscBWAdj: 0 # Valid values between -128 and 128
+        p25PostBWAdj: 0 # Valid values between -128 and 128
+        adfGainMode: 0 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
+        dmrSymLvl3Adj: 0 # Valid values between -128 and 128
+        dmrSymLvl1Adj: 0 # Valid values between -128 and 128
+        p25SymLvl3Adj: 0 # Valid values between -128 and 128
+        p25SymLvl1Adj: 0 # Valid values between -128 and 128
+        rxDCOffset: 0 # Valid values between -128 and 128
+        txDCOffset: 0 # Valid values between -128 and 128
+        txTuning: 0 # Freq offset for the hotspot, in hz
         rxTuning: 0
         rxLevel: 50
         txLevel: 50

@@ -130,23 +130,24 @@ HostCal::HostCal(const std::string& confFile) :
     m_fec(),
     m_transmit(false),
     m_duplex(true),
-    m_txInvert(false),
     m_rxInvert(false),
+    m_txInvert(false),
     m_pttInvert(false),
     m_dcBlocker(true),
-    m_txLevel(50.0F),
     m_rxLevel(50.0F),
+    m_txLevel(50.0F),
     m_dmrEnabled(false),
     m_dmrRx1K(false),
     m_p25Enabled(false),
     m_p25Rx1K(false),
-    m_txDCOffset(0),
     m_rxDCOffset(0),
+    m_txDCOffset(0),
     m_isHotspot(false),
     m_dmrDiscBWAdj(0),
     m_p25DiscBWAdj(0),
     m_dmrPostBWAdj(0),
     m_p25PostBWAdj(0),
+    m_adfGainMode(ADF_GAIN_AUTO),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -390,6 +391,8 @@ int HostCal::run()
     m_p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
     m_dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
     m_p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
+
+    m_adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
 
     m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
     m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
@@ -699,6 +702,32 @@ int HostCal::run()
                     m_p25PostBWAdj = bwAdj;
 
                     writeRFParams();
+                }
+
+                printStatus();
+            }
+        }
+        break;
+
+        case '5':
+        {
+            if (m_isHotspot) {
+                char value[2] = { '\0' };
+                ::fprintf(stdout, "> ADF7021 Gain Mode (0 - Auto, 1 - Auto High Lin., 2 - Low, 3 - High) [%u] ? ", m_adfGainMode);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 2, 0);
+                if (value[0] != '\0') {
+                    uint8_t gainMode = (uint8_t)m_adfGainMode;
+                    sscanf(value, "%c", &gainMode);
+
+                    if (gainMode > 0U && gainMode < 4U) {
+                        m_adfGainMode = (ADF_GAIN_MODE)gainMode;
+                        writeRFParams();
+                    } else {
+                        m_adfGainMode = ADF_GAIN_AUTO;
+                        writeRFParams();
+                    }
                 }
 
                 printStatus();
@@ -1137,6 +1166,7 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    2        Set P25 Disc. Bandwidth Offset");
         LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset");
         LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset");
+        LogMessage(LOG_CAL, "    5        Set ADF7021 Rx Auto. Gain Mode");
     }
 }
 
@@ -1912,10 +1942,10 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 /// <returns></returns>
 bool HostCal::writeRFParams()
 {
-    unsigned char buffer[17U];
+    unsigned char buffer[18U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 17U;
+    buffer[1U] = 18U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1941,9 +1971,11 @@ bool HostCal::writeRFParams()
     m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
     buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
 
+    buffer[17U] = (uint8_t)m_adfGainMode;
+
     // CUtils::dump(1U, "Written", buffer, len);
 
-    int ret = m_modem->write(buffer, 17U);
+    int ret = m_modem->write(buffer, 18U);
     if (ret <= 0)
         return false;
 
@@ -2086,6 +2118,21 @@ void HostCal::printStatus()
         if (m_isHotspot) {
             LogMessage(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
                 m_dmrDiscBWAdj, m_p25DiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj);
+            switch (m_adfGainMode) {
+                case ADF_GAIN_AUTO_LIN:
+                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Auto High Linearity");
+                    break;
+                case ADF_GAIN_LOW:
+                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Low");
+                    break;
+                case ADF_GAIN_HIGH:
+                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: High");
+                    break;
+                case ADF_GAIN_AUTO:
+                default:
+                    LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Auto");
+                    break;
+            }
         }
         LogMessage(LOG_CAL, " - FDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", m_fdmaPreamble, float(m_fdmaPreamble) * 0.2083F, m_dmrRxDelay, float(m_dmrRxDelay) * 0.0416666F,
             m_p25CorrCount, float(m_p25CorrCount) * 0.667F);

@@ -103,6 +103,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25DiscBWAdj(0),
     m_dmrPostBWAdj(0),
     m_p25PostBWAdj(0),
+    m_adfGainMode(ADF_GAIN_AUTO),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -233,8 +234,11 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
 /// <param name="p25DiscBWAdj"></param>
 /// <param name="dmrPostBWAdj"></param>
 /// <param name="p25PostBWAdj"></param>
-void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj)
+/// <param name="gainMode"></param>
+void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
+    int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode)
 {
+    m_adfGainMode = gainMode;
     m_rfPower = rfPower;
     m_rxFrequency = rxFreq;
     m_txFrequency = txFreq;
@@ -1498,10 +1502,10 @@ bool Modem::writeSymbolAdjust()
 /// <returns></returns>
 bool Modem::writeRFParams()
 {
-    unsigned char buffer[17U];
+    unsigned char buffer[18U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 17U;
+    buffer[1U] = 18U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1523,9 +1527,11 @@ bool Modem::writeRFParams()
     buffer[15U] = (uint8_t)(m_dmrPostBWAdj + 128);
     buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
 
+    buffer[17U] = (uint8_t)m_adfGainMode;
+
     // CUtils::dump(1U, "Written", buffer, len);
 
-    int ret = m_port->write(buffer, 17U);
+    int ret = m_port->write(buffer, 18U);
     if (ret <= 0)
         return false;
 

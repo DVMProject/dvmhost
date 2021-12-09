@@ -163,6 +163,13 @@ namespace modem
         RESP_DATA
     };
 
+    enum ADF_GAIN_MODE {
+        ADF_GAIN_AUTO = 0U,
+        ADF_GAIN_AUTO_LIN = 1U,
+        ADF_GAIN_LOW = 2U,
+        ADF_GAIN_HIGH = 3U
+    };
+
     const uint8_t DVM_FRAME_START = 0xFEU;
 
     const uint8_t MAX_FDMA_PREAMBLE = 255U;
@@ -195,7 +202,8 @@ namespace modem
         /// <summary>Sets the symbol adjustment levels.</summary>
         void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
         /// <summary>Sets the RF parameters.</summary>
-        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj);
+        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
+            int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
@@ -298,47 +306,49 @@ namespace modem
 
         bool m_duplex;
 
-        bool m_rxInvert;
-        bool m_txInvert;
-        bool m_pttInvert;
+        bool m_rxInvert;                // dedicated modem - Rx signal inversion
+        bool m_txInvert;                // dedicated modem - Tx signal inversion
+        bool m_pttInvert;               // dedicated modem - PTT signal inversion
 
-        bool m_dcBlocker;
-        bool m_cosLockout;
+        bool m_dcBlocker;               // dedicated modem - DC blocker
+        bool m_cosLockout;              // dedicated modem - COS lockout
 
         uint8_t m_fdmaPreamble;
         uint8_t m_dmrRxDelay;
         uint8_t m_p25CorrCount;
 
-        float m_rxLevel;
-        float m_cwIdTXLevel;
-        float m_dmrTXLevel;
-        float m_p25TXLevel;
+        float m_rxLevel;                // dedicated/hotspot modem - Rx modulation level
+        float m_cwIdTXLevel;            // dedicated/hotspot modem - CW ID Tx modulation level
+        float m_dmrTXLevel;             // dedicated/hotspot modem - DMR Tx modulation level
+        float m_p25TXLevel;             // dedicated/hotspot modem - P25 Tx modulation level
 
         bool m_disableOFlowReset;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;
-        int m_rxDCOffset;
-        int m_txDCOffset;
+        int m_rxDCOffset;               // dedicated modem - Rx signal DC offset
+        int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
         bool m_isHotspot;
 
-        uint32_t m_rxFrequency;
-        uint32_t m_txFrequency;
-        uint8_t m_rfPower;
+        uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
+        uint32_t m_txFrequency;         // hotspot modem - Tx Frequency
+        uint8_t m_rfPower;              // hotspot modem - RF power
 
-        int8_t m_dmrDiscBWAdj;
-        int8_t m_p25DiscBWAdj;
-        int8_t m_dmrPostBWAdj;
-        int8_t m_p25PostBWAdj;
+        int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
+        int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
+        int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment
+        int8_t m_p25PostBWAdj;          // hotspot modem - P25 post demod BW adjustment
 
-        int m_dmrSymLevel3Adj;
-        int m_dmrSymLevel1Adj;
-        int m_p25SymLevel3Adj;
-        int m_p25SymLevel1Adj;
+        ADF_GAIN_MODE m_adfGainMode;    // hotspot modem - ADF7021 Rx gain
 
-        uint32_t m_adcOverFlowCount;
-        uint32_t m_dacOverFlowCount;
+        int m_dmrSymLevel3Adj;          // dedicated modem - +3/-3 DMR symbol adjustment
+        int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
+        int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment
+        int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
+
+        uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
+        uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count
 
         DVM_STATE m_modemState;
 

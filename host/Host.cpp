@@ -1512,6 +1512,7 @@ bool Host::createModem()
     int p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
     int dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
     int p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
+    ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
     int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
     int dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
     int p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
@@ -1649,7 +1650,7 @@ bool Host::createModem()
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(rxActualFreq, txActualFreq, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj);
+    m_modem->setRFParams(rxActualFreq, txActualFreq, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

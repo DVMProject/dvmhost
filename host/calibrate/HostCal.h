@@ -69,33 +69,35 @@ private:
 
     bool m_duplex;
 
-    bool m_txInvert;
-    bool m_rxInvert;
-    bool m_pttInvert;
+    bool m_rxInvert;                // dedicated modem - Rx signal inversion
+    bool m_txInvert;                // dedicated modem - Tx signal inversion
+    bool m_pttInvert;               // dedicated modem - PTT signal inversion
 
-    bool m_dcBlocker;
+    bool m_dcBlocker;               // dedicated modem - DC blocker
 
-    float m_txLevel;
-    float m_rxLevel;
+    float m_rxLevel;                // dedicated/hotspot modem - Rx modulation level
+    float m_txLevel;                // dedicated/hotspot modem - Tx modulation level
 
     bool m_dmrEnabled;
     bool m_dmrRx1K;
     bool m_p25Enabled;
     bool m_p25Rx1K;
-    int m_txDCOffset;
-    int m_rxDCOffset;
+    int m_rxDCOffset;               // dedicated modem - Rx signal DC offset
+    int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
     bool m_isHotspot;
 
-    int8_t m_dmrDiscBWAdj;
-    int8_t m_p25DiscBWAdj;
-    int8_t m_dmrPostBWAdj;
-    int8_t m_p25PostBWAdj;
+    int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
+    int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
+    int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment
+    int8_t m_p25PostBWAdj;          // hotspot modem - P25 post demod BW adjustment
 
-    int m_dmrSymLevel3Adj;
-    int m_dmrSymLevel1Adj;
-    int m_p25SymLevel3Adj;
-    int m_p25SymLevel1Adj;
+    modem::ADF_GAIN_MODE m_adfGainMode; // hotspot modem - ADF7021 Rx gain
+
+    int m_dmrSymLevel3Adj;          // dedicated modem - +3/-3 DMR symbol adjustment
+    int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
+    int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment
+    int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
 
     uint8_t m_fdmaPreamble;
     uint8_t m_dmrRxDelay;
@@ -109,9 +111,9 @@ private:
     int m_rxTuning;
     int m_txTuning;
 
-    uint32_t m_rxFrequency;
+    uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
     uint32_t m_rxAdjustedFreq;
-    uint32_t m_txFrequency;
+    uint32_t m_txFrequency;         // hotspot modem - Tx Frequency
     uint32_t m_txAdjustedFreq;
     uint8_t m_channelId;
     uint32_t m_channelNo;
