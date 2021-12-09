@@ -2116,8 +2116,10 @@ void HostCal::printStatus()
     }
 
     {
-        LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
-            m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
+        if (!m_isHotspot) {
+            LogMessage(LOG_CAL, " - PTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+                m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no", m_dcBlocker ? "yes" : "no");
+        }
         LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
             m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
         if (!m_isHotspot) {
