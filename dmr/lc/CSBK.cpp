@@ -92,8 +92,10 @@ bool CSBK::decode(const uint8_t* bytes)
     m_data[11U] ^= CSBK_CRC_MASK[1U];
 
     bool valid = edac::CRC::checkCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
-    if (!valid)
+    if (!valid) {
+        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
         return false;
+    }
 
     // restore the checksum
     m_data[10U] ^= CSBK_CRC_MASK[0U];
@@ -191,7 +193,7 @@ bool CSBK::decode(const uint8_t* bytes)
         m_dstId = 0U;
         m_dataContent = false;
         m_CBF = 0U;
-        LogError(LOG_DMR, "unknown CSBK type, csbko = $%02X", m_CSBKO);
+        LogError(LOG_DMR, "CSBK::decode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
         return true;
     }
 
@@ -457,6 +459,7 @@ void CSBK::encode(uint8_t* bytes)
         m_data[7U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
         m_data[8U] = (m_srcId >> 8) & 0xFFU;
         m_data[9U] = (m_srcId >> 0) & 0xFFU;
+        LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
         break;
     }
 

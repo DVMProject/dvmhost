@@ -164,11 +164,13 @@ bool TDULC::decode(const uint8_t* data)
     // decode RS (24,12,13) FEC
     try {
         bool ret = m_rs.decode241213(rs);
-        if (!ret)
+        if (!ret) {
+            LogError(LOG_P25, "TDULC::decode(), failed to decode RS (24,12,13) FEC");
             return false;
+        }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS crashed with input data", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_TDULC_LENGTH_BYTES);
         return false;
     }
 
@@ -299,7 +301,7 @@ bool TDULC::decodeLC(const uint8_t* rs)
         }
         break;
     default:
-        LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogError(LOG_P25, "TDULC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         return false;
     }
 
@@ -385,7 +387,7 @@ void TDULC::encodeLC(uint8_t* rs)
                 rsValue = (rsValue << 32) + calcBaseFreq;                           // Base Frequency
             }
             else {
-                LogError(LOG_P25, "invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+                LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                     m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                     m_siteIdenEntry.chSpaceKhz());
                 return; // blatently ignore creating this TSBK
@@ -415,7 +417,7 @@ void TDULC::encodeLC(uint8_t* rs)
                 rsValue = (rsValue << 8) + m_adjServiceClass;                       // System Service Class
             }
             else {
-                LogError(LOG_P25, "invalid values for LC_ADJ_STS_BCAST, tsbkAdjSiteRFSSId = $%02X, tsbkAdjSiteId = $%02X, tsbkAdjSiteChannel = $%02X",
+                LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_ADJ_STS_BCAST, tsbkAdjSiteRFSSId = $%02X, tsbkAdjSiteId = $%02X, tsbkAdjSiteChannel = $%02X",
                     m_adjRfssId, m_adjSiteId, m_adjChannelNo);
                 return; // blatently ignore creating this TSBK
             }
@@ -441,7 +443,7 @@ void TDULC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
         break;
     default:
-        LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogError(LOG_P25, "TDULC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
     }
 

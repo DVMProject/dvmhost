@@ -176,11 +176,13 @@ bool LC::decodeHDU(const uint8_t* data)
     // decode RS (36,20,17) FEC
     try {
         bool ret = m_rs.decode362017(rs);
-        if (!ret)
+        if (!ret) {
+            LogError(LOG_P25, "LC::decodeHDU(), failed to decode RS (36,20,17) FEC");
             return false;
+        }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS crashed with input data", rs, P25_HDU_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_HDU_LENGTH_BYTES);
         return false;
     }
 
@@ -299,11 +301,13 @@ bool LC::decodeLDU1(const uint8_t * data)
     // decode RS (24,12,13) FEC
     try {
         bool ret = m_rs.decode241213(rs);
-        if (!ret)
+        if (!ret) {
+            LogError(LOG_P25, "LC::decodeLDU1(), failed to decode RS (24,12,13) FEC");
             return false;
+        }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS crashed with input data", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_LENGTH_BYTES);
         return false;
     }
 
@@ -391,11 +395,13 @@ bool LC::decodeLDU2(const uint8_t * data)
     // decode RS (24,16,9) FEC
     try {
         bool ret = m_rs.decode24169(rs);
-        if (!ret)
+        if (!ret) {
+            LogError(LOG_P25, "LC::decodeLDU2(), failed to decode RS (24,16,9) FEC");
             return false;
+        }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS crashed with input data", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_LENGTH_BYTES);
         return false;
     }
 
@@ -556,7 +562,7 @@ bool LC::decodeLC(const uint8_t * rs)
         }
         break;
     default:
-        LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         return false;
     }
 
@@ -626,7 +632,7 @@ void LC::encodeLC(uint8_t * rs)
         rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
         break;
     default:
-        LogError(LOG_P25, "unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
     }
 

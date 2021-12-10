@@ -63,6 +63,8 @@ namespace p25
             /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
+            TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose, bool warnCRC);
+            /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(LC* lc);
             /// <summary>Finalizes a instance of the TSBK class.</summary>
             ~TSBK();
@@ -84,6 +86,8 @@ namespace p25
         public:
             /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);
+            /// <summary>Flag indicating CRC-errors should be warnings and not errors.</summary>
+            __PROPERTY(bool, warnCRC, WarnCRC);
 
             /** Common Data */
             /// <summary>Flag indicating the link control data is protected.</summary>

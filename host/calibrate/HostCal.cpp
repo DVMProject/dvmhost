@@ -1730,6 +1730,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
 
         lc::TSBK tsbk = lc::TSBK(SiteData(), lookups::IdenTable());
         tsbk.setVerbose(true); // always verbose in CAL
+        tsbk.setWarnCRC(true);
 
         Utils::dump(1U, "Raw TSBK Dump", buffer + 1U, P25_TSDU_FRAME_LENGTH_BYTES);
 

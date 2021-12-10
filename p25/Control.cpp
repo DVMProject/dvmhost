@@ -75,7 +75,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="dumpPDUData"></param>
 /// <param name="repeatPDU"></param>
-/// <param name="dumpTSBKData"></param>
+/// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,

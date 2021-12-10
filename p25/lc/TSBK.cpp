@@ -61,9 +61,20 @@ TSBK::TSBK(SiteData siteData, lookups::IdenTable entry) : TSBK(siteData)
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
 /// <param name="verbose"></param>
-TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : TSBK(siteData)
+TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : TSBK(siteData, entry, verbose, false)
 {
     m_verbose = verbose;
+}
+
+/// <summary>
+/// Initializes a new instance of the TSBK class.
+/// </summary>
+/// <param name="siteData"></param>
+/// <param name="entry"></param>
+/// <param name="verbose"></param>
+TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose, bool warnCRC) : TSBK(siteData)
+{
+    m_warnCRC = warnCRC;
     m_siteIdenEntry = entry;
 }
 
@@ -106,6 +117,7 @@ TSBK& TSBK::operator=(const TSBK& data)
 {
     if (this != &data) {
         m_verbose = data.m_verbose;
+        m_warnCRC = data.m_warnCRC;
         m_protect = data.m_protect;
         m_lco = data.m_lco;
         m_mfId = data.m_mfId;
@@ -185,21 +197,27 @@ bool TSBK::decode(const uint8_t* data)
     // decode 1/2 rate Trellis & check CRC-CCITT 16
     try {
         bool ret = m_trellis.decode12(raw, tsbk);
-        if (m_verbose && !ret) {
-            LogDebug(LOG_P25, "TSBK::decode(): failed to decode Trellis 1/2 rate");
+        if (!ret) {
+            LogError(LOG_P25, "TSBK::decode(), failed to decode Trellis 1/2 rate coding");
         }
 
         if (ret) {
             ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
-            if (m_verbose && !ret) {
-                LogDebug(LOG_P25, "TSBK::decode(): CRC CCITT-162 failed to match");
+            if (!ret) {
+                if (m_warnCRC) {
+                    LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                    ret = true; // ignore CRC error
+                }
+                else {
+                    LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                }
             }
         }
         if (!ret)
             return false;
     }
     catch (...) {
-        Utils::dump(2U, "P25, CRC failed with input data", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
         return false;
     }
 
@@ -247,7 +265,7 @@ bool TSBK::decode(const uint8_t* data)
             m_mfId = P25_MFG_STANDARD;
             break;
         default:
-            LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            LogError(LOG_P25, "TSBK::decode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
             break;
         }
 
@@ -391,7 +409,7 @@ bool TSBK::decode(const uint8_t* data)
         m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                           // Site Service Class
         break;
     default:
-        LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogError(LOG_P25, "TSBK::decode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
     }
 
@@ -522,10 +540,10 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     {
         if (m_response == 0U) {
             if (m_lco == TSBK_OSP_QUE_RSP) {
-                LogError(LOG_P25, "invalid values for TSBK_OSP_QUE_RSP, reason = %u", m_response);
+                LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_QUE_RSP, reason = %u", m_response);
             }
             else {
-                LogError(LOG_P25, "invalid values for TSBK_OSP_DENY_RSP, reason = %u", m_response);
+                LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_DENY_RSP, reason = %u", m_response);
             }
             return; // blatently ignore creating this TSBK
         }
@@ -606,7 +624,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }
         else {
-            LogError(LOG_P25, "invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                 m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                 m_siteIdenEntry.chSpaceKhz());
             return; // blatently ignore creating this TSBK
@@ -672,7 +690,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             tsbkValue = (tsbkValue << 8) + m_adjServiceClass;                       // System Service Class
         }
         else {
-            LogError(LOG_P25, "invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
+            LogError(LOG_P25, "TSBK::encode(), invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
                 m_adjRfssId, m_adjSiteId, m_adjChannelId, m_adjChannelNo, m_adjServiceClass);
             return; // blatently ignore creating this TSBK
         }
@@ -683,7 +701,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
             (m_siteIdenEntry.txOffsetMhz() != 0.0F) && (m_siteIdenEntry.baseFrequency() != 0U)) {
             if (m_siteIdenEntry.baseFrequency() < 762000000U) {
-                LogError(LOG_P25, "invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz",
+                LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz",
                     m_siteIdenEntry.baseFrequency());
                 return; // blatently ignore creating this TSBK
             }
@@ -703,7 +721,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }
         else {
-            LogError(LOG_P25, "invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                 m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                 m_siteIdenEntry.chSpaceKhz());
             return; // blatently ignore creating this TSBK
@@ -712,7 +730,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
-            LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         }
         break;
     }
@@ -767,7 +785,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
                     }
                 }
                 else {
-                    LogError(LOG_P25, "invalid values for TSBK_OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
+                    LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
                         m_patchSuperGroupId, m_patchGroup1Id);
                     return; // blatently ignore creating this TSBK
                 }
@@ -783,7 +801,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
                     tsbkValue = (tsbkValue << 24) + m_srcId;                        // Source Radio Address
                 }
                 else {
-                    LogError(LOG_P25, "invalid values for TSBK_OSP_MOT_GRG_VCH_GRANT, patchSuperGroupId = $%02X", m_patchSuperGroupId);
+                    LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_MOT_GRG_VCH_GRANT, patchSuperGroupId = $%02X", m_patchSuperGroupId);
                     return; // blatently ignore creating this TSBK
                 }
             }
@@ -824,7 +842,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
             case TSBK_OSP_U_DEREG_ACK:
                 break;
             default:
-                LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+                LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
                 break;
             }
         }
@@ -839,7 +857,7 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
                 tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
                 break;
             default:
-                LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+                LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
                 break;
             }
         }
@@ -915,6 +933,7 @@ void TSBK::setCallsign(std::string callsign)
 /// <param name="siteData"></param>
 TSBK::TSBK(SiteData siteData) :
     m_verbose(false),
+    m_warnCRC(false),
     m_protect(false),
     m_lco(LC_GROUP),
     m_mfId(P25_MFG_STANDARD),
