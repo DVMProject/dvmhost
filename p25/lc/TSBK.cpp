@@ -259,12 +259,36 @@ bool TSBK::decode(const uint8_t* data)
         }
     }
 
+    // internal P25 vendor opcodes
+    if (m_mfId == P25_MFG_DVM) {
+        switch (m_lco) {
+        case LC_CALL_TERM:
+            m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                               // Channel ID
+            m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                              // Channel Number
+            m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                      // Target Radio Address
+            m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                            // Source Radio Address
+            break;
+        default:
+            m_mfId = P25_MFG_STANDARD;
+            break;
+        }
+
+        if (m_mfId == P25_MFG_DVM) {
+            return true;
+        }
+        else {
+            m_mfId = tsbk[1U];
+        }
+    }
+
     // standard P25 reference opcodes
     switch (m_lco) {
     case TSBK_IOSP_GRP_VCH:
         m_emergency = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;               // Emergency Flag
         m_encrypted = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;               // Encryption Flag
         m_priority = (((tsbkValue >> 56) & 0xFFU) & 0x07U);                         // Priority
+        m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                                   // Channel ID
+        m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                                  // Channel Number
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
@@ -272,6 +296,8 @@ bool TSBK::decode(const uint8_t* data)
         m_emergency = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;               // Emergency Flag
         m_encrypted = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;               // Encryption Flag
         m_priority = (((tsbkValue >> 56) & 0xFFU) & 0x07U);                         // Priority
+        m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                                   // Channel ID
+        m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                                  // Channel Number
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
@@ -483,6 +509,13 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
         tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
         tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Source ID
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+        break;
+    case TSBK_OSP_GRP_VCH_GRANT_UPD:
+        tsbkValue = 0U;
+        tsbkValue = m_siteData.channelId();                                         // Channel ID
+        tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                 // Channel Number
+        tsbkValue = (tsbkValue << 16) + m_dstId;                                    // Talkgroup Address
+        tsbkValue = (tsbkValue << 32) + 0;
         break;
     case TSBK_OSP_DENY_RSP:
     case TSBK_OSP_QUE_RSP:
@@ -795,6 +828,21 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
                 break;
             }
         }
+
+        // internal P25 vendor opcodes
+        if (m_mfId == P25_MFG_DVM) {
+            switch (m_lco) {
+            case LC_CALL_TERM:
+                tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
+                tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                 // Channel Number
+                tsbkValue = (tsbkValue << 16) + m_dstId;                                    // Talkgroup Address
+                tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+                break;
+            default:
+                LogError(LOG_P25, "unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+                break;
+            }
+        }
     }
 
     // split rs value into bytes
@@ -879,6 +927,7 @@ TSBK::TSBK(SiteData siteData) :
     m_response(P25_RSP_ACCEPT),
     m_netId(P25_WACN_STD_DEFAULT),
     m_sysId(P25_SID_STD_DEFAULT),
+    m_grpVchId(0U),
     m_grpVchNo(0U),
     m_messageValue(0U),
     m_statusValue(0U),

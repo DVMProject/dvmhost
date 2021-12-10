@@ -514,7 +514,7 @@ bool Control::writeControlRF()
         return false;
     }
 
-    const uint8_t maxSeq = 7U;
+    const uint8_t maxSeq = 8U;
     if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }

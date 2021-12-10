@@ -115,6 +115,8 @@ namespace p25
             /// <summary>Configured system ID.</summary>
             __READONLY_PROPERTY(uint32_t, sysId, SysId);
 
+            /// <summary>Voice channel ID.</summary>
+            __PROPERTY(uint32_t, grpVchId, GrpVchId);
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 

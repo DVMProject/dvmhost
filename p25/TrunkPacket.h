@@ -129,6 +129,7 @@ namespace p25
         uint8_t m_mbfIdenCnt;
         uint8_t m_mbfAdjSSCnt;
         uint8_t m_mbfSCCBCnt;
+        uint8_t m_mbfGrpGrntCnt;
 
         std::vector<uint32_t> m_voiceChTable;
 
@@ -202,6 +203,9 @@ namespace p25
         void writeRF_TSDU_Queue(uint8_t reason, uint8_t service);
         /// <summary>Helper to write a location registration response packet.</summary>
         bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId);
+
+        /// <summary>Helper to write a call termination packet.</summary>
+        bool writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId);
 
         /// <summary>Helper to write a network TSDU from the RF data queue.</summary>
         void writeNet_TSDU_From_RF(uint8_t* data);

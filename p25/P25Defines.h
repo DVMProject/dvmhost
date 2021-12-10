@@ -112,6 +112,7 @@ namespace p25
 
     const uint8_t   P25_MFG_STANDARD = 0x00U;
     const uint8_t   P25_MFG_MOT = 0x90U;
+    const uint8_t   P25_MFG_DVM = 0xFEU; // internal P25 MFId used for internal signalling (shouldn't be air transmitted!)
 
     const uint8_t   P25_MOT_CALLSIGN_LENGTH_BYTES = 8U;
 

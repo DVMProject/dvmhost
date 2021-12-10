@@ -562,19 +562,47 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 uint32_t srcId = m_netTSBK.getSrcId();
                 uint32_t dstId = m_netTSBK.getDstId();
 
+                // handle internal DVM TSDUs
+                if (m_netTSBK.getMFId() == P25_MFG_DVM) {
+                    switch (m_netTSBK.getLCO()) {
+                        case LC_CALL_TERM:
+                            if (m_p25->m_dedicatedControl) {
+                                uint32_t chNo = m_netTSBK.getGrpVchNo();
+
+                                if (m_verbose) {
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", LC_CALL_TERM (Call Termination), chNo = %u, srcId = %u, dstId = %u", chNo, srcId, dstId);
+                                }
+
+                                // is the specified channel granted?
+                                if (isChBusy(chNo) && hasDstIdGranted(dstId)) {
+                                    releaseDstIdGrant(dstId, false);
+                                }
+                            }
+                            break;
+                        default:
+                            LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_netTSBK.getMFId(), m_netTSBK.getLCO());
+                            return false;
+                    }
+
+                    writeNet_TSDU();
+
+                    return true;
+                }
+
+                // handle standard P25 reference opcodes
                 switch (m_netTSBK.getLCO()) {
                     case TSBK_IOSP_GRP_VCH:
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
                         }
-                        break;
+                        return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
                         }
-                        break;
+                        return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_ANS:
                         if (m_netTSBK.getResponse() > 0U) {
                             if (m_verbose) {
@@ -654,13 +682,13 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                         break;
                     case TSBK_IOSP_GRP_AFF:
                         // ignore a network group affiliation command
-                        break;
+                        return true; // don't allow this to write to the air
                     case TSBK_OSP_U_DEREG_ACK:
                         // ignore a network user deregistration command
-                        break;
+                        return true; // don't allow this to write to the air
                     case TSBK_OSP_LOC_REG_RSP:
                         // ignore a network location registration command
-                        break;
+                        return true; // don't allow this to write to the air
                     case TSBK_OSP_DENY_RSP:
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
@@ -1136,6 +1164,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_mbfIdenCnt(0U),
     m_mbfAdjSSCnt(0U),
     m_mbfSCCBCnt(0U),
+    m_mbfGrpGrntCnt(0U),
     m_voiceChTable(),
     m_adjSiteTable(),
     m_adjSiteUpdateCnt(),
@@ -1250,11 +1279,17 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         else
             queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
         break;
-    /** extra data */
+    /** update data */
     case 4:
+        if (m_grantChTable.size() > 0) {
+            queueRF_TSBK_Ctrl(TSBK_OSP_GRP_VCH_GRANT_UPD);
+        }
+        break;
+    /** extra data */
+    case 5:
         queueRF_TSBK_Ctrl(TSBK_OSP_SNDCP_CH_ANN);
         break;
-    case 5:
+    case 6:
         // write ADJSS
         if (adjSS && m_adjSiteTable.size() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_ADJ_STS_BCAST);
@@ -1262,12 +1297,14 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         } else {
             forcePad = true;
         }
-    case 6:
+        break;
+    case 7:
         // write SCCB
         if (adjSS && m_sccbTable.size() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_SCCB_EXP);
             break;
         }
+        break;
     }
 
     // should we insert the BSI bursts?
@@ -1278,7 +1315,7 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     // add padding after the last sequence or if forced; and only
     // if we're doing multiblock frames (MBF)
-    if ((n == 6U || forcePad) && m_ctrlTSDUMBF)
+    if ((n >= 4U || forcePad) && m_ctrlTSDUMBF)
     {
         // pad MBF if we have 1 queued TSDUs
         if (m_mbfCnt == 1U) {
@@ -1389,6 +1426,10 @@ void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t d
 
     lc.setLCO(LC_CALL_TERM);
     writeRF_TDULC(lc, true);
+
+    if (m_p25->m_control) {
+        writeNet_TSDU_Call_Term(srcId, dstId);
+    }
 }
 
 /// <summary>
@@ -1568,6 +1609,53 @@ void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
     resetRF();
 
     switch (lco) {
+        case TSBK_OSP_GRP_VCH_GRANT_UPD:
+            // write group voice grant update
+            if (m_grantChTable.size() > 0) {
+                if (m_mbfGrpGrntCnt >= m_grantChTable.size())
+                    m_mbfGrpGrntCnt = 0U;
+
+                if (m_debug) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_GRP_VCH_GRANT_UPD (Group Voice Channel Grant Update)");
+                }
+
+                bool noData = false;
+                uint8_t i = 0U;
+                for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
+                    // no good very bad way of skipping entries...
+                    if (i != m_mbfGrpGrntCnt) {
+                        i++;
+                        continue;
+                    }
+                    else {
+                        uint32_t dstId = it->first;
+                        uint32_t chNo = it->second;
+
+                        if (chNo == 0U) {
+                            noData = true;
+                            m_mbfGrpGrntCnt++;
+                            break;
+                        }
+                        else {
+                            // transmit group voice grant update
+                            m_rfTSBK.setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                            m_rfTSBK.setDstId(dstId);
+                            m_rfTSBK.setGrpVchNo(chNo);
+
+                            m_mbfGrpGrntCnt++;
+                            break;
+                        }
+                    }
+                }
+
+                if (noData) {
+                    return; // don't create anything
+                }
+            }
+            else {
+                return; // don't create anything
+            }
+            break;
         case TSBK_OSP_IDEN_UP:
             {
                 if (m_debug) {
@@ -2183,6 +2271,26 @@ bool TrunkPacket::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
     }
 
     writeRF_TSDU_SBF(false);
+    return ret;
+}
+
+/// <summary>
+/// Helper to write a call termination packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+bool TrunkPacket::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
+{
+    bool ret = false;
+
+    m_rfTSBK.setLCO(LC_CALL_TERM);
+    m_rfTSBK.setMFId(P25_MFG_DVM);
+    m_rfTSBK.setGrpVchId(m_p25->m_siteData.channelId());
+    m_rfTSBK.setGrpVchNo(m_p25->m_siteData.channelNo());
+    m_rfTSBK.setDstId(dstId);
+    m_rfTSBK.setSrcId(srcId);
+
+    writeRF_TSDU_SBF(false); // the problem with this is the vendor code going over the air!
     return ret;
 }
 
