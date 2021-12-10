@@ -440,7 +440,13 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
-            ret = m_voice->process(data, len);
+            if (!m_dedicatedControl)
+                ret = m_voice->process(data, len);
+            else {
+                if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
+                    ret = m_voice->process(data, len);
+                }
+            }
             break;
 
         case P25_DUID_TDU:
@@ -449,7 +455,13 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             break;
 
         case P25_DUID_PDU:
-            ret = m_data->process(data, len);
+            if (!m_dedicatedControl)
+                ret = m_data->process(data, len);
+            else {
+                if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
+                    ret = m_data->process(data, len);
+                }
+            }
             break;
 
         case P25_DUID_TSDU:
@@ -765,13 +777,20 @@ void Control::processNetwork()
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
+            if (!m_dedicatedControl)
+                ret = m_voice->processNetwork(data, length, control, lsd, duid);
+            // dedicated control ignores network voice frames -- always
+            break;
+
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
             m_voice->processNetwork(data, length, control, lsd, duid);
             break;
 
         case P25_DUID_PDU:
-            m_data->processNetwork(data, length, control, lsd, duid);
+            if (!m_dedicatedControl)
+                ret = m_data->processNetwork(data, length, control, lsd, duid);
+            // dedicated control ignores network data frames -- always
             break;
 
         case P25_DUID_TSDU:

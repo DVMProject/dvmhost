@@ -563,6 +563,18 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 uint32_t dstId = m_netTSBK.getDstId();
 
                 switch (m_netTSBK.getLCO()) {
+                    case TSBK_IOSP_GRP_VCH:
+                        if (m_verbose) {
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
+                        }
+                        break;
+                    case TSBK_IOSP_UU_VCH:
+                        if (m_verbose) {
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
+                        }
+                        break;
                     case TSBK_IOSP_UU_ANS:
                         if (m_netTSBK.getResponse() > 0U) {
                             if (m_verbose) {
@@ -1857,7 +1869,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 
         // transmit group grant
         m_rfTSBK.setLCO(TSBK_IOSP_GRP_VCH);
-        writeRF_TSDU_SBF(true, true);
+        writeRF_TSDU_SBF(false, true);
     }
     else {
         if (!net) {
@@ -1871,7 +1883,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 
         // transmit private grant
         m_rfTSBK.setLCO(TSBK_IOSP_UU_VCH);
-        writeRF_TSDU_SBF(true, true);
+        writeRF_TSDU_SBF(false, true);
     }
 
     m_rfTSBK.setLCO(lco);
