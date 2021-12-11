@@ -838,6 +838,7 @@ int HostCal::run()
         break;
         case 'B':
         case 'J':
+        case '0':
         {
             m_mode = STATE_DMR;
             if (c == 'J') {
@@ -848,7 +849,11 @@ int HostCal::run()
                 m_modeStr = DMR_FEC_STR;
                 m_dmrRx1K = false;
             }
-            m_duplex = false;
+            if (c == '0') {
+                m_duplex = true;
+            } else {
+                m_duplex = false;
+            }
             m_dmrEnabled = true;
             m_p25Enabled = false;
 
