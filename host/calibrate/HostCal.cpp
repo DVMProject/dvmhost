@@ -418,9 +418,24 @@ int HostCal::run()
     writeRFParams();
 
     getStatus();
+    uint8_t timeout = 0U;
     while (!m_hasFetchedStatus) {
         m_modem->clock(0U);
+
+        timeout++;
+        if (timeout >= 25U) {
+            break;
+        }
+
         sleep(5U);
+    }
+
+    if (!m_hasFetchedStatus) {
+        ::LogError(LOG_CAL, "Failed to get status from modem");
+
+        m_modem->close();
+        m_console.close();
+        return 2;
     }
 
     displayHelp();
@@ -722,13 +737,16 @@ int HostCal::run()
 
                 m_console.getLine(value, 2, 0);
                 if (value[0] != '\0') {
-                    uint8_t gainMode = (uint8_t)m_adfGainMode;
-                    sscanf(value, "%c", &gainMode);
+                    uint32_t gainMode = (uint32_t)m_adfGainMode;
+                    sscanf(value, "%u", &gainMode);
 
-                    if (gainMode > 0U && gainMode < 4U) {
+                    if (gainMode >= 0U && gainMode < 4U)
+                    {
                         m_adfGainMode = (ADF_GAIN_MODE)gainMode;
                         writeRFParams();
-                    } else {
+                    }
+                    else
+                    {
                         m_adfGainMode = ADF_GAIN_AUTO;
                         writeRFParams();
                     }
@@ -1985,6 +2003,7 @@ bool HostCal::writeRFParams()
     m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
     buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
 
+    m_conf["system"]["modem"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
     buffer[17U] = (uint8_t)m_adfGainMode;
 
     // CUtils::dump(1U, "Written", buffer, len);
