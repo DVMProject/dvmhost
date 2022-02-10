@@ -507,29 +507,13 @@ bool Network::writeConfig()
     sysInfo["latitude"].set<float>(m_latitude);                                     // Latitude
     sysInfo["longitude"].set<float>(m_longitude);                                   // Longitude
 
-    int height = m_height;
-    if (m_height > 999)
-        height = 999;
-
-    sysInfo["height"].set<int>(height);                                             // Height
-
-    // clamp location to 20 characters
-    if (m_location.length() > 20) {
-        std::string location = m_location;
-        m_location = location.substr(0, 20);
-    }
-
+    sysInfo["height"].set<int>(m_height);                                           // Height
     sysInfo["location"].set<std::string>(m_location);                               // Location
-
-    int power = m_power;
-    if (m_power > 99U)
-        power = 99U;
-
-    sysInfo["power"].set<int>(power);                                               // Tx Power
     config["info"].set<json::object>(sysInfo);
 
     // channel data
     json::object channel = json::object();
+    channel["txPower"].set<uint32_t>(m_power);                                           // Tx Power
     channel["txOffsetMhz"].set<float>(m_txOffsetMhz);                               // Tx Offset (Mhz)
     channel["chBandwidthKhz"].set<float>(m_chBandwidthKhz);                         // Ch. Bandwidth (khz)
     channel["channelId"].set<uint8_t>(m_channelId);                                 // Channel ID
