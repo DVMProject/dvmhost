@@ -222,13 +222,16 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
+    bool disableCompositeFlag = p25Protocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
     if (m_control) {
         serviceClass |= P25_SVC_CLS_REG;
     }
 
     if (m_voiceOnControl) {
-        serviceClass |= P25_SVC_CLS_COMPOSITE;
+        if (!disableCompositeFlag) {
+            serviceClass |= P25_SVC_CLS_COMPOSITE;
+        }
     }
 
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass);
