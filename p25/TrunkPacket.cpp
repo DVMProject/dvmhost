@@ -420,7 +420,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
                     ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
 
-                    writeRF_TSDU_SBF();
+                    writeRF_TSDU_SBF(false);
                 }
                 break;
             case TSBK_IOSP_GRP_AFF:
