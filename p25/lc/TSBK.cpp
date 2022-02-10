@@ -367,7 +367,7 @@ bool TSBK::decode(const uint8_t* data)
         m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
         m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Reason
 
-        if (m_response > 0U) {
+        if (m_response == 0U) {
             m_emergency = true;
         } else {
             m_emergency = false;
