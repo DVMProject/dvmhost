@@ -294,6 +294,22 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     writeRF_TSDU_Queue(P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_TELE_INT_ANS);
                 }
                 break;
+            case TSBK_ISP_SNDCP_CH_REQ:
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK("TSBK_ISP_SNDCP_CH_REQ (SNDCP Channel Request)", TSBK_ISP_SNDCP_CH_REQ, srcId);
+
+                // validate the source RID
+                VALID_SRCID("TSBK_ISP_SNDCP_CH_REQ (SNDCP Channel Request)", TSBK_ISP_SNDCP_CH_REQ, srcId);
+
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Channel Request), dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
+                        m_rfTSBK.getDataServiceOptions(), m_rfTSBK.getDataAccessControl(), srcId);
+                }
+
+                // SNDCP data channel requests are currently unsupported -- maybe in the future?
+
+                writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_ISP_SNDCP_CH_REQ);
+                break;
             case TSBK_IOSP_STS_UPDT:
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_STS_UPDT (Status Update)", TSBK_IOSP_STS_UPDT, srcId);
@@ -394,6 +410,18 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 }
 
                 writeRF_TSDU_SBF(true);
+                break;
+            case TSBK_ISP_EMERG_ALRM_REQ:
+                if (m_rfTSBK.getEmergency()) {
+                    if (m_verbose) {
+                        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                            srcId, dstId);
+                    }
+
+                    ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
+
+                    writeRF_TSDU_SBF();
+                }
                 break;
             case TSBK_IOSP_GRP_AFF:
                 // make sure control data is supported
@@ -680,6 +708,20 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                                 m_netTSBK.getService(), srcId, dstId);
                         }
                         break;
+                    case TSBK_ISP_EMERG_ALRM_REQ:
+                        // non-emergency mode is a TSBK_OSP_DENY_RSP
+                        if (!m_netTSBK.getEmergency()) {
+                            if (m_verbose) {
+                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
+                                    m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
+                            }
+                        } else {
+                            if (m_verbose) {
+                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                                    srcId, dstId);
+                            }
+                        }
+                        break;
                     case TSBK_IOSP_GRP_AFF:
                         // ignore a network group affiliation command
                         return true; // don't allow this to write to the air
@@ -689,12 +731,6 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                     case TSBK_OSP_LOC_REG_RSP:
                         // ignore a network location registration command
                         return true; // don't allow this to write to the air
-                    case TSBK_OSP_DENY_RSP:
-                        if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-                                m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
-                        }
-                        break;
                     case TSBK_OSP_QUE_RSP:
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",

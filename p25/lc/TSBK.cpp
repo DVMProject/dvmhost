@@ -334,6 +334,11 @@ bool TSBK::decode(const uint8_t* data)
         m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Answer Response
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
+    case TSBK_ISP_SNDCP_CH_REQ:
+        m_dataServiceOptions = (uint8_t)((tsbkValue >> 56) & 0xFFU);                // Data Service Options
+        m_dataAccessControl = (uint32_t)((tsbkValue >> 40) & 0xFFFFFFFFU);          // Data Access Control
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
     case TSBK_IOSP_STS_UPDT:
         m_statusValue = (uint8_t)((tsbkValue >> 56) & 0xFFU);                       // Status Value
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
@@ -352,6 +357,23 @@ bool TSBK::decode(const uint8_t* data)
         m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Additional Info. Flag
         m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
+    case TSBK_ISP_EMERG_ALRM_REQ: // TSBK_OSP_DENY_RSP
+        /*
+        ** these are used by TSBK_OSP_DENY_RSP; best way to check is for m_response > 0
+        */
+        m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Additional Info. Flag
+        m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
+        m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Reason
+
+        if (m_response > 0U) {
+            m_emergency = true;
+        } else {
+            m_emergency = false;
+        }
+
+        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case TSBK_IOSP_EXT_FNCT:
@@ -381,7 +403,6 @@ bool TSBK::decode(const uint8_t* data)
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
-    case TSBK_OSP_DENY_RSP:
     case TSBK_OSP_QUE_RSP:
         m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Additional Info. Flag
         m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type

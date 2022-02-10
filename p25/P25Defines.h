@@ -285,9 +285,10 @@ namespace p25
 
     // TSBK Inbound Signalling Packet (ISP) Opcode(s)
     const uint8_t   TSBK_ISP_TELE_INT_PSTN_REQ = 0x09U; // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
-    const uint8_t   TSBK_ISP_SNDCP_CH_REQ = 0x13U;      // SNDCP CH REQ - SNDCP Data Channel Request
+    const uint8_t   TSBK_ISP_SNDCP_CH_REQ = 0x12U;      // SNDCP CH REQ - SNDCP Data Channel Request
     const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;         // STS Q RSP - Status Query Response
     const uint8_t   TSBK_ISP_CAN_SRV_REQ = 0x23U;       // CAN SRV REQ - Cancel Service Request
+    const uint8_t   TSBK_ISP_EMERG_ALRM_REQ = 0x27U;    // EMERG ALRM REQ - Emergency Alarm Request
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request

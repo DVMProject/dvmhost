@@ -132,6 +132,12 @@ namespace p25
             /// <summary>Extended function opcode.</summary>
             __PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
 
+            /** SNDCP Channel Request */
+            /// <summary>SNDCP Data Service Options</summary>
+            __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
+            /// <summary>SNDCP Data Access Control</summary>
+            __PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
+
             /** Adjacent Site Data */
             /// <summary>Adjacent site CFVA flags.</summary>
             __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
