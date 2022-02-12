@@ -2294,10 +2294,15 @@ bool TrunkPacket::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
 
     // validate the talkgroup ID
     if (m_rfTSBK.getGroup()) {
-        if (!acl::AccessControl::validateTGId(dstId)) {
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, TGID rejection, dstId = %u", dstId);
-            ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
-            m_rfTSBK.setResponse(P25_RSP_DENY);
+                if (dstId == 0U) {
+            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response), TGID 0, dstId = %u", dstId);
+        }
+        else {
+            if (!acl::AccessControl::validateTGId(dstId)) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, TGID rejection, dstId = %u", dstId);
+                ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
+                m_rfTSBK.setResponse(P25_RSP_DENY);
+            }
         }
     }
 
