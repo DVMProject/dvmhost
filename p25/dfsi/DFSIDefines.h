@@ -29,12 +29,12 @@
 #include "Defines.h"
 
 // Frame Type String(s)
-#define P25_DFSI_VHDR1_STR "P25_DFSI_START_STOP (Start/Stop)"
+#define P25_DFSI_SS_STR "P25_DFSI_START_STOP (Start/Stop)"
 #define P25_DFSI_VHDR1_STR "P25_DFSI_VHDR1 (Voice Header 1)"
 #define P25_DFSI_VHDR2_STR "P25_DFSI_VHDR2 (Voice Header 2)"
 #define P25_DFSI_LDU1_STR "P25_DFSI_LDU1 (Logical Link Data Unit 1)"
 #define P25_DFSI_LDU2_STR "P25_DFSI_LDU2 (Logical Link Data Unit 2)"
-#define P25_DFSI_LDU2_STR "P25_DFSI_TSBK (Trunking System Block)"
+#define P25_DFSI_TSBK_STR "P25_DFSI_TSBK (Trunking System Block)"
 
 namespace p25
 {
