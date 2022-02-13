@@ -82,7 +82,8 @@ namespace p25
         const uint8_t   P25_DFSI_TYPE_VOICE = 0x0BU;        //
         const uint8_t   P25_DFSI_TYPE_TSBK = 0x0FU;         //
 
-        const uint8_t   P25_DFSI_ICW_SOURCE = 0x00U;        // Infrastructure Source - Default Source
+        const uint8_t   P25_DFSI_DEF_ICW_SOURCE = 0x00U;    // Infrastructure Source - Default Source
+        const uint8_t   P25_DFSI_DEF_SOURCE = 0x00U;        //
 
         // Frame Type(s)
         const uint8_t   P25_DFSI_START_STOP = 0x00U;        // Start/Stop

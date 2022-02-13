@@ -29,6 +29,7 @@
 #include "Defines.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/lc/LC.h"
+#include "p25/lc/TSBK.h"
 
 #include <string>
 
@@ -67,14 +68,19 @@ namespace p25
             void encodeVHDR2(uint8_t* data);
 
             /// <summary>Decode a logical link data unit 1.</summary>
-            bool decodeLDU1(const uint8_t* data);
+            bool decodeLDU1(const uint8_t* data, uint8_t* imbe);
             /// <summary>Encode a logical link data unit 1.</summary>
-            void encodeLDU1(uint8_t* data);
+            void encodeLDU1(uint8_t* data, const uint8_t* imbe);
 
             /// <summary>Decode a logical link data unit 2.</summary>
-            bool decodeLDU2(const uint8_t* data);
+            bool decodeLDU2(const uint8_t* data, uint8_t* imbe);
             /// <summary>Encode a logical link data unit 2.</summary>
-            void encodeLDU2(uint8_t* data);
+            void encodeLDU2(uint8_t* data, const uint8_t* imbe);
+
+            /// <summary>Decode a TSBK.</summary>
+            bool decodeTSBK(const uint8_t* data);
+            /// <summary>Encode a TSBK.</summary>
+            void encodeTSBK(uint8_t* data, const uint8_t* tsbk);
 
         public:
             /** Common Data */
@@ -86,16 +92,26 @@ namespace p25
             __PROPERTY(uint8_t, startStopFlag, StartStop);
             /// <summary>Type Flag.</summary>
             __PROPERTY(uint8_t, typeFlag, Type);
+            /// <summary>ICW Flag.</summary>
+            __PROPERTY(uint8_t, icwFlag, ICW);
+
+            /// <summary>RSSI.</summary>
+            __PROPERTY(uint8_t, rssi, RSSI);
+
+            /// <summary>Source.</summary>
+            __PROPERTY(uint8_t, source, Source);
 
             /// <summary>Link control data.</summary>
             __PROPERTY(p25::lc::LC, control, Control);
+            /// <summary>TSBK.</summary>
+            __PROPERTY(p25::lc::TSBK, tsbk, TSBK);
             /// <summary>Low speed data.</summary>
             __PROPERTY(p25::data::LowSpeedData, lsd, LSD);
 
         private:
-            /// <summary>Decode start data.</summary>
+            /// <summary>Decode start record data.</summary>
             bool decodeStart(const uint8_t* data);
-            /// <summary>Encode start data.</summary>
+            /// <summary>Encode start record data.</summary>
             void encodeStart(uint8_t* data);
         };
     } // namespace dfsi

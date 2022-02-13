@@ -6,12 +6,7 @@
 * @package DVM / Host Software
 *
 */
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
-*   Copyright (C) 2016 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -43,6 +38,14 @@
 
 namespace p25
 {
+    namespace dfsi
+    {
+        // ---------------------------------------------------------------------------
+        //  Class Prototypes
+        // ---------------------------------------------------------------------------
+        class HOST_SW_API LC;
+    }
+
     namespace lc
     {
         // ---------------------------------------------------------------------------
@@ -194,8 +197,11 @@ namespace p25
 
         private:
             /// <summary>Initializes a new instance of the TSBK class.</summary>
+            TSBK();
+            /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(SiteData siteData);
 
+            friend class dfsi::LC;
             friend class LC;
             friend class TDULC;
             edac::RS634717 m_rs;

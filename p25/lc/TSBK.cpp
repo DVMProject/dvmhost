@@ -6,10 +6,6 @@
 * @package DVM / Host Software
 *
 */
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
 *   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
 *
@@ -948,6 +944,14 @@ void TSBK::setCallsign(std::string callsign)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+/// <summary>
+/// Initializes a new instance of the TSBK class.
+/// </summary>
+/// <remarks>This should never be used.</remarks>
+TSBK::TSBK() : TSBK(SiteData())
+{
+    /* stub */
+}
 /// <summary>
 /// Initializes a new instance of the TSBK class.
 /// </summary>

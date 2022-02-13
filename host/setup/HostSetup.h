@@ -6,10 +6,6 @@
 * @package DVM / Host Software
 *
 */
-//
-// Based on code from the MMDVMCal project. (https://github.com/g4klx/MMDVMCal)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
 *   Copyright (C) 2021 by Bryan Biedenkapp N2PLL
 *
