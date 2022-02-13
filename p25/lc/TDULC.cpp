@@ -365,7 +365,7 @@ void TDULC::encodeLC(uint8_t* rs)
     case LC_CALL_TERM:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
         rsValue = 0U;
-        rsValue = (rsValue << 24) + P25_WUID_SYS;                                   // System Radio Address
+        rsValue = (rsValue << 24) + P25_WUID_FNE;                                   // System Radio Address
         break;
     case LC_IDEN_UP:
         rs[0U] |= 0x40U;                                                            // Implicit Operation

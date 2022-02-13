@@ -259,6 +259,10 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
+                    if (m_p25->m_ackTSBKRequests) {
+                        writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_ANS, false, true);
+                    }
+
                     writeRF_TSDU_Grant(false, false, false);
                 }
                 else if (m_rfTSBK.getResponse() == P25_ANS_RSP_DENY) {
@@ -278,10 +282,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_TELE_INT_ANS (Telephone Interconnect Answer Response), response = $%02X, srcId = %u",
                         m_rfTSBK.getResponse(), srcId);
-                }
-
-                if (m_p25->m_ackTSBKRequests) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, false, true);
                 }
 
                 writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
@@ -426,6 +426,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 if (m_p25->m_ackTSBKRequests) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_GRP_AFF, true, true);
                 }
+
                 writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId);
                 break;
             case TSBK_ISP_GRP_AFF_Q_RSP:
@@ -448,12 +449,13 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
                 // HACK: ensure the DEREG_REQ transmits something ...
                 if (dstId == 0U) {
-                    dstId = P25_WUID_SYS;
+                    dstId = P25_WUID_FNE;
                 }
 
                 if (m_p25->m_ackTSBKRequests) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_U_DEREG_REQ, true, true);
                 }
+
                 writeRF_TSDU_U_Dereg_Ack(srcId);
                 break;
             case TSBK_IOSP_U_REG:
@@ -467,6 +469,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 if (m_p25->m_ackTSBKRequests) {
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_U_REG, true, true);
                 }
+
                 writeRF_TSDU_U_Reg_Rsp(srcId);
                 break;
             case TSBK_ISP_LOC_REG_REQ:
@@ -1106,10 +1109,10 @@ void TrunkPacket::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_GRP_AFF_Q (Group Affiliation Query), dstId = %u", dstId);
     }
 
-    ::ActivityLog("P25", true, "group affiliation query command from %u to %u", P25_WUID_SYS, dstId);
+    ::ActivityLog("P25", true, "group affiliation query command from %u to %u", P25_WUID_FNE, dstId);
 
     m_rfTSBK.setLCO(TSBK_OSP_GRP_AFF_Q);
-    m_rfTSBK.setSrcId(P25_WUID_SYS);
+    m_rfTSBK.setSrcId(P25_WUID_FNE);
     m_rfTSBK.setDstId(dstId);
     writeRF_TSDU_SBF(true);
 }
@@ -1124,10 +1127,10 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_U_REG_CMD (Unit Registration Command), dstId = %u", dstId);
     }
 
-    ::ActivityLog("P25", true, "unit registration command from %u to %u", P25_WUID_SYS, dstId);
+    ::ActivityLog("P25", true, "unit registration command from %u to %u", P25_WUID_FNE, dstId);
 
     m_rfTSBK.setLCO(TSBK_OSP_U_REG_CMD);
-    m_rfTSBK.setSrcId(P25_WUID_SYS);
+    m_rfTSBK.setSrcId(P25_WUID_FNE);
     m_rfTSBK.setDstId(dstId);
     writeRF_TSDU_SBF(true);
 }
@@ -2040,9 +2043,11 @@ void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool ex
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint8_t mfId = m_rfTSBK.getMFId();
+    uint32_t _srcId = m_rfTSBK.getSrcId();
 
     m_rfTSBK.setLCO(TSBK_IOSP_ACK_RSP);
     m_rfTSBK.setMFId(P25_MFG_STANDARD);
+    m_rfTSBK.setSrcId(srcId);
     m_rfTSBK.setService(service);
 
     if (extended) {
@@ -2059,6 +2064,7 @@ void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool ex
 
     m_rfTSBK.setLCO(lco);
     m_rfTSBK.setMFId(mfId);
+    m_rfTSBK.setSrcId(_srcId);
 }
 
 /// <summary>
@@ -2069,18 +2075,22 @@ void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool ex
 void TrunkPacket::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
 {
     uint8_t lco = m_rfTSBK.getLCO();
-
-    if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u", 
-            m_rfTSBK.getAIV(), reason, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
-    }
+    uint32_t srcId = m_rfTSBK.getSrcId();
 
     m_rfTSBK.setLCO(TSBK_OSP_DENY_RSP);
+    m_rfTSBK.setSrcId(P25_WUID_FNE);
     m_rfTSBK.setService(service);
     m_rfTSBK.setResponse(reason);
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, service = $%02X, srcId = %u, dstId = %u", 
+            m_rfTSBK.getAIV(), reason, service, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+    }
+
     writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
+    m_rfTSBK.setSrcId(srcId);
 }
 
 /// <summary>
@@ -2224,7 +2234,7 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     if (dereged) {
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
-        m_rfTSBK.setSrcId(P25_WUID_SYS);
+        m_rfTSBK.setSrcId(P25_WUID_FNE);
         m_rfTSBK.setDstId(srcId);
 
         writeRF_TSDU_SBF(false);
@@ -2242,18 +2252,22 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 void TrunkPacket::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
 {
     uint8_t lco = m_rfTSBK.getLCO();
+    uint32_t srcId = m_rfTSBK.getSrcId();
+
+    m_rfTSBK.setLCO(TSBK_OSP_QUE_RSP);
+    m_rfTSBK.setSrcId(P25_WUID_FNE);
+    m_rfTSBK.setService(service);
+    m_rfTSBK.setResponse(reason);
 
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u", 
             m_rfTSBK.getAIV(), reason, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
     }
 
-    m_rfTSBK.setLCO(TSBK_OSP_QUE_RSP);
-    m_rfTSBK.setService(service);
-    m_rfTSBK.setResponse(reason);
     writeRF_TSDU_SBF(false);
 
     m_rfTSBK.setLCO(lco);
+    m_rfTSBK.setSrcId(srcId);
 }
 
 /// <summary>
@@ -2451,7 +2465,7 @@ void TrunkPacket::denialInhibit(uint32_t srcId)
     // this check should have already been done -- but do it again anyway
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_P25, P25_TSDU_STR ", denial, system auto-inhibit RID, srcId = %u", srcId);
-        writeRF_TSDU_Ext_Func(P25_EXT_FNCT_INHIBIT, P25_WUID_SYS, srcId);
+        writeRF_TSDU_Ext_Func(P25_EXT_FNCT_INHIBIT, P25_WUID_FNE, srcId);
     }
 }
 

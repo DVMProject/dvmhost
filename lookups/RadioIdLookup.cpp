@@ -100,7 +100,7 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 /// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
 void RadioIdLookup::addEntry(uint32_t id, bool enabled)
 {
-    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_SYS) || (id == p25::P25_WUID_FNE)) {
+    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
         return;
     }
 
@@ -132,7 +132,7 @@ RadioId RadioIdLookup::find(uint32_t id)
 {
     RadioId entry;
 
-    if (id == p25::P25_WUID_ALL || id == p25::P25_WUID_SYS || id == p25::P25_WUID_FNE) {
+    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
         return RadioId(true, false);
     }
 

@@ -443,7 +443,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
                         if (dstId != 0U) {
-                            dmr->writeRF_Call_Alrt(slotNo, p25::P25_WUID_SYS, dstId);
+                            dmr->writeRF_Call_Alrt(slotNo, p25::P25_WUID_FNE, dstId);
                         }
                         else {
                             LogError(LOG_RCON, INVALID_OPT_STR "tried to DMR call alert RID 0!");
@@ -464,7 +464,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
                         if (dstId != 0U) {
-                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_SYS, dstId);
+                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
                         }
                         else {
                             LogError(LOG_RCON, INVALID_OPT_STR "tried to DMR radio check RID 0!");
@@ -485,7 +485,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
                         if (dstId != 0U) {
-                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_SYS, dstId);
+                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
                         }
                         else {
                             LogError(LOG_RCON, INVALID_OPT_STR "tried to DMR radio inhibit RID 0!");
@@ -506,7 +506,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
                         if (dstId != 0U) {
-                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_SYS, dstId);
+                            dmr->writeRF_Ext_Func(slotNo, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
                         }
                         else {
                             LogError(LOG_RCON, INVALID_OPT_STR "tried to DMR radio uninhibit RID 0!");
@@ -543,7 +543,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         p25->trunk()->setMFId(m_p25MFId);
-                        p25->trunk()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_SYS, dstId);
+                        p25->trunk()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
                     }
                     else {
                         LogError(LOG_RCON, INVALID_OPT_STR "tried to P25 call alert RID 0!");
@@ -559,7 +559,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         p25->trunk()->setMFId(m_p25MFId);
-                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_SYS, dstId);
+                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
                     }
                     else {
                         LogError(LOG_RCON, INVALID_OPT_STR "tried to P25 radio check RID 0!");
@@ -575,7 +575,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         p25->trunk()->setMFId(m_p25MFId);
-                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_SYS, dstId);
+                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
                     }
                     else {
                         LogError(LOG_RCON, INVALID_OPT_STR "tried to P25 inhibit RID 0!");
@@ -591,7 +591,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         p25->trunk()->setMFId(m_p25MFId);
-                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_SYS, dstId);
+                        p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
                     }
                     else {
                         LogError(LOG_RCON, INVALID_OPT_STR "tried to P25 uninhibit RID 0!");

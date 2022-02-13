@@ -198,7 +198,6 @@ namespace p25
     const uint32_t  P25_SID_STD_DEFAULT = 0x001U;
 
     const uint32_t  P25_WUID_FNE = 0xFFFFFCU;
-    const uint32_t  P25_WUID_SYS = 0xFFFFFDU;
     const uint32_t  P25_WUID_REG = 0xFFFFFEU;
     const uint32_t  P25_WUID_ALL = 0xFFFFFFU;
 
