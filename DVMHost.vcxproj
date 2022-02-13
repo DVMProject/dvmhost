@@ -212,6 +212,8 @@
     <ClInclude Include="p25\data\DataHeader.h" />
     <ClInclude Include="p25\data\DataRspHeader.h" />
     <ClInclude Include="p25\data\LowSpeedData.h" />
+    <ClInclude Include="p25\dfsi\DFSIDefines.h" />
+    <ClInclude Include="p25\dfsi\LC.h" />
     <ClInclude Include="p25\edac\Trellis.h" />
     <ClInclude Include="p25\lc\LC.h" />
     <ClInclude Include="p25\lc\TDULC.h" />
@@ -242,6 +244,7 @@
     <ClCompile Include="dmr\data\DataHeader.cpp" />
     <ClCompile Include="dmr\data\EMB.cpp" />
     <ClCompile Include="dmr\data\EmbeddedData.cpp" />
+    <ClCompile Include="dmr\dfsi\LC.cpp" />
     <ClCompile Include="dmr\Control.cpp" />
     <ClCompile Include="dmr\DataPacket.cpp" />
     <ClCompile Include="dmr\lc\PrivacyLC.cpp" />

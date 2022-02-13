@@ -72,6 +72,9 @@
     <Filter Include="Header Files\p25\data">
       <UniqueIdentifier>{ac8d97b8-a9bd-48e3-9fb9-08e997d055d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\p25\dfsi">
+      <UniqueIdentifier>{c53673fd-d7d5-49f2-a8e4-5a92e379f436}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\p25\edac">
       <UniqueIdentifier>{94f78cbc-78b5-454e-972d-89ff595eca17}</UniqueIdentifier>
     </Filter>
@@ -83,6 +86,9 @@
     </Filter>
     <Filter Include="Source Files\p25\data">
       <UniqueIdentifier>{d742b2cf-71b2-45a1-afbd-753128c38f66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\p25\dfsi">
+      <UniqueIdentifier>{7c4122c6-5105-4c86-ac60-3a9873921535}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\p25\edac">
       <UniqueIdentifier>{07a6e6a8-699e-41a9-9e0f-0a8a064b2331}</UniqueIdentifier>
@@ -365,6 +371,12 @@
     <ClInclude Include="dmr\DMRUtils.h">
       <Filter>Header Files\dmr</Filter>
     </ClInclude>
+    <ClInclude Include="p25\dfsi\DFSIDefines.h">
+      <Filter>Header Files\p25\dfsi</Filter>
+    </ClInclude>
+    <ClInclude Include="p25\dfsi\LC.h">
+      <Filter>Header Files\p25\dfsi</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -582,6 +594,9 @@
     </ClCompile>
     <ClCompile Include="host\setup\HostSetup.cpp">
       <Filter>Source Files\host\setup</Filter>
+    </ClCompile>
+    <ClCompile Include="p25\dfsi\LC.cpp">
+      <Filter>Source Files\p25\dfsi</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
