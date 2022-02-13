@@ -200,6 +200,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     m_trunk->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
+    m_trunk->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
 
     yaml::Node control = p25Protocol["control"];
     m_control = control["enable"].as<bool>(false);
@@ -275,6 +276,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
+        LogInfo("    Unit-to-Unit Availability Check: %s", m_trunk->m_unitToUnitAvailCheck ? "yes" : "no");
     }
 
     m_voice->resetRF();

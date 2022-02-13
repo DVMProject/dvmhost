@@ -68,6 +68,7 @@ protocols:
         callHang: 5
         noStatusAck: false
         noMessageAck: true
+        unitToUnitAvailCheck: true
         silenceThreshold: 124
         disableNetworkHDU: false
         queueSize: 5000

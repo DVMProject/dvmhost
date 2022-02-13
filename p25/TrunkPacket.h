@@ -150,6 +150,7 @@ namespace p25
 
         bool m_noStatusAck;
         bool m_noMessageAck;
+        bool m_unitToUnitAvailCheck;
 
         Timer m_adjSiteUpdateTimer;
         uint32_t m_adjSiteUpdateInterval;

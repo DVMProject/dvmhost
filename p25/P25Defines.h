@@ -181,6 +181,8 @@ namespace p25
     const uint32_t  P25_DENY_RSN_PTT_BONK = 0x77U;
     const uint32_t  P25_DENY_RSN_SYS_UNSUPPORTED_SVC = 0xFFU;
 
+    const uint32_t  P25_QUE_RSN_REQ_ACTIVE_SERVICE = 0x10U;
+    const uint32_t  P25_QUE_RSN_TGT_ACTIVE_SERVICE = 0x20U;
     const uint32_t  P25_QUE_RSN_TGT_UNIT_QUEUED = 0x2FU;
     const uint32_t  P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL = 0x40U;
 

@@ -236,7 +236,12 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                writeRF_TSDU_UU_Ans_Req(srcId, dstId);
+                if (m_unitToUnitAvailCheck) {
+                    writeRF_TSDU_UU_Ans_Req(srcId, dstId);
+                }
+                else {
+                    writeRF_TSDU_Grant(false, false, false);
+                }
                 break;
             case TSBK_IOSP_UU_ANS:
                 // make sure control data is supported
@@ -251,10 +256,6 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u", 
                         m_rfTSBK.getResponse(), srcId, dstId);
-                }
-
-                if (m_p25->m_ackTSBKRequests) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_UU_ANS, false, true);
                 }
 
                 if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
@@ -283,16 +284,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, false, true);
                 }
 
-                if (m_rfTSBK.getResponse() == P25_ANS_RSP_PROCEED) {
-                    //writeRF_TSDU_Grant(false);
-                    writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
-                }
-                else if (m_rfTSBK.getResponse() == P25_ANS_RSP_DENY) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_TELE_INT_ANS, false, true);
-                }
-                else if (m_rfTSBK.getResponse() == P25_ANS_RSP_WAIT) {
-                    writeRF_TSDU_Queue(P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_TELE_INT_ANS);
-                }
+                writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
                 break;
             case TSBK_ISP_SNDCP_CH_REQ:
                 // make sure control data is supported
@@ -420,7 +412,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
 
                     ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
 
-                    writeRF_TSDU_SBF(false);
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
                 }
                 break;
             case TSBK_IOSP_GRP_AFF:
@@ -1214,6 +1206,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_voiceGrantChCnt(0U),
     m_noStatusAck(false),
     m_noMessageAck(true),
+    m_unitToUnitAvailCheck(true),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_ctrlTSDUMBF(true),
