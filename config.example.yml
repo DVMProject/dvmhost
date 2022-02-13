@@ -84,11 +84,11 @@ system:
 #    fixedMode: false
     rfTalkgroupHang: 10
     info:
-        latitude: 0.0
-        longitude: 0.0
-        height: 0
+        latitude: -83.689428
+        longitude: -39.194973
+        height: 1
         power: 10
-        location: "Repeater Site, USA"
+        location: "Repeater Site, Antarctica"
     config:
         channelId: 2
         channelNo: 1
