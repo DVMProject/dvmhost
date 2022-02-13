@@ -117,6 +117,86 @@ void LC::encodeNID(uint8_t* data)
     encodeStart(raw + 1U);
 }
 
+/// <summary>
+/// Decode a voice header 1.
+/// </summary>
+/// <param name="data"></param>
+/// <returns>True, if decoded, otherwise false.</returns>
+bool LC::decodeVHDR1(const uint8_t* data)
+{
+    // TODO TODO TODO    
+    return true;
+}
+
+/// <summary>
+/// Encode a voice header 1.
+/// </summary>
+/// <param name="data"></param>
+void LC::encodeVHDR1(uint8_t* data)
+{
+    // TODO TODO TODO    
+}
+
+/// <summary>
+/// Decode a voice header 2.
+/// </summary>
+/// <param name="data"></param>
+/// <returns>True, if decoded, otherwise false.</returns>
+bool LC::decodeVHDR2(const uint8_t* data)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Encode a voice header 2.
+/// </summary>
+/// <param name="data"></param>
+void LC::encodeVHDR2(uint8_t* data)
+{
+    // TODO TODO TODO    
+}
+
+/// <summary>
+/// Decode a logical link data unit 1.
+/// </summary>
+/// <param name="data"></param>
+/// <returns>True, if decoded, otherwise false.</returns>
+bool LC::decodeLDU1(const uint8_t* data)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Encode a logical link data unit 1.
+/// </summary>
+/// <param name="data"></param>
+void LC::encodeLDU1(uint8_t* data)
+{
+    // TODO TODO TODO    
+}
+
+/// <summary>
+/// Decode a logical link data unit 2.
+/// </summary>
+/// <param name="data"></param>
+/// <returns>True, if decoded, otherwise false.</returns>
+bool LC::decodeLDU2(const uint8_t* data)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Encode a logical link data unit 2.
+/// </summary>
+/// <param name="data"></param>
+void LC::encodeLDU2(uint8_t* data)
+{
+    // TODO TODO TODO    
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
