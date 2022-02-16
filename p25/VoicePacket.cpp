@@ -1186,8 +1186,12 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
                 m_p25->m_trunk->writeRF_TSDU_Mot_Patch(dstId, 0U, 0U);
                 m_lastPatchGroup = dstId;
             }
+        }
 
-            if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
+        // single-channel trunking or voice on control support?
+        if (m_p25->m_control && m_p25->m_voiceOnControl) {
+            m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+            if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, true, true)) {
                 if (m_network != NULL)
                     m_network->resetP25();
 
@@ -1202,17 +1206,13 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
 
                 m_p25->m_netState = RS_NET_IDLE;
                 m_p25->m_netLastDstId = 0U;
+
                 if (m_p25->m_rfState == RS_RF_REJECTED) {
                     m_p25->m_rfState = RS_RF_LISTENING;
                 }
+
                 return;
             }
-        }
-
-        // single-channel trunking or voice on control support?
-        if (m_p25->m_control && m_p25->m_voiceOnControl) {
-            m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-            m_p25->m_trunk->writeRF_TSDU_Grant(m_rfLC.getGroup(), true, true);
         }
 
         m_hadVoice = true;

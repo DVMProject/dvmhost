@@ -785,7 +785,7 @@ void Control::processNetwork()
             if (!m_dedicatedControl)
                 ret = m_voice->processNetwork(data, length, control, lsd, duid);
             else {
-                if (m_voiceOnControl && !m_trunk->isChBusy(m_siteData.channelNo())) {
+                if (m_voiceOnControl) {
                     ret = m_voice->processNetwork(data, length, control, lsd, duid);
                 }
             }
@@ -800,7 +800,7 @@ void Control::processNetwork()
             if (!m_dedicatedControl)
                 ret = m_data->processNetwork(data, length, control, lsd, duid);
             else {
-                if (m_voiceOnControl && !m_trunk->isChBusy(m_siteData.channelNo())) {
+                if (m_voiceOnControl) {
                     ret = m_voice->processNetwork(data, length, control, lsd, duid);
                 }
             }

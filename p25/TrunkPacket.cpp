@@ -1979,7 +1979,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                 m_rfTSBK.getEmergency(), m_rfTSBK.getEncrypted(), m_rfTSBK.getPriority(), m_rfTSBK.getGrpVchNo(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
         }
 
@@ -1993,7 +1993,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
         }
 
         if (m_verbose) {
-            LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+            LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                 m_rfTSBK.getEmergency(), m_rfTSBK.getEncrypted(), m_rfTSBK.getPriority(), m_rfTSBK.getGrpVchNo(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
         }
 
