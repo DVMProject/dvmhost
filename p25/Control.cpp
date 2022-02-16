@@ -784,7 +784,11 @@ void Control::processNetwork()
         case P25_DUID_LDU2:
             if (!m_dedicatedControl)
                 ret = m_voice->processNetwork(data, length, control, lsd, duid);
-            // dedicated control ignores network voice frames -- always
+            else {
+                if (m_voiceOnControl && !m_trunk->isChBusy(m_siteData.channelNo())) {
+                    ret = m_voice->processNetwork(data, length, control, lsd, duid);
+                }
+            }
             break;
 
         case P25_DUID_TDU:
@@ -795,7 +799,11 @@ void Control::processNetwork()
         case P25_DUID_PDU:
             if (!m_dedicatedControl)
                 ret = m_data->processNetwork(data, length, control, lsd, duid);
-            // dedicated control ignores network data frames -- always
+            else {
+                if (m_voiceOnControl && !m_trunk->isChBusy(m_siteData.channelNo())) {
+                    ret = m_voice->processNetwork(data, length, control, lsd, duid);
+                }
+            }
             break;
 
         case P25_DUID_TSDU:

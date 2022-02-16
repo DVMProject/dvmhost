@@ -1694,6 +1694,13 @@ bool Host::createNetwork()
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
+    if (rconPassword.length() > 64) {
+        std::string password = rconPassword;
+        rconPassword = password.substr(0, 64);
+
+        ::LogWarning(LOG_HOST, "RCON password is too long; truncating to the first 64 characters.");
+    }
+
     IdenTable entry = m_idenTable->find(m_channelId);
 
     LogInfo("Network Parameters");
