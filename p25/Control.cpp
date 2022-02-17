@@ -834,23 +834,31 @@ void Control::writeRF_Nulls()
 /// <summary>
 /// Helper to write TDU preamble packet burst.
 /// </summary>
-void Control::writeRF_Preamble()
+/// <param name="preambleCount"></param>
+/// <param name="force"></param>
+void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
 {
-    if (m_modem->hasTX() || m_tduPreambleCount == 0U) {
-        return;
+    if (preambleCount == 0) {
+        preambleCount = m_tduPreambleCount;
     }
 
-    if (m_ccRunning) {
-        return;
+    if (!force) {
+        if (m_modem->hasTX() || m_tduPreambleCount == 0U) {
+            return;
+        }
+
+        if (m_ccRunning) {
+            return;
+        }
     }
 
     if (m_tduPreambleCount > MAX_PREAMBLE_TDU_CNT) {
         LogWarning(LOG_P25, "oversized TDU preamble count, reducing to maximum %u", MAX_PREAMBLE_TDU_CNT);
-        m_tduPreambleCount = MAX_PREAMBLE_TDU_CNT;
+        preambleCount = m_tduPreambleCount = MAX_PREAMBLE_TDU_CNT;
     }
 
     // write TDUs if requested
-    for (uint8_t i = 0U; i < m_tduPreambleCount; i++) {
+    for (uint8_t i = 0U; i < preambleCount; i++) {
         writeRF_TDU(true);
     }
 }

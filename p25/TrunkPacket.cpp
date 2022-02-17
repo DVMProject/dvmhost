@@ -213,7 +213,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                writeRF_TSDU_Grant(true, false, false);
+                writeRF_TSDU_Grant(true);
                 break;
             case TSBK_IOSP_UU_VCH:
                 // make sure control data is supported
@@ -236,7 +236,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                     writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 }
                 else {
-                    writeRF_TSDU_Grant(false, false, false);
+                    writeRF_TSDU_Grant(false);
                 }
                 break;
             case TSBK_IOSP_UU_ANS:
@@ -259,7 +259,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len)
                         writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_ANS, false, true);
                     }
 
-                    writeRF_TSDU_Grant(false, false, false);
+                    writeRF_TSDU_Grant(false);
                 }
                 else if (m_rfTSBK.getResponse() == P25_ANS_RSP_DENY) {
                     writeRF_TSDU_Deny(P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
@@ -1465,7 +1465,8 @@ void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t d
 /// </summary>
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
-void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
+/// <param name="force"></param>
+void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
 {
     if (!m_p25->m_control)
         return;
@@ -1496,19 +1497,21 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite)
     if (!noNetwork)
         writeNetworkRF(data + 2U, true);
 
-    if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
-        writeRF_TSDU_MBF(clearBeforeWrite);
-        return;
-    }
+    if (!force) {
+        if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
+            writeRF_TSDU_MBF(clearBeforeWrite);
+            return;
+        }
 
-    if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
-        writeRF_TSDU_MBF(clearBeforeWrite);
-        return;
-    }
+        if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
+            writeRF_TSDU_MBF(clearBeforeWrite);
+            return;
+        }
 
-    if (clearBeforeWrite) {
-        m_p25->m_modem->clearP25Data();
-        m_p25->m_queue.clear();
+        if (clearBeforeWrite) {
+            m_p25->m_modem->clearP25Data();
+            m_p25->m_queue.clear();
+        }
     }
 
     if (m_p25->m_duplex) {
@@ -1985,7 +1988,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 
         // transmit group grant
         m_rfTSBK.setLCO(TSBK_IOSP_GRP_VCH);
-        writeRF_TSDU_SBF(false, true);
+        writeRF_TSDU_SBF(false, true, net);
     }
     else {
         if (!net) {
@@ -1999,7 +2002,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 
         // transmit private grant
         m_rfTSBK.setLCO(TSBK_IOSP_UU_VCH);
-        writeRF_TSDU_SBF(false, true);
+        writeRF_TSDU_SBF(false, true, net);
     }
 
     m_rfTSBK.setLCO(lco);

@@ -175,7 +175,7 @@ namespace p25
         void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
         /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-        void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false);
+        void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
         /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
         void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
 
@@ -183,7 +183,7 @@ namespace p25
         void queueRF_TSBK_Ctrl(uint8_t lco);
 
         /// <summary>Helper to write a grant packet.</summary>
-        bool writeRF_TSDU_Grant(bool grp, bool skip, bool net);
+        bool writeRF_TSDU_Grant(bool grp, bool skip = false, bool net = false);
         /// <summary>Helper to write a unit to unit answer request packet.</summary>
         void writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to write a acknowledge packet.</summary>

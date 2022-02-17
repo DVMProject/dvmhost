@@ -189,7 +189,7 @@ namespace p25
         /// <summary>Helper to write data nulls.</summary>
         void writeRF_Nulls();
         /// <summary>Helper to write TDU preamble packet burst.</summary>
-        void writeRF_Preamble();
+        void writeRF_Preamble(uint32_t preambleCount = 0, bool force = false);
         /// <summary>Helper to write a P25 TDU packet.</summary>
         void writeRF_TDU(bool noNetwork);
 

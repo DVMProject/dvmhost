@@ -343,7 +343,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                             }
                         }                        
 
-                        if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, false)) {
+                        if (!m_p25->m_trunk->writeRF_TSDU_Grant(group)) {
                             return false;
                         }
                     }
@@ -356,7 +356,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // single-channel trunking or voice on control support?
             if (m_p25->m_control && m_p25->m_voiceOnControl) {
                 m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-                m_p25->m_trunk->writeRF_TSDU_Grant(group, true, false);
+                m_p25->m_trunk->writeRF_TSDU_Grant(group, true);
             }
 
             m_hadVoice = true;
@@ -779,6 +779,16 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 count += 16U;
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
+                    // are we interrupting a running CC?
+                    if (m_p25->m_ccRunning) {
+                        g_interruptP25Control = true;
+                    }
+
+                    // single-channel trunking or voice on control support?
+                    if (m_p25->m_control && m_p25->m_voiceOnControl) {
+                        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+                    }
+
                     m_p25->m_modem->clearP25Data();
                     m_p25->m_queue.clear();
                     
@@ -1191,7 +1201,7 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
         // single-channel trunking or voice on control support?
         if (m_p25->m_control && m_p25->m_voiceOnControl) {
             m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-            if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, true, true)) {
+            if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
                 if (m_network != NULL)
                     m_network->resetP25();
 
@@ -1213,6 +1223,8 @@ void VoicePacket::writeNet_LDU1(const lc::LC& control, const data::LowSpeedData&
 
                 return;
             }
+
+            m_p25->writeRF_Preamble(0, true);
         }
 
         m_hadVoice = true;
