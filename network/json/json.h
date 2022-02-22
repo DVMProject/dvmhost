@@ -256,19 +256,19 @@ namespace json
             u_.p = v;                                                               \
             break
 
-            INIT(boolean_, false);
-            INIT(number_, 0.0);
-        #ifdef PICOJSON_USE_INT64
-            INIT(int64_, 0);
-        #endif
-            INIT(int32_, 0);
-            INIT(uint32_, 0);
-            INIT(uint16_, 0);
-            INIT(uint8_, 0);
-            INIT(float_, 0.0f);
-            INIT(string_, new std::string());
-            INIT(array_, new array());
-            INIT(object_, new object());
+        INIT(boolean_, false);
+        INIT(number_, 0.0);
+#ifdef PICOJSON_USE_INT64
+        INIT(int64_, 0);
+#endif
+        INIT(int32_, 0);
+        INIT(uint32_, 0);
+        INIT(uint16_, 0);
+        INIT(uint8_, 0);
+        INIT(float_, 0.0f);
+        INIT(string_, new std::string());
+        INIT(array_, new array());
+        INIT(object_, new object());
         #undef INIT
         default:
             break;
@@ -341,9 +341,9 @@ namespace json
                 delete u_.p;                                                        \
                 break
 
-            DEINIT(string_);
-            DEINIT(array_);
-            DEINIT(object_);
+        DEINIT(string_);
+        DEINIT(array_);
+        DEINIT(object_);
         #undef DEINIT
         default:
             break;
@@ -361,9 +361,9 @@ namespace json
                 u_.p = v;                                                           \
                 break
 
-            INIT(string_, new std::string(*x.u_.string_));
-            INIT(array_, new array(*x.u_.array_));
-            INIT(object_, new object(*x.u_.object_));
+        INIT(string_, new std::string(*x.u_.string_));
+        INIT(array_, new array(*x.u_.array_));
+        INIT(object_, new object(*x.u_.object_));
         #undef INIT
         default:
             u_ = x.u_;
@@ -632,20 +632,20 @@ namespace json
         Iter oi;
         void operator()(char c) {
             switch (c) {
-                #define MAP(val, sym)                                               \
-                    case val:                                                       \
-                        copy(sym, oi);                                              \
-                        break
+            #define MAP(val, sym)                                                   \
+                case val:                                                           \
+                    copy(sym, oi);                                                  \
+                    break
 
-                MAP('"', "\\\"");
-                MAP('\\', "\\\\");
-                MAP('/', "\\/");
-                MAP('\b', "\\b");
-                MAP('\f', "\\f");
-                MAP('\n', "\\n");
-                MAP('\r', "\\r");
-                MAP('\t', "\\t");
-                #undef MAP
+            MAP('"', "\\\"");
+            MAP('\\', "\\\\");
+            MAP('/', "\\/");
+            MAP('\b', "\\b");
+            MAP('\f', "\\f");
+            MAP('\n', "\\n");
+            MAP('\r', "\\r");
+            MAP('\t', "\\t");
+            #undef MAP
             default:
                 if (static_cast<unsigned char>(c) < 0x20 || c == 0x7f) {
                     char buf[7];
@@ -935,14 +935,14 @@ namespace json
                         out.push_back(val);                                         \
                         break
 
-                    MAP('"', '\"');
-                    MAP('\\', '\\');
-                    MAP('/', '/');
-                    MAP('b', '\b');
-                    MAP('f', '\f');
-                    MAP('n', '\n');
-                    MAP('r', '\r');
-                    MAP('t', '\t');
+                MAP('"', '\"');
+                MAP('\\', '\\');
+                MAP('/', '/');
+                MAP('b', '\b');
+                MAP('f', '\f');
+                MAP('n', '\n');
+                MAP('r', '\r');
+                MAP('t', '\t');
                 #undef MAP
                 case 'u':
                     if (!_parse_codepoint(out, in)) {
@@ -1027,18 +1027,18 @@ namespace json
         in.skip_ws();
         int ch = in.getc();
         switch (ch) {
-            #define IS(ch, text, op)                                                \
-                case ch:                                                            \
-                    if (in.match(text) && op) {                                     \
-                        return true;                                                \
-                    } else {                                                        \
-                        return false;                                               \
-                    }
+        #define IS(ch, text, op)                                                    \
+            case ch:                                                                \
+                if (in.match(text) && op) {                                         \
+                    return true;                                                    \
+                } else {                                                            \
+                    return false;                                                   \
+                }
 
-            IS('n', "ull", ctx.set_null());
-            IS('f', "alse", ctx.set_bool(false));
-            IS('t', "rue", ctx.set_bool(true));
-            #undef IS
+        IS('n', "ull", ctx.set_null());
+        IS('f', "alse", ctx.set_bool(false));
+        IS('t', "rue", ctx.set_bool(true));
+        #undef IS
         case '"':
             return ctx.parse_string(in);
         case '[':
