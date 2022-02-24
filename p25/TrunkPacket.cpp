@@ -158,7 +158,7 @@ void TrunkPacket::resetNet()
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="blockData">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
+/// <param name="mbtDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
 /// <returns></returns>
 bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
 {
