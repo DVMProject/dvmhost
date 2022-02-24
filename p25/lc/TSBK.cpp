@@ -186,12 +186,21 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, data::DataBlock block)
 {
     // get the raw block data
     uint8_t pduBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    uint32_t len = block.getData(pduBlock);
+    if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+        m_decodedMBT = false;
+        LogError(LOG_P25, "TSBK::decode(), failed to read PDU data block");
+        return false;
+    }
+
+/*    
     bool ret = block.decode(pduBlock, dataHeader);
     if (!ret) {
         m_decodedMBT = false;
         LogError(LOG_P25, "TSBK::decode(), failed to decode PDU data block");
         return false;
     }
+*/
 
     m_lco = dataHeader.getAMBTOpcode();                                             // LCO
     m_lastBlock = true;
@@ -312,7 +321,7 @@ bool TSBK::decode(const uint8_t* data)
                 }
             }
         }
-        
+
         if (!ret)
             return false;
     }
