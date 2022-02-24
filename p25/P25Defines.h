@@ -210,6 +210,7 @@ namespace p25
     const uint8_t   PDU_FMT_RSP = 0x03U;
     const uint8_t   PDU_FMT_UNCONFIRMED = 0x15U;
     const uint8_t   PDU_FMT_CONFIRMED = 0x16U;
+    const uint8_t   PDU_FMT_AMBT = 0x17U;
 
     // PDU SAP 
     const uint8_t   PDU_SAP_USER_DATA = 0x00U;
@@ -221,6 +222,7 @@ namespace p25
     const uint8_t   PDU_SAP_REG = 0x20U;
     const uint8_t   PDU_SAP_UNENC_KMM = 0x28U;
     const uint8_t   PDU_SAP_ENC_KMM = 0x29U;
+    const uint8_t   PDU_SAP_TRUNK_CTRL = 0x3DU;
 
     // PDU ACK Class
     const uint8_t   PDU_ACK_CLASS_ACK = 0x00U;

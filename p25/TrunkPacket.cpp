@@ -157,23 +157,30 @@ void TrunkPacket::resetNet()
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
+/// <param name="mbtData">Flag indicating the data parameter contains MBT data.</param>
 /// <returns></returns>
-bool TrunkPacket::process(uint8_t* data, uint32_t len)
+bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtData)
 {
     assert(data != NULL);
 
     if (!m_p25->m_control)
         return false;
 
-    // Decode the NID
-    bool valid = m_p25->m_nid.decode(data + 2U);
+    uint8_t duid = 0U;
+    if (!mbtData) {
+        // Decode the NID
+        bool valid = m_p25->m_nid.decode(data + 2U);
 
-    if (m_p25->m_rfState == RS_RF_LISTENING && !valid)
-        return false;
+        if (m_p25->m_rfState == RS_RF_LISTENING && !valid)
+            return false;
+
+        duid = m_p25->m_nid.getDUID();
+    } else {
+        duid = P25_DUID_TSDU;
+    }
 
     RPT_RF_STATE prevRfState = m_p25->m_rfState;
-    uint8_t duid = m_p25->m_nid.getDUID();
-
+    
     // handle individual DUIDs
     if (duid == P25_DUID_TSDU) {
         if (m_p25->m_rfState != RS_RF_DATA) {

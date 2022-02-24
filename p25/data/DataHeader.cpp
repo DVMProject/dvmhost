@@ -54,6 +54,7 @@ DataHeader::DataHeader() :
     m_n(0U),
     m_seqNo(0U),
     m_headerOffset(0U),
+    m_ambtOpcode(0U),
     m_trellis(),
     m_blocksToFollow(0U),
     m_padCount(0U),
@@ -103,8 +104,15 @@ bool DataHeader::decode(const uint8_t* data)
     m_llId = (header[3U] << 16) + (header[4U] << 8) + header[5U];               // Logical Link ID
 
     m_fullMessage = (header[6U] & 0x80U) == 0x80U;                              // Full Message Flag
+
     m_blocksToFollow = header[6U] & 0x7FU;                                      // Block Frames to Follow
-    m_padCount = header[7U] & 0x1FU;                                            // Pad Count
+    if (m_fmt == PDU_FMT_AMBT) {
+        m_padCount = 0;
+        m_ambtOpcode = header[7U] & 0x3FU;                                      // AMBT Opcode
+    }
+    else {
+        m_padCount = header[7U] & 0x1FU;                                        // Pad Count
+    }
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
         m_dataOctets = 16 * m_blocksToFollow - 4 - m_padCount;
@@ -150,7 +158,12 @@ void DataHeader::encode(uint8_t* data)
     header[6U] = (m_fullMessage ? 0x80U : 0x00U) +                              // Full Message Flag
         (m_blocksToFollow & 0x7FU);                                             // Blocks Frames to Follow
 
-    header[7U] = (m_padCount & 0x1FU);                                          // Pad Count
+    if (m_fmt == PDU_FMT_AMBT) {
+        header[7U] = (m_ambtOpcode & 0x3FU);                                    // AMBT Opcode
+    }
+    else {
+        header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
+    }
 
     header[8U] = (m_sync ? 0x80U : 0x00U) +                                     // Re-synchronize Flag
         ((m_n << 4) && 0x07U) +                                                 // Packet Sequence No.
@@ -191,6 +204,7 @@ void DataHeader::reset()
     m_seqNo = 0U;
 
     m_headerOffset = 0U;
+    m_ambtOpcode = 0U;
 }
 
 /// <summary>Gets the total number of data octets.</summary>
