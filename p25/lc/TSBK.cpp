@@ -312,6 +312,7 @@ bool TSBK::decode(const uint8_t* data)
                 }
             }
         }
+        
         if (!ret)
             return false;
     }

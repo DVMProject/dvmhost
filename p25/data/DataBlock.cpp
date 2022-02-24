@@ -87,6 +87,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             m_confirmed = true;
             bool valid = m_trellis.decode34(data, buffer);
             if (!valid) {
+                LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
                 return false;
             }
 
@@ -139,6 +140,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             m_confirmed = false;
             bool valid = m_trellis.decode12(data, buffer);
             if (!valid) {
+                LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 1/2 rate coding");
                 return false;
             }
 

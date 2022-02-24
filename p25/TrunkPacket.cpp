@@ -191,7 +191,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
         m_p25->m_queue.clear();
 
         // special case to avoid resetting the TSBK state and handle MBTs (this is a horrible hack)
-        if (len != 1U && !blockData) {
+        if (len > 1U && !blockData) {
             resetRF();
         }
         resetNet();
@@ -768,7 +768,7 @@ bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
     for (uint32_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
         bool decodeRet = m_rfTSBK.decodeMBT(dataHeader, blocks[i]);
         if (decodeRet) {
-            process(data, 0U, true);
+            process(data, 1U, true);
         } else {
             ret = false;
         }
