@@ -121,12 +121,21 @@ bool DataHeader::decode(const uint8_t* data)
         m_dataOctets = 12 * m_blocksToFollow - 4 - m_padCount;
     }
 
-    m_sync = (header[8U] & 0x80U) == 0x80U;                                     // Re-synchronize Flag
+    if (m_fmt == PDU_FMT_AMBT) {
+        m_sync = false;
 
-    m_n = (header[8U] >> 4) & 0x07U;                                            // Packet Sequence No.
-    m_seqNo = header[8U] & 0x0FU;                                               // Fragment Sequence No.
+        m_n = 0U;
+        m_seqNo = 0U;
+        m_headerOffset = 0U;
+    }
+    else {
+        m_sync = (header[8U] & 0x80U) == 0x80U;                                 // Re-synchronize Flag
 
-    m_headerOffset = header[9U] & 0x3FU;                                        // Data Header Offset
+        m_n = (header[8U] >> 4) & 0x07U;                                        // Packet Sequence No.
+        m_seqNo = header[8U] & 0x0FU;                                           // Fragment Sequence No.
+
+        m_headerOffset = header[9U] & 0x3FU;                                    // Data Header Offset
+    }
 
     return true;
 }
@@ -163,13 +172,13 @@ void DataHeader::encode(uint8_t* data)
     }
     else {
         header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
+
+        header[8U] = (m_sync ? 0x80U : 0x00U) +                                 // Re-synchronize Flag
+            ((m_n << 4) && 0x07U) +                                             // Packet Sequence No.
+            (m_seqNo & 0x0F);                                                   // Fragment Sequence No.
+
+        header[9U] = m_headerOffset & 0x3FU;                                    // Data Header Offset
     }
-
-    header[8U] = (m_sync ? 0x80U : 0x00U) +                                     // Re-synchronize Flag
-        ((m_n << 4) && 0x07U) +                                                 // Packet Sequence No.
-        (m_seqNo & 0x0F);                                                       // Fragment Sequence No.
-
-    header[9U] = m_headerOffset & 0x3FU;                                        // Data Header Offset
 
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
