@@ -305,7 +305,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                 case PDU_SAP_TRUNK_CTRL:
                 {
                     if (m_verbose) {
-                        LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (AMBT Trunking Packet), lco = $%02X, blocksToFollow = %u", 
+                        LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u", 
                             m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                     }
 
