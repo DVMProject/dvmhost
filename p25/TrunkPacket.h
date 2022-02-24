@@ -63,7 +63,7 @@ namespace p25
         void resetNet();
 
         /// <summary>Process a data frame from the RF interface.</summary>
-        bool process(uint8_t* data, uint32_t len, bool blockData = false);
+        bool process(uint8_t* data, uint32_t len, bool mbtDecoded = false);
         /// <summary>Process a data frame from the network.</summary>
         bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 

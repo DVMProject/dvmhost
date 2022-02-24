@@ -158,9 +158,9 @@ void TrunkPacket::resetNet()
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="blockData">Flag indicating the data parameter contains raw TSBK data.</param>
+/// <param name="blockData">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
 /// <returns></returns>
-bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
+bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
 {
     assert(data != NULL);
 
@@ -168,7 +168,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
         return false;
 
     uint8_t duid = 0U;
-    if (!blockData) {
+    if (!mbtDecoded) {
         // Decode the NID
         bool valid = m_p25->m_nid.decode(data + 2U);
 
@@ -190,17 +190,19 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
 
         m_p25->m_queue.clear();
 
-        // special case to avoid resetting the TSBK state and handle MBTs (this is a horrible hack)
-        if (len > 1U && !blockData) {
+        if (!mbtDecoded) {
             resetRF();
+            resetNet();
+            
+            bool ret = m_rfTSBK.decode(data + 2U);
+            if (!ret) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", undecodable LC");
+                m_p25->m_rfState = prevRfState;
+                return false;
+            }
         }
-        resetNet();
-        
-        bool ret = m_rfTSBK.decode(data + 2U);
-        if (!ret) {
-            LogWarning(LOG_RF, P25_TSDU_STR ", undecodable LC");
-            m_p25->m_rfState = prevRfState;
-            return false;
+        else {
+            resetNet();
         }
 
         uint32_t srcId = m_rfTSBK.getSrcId();
