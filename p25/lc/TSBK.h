@@ -78,7 +78,7 @@ namespace p25
             TSBK& operator=(const TSBK& data);
 
             /// <summary>Decode a alternate trunking signalling block.</summary>
-            bool decodeMBT(const data::DataHeader dataHeader, data::DataBlock block);
+            bool decodeMBT(const data::DataHeader dataHeader, const uint8_t* block);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data);

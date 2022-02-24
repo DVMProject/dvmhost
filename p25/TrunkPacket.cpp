@@ -768,11 +768,23 @@ bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
 
     bool ret = true;
     for (uint32_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
-        bool decodeRet = m_rfTSBK.decodeMBT(dataHeader, blocks[i]);
+        bool decodeRet = true;
+
+        // get the raw block data
+        uint8_t raw[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+        uint32_t len = blocks[i].getData(raw);
+        if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+            LogError(LOG_P25, "TrunkPacket::processMBT(), failed to read PDU data block");
+            decodeRet = false;
+        }
+
         if (decodeRet) {
-            process(data, 1U, true);
-        } else {
-            ret = false;
+            bool decodeRet = m_rfTSBK.decodeMBT(dataHeader, raw);
+            if (decodeRet) {
+                process(data, 1U, true);
+            } else {
+                ret = false;
+            }
         }
     }
 

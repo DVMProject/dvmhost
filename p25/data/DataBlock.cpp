@@ -61,9 +61,7 @@ DataBlock::DataBlock() :
 /// </summary>
 DataBlock::~DataBlock()
 {
-    if (m_data != NULL) {
-        delete[] m_data;
-    }
+    delete[] m_data;
 }
 
 /// <summary>

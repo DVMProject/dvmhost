@@ -182,16 +182,8 @@ TSBK& TSBK::operator=(const TSBK& data)
 /// <param name="dataHeader"></param>
 /// <param name="block"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool TSBK::decodeMBT(const data::DataHeader dataHeader, data::DataBlock block)
+bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
 {
-    // get the raw block data
-    uint8_t pduBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-    uint32_t len = block.getData(pduBlock);
-    if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
-        LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
-        return false;
-    }
-
     m_lco = dataHeader.getAMBTOpcode();                                             // LCO
     m_lastBlock = true;
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
@@ -202,22 +194,22 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, data::DataBlock block)
         // combine bytes into rs value
         tsbkValue = dataHeader.getAMBTField8();
         tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
-        tsbkValue = (tsbkValue << 8) + pduBlock[0U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[1U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[2U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[3U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[4U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[5U];
+        tsbkValue = (tsbkValue << 8) + block[0U];
+        tsbkValue = (tsbkValue << 8) + block[1U];
+        tsbkValue = (tsbkValue << 8) + block[2U];
+        tsbkValue = (tsbkValue << 8) + block[3U];
+        tsbkValue = (tsbkValue << 8) + block[4U];
+        tsbkValue = (tsbkValue << 8) + block[5U];
     } else {
         // combine bytes into rs value
-        tsbkValue = pduBlock[0U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[1U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[2U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[3U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[4U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[5U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[6U];
-        tsbkValue = (tsbkValue << 8) + pduBlock[7U];
+        tsbkValue = block[0U];
+        tsbkValue = (tsbkValue << 8) + block[1U];
+        tsbkValue = (tsbkValue << 8) + block[2U];
+        tsbkValue = (tsbkValue << 8) + block[3U];
+        tsbkValue = (tsbkValue << 8) + block[4U];
+        tsbkValue = (tsbkValue << 8) + block[5U];
+        tsbkValue = (tsbkValue << 8) + block[6U];
+        tsbkValue = (tsbkValue << 8) + block[7U];
     }
 
     // Motorola P25 vendor opcodes
