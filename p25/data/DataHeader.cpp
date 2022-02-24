@@ -127,6 +127,9 @@ bool DataHeader::decode(const uint8_t* data)
         m_n = 0U;
         m_seqNo = 0U;
         m_headerOffset = 0U;
+
+        m_ambtField8 = header[8U];                                              // AMBT Field 8
+        m_ambtField9 = header[9U];                                              // AMBT Field 9
     }
     else {
         m_sync = (header[8U] & 0x80U) == 0x80U;                                 // Re-synchronize Flag
@@ -169,6 +172,8 @@ void DataHeader::encode(uint8_t* data)
 
     if (m_fmt == PDU_FMT_AMBT) {
         header[7U] = (m_ambtOpcode & 0x3FU);                                    // AMBT Opcode
+        header[8U] = m_ambtField8;                                              // AMBT Field 8
+        header[9U] = m_ambtField9;                                              // AMBT Field 9
     }
     else {
         header[7U] = (m_padCount & 0x1FU);                                      // Pad Count

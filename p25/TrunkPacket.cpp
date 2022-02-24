@@ -157,9 +157,9 @@ void TrunkPacket::resetNet()
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="mbtData">Flag indicating the data parameter contains MBT data.</param>
+/// <param name="blockData">Flag indicating the data parameter contains raw TSBK data.</param>
 /// <returns></returns>
-bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtData)
+bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
 {
     assert(data != NULL);
 
@@ -167,7 +167,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtData)
         return false;
 
     uint8_t duid = 0U;
-    if (!mbtData) {
+    if (!blockData) {
         // Decode the NID
         bool valid = m_p25->m_nid.decode(data + 2U);
 

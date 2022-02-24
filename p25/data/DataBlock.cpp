@@ -139,6 +139,9 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             m_data[i] = buffer[i];                                                       // Payload Data
         }
     }
+    else if (m_fmt == PDU_FMT_AMBT) {
+        // ignore AMBT this is handled else where
+    }
     else {
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
     }
@@ -193,6 +196,9 @@ void DataBlock::encode(uint8_t* data)
 
         m_trellis.encode12(buffer, data);
     }
+    else if (m_fmt == PDU_FMT_AMBT) {
+        // ignore AMBT this is handled else where
+    }
     else {
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
         return;
@@ -236,7 +242,7 @@ void DataBlock::setData(const uint8_t* buffer)
     if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
         ::memcpy(m_data, buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
         ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
     else {
@@ -255,7 +261,7 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     } 
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }

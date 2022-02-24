@@ -91,8 +91,13 @@ namespace p25
             __PROPERTY(uint8_t, seqNo, SeqNo);
             /// <summary>Offset of the header.</summary>
             __PROPERTY(uint8_t, headerOffset, HeaderOffset);
+
             /// <summary>Alternate Trunking Block Opcode</summary>
             __PROPERTY(uint8_t, ambtOpcode, AMBTOpcode);
+            /// <summary>Alternate Trunking Block Field 8</summary>
+            __PROPERTY(uint8_t, ambtField8, AMBTField8);
+            /// <summary>Alternate Trunking Block Field 9</summary>
+            __PROPERTY(uint8_t, ambtField9, AMBTField9);
 
         private:
             edac::Trellis m_trellis;
