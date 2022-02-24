@@ -217,8 +217,6 @@ namespace p25
             bool m_sndcpReqAccess;
             uint16_t m_sndcpDAC;
 
-            bool m_decodedMBT;
-
             /** Local Site data */
             uint8_t* m_siteCallsign;
         };

@@ -1091,7 +1091,6 @@ TSBK::TSBK(SiteData siteData) :
     m_sndcpAutoAccess(true),
     m_sndcpReqAccess(false),
     m_sndcpDAC(1U),
-    m_decodedMBT(false),
     m_siteCallsign(NULL)
 {
     m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
