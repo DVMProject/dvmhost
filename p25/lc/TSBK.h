@@ -27,6 +27,8 @@
 #define  __P25_LC__TSBK_H__
 
 #include "Defines.h"
+#include "p25/data/DataHeader.h"
+#include "p25/data/DataBlock.h"
 #include "p25/edac/Trellis.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/TDULC.h"
@@ -74,6 +76,9 @@ namespace p25
 
             /// <summary>Equals operator.</summary>
             TSBK& operator=(const TSBK& data);
+
+            /// <summary>Decode a alternate trunking signalling block.</summary>
+            bool decodeMBT(const data::DataHeader dataHeader, data::DataBlock block);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data);
@@ -211,6 +216,8 @@ namespace p25
             bool m_sndcpAutoAccess;
             bool m_sndcpReqAccess;
             uint16_t m_sndcpDAC;
+
+            bool m_decodedMBT;
 
             /** Local Site data */
             uint8_t* m_siteCallsign;

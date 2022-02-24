@@ -82,65 +82,76 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
     m_headerSap = header.getSAP();
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
-        m_confirmed = true;
-        bool valid = m_trellis.decode34(data, buffer);
-        if (!valid) {
-            return false;
-        }
+        // decode 3/4 rate Trellis
+        try {
+            m_confirmed = true;
+            bool valid = m_trellis.decode34(data, buffer);
+            if (!valid) {
+                return false;
+            }
 
-        // determine the number of user data bytes
-        uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-        if (m_serialNo == (header.getBlocksToFollow() - 1) ||
-            (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U))
-            count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
+            // determine the number of user data bytes
+            uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+            if (m_serialNo == (header.getBlocksToFollow() - 1) ||
+                (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U))
+                count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
 
-        // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
+            // Utils::dump(1U, "PDU Confirmed Data Block", buffer, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
-        m_serialNo = (buffer[0] & 0xFEU) >> 1;                                           // Confirmed Data Serial No.
-        uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                           // CRC-9 Check Sum
+            m_serialNo = (buffer[0] & 0xFEU) >> 1;                                       // Confirmed Data Serial No.
+            uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                       // CRC-9 Check Sum
 
-        ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+            ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
-        // if this is extended addressing and the first block decode the SAP and LLId
-        if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
-            m_sap = buffer[5U] & 0x3FU;                                                 // Service Access Point
-            m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];               // Logical Link ID
+            // if this is extended addressing and the first block decode the SAP and LLId
+            if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
+                m_sap = buffer[5U] & 0x3FU;                                              // Service Access Point
+                m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];            // Logical Link ID
 
-            // re-copy buffer to remove SAP and llId
-            for (uint32_t i = 6U; i < count; i++) {
-                m_data[i - 6U] = buffer[i];                                             // Payload Data
+                // re-copy buffer to remove SAP and llId
+                for (uint32_t i = 6U; i < count; i++) {
+                    m_data[i - 6U] = buffer[i];                                          // Payload Data
+                }
+            }
+            else {
+                for (uint32_t i = 2U; i < count; i++) {
+                    m_data[i - 2U] = buffer[i];                                          // Payload Data
+                }
+            }
+
+            // Utils::dump(1U, "PDU Data", m_data, count);
+
+            // compute CRC-9 for the packet
+            uint16_t computedCRC = confirmedCRC9(buffer);
+
+            if (crc != computedCRC) {
+                LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, computedCRC);
             }
         }
-        else {
-            for (uint32_t i = 2U; i < count; i++) {
-                m_data[i - 2U] = buffer[i];                                             // Payload Data
-            }
-        }
-
-        // Utils::dump(1U, "PDU Data", m_data, count);
-
-        // compute CRC-9 for the packet
-        uint16_t computedCRC = confirmedCRC9(buffer);
-
-        if (crc != computedCRC) {
-            LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, computedCRC);
-        }
-    }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP)) {
-        m_confirmed = false;
-        bool valid = m_trellis.decode12(data, buffer);
-        if (!valid) {
+        catch (...) {
+            Utils::dump(2U, "P25, decoding excepted with input data", data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
             return false;
         }
-
-        // Utils::dump(1U, "PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
-
-        for (uint32_t i = 0U; i < P25_PDU_UNCONFIRMED_LENGTH_BYTES; i++) {
-            m_data[i] = buffer[i];                                                       // Payload Data
-        }
     }
-    else if (m_fmt == PDU_FMT_AMBT) {
-        // ignore AMBT this is handled else where
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP) || (m_fmt == PDU_FMT_AMBT)) {
+        // decode 3/4 rate Trellis
+        try {
+            m_confirmed = false;
+            bool valid = m_trellis.decode12(data, buffer);
+            if (!valid) {
+                return false;
+            }
+
+            // Utils::dump(1U, "PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+            for (uint32_t i = 0U; i < P25_PDU_UNCONFIRMED_LENGTH_BYTES; i++) {
+                m_data[i] = buffer[i];                                                       // Payload Data
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, decoding excepted with input data", data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+            return false;
+        }
     }
     else {
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
@@ -186,7 +197,7 @@ void DataBlock::encode(uint8_t* data)
 
         m_trellis.encode34(buffer, data);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed)) {
+    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
@@ -195,9 +206,6 @@ void DataBlock::encode(uint8_t* data)
         // Utils::dump(1U, "PDU Unconfirmed Data Block", buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
         m_trellis.encode12(buffer, data);
-    }
-    else if (m_fmt == PDU_FMT_AMBT) {
-        // ignore AMBT this is handled else where
     }
     else {
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);

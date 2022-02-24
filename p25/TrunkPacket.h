@@ -27,6 +27,8 @@
 #define __P25_TRUNK_PACKET_H__
 
 #include "Defines.h"
+#include "p25/data/DataHeader.h"
+#include "p25/data/DataBlock.h"
 #include "p25/lc/TSBK.h"
 #include "p25/lc/TDULC.h"
 #include "p25/Control.h"
@@ -64,6 +66,9 @@ namespace p25
         bool process(uint8_t* data, uint32_t len, bool blockData = false);
         /// <summary>Process a data frame from the network.</summary>
         bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+
+        /// <summary>Helper used to process AMBTs from PDU data.</summary>
+        bool processMBT(data::DataHeader dataHeader, data::DataBlock* blocks);
 
         /// <summary>Helper to write P25 adjacent site information to the network.</summary>
         void writeAdjSSNetwork();

@@ -177,12 +177,115 @@ TSBK& TSBK::operator=(const TSBK& data)
 }
 
 /// <summary>
+/// Decode a alternate trunking signalling block.
+/// </summary>
+/// <param name="dataHeader"></param>
+/// <param name="block"></param>
+/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+bool TSBK::decodeMBT(const data::DataHeader dataHeader, data::DataBlock block)
+{
+    // get the raw block data
+    uint8_t pduBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    bool ret = block.decode(pduBlock, dataHeader);
+    if (!ret) {
+        m_decodedMBT = false;
+        LogError(LOG_P25, "TSBK::decode(), failed to decode PDU data block");
+        return false;
+    }
+
+    m_lco = dataHeader.getAMBTOpcode();                                             // LCO
+    m_lastBlock = true;
+    m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
+
+    ulong64_t tsbkValue = 0U;
+
+    if (dataHeader.getFormat() == PDU_FMT_AMBT) {
+        // combine bytes into rs value
+        tsbkValue = dataHeader.getAMBTField8();
+        tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
+        tsbkValue = (tsbkValue << 8) + pduBlock[0U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[1U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[2U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[3U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[4U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[5U];
+    } else {
+        // combine bytes into rs value
+        tsbkValue = pduBlock[0U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[1U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[2U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[3U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[4U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[5U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[6U];
+        tsbkValue = (tsbkValue << 8) + pduBlock[7U];
+    }
+
+    // Motorola P25 vendor opcodes
+    if (m_mfId == P25_MFG_MOT) {
+        switch (m_lco) {
+        case TSBK_IOSP_GRP_VCH:
+        case TSBK_IOSP_UU_VCH:
+        case TSBK_IOSP_UU_ANS:
+        case TSBK_IOSP_TELE_INT_ANS:
+        case TSBK_IOSP_STS_UPDT:
+        case TSBK_IOSP_STS_Q:
+        case TSBK_IOSP_MSG_UPDT:
+        case TSBK_IOSP_CALL_ALRT:
+        case TSBK_IOSP_ACK_RSP:
+        case TSBK_IOSP_GRP_AFF:
+        case TSBK_IOSP_U_REG:
+        case TSBK_ISP_CAN_SRV_REQ:
+        case TSBK_ISP_GRP_AFF_Q_RSP:
+        case TSBK_OSP_DENY_RSP:
+        case TSBK_OSP_QUE_RSP:
+        case TSBK_ISP_U_DEREG_REQ:
+        case TSBK_OSP_U_DEREG_ACK:
+        case TSBK_ISP_LOC_REG_REQ:
+            m_mfId = P25_MFG_STANDARD;
+            break;
+        default:
+            LogError(LOG_P25, "TSBK::decodeMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            break;
+        }
+
+        if (m_mfId == P25_MFG_MOT) {
+            return true;
+        }
+        else {
+            m_mfId = dataHeader.getMFId();
+        }
+    }
+
+    // standard P25 reference opcodes
+    switch (m_lco) {
+    case TSBK_IOSP_GRP_AFF:
+        m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
+        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    default:
+        LogError(LOG_P25, "TSBK::decodeMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        break;
+    }
+
+    m_decodedMBT = true;
+    return true;
+}
+
+/// <summary>
 /// Decode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool TSBK::decode(const uint8_t* data)
 {
+    if (!m_decodedMBT) {
+        m_decodedMBT = false;
+        return true;
+    }
+
     assert(data != NULL);
 
     // deinterleave
@@ -1002,6 +1105,7 @@ TSBK::TSBK(SiteData siteData) :
     m_sndcpAutoAccess(true),
     m_sndcpReqAccess(false),
     m_sndcpDAC(1U),
+    m_decodedMBT(false),
     m_siteCallsign(NULL)
 {
     m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];

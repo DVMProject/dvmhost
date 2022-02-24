@@ -34,6 +34,7 @@
 #include "Utils.h"
 
 using namespace p25;
+using namespace p25::data;
 
 #include <cassert>
 #include <cstdio>
@@ -189,7 +190,10 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool blockData)
 
         m_p25->m_queue.clear();
 
-        resetRF();
+        // special case to avoid resetting the TSBK state and handle MBTs (this is a horrible hack)
+        if (len != 1U && !blockData) {
+            resetRF();
+        }
         resetNet();
         
         bool ret = m_rfTSBK.decode(data + 2U);
@@ -748,6 +752,29 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
     }
 
     return true;
+}
+
+/// <summary>
+/// Helper used to process AMBTs from PDU data.
+/// </summary>
+/// <param name="dataHeader"></param>
+/// <param name="dataBlock"></param>
+bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
+{
+    uint8_t data[1U];
+    ::memset(data, 0x00U, 1U);
+
+    bool ret = true;
+    for (uint32_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
+        bool decodeRet = m_rfTSBK.decodeMBT(dataHeader, blocks[i]);
+        if (decodeRet) {
+            process(data, 0U, true);
+        } else {
+            ret = false;
+        }
+    }
+
+    return ret;
 }
 
 /// <summary>

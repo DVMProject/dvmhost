@@ -310,11 +310,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                     }
 
                     for (uint32_t i = 0; i < blocksToFollow; i++) {
-                        uint8_t data[P25_TSBK_FEC_LENGTH_BYTES + 2U];
-                        ::memset(data, 0x00U, P25_TSBK_FEC_LENGTH_BYTES + 2U);
-
-                        uint32_t len = m_rfData[i].getData(data + 2U);
-                        m_p25->m_trunk->process(data, len, true);
+                        m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
                     }
                 }
                 break;
