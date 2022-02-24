@@ -188,6 +188,10 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
     m_lastBlock = true;
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
 
+    if (dataHeader.getOutbound()) {
+        LogWarning(LOG_P25, "TSBK::decodeMBT(), MBT is an outbound MBT?, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+    }
+
     ulong64_t tsbkValue = 0U;
 
     if (dataHeader.getFormat() == PDU_FMT_AMBT) {
@@ -250,10 +254,54 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
 
     // standard P25 reference opcodes
     switch (m_lco) {
+    case TSBK_IOSP_STS_UPDT:
+        m_statusValue = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                     // Message Value
+        m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];             // Target Radio Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_IOSP_MSG_UPDT:
+        m_messageValue = (uint32_t)((tsbkValue >> 48) & 0xFFFFU);                   // Message Value
+        m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];             // Target Radio Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_IOSP_CALL_ALRT:
+        m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
+        m_dstId = (uint32_t)((tsbkValue >> 8) & 0xFFFFFFU);                         // Target Radio Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_IOSP_ACK_RSP:
+        m_aivFlag = false;
+        m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
+        m_netId = (uint32_t)((tsbkValue >> 36) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 24) & 0xFFFU);                           // System ID
+        m_dstId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Target Radio Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
     case TSBK_IOSP_GRP_AFF:
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_ISP_CAN_SRV_REQ:
+        m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Additional Info. Flag
+        m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                           // Service Type
+        m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Reason
+        m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                            // System ID
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFU) << 16 +                          // Target Radio Address
+            (block[6U] << 8) + (block[7U]));
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_IOSP_EXT_FNCT:
+        m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
+        m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];  // Extended Function
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     default:
