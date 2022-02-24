@@ -179,7 +179,7 @@ void DataHeader::encode(uint8_t* data)
         header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
 
         header[8U] = (m_sync ? 0x80U : 0x00U) +                                 // Re-synchronize Flag
-            ((m_n << 4) && 0x07U) +                                             // Packet Sequence No.
+            ((m_n << 4) & 0x07U) +                                              // Packet Sequence No.
             (m_seqNo & 0x0F);                                                   // Fragment Sequence No.
 
         header[9U] = m_headerOffset & 0x3FU;                                    // Data Header Offset
