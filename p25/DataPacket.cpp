@@ -304,6 +304,11 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                 break;
                 case PDU_SAP_TRUNK_CTRL:
                 {
+                    if (m_verbose) {
+                        LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (AMBT Trunking Packet), lco = $%02X, blocksToFollow = %u", 
+                            m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
+                    }
+
                     for (uint32_t i = 0; i < blocksToFollow; i++) {
                         uint8_t data[P25_TSBK_FEC_LENGTH_BYTES + 2U];
                         ::memset(data, 0x00U, P25_TSBK_FEC_LENGTH_BYTES + 2U);
