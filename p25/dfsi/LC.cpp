@@ -689,7 +689,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 }
 
 /// <summary>
-/// Decode a logical link data unit 2.
+/// Decode a TSBK.
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if decoded, otherwise false.</returns>
