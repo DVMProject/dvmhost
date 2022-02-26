@@ -80,7 +80,7 @@ namespace p25
             /// <summary>Decode a TSBK.</summary>
             bool decodeTSBK(const uint8_t* data);
             /// <summary>Encode a TSBK.</summary>
-            void encodeTSBK(uint8_t* data, const uint8_t* tsbk);
+            void encodeTSBK(uint8_t* data);
 
         public:
             /** Common Data */
@@ -109,6 +109,9 @@ namespace p25
             __PROPERTY(p25::data::LowSpeedData, lsd, LSD);
 
         private:
+            /** Encryption data */
+            uint8_t* m_mi;
+
             /// <summary>Decode start record data.</summary>
             bool decodeStart(const uint8_t* data);
             /// <summary>Encode start record data.</summary>

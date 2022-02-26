@@ -103,6 +103,7 @@ namespace p25
     const uint32_t  P25_PDU_FEC_LENGTH_BITS = P25_PDU_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
 
     const uint32_t  P25_MI_LENGTH_BYTES = 9U;
+    const uint32_t  P25_RAW_IMBE_LENGTH_BYTES = 11U;
 
     const uint32_t  P25_SS0_START = 70U;
     const uint32_t  P25_SS1_START = 71U;

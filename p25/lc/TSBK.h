@@ -81,9 +81,9 @@ namespace p25
             bool decodeMBT(const data::DataHeader dataHeader, const uint8_t* block);
 
             /// <summary>Decode a trunking signalling block.</summary>
-            bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data, bool rawTSBK = false);
             /// <summary>Encode a trunking signalling block.</summary>
-            void encode(uint8_t* data, bool singleBlock);
+            void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
 
             /// <summary>Sets the flag to skip vendor opcode processing.</summary>
             void setVendorSkip(bool skip);

@@ -729,6 +729,18 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 
                 m_netLastLDU1 = control;
 
+                if (m_p25->m_netState == RS_NET_IDLE) {
+                    // are we interrupting a running CC?
+                    if (m_p25->m_ccRunning) {
+                        g_interruptP25Control = true;
+                    }
+
+                    // single-channel trunking or voice on control support?
+                    if (m_p25->m_control && m_p25->m_voiceOnControl) {
+                        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+                    }
+                }
+
                 checkNet_LDU2(control, lsd);
                 if (m_p25->m_netState != RS_NET_IDLE) {
                     writeNet_LDU1(control, lsd);
@@ -779,17 +791,9 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 count += 16U;
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
-                    // are we interrupting a running CC?
-                    if (m_p25->m_ccRunning) {
-                        g_interruptP25Control = true;
+                    if (!m_p25->m_voiceOnControl) {
+                        m_p25->m_modem->clearP25Data();
                     }
-
-                    // single-channel trunking or voice on control support?
-                    if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
-                    }
-
-                    m_p25->m_modem->clearP25Data();
                     m_p25->m_queue.clear();
                     
                     resetRF();

@@ -294,7 +294,7 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
         m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Reason
         m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                            // System ID
-        m_dstId = (uint32_t)(((tsbkValue) & 0xFFU) << 16 +                          // Target Radio Address
+        m_dstId = (uint32_t)((((tsbkValue) & 0xFFU) << 16) +                        // Target Radio Address
             (block[6U] << 8) + (block[7U]));
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
@@ -316,43 +316,60 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
 /// Decode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="rawTSBK"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool TSBK::decode(const uint8_t* data)
+bool TSBK::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != NULL);
 
-    // deinterleave
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
-    uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
-    P25Utils::decode(data, raw, 114U, 318U);
-
-    // decode 1/2 rate Trellis & check CRC-CCITT 16
-    try {
-        bool ret = m_trellis.decode12(raw, tsbk);
+    if (rawTSBK) {
+        ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
+        
+        bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
-            LogError(LOG_P25, "TSBK::decode(), failed to decode Trellis 1/2 rate coding");
-        }
-
-        if (ret) {
-            ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
-            if (!ret) {
-                if (m_warnCRC) {
-                    LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
-                    ret = true; // ignore CRC error
-                }
-                else {
-                    LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
-                }
+            if (m_warnCRC) {
+                LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                ret = true; // ignore CRC error
+            }
+            else {
+                LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
             }
         }
+    }
+    else {
+        // deinterleave
+        uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
+        P25Utils::decode(data, raw, 114U, 318U);
 
-        if (!ret)
+        // decode 1/2 rate Trellis & check CRC-CCITT 16
+        try {
+            bool ret = m_trellis.decode12(raw, tsbk);
+            if (!ret) {
+                LogError(LOG_P25, "TSBK::decode(), failed to decode Trellis 1/2 rate coding");
+            }
+
+            if (ret) {
+                ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+                if (!ret) {
+                    if (m_warnCRC) {
+                        LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                        ret = true; // ignore CRC error
+                    }
+                    else {
+                        LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                    }
+                }
+            }
+
+            if (!ret)
+                return false;
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
             return false;
-    }
-    catch (...) {
-        Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
-        return false;
-    }
+        }
+    } 
 
     if (m_verbose) {
         Utils::dump(2U, "Decoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
@@ -574,7 +591,9 @@ bool TSBK::decode(const uint8_t* data)
 /// Encode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
-void TSBK::encode(uint8_t * data, bool singleBlock)
+/// <param name="rawTSBK"></param>
+/// <param name="noTrellis"></param>
+void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
 {
     assert(data != NULL);
 
@@ -1040,15 +1059,20 @@ void TSBK::encode(uint8_t * data, bool singleBlock)
     // encode 1/2 rate Trellis
     m_trellis.encode12(tsbk, raw);
 
-    // is this a single block TSBK?
-    if (singleBlock) {
+    // are we encoding a raw TSBK?
+    if (rawTSBK) {
+        if (noTrellis) {
+            ::memcpy(data, tsbk, P25_TSBK_LENGTH_BYTES);
+        }
+        else {
+            ::memcpy(data, raw, P25_TSBK_FEC_LENGTH_BYTES);
+        }
+    }
+    else {
         // interleave
         P25Utils::encode(raw, data, 114U, 318U);
 
         // Utils::dump(2U, "TSBK Interleave", data, P25_TSBK_FEC_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
-    }
-    else {
-        ::memcpy(data, raw, P25_TSBK_FEC_LENGTH_BYTES);
     }
 }
 

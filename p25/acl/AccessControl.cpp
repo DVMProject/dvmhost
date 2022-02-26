@@ -65,6 +65,11 @@ bool AccessControl::validateSrcId(uint32_t id)
 {
     // check if RID ACLs are enabled
     if (m_ridLookup->getACL() == false) {
+        RadioId rid = m_ridLookup->find(id);
+        if (!rid.radioDefault() && !rid.radioEnabled()) {
+            return false;
+        }
+
         return true;
     }
 

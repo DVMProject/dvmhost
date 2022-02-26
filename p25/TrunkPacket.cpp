@@ -1530,7 +1530,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool f
 
     // Generate TSBK block
     m_rfTSBK.setLastBlock(true); // always set last block -- this a Single Block TSDU
-    m_rfTSBK.encode(data + 2U, true);
+    m_rfTSBK.encode(data + 2U);
 
     if (m_debug) {
         Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
@@ -1602,7 +1602,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
     if (m_mbfCnt + 1U == TSBK_MBF_CNT) {
         // Generate TSBK block
         m_rfTSBK.setLastBlock(true); // set last block
-        m_rfTSBK.encode(tsbk, false);
+        m_rfTSBK.encode(tsbk, true);
 
         if (m_debug) {
             Utils::dump(1U, "!!! *TSDU MBF Last TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
@@ -1666,7 +1666,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
 
     // Generate TSBK block
     m_rfTSBK.setLastBlock(false); // clear last block
-    m_rfTSBK.encode(tsbk, false);
+    m_rfTSBK.encode(tsbk, true);
 
     if (m_debug) {
         Utils::dump(1U, "!!! *TSDU MBF Block Data", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
@@ -2410,7 +2410,7 @@ void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
 
     // Regenerate TSDU Data
     m_rfTSBK.setLastBlock(true); // always set last block -- this a Single Block TSDU
-    m_rfTSBK.encode(data, true);
+    m_rfTSBK.encode(data);
 
     // Add busy bits
     m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
@@ -2485,7 +2485,7 @@ void TrunkPacket::writeNet_TSDU()
 
     // Regenerate TSDU Data
     m_netTSBK.setLastBlock(true); // always set last block -- this a Single Block TSDU
-    m_netTSBK.encode(buffer + 2U, true);
+    m_netTSBK.encode(buffer + 2U);
 
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
