@@ -83,6 +83,21 @@ LowSpeedData::~LowSpeedData()
 }
 
 /// <summary>
+/// Equals operator.
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+LowSpeedData& LowSpeedData::operator=(const LowSpeedData& data)
+{
+    if (this != &data) {
+        m_lsd1 = data.m_lsd1;
+        m_lsd2 = data.m_lsd2;
+    }
+
+    return *this;
+}
+
+/// <summary>
 /// Decodes embedded low speed data.
 /// </summary>
 /// <param name="data"></param>

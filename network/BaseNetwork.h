@@ -36,6 +36,8 @@
 #include "p25/P25Defines.h"
 #include "dmr/data/Data.h"
 #include "p25/data/LowSpeedData.h"
+#include "p25/dfsi/DFSIDefines.h"
+#include "p25/dfsi/LC.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/TSBK.h"
 #include "p25/lc/TDULC.h"
@@ -82,80 +84,6 @@ namespace network
     // ---------------------------------------------------------------------------
     //  Constants
     // ---------------------------------------------------------------------------
-
-    // P25 V.24 LDU1 Encapsulation Frames
-    const uint8_t LDU1_REC62[] = {  // IMBE Voice 1
-        // ID         RT Md  St/Sp  Type   ICW    RSSI                        IMBE Voice                                                                   Source
-        0x62U, 0x02U, 0x04U, 0x0CU, 0x0BU, 0x1BU, 0x64U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC63[] = {  // IMBE Voice 2
-        // ID  IMBE Voice                                                                          Source
-        0x63U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC64[] = {  // IMBE Voice 3 + Link Control
-        // ID  LCO    MFId   SvcOp         IMBE Voice                                                                   Status
-        0x64U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC65[] = {  // IMBE Voice 4 + Link Control
-        // ID  Destination ID              IMBE Voice                                                                   Status
-        0x65U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC66[] = {  // IMBE Voice 5 + Link Control
-        // ID  Source ID                   IMBE Voice                                                                   Status
-        0x66U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC67[] = {  // IMBE Voice 6 + Link Control
-        // ID                              IMBE Voice                                                                   Status
-        0x67U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC68[] = {  // IMBE Voice 7 + Link Control
-        // ID                              IMBE Voice                                                                   Status
-        0x68U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC69[] = {  // IMBE Voice 8 + Link Control
-        // ID                              IMBE Voice                                                                   Status
-        0x69U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU1_REC6A[] = {  // IMBE Voice 9 + Low Speed Data
-        // ID  LSD           Status IMBE Voice
-        0x6AU, 0x00U, 0x00U, 0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
-
-    // P25 V.24 LDU2 Encapsulation Frames
-    const uint8_t LDU2_REC6B[] = {  // IMBE Voice 10
-        // ID         RT Md  St/Sp  Type   ICW    RSSI                        IMBE Voice
-        0x6BU, 0x02U, 0x04U, 0x0CU, 0x0BU, 0x1BU, 0x64U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
-
-    const uint8_t LDU2_REC6C[] = {  // IMBE Voice 11
-        // ID  IMBE Voice                                                                          Status
-        0x6CU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC6D[] = {  // IMBE Voice 12 + Encryption Message Indicator
-        // ID  Encryption MI               IMBE Voice                                                                   Status
-        0x6DU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC6E[] = {  // IMBE Voice 13 + Encryption Message Indicator
-        // ID  Encryption MI               IMBE Voice                                                                   Status
-        0x6EU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC6F[] = {  // IMBE Voice 14 + Encryption Message Indicator
-        // ID  Encryption MI               IMBE Voice                                                                   Status
-        0x6FU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC70[] = {  // IMBE Voice 15 + Encryption Algorithm & Key ID
-        // ID  AlgId  KID    KID           IMBE Voice                                                                   Status
-        0x70U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC71[] = {  // IMBE Voice 16 + Encryption Sync
-        // ID  Encryption Sync             IMBE Voice                                                                   Status
-        0x71U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC72[] = {  // IMBE Voice 17 + Encryption Sync
-        // ID  Encryption Sync             IMBE Voice                                                                   Status
-        0x72U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x02U };
-
-    const uint8_t LDU2_REC73[] = {  // IMBE Voice 18 + Low Speed Data
-        // ID  LSD           Status IMBE Voice
-        0x73U, 0x00U, 0x00U, 0x02U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
 
     const uint32_t DATA_PACKET_LENGTH = 8192U;
     const uint32_t DMR_PACKET_SIZE = 55U;

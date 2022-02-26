@@ -44,7 +44,6 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
-/// <param name="siteData"></param>
 LC::LC() :
     m_rtModeFlag(P25_DFSI_RT_ENABLED),
     m_startStopFlag(P25_DFSI_START_FLAG),
@@ -59,6 +58,15 @@ LC::LC() :
 {
     m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+}
+
+/// <summary>
+/// Initializes a new instance of the LC class.
+/// </summary>
+LC::LC(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd) : LC()
+{
+    m_control = control;
+    m_lsd = lsd;
 }
 
 /// <summary>
@@ -759,9 +767,9 @@ void LC::encodeStart(uint8_t* data)
     ::memset(rawFrame, 0x00U, P25_DFSI_START_LENGTH_BYTES);
 
     rawFrame[0U] = 0x02U;
-    rawFrame[1U] = m_rtModeFlag;                                                         // RT Mode Flag
-    rawFrame[2U] = m_startStopFlag;                                                      // Start/Stop Flag
-    rawFrame[3U] = m_typeFlag;                                                           // Type flag
+    rawFrame[1U] = m_rtModeFlag;                                                    // RT Mode Flag
+    rawFrame[2U] = m_startStopFlag;                                                 // Start/Stop Flag
+    rawFrame[3U] = m_typeFlag;                                                      // Type flag
 
     ::memcpy(data, rawFrame, P25_DFSI_START_LENGTH_BYTES);
 }

@@ -46,6 +46,8 @@ namespace p25
         public:
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC();
+            /// <summary>Initializes a new instance of the LC class.</summary>
+            LC(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
             /// <summary>Finalizes a instance of the LC class.</summary>
             ~LC();
 

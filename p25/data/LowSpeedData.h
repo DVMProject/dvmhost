@@ -48,6 +48,9 @@ namespace p25
             /// <summary>Finalizes a new instance of the LowSpeedData class.</summary>
             ~LowSpeedData();
 
+            /// <summary>Equals operator.</summary>
+            LowSpeedData& operator=(const LowSpeedData& data);
+
             /// <summary>Decodes embedded low speed data.</summary>
             void process(uint8_t* data);
             /// <summary>Encode embedded low speed data.</summary>

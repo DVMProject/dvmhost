@@ -554,10 +554,7 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
 
     assert(data != NULL);
 
-    uint8_t serviceOptions =
-        (control.getEmergency() ? 0x80U : 0x00U) +
-        (control.getEncrypted() ? 0x40U : 0x00U) +
-        (control.getPriority() & 0x07U);
+    p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
@@ -584,71 +581,51 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     buffer[22U] = p25::P25_DUID_LDU1;                                               // DUID
 
     uint32_t count = 24U;
-    uint8_t tempBuf[22U];
+    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
-    // The '62' record
-    ::memcpy(tempBuf, LDU1_REC62, 22U);
-    m_audio.decode(data, tempBuf + 10U, 0U);
-    ::memcpy(buffer + 24U, tempBuf, 22U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE1);
+    m_audio.decode(data, imbe, 0U);
+    dfsiLC.encodeLDU1(buffer + 24U, imbe);
     count += 22U;
 
-    // The '63' record
-    ::memcpy(tempBuf, LDU1_REC63, 14U);
-    m_audio.decode(data, tempBuf + 1U, 1U);
-    ::memcpy(buffer + 46U, tempBuf, 14U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE2);
+    m_audio.decode(data, imbe, 1U);
+    dfsiLC.encodeLDU1(buffer + 46U, imbe);
     count += 14U;
 
-    // The '64' record
-    ::memcpy(tempBuf, LDU1_REC64, 17U);
-    tempBuf[1U] = control.getLCO();
-    tempBuf[2U] = control.getMFId();
-    tempBuf[3U] = serviceOptions;
-    m_audio.decode(data, tempBuf + 5U, 2U);
-    ::memcpy(buffer + 60U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE3);
+    m_audio.decode(data, imbe, 2U);
+    dfsiLC.encodeLDU1(buffer + 60U, imbe);
     count += 17U;
 
-    // The '65' record
-    ::memcpy(tempBuf, LDU1_REC65, 17U);
-    tempBuf[1U] = (dstId >> 16) & 0xFFU;
-    tempBuf[2U] = (dstId >> 8) & 0xFFU;
-    tempBuf[3U] = (dstId >> 0) & 0xFFU;
-    m_audio.decode(data, tempBuf + 5U, 3U);
-    ::memcpy(buffer + 77U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE4);
+    m_audio.decode(data, imbe, 3U);
+    dfsiLC.encodeLDU1(buffer + 77U, imbe);
     count += 17U;
 
-    // The '66' record
-    ::memcpy(tempBuf, LDU1_REC66, 17U);
-    tempBuf[1U] = (srcId >> 16) & 0xFFU;
-    tempBuf[2U] = (srcId >> 8) & 0xFFU;
-    tempBuf[3U] = (srcId >> 0) & 0xFFU;
-    m_audio.decode(data, tempBuf + 5U, 4U);
-    ::memcpy(buffer + 94U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE5);
+    m_audio.decode(data, imbe, 4U);
+    dfsiLC.encodeLDU1(buffer + 94U, imbe);
     count += 17U;
 
-    // The '67' record
-    ::memcpy(tempBuf, LDU1_REC67, 17U);
-    m_audio.decode(data, tempBuf + 5U, 5U);
-    ::memcpy(buffer + 111U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE6);
+    m_audio.decode(data, imbe, 5U);
+    dfsiLC.encodeLDU1(buffer + 111U, imbe);
     count += 17U;
 
-    // The '68' record
-    ::memcpy(tempBuf, LDU1_REC68, 17U);
-    m_audio.decode(data, tempBuf + 5U, 6U);
-    ::memcpy(buffer + 128U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE7);
+    m_audio.decode(data, imbe, 6U);
+    dfsiLC.encodeLDU1(buffer + 128U, imbe);
     count += 17U;
 
-    // The '69' record
-    ::memcpy(tempBuf, LDU1_REC69, 17U);
-    m_audio.decode(data, tempBuf + 5U, 7U);
-    ::memcpy(buffer + 145U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE8);
+    m_audio.decode(data, imbe, 7U);
+    dfsiLC.encodeLDU1(buffer + 145U, imbe);
     count += 17U;
 
-    // The '6A' record
-    ::memcpy(tempBuf, LDU1_REC6A, 16U);
-    tempBuf[1U] = lsd.getLSD1();
-    tempBuf[2U] = lsd.getLSD2();
-    m_audio.decode(data, tempBuf + 4U, 8U);
-    ::memcpy(buffer + 162U, tempBuf, 16U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE9);
+    m_audio.decode(data, imbe, 8U);
+    dfsiLC.encodeLDU1(buffer + 162U, imbe);
     count += 16U;
 
     buffer[23U] = count;
@@ -678,6 +655,8 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
 
     assert(data != NULL);
 
+    p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
+
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
@@ -703,81 +682,51 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     buffer[22U] = p25::P25_DUID_LDU2;                                               // DUID
 
     uint32_t count = 24U;
-    uint8_t tempBuf[22U];
+    uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
-    // The '6B' record
-    ::memcpy(tempBuf, LDU2_REC6B, 22U);
-    m_audio.decode(data, tempBuf + 10U, 0U);
-    ::memcpy(buffer + 24U, tempBuf, 22U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE10);
+    m_audio.decode(data, imbe, 0U);
+    dfsiLC.encodeLDU2(buffer + 24U, imbe);
     count += 22U;
 
-    // The '6C' record
-    ::memcpy(tempBuf, LDU2_REC6C, 14U);
-    m_audio.decode(data, tempBuf + 1U, 1U);
-    ::memcpy(buffer + 46U, tempBuf, 14U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE11);
+    m_audio.decode(data, imbe, 1U);
+    dfsiLC.encodeLDU2(buffer + 46U, imbe);
     count += 14U;
 
-    // generate MI data
-    uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-    control.getMI(mi);
-
-    // Utils::dump(1U, "LDU2 Control MI", mi, p25::P25_MI_LENGTH_BYTES);
-
-    // The '6D' record
-    ::memcpy(tempBuf, LDU2_REC6D, 17U);
-    tempBuf[1U] = mi[0U];
-    tempBuf[2U] = mi[1U];
-    tempBuf[3U] = mi[2U];
-    m_audio.decode(data, tempBuf + 5U, 2U);
-    ::memcpy(buffer + 60U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE12);
+    m_audio.decode(data, imbe, 2U);
+    dfsiLC.encodeLDU2(buffer + 60U, imbe);
     count += 17U;
 
-    // The '6E' record
-    ::memcpy(tempBuf, LDU2_REC6E, 17U);
-    tempBuf[1U] = mi[3U];
-    tempBuf[2U] = mi[4U];
-    tempBuf[3U] = mi[5U];
-    m_audio.decode(data, tempBuf + 5U, 3U);
-    ::memcpy(buffer + 77U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE13);
+    m_audio.decode(data, imbe, 3U);
+    dfsiLC.encodeLDU2(buffer + 77U, imbe);
     count += 17U;
 
-    // The '6F' record
-    ::memcpy(tempBuf, LDU2_REC6F, 17U);
-    tempBuf[1U] = mi[6U];
-    tempBuf[2U] = mi[7U];
-    tempBuf[3U] = mi[8U];
-    m_audio.decode(data, tempBuf + 5U, 4U);
-    ::memcpy(buffer + 94U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE14);
+    m_audio.decode(data, imbe, 4U);
+    dfsiLC.encodeLDU2(buffer + 94U, imbe);
     count += 17U;
 
-    // The '70' record
-    ::memcpy(tempBuf, LDU2_REC70, 17U);
-    tempBuf[1U] = control.getAlgId();
-    uint32_t kid = control.getKId();
-    tempBuf[2U] = (kid >> 8) & 0xFFU;
-    tempBuf[3U] = (kid >> 0) & 0xFFU;
-    m_audio.decode(data, tempBuf + 5U, 5U);
-    ::memcpy(buffer + 111U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE15);
+    m_audio.decode(data, imbe, 5U);
+    dfsiLC.encodeLDU2(buffer + 111U, imbe);
     count += 17U;
 
-    // The '71' record
-    ::memcpy(tempBuf, LDU2_REC71, 17U);
-    m_audio.decode(data, tempBuf + 5U, 6U);
-    ::memcpy(buffer + 128U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE16);
+    m_audio.decode(data, imbe, 6U);
+    dfsiLC.encodeLDU2(buffer + 128U, imbe);
     count += 17U;
 
-    // The '72' record
-    ::memcpy(tempBuf, LDU2_REC72, 17U);
-    m_audio.decode(data, tempBuf + 5U, 7U);
-    ::memcpy(buffer + 145U, tempBuf, 17U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE17);
+    m_audio.decode(data, imbe, 7U);
+    dfsiLC.encodeLDU2(buffer + 145U, imbe);
     count += 17U;
 
-    // The '73' record
-    ::memcpy(tempBuf, LDU2_REC73, 16U);
-    tempBuf[1U] = lsd.getLSD1();
-    tempBuf[2U] = lsd.getLSD2();
-    m_audio.decode(data, tempBuf + 4U, 8U);
-    ::memcpy(buffer + 162U, tempBuf, 16U);
+    dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE18);
+    m_audio.decode(data, imbe, 8U);
+    dfsiLC.encodeLDU2(buffer + 162U, imbe);
     count += 16U;
 
     buffer[23U] = count;
