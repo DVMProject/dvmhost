@@ -61,12 +61,21 @@ LC::LC() :
 }
 
 /// <summary>
+/// Initializes a copy instance of the LC class.
+/// </summary>
+/// <param name="data"></param>
+LC::LC(const LC& data) : LC()
+{
+    copy(data);
+}
+
+/// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
-LC::LC(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd) : LC()
+LC::LC(const lc::LC& control, const data::LowSpeedData& lsd) : LC()
 {
-    m_control = control;
-    m_lsd = lsd;
+    m_control = lc::LC(control);
+    m_lsd = data::LowSpeedData(lsd);
 }
 
 /// <summary>
@@ -85,25 +94,7 @@ LC::~LC()
 LC& LC::operator=(const LC& data)
 {
     if (this != &data) {
-        m_frameType = data.m_frameType;
-        m_rtModeFlag = data.m_rtModeFlag;
-        m_startStopFlag = data.m_startStopFlag;
-        m_typeFlag = data.m_typeFlag;
-        m_icwFlag = data.m_icwFlag;
-
-        m_rssi = data.m_rssi;
-        m_source = data.m_source;
-
-        m_control = data.m_control;
-        m_tsbk = data.m_tsbk;
-        m_lsd = data.m_lsd;
-
-        delete[] m_mi;
-
-        uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
-
-        m_mi = mi;
+        copy(data);
     }
 
     return *this;
@@ -251,8 +242,8 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
     {
         case P25_DFSI_LDU1_VOICE1:
             {
-                m_control = p25::lc::LC();
-                m_lsd = p25::data::LowSpeedData();
+                m_control = lc::LC();
+                m_lsd = data::LowSpeedData();
 
                 decodeStart(data + 1U);                                             // Start Record
                 m_icwFlag = data[5U];                                               // ICW Flag
@@ -482,7 +473,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE10:
             {
                 ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-                m_lsd = p25::data::LowSpeedData();
+                m_lsd = data::LowSpeedData();
 
                 decodeStart(data + 1U);                                             // Start Record
                 m_icwFlag = data[5U];                                               // ICW Flag
@@ -568,7 +559,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
     assert(imbe != NULL);
 
     // generate MI data
-    uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+    uint8_t mi[P25_MI_LENGTH_BYTES];
     m_control.getMI(mi);
 
     // determine the LDU2 DFSI frame length, its variable
@@ -739,6 +730,33 @@ void LC::encodeTSBK(uint8_t* data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void LC::copy(const LC& data)
+{
+    m_frameType = data.m_frameType;
+    m_rtModeFlag = data.m_rtModeFlag;
+    m_startStopFlag = data.m_startStopFlag;
+    m_typeFlag = data.m_typeFlag;
+    m_icwFlag = data.m_icwFlag;
+
+    m_rssi = data.m_rssi;
+    m_source = data.m_source;
+
+    m_control = lc::LC(data.m_control);
+    m_tsbk = lc::TSBK(data.m_tsbk);
+    m_lsd = data.m_lsd;
+
+    delete[] m_mi;
+
+    uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
+    ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
+
+    m_mi = mi;
+}
+
 /// <summary>
 /// Decode start record data.
 /// </summary>

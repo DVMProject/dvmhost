@@ -42,6 +42,15 @@ using namespace p25;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
+/// Initializes a copy instance of the TSBK class.
+/// </summary>
+/// <param name="data"></param>
+TSBK::TSBK(const TSBK& data) : TSBK()
+{
+    copy(data);
+}
+
+/// <summary>
 /// Initializes a new instance of the TSBK class.
 /// </summary>
 /// <param name="siteData"></param>
@@ -112,65 +121,7 @@ TSBK::~TSBK()
 TSBK& TSBK::operator=(const TSBK& data)
 {
     if (this != &data) {
-        m_verbose = data.m_verbose;
-        m_warnCRC = data.m_warnCRC;
-        m_protect = data.m_protect;
-        m_lco = data.m_lco;
-        m_mfId = data.m_mfId;
-
-        m_srcId = data.m_srcId;
-        m_dstId = data.m_dstId;
-
-        m_lastBlock = data.m_lastBlock;
-        m_aivFlag = data.m_aivFlag;
-        m_extendedAddrFlag = data.m_extendedAddrFlag;
-
-        m_service = data.m_service;
-        m_response = data.m_response;
-
-        m_netId = data.m_netId;
-        m_sysId = data.m_sysId;
-
-        m_grpVchNo = data.m_grpVchNo;
-
-        m_messageValue = data.m_messageValue;
-        m_statusValue = data.m_statusValue;
-
-        m_extendedFunction = data.m_extendedFunction;
-
-        m_adjCFVA = data.m_adjCFVA;
-        m_adjRfssId = data.m_adjRfssId;
-        m_adjSiteId = data.m_adjSiteId;
-        m_adjChannelId = data.m_adjChannelId;
-        m_adjChannelNo = data.m_adjChannelNo;
-        m_adjServiceClass = data.m_adjServiceClass;
-
-        m_sccbChannelId1 = data.m_sccbChannelId1;
-        m_sccbChannelId2 = data.m_sccbChannelId2;
-        m_sccbChannelNo = data.m_sccbChannelNo;
-
-        m_lra = data.m_lra;
-
-        m_patchSuperGroupId = data.m_patchSuperGroupId;
-        m_patchGroup1Id = data.m_patchGroup1Id;
-        m_patchGroup2Id = data.m_patchGroup2Id;
-        m_patchGroup3Id = data.m_patchGroup3Id;
-
-        m_emergency = data.m_emergency;
-        m_encrypted = data.m_encrypted;
-        m_priority = data.m_priority;
-
-        m_group = data.m_group;
-
-        m_siteData = data.m_siteData;
-        m_siteIdenEntry = data.m_siteIdenEntry;
-
-        delete[] m_siteCallsign;
-
-        uint8_t* callsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
-        ::memcpy(callsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
-
-        m_siteCallsign = callsign;
+        copy(data);
     }
 
     return *this;
@@ -1113,6 +1064,7 @@ TSBK::TSBK() : TSBK(SiteData())
 {
     /* stub */
 }
+
 /// <summary>
 /// Initializes a new instance of the TSBK class.
 /// </summary>
@@ -1168,4 +1120,71 @@ TSBK::TSBK(SiteData siteData) :
     m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
     ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
     setCallsign(siteData.callsign());
+}
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void TSBK::copy(const TSBK& data)
+{
+    m_verbose = data.m_verbose;
+    m_warnCRC = data.m_warnCRC;
+    m_protect = data.m_protect;
+    m_lco = data.m_lco;
+    m_mfId = data.m_mfId;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_lastBlock = data.m_lastBlock;
+    m_aivFlag = data.m_aivFlag;
+    m_extendedAddrFlag = data.m_extendedAddrFlag;
+
+    m_service = data.m_service;
+    m_response = data.m_response;
+
+    m_netId = data.m_netId;
+    m_sysId = data.m_sysId;
+
+    m_grpVchNo = data.m_grpVchNo;
+
+    m_messageValue = data.m_messageValue;
+    m_statusValue = data.m_statusValue;
+
+    m_extendedFunction = data.m_extendedFunction;
+
+    m_adjCFVA = data.m_adjCFVA;
+    m_adjRfssId = data.m_adjRfssId;
+    m_adjSiteId = data.m_adjSiteId;
+    m_adjChannelId = data.m_adjChannelId;
+    m_adjChannelNo = data.m_adjChannelNo;
+    m_adjServiceClass = data.m_adjServiceClass;
+
+    m_sccbChannelId1 = data.m_sccbChannelId1;
+    m_sccbChannelId2 = data.m_sccbChannelId2;
+    m_sccbChannelNo = data.m_sccbChannelNo;
+
+    m_lra = data.m_lra;
+
+    m_patchSuperGroupId = data.m_patchSuperGroupId;
+    m_patchGroup1Id = data.m_patchGroup1Id;
+    m_patchGroup2Id = data.m_patchGroup2Id;
+    m_patchGroup3Id = data.m_patchGroup3Id;
+
+    m_emergency = data.m_emergency;
+    m_encrypted = data.m_encrypted;
+    m_priority = data.m_priority;
+
+    m_group = data.m_group;
+
+    m_siteData = data.m_siteData;
+    m_siteIdenEntry = data.m_siteIdenEntry;
+
+    delete[] m_siteCallsign;
+
+    uint8_t* callsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
+    ::memcpy(callsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
+
+    m_siteCallsign = callsign;
 }

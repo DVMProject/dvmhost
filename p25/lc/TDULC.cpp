@@ -43,6 +43,15 @@ using namespace p25;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
+/// Initializes a copy instance of the TDULC class.
+/// </summary>
+/// <param name="data"></param>
+TDULC::TDULC(const TDULC& data) : TDULC()
+{
+    copy(data);
+}
+
+/// <summary>
 /// Initializes a new instance of the TDULC class.
 /// </summary>
 /// <param name="siteData"></param>
@@ -106,33 +115,7 @@ TDULC::~TDULC()
 TDULC& TDULC::operator=(const TDULC& data)
 {
     if (this != &data) {
-        m_verbose = data.m_verbose;
-        m_protect = data.m_protect;
-        m_lco = data.m_lco;
-        m_mfId = data.m_mfId;
-
-        m_srcId = data.m_srcId;
-        m_dstId = data.m_dstId;
-
-        m_grpVchNo = data.m_grpVchNo;
-
-        m_adjCFVA = data.m_adjCFVA;
-        m_adjRfssId = data.m_adjRfssId;
-        m_adjSiteId = data.m_adjSiteId;
-        m_adjChannelId = data.m_adjChannelId;
-        m_adjChannelNo = data.m_adjChannelNo;
-        m_adjServiceClass = data.m_adjServiceClass;
-
-        m_emergency = data.m_emergency;
-        m_encrypted = data.m_encrypted;
-        m_priority = data.m_priority;
-
-        m_group = data.m_group;
-
-        m_callTimer = data.m_callTimer;
-
-        m_siteData = data.m_siteData;
-        m_siteIdenEntry = data.m_siteIdenEntry;
+        copy(data);
     }
 
     return *this;
@@ -218,6 +201,15 @@ void TDULC::encode(uint8_t * data)
 /// <summary>
 /// Initializes a new instance of the TDULC class.
 /// </summary>
+/// <remarks>This should never be used.</remarks>
+TDULC::TDULC() : TDULC(SiteData())
+{
+    /* stub */
+}
+
+/// <summary>
+/// Initializes a new instance of the TDULC class.
+/// </summary>
 /// <param name="siteData"></param>
 TDULC::TDULC(SiteData siteData) :
     m_verbose(false),
@@ -243,6 +235,41 @@ TDULC::TDULC(SiteData siteData) :
     m_callTimer(0U)
 {
     m_grpVchNo = m_siteData.channelNo();
+}
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void TDULC::copy(const TDULC& data)
+{
+    m_verbose = data.m_verbose;
+    m_protect = data.m_protect;
+    m_lco = data.m_lco;
+    m_mfId = data.m_mfId;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_grpVchNo = data.m_grpVchNo;
+
+    m_adjCFVA = data.m_adjCFVA;
+    m_adjRfssId = data.m_adjRfssId;
+    m_adjSiteId = data.m_adjSiteId;
+    m_adjChannelId = data.m_adjChannelId;
+    m_adjChannelNo = data.m_adjChannelNo;
+    m_adjServiceClass = data.m_adjServiceClass;
+
+    m_emergency = data.m_emergency;
+    m_encrypted = data.m_encrypted;
+    m_priority = data.m_priority;
+
+    m_group = data.m_group;
+
+    m_callTimer = data.m_callTimer;
+
+    m_siteData = data.m_siteData;
+    m_siteIdenEntry = data.m_siteIdenEntry;
 }
 
 /// <summary>

@@ -33,6 +33,7 @@
 
 #include "Defines.h"
 #include "p25/data/LowSpeedData.h"
+#include "p25/dfsi/LC.h"
 #include "p25/lc/LC.h"
 #include "p25/Control.h"
 #include "p25/Audio.h"
@@ -96,6 +97,7 @@ namespace p25
         data::LowSpeedData m_rfLSD;
         data::LowSpeedData m_netLSD;
 
+        dfsi::LC m_dfsiLC;
         uint8_t* m_netLDU1;
         uint8_t* m_netLDU2;
 
@@ -128,13 +130,13 @@ namespace p25
         /// <summary>Helper to write a network P25 TDU packet.</summary>
         void writeNet_TDU();
         /// <summary>Helper to check for an unflushed LDU1 packet.</summary>
-        void checkNet_LDU1(const lc::LC& control, const data::LowSpeedData& lsd);
+        void checkNet_LDU1();
         /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-        void writeNet_LDU1(const lc::LC& control, const data::LowSpeedData& lsd);
+        void writeNet_LDU1();
         /// <summary>Helper to check for an unflushed LDU2 packet.</summary>
-        void checkNet_LDU2(const lc::LC& control, const data::LowSpeedData& lsd);
+        void checkNet_LDU2();
         /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-        void writeNet_LDU2(const lc::LC& control, const data::LowSpeedData& lsd);
+        void writeNet_LDU2();
 
         /// <summary>Helper to insert IMBE silence frames for missing audio.</summary>
         void insertMissingAudio(uint8_t* data);

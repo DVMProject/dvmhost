@@ -63,6 +63,8 @@ namespace p25
 
         class HOST_SW_API TSBK {
         public:
+            /// <summary>Initializes a copy instance of the TSBK class.</summary>
+            TSBK(const TSBK& data);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(SiteData siteData, lookups::IdenTable entry);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
@@ -219,6 +221,9 @@ namespace p25
 
             /** Local Site data */
             uint8_t* m_siteCallsign;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const TSBK& data);
         };
     } // namespace lc
 } // namespace p25

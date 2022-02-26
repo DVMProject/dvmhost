@@ -46,6 +46,8 @@ namespace p25
         public:
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC();
+            /// <summary>Initializes a copy instance of the LC class.</summary>
+            LC(const LC& data);
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
             /// <summary>Finalizes a instance of the LC class.</summary>
@@ -104,15 +106,18 @@ namespace p25
             __PROPERTY(uint8_t, source, Source);
 
             /// <summary>Link control data.</summary>
-            __PROPERTY(p25::lc::LC, control, Control);
+            __PROPERTY_PLAIN(p25::lc::LC, control, control);
             /// <summary>TSBK.</summary>
-            __PROPERTY(p25::lc::TSBK, tsbk, TSBK);
+            __PROPERTY_PLAIN(p25::lc::TSBK, tsbk, tsbk);
             /// <summary>Low speed data.</summary>
-            __PROPERTY(p25::data::LowSpeedData, lsd, LSD);
+            __PROPERTY_PLAIN(p25::data::LowSpeedData, lsd, lsd);
 
         private:
             /** Encryption data */
             uint8_t* m_mi;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const LC& data);
 
             /// <summary>Decode start record data.</summary>
             bool decodeStart(const uint8_t* data);

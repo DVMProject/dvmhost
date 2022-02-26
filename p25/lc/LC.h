@@ -59,6 +59,8 @@ namespace p25
         public:
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC();
+            /// <summary>Initializes a copy instance of the LC class.</summary>
+            LC(const LC& data);
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC(SiteData siteData);
             /// <summary>Finalizes a instance of the LC class.</summary>
@@ -136,6 +138,9 @@ namespace p25
 
             /** Encryption data */
             uint8_t* m_mi;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const LC& data);
 
             /// <summary>Decode link control.</summary>
             bool decodeLC(const uint8_t* rs);

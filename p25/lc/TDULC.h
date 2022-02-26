@@ -53,6 +53,8 @@ namespace p25
 
         class HOST_SW_API TDULC {
         public:
+            /// <summary>Initializes a copy instance of the TDULC class.</summary>
+            TDULC(const TDULC& data);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
             TDULC(SiteData siteData, lookups::IdenTable entry);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
@@ -124,6 +126,8 @@ namespace p25
 
         private:
             /// <summary>Initializes a new instance of the TDULC class.</summary>
+            TDULC();
+            /// <summary>Initializes a new instance of the TDULC class.</summary>
             TDULC(SiteData siteData);
 
             friend class LC;
@@ -131,6 +135,9 @@ namespace p25
             edac::RS634717 m_rs;
 
             uint32_t m_callTimer;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const TDULC& data);
 
             /// <summary>Decode link control.</summary>
             bool decodeLC(const uint8_t* rs);

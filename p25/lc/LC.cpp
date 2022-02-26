@@ -77,6 +77,15 @@ LC::LC() :
 }
 
 /// <summary>
+/// Initializes a copy instance of the LC class.
+/// </summary>
+/// <param name="data"></param>
+LC::LC(const LC& data) : LC()
+{
+    copy(data);
+}
+
+/// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
 /// <param name="siteData"></param>
@@ -91,7 +100,10 @@ LC::LC(SiteData siteData) : LC()
 /// </summary>
 LC::~LC()
 {
-    delete[] m_mi;
+    if (m_mi != NULL) {
+        delete[] m_mi;
+        m_mi = NULL;
+    }
 }
 
 /// <summary>
@@ -102,53 +114,7 @@ LC::~LC()
 LC& LC::operator=(const LC& data)
 {
     if (this != &data) {
-        m_protect = data.m_protect;
-        m_mfId = data.m_mfId;
-
-        m_srcId = data.m_srcId;
-        m_dstId = data.m_dstId;
-
-        m_grpVchNo = data.m_grpVchNo;
-
-        m_emergency = data.m_emergency;
-        m_encrypted = data.m_encrypted;
-        m_priority = data.m_priority;
-
-        m_group = data.m_group;
-
-        m_callTimer = data.m_callTimer;
-
-        m_algId = data.m_algId;
-        if (m_algId != P25_ALGO_UNENCRYPT) {
-            delete[] m_mi;
-
-            uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
-            ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
-
-            m_mi = mi;
-
-            m_kId = data.m_kId;
-            if (!m_encrypted) {
-                m_encryptOverride = true;
-                m_encrypted = true;
-            }
-        }
-        else {
-            delete[] m_mi;
-
-            uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
-            ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-
-            m_mi = mi;
-
-            m_kId = 0x0000U;
-            if (m_encrypted) {
-                m_encryptOverride = true;
-                m_encrypted = false;
-            }
-        }
-
-        m_siteData = data.m_siteData;
+        copy(data);
     }
 
     return *this;
@@ -504,6 +470,61 @@ void LC::getMI(uint8_t* mi) const
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void LC::copy(const LC& data)
+{
+    m_protect = data.m_protect;
+    m_mfId = data.m_mfId;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_grpVchNo = data.m_grpVchNo;
+
+    m_emergency = data.m_emergency;
+    m_encrypted = data.m_encrypted;
+    m_priority = data.m_priority;
+
+    m_group = data.m_group;
+
+    m_callTimer = data.m_callTimer;
+
+    m_algId = data.m_algId;
+    if (m_algId != P25_ALGO_UNENCRYPT) {
+        delete[] m_mi;
+
+        uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
+        ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
+
+        m_mi = mi;
+
+        m_kId = data.m_kId;
+        if (!m_encrypted) {
+            m_encryptOverride = true;
+            m_encrypted = true;
+        }
+    }
+    else {
+        delete[] m_mi;
+
+        uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
+        ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
+
+        m_mi = mi;
+
+        m_kId = 0x0000U;
+        if (m_encrypted) {
+            m_encryptOverride = true;
+            m_encrypted = false;
+        }
+    }
+
+    m_siteData = data.m_siteData;
+}
+
 /// <summary>
 /// Decode link control.
 /// </summary>
