@@ -540,7 +540,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
             break;
         default:
             {
-                LogError(LOG_P25, "LC::decodeLDU1(), invalid frametype, frameType = $%02X", m_frameType);
+                LogError(LOG_P25, "LC::decodeLDU2(), invalid frametype, frameType = $%02X", m_frameType);
                 return false;
             }
             break;
@@ -596,7 +596,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
         default:
             {
-                LogError(LOG_P25, "LC::encodeLDU1(), invalid frametype, frameType = $%02X", m_frameType);
+                LogError(LOG_P25, "LC::encodeLDU2(), invalid frametype, frameType = $%02X", m_frameType);
                 return;
             }
             break;
