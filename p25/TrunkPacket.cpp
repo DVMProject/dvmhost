@@ -628,12 +628,38 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
                         }
+
+                        // workaround for single channel dedicated sites to pass network traffic on a lone VC
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_voiceChTable.size() == 1U) {
+                            m_rfTSBK.setSrcId(srcId);
+                            m_rfTSBK.setDstId(dstId);
+
+                            m_rfTSBK.setEmergency(m_netTSBK.getEmergency());
+                            m_rfTSBK.setEncrypted(m_netTSBK.getEncrypted());
+                            m_rfTSBK.setPriority(m_netTSBK.getPriority());
+
+                            writeRF_TSDU_Grant(true);
+                        }
+
                         return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
                                 m_netTSBK.getEmergency(), m_netTSBK.getEncrypted(), m_netTSBK.getPriority(), m_netTSBK.getGrpVchNo(), srcId, dstId);
                         }
+
+                        // workaround for single channel dedicated sites to pass network traffic on a lone VC
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_voiceChTable.size() == 1U) {
+                            m_rfTSBK.setSrcId(srcId);
+                            m_rfTSBK.setDstId(dstId);
+
+                            m_rfTSBK.setEmergency(m_netTSBK.getEmergency());
+                            m_rfTSBK.setEncrypted(m_netTSBK.getEncrypted());
+                            m_rfTSBK.setPriority(m_netTSBK.getPriority());
+
+                            writeRF_TSDU_Grant(false);
+                        }
+
                         return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_ANS:
                         if (m_netTSBK.getResponse() > 0U) {
