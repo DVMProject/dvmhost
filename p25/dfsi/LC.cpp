@@ -122,15 +122,19 @@ void LC::encodeNID(uint8_t* data)
 {
     assert(data != NULL);
 
-    uint8_t rawFrame[P25_DFSI_SS_FRAME_LENGTH_BYTES];
-    ::memset(rawFrame, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES);
+    uint8_t dfsiFrame[P25_DFSI_SS_FRAME_LENGTH_BYTES];
+    ::memset(dfsiFrame, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES);
 
-    rawFrame[0U] = m_frameType;                                                     // Frame Type
+    dfsiFrame[0U] = m_frameType;                                                    // Frame Type
 
     // encode start record
-    encodeStart(rawFrame + 1U);
+    encodeStart(dfsiFrame + 1U);
 
-    ::memcpy(data, rawFrame, P25_DFSI_SS_FRAME_LENGTH_BYTES);
+#if DEBUG_P25_DFSI
+    Utils::dump(2U, "LC::encodeNID(), DFSI Start/Stop Frame", dfsiFrame, P25_DFSI_SS_FRAME_LENGTH_BYTES);
+#endif
+
+    ::memcpy(data, dfsiFrame, P25_DFSI_SS_FRAME_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -167,18 +171,22 @@ void LC::encodeVHDR1(uint8_t* data)
 {
     assert(data != NULL);
 
-    uint8_t rawFrame[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES];
-    ::memset(rawFrame, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
+    uint8_t dfsiFrame[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES];
+    ::memset(dfsiFrame, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
 
-    rawFrame[0U] = P25_DFSI_VHDR1;                                                  // Frame Type
+    dfsiFrame[0U] = P25_DFSI_VHDR1;                                                 // Frame Type
 
     // encode start record
-    encodeStart(rawFrame + 1U);
+    encodeStart(dfsiFrame + 1U);
 
-    rawFrame[5U] = m_icwFlag;                                                       // ICW Flag
-    rawFrame[6U] = m_rssi;                                                          // RSSI
+    dfsiFrame[5U] = m_icwFlag;                                                      // ICW Flag
+    dfsiFrame[6U] = m_rssi;                                                         // RSSI
 
-    ::memcpy(data, rawFrame, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
+#if DEBUG_P25_DFSI
+    Utils::dump(2U, "LC::encodeVHDR1(), DFSI Voice Header 1 Frame", dfsiFrame, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
+#endif
+
+    ::memcpy(data, dfsiFrame, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -220,6 +228,10 @@ void LC::encodeVHDR2(uint8_t* data)
     dfsiFrame[1U] = (dstId >> 16) & 0xFFU;                                          // Talkgroup Address
     dfsiFrame[2U] = (dstId >> 8) & 0xFFU;
     dfsiFrame[3U] = (dstId >> 0) & 0xFFU;
+
+#if DEBUG_P25_DFSI
+    Utils::dump(2U, "LC::encodeVHDR2(), DFSI Voice Header 2 Frame", dfsiFrame, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
+#endif
 
     ::memcpy(data, dfsiFrame, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
 }
@@ -451,6 +463,11 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
+#if DEBUG_P25_DFSI
+    LogDebug(LOG_P25, "LC::encodeLDU1(), frameType = $%02X", m_frameType);
+    Utils::dump(2U, "LC::encodeLDU1(), DFSI LDU1 Frame", dfsiFrame, frameLength);
+#endif
+
     ::memcpy(data, dfsiFrame, frameLength);
 }
 
@@ -560,6 +577,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 
     // generate MI data
     uint8_t mi[P25_MI_LENGTH_BYTES];
+    ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
     m_control.getMI(mi);
 
     // determine the LDU2 DFSI frame length, its variable
@@ -684,6 +702,11 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
+#if DEBUG_P25_DFSI
+    LogDebug(LOG_P25, "LC::encodeLDU2(), frameType = $%02X", m_frameType);
+    Utils::dump(2U, "LC::encodeLDU2(), DFSI LDU2 Frame", dfsiFrame, frameLength);
+#endif
+
     ::memcpy(data, dfsiFrame, frameLength);
 }
 
@@ -716,6 +739,8 @@ bool LC::decodeTSBK(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeTSBK(uint8_t* data)
 {
+    assert(data != NULL);
+
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     m_tsbk.encode(tsbk, true, true);
 
@@ -725,6 +750,12 @@ void LC::encodeTSBK(uint8_t* data)
     dfsiFrame[0U] = P25_DFSI_TSBK;                                                  // Frame Type
     encodeStart(dfsiFrame + 1U);                                                    // Start Record
     ::memcpy(dfsiFrame + 9U, tsbk, P25_TSBK_LENGTH_BYTES);                          // Raw TSBK + CRC
+
+#if DEBUG_P25_DFSI
+    Utils::dump(2U, "LC::encodeTSBK(), DFSI TSBK Frame", dfsiFrame, P25_TSBK_LENGTH_BYTES);
+#endif
+
+    ::memcpy(data, dfsiFrame, P25_DFSI_TSBK_FRAME_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------

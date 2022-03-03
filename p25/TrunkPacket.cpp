@@ -1559,6 +1559,10 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool f
     m_rfTSBK.encode(data + 2U);
 
     if (m_debug) {
+        LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
+            m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
+
         Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
     }
 
@@ -1631,6 +1635,10 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         m_rfTSBK.encode(tsbk, true);
 
         if (m_debug) {
+            LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+                m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
+                m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
+
             Utils::dump(1U, "!!! *TSDU MBF Last TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
         }
 
@@ -1646,6 +1654,10 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
             Utils::getBitRange(m_rfMBF, tsbk, offset, P25_TSBK_FEC_LENGTH_BITS);
 
             if (m_debug) {
+                LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+                    m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
+                    m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
+
                 Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
             }
                 
@@ -1695,6 +1707,10 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
     m_rfTSBK.encode(tsbk, true);
 
     if (m_debug) {
+        LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
+            m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
+
         Utils::dump(1U, "!!! *TSDU MBF Block Data", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
     }
 

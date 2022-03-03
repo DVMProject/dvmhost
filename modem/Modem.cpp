@@ -286,9 +286,9 @@ void Modem::setRXLevel(float rxLevel)
     buffer[2U] = CMD_SET_RXLEVEL;
 
     buffer[3U] = (uint8_t)(m_rxLevel * 2.55F + 0.5F);
-
-    // Utils::dump(1U, "Written", buffer, 16U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::setRXLevel(), Written", buffer, 16U);
+#endif
     int ret = write(buffer, 16U);
     if (ret != 16)
         return;
@@ -307,9 +307,9 @@ void Modem::setRXLevel(float rxLevel)
             }
         }
     } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
-
-    // Utils::dump(1U, "Response", m_buffer, m_length);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::setRXLevel(), Response", m_buffer, m_length);
+#endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
         LogError(LOG_MODEM, "NAK to the SET_RXLEVEL command from the modem");
     }
@@ -955,9 +955,9 @@ void Modem::clearP25Data()
         buffer[0U] = DVM_FRAME_START;
         buffer[1U] = 3U;
         buffer[2U] = CMD_P25_CLEAR;
-
-        // Utils::dump(1U, "Written", buffer, 3U);
-
+#if DEBUG_MODEM
+        Utils::dump(1U, "Modem::clearP25Data(), Written", buffer, 3U);
+#endif
         write(buffer, 3U);
     }
 }
@@ -1139,9 +1139,9 @@ bool Modem::writeDMRStart(bool tx)
     buffer[1U] = 4U;
     buffer[2U] = CMD_DMR_START;
     buffer[3U] = tx ? 0x01U : 0x00U;
-
-    // Utils::dump(1U, "Written", buffer, 4U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::writeDMRStart(), Written", buffer, 4U);
+#endif
     return write(buffer, 4U) == 4;
 }
 
@@ -1168,9 +1168,9 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
     buffer[9U] = lc[6U];
     buffer[10U] = lc[7U];
     buffer[11U] = lc[8U];
-
-    // Utils::dump(1U, "Written", buffer, 12U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::writeDMRShortLC(), Written", buffer, 12U);
+#endif
     return write(buffer, 12U) == 12;
 }
 
@@ -1192,9 +1192,9 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
     buffer[1U] = 4U;
     buffer[2U] = CMD_DMR_ABORT;
     buffer[3U] = slotNo;
-
-    // Utils::dump(1U, "Written", buffer, 4U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::writeDMRAbort(), Written", buffer, 4U);
+#endif
     return write(buffer, 4U) == 4;
 }
 
@@ -1231,9 +1231,9 @@ bool Modem::setState(DVM_STATE state)
     buffer[1U] = 4U;
     buffer[2U] = CMD_SET_MODE;
     buffer[3U] = state;
-
-    // Utils::dump(1U, "Written", buffer, 4U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::setState(), Written", buffer, 4U);
+#endif
     return write(buffer, 4U) == 4;
 }
 
@@ -1283,10 +1283,7 @@ bool Modem::getFirmwareVersion()
         buffer[1U] = 3U;
         buffer[2U] = CMD_GET_VERSION;
 
-        // Utils::dump(1U, "F/W Ver Written", buffer, 3U);
-
         int ret = write(buffer, 3U);
-        // LogMessage(LOG_MODEM, "Asking for F/W");
         if (ret != 3)
             return false;
 
@@ -1345,8 +1342,6 @@ bool Modem::getStatus()
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 3U;
     buffer[2U] = CMD_GET_STATUS;
-
-    // Utils::dump(1U, "Written", buffer, 3U);
 
     return write(buffer, 3U) == 3;
 }
@@ -1413,9 +1408,9 @@ bool Modem::writeConfig()
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
     buffer[14U] = m_p25CorrCount;
-
-    // Utils::dump(1U, "Written", buffer, 17U);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::writeConfig(), Written", buffer, 17U);
+#endif
     int ret = write(buffer, 17U);
     if (ret != 17)
         return false;
@@ -1434,9 +1429,9 @@ bool Modem::writeConfig()
             }
         }
     } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
-
-    // Utils::dump(1U, "Response", m_buffer, m_length);
-
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::writeConfig(), Response", m_buffer, m_length);
+#endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
         LogError(LOG_MODEM, "NAK to the SET_CONFIG command from the modem, reason = %u", resp);
         return false;
@@ -1483,8 +1478,6 @@ bool Modem::writeSymbolAdjust()
             }
         }
     } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
-
-    // Utils::dump(1U, "Response", m_buffer, m_length);
 
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
         LogError(LOG_MODEM, "NAK to the SET_SYMLVLADJ command from the modem");

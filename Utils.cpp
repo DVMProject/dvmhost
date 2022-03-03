@@ -87,7 +87,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 
         uint32_t bytes = (length > 16U) ? 16U : length;
 
-        for (unsigned i = 0U; i < bytes; i++) {
+        for (uint32_t i = 0U; i < bytes; i++) {
             char temp[10U];
             ::sprintf(temp, "%02X ", data[offset + i]);
             output += temp;
@@ -98,7 +98,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 
         output += "   *";
 
-        for (unsigned i = 0U; i < bytes; i++) {
+        for (uint32_t i = 0U; i < bytes; i++) {
             uint8_t c = data[offset + i];
 
             if (::isprint(c))
@@ -177,7 +177,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
         microslotHeader += temp;
     }
 
-    ::Log(2U, "SYMBOLS", "MCR: %s", microslotHeader.c_str());
+    ::Log(2U, "SYMBOLS", "MCR:  %s", microslotHeader.c_str());
 
     uint32_t bufLen = length;
     while (bufLen > 0U) {

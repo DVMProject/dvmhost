@@ -828,6 +828,10 @@ void Control::writeRF_Nulls()
     data[0U] = TAG_EOT;
     data[1U] = 0x00U;
 
+    if (m_debug) {
+        LogDebug(LOG_P25, "writeRF_Nulls()");
+    }
+
     writeQueueRF(data, NULLS_LENGTH_BYTES + 2U);
 }
 

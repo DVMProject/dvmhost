@@ -137,7 +137,9 @@ bool LC::decodeHDU(const uint8_t* data)
     // decode Golay (18,6,8) FEC
     decodeHDUGolay(raw, rs);
 
-    // Utils::dump(2U, "HDU RS", rs, P25_HDU_LENGTH_BYTES);
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::decodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
+#endif
 
     // decode RS (36,20,17) FEC
     try {
@@ -152,7 +154,9 @@ bool LC::decodeHDU(const uint8_t* data)
         return false;
     }
 
-    // Utils::dump(2U, "HDU", rs, P25_HDU_LENGTH_BYTES);
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::decodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
+#endif
 
     m_mfId = rs[9U];                                                                // Mfg Id.
     m_algId = rs[10U];                                                              // Algorithm ID
@@ -212,12 +216,16 @@ void LC::encodeHDU(uint8_t * data)
     rs[13U] = (m_dstId >> 8) & 0xFFU;                                               // Talkgroup Address
     rs[14U] = (m_dstId >> 0) & 0xFFU;                                               // ...
 
-    // Utils::dump(2U, "HDU", rs, P25_HDU_LENGTH_BYTES);
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::encodeHDU(), HDU", rs, P25_HDU_LENGTH_BYTES);
+#endif
 
     // encode RS (36,20,17) FEC
     m_rs.encode362017(rs);
 
-    // Utils::dump(2U, "HDU RS", rs, P25_HDU_LENGTH_BYTES);
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::encodeHDU(), HDU RS", rs, P25_HDU_LENGTH_BYTES);
+#endif
 
     uint8_t raw[P25_HDU_LENGTH_BYTES + 1U];
     ::memset(raw, 0x00U, P25_HDU_LENGTH_BYTES + 1U);
@@ -228,7 +236,9 @@ void LC::encodeHDU(uint8_t * data)
     // interleave
     P25Utils::encode(raw, data, 114U, 780U);
 
-    // Utils::dump(2U, "HDU Interleave", data, P25_HDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#if DEBUG_P25_HDU
+    Utils::dump(2U, "LC::encodeHDU(), HDU Interleave", data, P25_HDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
 }
 
 /// <summary>
@@ -262,7 +272,9 @@ bool LC::decodeLDU1(const uint8_t * data)
     P25Utils::decode(data, raw, 1356U, 1398U);
     decodeLDUHamming(raw, rs + 15U);
 
-    // Utils::dump(2U, "LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU1
+    Utils::dump(2U, "LC::decodeLDU1(), LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // decode RS (24,12,13) FEC
     try {
@@ -277,7 +289,9 @@ bool LC::decodeLDU1(const uint8_t * data)
         return false;
     }
 
-    // Utils::dump(2U, "LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU1
+    Utils::dump(2U, "LC::decodeLDU1(), LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     return decodeLC(rs);
 }
@@ -295,12 +309,16 @@ void LC::encodeLDU1(uint8_t * data)
 
     encodeLC(rs);
 
-    // Utils::dump(2U, "LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU1
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
 
-    // Utils::dump(2U, "LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU1
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data
     uint8_t raw[5U];
@@ -322,7 +340,9 @@ void LC::encodeLDU1(uint8_t * data)
     encodeLDUHamming(raw, rs + 15U);
     P25Utils::encode(raw, data, 1356U, 1398U);
 
-    // Utils::dump(2U, "LDU1 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#if DEBUG_P25_LDU1
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
 }
 
 /// <summary>
@@ -356,7 +376,9 @@ bool LC::decodeLDU2(const uint8_t * data)
     P25Utils::decode(data, raw, 1356U, 1398U);
     decodeLDUHamming(raw, rs + 15U);
 
-    // Utils::dump(2U, "LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU2
+    Utils::dump(2U, "LC::decodeLDU2(), LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // decode RS (24,16,9) FEC
     try {
@@ -371,7 +393,9 @@ bool LC::decodeLDU2(const uint8_t * data)
         return false;
     }
 
-    // Utils::dump(2U, "LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU2
+    Utils::dump(2U, "LC::decodeLDU2(), LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     m_algId = rs[9U];                                                               // Algorithm ID
     if (m_algId != P25_ALGO_UNENCRYPT) {
@@ -418,12 +442,16 @@ void LC::encodeLDU2(uint8_t * data)
     rs[10U] = (m_kId >> 8) & 0xFFU;                                                 // Key ID
     rs[11U] = (m_kId >> 0) & 0xFFU;                                                 // ...
 
-    // Utils::dump(2U, "LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#if DEBUG_P25_LDU2
+    Utils::dump(2U, "LC::encodeLDU2(), LDU2 LC", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // encode RS (24,16,9) FEC
     m_rs.encode24169(rs);
-
-    // Utils::dump(2U, "LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+    
+#if DEBUG_P25_LDU2
+    Utils::dump(2U, "LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
+#endif
 
     // encode Hamming (10,6,3) FEC and interleave for LC data
     uint8_t raw[5U];
@@ -445,7 +473,9 @@ void LC::encodeLDU2(uint8_t * data)
     encodeLDUHamming(raw, rs + 15U);
     P25Utils::encode(raw, data, 1356U, 1398U);
 
-    // Utils::dump(2U, "LDU2 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#if DEBUG_P25_LDU2
+    Utils::dump(2U, "LC::encodeLDU2(), LDU2 Interleave", data, P25_LDU_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
 }
 
 /** Encryption data */
@@ -496,10 +526,8 @@ void LC::copy(const LC& data)
     if (m_algId != P25_ALGO_UNENCRYPT) {
         delete[] m_mi;
 
-        uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
-        ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
-
-        m_mi = mi;
+        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
+        ::memcpy(m_mi, data.m_mi, P25_MI_LENGTH_BYTES);
 
         m_kId = data.m_kId;
         if (!m_encrypted) {
@@ -510,10 +538,8 @@ void LC::copy(const LC& data)
     else {
         delete[] m_mi;
 
-        uint8_t* mi = new uint8_t[P25_MI_LENGTH_BYTES];
+        m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
         ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
-
-        m_mi = mi;
 
         m_kId = 0x0000U;
         if (m_encrypted) {

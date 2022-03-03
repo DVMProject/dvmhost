@@ -167,7 +167,9 @@ bool DataHeader::decode(const uint8_t* bytes)
 
     switch (m_DPF) {
     case DPF_UDT:
-        // Utils::dump(1U, "DMR, Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_dataFormat = (m_data[1U] & 0x0FU);                                    // UDT Format
         m_blocks = (m_data[8U] & 0x03U) + 1U;                                   // Blocks To Follow
@@ -178,7 +180,9 @@ bool DataHeader::decode(const uint8_t* bytes)
         break;
 
     case DPF_UNCONFIRMED_DATA:
-        // Utils::dump(1U, "DMR, Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
         m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
@@ -187,7 +191,9 @@ bool DataHeader::decode(const uint8_t* bytes)
         break;
 
     case DPF_CONFIRMED_DATA:
-        // Utils::dump(1U, "DMR, Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_padCount = (m_data[0U] & 0x10U) + (m_data[1U] & 0x0FU);               // Octet Pad Count
         m_F = (m_data[8U] & 0x80U) == 0x80U;                                    // Full Message Flag
@@ -198,7 +204,9 @@ bool DataHeader::decode(const uint8_t* bytes)
         break;
 
     case DPF_RESPONSE:
-        // Utils::dump(1U, "DMR, Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_blocks = m_data[8U] & 0x7FU;                                          // Blocks To Follow
         m_rspClass = (m_data[9U] >> 6) & 0x03U;                                 // Response Class
@@ -207,7 +215,9 @@ bool DataHeader::decode(const uint8_t* bytes)
         break;
 
     case DPF_DEFINED_SHORT:
-        // Utils::dump(1U, "DMR, Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
         m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
@@ -217,7 +227,9 @@ bool DataHeader::decode(const uint8_t* bytes)
         break;
 
     case DPF_DEFINED_RAW:
-        // Utils::dump(1U, "DMR, Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         m_sap = ((m_data[1U] & 0xF0U) >> 4);                                    // Service Access Point
         m_blocks = (m_data[0U] & 0x30U) + (m_data[1U] & 0x0FU);                 // Blocks To Follow
         m_F = (m_data[8U] & 0x01U) == 0x01U;                                    // Full Message Flag
@@ -285,7 +297,9 @@ void DataHeader::encode(uint8_t* bytes) const
         m_data[9U] = (m_SF ? 0x80U : 0x00U) +                                   // Supplemental Flag
             (m_PF ? 0x40U : 0x00U) +                                            // Protect Flag
             (m_UDTO & 0x3F);                                                    // UDT Opcode
-        // Utils::dump(1U, "DMR, Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Unified Data Transport Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     case DPF_UNCONFIRMED_DATA:
@@ -295,7 +309,9 @@ void DataHeader::encode(uint8_t* bytes) const
         m_data[8U] = (m_F ? 0x80U : 0x00U) +                                    // Full Message Flag
             (m_blocks & 0x7FU);                                                 // Blocks To Follow
         m_data[9U] = m_fsn;                                                     // Fragment Sequence Number
-        // Utils::dump(1U, "DMR, Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Unconfirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     case DPF_CONFIRMED_DATA:
@@ -307,7 +323,9 @@ void DataHeader::encode(uint8_t* bytes) const
         m_data[9U] = (m_S ? 0x80U : 0x00U) +                                    // Synchronize Flag
             ((m_Ns & 0x07U) << 4) +                                             // Send Sequence Number
             (m_fsn & 0x0FU);                                                    // Fragment Sequence Number
-        // Utils::dump(1U, "DMR, Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Confirmed Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     case DPF_RESPONSE:
@@ -316,7 +334,9 @@ void DataHeader::encode(uint8_t* bytes) const
         m_data[9U] = ((m_rspClass & 0x03U) << 6) +                              // Response Class
             ((m_rspType & 0x07U) << 3) +                                        // Response Type
             ((m_rspStatus & 0x07U));                                            // Response Status
-        // Utils::dump(1U, "DMR, Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Response Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     case DPF_DEFINED_SHORT:
@@ -327,7 +347,9 @@ void DataHeader::encode(uint8_t* bytes) const
             (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
             ((m_dataFormat & 0xFCU) << 2);                                      // Defined Data Format
         m_data[9U] = m_padCount;                                                // Bit Padding
-        // Utils::dump(1U, "DMR, Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     case DPF_DEFINED_RAW:
@@ -338,7 +360,9 @@ void DataHeader::encode(uint8_t* bytes) const
             (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
             ((m_dstPort & 0x07U) << 2) +                                        // Destination Port
             ((m_srcPort & 0x07U) << 5);                                         // Source Port
-        // Utils::dump(1U, "DMR, Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#if DEBUG_DMR_PDU_DATA
+        Utils::dump(1U, "DMR, DataHeader::decode(), Raw Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
+#endif
         break;
 
     default:

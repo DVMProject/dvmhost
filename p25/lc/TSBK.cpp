@@ -1023,7 +1023,9 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
         // interleave
         P25Utils::encode(raw, data, 114U, 318U);
 
-        // Utils::dump(2U, "TSBK Interleave", data, P25_TSBK_FEC_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#if DEBUG_P25_TSBK
+        Utils::dump(2U, "TSBK::encode(), TSBK Interleave", data, P25_TSBK_FEC_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
     }
 }
 

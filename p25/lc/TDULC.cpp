@@ -138,7 +138,9 @@ bool TDULC::decode(const uint8_t* data)
     // decode Golay (24,12,8) FEC
     edac::Golay24128::decode24128(rs, raw, P25_TDULC_LENGTH_BYTES);
 
-    // Utils::dump(2U, "TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+#if DEBUG_P25_TDULC
+    Utils::dump(2U, "TDULC::decode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+#endif
 
     // decode RS (24,12,13) FEC
     try {
@@ -181,7 +183,9 @@ void TDULC::encode(uint8_t * data)
     // encode RS (24,12,13) FEC
     m_rs.encode241213(rs);
 
-    // Utils::dump(2U, "TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+#if DEBUG_P25_TDULC
+    Utils::dump(2U, "TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
+#endif
 
     uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
     ::memset(raw, 0x00U, P25_TDULC_FEC_LENGTH_BYTES + 1U);
@@ -192,7 +196,9 @@ void TDULC::encode(uint8_t * data)
     // interleave
     P25Utils::encode(raw, data, 114U, 410U);
 
-    // Utils::dump(2U, "TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#if DEBUG_P25_TDULC
+    Utils::dump(2U, "TDULC::encode(), TDULC Interleave", data, P25_TDULC_FRAME_LENGTH_BYTES + P25_PREAMBLE_LENGTH_BYTES);
+#endif
 }
 
 // ---------------------------------------------------------------------------
