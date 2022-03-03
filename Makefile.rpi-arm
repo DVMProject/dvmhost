@@ -1,6 +1,7 @@
 CC      = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
 CXX     = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ 
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
+EXTFLAGS=
 LIBS    = -lpthread
 LDFLAGS = -g
 
@@ -82,10 +83,10 @@ OBJECTS = \
 all:	dvmhost
 
 dvmhost: $(OBJECTS) 
-		$(CXX) $(OBJECTS) $(CFLAGS) $(LIBS) -o dvmhost
+		$(CXX) $(OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o dvmhost
 
 %.o: %.cpp
-		$(CXX) $(CFLAGS) -c -o $@ $<
+		$(CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
 
 clean:
 		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/dfsi/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o modem/port/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o host/setup/*.o
