@@ -96,7 +96,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
             if ((m_serialNo == (header.getBlocksToFollow() - 1) && header.getBlocksToFollow() > 1) ||
                 (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U)) {
-                count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
                 m_lastBlock = true;
             } else {
                 if (header.getBlocksToFollow() <= 1) {
@@ -115,6 +114,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
 
             // if this is extended addressing and the first block decode the SAP and LLId
             if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
+                count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;                
+
                 m_sap = buffer[5U] & 0x3FU;                                              // Service Access Point
                 m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];            // Logical Link ID
 
@@ -294,35 +295,4 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
         LogError(LOG_P25, "unknown FMT value in P25_DUID_PDU, fmt = $%02X", m_fmt);
         return 0U;
     }
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-/// <summary>
-///
-/// </summary>
-/// <param name="buffer"></param>
-uint16_t DataBlock::crc9()
-{
-    assert(m_data != NULL);
-
-    uint16_t crc = 0x00U;
-/*
-    edac::CRC::tmp_bit_cnt = 135U;
-    edac::CRC::crc9(&crc, m_serialNo, 7U);
-    for (uint8_t i = 0; i < P25_PDU_CONFIRMED_DATA_LENGTH_BYTES; i++) {
-        edac::CRC::crc9(&crc, m_data[i], 8U);
-    }
-    edac::CRC::crc9Finish(&crc, 8U);
-
-    crc = ~crc;
-    crc &= 0x01FFU;
-    crc ^= 0x01FFU;
-
-#if DEBUG_P25_PDU_DATA
-    LogDebug(LOG_P25, "DataBlock::crc9(), crc = $%03X", crc);
-#endif
-*/
-    return crc;
 }

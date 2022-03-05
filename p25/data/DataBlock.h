@@ -86,9 +86,6 @@ namespace p25
             uint8_t m_headerSap;
 
             uint8_t* m_data;
-
-            /// <summary></summary>
-            uint16_t crc9();
         };
     } // namespace data
 } // namespace p25

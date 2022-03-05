@@ -368,19 +368,23 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
         uint8_t  crc8[4U];
     };
 
-    crc32 = 0xFFFFFFFFU;
+    uint32_t i = 0;
+    crc32 = 0x00000000U;
 
-    for (uint32_t i = 0U; i < (length - 4U); i++)
-        crc32 = (crc32 << 8) ^ CRC32_TABLE[((crc32 >> 24) ^ in[i]) & 0xFF];
+    for (uint32_t j = (length - 4U); j-- > 0; i++) {
+        uint32_t idx = ((crc32 >> 24) ^ in[i]) & 0xFFU;
+        crc32 = (CRC32_TABLE[idx] ^ (crc32 << 8)) & 0xFFFFFFFFU;
+    }
 
     crc32 = ~crc32;
+    crc32 &= 0xFFFFFFFFU;
 
 #if DEBUG_CRC
     uint32_t inCrc = (in[length - 4U] << 24) | (in[length - 3U] << 16) | (in[length - 2U] << 8) | (in[length - 1U] << 0);
     LogDebug(LOG_HOST, "CRC:checkCRC32(), crc = $%08X, in = $%08X, len = %u", crc32, inCrc, length);
 #endif
 
-    return crc8[0U] == in[length - 4U] && crc8[1U] == in[length - 3U] && crc8[2U] == in[length - 2U] && crc8[3U] == in[length - 1U];
+    return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U] && crc8[2U] == in[length - 3U] && crc8[3U] == in[length - 4U];
 }
 
 /// <summary>
@@ -398,21 +402,25 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
         uint8_t  crc8[4U];
     };
 
-    crc32 = 0xFFFFFFFFU;
+    uint32_t i = 0;
+    crc32 = 0x00000000U;
 
-    for (uint32_t i = 0U; i < (length - 4U); i++)
-        crc32 = (crc32 << 8) ^ CRC32_TABLE[((crc32 >> 24) ^ in[i]) & 0xFF];
+    for (uint32_t j = (length - 4U); j-- > 0; i++) {
+        uint32_t idx = ((crc32 >> 24) ^ in[i]) & 0xFFU;
+        crc32 = (CRC32_TABLE[idx] ^ (crc32 << 8)) & 0xFFFFFFFFU;
+    }
 
     crc32 = ~crc32;
+    crc32 &= 0xFFFFFFFFU;
 
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC:addCRC32(), crc = $%08X, len = %u", crc32, length);
 #endif
 
-    in[length - 4U] = crc8[0U];
-    in[length - 3U] = crc8[1U];
-    in[length - 2U] = crc8[2U];
-    in[length - 1U] = crc8[3U];
+    in[length - 1U] = crc8[0U];
+    in[length - 2U] = crc8[1U];
+    in[length - 3U] = crc8[2U];
+    in[length - 4U] = crc8[3U];
 }
 
 /// <summary>
