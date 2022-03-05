@@ -696,7 +696,7 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     if ((regType != PDU_REG_TYPE_RSP_ACCPT) && (regType != PDU_REG_TYPE_RSP_DENY))
         return;
 
-    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS); // + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
@@ -753,17 +753,17 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
 
     uint8_t pdu[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
 
-    // Add the data
-    uint32_t newBitLength = P25Utils::encode(m_rfPDU, pdu + 2U, bitLength);
-    uint32_t newByteLength = newBitLength / 8U;
-    if ((newBitLength % 8U) > 0U)
-        newByteLength++;
-
     // Regenerate Sync
     Sync::addP25Sync(pdu + 2U);
 
     // Regenerate NID
     m_p25->m_nid.encode(pdu + 2U, P25_DUID_PDU);
+
+    // Add the data
+    uint32_t newBitLength = P25Utils::encode(m_rfPDU, pdu + 2U, 114U, bitLength);
+    uint32_t newByteLength = newBitLength / 8U;
+    if ((newBitLength % 8U) > 0U)
+        newByteLength++;
 
     // Add busy bits
     m_p25->addBusyBits(pdu + 2U, newBitLength, false, true);
@@ -788,7 +788,7 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
     if (ackClass == PDU_ACK_CLASS_ACK && ackType != PDU_ACK_TYPE_ACK)
         return;
 
-    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS); // + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
@@ -812,17 +812,17 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
 
     uint8_t pdu[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
 
-    // Add the data
-    uint32_t newBitLength = P25Utils::encode(m_rfPDU, pdu + 2U, bitLength);
-    uint32_t newByteLength = newBitLength / 8U;
-    if ((newBitLength % 8U) > 0U)
-        newByteLength++;
-
     // Regenerate Sync
     Sync::addP25Sync(pdu + 2U);
 
     // Regenerate NID
     m_p25->m_nid.encode(pdu + 2U, P25_DUID_PDU);
+
+    // Add the data
+    uint32_t newBitLength = P25Utils::encode(m_rfPDU, pdu + 2U, 114U, bitLength);
+    uint32_t newByteLength = newBitLength / 8U;
+    if ((newBitLength % 8U) > 0U)
+        newByteLength++;
 
     // Add busy bits
     m_p25->addBusyBits(pdu + 2U, newBitLength, false, true);

@@ -112,7 +112,7 @@ bool DataRspHeader::decode(const uint8_t* data)
 /// Encodes P25 PDU data response header.
 /// </summary>
 /// <param name="data"></param>
-void DataRspHeader::encode(uint8_t * data)
+void DataRspHeader::encode(uint8_t* data)
 {
     assert(data != NULL);
 
@@ -144,7 +144,7 @@ void DataRspHeader::encode(uint8_t * data)
     edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
-    Utils::dump(1U, "P25, DataRspHeader::encode(), PDU Response Header Data", data, P25_PDU_HEADER_LENGTH_BYTES);
+    Utils::dump(1U, "P25, DataRspHeader::encode(), PDU Response Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
     // encode 1/2 rate Trellis
