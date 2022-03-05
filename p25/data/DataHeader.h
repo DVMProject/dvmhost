@@ -82,16 +82,30 @@ namespace p25
             /// <summary>Logical link ID.</summary>
             __PROPERTY(uint32_t, llId, LLId);
             /// <summary>Flag indicating whether or not this data packet is a full message.</summary>
-            __PROPERTY(bool, fullMessage, FullMessage);
-            /// <summary></summary>
-            __PROPERTY(bool, sync, Sync);
-            /// <summary></summary>
-            __PROPERTY(uint8_t, n, N);
-            /// <summary>Data packet sequence number.</summary>
-            __PROPERTY(uint8_t, seqNo, SeqNo);
+            /// <remarks>When a response header, this represents the extended flag.</summary>
+            __PROPERTY(bool, F, FullMessage);
+            /// <summary>Synchronize Flag.</summary>
+            __PROPERTY(bool, S, Synchronize);
+            /// <summary>Fragment Sequence Number.</summary>
+            __PROPERTY(uint8_t, fsn, FSN);
+            /// <summary>Send Sequence Number.</summary>
+            __PROPERTY(uint8_t, Ns, Ns);
+            /// <summary>Flag indicating whether or not this is the last fragment in a message.</summary>
+            __PROPERTY(bool, lastFragment, LastFragment);
             /// <summary>Offset of the header.</summary>
             __PROPERTY(uint8_t, headerOffset, HeaderOffset);
 
+            /** Response Data */
+            /// <summary>Source Logical link ID.</summary>
+            __PROPERTY(uint32_t, srcLlId, SrcLLId);
+            /// <summary>Response class.</summary>
+            __PROPERTY(uint8_t, rspClass, Class);
+            /// <summary>Response type.</summary>
+            __PROPERTY(uint8_t, rspType, Type);
+            /// <summary>Response status.</summary>
+            __PROPERTY(uint8_t, rspStatus, Status);
+
+            /** AMBT Data */
             /// <summary>Alternate Trunking Block Opcode</summary>
             __PROPERTY(uint8_t, ambtOpcode, AMBTOpcode);
             /// <summary>Alternate Trunking Block Field 8</summary>

@@ -66,7 +66,7 @@ namespace edac
         static uint8_t crc8(const uint8_t* in, uint32_t length);
 
         /// <summary>Generate 9-bit CRC.</summary>
-        static uint16_t crc9(const uint8_t* in, uint32_t bitlen);
+        static uint16_t crc9(const uint8_t* in, uint32_t bitLength);
     };
 } // namespace edac
 

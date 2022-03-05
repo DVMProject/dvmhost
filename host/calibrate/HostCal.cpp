@@ -13,7 +13,7 @@
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
 *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
-*   Copyright (C) 2017-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -1741,9 +1741,10 @@ void HostCal::processP25BER(const uint8_t* buffer)
             Utils::dump(1U, "Unfixable PDU Data", rfPDU + P25_SYNC_LENGTH_BYTES + P25_NID_LENGTH_BYTES, P25_PDU_HEADER_LENGTH_BYTES);
         }
         else {
-            LogMessage(LOG_CAL, P25_PDU_STR ", fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u",
-                dataHeader.getFormat(), dataHeader.getSAP(), dataHeader.getFullMessage(), dataHeader.getBlocksToFollow(), dataHeader.getPadCount(),
-                dataHeader.getN(), dataHeader.getSeqNo());
+            LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
+                dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(), 
+                dataHeader.getBlocksToFollow(), dataHeader.getPadCount(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
+                dataHeader.getHeaderOffset());
         }
 
         delete[] rfPDU;

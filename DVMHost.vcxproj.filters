@@ -338,9 +338,6 @@
     <ClInclude Include="network\BaseNetwork.h">
       <Filter>Header Files\network</Filter>
     </ClInclude>
-    <ClInclude Include="p25\data\DataRspHeader.h">
-      <Filter>Header Files\p25\data</Filter>
-    </ClInclude>
     <ClInclude Include="dmr\SiteData.h">
       <Filter>Header Files\dmr</Filter>
     </ClInclude>
@@ -567,9 +564,6 @@
     </ClCompile>
     <ClCompile Include="network\BaseNetwork.cpp">
       <Filter>Source Files\network</Filter>
-    </ClCompile>
-    <ClCompile Include="p25\data\DataRspHeader.cpp">
-      <Filter>Source Files\p25\data</Filter>
     </ClCompile>
     <ClCompile Include="dmr\ControlPacket.cpp">
       <Filter>Source Files\dmr</Filter>

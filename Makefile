@@ -42,7 +42,6 @@ OBJECTS = \
 		p25/acl/AccessControl.o \
 		p25/data/DataBlock.o \
 		p25/data/DataHeader.o \
-		p25/data/DataRspHeader.o \
 		p25/data/LowSpeedData.o \
 		p25/dfsi/LC.o \
 		p25/edac/Trellis.o \

@@ -34,7 +34,6 @@
 #include "Defines.h"
 #include "p25/data/DataBlock.h"
 #include "p25/data/DataHeader.h"
-#include "p25/data/DataRspHeader.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/lc/LC.h"
 #include "p25/Control.h"
@@ -115,7 +114,9 @@ namespace p25
         void writeNetworkRF(const uint8_t dataType, const uint8_t* data, uint32_t len);
 
         /// <summary>Helper to write a P25 PDU packet.</summary>
-        void writeRF_PDU();
+        void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);
+        /// <summary>Helper to re-write a received P25 PDU packet.</summary>
+        void writeRF_PDU_Buffered();
         /// <summary>Helper to write a PDU registration response.</summary>
         void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr);
         /// <summary>Helper to write a PDU acknowledge response.</summary>

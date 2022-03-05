@@ -449,15 +449,15 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 /// Generate 9-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="bitlen">Length of byte array in bits.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>Calculated 9-bit CRC value.</returns>
-uint16_t CRC::crc9(const uint8_t* in, uint32_t bitlen)
+uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
     uint16_t crc = 0x00U;
 
-    for (uint32_t i = 0; i < bitlen; i++) {
+    for (uint32_t i = 0; i < bitLength; i++) {
         bool b = READ_BIT(in, i);
         if (b) {
             if (i < 7U) {
@@ -473,7 +473,7 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitlen)
     crc ^= 0x1FFU;
 
 #if DEBUG_CRC
-    LogDebug(LOG_HOST, "CRC:crc9(), crc = $%03X, bitlen = %u", crc, bitlen);
+    LogDebug(LOG_HOST, "CRC:crc9(), crc = $%03X, bitlen = %u", crc, bitLength);
 #endif
     
     return crc;

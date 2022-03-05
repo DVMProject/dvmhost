@@ -74,6 +74,7 @@ namespace p25
 
             /// <summary>Flag indicating this is the last block in a sequence of block.</summary>
             __PROPERTY(bool, lastBlock, LastBlock);
+            
             /// <summary>Logical link ID.</summary>
             __PROPERTY(uint32_t, llId, LLId);
             /// <summary>Service access point.</summary>
