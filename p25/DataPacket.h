@@ -96,6 +96,7 @@ namespace p25
         uint8_t* m_netPDU;
 
         uint8_t* m_pduUserData;
+        uint32_t m_pduUserDataLength;
 
         std::unordered_map<uint32_t, ulong64_t> m_fneRegTable;
 

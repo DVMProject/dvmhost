@@ -72,6 +72,8 @@ namespace p25
             /// <summary>Sets the data block serial number.</summary>
             __PROPERTY(uint8_t, serialNo, SerialNo);
 
+            /// <summary>Flag indicating this is the last block in a sequence of block.</summary>
+            __PROPERTY(bool, lastBlock, LastBlock);
             /// <summary>Logical link ID.</summary>
             __PROPERTY(uint32_t, llId, LLId);
             /// <summary>Service access point.</summary>
@@ -86,7 +88,7 @@ namespace p25
             uint8_t* m_data;
 
             /// <summary></summary>
-            uint16_t confirmedCRC9(const uint8_t* buffer);
+            uint16_t crc9();
         };
     } // namespace data
 } // namespace p25

@@ -100,6 +100,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             m_p25->m_rfState = RS_RF_DATA;
 
             ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+            m_pduUserDataLength = 0U;
         }
 
         uint32_t start = m_rfPDUCount * P25_LDU_FRAME_LENGTH_BITS;
@@ -193,6 +194,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             uint32_t bitLength = ((blocksToFollow + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
 
             if (m_rfPDUBits >= bitLength) {
+                // process all blocks in the data stream
                 uint32_t dataOffset = 0U;
                 for (uint32_t i = 0U; i < blocksToFollow; i++) {
                     ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -210,13 +212,23 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                                 m_rfSecondHeader.setSAP(m_rfData[i].getSAP());
                             }
                             else {
-                                LogMessage(LOG_RF, P25_PDU_STR ", block %u, fmt = $%02X",
-                                    (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? m_rfData[i].getSerialNo() : m_rfDataBlockCnt, m_rfData[i].getFormat());
+                                LogMessage(LOG_RF, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u",
+                                    (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? m_rfData[i].getSerialNo() : m_rfDataBlockCnt, m_rfData[i].getFormat(),
+                                    m_rfData[i].getLastBlock());
                             }
                         }
 
                         m_rfData[i].getData(m_pduUserData + dataOffset);
+                        m_pduUserDataLength += (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
                         m_rfDataBlockCnt++;
+
+                        // is this the last block?
+                        if (m_rfData[i].getLastBlock()) {
+                            bool crcRet = edac::CRC::checkCRC32(m_pduUserData, m_pduUserDataLength);
+                            if (!crcRet) {
+                                LogWarning(LOG_RF, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", blocksToFollow, m_pduUserDataLength);
+                            }
+                        }
 
                         writeNetworkRF(P25_DT_DATA, buffer, P25_PDU_FEC_LENGTH_BYTES);
                     }
@@ -540,6 +552,7 @@ DataPacket::DataPacket(Control* p25, network::BaseNetwork* network, bool dumpPDU
     m_netDataOffset(0U),
     m_netPDU(NULL),
     m_pduUserData(NULL),
+    m_pduUserDataLength(0U),
     m_fneRegTable(),
     m_dumpPDUData(dumpPDUData),
     m_repeatPDU(repeatPDU),

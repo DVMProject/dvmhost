@@ -86,7 +86,9 @@ bool DataRspHeader::decode(const uint8_t* data)
         return false;
     }
 
-    // Utils::dump(1U, "PDU Response Header Data", data, P25_PDU_HEADER_LENGTH_BYTES);
+#if DEBUG_P25_PDU_DATA
+    Utils::dump(1U, "P25, DataRspHeader::decode(), PDU Response Header Data", data, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
 
     m_outbound = (header[0U] & 0x20U) == 0x20U;                                 // Inbound/Outbound
 
@@ -140,6 +142,10 @@ void DataRspHeader::encode(uint8_t * data)
 
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
+
+#if DEBUG_P25_PDU_DATA
+    Utils::dump(1U, "P25, DataRspHeader::encode(), PDU Response Header Data", data, P25_PDU_HEADER_LENGTH_BYTES);
+#endif
 
     // encode 1/2 rate Trellis
     m_trellis.encode12(header, data);
