@@ -44,7 +44,6 @@ using namespace p25;
 /// Initializes a new instance of the DataBlock class.
 /// </summary>
 DataBlock::DataBlock() :
-    m_confirmed(false),
     m_serialNo(0U),
     m_lastBlock(false),
     m_llId(0U),
@@ -85,7 +84,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
     if (m_fmt == PDU_FMT_CONFIRMED) {
         // decode 3/4 rate Trellis
         try {
-            m_confirmed = true;
             bool valid = m_trellis.decode34(data, buffer);
             if (!valid) {
                 LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
@@ -145,9 +143,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
         }
     }
     else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP) || (m_fmt == PDU_FMT_AMBT)) {
-        // decode 3/4 rate Trellis
+        // decode 1/2 rate Trellis
         try {
-            m_confirmed = false;
             bool valid = m_trellis.decode12(data, buffer);
             if (!valid) {
                 LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 1/2 rate coding");
@@ -183,7 +180,7 @@ void DataBlock::encode(uint8_t* data)
     assert(data != NULL);
     assert(m_data != NULL);
 
-    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
+    if (m_fmt == PDU_FMT_CONFIRMED) {
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
 
@@ -213,7 +210,7 @@ void DataBlock::encode(uint8_t* data)
 
         m_trellis.encode34(buffer, data);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
+    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
         uint8_t buffer[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
@@ -243,12 +240,6 @@ void DataBlock::setFormat(const uint8_t fmt)
 void DataBlock::setFormat(const DataHeader header)
 {
     m_fmt = header.getFormat();
-    if (m_fmt == PDU_FMT_CONFIRMED) {
-        m_confirmed = true;
-    }
-    else {
-        m_confirmed = false;
-    }
 }
 
 /// <summary>Gets the data format.</summary>
@@ -265,10 +256,10 @@ void DataBlock::setData(const uint8_t* buffer)
     assert(buffer != NULL);
     assert(m_data != NULL);
 
-    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
+    if (m_fmt == PDU_FMT_CONFIRMED) {
         ::memcpy(m_data, buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
+    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
         ::memcpy(m_data, buffer, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
     else {
@@ -283,11 +274,11 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     assert(buffer != NULL);
     assert(m_data != NULL);
 
-    if ((m_fmt == PDU_FMT_CONFIRMED) || (m_fmt == PDU_FMT_RSP && m_confirmed)) {
+    if (m_fmt == PDU_FMT_CONFIRMED) {
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     } 
-    else if ((m_fmt == PDU_FMT_UNCONFIRMED) || (m_fmt == PDU_FMT_RSP && !m_confirmed) || (m_fmt == PDU_FMT_AMBT)) {
+    else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }

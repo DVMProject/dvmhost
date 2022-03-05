@@ -235,7 +235,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                         writeNetworkRF(P25_DT_DATA, buffer, P25_PDU_FEC_LENGTH_BYTES);
                     }
                     else {
-                        if (m_rfData[i].getConfirmed())
+                        if (m_rfData[i].getFormat() == PDU_FMT_CONFIRMED)
                             LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (3/4 rate or CRC)");
                         else
                             LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");
@@ -249,7 +249,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                     dataOffset += (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
                 }
 
-                if (m_dumpPDUData) {
+                if (m_dumpPDUData && m_rfDataBlockCnt > 0U) {
                     Utils::dump(1U, "PDU Packet", m_pduUserData, dataOffset);
                 }
 
@@ -257,90 +257,102 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                     LogWarning(LOG_RF, P25_PDU_STR ", incomplete PDU (%d / %d blocks)", m_rfDataBlockCnt, blocksToFollow);
                 }
 
-                switch (m_rfDataHeader.getSAP()) {
-                case PDU_SAP_REG:
-                {
-                    uint8_t regType = (m_pduUserData[0] >> 4) & 0x0F;
-                    switch (regType) {
-                    case PDU_REG_TYPE_REQ_CNCT:
+                // did we receive a response header?
+                if (m_rfDataHeader.getFormat() == PDU_FMT_RSP) {
+                    if (m_verbose) {
+                        LogMessage(LOG_RF, P25_PDU_STR ", response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X",
+                                m_rfDataHeader.getFormat(), m_rfDataHeader.getResponseClass(), m_rfDataHeader.getResponseType(), m_rfDataHeader.getResponseStatus());
+                    }
+                }
+                else {
+                    // handle standard P25 service access points
+                    switch (m_rfDataHeader.getSAP()) {
+                    case PDU_SAP_REG:
                     {
-                        uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
-                        ulong64_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) +
-                            (m_pduUserData[10U] << 8) + m_pduUserData[11U];
-
-                        if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %u", llId, ipAddr);
-                        }
-
-                        if (!acl::AccessControl::validateSrcId(llId)) {
-                            LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %u", llId, ipAddr);
-                            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
-                        }
-                        else {
-                            if (!hasLLIdFNEReg(llId)) {
-                                // update dynamic FNE registration table entry
-                                m_fneRegTable[llId] = ipAddr;
-                            }
+                        uint8_t regType = (m_pduUserData[0] >> 4) & 0x0F;
+                        switch (regType) {
+                        case PDU_REG_TYPE_REQ_CNCT:
+                        {
+                            uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
+                            ulong64_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) +
+                                (m_pduUserData[10U] << 8) + m_pduUserData[11U];
 
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %u", llId, ipAddr);
+                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %u", llId, ipAddr);
                             }
 
-                            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
+                            writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
+
+                            if (!acl::AccessControl::validateSrcId(llId)) {
+                                LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %u", llId, ipAddr);
+                                writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
+                            }
+                            else {
+                                if (!hasLLIdFNEReg(llId)) {
+                                    // update dynamic FNE registration table entry
+                                    m_fneRegTable[llId] = ipAddr;
+                                }
+
+                                if (m_verbose) {
+                                    LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %u", llId, ipAddr);
+                                }
+
+                                writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
+                            }
+                        }
+                        break;
+                        case PDU_REG_TYPE_REQ_DISCNCT:
+                        {
+                            uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
+
+                            if (m_verbose) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_DISCNCT (Registration Request Disconnect), llId = %u", llId);
+                            }
+
+                            if (hasLLIdFNEReg(llId)) {
+                                // remove dynamic FNE registration table entry
+                                try {
+                                    m_fneRegTable.at(llId);
+                                    m_fneRegTable.erase(llId);
+                                }
+                                catch (...) {
+                                    // stub
+                                }
+                            }
+                        }
+                        break;
+                        default:
+                            LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
+                            break;
                         }
                     }
                     break;
-                    case PDU_REG_TYPE_REQ_DISCNCT:
+                    case PDU_SAP_TRUNK_CTRL:
                     {
-                        uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
-
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_DISCNCT (Registration Request Disconnect), llId = %u", llId);
+                            LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u", 
+                                m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
-                        if (hasLLIdFNEReg(llId)) {
-                            // remove dynamic FNE registration table entry
-                            try {
-                                m_fneRegTable.at(llId);
-                                m_fneRegTable.erase(llId);
-                            }
-                            catch (...) {
-                                // stub
-                            }
+                        for (uint32_t i = 0; i < blocksToFollow; i++) {
+                            m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
                         }
                     }
                     break;
                     default:
-                        LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
-                        break;
-                    }
-                }
-                break;
-                case PDU_SAP_TRUNK_CTRL:
-                {
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u", 
-                            m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
-                    }
+                        ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", m_rfDataHeader.getLLId(), m_rfDataHeader.getLLId(), m_rfDataHeader.getBlocksToFollow());
 
-                    for (uint32_t i = 0; i < blocksToFollow; i++) {
-                        m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
-                    }
-                }
-                break;
-                default:
-                    ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", m_rfDataHeader.getLLId(), m_rfDataHeader.getLLId(), m_rfDataHeader.getBlocksToFollow());
+                        if (m_repeatPDU) {
+                            if (m_verbose) {
+                                LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfUseSecondHeader) ? m_rfSecondHeader.getLLId() : m_rfDataHeader.getLLId());
+                            }
 
-                    if (m_repeatPDU) {
-                        if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", repeating PDU, llId = %u", (m_rfUseSecondHeader) ? m_rfSecondHeader.getLLId() : m_rfDataHeader.getLLId());
+                            writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
                         }
 
-                        writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
+                        ::ActivityLog("P25", true, "end of RF data transmission");
+                        break;
                     }
-
-                    ::ActivityLog("P25", true, "end of RF data transmission");
-                    break;
                 }
 
                 m_rfDataHeader.reset();
@@ -351,7 +363,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                 m_rfPDUBits = 0U;
 
                 m_p25->m_rfState = m_prevRfState;
-            }
+            } // switch (m_rfDataHeader.getSAP())
         }
 
         return true;
@@ -722,19 +734,11 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
     DataHeader rspHeader = DataHeader();
-    rspHeader.setFormat(PDU_FMT_RSP);
+    rspHeader.setFormat(PDU_FMT_CONFIRMED);
+    rspHeader.setAckNeeded(true);
     rspHeader.setOutbound(true);
-    rspHeader.setClass(PDU_ACK_CLASS_ACK);
-    rspHeader.setType(PDU_ACK_TYPE_ACK);
-    rspHeader.setStatus(m_rfDataHeader.getNs());
-    rspHeader.setLLId(llId);
-    if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR) {
-        rspHeader.setSrcLLId(P25_WUID_FNE);
-        rspHeader.setFullMessage(true);
-    }
-    else {
-        rspHeader.setFullMessage(false);
-    }
+    rspHeader.setSAP(PDU_SAP_REG);
+    rspHeader.setLLId(m_rfDataHeader.getLLId());
     rspHeader.setBlocksToFollow(1U);
 
     // Generate the PDU header and 1/2 rate Trellis
@@ -743,29 +747,30 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
     offset += P25_PDU_FEC_LENGTH_BITS;
 
     // build registration response data
-    ::memset(block, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    uint8_t rspData[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+    ::memset(rspData, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
-    block[0U] = (regType << 4);                                                     // Registration Type & Options
-    block[1U] = (llId >> 16) & 0xFFU;                                               // Logical Link ID
-    block[2U] = (llId >> 8) & 0xFFU;
-    block[3U] = (llId >> 0) & 0xFFU;
+    rspData[0U] = ((regType & 0x0FU) << 4);                                     // Registration Type & Options
+    rspData[1U] = (llId >> 16) & 0xFFU;                                         // Logical Link ID
+    rspData[2U] = (llId >> 8) & 0xFFU;
+    rspData[3U] = (llId >> 0) & 0xFFU;
     if (regType == PDU_REG_TYPE_RSP_ACCPT) {
-        block[8U] = (ipAddr >> 24) & 0xFFU;                                         // IP Address
-        block[9U] = (ipAddr >> 16) & 0xFFU;
-        block[10U] = (ipAddr >> 8) & 0xFFU;
-        block[11U] = (ipAddr >> 0) & 0xFFU;
+        rspData[8U] = (ipAddr >> 24) & 0xFFU;                                   // IP Address
+        rspData[9U] = (ipAddr >> 16) & 0xFFU;
+        rspData[10U] = (ipAddr >> 8) & 0xFFU;
+        rspData[11U] = (ipAddr >> 0) & 0xFFU;
     }
 
-    edac::CRC::addCRC32(block, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    edac::CRC::addCRC32(rspData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
     // Generate the PDU data
-    m_rfData[0].setFormat(PDU_FMT_RSP);
-    m_rfData[0].setConfirmed(true);
-    m_rfData[0].setSerialNo(0U);
-    m_rfData[0].setData(block);
+    DataBlock rspBlock = DataBlock();
+    rspBlock.setFormat(PDU_FMT_CONFIRMED);
+    rspBlock.setSerialNo(0U);
+    rspBlock.setData(rspData);
 
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-    m_rfData[0].encode(block);
+    rspBlock.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
     writeRF_PDU(data, bitLength);
@@ -793,9 +798,9 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
     DataHeader rspHeader = DataHeader();
     rspHeader.setFormat(PDU_FMT_RSP);
     rspHeader.setOutbound(true);
-    rspHeader.setClass(ackClass);
-    rspHeader.setType(ackType);
-    rspHeader.setStatus(m_rfDataHeader.getNs());
+    rspHeader.setResponseClass(ackClass);
+    rspHeader.setResponseType(ackType);
+    rspHeader.setResponseStatus(m_rfDataHeader.getNs());
     rspHeader.setLLId(llId);
     if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR) {
         rspHeader.setSrcLLId(P25_WUID_FNE);
@@ -961,7 +966,7 @@ void DataPacket::writeNet_PDU()
             m_netDataBlockCnt++;
         }
         else {
-            if (m_netData[m_netDataBlockCnt].getConfirmed())
+            if (m_netData[m_netDataBlockCnt].getFormat() == PDU_FMT_CONFIRMED)
                 LogWarning(LOG_NET, P25_PDU_STR ", unfixable PDU data (3/4 rate or CRC)");
             else
                 LogWarning(LOG_NET, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC)");

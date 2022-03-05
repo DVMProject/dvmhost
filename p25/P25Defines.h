@@ -216,13 +216,20 @@ namespace p25
     // PDU SAP 
     const uint8_t   PDU_SAP_USER_DATA = 0x00U;
     const uint8_t   PDU_SAP_ENC_USER_DATA = 0x01U;
+
     const uint8_t   PDU_SAP_PACKET_DATA = 0x04U;
+
     const uint8_t   PDU_SAP_ARP = 0x05U;
+
     const uint8_t   PDU_SAP_SNDCP_CTRL_DATA = 0x06U;
+
     const uint8_t   PDU_SAP_EXT_ADDR = 0x1FU;
+
     const uint8_t   PDU_SAP_REG = 0x20U;
+
     const uint8_t   PDU_SAP_UNENC_KMM = 0x28U;
     const uint8_t   PDU_SAP_ENC_KMM = 0x29U;
+
     const uint8_t   PDU_SAP_TRUNK_CTRL = 0x3DU;
 
     // PDU ACK Class

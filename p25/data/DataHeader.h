@@ -99,11 +99,11 @@ namespace p25
             /// <summary>Source Logical link ID.</summary>
             __PROPERTY(uint32_t, srcLlId, SrcLLId);
             /// <summary>Response class.</summary>
-            __PROPERTY(uint8_t, rspClass, Class);
+            __PROPERTY(uint8_t, rspClass, ResponseClass);
             /// <summary>Response type.</summary>
-            __PROPERTY(uint8_t, rspType, Type);
+            __PROPERTY(uint8_t, rspType, ResponseType);
             /// <summary>Response status.</summary>
-            __PROPERTY(uint8_t, rspStatus, Status);
+            __PROPERTY(uint8_t, rspStatus, ResponseStatus);
 
             /** AMBT Data */
             /// <summary>Alternate Trunking Block Opcode</summary>

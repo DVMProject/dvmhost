@@ -27,6 +27,7 @@
 #include "p25/P25Defines.h"
 #include "p25/data/DataHeader.h"
 #include "edac/CRC.h"
+#include "Log.h"
 #include "Utils.h"
 
 using namespace p25::data;
@@ -131,7 +132,7 @@ bool DataHeader::decode(const uint8_t* data)
     case PDU_FMT_CONFIRMED:
         m_S = (header[8U] & 0x80U) == 0x80U;                                    // Re-synchronize Flag
 
-        m_Ns = (header[8U] >> 4) & 0x07U;                                        // Packet Sequence No.
+        m_Ns = (header[8U] >> 4) & 0x07U;                                       // Packet Sequence No.
         m_fsn = header[8U] & 0x07U;                                             // Fragment Sequence No.
         m_lastFragment = (header[8U] & 0x08U) == 0x08U;                         // Last Fragment Flag
 
@@ -179,6 +180,11 @@ void DataHeader::encode(uint8_t* data)
 
     if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP) {
         m_ackNeeded = false;
+    }
+
+    if (m_fmt == PDU_FMT_CONFIRMED && !m_ackNeeded) {
+        LogWarning(LOG_P25, "DataHeader::encode(), invalid values for PDU_FMT_CONFIRMED, ackNeeded = %u", m_ackNeeded);
+        m_ackNeeded = true; // force set this to true
     }
 
     header[0U] = (m_ackNeeded ? 0x40U : 0x00U) +                                // Acknowledge Needed

@@ -208,6 +208,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
         uint32_t srcId = m_rfTSBK.getSrcId();
         uint32_t dstId = m_rfTSBK.getDstId();
 
+        // handle standard P25 reference opcodes
         switch (m_rfTSBK.getLCO()) {
             case TSBK_IOSP_GRP_VCH:
                 // make sure control data is supported
@@ -494,7 +495,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
             default:
                 LogError(LOG_RF, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_rfTSBK.getMFId(), m_rfTSBK.getLCO());
                 break;
-        }
+        } // switch (m_rfTSBK.getLCO())
 
         // add trailing null pad; only if control data isn't being transmitted
         if (!m_p25->m_ccRunning) {
@@ -770,7 +771,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_netTSBK.getMFId(), m_netTSBK.getLCO());
                         return false;
-                }
+                } // switch (m_netTSBK.getLCO())
 
                 writeNet_TSDU();
             }
