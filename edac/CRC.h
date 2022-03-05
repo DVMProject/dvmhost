@@ -62,9 +62,6 @@ namespace edac
         /// <summary>Encode 32-bit CRC.</summary>
         static void addCRC32(uint8_t* in, uint32_t length);
 
-        /// <summary>Generate 32-bit CRC.</summary>
-        static uint32_t crc32(const uint8_t *in, uint32_t length);
-
         /// <summary>Generate 8-bit CRC.</summary>
         static uint8_t crc8(const uint8_t* in, uint32_t length);
 
