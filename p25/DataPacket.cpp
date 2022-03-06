@@ -735,6 +735,7 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
 
     DataHeader rspHeader = DataHeader();
     rspHeader.setFormat(PDU_FMT_CONFIRMED);
+    rspHeader.setMFId(m_rfDataHeader.getMFId());
     rspHeader.setAckNeeded(true);
     rspHeader.setOutbound(true);
     rspHeader.setSAP(PDU_SAP_REG);
@@ -797,6 +798,7 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
 
     DataHeader rspHeader = DataHeader();
     rspHeader.setFormat(PDU_FMT_RSP);
+    rspHeader.setMFId(m_rfDataHeader.getMFId());
     rspHeader.setOutbound(true);
     rspHeader.setResponseClass(ackClass);
     rspHeader.setResponseType(ackType);
