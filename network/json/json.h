@@ -1378,7 +1378,7 @@ namespace json
 
 #if !PICOJSON_USE_RVALUE_REFERENCE
 namespace std {
-    template <> inline void swap(picojson::value &x, picojson::value &y) {
+    template <> inline void swap(json::value &x, json::value &y) {
         x.swap(y);
     }
 }
