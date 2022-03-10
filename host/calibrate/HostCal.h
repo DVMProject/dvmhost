@@ -129,6 +129,7 @@ private:
     uint32_t m_timeout;
     uint32_t m_timer;
 
+    bool m_updateConfigFromModem;
     bool m_hasFetchedStatus;
 
     /// <summary>Modem port open callback.</summary>
@@ -180,6 +181,15 @@ private:
     bool writeSymbolAdjust();
     /// <summary>Helper to sleep the calibration thread.</summary>
     void sleep(uint32_t ms);
+
+    /// <summary>Read the configuration area on the air interface modem.</summary>
+    bool readFlash();
+    /// <summary>Process the configuration data from the air interface modem.</summary>
+    void processFlashConfig(const uint8_t *buffer);
+    /// <summary>Erase the configuration area on the air interface modem.</summary>
+    bool eraseFlash();
+    /// <summary>Write the configuration area on the air interface modem.</summary>
+    bool writeFlash();
 
     /// <summary>Helper to clock the calibration BER timer.</summary>
     void timerClock();

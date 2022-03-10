@@ -123,6 +123,9 @@ namespace modem
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,
 
+        CMD_FLSH_READ = 0xE0U,
+        CMD_FLSH_WRITE = 0xE1U,
+
         CMD_DEBUG1 = 0xF1U,
         CMD_DEBUG2 = 0xF2U,
         CMD_DEBUG3 = 0xF3U,
@@ -149,6 +152,11 @@ namespace modem
 
         RSN_INVALID_P25_CORR_COUNT = 16U,
 
+        RSN_NO_INTERNAL_FLASH = 20U,
+        RSN_FAILED_ERASE_FLASH = 21U,
+        RSN_FAILED_WRITE_FLASH = 22U,
+        RSN_FLASH_WRITE_TOO_BIG = 23U,
+
         RSN_HS_NO_DUAL_MODE = 32U,
 
         RSN_DMR_DISABLED = 63U,
@@ -171,6 +179,9 @@ namespace modem
     };
 
     const uint8_t DVM_FRAME_START = 0xFEU;
+
+    const uint8_t DVM_CONF_AREA_VER = 0x01U;
+    const uint8_t DVM_CONF_AREA_LEN = 246U;
 
     const uint8_t MAX_FDMA_PREAMBLE = 255U;
 
@@ -382,6 +393,8 @@ namespace modem
         bool m_lockout;
         bool m_error;
 
+        bool m_flashDisabled;
+
         /// <summary>Retrieve the air interface modem version.</summary>
         bool getFirmwareVersion();
         /// <summary>Retrieve the current status from the air interface modem.</summary>
@@ -392,6 +405,11 @@ namespace modem
         bool writeSymbolAdjust();
         /// <summary>Write RF parameters to the air interface modem.</summary>
         bool writeRFParams();
+
+        /// <summary>Retrieve the data from the configuration area on the air interface modem.</summary>
+        bool readFlash();
+        /// <summary>Process the configuration data from the air interface modem.</summary>
+        void processFlashConfig(const uint8_t *buffer);
 
         /// <summary>Print debug air interface messages to the host log.</summary>
         void printDebug(const uint8_t* buffer, uint16_t len);

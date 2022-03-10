@@ -36,6 +36,7 @@
 #include "p25/data/DataHeader.h"
 #include "p25/lc/LC.h"
 #include "p25/P25Utils.h"
+#include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
@@ -174,6 +175,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_berUncorrectable(0U),
     m_timeout(300U),
     m_timer(0U),
+    m_updateConfigFromModem(false),
     m_hasFetchedStatus(false)
 {
     /* stub */
@@ -414,6 +416,8 @@ int HostCal::run()
         return 1;
     }
 
+    readFlash();
+
     writeConfig();
     writeRFParams();
 
@@ -445,7 +449,7 @@ int HostCal::run()
     while (!end) {
         int c = m_console.getChar();
         switch (c) {
-            /** Level Adjustment Commands */
+        /** Level Adjustment Commands */
         case 'I':
         {
             if (!m_isHotspot) {
@@ -613,7 +617,13 @@ int HostCal::run()
         }
         break;
 
-            /** Engineering Commands */
+        /** Engineering Commands */
+        case 'E':
+            eraseFlash();
+            break;
+        case 'e':
+            readFlash();
+            break;
         case '-':
             if (!m_isHotspot)
                 setDMRSymLevel3Adj(-1);
@@ -755,7 +765,7 @@ int HostCal::run()
         }
         break;
 
-            /** Mode Commands */
+        /** Mode Commands */
         case 'Z':
         {
             m_mode = STATE_DMR_CAL;
@@ -936,8 +946,15 @@ int HostCal::run()
         {
             yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
             LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
+            if (writeFlash()) {
+                LogMessage(LOG_CAL, " - Wrote configuration area on modem");
+            }
         }
         break;
+        case 'U':
+            m_updateConfigFromModem = true;
+            readFlash();
+            break;
         case 'Q':
         case 'q':
             m_mode = STATE_IDLE;
@@ -1109,12 +1126,52 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
         }
         break;
 
+        case CMD_FLSH_READ:
+        {
+            uint8_t len = buffer[1U];
+            if (m_debug) {
+                Utils::dump(1U, "Modem Flash Contents", buffer, len);
+            }
+            if (len == 249U) {
+                bool ret = edac::CRC::checkCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
+                if (!ret) {
+                    LogWarning(LOG_CAL, "HostCal::portModemHandler(), clearing modem configuration area; first setup?");
+                    eraseFlash();
+                }
+                else {
+                    bool isErased = (buffer[DVM_CONF_AREA_LEN] & 0x80U) == 0x80U;
+                    uint8_t confAreaVersion = buffer[DVM_CONF_AREA_LEN] & 0x7FU;
+
+                    if (!isErased) {
+                        if (confAreaVersion != DVM_CONF_AREA_VER) {
+                            LogError(LOG_MODEM, "HostCal::portModemHandler(), invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
+                        }
+                        else {
+                            processFlashConfig(buffer + 3U);
+
+                            // reset update config flag if its set
+                            if (m_updateConfigFromModem) {
+                                m_updateConfigFromModem = false;
+                            }
+                        }
+                    }
+                    else {
+                        LogWarning(LOG_MODEM, "HostCal::portModemHandler(), modem configuration area was erased and does not contain active configuration!");
+                    }
+                }
+            }
+            else {
+                LogWarning(LOG_MODEM, "Incorrect length for configuration area! Ignoring.");
+            }
+        }
+        break;
+
         case CMD_GET_VERSION:
         case CMD_ACK:
             break;
 
         case CMD_NAK:
-            LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", buffer[3U], buffer[4U]);
+            LogWarning(LOG_CAL, "NAK, command = 0x%02X, reason = %u", buffer[3U], buffer[4U]);
             break;
 
         case CMD_DEBUG1:
@@ -1127,7 +1184,7 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
             break;
 
         default:
-            LogWarning(LOG_MODEM, "Unknown message, type = %02X", buffer[2U]);
+            LogWarning(LOG_CAL, "Unknown message, type = %02X", buffer[2U]);
             Utils::dump("Buffer dump", buffer, len);
             break;
         }
@@ -1149,6 +1206,9 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    v        Display version of firmware");
     LogMessage(LOG_CAL, "    H/h      Display help");
     LogMessage(LOG_CAL, "    S/s      Save calibration settings to configuration file");
+    if (!m_modem->m_flashDisabled) {
+        LogMessage(LOG_CAL, "    U        Read modem configuration area and reset local configuration");
+    }
     LogMessage(LOG_CAL, "    Q/q      Quit");
     LogMessage(LOG_CAL, "Level Adjustment Commands:");
     if (!m_isHotspot) {
@@ -1198,6 +1258,10 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset");
         LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset");
         LogMessage(LOG_CAL, "    5        Set ADF7021 Rx Auto. Gain Mode");
+    }
+    if (!m_modem->m_flashDisabled) {
+        LogMessage(LOG_CAL, "    E        Erase modem configuration area");
+        LogMessage(LOG_CAL, "    e        Read modem configuration area");
     }
 }
 
@@ -2062,6 +2126,161 @@ void HostCal::sleep(uint32_t ms)
 #else
     ::usleep(ms * 1000);
 #endif
+}
+
+/// <summary>
+/// Read the configuration area on the air interface modem.
+/// </summary>
+bool HostCal::readFlash()
+{
+    if (m_modem->m_flashDisabled) {
+        return false;
+    }
+
+    uint8_t buffer[3U];
+    ::memset(buffer, 0x00U, 3U);
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_FLSH_READ;
+
+    int ret = m_modem->write(buffer, 3U);
+    if (ret <= 0)
+        return false;
+
+    sleep(1000U);
+
+    m_modem->clock(0U);
+    return true;
+}
+
+/// <summary>
+/// Process the configuration data from the air interface modem.
+/// </summary>
+/// <param name="buffer"></param>
+void HostCal::processFlashConfig(const uint8_t *buffer)
+{
+    if (m_updateConfigFromModem) {
+        LogMessage(LOG_CAL, " - Restoring local configuration from configuration area on modem");
+
+        // TODO TODO TODO
+    }
+}
+
+/// <summary>
+/// Erase the configuration area on the air interface modem.
+/// </summary>
+bool HostCal::eraseFlash()
+{
+    if (m_modem->m_flashDisabled) {
+        return false;
+    }
+
+    uint8_t buffer[249U];
+    ::memset(buffer, 0x00U, 249U);
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 249U;
+    buffer[2U] = CMD_FLSH_WRITE;
+
+    // configuration version
+    buffer[DVM_CONF_AREA_LEN] = DVM_CONF_AREA_VER & 0x7FU;
+    buffer[DVM_CONF_AREA_LEN] |= 0x80U; // flag erased
+    edac::CRC::addCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
+
+    int ret = m_modem->write(buffer, 249U);
+    if (ret <= 0)
+        return false;
+
+    sleep(1000U);
+
+    m_updateConfigFromModem = false;
+    LogMessage(LOG_CAL, " - Erased configuration area on modem");
+    
+    m_modem->clock(0U);
+    return true;
+}
+
+/// <summary>
+/// Write the configuration area on the air interface modem.
+/// </summary>
+bool HostCal::writeFlash()
+{
+    if (m_modem->m_flashDisabled) {
+        return false;
+    }
+
+    uint8_t buffer[249U];
+    ::memset(buffer, 0x00U, 249U);
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 249U;
+    buffer[2U] = CMD_FLSH_WRITE;
+
+    // general config
+    buffer[3U] = 0x00U;
+    if (m_rxInvert)
+        buffer[3U] |= 0x01U;
+    if (m_txInvert)
+        buffer[3U] |= 0x02U;
+    if (m_pttInvert)
+        buffer[3U] |= 0x04U;
+
+    buffer[4U] = 0x00U;
+    if (m_dcBlocker)
+        buffer[4U] |= 0x01U;
+
+    if (m_dmrEnabled)
+        buffer[4U] |= 0x02U;
+    if (m_p25Enabled)
+        buffer[4U] |= 0x08U;
+
+    buffer[5U] = m_fdmaPreamble;
+
+    buffer[7U] = (uint8_t)(m_rxLevel * 2.55F + 0.5F);
+    buffer[8U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
+
+    buffer[10U] = m_dmrRxDelay;
+    buffer[11U] = (uint8_t)m_p25CorrCount;
+
+    buffer[13U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
+    buffer[15U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
+
+    buffer[16U] = (uint8_t)(m_txDCOffset + 128);
+    buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
+    
+    // RF parameters
+    buffer[20U] = (uint8_t)(m_dmrDiscBWAdj + 128);
+    buffer[21U] = (uint8_t)(m_p25DiscBWAdj + 128);
+    buffer[22U] = (uint8_t)(m_dmrPostBWAdj + 128);
+    buffer[23U] = (uint8_t)(m_p25PostBWAdj + 128);
+
+    buffer[24U] = (uint8_t)m_adfGainMode;
+
+    buffer[25U] = (uint8_t)(m_txTuning + 128);
+    buffer[26U] = (uint8_t)(m_rxTuning + 128);
+
+    // symbol adjust
+    buffer[30U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
+    buffer[31U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
+
+    buffer[32U] = (uint8_t)(m_p25SymLevel3Adj + 128);
+    buffer[33U] = (uint8_t)(m_p25SymLevel1Adj + 128);
+
+    // configuration version
+    buffer[DVM_CONF_AREA_LEN] = DVM_CONF_AREA_VER;
+    edac::CRC::addCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
+
+    int ret = m_modem->write(buffer, 249U);
+    if (ret <= 0)
+        return false;
+
+    sleep(1000U);
+
+    m_updateConfigFromModem = false;
+
+    m_modem->clock(0U);
+    return true;
 }
 
 /// <summary>

@@ -33,6 +33,7 @@
 #include "dmr/DMRDefines.h"
 #include "p25/P25Defines.h"
 #include "modem/Modem.h"
+#include "edac/CRC.h"
 #include "Log.h"
 #include "Thread.h"
 #include "Utils.h"
@@ -135,6 +136,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_cd(false),
     m_lockout(false),
     m_error(false),
+    m_flashDisabled(false),
     m_trace(trace),
     m_debug(debug),
     m_playoutTimer(1000U, 0U, packetPlayoutTime)
@@ -380,6 +382,12 @@ bool Modem::open()
 
     m_rspOffset = 0U;
     m_rspState = RESP_START;
+
+    ret = readFlash();
+    if (!ret) {
+        LogError(LOG_MODEM, "Unable to read configuration on modem flash device! Using local configuration.");
+        m_flashDisabled = true;
+    }
 
     // do we have an open port handler?
     if (m_openPortHandler) {
@@ -1554,6 +1562,87 @@ bool Modem::writeRFParams()
 }
 
 /// <summary>
+/// Retrieve the data from the configuration area on the air interface modem.
+/// </summary>
+/// <returns></returns>
+bool Modem::readFlash()
+{
+    Thread::sleep(2000U);    // 2s
+
+    for (uint32_t i = 0U; i < 6U; i++) {
+        uint8_t buffer[3U];
+
+        buffer[0U] = DVM_FRAME_START;
+        buffer[1U] = 3U;
+        buffer[2U] = CMD_FLSH_READ;
+
+        int ret = write(buffer, 3U);
+        if (ret != 3)
+            return false;
+
+        for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
+            Thread::sleep(10U);
+            RESP_TYPE_DVM resp = getResponse();
+
+            if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
+                LogWarning(LOG_MODEM, "Modem::readFlash(), old modem that doesn't support flash commands?");
+                return false;
+            }
+
+            if (resp == RTM_OK && m_buffer[2U] == CMD_FLSH_READ) {
+                uint8_t len = m_buffer[1U];
+                if (m_debug) {
+                    Utils::dump(1U, "Modem Flash Contents", m_buffer, len);
+                }
+
+                if (len == 249U) {
+                    bool ret = edac::CRC::checkCCITT162(m_buffer + 3U, DVM_CONF_AREA_LEN);
+                    if (!ret) {
+                        LogError(LOG_MODEM, "Modem::readFlash(), failed CRC CCITT-162 check");
+                    }
+                    else {
+                        bool isErased = (m_buffer[DVM_CONF_AREA_LEN] & 0x80U) == 0x80U;
+                        uint8_t confAreaVersion = m_buffer[DVM_CONF_AREA_LEN] & 0x7FU;
+
+                        if (!isErased) {
+                            if (confAreaVersion != DVM_CONF_AREA_VER) {
+                                LogError(LOG_MODEM, "Modem::readFlash(), invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
+                            }
+                            else {
+                                processFlashConfig(m_buffer + 3U);
+                            }
+                        }
+                        else {
+                            LogWarning(LOG_MODEM, "Modem::readFlash(), modem configuration area was erased and does not contain active configuration!");
+                        }
+                    }
+                }
+                else {
+                    LogWarning(LOG_MODEM, "Incorrect length for configuration area! Ignoring.");
+                }
+
+                return true;
+            }
+        }
+
+        Thread::sleep(1500U);
+    }
+
+    LogError(LOG_MODEM, "Unable to read the configuration flash after 6 attempts");
+
+    return false;
+}
+
+/// <summary>
+/// Process the configuration data from the air interface modem.
+/// </summary>
+/// <param name="buffer"></param>
+void Modem::processFlashConfig(const uint8_t *buffer)
+{
+    // TODO TODO TODO
+}
+
+/// <summary>
 /// Print debug air interface messages to the host log.
 /// </summary>
 /// <param name="buffer"></param>
@@ -1634,7 +1723,7 @@ RESP_TYPE_DVM Modem::getResponse()
         }
 
         if (m_buffer[0U] != DVM_FRAME_START) {
-            LogDebug(LOG_MODEM, "getResponse(), first byte not a frame start");
+            LogDebug(LOG_MODEM, "getResponse(), first byte not a frame start; byte = %02X", m_buffer[0U]);
             return RTM_TIMEOUT;
         }
 
