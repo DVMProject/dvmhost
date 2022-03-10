@@ -1,10 +1,16 @@
-CC      = gcc
-CXX     = g++
+CC        = gcc
+CXX       = g++
+armCC     = arm-linux-gnueabihf-gcc
+armCXX    = arm-linux-gnueabihf-g++
+rpi-armCC = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+rpi-armCXX= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ 
+
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
 EXTFLAGS=
 LIBS    = -lpthread
 LDFLAGS = -g
 
+BIN = dvmhost
 OBJECTS = \
 		edac/AMBEFEC.o \
 		edac/BCH.o \
@@ -80,12 +86,10 @@ OBJECTS = \
 		HostMain.o
 
 all:	dvmhost
-
 dvmhost: $(OBJECTS) 
-		$(CXX) $(OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o dvmhost
-
+		$($(ARCH)CXX) $(OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(BIN)
 %.o: %.cpp
-		$(CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
-
+		$($(ARCH)CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
 clean:
-		$(RM) dvmhost *.o *.d *.bak *~ edac/*.o dmr/*.o dmr/acl/*.o dmr/data/*.o dmr/edac/*.o dmr/lc/*.o p25/*.o p25/acl/*.o p25/data/*.o p25/dfsi/*.o p25/edac/*.o p25/lc/*.o lookups/*.o modem/*.o modem/port/*.o network/*.o yaml/*.o host/*.o host/calibrate/*.o host/setup/*.o
+		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
+
