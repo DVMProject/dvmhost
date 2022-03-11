@@ -1,9 +1,12 @@
-CC        = gcc
-CXX       = g++
-armCC     = arm-linux-gnueabihf-gcc
-armCXX    = arm-linux-gnueabihf-g++
-rpi-armCC = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
-rpi-armCXX= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ 
+CC          = gcc
+CXX         = g++
+STRIP       = strip
+armCC       = arm-linux-gnueabihf-gcc
+armCXX      = arm-linux-gnueabihf-g++
+armSTRIP    = arm-linux-gnueabihf-strip
+rpi-armCC   = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+rpi-armCXX  = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ 
+rpi-armSTRIP= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip
 
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
 EXTFLAGS=
@@ -85,11 +88,13 @@ OBJECTS = \
 		Utils.o \
 		HostMain.o
 
-all:	dvmhost
+all: dvmhost
 dvmhost: $(OBJECTS) 
 		$($(ARCH)CXX) $(OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(BIN)
 %.o: %.cpp
 		$($(ARCH)CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
+strip:
+		$($(ARCH)STRIP) $(BIN)
 clean:
 		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
 
