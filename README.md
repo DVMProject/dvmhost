@@ -11,9 +11,10 @@ Please see the various Makefile included in the project for more information. (A
 
 The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC install is usually all thats needed to compile.
 
-* Makefile - This makefile is used for building binaries for the native installed GCC.
-* Makefile.arm - This makefile is used for cross-compiling for a ARM platform.
-* Makefile.rpi-arm - This makefile is used for cross-compiling for a Raspberry Pi.
+* Makefile - This makefile is used for building binaries.
+    - Use the ARCH parameter to change the architecture.
+        - ARCH=arm - Generic ARM compilation with installed cross-compiler tools (see just below).
+        - ARCH=rpi-arm - Raspberry Pi ARM compliation using the ```https://github.com/raspberrypi/tools.git``` (see just below).
 
 Use the ```make``` command to build the software.
 
