@@ -1073,7 +1073,11 @@ TSBK::TSBK() : TSBK(SiteData())
 /// <param name="siteData"></param>
 TSBK::TSBK(SiteData siteData) :
     m_verbose(false),
+#if FORCE_TSBK_CRC_WARN
+    m_warnCRC(true),
+#else
     m_warnCRC(false),
+#endif
     m_protect(false),
     m_lco(LC_GROUP),
     m_mfId(P25_MFG_STANDARD),
