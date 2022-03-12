@@ -100,30 +100,29 @@ clean:
 		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
 
 install: all
-		@mkdir -p /opt/dvm
+		mkdir -p /opt/dvm/bin || true
 		install -m 755 $(BIN) /opt/dvm/bin/
+		mkdir -p /opt/dvm || true
+		install -m 644 config.example.yml /opt/dvm/config.yml
+		install -m 644 iden_table.example.dat /opt/dvm/iden_table.dat
+		install -m 644 rid_acl.example.dat /opt/dvm/rid_acl.dat
+		install -m 644 tg_acl.example.dat /opt/dvm/tg_acl.dat
+		sed -i 's/filePath: ./filePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
+		sed -i 's/activityFilePath: ./activityFilePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
+		sed -i 's/file: iden_table.dat/file: \/opt\/dvm\/iden_table.dat/' /opt/dvm/config.yml
+		sed -i 's/file: rid_acl.dat/file: \/opt\/dvm\/rid_acl.dat/' /opt/dvm/config.yml
+		sed -i 's/file: tg_acl.dat/file: \/opt\/dvm\/tg_acl.dat/' /opt/dvm/config.yml
+		mkdir -p /opt/dvm/log || true
 
-install-config-files:
-		@mkdir -p /opt/dvm
-		@cp -n config.example.yml /opt/dvm/config.yml
-		@cp -n iden_table.example.dat /opt/dvm/iden_table.dat
-		@cp -n rid_acl.example.dat /opt/dvm/rid_acl.dat
-		@cp -n tg_acl.example.dat /opt/dvm/tg_acl.dat
-		@sed -i 's/filePath: ./filePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
-		@sed -i 's/activityFilePath: ./activityFilePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
-		@sed -i 's/file: iden_table.dat/file: \/opt\/dvm\/iden_table.dat/' /opt/dvm/config.yml
-		@sed -i 's/file: rid_acl.dat/file: \/opt\/dvm\/rid_acl.dat/' /opt/dvm/config.yml
-		@sed -i 's/file: tg_acl.dat/file: \/opt\/dvm\/tg_acl.dat/' /opt/dvm/config.yml
-
-install-service: install install-config-files
+install-service: install
 		@useradd --user-group -M --system dvmhost --shell /bin/false || true
 		@usermod --groups dialout --append dvmhost || true
-		@mkdir /opt/dvm/log || true
+		@chown dvmhost:dvmhost /opt/dvm/config.yml
+		@chown dvmhost:dvmhost /opt/dvm/iden_table.dat
+		@chown dvmhost:dvmhost /opt/dvm/rid_acl.dat
+		@chown dvmhost:dvmhost /opt/dvm/tg_acl.dat
 		@chown dvmhost:dvmhost /opt/dvm/log
 		@cp ./linux/dvmhost.service /lib/systemd/system/
-		@systemctl enable dvmhost.service
 
 uninstall-service:
-		@systemctl stop dvmhost.service || true
-		@systemctl disable dvmhost.service || true
 		@rm -f /lib/systemd/system/dvmhost.service || true
