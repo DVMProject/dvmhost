@@ -573,7 +573,7 @@ bool Control::writeEndRF()
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         if (m_tailOnIdle) {
             bool ret = m_voice->writeEndRF();
-            if (!m_control) {
+            if (!m_control && m_duplex) {
                 writeRF_Nulls();
             }
 

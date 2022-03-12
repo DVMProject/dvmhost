@@ -78,6 +78,7 @@ system:
     identity: ABCD123
     timeout: 180
     duplex: true
+    simplexSameFrequency: false
     modeHang: 10
 #    rfModeHang: 10
 #    netModeHang: 10

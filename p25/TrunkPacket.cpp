@@ -1496,6 +1496,10 @@ void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 /// <param name="dstId"></param>
 void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
 {
+    if (!m_p25->m_duplex) {
+        return;
+    }
+
     uint32_t count = m_p25->m_hangCount / 2;
     lc::TDULC lc = lc::TDULC(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
 

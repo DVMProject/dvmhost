@@ -1306,6 +1306,7 @@ bool Host::readParams()
 
     yaml::Node systemConf = m_conf["system"];
     m_duplex = systemConf["duplex"].as<bool>(true);
+    bool simplexSameFreq = systemConf["simplexSameFrequency"].as<bool>(false);
 
     m_timeout = systemConf["timeout"].as<uint32_t>(120U);
     m_rfModeHang = systemConf["rfModeHang"].as<uint32_t>(10U);
@@ -1332,6 +1333,9 @@ bool Host::readParams()
     LogInfo("    P25: %s", m_p25Enabled ? "enabled" : "disabled");
     LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
     if (!udpMasterMode) {
+        if (!m_duplex) {
+            LogInfo("    Simplex Same Frequency: %s", simplexSameFreq ? "yes" : "no");
+        }
         LogInfo("    Timeout: %us", m_timeout);
         LogInfo("    RF Mode Hang: %us", m_rfModeHang);
         LogInfo("    RF Talkgroup Hang: %us", m_rfTalkgroupHang);
@@ -1391,21 +1395,18 @@ bool Host::readParams()
             m_channelNo = 4095U;
         }
 
-        if (m_duplex) {
-            if (entry.txOffsetMhz() == 0U) {
-                ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
-                return false;
-            }
-
-            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-            float calcTxOffset = entry.txOffsetMhz() * 1000000;
-
-            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
-            m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        if (entry.txOffsetMhz() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+            return false;
         }
-        else {
-            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
 
+        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+
+        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+        m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+
+        if (!m_duplex && simplexSameFreq) {
             m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
             m_txFrequency = m_rxFrequency;
         }
