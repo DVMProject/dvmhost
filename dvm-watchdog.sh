@@ -1,5 +1,5 @@
 #!/bin/bash
-R_PATH=/opt/dvmhost
+R_PATH=/opt/dvm
 pushd ${R_PATH}
 
 if [ -z $1 ]; then exit 99; fi

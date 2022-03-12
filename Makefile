@@ -107,6 +107,10 @@ install: all
 		install -m 644 iden_table.example.dat /opt/dvm/iden_table.dat
 		install -m 644 rid_acl.example.dat /opt/dvm/rid_acl.dat
 		install -m 644 tg_acl.example.dat /opt/dvm/tg_acl.dat
+		install -m 755 start-dvm.sh /opt/dvm
+		install -m 755 stop-dvm.sh /opt/dvm
+		install -m 755 dvm-watchdog.sh /opt/dvm
+		install -m 755 stop-watchdog.sh /opt/dvm
 		sed -i 's/filePath: ./filePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
 		sed -i 's/activityFilePath: ./activityFilePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
 		sed -i 's/file: iden_table.dat/file: \/opt\/dvm\/iden_table.dat/' /opt/dvm/config.yml
