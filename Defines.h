@@ -117,6 +117,7 @@ typedef unsigned long long  ulong64_t;
 
 #define NULL_PORT "null"
 #define UART_PORT "uart"
+#define PTY_PORT "pty"
 #define UDP_PORT "udp"
 
 #define UDP_MODE_MASTER "master"

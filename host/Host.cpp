@@ -36,6 +36,7 @@
 #include "p25/P25Utils.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
+#include "modem/port/PseudoPTYPort.h"
 #include "modem/port/UDPPort.h"
 #include "network/UDPSocket.h"
 #include "lookups/RSSIInterpolator.h"
@@ -1586,9 +1587,16 @@ bool Host::createModem()
             break;
         }
 
-        modemPort = new port::UARTPort(uartPort, serialSpeed, true);
-        LogInfo("    UART Port: %s", uartPort.c_str());
-        LogInfo("    UART Speed: %u", uartSpeed);
+        if (portType == PTY_PORT) {
+            modemPort = new port::PseudoPTYPort(uartPort, serialSpeed, true);
+            LogInfo("    PTY File: %s", uartPort.c_str());
+            LogInfo("    PTY Speed: %u", uartSpeed);
+        }
+        else {
+            modemPort = new port::UARTPort(uartPort, serialSpeed, true);
+            LogInfo("    UART Port: %s", uartPort.c_str());
+            LogInfo("    UART Speed: %u", uartSpeed);
+        }
     }
     else {
         LogError(LOG_HOST, "Invalid protocol port type, %s!", portType.c_str());
