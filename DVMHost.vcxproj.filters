@@ -353,6 +353,9 @@
     <ClInclude Include="modem\port\UARTPort.h">
       <Filter>Header Files\modem\port</Filter>
     </ClInclude>
+    <ClInclude Include="modem\port\PseudoPTYPort.h">
+      <Filter>Header Files\modem\port</Filter>
+    </ClInclude>
     <ClInclude Include="modem\port\ModemNullPort.h">
       <Filter>Header Files\modem\port</Filter>
     </ClInclude>
@@ -569,6 +572,9 @@
       <Filter>Source Files\dmr</Filter>
     </ClCompile>
     <ClCompile Include="modem\port\UARTPort.cpp">
+      <Filter>Source Files\modem\port</Filter>
+    </ClCompile>
+    <ClCompile Include="modem\port\PseudoPTYPort.cpp">
       <Filter>Source Files\modem\port</Filter>
     </ClCompile>
     <ClCompile Include="modem\port\ModemNullPort.cpp">

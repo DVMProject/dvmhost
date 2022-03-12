@@ -10,7 +10,7 @@ rpi-armSTRIP= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf
 
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
 EXTFLAGS=
-LIBS    = -lpthread
+LIBS    = -lpthread -lutil
 LDFLAGS = -g
 
 BIN = dvmhost
@@ -69,6 +69,7 @@ OBJECTS = \
 		modem/port/ISerialPort.o \
 		modem/port/ModemNullPort.o \
 		modem/port/UARTPort.o \
+		modem/port/PseudoPTYPort.o \
 		modem/port/UDPPort.o \
 		modem/Modem.o \
 		network/UDPSocket.o \
@@ -98,3 +99,31 @@ strip:
 clean:
 		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
 
+install: all
+		@mkdir -p /opt/dvm
+		install -m 755 $(BIN) /opt/dvm/bin/
+
+install-config-files:
+		@mkdir -p /opt/dvm
+		@cp -n config.example.yml /opt/dvm/config.yml
+		@cp -n iden_table.example.dat /opt/dvm/iden_table.dat
+		@cp -n rid_acl.example.dat /opt/dvm/rid_acl.dat
+		@cp -n tg_acl.example.dat /opt/dvm/tg_acl.dat
+		@sed -i 's/filePath: ./filePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
+		@sed -i 's/activityFilePath: ./activityFilePath: \/opt\/dvm\/log\//' /opt/dvm/config.yml
+		@sed -i 's/file: iden_table.dat/file: \/opt\/dvm\/iden_table.dat/' /opt/dvm/config.yml
+		@sed -i 's/file: rid_acl.dat/file: \/opt\/dvm\/rid_acl.dat/' /opt/dvm/config.yml
+		@sed -i 's/file: tg_acl.dat/file: \/opt\/dvm\/tg_acl.dat/' /opt/dvm/config.yml
+
+install-service: install install-config-files
+		@useradd --user-group -M --system dvmhost --shell /bin/false || true
+		@usermod --groups dialout --append dvmhost || true
+		@mkdir /opt/dvm/log || true
+		@chown dvmhost:dvmhost /opt/dvm/log
+		@cp ./linux/dvmhost.service /lib/systemd/system/
+		@systemctl enable dvmhost.service
+
+uninstall-service:
+		@systemctl stop dvmhost.service || true
+		@systemctl disable dvmhost.service || true
+		@rm -f /lib/systemd/system/dvmhost.service || true

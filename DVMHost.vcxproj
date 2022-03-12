@@ -202,6 +202,7 @@
     <ClInclude Include="modem\port\ISerialPort.h" />
     <ClInclude Include="modem\port\ModemNullPort.h" />
     <ClInclude Include="modem\port\UARTPort.h" />
+    <ClInclude Include="modem\port\PseudoPTYPort.h" />
     <ClInclude Include="modem\port\UDPPort.h" />
     <ClInclude Include="network\BaseNetwork.h" />
     <ClInclude Include="network\Network.h" />
@@ -281,6 +282,7 @@
     <ClCompile Include="modem\port\ISerialPort.cpp" />
     <ClCompile Include="modem\port\ModemNullPort.cpp" />
     <ClCompile Include="modem\port\UARTPort.cpp" />
+    <ClCompile Include="modem\port\PseudoPTYPort.cpp" />
     <ClCompile Include="modem\port\UDPPort.cpp" />
     <ClCompile Include="network\BaseNetwork.cpp" />
     <ClCompile Include="network\Network.cpp" />
