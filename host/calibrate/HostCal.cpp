@@ -317,6 +317,8 @@ int HostCal::run()
     m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
     m_p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
 
+    bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
+
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
 
@@ -386,6 +388,10 @@ int HostCal::run()
         LogInfo("    TX Effective Frequency: %uhz", m_txAdjustedFreq);
         LogInfo("    RX Level: %.1f%%", m_rxLevel);
         LogInfo("    TX Level: %.1f%%", m_txLevel);
+
+        if (ignoreModemConfigArea) {
+            LogInfo("    Ignore Modem Configuration Area: yes");
+        }
     }
     else if (portType == UDP_PORT) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with a remote modem!");
@@ -397,7 +403,11 @@ int HostCal::run()
         return 2;
     }
 
-    m_modem = new Modem(modemPort, false, false, false, false, true, false, 80, 7, 4, 10, false, false, false);
+    m_modem = new Modem(modemPort, false, m_rxInvert, m_txInvert, m_pttInvert, m_dcBlocker, false, m_fdmaPreamble, m_dmrRxDelay, m_p25CorrCount, 10U, false, ignoreModemConfigArea, false, false);
+    m_modem->setLevels(m_rxLevel, m_txLevel, m_txLevel, m_txLevel);
+    m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+    m_modem->setDCOffsetParams(m_txDCOffset, m_rxDCOffset);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_adfGainMode);
 
     m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemOpen, this));
     m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemClose, this));
@@ -1147,7 +1157,7 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
                             LogError(LOG_MODEM, "HostCal::portModemHandler(), invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
                         }
                         else {
-                            processFlashConfig(buffer + 3U);
+                            processFlashConfig(buffer);
 
                             // reset update config flag if its set
                             if (m_updateConfigFromModem) {
@@ -2163,7 +2173,76 @@ void HostCal::processFlashConfig(const uint8_t *buffer)
     if (m_updateConfigFromModem) {
         LogMessage(LOG_CAL, " - Restoring local configuration from configuration area on modem");
 
-        // TODO TODO TODO
+        // general config
+        m_rxInvert = (buffer[3U] & 0x01U) == 0x01U;
+        m_conf["system"]["modem"]["rxInvert"] = __BOOL_STR(m_rxInvert);
+        m_txInvert = (buffer[3U] & 0x02U) == 0x02U;
+        m_conf["system"]["modem"]["txInvert"] = __BOOL_STR(m_txInvert);
+        m_pttInvert = (buffer[3U] & 0x04U) == 0x04U;
+        m_conf["system"]["modem"]["pttInvert"] = __BOOL_STR(m_pttInvert);
+
+        m_dcBlocker = (buffer[4U] & 0x01U) == 0x01U;
+        m_conf["system"]["modem"]["dcBlocker"] = __BOOL_STR(m_dcBlocker);
+
+        m_fdmaPreamble = buffer[5U];
+        m_conf["system"]["modem"]["fdmaPreamble"] = __INT_STR(m_fdmaPreamble);
+
+        // levels
+        m_rxLevel = (float(buffer[7U]) - 0.5F) / 2.55F;
+        m_conf["system"]["modem"]["rxLevel"] = __FLOAT_STR(m_rxLevel);
+        m_txLevel = (float(buffer[8U]) - 0.5F) / 2.55F;
+        m_conf["system"]["modem"]["txLevel"] = __FLOAT_STR(m_txLevel);
+
+        m_dmrRxDelay = buffer[10U];
+        m_conf["system"]["modem"]["dmrRxDelay"] = __INT_STR(m_dmrRxDelay);
+
+        m_p25CorrCount = buffer[11U];
+        m_conf["system"]["modem"]["p25CorrCount"] = __INT_STR(m_p25CorrCount);
+
+        m_txDCOffset = int(buffer[16U]) - 128;
+        m_conf["system"]["modem"]["txDCOffset"] = __INT_STR(m_txDCOffset);
+        m_rxDCOffset = int(buffer[17U]) - 128;
+        m_conf["system"]["modem"]["rxDCOffset"] = __INT_STR(m_rxDCOffset);
+
+        writeConfig();
+        sleep(500);
+
+        // symbol adjust
+        m_dmrSymLevel3Adj = int(buffer[35U]) - 128;
+        m_conf["system"]["modem"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
+        m_dmrSymLevel1Adj = int(buffer[36U]) - 128;
+        m_conf["system"]["modem"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
+
+        m_p25SymLevel3Adj = int(buffer[37U]) - 128;
+        m_conf["system"]["modem"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
+        m_p25SymLevel1Adj = int(buffer[38U]) - 128;
+        m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
+
+        writeSymbolAdjust();
+        sleep(500);
+
+        // RF parameters
+        m_dmrDiscBWAdj = int8_t(buffer[20U]) - 128;
+        m_conf["system"]["modem"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
+        m_p25DiscBWAdj = int8_t(buffer[21U]) - 128;
+        m_conf["system"]["modem"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
+        m_dmrPostBWAdj = int8_t(buffer[22U]) - 128;
+        m_conf["system"]["modem"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
+        m_p25PostBWAdj = int8_t(buffer[23U]) - 128;
+        m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
+
+        m_adfGainMode = (ADF_GAIN_MODE)buffer[24U];
+        m_conf["system"]["modem"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
+
+        m_txTuning = int(buffer[25U]) - 128;
+        m_conf["system"]["modem"]["txTuning"] = __INT_STR(m_txTuning);
+        m_txAdjustedFreq = m_txFrequency + m_txTuning;
+        m_rxTuning = int(buffer[26U]) - 128;
+        m_conf["system"]["modem"]["rxTuning"] = __INT_STR(m_rxTuning);
+        m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
+
+        writeRFParams();
+        sleep(500);
     }
 }
 
@@ -2230,11 +2309,6 @@ bool HostCal::writeFlash()
     if (m_dcBlocker)
         buffer[4U] |= 0x01U;
 
-    if (m_dmrEnabled)
-        buffer[4U] |= 0x02U;
-    if (m_p25Enabled)
-        buffer[4U] |= 0x08U;
-
     buffer[5U] = m_fdmaPreamble;
 
     buffer[7U] = (uint8_t)(m_rxLevel * 2.55F + 0.5F);
@@ -2257,15 +2331,24 @@ bool HostCal::writeFlash()
 
     buffer[24U] = (uint8_t)m_adfGainMode;
 
-    buffer[25U] = (uint8_t)(m_txTuning + 128);
-    buffer[26U] = (uint8_t)(m_rxTuning + 128);
+    uint32_t txTuning = (uint32_t)m_txTuning;
+    __SET_UINT32(txTuning, buffer, 25U);
+    uint32_t rxTuning = (uint32_t)m_rxTuning;
+    __SET_UINT32(rxTuning, buffer, 29U);
 
     // symbol adjust
-    buffer[30U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
-    buffer[31U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
+    buffer[35U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
+    buffer[36U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
 
-    buffer[32U] = (uint8_t)(m_p25SymLevel3Adj + 128);
-    buffer[33U] = (uint8_t)(m_p25SymLevel1Adj + 128);
+    buffer[37U] = (uint8_t)(m_p25SymLevel3Adj + 128);
+    buffer[38U] = (uint8_t)(m_p25SymLevel1Adj + 128);
+
+    // software signature
+    std::string software;
+    software.append(__NET_NAME__ " " __VER__ " (built " __BUILD__ ")");
+    for (uint8_t i = 0; i < software.length(); i++) {
+        buffer[192U + i] = software[i];
+    }
 
     // configuration version
     buffer[DVM_CONF_AREA_LEN] = DVM_CONF_AREA_VER;

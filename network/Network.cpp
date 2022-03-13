@@ -493,7 +493,7 @@ bool Network::writeAuthorisation()
 /// <returns></returns>
 bool Network::writeConfig()
 {
-    const char* software = "DVM_DMR_P25";
+    const char* software = __NET_NAME__;
 
     json::object config = json::object();
 
@@ -513,7 +513,7 @@ bool Network::writeConfig()
 
     // channel data
     json::object channel = json::object();
-    channel["txPower"].set<uint32_t>(m_power);                                           // Tx Power
+    channel["txPower"].set<uint32_t>(m_power);                                      // Tx Power
     channel["txOffsetMhz"].set<float>(m_txOffsetMhz);                               // Tx Offset (Mhz)
     channel["chBandwidthKhz"].set<float>(m_chBandwidthKhz);                         // Ch. Bandwidth (khz)
     channel["channelId"].set<uint8_t>(m_channelId);                                 // Channel ID

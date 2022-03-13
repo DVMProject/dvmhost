@@ -1528,6 +1528,7 @@ bool Host::createModem()
     }
     uint8_t packetPlayoutTime = (uint8_t)modemConf["packetPlayoutTime"].as<uint32_t>(10U);
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
+    bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
 
@@ -1624,10 +1625,6 @@ bool Host::createModem()
         LogInfo("    UDP Port: %u", udpPort);
     }
 
-    // apply the frequency tuning offsets
-    uint32_t rxActualFreq = m_rxFrequency + rxTuning;
-    uint32_t txActualFreq = m_txFrequency + txTuning;
-
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
     LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
     LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
@@ -1640,8 +1637,8 @@ bool Host::createModem()
     LogInfo("    TX DC Offset: %d", txDCOffset);
     LogInfo("    RX Tuning Offset: %dhz", rxTuning);
     LogInfo("    TX Tuning Offset: %dhz", txTuning);
-    LogInfo("    RX Effective Frequency: %uhz", rxActualFreq);
-    LogInfo("    TX Effective Frequency: %uhz", txActualFreq);
+    LogInfo("    RX Effective Frequency: %uhz", m_rxFrequency + rxTuning);
+    LogInfo("    TX Effective Frequency: %uhz", m_txFrequency + txTuning);
     LogInfo("    RF Power Level: %u", rfPower);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
@@ -1650,16 +1647,21 @@ bool Host::createModem()
     LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
     LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
+    if (ignoreModemConfigArea) {
+        LogInfo("    Ignore Modem Configuration Area: yes");
+    }
+
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
-    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, packetPlayoutTime, disableOFlowReset, trace, debug);
+    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
+        packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(rxActualFreq, txActualFreq, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 

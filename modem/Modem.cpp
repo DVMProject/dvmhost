@@ -54,6 +54,28 @@ using namespace modem;
 #endif
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define CONFIG_OPT_MISMATCH_STR "Configuration option mismatch; "
+#define CONFIG_OPT_ALTERED_STR "Configuration option manually altered; "
+#define MODEM_CONFIG_AREA_DISAGREE_STR "modem configuration area disagreement, "
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+// Check flash configuration value against class value.
+#define FLASH_VALUE_CHECK(_CLASS_VAL, _FLASH_VAL, _DEFAULT, _STR)                        \
+    if (_CLASS_VAL == _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                            \
+        LogWarning(LOG_MODEM, CONFIG_OPT_MISMATCH_STR MODEM_CONFIG_AREA_DISAGREE_STR _STR " = %u, " _STR " (flash) = %u", _CLASS_VAL, _FLASH_VAL); \
+        _CLASS_VAL = _FLASH_VAL;                                                         \
+    } else {                                                                             \
+        if (_CLASS_VAL != _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                        \
+            LogWarning(LOG_MODEM, CONFIG_OPT_ALTERED_STR MODEM_CONFIG_AREA_DISAGREE_STR _STR " = %u, " _STR " (flash) = %u", _CLASS_VAL, _FLASH_VAL); \
+        }                                                                                \
+    }
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
@@ -69,12 +91,14 @@ using namespace modem;
 /// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
 /// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="p25CorrCount">P25 Correlation Countdown.</param>
-/// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="packetPlayoutTime">Length of time in MS between packets to send to modem.</param>
+/// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
+/// <param name="ignoreModemConfigArea">Flag indicating whether the modem configuration area is ignored.</param>
 /// <param name="trace">Flag indicating whether air interface modem trace is enabled.</param>
 /// <param name="debug">Flag indicating whether air interface modem debug is enabled.</param>
-Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-    bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug) :
+Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
+    uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset,
+    bool ignoreModemConfigArea, bool trace, bool debug) :
     m_port(port),
     m_dmrColorCode(0U),
     m_p25NAC(0x293U),
@@ -98,7 +122,9 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_txDCOffset(0),
     m_isHotspot(false),
     m_rxFrequency(0U),
+    m_rxTuning(0),
     m_txFrequency(0U),
+    m_txTuning(0),
     m_rfPower(0U),
     m_dmrDiscBWAdj(0),
     m_p25DiscBWAdj(0),
@@ -136,6 +162,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_cd(false),
     m_lockout(false),
     m_error(false),
+    m_ignoreModemConfigArea(ignoreModemConfigArea),
     m_flashDisabled(false),
     m_trace(trace),
     m_debug(debug),
@@ -237,13 +264,15 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
 /// <param name="dmrPostBWAdj"></param>
 /// <param name="p25PostBWAdj"></param>
 /// <param name="gainMode"></param>
-void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
-    int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode)
+void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower,
+    int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode)
 {
     m_adfGainMode = gainMode;
     m_rfPower = rfPower;
     m_rxFrequency = rxFreq;
+    m_rxTuning = rxTuning;
     m_txFrequency = txFreq;
+    m_txTuning = txTuning;
 
     m_dmrDiscBWAdj = dmrDiscBWAdj;
     m_p25DiscBWAdj = p25DiscBWAdj;
@@ -1511,15 +1540,17 @@ bool Modem::writeRFParams()
 
     buffer[3U] = 0x00U;
 
-    buffer[4U] = (m_rxFrequency >> 0) & 0xFFU;
-    buffer[5U] = (m_rxFrequency >> 8) & 0xFFU;
-    buffer[6U] = (m_rxFrequency >> 16) & 0xFFU;
-    buffer[7U] = (m_rxFrequency >> 24) & 0xFFU;
+    uint32_t rxActualFreq = m_rxFrequency + m_rxTuning;
+    buffer[4U] = (rxActualFreq >> 0) & 0xFFU;
+    buffer[5U] = (rxActualFreq >> 8) & 0xFFU;
+    buffer[6U] = (rxActualFreq >> 16) & 0xFFU;
+    buffer[7U] = (rxActualFreq >> 24) & 0xFFU;
 
-    buffer[8U] = (m_txFrequency >> 0) & 0xFFU;
-    buffer[9U] = (m_txFrequency >> 8) & 0xFFU;
-    buffer[10U] = (m_txFrequency >> 16) & 0xFFU;
-    buffer[11U] = (m_txFrequency >> 24) & 0xFFU;
+    uint32_t txActualFreq = m_txFrequency + m_txTuning;
+    buffer[8U] = (txActualFreq >> 0) & 0xFFU;
+    buffer[9U] = (txActualFreq >> 8) & 0xFFU;
+    buffer[10U] = (txActualFreq >> 16) & 0xFFU;
+    buffer[11U] = (txActualFreq >> 24) & 0xFFU;
 
     buffer[12U] = (unsigned char)(m_rfPower * 2.55F + 0.5F);
 
@@ -1609,7 +1640,7 @@ bool Modem::readFlash()
                                 LogError(LOG_MODEM, "Modem::readFlash(), invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
                             }
                             else {
-                                processFlashConfig(m_buffer + 3U);
+                                processFlashConfig(m_buffer);
                             }
                         }
                         else {
@@ -1639,7 +1670,76 @@ bool Modem::readFlash()
 /// <param name="buffer"></param>
 void Modem::processFlashConfig(const uint8_t *buffer)
 {
-    // TODO TODO TODO
+    if (m_ignoreModemConfigArea) {
+        LogMessage(LOG_MODEM, "Modem configuration area checking is disabled!");
+        return;
+    }
+
+    // general config
+    bool rxInvert = (buffer[3U] & 0x01U) == 0x01U;
+    FLASH_VALUE_CHECK(m_rxInvert, rxInvert, false, "rxInvert");
+    bool txInvert = (buffer[3U] & 0x02U) == 0x02U;
+    FLASH_VALUE_CHECK(m_txInvert, txInvert, false, "txInvert");
+    bool pttInvert = (buffer[3U] & 0x04U) == 0x04U;
+    FLASH_VALUE_CHECK(m_pttInvert, pttInvert, false, "pttInvert");
+
+    bool dcBlocker = (buffer[4U] & 0x01U) == 0x01U;
+    FLASH_VALUE_CHECK(m_dcBlocker, dcBlocker, true, "dcBlocker");
+
+    uint8_t fdmaPreamble = buffer[5U];
+    FLASH_VALUE_CHECK(m_fdmaPreamble, fdmaPreamble, 80U, "fdmaPreamble");
+
+    // levels
+    float rxLevel = (float(buffer[7U]) - 0.5F) / 2.55F;
+    FLASH_VALUE_CHECK(m_rxLevel, rxLevel, 50.0F, "rxLevel");
+
+    float txLevel = (float(buffer[8U]) - 0.5F) / 2.55F;
+    FLASH_VALUE_CHECK(m_cwIdTXLevel, txLevel, 50.0F, "cwIdTxLevel");
+    FLASH_VALUE_CHECK(m_dmrTXLevel, txLevel, 50.0F, "dmrTxLevel");
+    FLASH_VALUE_CHECK(m_p25TXLevel, txLevel, 50.0F, "p25TxLevel");
+
+    uint8_t dmrRxDelay = buffer[10U];
+    FLASH_VALUE_CHECK(m_dmrRxDelay, dmrRxDelay, 7U, "dmrRxDelay");
+
+    uint8_t p25CorrCount = buffer[11U];
+    FLASH_VALUE_CHECK(m_p25CorrCount, p25CorrCount, 8U, "p25CorrCount");
+
+    int txDCOffset = int(buffer[16U]) - 128;
+    FLASH_VALUE_CHECK(m_txDCOffset, txDCOffset, 0, "txDCOffset");
+
+    int rxDCOffset = int(buffer[17U]) - 128;
+    FLASH_VALUE_CHECK(m_rxDCOffset, rxDCOffset, 0, "rxDCOffset");
+    
+    // RF parameters
+    int8_t dmrDiscBWAdj = int8_t(buffer[20U]) - 128;
+    FLASH_VALUE_CHECK(m_dmrDiscBWAdj, dmrDiscBWAdj, 0, "dmrDiscBWAdj");
+    int8_t p25DiscBWAdj = int8_t(buffer[21U]) - 128;
+    FLASH_VALUE_CHECK(m_p25DiscBWAdj, p25DiscBWAdj, 0, "p25DiscBWAdj");
+    int8_t dmrPostBWAdj = int8_t(buffer[22U]) - 128;
+    FLASH_VALUE_CHECK(m_dmrPostBWAdj, dmrPostBWAdj, 0, "dmrPostBWAdj");
+    int8_t p25PostBWAdj = int8_t(buffer[23U]) - 128;
+    FLASH_VALUE_CHECK(m_p25PostBWAdj, p25PostBWAdj, 0, "p25PostBWAdj");
+
+    ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)buffer[24U];
+    FLASH_VALUE_CHECK(m_adfGainMode, adfGainMode, ADF_GAIN_AUTO, "adfGainMode");
+
+    uint32_t txTuningRaw = __GET_UINT32(buffer, 25U);
+    int txTuning = int(txTuningRaw);
+    FLASH_VALUE_CHECK(m_txTuning, txTuning, 0, "txTuning");
+    uint32_t rxTuningRaw = __GET_UINT32(buffer, 29U);
+    int rxTuning = int(rxTuningRaw);
+    FLASH_VALUE_CHECK(m_rxTuning, rxTuning, 0, "rxTuning");
+
+    // symbol adjust
+    int dmrSymLevel3Adj = int(buffer[35U]) - 128;
+    FLASH_VALUE_CHECK(m_dmrSymLevel3Adj, dmrSymLevel3Adj, 0, "dmrSymLevel3Adj");
+    int dmrSymLevel1Adj = int(buffer[36U]) - 128;
+    FLASH_VALUE_CHECK(m_dmrSymLevel1Adj, dmrSymLevel1Adj, 0, "dmrSymLevel1Adj");
+
+    int p25SymLevel3Adj = int(buffer[37U]) - 128;
+    FLASH_VALUE_CHECK(m_p25SymLevel3Adj, p25SymLevel3Adj, 0, "p25SymLevel3Adj");
+    int p25SymLevel1Adj = int(buffer[38U]) - 128;
+    FLASH_VALUE_CHECK(m_p25SymLevel1Adj, p25SymLevel1Adj, 0, "p25SymLevel1Adj");
 }
 
 /// <summary>

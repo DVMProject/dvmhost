@@ -94,6 +94,7 @@ typedef unsigned long long  ulong64_t;
 // ---------------------------------------------------------------------------
 
 #define __PROG_NAME__ "Digital Voice Modem Host"
+#define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ "dvmhost"
 #define __VER__ "R01.00.00"
 #define __BUILD__ __DATE__ " " __TIME__
@@ -103,7 +104,7 @@ typedef unsigned long long  ulong64_t;
 #if defined(_WIN32) || defined(_WIN64)
 #define DEFAULT_CONF_FILE "config.yml"
 #else
-#define DEFAULT_CONF_FILE "/opt/DVM/bin/config.yml"
+#define DEFAULT_CONF_FILE "/opt/dvm/config.yml"
 #endif // defined(_WIN32) || defined(_WIN64)
 #if defined(_WIN32) || defined(_WIN64)
 #define DEFAULT_LOCK_FILE "dvm.lock"

@@ -142,6 +142,7 @@ system:
         rssiMappingFile: RSSI.dat
         packetPlayoutTime: 10
         disableOFlowReset: false
+        ignoreModemConfigArea: false
         trace: false
         debug: false
     cwId:

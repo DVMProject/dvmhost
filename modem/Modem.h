@@ -199,8 +199,9 @@ namespace modem
     class HOST_SW_API Modem {
     public:
         /// <summary>Initializes a new instance of the Modem class.</summary>
-        Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker,
-            bool cosLockout, uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset, bool trace, bool debug);
+        Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
+            uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset,
+            bool ignoreModemConfigArea, bool trace, bool debug);
         /// <summary>Finalizes a instance of the Modem class.</summary>
         ~Modem();
 
@@ -213,7 +214,7 @@ namespace modem
         /// <summary>Sets the symbol adjustment levels.</summary>
         void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
         /// <summary>Sets the RF parameters.</summary>
-        void setRFParams(uint32_t rxFreq, uint32_t txFreq, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
+        void setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
             int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
@@ -343,7 +344,9 @@ namespace modem
         bool m_isHotspot;
 
         uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
+        int m_rxTuning;                 // hotspot modem - Rx Frequency Offset
         uint32_t m_txFrequency;         // hotspot modem - Tx Frequency
+        int m_txTuning;                 // hotspot modem - Tx Frequency Offset
         uint8_t m_rfPower;              // hotspot modem - RF power
 
         int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
@@ -393,6 +396,7 @@ namespace modem
         bool m_lockout;
         bool m_error;
 
+        bool m_ignoreModemConfigArea;
         bool m_flashDisabled;
 
         /// <summary>Retrieve the air interface modem version.</summary>
