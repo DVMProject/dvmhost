@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017,2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -52,18 +52,38 @@ namespace p25
         /// <summary>Encodes P25 network identifier data.</summary>
         void encode(uint8_t* data, uint8_t duid) const;
 
+        /// <summary>Helper to configure a separate Tx NAC.</summary>
+        void setTxNAC(uint32_t nac);
+
     public:
         /// <summary>Data unit ID.</summary>
         __READONLY_PROPERTY(uint8_t, duid, DUID);
 
     private:
-        uint8_t* m_hdu;
-        uint8_t* m_tdu;
-        uint8_t* m_ldu1;
-        uint8_t* m_pdu;
-        uint8_t* m_tsdu;
-        uint8_t* m_ldu2;
-        uint8_t* m_tdulc;
+        uint32_t m_nac;
+
+        uint8_t* m_rxHdu;
+        uint8_t* m_rxTdu;
+        uint8_t* m_rxLdu1;
+        uint8_t* m_rxPdu;
+        uint8_t* m_rxTsdu;
+        uint8_t* m_rxLdu2;
+        uint8_t* m_rxTdulc;
+
+        bool m_splitNac;
+
+        uint8_t* m_txHdu;
+        uint8_t* m_txTdu;
+        uint8_t* m_txLdu1;
+        uint8_t* m_txPdu;
+        uint8_t* m_txTsdu;
+        uint8_t* m_txLdu2;
+        uint8_t* m_txTdulc;
+
+        /// <summary></summary>
+        void createRxNID(uint32_t nac);
+        /// <summary></summary>
+        void createTxNID(uint32_t nac);
     };
 } // namespace p25
 

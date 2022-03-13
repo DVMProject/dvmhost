@@ -86,6 +86,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_data(NULL),
     m_trunk(NULL),
     m_nac(nac),
+    m_txNAC(nac),
     m_timeout(timeout),
     m_modem(modem),
     m_network(network),
@@ -277,6 +278,14 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_trunk->m_unitToUnitAvailCheck ? "yes" : "no");
+    }
+
+    // are we overriding the NAC for split NAC operations?
+    uint32_t txNAC = (uint32_t)::strtoul(systemConf["config"]["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
+    if (txNAC != 0xF7EU && txNAC != m_nac) {
+        LogMessage(LOG_P25, "Split NAC operations, setting Tx NAC to $%03X", txNAC);
+        m_txNAC = txNAC;
+        m_nid.setTxNAC(m_txNAC);
     }
 
     m_voice->resetRF();

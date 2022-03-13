@@ -1442,6 +1442,11 @@ bool Host::readParams()
         m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
         m_p25NAC = p25::P25Utils::nac(m_p25NAC);
 
+        uint32_t p25TxNAC = (uint32_t)::strtoul(rfssConfig["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
+        if (p25TxNAC == m_p25NAC) {
+            LogWarning(LOG_HOST, "Only use txNAC when split NAC operations are needed. nac and txNAC should not be the same!");
+        }
+
         m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
@@ -1466,6 +1471,11 @@ bool Host::readParams()
         LogInfo("    DMR Color Code: %u", m_dmrColorCode);
         LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
         LogInfo("    P25 NAC: $%03X", m_p25NAC);
+
+        if (p25TxNAC != 0xF7EU && p25TxNAC != m_p25NAC) {
+            LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
+        }
+
         LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
         LogInfo("    P25 Network Id: $%05X", m_p25NetId);
         LogInfo("    P25 System Id: $%03X", m_p25SysId);

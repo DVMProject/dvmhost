@@ -119,6 +119,7 @@ namespace p25
         TrunkPacket* m_trunk;
 
         uint32_t m_nac;
+        uint32_t m_txNAC;
         uint32_t m_timeout;
 
         modem::Modem* m_modem;
