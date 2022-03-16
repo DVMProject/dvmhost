@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ] ; then
+    useradd --user-group -M --system dvmhost --shell /bin/false || true
+    usermod --groups dialout --append dvmhost || true
+    chown dvmhost:dvmhost /opt/dvm/config.yml
+    chown dvmhost:dvmhost /opt/dvm/iden_table.dat
+    chown dvmhost:dvmhost /opt/dvm/rid_acl.dat
+    chown dvmhost:dvmhost /opt/dvm/tg_acl.dat
+    chown dvmhost:dvmhost /opt/dvm/log
+
+    # This will only remove masks created by d-s-h on package removal.
+    deb-systemd-helper unmask 'dvmhost.service' >/dev/null || true
+
+    # was-enabled defaults to true, so new installations run enable.
+    if deb-systemd-helper --quiet was-enabled 'dvmhost.service'; then
+        # Enables the unit on first installation, creates new
+        # symlinks on upgrades if the unit file has changed.
+        deb-systemd-helper enable 'dvmhost.service' >/dev/null || true
+    else
+        # Update the statefile to add new symlinks (if any), which need to be
+        # cleaned up on purge. Also remove old symlinks.
+        deb-systemd-helper update-state 'dvmhost.service' >/dev/null || true
+    fi
+fi
