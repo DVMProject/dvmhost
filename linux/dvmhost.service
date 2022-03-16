@@ -3,7 +3,7 @@ Description=DVMProject Host Radio Service
 After=syslog.target network.target
 
 [Service]
-User=mmdvm
+User=dvmhost
 Type=forking
 ExecStart=/opt/dvm/bin/dvmhost -c /opt/dvm/config.yml
 Restart=on-abnormal
