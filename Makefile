@@ -121,6 +121,7 @@ install: all
 		mkdir -p /opt/dvm/log || true
 
 dpkg: clean
+		which debuild || (echo "debuild is missing? Is 'devscripts' package installed?"; exit 1)
 		tar -caf ../dvmhost_1.0.0.orig.tar.gz --exclude=.git --exclude=.gitattributes --exclude=.gitignore --exclude=.vscode -v .
 		mv ../dvmhost_1.0.0.orig.tar.gz .
 		mkdir -p dpkg_build
