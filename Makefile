@@ -100,7 +100,6 @@ clean:
 		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
 		$(RM) -r dpkg_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
-		-$(RM) dvmhost.service
 
 install: all
 		mkdir -p /opt/dvm/bin || true
