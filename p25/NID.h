@@ -62,26 +62,13 @@ namespace p25
     private:
         uint32_t m_nac;
 
-        uint8_t* m_rxHdu;
-        uint8_t* m_rxTdu;
-        uint8_t* m_rxLdu1;
-        uint8_t* m_rxPdu;
-        uint8_t* m_rxTsdu;
-        uint8_t* m_rxLdu2;
-        uint8_t* m_rxTdulc;
+        uint8_t** m_rxTx;
+        uint8_t** m_tx;
 
         bool m_splitNac;
 
-        uint8_t* m_txHdu;
-        uint8_t* m_txTdu;
-        uint8_t* m_txLdu1;
-        uint8_t* m_txPdu;
-        uint8_t* m_txTsdu;
-        uint8_t* m_txLdu2;
-        uint8_t* m_txTdulc;
-
         /// <summary></summary>
-        void createRxNID(uint32_t nac);
+        void createRxTxNID(uint32_t nac);
         /// <summary></summary>
         void createTxNID(uint32_t nac);
     };
