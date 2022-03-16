@@ -98,6 +98,9 @@ strip:
 		$($(ARCH)STRIP) $(BIN)
 clean:
 		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
+		$(RM) -r dpkg_build
+		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
+		-$(RM) dvmhost.service
 
 install: all
 		mkdir -p /opt/dvm/bin || true
@@ -117,6 +120,12 @@ install: all
 		sed -i 's/file: rid_acl.dat/file: \/opt\/dvm\/rid_acl.dat/' /opt/dvm/config.yml
 		sed -i 's/file: tg_acl.dat/file: \/opt\/dvm\/tg_acl.dat/' /opt/dvm/config.yml
 		mkdir -p /opt/dvm/log || true
+
+dpkg: clean
+		tar -caf ../dvmhost_1.0.0.orig.tar.gz --exclude=.git --exclude=.gitattributes --exclude=.gitignore --exclude=.vscode -v .
+		mv ../dvmhost_1.0.0.orig.tar.gz .
+		mkdir -p dpkg_build
+		cd dpkg_build; tar xvf ../dvmhost_1.0.0.orig.tar.gz .; debuild -us -uc
 
 install-service: install
 		@useradd --user-group -M --system dvmhost --shell /bin/false || true

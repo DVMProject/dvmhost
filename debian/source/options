@@ -1,0 +1,4 @@
+tar-ignore = ".vscode"
+tar-ignore = ".git"
+tar-ignore = ".gitignore"
+tar-ignore = ".gitattributes"

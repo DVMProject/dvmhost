@@ -1,0 +1,11 @@
+Source: dvmhost
+Maintainer: Bryan Biedenkapp <gatekeep@deb-lx-fuel>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+
+Package: dvmhost
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Digital Voice Modem Host

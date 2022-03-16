@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+install_root = /opt
+build_root = $$(pwd)/debian/dvmhost
+
+%:
+	dh $@ --with=systemd
+
+override_dh_installinit:
+	dh_systemd_enable -pdvmhost --name=dvmhost linux/dvmhost.service
+	dh_installinit -pdvmhost --no-start --noscripts
+	dh_systemd_start -pdvmhost --no-restart-on-upgrade
+
+override_dh_systemd_start:
+	echo "Not running dh_systemd_start"
+
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p $(build_root)/opt/dvm || true
+	mkdir -p $(build_root)/opt/dvm/bin || true
+	mkdir -p $(build_root)/opt/dvm/log || true
+	cp -Rv $(install_root)/dvm $(build_root)/opt
+
