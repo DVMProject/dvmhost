@@ -192,6 +192,12 @@ inline std::string __FLOAT_STR(const float& value) {
     return ss.str();
 }
 
+inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
+    std::stringstream ss;
+    ss << ((value >> 24) & 0xFFU) << "." << ((value >> 16) & 0xFFU) << "." << ((value >> 8) & 0xFFU) << "." << (value & 0xFFU);
+    return ss.str();
+}
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------

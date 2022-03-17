@@ -278,13 +278,13 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                                 (m_pduUserData[10U] << 8) + m_pduUserData[11U];
 
                             if (m_verbose) {
-                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %u", llId, ipAddr);
+                                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                             }
 
                             writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
 
                             if (!acl::AccessControl::validateSrcId(llId)) {
-                                LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %u", llId, ipAddr);
+                                LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                                 writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
                             }
                             else {
@@ -294,7 +294,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                                 }
 
                                 if (m_verbose) {
-                                    LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %u", llId, ipAddr);
+                                    LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                                 }
 
                                 writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
