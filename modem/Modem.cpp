@@ -75,6 +75,17 @@ using namespace modem;
         }                                                                                \
     }
 
+// Check flash configuration value against class value.
+#define FLASH_VALUE_CHECK_FLOAT(_CLASS_VAL, _FLASH_VAL, _DEFAULT, _STR)                 \
+    if (_CLASS_VAL == _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                            \
+        LogWarning(LOG_MODEM, CONFIG_OPT_MISMATCH_STR MODEM_CONFIG_AREA_DISAGREE_STR _STR " = %f, " _STR " (flash) = %f", _CLASS_VAL, _FLASH_VAL); \
+        _CLASS_VAL = _FLASH_VAL;                                                         \
+    } else {                                                                             \
+        if (_CLASS_VAL != _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                        \
+            LogWarning(LOG_MODEM, CONFIG_OPT_ALTERED_STR MODEM_CONFIG_AREA_DISAGREE_STR _STR " = %f, " _STR " (flash) = %f", _CLASS_VAL, _FLASH_VAL); \
+        }                                                                                \
+    }
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -1691,12 +1702,12 @@ void Modem::processFlashConfig(const uint8_t *buffer)
 
     // levels
     float rxLevel = (float(buffer[7U]) - 0.5F) / 2.55F;
-    FLASH_VALUE_CHECK(m_rxLevel, rxLevel, 50.0F, "rxLevel");
+    FLASH_VALUE_CHECK_FLOAT(m_rxLevel, rxLevel, 50.0F, "rxLevel");
 
     float txLevel = (float(buffer[8U]) - 0.5F) / 2.55F;
-    FLASH_VALUE_CHECK(m_cwIdTXLevel, txLevel, 50.0F, "cwIdTxLevel");
-    FLASH_VALUE_CHECK(m_dmrTXLevel, txLevel, 50.0F, "dmrTxLevel");
-    FLASH_VALUE_CHECK(m_p25TXLevel, txLevel, 50.0F, "p25TxLevel");
+    FLASH_VALUE_CHECK_FLOAT(m_cwIdTXLevel, txLevel, 50.0F, "cwIdTxLevel");
+    FLASH_VALUE_CHECK_FLOAT(m_dmrTXLevel, txLevel, 50.0F, "dmrTxLevel");
+    FLASH_VALUE_CHECK_FLOAT(m_p25TXLevel, txLevel, 50.0F, "p25TxLevel");
 
     uint8_t dmrRxDelay = buffer[10U];
     FLASH_VALUE_CHECK(m_dmrRxDelay, dmrRxDelay, 7U, "dmrRxDelay");
