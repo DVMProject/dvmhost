@@ -26,30 +26,31 @@
     <ClInclude Include="RemoteCommand.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="network\UDPSocket.h">
+    <ClInclude Include="..\edac\SHA256.h">
+      <Filter>Header Files\edac</Filter>
+    </ClInclude>
+    <ClInclude Include="..\network\UDPSocket.h">
       <Filter>Header Files\network</Filter>
     </ClInclude>
-    <ClInclude Include="Defines.h">
+    <ClInclude Include="..\Defines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="edac\SHA256.h">
-      <Filter>Header Files\edac</Filter>
+    <ClInclude Include="..\Log.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RemoteCommand.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="network\UDPSocket.cpp">
-      <Filter>Source Files\network</Filter>
-    </ClCompile>
-    <ClCompile Include="edac\SHA256.cpp">
+    <ClCompile Include="..\edac\SHA256.cpp">
       <Filter>Source Files\edac</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Makefile" />
-    <None Include="Makefile.arm" />
-    <None Include="Makefile.rpi-arm" />
+    <ClCompile Include="..\network\UDPSocket.cpp">
+      <Filter>Source Files\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Log.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

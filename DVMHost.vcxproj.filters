@@ -595,22 +595,23 @@
     <ClCompile Include="host\setup\HostSetup.cpp">
       <Filter>Source Files\host\setup</Filter>
     </ClCompile>
+    <ClCompile Include="dmr\dfsi\LC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="p25\dfsi\LC.cpp">
       <Filter>Source Files\p25\dfsi</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile" />
-    <None Include="Makefile.arm" />
-    <None Include="Makefile.rpi-arm" />
     <None Include="cpp.hint" />
     <None Include="iden_channel_calc.py" />
+    <None Include="iden_table.example.dat" />
+    <None Include="rid_acl.example.dat" />
+    <None Include="tg_acl.example.dat" />
+    <None Include="config.example.yml" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="iden_table.dat" />
-    <CopyFileToFolders Include="rid_acl.dat" />
     <CopyFileToFolders Include="RSSI.dat" />
-    <CopyFileToFolders Include="tg_acl.dat" />
-    <CopyFileToFolders Include="config.yml" />
   </ItemGroup>
 </Project>

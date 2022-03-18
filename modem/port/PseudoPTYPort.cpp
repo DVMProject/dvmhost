@@ -34,9 +34,9 @@
 #include <cassert>
 #include <cstdlib>
 
-using namespace modem::port;
-
 #if !defined(_WIN32) && !defined(_WIN64)
+
+using namespace modem::port;
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

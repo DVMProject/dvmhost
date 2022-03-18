@@ -244,7 +244,6 @@
     <ClCompile Include="dmr\data\DataHeader.cpp" />
     <ClCompile Include="dmr\data\EMB.cpp" />
     <ClCompile Include="dmr\data\EmbeddedData.cpp" />
-    <ClCompile Include="dmr\dfsi\LC.cpp" />
     <ClCompile Include="dmr\Control.cpp" />
     <ClCompile Include="dmr\DataPacket.cpp" />
     <ClCompile Include="dmr\lc\PrivacyLC.cpp" />
@@ -292,6 +291,7 @@
     <ClCompile Include="p25\data\DataBlock.cpp" />
     <ClCompile Include="p25\data\DataHeader.cpp" />
     <ClCompile Include="p25\data\LowSpeedData.cpp" />
+    <ClCompile Include="p25\dfsi\LC.cpp" />
     <ClCompile Include="p25\edac\Trellis.cpp" />
     <ClCompile Include="p25\lc\LC.cpp" />
     <ClCompile Include="p25\lc\TDULC.cpp" />
@@ -313,26 +313,24 @@
     <ClCompile Include="yaml\Yaml.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="iden_table.dat">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="config.yml">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
+    <None Include="config.example.yml">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
+    </None>
     <None Include="cpp.hint" />
     <None Include="iden_channel_calc.py" />
+    <None Include="iden_table.example.dat">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
+    </None>
     <None Include="Makefile" />
-    <None Include="Makefile.arm" />
-    <None Include="Makefile.rpi-arm" />
-    <CopyFileToFolders Include="rid_acl.dat">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
     <CopyFileToFolders Include="RSSI.dat">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="tg_acl.dat">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
+    <None Include="rid_acl.example.dat">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
+    </None>
+    <None Include="tg_acl.example.dat">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..;$(ProjectDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..;$(ProjectDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -152,20 +152,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Defines.h" />
-    <ClInclude Include="edac\SHA256.h" />
+    <ClInclude Include="..\Defines.h" />
+    <ClInclude Include="..\edac\SHA256.h" />
+    <ClInclude Include="..\Log.h" />
+    <ClInclude Include="..\network\UDPSocket.h" />
     <ClInclude Include="RemoteCommand.h" />
-    <ClInclude Include="network\UDPSocket.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="edac\SHA256.cpp" />
+    <ClCompile Include="..\edac\SHA256.cpp" />
+    <ClCompile Include="..\Log.cpp" />
+    <ClCompile Include="..\network\UDPSocket.cpp" />
     <ClCompile Include="RemoteCommand.cpp" />
-    <ClCompile Include="network\UDPSocket.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Makefile" />
-    <None Include="Makefile.arm" />
-    <None Include="Makefile.rpi-arm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

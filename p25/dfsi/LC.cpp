@@ -382,7 +382,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
-    uint8_t dfsiFrame[frameLength];
+    uint8_t* dfsiFrame = new uint8_t[frameLength];
     ::memset(dfsiFrame, 0x00U, frameLength);
 
     dfsiFrame[0U] = m_frameType;                                                    // Frame Type
@@ -469,6 +469,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);
+    delete[] dfsiFrame;
 }
 
 /// <summary>
@@ -619,7 +620,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
-    uint8_t dfsiFrame[frameLength];
+    uint8_t* dfsiFrame = new uint8_t[frameLength];
     ::memset(dfsiFrame, 0x00U, frameLength);
 
     dfsiFrame[0U] = m_frameType;                                                    // Frame Type
@@ -708,6 +709,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);
+    delete[] dfsiFrame;
 }
 
 /// <summary>
