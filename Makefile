@@ -9,12 +9,13 @@ rpi-armCXX  = /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf
 rpi-armSTRIP= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip
 
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
+CCFLAGS = -I..
 EXTFLAGS=
 LIBS    = -lpthread -lutil
 LDFLAGS = -g
 
-BIN = dvmhost
-OBJECTS = \
+HOST_BIN = dvmhost
+HOST_OBJECTS = \
 		edac/AMBEFEC.o \
 		edac/BCH.o \
 		edac/BPTC19696.o \
@@ -88,16 +89,27 @@ OBJECTS = \
 		StopWatch.o \
 		Utils.o \
 		HostMain.o
+CMD_BIN = dvmcmd
+CMD_OBJECTS = \
+        remote/RemoteCommand.cmd.o \
+        edac/SHA256.cmd.o \
+        network/UDPSocket.cmd.o \
+		Log.cmd.o
 
-all: dvmhost
-dvmhost: $(OBJECTS) 
-		$($(ARCH)CXX) $(OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(BIN)
+all: dvmhost dvmcmd
+dvmhost: $(HOST_OBJECTS) 
+		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(HOST_BIN)
+dvmcmd: $(CMD_OBJECTS)
+		$($(ARCH)CXX) $(CMD_OBJECTS) $(CFLAGS) $(CCFLAGS) $(EXTFLAGS) $(LIBS) -o $(CMD_BIN)
 %.o: %.cpp
 		$($(ARCH)CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
+%.cmd.o: %.cpp
+		$($(ARCH)CXX) $(CFLAGS) $(CCFLAGS) $(EXTFLAGS) -c -o $@ $<
 strip:
-		$($(ARCH)STRIP) $(BIN)
+		-$($(ARCH)STRIP) $(HOST_BIN)
+		-$($(ARCH)STRIP) $(CMD_BIN)
 clean:
-		$(RM) $(BIN) $(OBJECTS) *.o *.d *.bak *~
+		$(RM) $(HOST_BIN) $(HOST_OBJECTS) $(CMD_BIN) $(CMD_OBJECTS) *.o *.d *.bak *~
 		$(RM) -r dpkg_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
 
