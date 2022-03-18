@@ -313,24 +313,32 @@
     <ClCompile Include="yaml\Yaml.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="config.example.yml">
+    <CopyFileToFolders Include="config.example.yml">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-    </None>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
+    </CopyFileToFolders>
     <None Include="cpp.hint" />
     <None Include="iden_channel_calc.py" />
-    <None Include="iden_table.example.dat">
+    <CopyFileToFolders Include="iden_table.example.dat">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-    </None>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
+    </CopyFileToFolders>
     <None Include="Makefile" />
     <CopyFileToFolders Include="RSSI.dat">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <None Include="rid_acl.example.dat">
+    <CopyFileToFolders Include="rid_acl.example.dat">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-    </None>
-    <None Include="tg_acl.example.dat">
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="tg_acl.example.dat">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-    </None>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

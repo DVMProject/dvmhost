@@ -595,9 +595,6 @@
     <ClCompile Include="host\setup\HostSetup.cpp">
       <Filter>Source Files\host\setup</Filter>
     </ClCompile>
-    <ClCompile Include="dmr\dfsi\LC.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="p25\dfsi\LC.cpp">
       <Filter>Source Files\p25\dfsi</Filter>
     </ClCompile>
@@ -606,12 +603,12 @@
     <None Include="Makefile" />
     <None Include="cpp.hint" />
     <None Include="iden_channel_calc.py" />
-    <None Include="iden_table.example.dat" />
-    <None Include="rid_acl.example.dat" />
-    <None Include="tg_acl.example.dat" />
-    <None Include="config.example.yml" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="RSSI.dat" />
+    <CopyFileToFolders Include="iden_table.example.dat" />
+    <CopyFileToFolders Include="config.example.yml" />
+    <CopyFileToFolders Include="rid_acl.example.dat" />
+    <CopyFileToFolders Include="tg_acl.example.dat" />
   </ItemGroup>
 </Project>
