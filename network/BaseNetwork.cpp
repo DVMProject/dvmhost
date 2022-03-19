@@ -226,14 +226,21 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 
     uint8_t* data = NULL;
     len = m_buffer[23U];
-    if (len <= 24) {
-        data = new uint8_t[len];
-        ::memset(data, 0x00U, len);
+    if (duid == p25::P25_DUID_PDU) {
+        data = new uint8_t[length];
+        ::memset(data, 0x00U, length);
+        ::memcpy(data, m_buffer, length);
     }
     else {
-        data = new uint8_t[len];
-        ::memset(data, 0x00U, len);
-        ::memcpy(data, m_buffer + 24U, len);
+        if (len <= 24) {
+            data = new uint8_t[len];
+            ::memset(data, 0x00U, len);
+        }
+        else {
+            data = new uint8_t[len];
+            ::memset(data, 0x00U, len);
+            ::memcpy(data, m_buffer + 24U, len);
+        }
     }
 
     ret = true;
@@ -359,12 +366,14 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::TSBK& tsbk, const uint8_t* data)
 /// <summary>
 /// Writes P25 PDU frame data to the network.
 /// </summary>
-/// <param name="llId"></param>
-/// <param name="dataType"></param>
+/// <param name="header"></param>
+/// <param name="secHeader"></param>
+/// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25PDU(const uint32_t llId, const uint8_t dataType, const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
+    const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -375,7 +384,7 @@ bool BaseNetwork::writeP25PDU(const uint32_t llId, const uint8_t dataType, const
 
     m_streamId[0] = m_p25StreamId;
 
-    return writeP25PDU(m_id, m_p25StreamId, llId, dataType, data, len);
+    return writeP25PDU(m_id, m_p25StreamId, header, secHeader, currentBlock, data, len);
 }
 
 /// <summary>
@@ -483,7 +492,7 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
     uint32_t dstId = data.getDstId();                                               // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
     uint32_t slotNo = data.getSlotNo();
 
@@ -521,7 +530,7 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
 
     buffer[4U] = data.getSeqNo();                                                   // Sequence Number
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     data.getData(buffer + 20U);
 
@@ -569,11 +578,11 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -670,11 +679,11 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -765,11 +774,11 @@ bool BaseNetwork::writeP25TDU(const uint32_t id, const uint32_t streamId, const 
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -813,11 +822,11 @@ bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = tsbk.getDstId();                                               // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
     buffer[15U] = tsbk.getMFId();                                                   // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     buffer[20U] = 0U;                                                               // Reserved (LSD 1)
     buffer[21U] = 0U;                                                               // Reserved (LSD 2)
@@ -844,16 +853,25 @@ bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const
 /// </summary>
 /// <param name="id"></param>
 /// <param name="streamId"></param>
-/// <param name="llId"></param>
-/// <param name="dataType"></param>
+/// <param name="header"></param>
+/// <param name="secHeader"></param>
+/// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const uint32_t llId, const uint8_t dataType, const uint8_t* data,
-    const uint32_t len)
+bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
+    const uint8_t currentBlock, const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
+
+    bool useSecondHeader = false;
+
+    // process second header if we're using enhanced addressing
+    if (header.getSAP() == p25::PDU_SAP_EXT_ADDR &&
+        header.getFormat() == p25::PDU_FMT_UNCONFIRMED) {
+        useSecondHeader = true;
+    }
 
     assert(data != NULL);
 
@@ -862,20 +880,24 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
-    buffer[4U] = dataType;                                                          // Data Type (LCO)
+    buffer[4U] = header.getSAP();                                                   // Service Access Point
+    if (header.getFormat() == p25::PDU_FMT_CONFIRMED) {
+        buffer[4U] |= 0x80U;
+    }
 
-    __SET_UINT16(llId, buffer, 5U);                                                 // Logical Link Address (Source Address)
+    uint32_t llId = (useSecondHeader) ? secHeader.getLLId() : header.getLLId();
+    __SET_UINT16(llId, buffer, 5U);                                                 // Logical Link Address
 
-    __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes] (Target Address)
+    __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
 
-    __SET_UINT32(id, buffer, 11U);
+    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
-    buffer[15U] = p25::P25_MFG_STANDARD;                                            // MFId
+    buffer[15U] = header.getMFId();                                                 // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
-    buffer[20U] = 0U;                                                               // Reserved (LSD 1)
-    buffer[21U] = 0U;                                                               // Reserved (LSD 2)
+    buffer[20U] = header.getBlocksToFollow();                                       // Blocks To Follow
+    buffer[21U] = currentBlock;                                                     // Current Block
 
     buffer[22U] = p25::P25_DUID_PDU;                                                // DUID
 

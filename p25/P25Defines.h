@@ -340,11 +340,6 @@ namespace p25
     const uint8_t   P25_DUID_LDU2 = 0x0AU;              // Logical Link Data Unit 2
     const uint8_t   P25_DUID_PDU = 0x0CU;               // Packet Data Unit 
     const uint8_t   P25_DUID_TDULC = 0x0FU;             // Terminator Data Unit with Link Control
-
-    // Data Type(s)
-    const uint8_t   P25_DT_DATA_HEADER = 0x06U;
-    const uint8_t   P25_DT_DATA_SEC_HEADER = 0x07U;
-    const uint8_t   P25_DT_DATA = 0x08U;
 } // namespace p25
 
 // ---------------------------------------------------------------------------

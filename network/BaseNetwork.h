@@ -141,7 +141,8 @@ namespace network
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
         virtual bool writeP25TSDU(const p25::lc::TSBK& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
-        virtual bool writeP25PDU(const uint32_t llId, const uint8_t dataType, const uint8_t* data, const uint32_t len);
+        virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
+            const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes the local activity log to the network.</summary>
         virtual bool writeActLog(const char* message);
@@ -207,7 +208,8 @@ namespace network
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
         bool writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::TSBK& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
-        bool writeP25PDU(const uint32_t id, const uint32_t streamId, const uint32_t llId, const uint8_t dataType, const uint8_t* data, const uint32_t len);
+        bool writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
+            const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes data to the network.</summary>
         virtual bool write(const uint8_t* data, uint32_t length);

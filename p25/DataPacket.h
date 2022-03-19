@@ -88,11 +88,11 @@ namespace p25
         data::DataBlock* m_netData;
         data::DataHeader m_netDataHeader;
         data::DataHeader m_netSecondHeader;
-        uint8_t m_netBlocksToFollow;
-        uint8_t m_netDataBlockCnt;
-        uint32_t m_netBitOffset;
+        bool m_netUseSecondHeader;
         uint32_t m_netDataOffset;
+        uint8_t m_netDataBlockCnt;
         uint8_t* m_netPDU;
+        uint32_t m_netPDUCount;
 
         uint8_t* m_pduUserData;
         uint32_t m_pduUserDataLength;
@@ -111,23 +111,18 @@ namespace p25
         ~DataPacket();
 
         /// <summary>Write data processed from RF to the network.</summary>
-        void writeNetworkRF(const uint8_t dataType, const uint8_t* data, uint32_t len);
+        void writeNetworkRF(const uint8_t currentBlock, const uint8_t* data, uint32_t len);
 
         /// <summary>Helper to write a P25 PDU packet.</summary>
         void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);
+        /// <summary>Helper to write a network P25 PDU packet.</summary>
+        void writeNet_PDU_Buffered();
         /// <summary>Helper to re-write a received P25 PDU packet.</summary>
         void writeRF_PDU_Buffered();
         /// <summary>Helper to write a PDU registration response.</summary>
         void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr);
         /// <summary>Helper to write a PDU acknowledge response.</summary>
         void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId);
-
-        /// <summary>Helper to write a network P25 PDU header packet.</summary>
-        void writeNet_PDU_Header();
-        /// <summary>Helper to write a network P25 PDU secondary header packet.</summary>
-        void writeNet_PDU_Sec_Header();
-        /// <summary>Helper to write a network P25 PDU data packet.</summary>
-        void writeNet_PDU();
     };
 } // namespace p25
 
