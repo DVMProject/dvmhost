@@ -399,7 +399,7 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
 
                     uint8_t blocksToFollow = data[20U];
                     bool confirmed = (data[4U] & 0x80U) == 0x80U;
-                    bool response = (data[4U] & 0x40U) == 0x40U;
+                    //bool response = (data[4U] & 0x40U) == 0x40U;
                     uint8_t sap = data[4U] & 0x3FU;
 
                     m_netDataHeader.setAckNeeded(confirmed);
