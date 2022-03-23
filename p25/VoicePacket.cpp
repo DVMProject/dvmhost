@@ -608,7 +608,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)", 
+                LogMessage(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)", 
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
             }
 
