@@ -5,6 +5,8 @@ The DVM Host software provides the host computer implementation of a mixed-mode 
 
 This project is a direct fork of the MMDVMHost (https://github.com/g4klx/MMDVMHost) project, and combines the MMDVMCal (https://github.com/g4klx/MMDVMCal) project into a single package.
 
+Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
+
 ## Building
 
 Please see the various Makefile included in the project for more information. (All following information assumes familiarity with the standard Linux make system.)
