@@ -534,6 +534,7 @@ bool Control::writeControlRF()
     }
 
     if (m_ccFrameCnt == 254U) {
+        m_trunk->writeAdjSSNetwork();
         m_ccFrameCnt = 0U;
     }
 
