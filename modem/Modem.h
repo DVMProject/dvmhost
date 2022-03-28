@@ -120,6 +120,8 @@ namespace modem
         CMD_P25_LOST = 0x32U,
         CMD_P25_CLEAR = 0x33U,
 
+        CMD_DFSI_DATA = 0x40U,
+
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,
 
@@ -220,6 +222,8 @@ namespace modem
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
         void setP25NAC(uint32_t nac);
+        /// <summary>Sets the P25 DFSI data mode.</summary>
+        void setP25DFSI(bool dfsi);
         /// <summary>Sets the RF receive deviation levels.</summary>
         void setRXLevel(float rxLevel);
 
@@ -258,6 +262,9 @@ namespace modem
         
         /// <summary>Helper to test if the modem is a hotspot.</summary>
         bool isHotspot() const;
+        
+        /// <summary>Helper to test if the modem is in P25 DFSI data mode.</summary>
+        bool isP25DFSI() const;
 
         /// <summary>Flag indicating whether or not the air interface modem is transmitting.</summary>
         bool hasTX() const;
@@ -383,6 +390,8 @@ namespace modem
         RingBuffer<uint8_t> m_txDMRData2;
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_txP25Data;
+
+        bool m_useDFSI;
 
         Timer m_statusTimer;
         Timer m_inactivityTimer;

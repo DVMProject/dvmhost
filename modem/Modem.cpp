@@ -164,6 +164,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_txDMRData2(1000U, "Modem TX DMR2"),
     m_rxP25Data(1000U, "Modem RX P25"),
     m_txP25Data(1000U, "Modem TX P25"),
+    m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
     m_dmrSpace1(0U),
@@ -311,6 +312,15 @@ void Modem::setP25NAC(uint32_t nac)
     assert(nac < 0xFFFU);
 
     m_p25NAC = nac;
+}
+
+/// <summary>
+/// Sets the P25 DFSI data mode.
+/// </summary>
+/// <param name="nac"></param>
+void Modem::setP25DFSI(bool dfsi)
+{
+    m_useDFSI = dfsi;
 }
 
 /// <summary>
@@ -644,6 +654,32 @@ void Modem::clock(uint32_t ms)
         }
         break;
 
+        /** DFSI */
+        case CMD_DFSI_DATA:
+        {
+            if (!m_useDFSI) {
+                LogError(LOG_MODEM, "CMD_DFSI_DATA, without being in P25 DFSI mode?; useDFSI = %u", m_useDFSI);
+                break;
+            }
+
+            //if (m_trace)
+            //    Utils::dump(1U, "RX P25 DFSI Data", m_buffer, m_length);
+
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_DFSI_DATA double length?; len = %u", m_length);
+                break;
+            }
+
+            uint8_t data = m_length - 2U;
+            m_rxP25Data.addData(&data, 1U);
+
+            data = TAG_DATA;
+            m_rxP25Data.addData(&data, 1U);
+
+            m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
+        }
+        break;
+
         /** General */
         case CMD_GET_STATUS:
         {
@@ -935,6 +971,15 @@ bool Modem::isHotspot() const
 }
 
 /// <summary>
+/// Helper to test if the modem is in P25 DFSI data mode.
+/// </summary>
+/// <returns>True, if the modem is in P25 DFSI data mode, otherwise false.</returns>
+bool Modem::isP25DFSI() const
+{
+    return m_useDFSI;
+}
+
+/// <summary>
 /// Flag indicating whether or not the air interface modem is transmitting.
 /// </summary>
 /// <returns>True, if air interface modem is transmitting, otherwise false.</returns>
@@ -1158,7 +1203,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = length + 2U;
-    buffer[2U] = CMD_P25_DATA;
+    buffer[2U] = (m_useDFSI) ? CMD_DFSI_DATA : CMD_P25_DATA;
 
     ::memcpy(buffer + 3U, data + 1U, length - 1U);
 
