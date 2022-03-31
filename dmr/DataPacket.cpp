@@ -97,7 +97,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
         if (!m_slot->m_rfTimeout) {
-            data[0U] = TAG_EOT;
+            data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
             m_slot->writeNetworkRF(data, DT_TERMINATOR_WITH_LC);
@@ -180,7 +180,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        data[0U] = m_slot->m_rfFrames == 0U ? TAG_EOT : TAG_DATA;
+        data[0U] = m_slot->m_rfFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
         if (m_slot->m_duplex && m_repeatDataPacket)
@@ -254,7 +254,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfFrames--;
 
-        data[0U] = m_slot->m_rfFrames == 0U ? TAG_EOT : TAG_DATA;
+        data[0U] = m_slot->m_rfFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
         // regenerate the Slot Type
@@ -325,7 +325,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
         if (!m_slot->m_netTimeout) {
-            data[0U] = TAG_EOT;
+            data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
             if (m_slot->m_duplex) {
@@ -383,7 +383,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        data[0U] = m_slot->m_netFrames == 0U ? TAG_EOT : TAG_DATA;
+        data[0U] = m_slot->m_netFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
         // Put a small delay into starting transmission
@@ -466,7 +466,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             // convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-            data[0U] = m_slot->m_netFrames == 0U ? TAG_EOT : TAG_DATA;
+            data[0U] = m_slot->m_netFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_slot->writeQueueNet(data);

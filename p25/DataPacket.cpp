@@ -622,7 +622,7 @@ void DataPacket::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNull
     m_p25->addBusyBits(data + 2U, newBitLength, false, true);
 
     if (m_p25->m_duplex) {
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
         m_p25->writeQueueRF(data, newByteLength + 2U);
     }

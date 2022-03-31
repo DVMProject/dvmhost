@@ -185,7 +185,7 @@ bool Control::processWakeup(const uint8_t* data)
     assert(data != NULL);
 
     // wakeups always come in on slot 1
-    if (data[0U] != TAG_DATA || data[1U] != (DMR_IDLE_RX | DMR_SYNC_DATA | DT_CSBK))
+    if (data[0U] != modem::TAG_DATA || data[1U] != (DMR_IDLE_RX | DMR_SYNC_DATA | DT_CSBK))
         return false;
 
     // generate a new CSBK and check validity

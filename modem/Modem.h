@@ -136,6 +136,15 @@ namespace modem
         CMD_DEBUG_DUMP = 0xFAU,
     };
 
+    enum CMD_TAGS {
+        TAG_HEADER = 0x00U,
+
+        TAG_DATA = 0x01U,
+
+        TAG_LOST = 0x02U,
+        TAG_EOT = 0x03U,
+    };
+
     enum CMD_REASON_CODE {
         RSN_OK = 0U,
         RSN_NAK = 1U,

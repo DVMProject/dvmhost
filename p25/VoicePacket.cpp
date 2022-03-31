@@ -399,7 +399,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 writeNetworkRF(buffer, P25_DUID_HDU);
 
                 if (m_p25->m_duplex) {
-                    buffer[0U] = TAG_DATA;
+                    buffer[0U] = modem::TAG_DATA;
                     buffer[1U] = 0x00U;
                     m_p25->writeQueueRF(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
                 }
@@ -524,7 +524,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             writeNetworkRF(data + 2U, P25_DUID_LDU1);
 
             if (m_p25->m_duplex) {
-                data[0U] = TAG_DATA;
+                data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
                 m_p25->writeQueueRF(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
             }
@@ -602,7 +602,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             writeNetworkRF(data + 2U, P25_DUID_LDU2);
 
             if (m_p25->m_duplex) {
-                data[0U] = TAG_DATA;
+                data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
                 m_p25->writeQueueRF(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
             }
@@ -999,7 +999,7 @@ void VoicePacket::writeNet_TDU()
     uint8_t buffer[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDU_FRAME_LENGTH_BYTES + 2U);
 
-    buffer[0U] = TAG_EOT;
+    buffer[0U] = modem::TAG_EOT;
     buffer[1U] = 0x00U;
 
     // Generate Sync
@@ -1254,7 +1254,7 @@ void VoicePacket::writeNet_LDU1()
             // Add busy bits
             m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-            buffer[0U] = TAG_DATA;
+            buffer[0U] = modem::TAG_DATA;
             buffer[1U] = 0x00U;
             m_p25->writeQueueNet(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -1312,7 +1312,7 @@ void VoicePacket::writeNet_LDU1()
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-    buffer[0U] = TAG_DATA;
+    buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
     m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
@@ -1416,7 +1416,7 @@ void VoicePacket::writeNet_LDU2()
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-    buffer[0U] = TAG_DATA;
+    buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
     m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
 

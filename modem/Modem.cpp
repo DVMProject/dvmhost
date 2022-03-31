@@ -654,32 +654,6 @@ void Modem::clock(uint32_t ms)
         }
         break;
 
-        /** DFSI */
-        case CMD_DFSI_DATA:
-        {
-            if (!m_useDFSI) {
-                LogError(LOG_MODEM, "CMD_DFSI_DATA, without being in P25 DFSI mode?; useDFSI = %u", m_useDFSI);
-                break;
-            }
-
-            //if (m_trace)
-            //    Utils::dump(1U, "RX P25 DFSI Data", m_buffer, m_length);
-
-            if (m_rspDoubleLength) {
-                LogError(LOG_MODEM, "CMD_DFSI_DATA double length?; len = %u", m_length);
-                break;
-            }
-
-            uint8_t data = m_length - 2U;
-            m_rxP25Data.addData(&data, 1U);
-
-            data = TAG_DATA;
-            m_rxP25Data.addData(&data, 1U);
-
-            m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
-        }
-        break;
-
         /** General */
         case CMD_GET_STATUS:
         {
@@ -1065,6 +1039,11 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
     assert(data != NULL);
     assert(length > 0U);
 
+    if (m_useDFSI) {
+        LogWarning(LOG_MODEM, "Cannot inject DMR Slot 1 Data in DFSI mode");
+        return;
+    }
+
     if (m_trace)
         Utils::dump(1U, "Injected DMR Slot 1 Data", data, length);
 
@@ -1088,6 +1067,11 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 {
     assert(data != NULL);
     assert(length > 0U);
+
+    if (m_useDFSI) {
+        LogWarning(LOG_MODEM, "Cannot inject DMr Slot 2 Data in DFSI mode");
+        return;
+    }
 
     if (m_trace)
         Utils::dump(1U, "Injected DMR Slot 2 Data", data, length);
@@ -1203,7 +1187,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = length + 2U;
-    buffer[2U] = (m_useDFSI) ? CMD_DFSI_DATA : CMD_P25_DATA;
+    buffer[2U] = CMD_P25_DATA;
 
     ::memcpy(buffer + 3U, data + 1U, length - 1U);
 

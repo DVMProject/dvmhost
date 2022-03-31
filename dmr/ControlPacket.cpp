@@ -131,7 +131,7 @@ bool ControlPacket::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfSeqNo = 0U;
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         if (m_slot->m_duplex)
@@ -262,7 +262,7 @@ void ControlPacket::processNetwork(const data::Data & dmrData)
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         if (csbko == CSBKO_PRECCSBK && csbk.getDataContent()) {
@@ -421,7 +421,7 @@ void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId
 
     m_slot->m_rfSeqNo = 0U;
 
-    data[0U] = TAG_DATA;
+    data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
@@ -469,7 +469,7 @@ void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 
     m_slot->m_rfSeqNo = 0U;
 
-    data[0U] = TAG_DATA;
+    data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
@@ -536,7 +536,7 @@ void ControlPacket::writeRF_TSCC_Aloha()
 
     m_slot->m_rfSeqNo = 0U;
 
-    data[0U] = TAG_DATA;
+    data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
@@ -583,7 +583,7 @@ void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     // Convert the Data Sync to be from the BS or MS as needed
     Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-    data[0U] = TAG_DATA;
+    data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
@@ -624,7 +624,7 @@ void ControlPacket::writeRF_TSCC_Bcast_Sys_Parm()
 
     m_slot->m_rfSeqNo = 0U;
 
-    data[0U] = TAG_DATA;
+    data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)

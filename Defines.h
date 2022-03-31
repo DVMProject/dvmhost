@@ -138,11 +138,6 @@ enum HOST_STATE {
     HOST_STATE_QUIT = 255U,
 };
 
-const uint8_t   TAG_HEADER = 0x00U;
-const uint8_t   TAG_DATA = 0x01U;
-const uint8_t   TAG_LOST = 0x02U;
-const uint8_t   TAG_EOT = 0x03U;
-
 enum RPT_RF_STATE {
     RS_RF_LISTENING,
     RS_RF_LATE_ENTRY,

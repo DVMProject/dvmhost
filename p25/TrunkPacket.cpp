@@ -1477,7 +1477,7 @@ void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
         writeNetworkRF(data + 2U, P25_DUID_TDULC);
 
     if (m_p25->m_duplex) {
-        data[0U] = TAG_EOT;
+        data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
         m_p25->writeQueueRF(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
@@ -1598,7 +1598,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool f
     }
 
     if (m_p25->m_duplex) {
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         m_p25->writeQueueRF(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
@@ -1692,7 +1692,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
         // Add idle bits
         addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
         
         if (clearBeforeWrite) {
@@ -2475,7 +2475,7 @@ void TrunkPacket::writeNet_TDULC(lc::TDULC lc)
     uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
 
-    buffer[0U] = TAG_EOT;
+    buffer[0U] = modem::TAG_EOT;
     buffer[1U] = 0x00U;
 
     // Generate Sync
@@ -2521,7 +2521,7 @@ void TrunkPacket::writeNet_TSDU()
     uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
 
-    buffer[0U] = TAG_DATA;
+    buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
 
     // Generate Sync

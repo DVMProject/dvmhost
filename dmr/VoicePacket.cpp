@@ -158,7 +158,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // Convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-            data[0U] = TAG_DATA;
+            data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_slot->m_rfTimeoutTimer.start();
@@ -225,7 +225,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // Convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-            data[0U] = TAG_DATA;
+            data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
             if (m_slot->m_duplex)
@@ -280,7 +280,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             m_rfEmbeddedData[m_rfEmbeddedWriteN].reset();
 
             if (!m_slot->m_rfTimeout) {
-                data[0U] = TAG_DATA;
+                data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
                 if (m_slot->m_duplex)
@@ -435,7 +435,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             emb.encode(data + 2U);
 
             if (!m_slot->m_rfTimeout) {
-                data[0U] = TAG_DATA;
+                data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
                 m_slot->writeNetworkRF(data, DT_VOICE, errors);
@@ -514,7 +514,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 slotType.setDataType(DT_VOICE_LC_HEADER);
                 slotType.encode(start + 2U);
 
-                start[0U] = TAG_DATA;
+                start[0U] = modem::TAG_DATA;
                 start[1U] = 0x00U;
 
                 m_slot->m_rfTimeoutTimer.start();
@@ -585,7 +585,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfBits += 141U;
                 m_slot->m_rfFrames++;
 
-                data[0U] = TAG_DATA;
+                data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
                 if (m_slot->m_duplex)
@@ -667,7 +667,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         m_slot->m_voice->m_lastFrameValid = false;
@@ -749,7 +749,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             slotType.setDataType(DT_VOICE_LC_HEADER);
             slotType.encode(start + 2U);
 
-            start[0U] = TAG_DATA;
+            start[0U] = modem::TAG_DATA;
             start[1U] = 0x00U;
 
             if (m_slot->m_duplex) {
@@ -797,7 +797,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         // Convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         m_slot->writeQueueNet(data);
@@ -846,7 +846,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             slotType.setDataType(DT_VOICE_LC_HEADER);
             slotType.encode(start + 2U);
 
-            start[0U] = TAG_DATA;
+            start[0U] = modem::TAG_DATA;
             start[1U] = 0x00U;
 
             if (m_slot->m_duplex) {
@@ -887,7 +887,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             }
             m_slot->m_netBits += 141U;
 
-            data[0U] = TAG_DATA;
+            data[0U] = modem::TAG_DATA;
             data[1U] = 0x00U;
 
             // Convert the Audio Sync to be from the BS or MS as needed
@@ -1022,7 +1022,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         emb.setLCSS(lcss);
         emb.encode(data + 2U);
 
-        data[0U] = TAG_DATA;
+        data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
         // Initialise the lost packet data

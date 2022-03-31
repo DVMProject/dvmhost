@@ -316,7 +316,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     bool sync = data[1U] == 0x01U;
 
-    if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
+    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
             ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
                 float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
@@ -352,7 +352,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         return false;
     }
 
-    if (data[0U] == TAG_LOST && m_rfState == RS_RF_DATA) {
+    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_DATA) {
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
         m_rfTGHang.stop();
@@ -367,7 +367,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         return false;
     }
 
-    if (data[0U] == TAG_LOST) {
+    if (data[0U] == modem::TAG_LOST) {
         m_rfState = RS_RF_LISTENING;
 
         m_voice->resetRF();
@@ -835,7 +835,7 @@ void Control::writeRF_Nulls()
     uint8_t data[NULLS_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NULLS_LENGTH_BYTES);
 
-    data[0U] = TAG_EOT;
+    data[0U] = modem::TAG_EOT;
     data[1U] = 0x00U;
 
     if (m_debug) {
@@ -899,7 +899,7 @@ void Control::writeRF_TDU(bool noNetwork)
         m_voice->writeNetworkRF(data + 2U, P25_DUID_TDU);
 
     if (m_duplex) {
-        data[0U] = TAG_EOT;
+        data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
         writeQueueRF(data, P25_TDU_FRAME_LENGTH_BYTES + 2U);

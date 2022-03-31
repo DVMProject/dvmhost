@@ -186,7 +186,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
-    if (data[0U] == TAG_LOST && m_rfState == RS_RF_AUDIO) {
+    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
             ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
@@ -209,13 +209,13 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         }
     }
 
-    if (data[0U] == TAG_LOST && m_rfState == RS_RF_DATA) {
+    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_DATA) {
         ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
         writeEndRF();
         return false;
     }
 
-    if (data[0U] == TAG_LOST) {
+    if (data[0U] == modem::TAG_LOST) {
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
         m_rfTGHang.stop();
@@ -757,7 +757,7 @@ void Slot::writeEndRF(bool writeEnd)
             slotType.setDataType(DT_TERMINATOR_WITH_LC);
             slotType.encode(data + 2U);
 
-            data[0U] = TAG_EOT;
+            data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
             for (uint32_t i = 0U; i < m_hangCount; i++)
@@ -814,7 +814,7 @@ void Slot::writeEndNet(bool writeEnd)
         slotType.setDataType(DT_TERMINATOR_WITH_LC);
         slotType.encode(data + 2U);
 
-        data[0U] = TAG_EOT;
+        data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
         if (m_duplex) {
