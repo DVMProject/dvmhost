@@ -120,8 +120,6 @@ namespace modem
         CMD_P25_LOST = 0x32U,
         CMD_P25_CLEAR = 0x33U,
 
-        CMD_DFSI_DATA = 0x40U,
-
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,
 
