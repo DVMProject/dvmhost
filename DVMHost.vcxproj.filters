@@ -377,6 +377,12 @@
     <ClInclude Include="p25\dfsi\LC.h">
       <Filter>Header Files\p25\dfsi</Filter>
     </ClInclude>
+    <ClInclude Include="p25\dfsi\DFSITrunkPacket.h">
+      <Filter>Header Files\p25\dfsi</Filter>
+    </ClInclude>
+    <ClInclude Include="p25\dfsi\DFSIVoicePacket.h">
+      <Filter>Header Files\p25\dfsi</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Log.cpp">
@@ -598,6 +604,12 @@
     <ClCompile Include="p25\dfsi\LC.cpp">
       <Filter>Source Files\p25\dfsi</Filter>
     </ClCompile>
+    <ClCompile Include="p25\dfsi\DFSITrunkPacket.cpp">
+      <Filter>Source Files\p25\dfsi</Filter>
+    </ClCompile>
+    <ClCompile Include="p25\dfsi\DFSIVoicePacket.cpp">
+      <Filter>Source Files\p25\dfsi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile" />
@@ -606,9 +618,9 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="RSSI.dat" />
-    <CopyFileToFolders Include="iden_table.example.dat" />
     <CopyFileToFolders Include="config.example.yml" />
     <CopyFileToFolders Include="rid_acl.example.dat" />
     <CopyFileToFolders Include="tg_acl.example.dat" />
+    <CopyFileToFolders Include="iden_table.dat" />
   </ItemGroup>
 </Project>

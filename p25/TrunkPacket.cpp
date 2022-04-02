@@ -158,9 +158,9 @@ void TrunkPacket::resetNet()
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="mbtDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
+/// <param name="preDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
 /// <returns></returns>
-bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
+bool TrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
 {
     assert(data != NULL);
 
@@ -168,7 +168,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
         return false;
 
     uint8_t duid = 0U;
-    if (!mbtDecoded) {
+    if (!preDecoded) {
         // Decode the NID
         bool valid = m_p25->m_nid.decode(data + 2U);
 
@@ -190,7 +190,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool mbtDecoded)
 
         m_p25->m_queue.clear();
 
-        if (!mbtDecoded) {
+        if (!preDecoded) {
             resetRF();
             resetNet();
             
@@ -1243,7 +1243,7 @@ void TrunkPacket::setTSBKVerbose(bool verbose)
 }
 
 // ---------------------------------------------------------------------------
-//  Private Class Members
+//  Protected Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
 /// Initializes a new instance of the TrunkPacket class.

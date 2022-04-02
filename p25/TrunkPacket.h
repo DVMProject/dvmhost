@@ -47,6 +47,7 @@ namespace p25
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     class HOST_SW_API VoicePacket;
+    namespace dfsi { class HOST_SW_API DFSIVoicePacket; }
     class HOST_SW_API DataPacket;
     class HOST_SW_API Control;
 
@@ -58,14 +59,14 @@ namespace p25
     class HOST_SW_API TrunkPacket {
     public:
         /// <summary>Resets the data states for the RF interface.</summary>
-        void resetRF();
+        virtual void resetRF();
         /// <summary>Resets the data states for the network.</summary>
-        void resetNet();
+        virtual void resetNet();
 
         /// <summary>Process a data frame from the RF interface.</summary>
-        bool process(uint8_t* data, uint32_t len, bool mbtDecoded = false);
+        virtual bool process(uint8_t* data, uint32_t len, bool preDecoded = false);
         /// <summary>Process a data frame from the network.</summary>
-        bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+        virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
         /// <summary>Helper used to process AMBTs from PDU data.</summary>
         bool processMBT(data::DataHeader dataHeader, data::DataBlock* blocks);
@@ -109,8 +110,9 @@ namespace p25
         /// <summary>Helper to change the TSBK verbose state.</summary>
         void setTSBKVerbose(bool verbose);
 
-    private:
+    protected:
         friend class VoicePacket;
+        friend class dfsi::DFSIVoicePacket;
         friend class DataPacket;
         friend class Control;
         Control* m_p25;
@@ -166,7 +168,7 @@ namespace p25
         /// <summary>Initializes a new instance of the TrunkPacket class.</summary>
         TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the TrunkPacket class.</summary>
-        ~TrunkPacket();
+        virtual ~TrunkPacket();
 
         /// <summary>Write data processed from RF to the network.</summary>
         void writeNetworkRF(const uint8_t* data, bool autoReset);
@@ -180,7 +182,7 @@ namespace p25
         void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
         /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-        void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+        virtual void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
         /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
         void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
 
@@ -213,9 +215,9 @@ namespace p25
         void writeNet_TSDU_From_RF(uint8_t* data);
 
         /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
-        void writeNet_TDULC(lc::TDULC lc);
+        virtual void writeNet_TDULC(lc::TDULC lc);
         /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
-        void writeNet_TSDU();
+        virtual void writeNet_TSDU();
 
         /// <summary>Helper to automatically inhibit a source ID on a denial.</summary>
         void denialInhibit(uint32_t srcId);

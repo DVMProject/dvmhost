@@ -871,7 +871,7 @@ bool VoicePacket::writeEndRF()
 }
 
 // ---------------------------------------------------------------------------
-//  Private Class Members
+//  Protected Class Members
 // ---------------------------------------------------------------------------
 /// <summary>
 /// Initializes a new instance of the VoicePacket class.

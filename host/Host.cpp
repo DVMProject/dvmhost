@@ -504,6 +504,14 @@ int Host::run()
         g_killed = true;
     }
 
+#if ENABLE_DFSI_SUPPORT
+    // DFSI checks
+    if (m_useDFSI && m_dmrEnabled) {
+        ::LogError(LOG_HOST, "Cannot have DMR enabled when using DFSI!");
+        g_killed = true;
+    }
+#endif
+
     // P25 control channel checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
@@ -1497,6 +1505,11 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
+#if NO_NO_FEATURE
+    m_useDFSI = modemProtocol["dfsi"].as<bool>(false);
+#else
+    m_useDFSI = false;
+#endif
     
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
@@ -1662,6 +1675,10 @@ bool Host::createModem()
     LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
     LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
+    if (m_useDFSI) {
+        LogInfo("    Digital Fixed Station Interface: yes");
+    }
+
     if (ignoreModemConfigArea) {
         LogInfo("    Ignore Modem Configuration Area: yes");
     }
@@ -1679,6 +1696,9 @@ bool Host::createModem()
     m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
+#ifdef ENABLE_DFSI_SUPPORT
+    m_modem->setP25DFSI(m_useDFSI);
+#endif
 
     if (m_modemRemote) {
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));

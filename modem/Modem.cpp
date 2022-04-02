@@ -76,7 +76,7 @@ using namespace modem;
     }
 
 // Check flash configuration value against class value.
-#define FLASH_VALUE_CHECK_FLOAT(_CLASS_VAL, _FLASH_VAL, _DEFAULT, _STR)                 \
+#define FLASH_VALUE_CHECK_FLOAT(_CLASS_VAL, _FLASH_VAL, _DEFAULT, _STR)                  \
     if (_CLASS_VAL == _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                            \
         LogWarning(LOG_MODEM, CONFIG_OPT_MISMATCH_STR MODEM_CONFIG_AREA_DISAGREE_STR _STR " = %f, " _STR " (flash) = %f", _CLASS_VAL, _FLASH_VAL); \
         _CLASS_VAL = _FLASH_VAL;                                                         \

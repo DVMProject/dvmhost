@@ -56,8 +56,10 @@ namespace p25
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     class HOST_SW_API VoicePacket;
+    namespace dfsi { class HOST_SW_API DFSIVoicePacket; }
     class HOST_SW_API DataPacket;
     class HOST_SW_API TrunkPacket;
+    namespace dfsi { class HOST_SW_API DFSITrunkPacket; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -112,10 +114,12 @@ namespace p25
 
     private:
         friend class VoicePacket;
+        friend class dfsi::DFSIVoicePacket;
         VoicePacket* m_voice;
         friend class DataPacket;
         DataPacket* m_data;
         friend class TrunkPacket;
+        friend class dfsi::DFSITrunkPacket;
         TrunkPacket* m_trunk;
 
         uint32_t m_nac;
@@ -183,6 +187,11 @@ namespace p25
         void writeQueueRF(const uint8_t* data, uint32_t length);
         /// <summary>Write data processed from the network to the data ring buffer.</summary>
         void writeQueueNet(const uint8_t* data, uint32_t length);
+
+#if ENABLE_DFSI_SUPPORT
+        /// <summary>Process a DFSI data frame from the RF interface.</summary>
+        bool processDFSI(uint8_t* data, uint32_t len);
+#endif
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();

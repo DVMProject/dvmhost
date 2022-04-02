@@ -54,6 +54,8 @@ HOST_OBJECTS = \
 		p25/data/DataHeader.o \
 		p25/data/LowSpeedData.o \
 		p25/dfsi/LC.o \
+		p25/dfsi/DFSITrunkPacket.o \
+		p25/dfsi/DFSIVoicePacket.o \
 		p25/edac/Trellis.o \
 		p25/lc/LC.o \
 		p25/lc/TDULC.o \

@@ -213,7 +213,9 @@
     <ClInclude Include="p25\data\DataHeader.h" />
     <ClInclude Include="p25\data\LowSpeedData.h" />
     <ClInclude Include="p25\dfsi\DFSIDefines.h" />
+    <ClInclude Include="p25\dfsi\DFSIVoicePacket.h" />
     <ClInclude Include="p25\dfsi\LC.h" />
+    <ClInclude Include="p25\dfsi\DFSITrunkPacket.h" />
     <ClInclude Include="p25\edac\Trellis.h" />
     <ClInclude Include="p25\lc\LC.h" />
     <ClInclude Include="p25\lc\TDULC.h" />
@@ -291,7 +293,9 @@
     <ClCompile Include="p25\data\DataBlock.cpp" />
     <ClCompile Include="p25\data\DataHeader.cpp" />
     <ClCompile Include="p25\data\LowSpeedData.cpp" />
+    <ClCompile Include="p25\dfsi\DFSIVoicePacket.cpp" />
     <ClCompile Include="p25\dfsi\LC.cpp" />
+    <ClCompile Include="p25\dfsi\DFSITrunkPacket.cpp" />
     <ClCompile Include="p25\edac\Trellis.cpp" />
     <ClCompile Include="p25\lc\LC.cpp" />
     <ClCompile Include="p25\lc\TDULC.cpp" />
@@ -320,7 +324,7 @@
     </CopyFileToFolders>
     <None Include="cpp.hint" />
     <None Include="iden_channel_calc.py" />
-    <CopyFileToFolders Include="iden_table.example.dat">
+    <CopyFileToFolders Include="iden_table.dat">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <FileType>Document</FileType>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
