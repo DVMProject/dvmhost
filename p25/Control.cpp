@@ -247,7 +247,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
 #if ENABLE_DFSI_SUPPORT
     if (m_modem->isP25DFSI()) {
-        m_trunk->m_ctrlTSDUMBF = true; // force SBF for TSDUs when using DFSI
+        m_trunk->m_ctrlTSDUMBF = false; // force SBF for TSDUs when using DFSI
     }
 #endif
 
@@ -323,11 +323,19 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         m_nid.setTxNAC(m_txNAC);
     }
 
-    m_voice->resetRF();
-    m_voice->resetNet();
-    m_data->resetRF();
-    m_trunk->resetRF();
-    m_trunk->resetNet();
+    if (m_voice != NULL) {
+        m_voice->resetRF();
+        m_voice->resetNet();
+    }
+
+    if (m_data != NULL) {
+        m_data->resetRF();
+    }
+
+    if (m_trunk != NULL) {
+        m_trunk->resetRF();
+        m_trunk->resetNet();
+    }
 }
 
 /// <summary>

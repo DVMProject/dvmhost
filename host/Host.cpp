@@ -1696,7 +1696,7 @@ bool Host::createModem()
     m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
-#ifdef ENABLE_DFSI_SUPPORT
+#if ENABLE_DFSI_SUPPORT
     m_modem->setP25DFSI(m_useDFSI);
 #endif
 
