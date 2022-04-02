@@ -1574,7 +1574,7 @@ bool Host::createModem()
     if (portType == NULL_PORT) {
         modemPort = new port::ModemNullPort();
     }
-    else if (portType == UART_PORT || portType == UDP_PORT) {
+    else if (portType == UART_PORT || portType == UDP_PORT || portType == PTY_PORT) {
         port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
         switch (uartSpeed) {
         case 1200:
