@@ -59,9 +59,6 @@ namespace p25
             virtual bool process(uint8_t* data, uint32_t len, bool preDecoded = false);
 
         protected:
-            friend class DFSIVoicePacket;
-            friend class Control;
-
             LC m_rfDFSILC;
             LC m_netDFSILC;
 
@@ -80,6 +77,10 @@ namespace p25
             //virtual void writeNet_TDULC(lc::TDULC lc);
             /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
             virtual void writeNet_TSDU();
+
+        private:
+            friend class DFSIVoicePacket;
+            friend class p25::Control;
         };
     } // namespace dfsi
 } // namespace p25

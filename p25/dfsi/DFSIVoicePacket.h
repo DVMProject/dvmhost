@@ -65,9 +65,6 @@ namespace p25
             virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
         protected:
-            friend class DFSITrunkPacket;
-            friend class Control;
-
             LC m_rfDFSILC;
             LC m_netDFSILC;
 
@@ -85,6 +82,10 @@ namespace p25
             virtual void writeNet_LDU1();
             /// <summary>Helper to write a network P25 LDU1 packet.</summary>
             virtual void writeNet_LDU2();
+
+        private:
+            friend class DFSITrunkPacket;
+            friend class p25::Control;
         };
     } // namespace dfsi
 } // namespace p25
