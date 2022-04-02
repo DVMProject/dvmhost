@@ -137,9 +137,14 @@ void DFSITrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bo
     if (!m_p25->m_control)
         return;
 
+    writeRF_DFSI_Start(P25_DFSI_TYPE_TSBK);
+
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
+    m_rfDFSILC.setFrameType(P25_DFSI_TSBK);
+    m_rfDFSILC.setStartStop(P25_DFSI_START_FLAG);
+    m_rfDFSILC.setType(P25_DFSI_TYPE_TSBK);
     m_rfDFSILC.tsbk(m_rfTSBK);
 
     // Generate Sync
@@ -181,12 +186,12 @@ void DFSITrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bo
     // Generate DFSI TSBK block
     m_rfDFSILC.encodeTSBK(data + 2U);
 
-    if (m_p25->m_duplex) {
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
 
-        m_p25->writeQueueRF(data, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
-    }
+    m_p25->writeQueueRF(data, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
+
+    writeRF_DSFI_Stop(P25_DFSI_TYPE_TSBK);
 }
 
 /// <summary>
@@ -208,4 +213,53 @@ void DFSITrunkPacket::writeNet_TSDU()
 
     if (m_network != NULL)
         m_network->resetP25();
+}
+
+/// <summary>
+/// Helper to write start DFSI data.
+/// </summary>
+/// <param name="type"></param>
+void DFSITrunkPacket::writeRF_DFSI_Start(uint8_t type)
+{
+    uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
+    ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+    
+    // Generate Start/Stop
+    m_rfDFSILC.setFrameType(P25_DFSI_START_STOP);
+    m_rfDFSILC.setStartStop(P25_DFSI_START_FLAG);
+    m_rfDFSILC.setType(type);
+
+    // Generate Identifier Data
+    m_rfDFSILC.encodeNID(buffer + 2U);
+
+    buffer[0U] = modem::TAG_DATA;
+    buffer[1U] = 0x00U;
+
+    m_p25->writeQueueRF(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+}
+
+/// <suimmary>
+/// Helper to write stop DFSI data.
+/// </summary>
+/// <param name="type"></param>
+void DFSITrunkPacket::writeRF_DSFI_Stop(uint8_t type)
+{
+    uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
+    ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+    
+    // Generate Start/Stop
+    m_rfDFSILC.setFrameType(P25_DFSI_START_STOP);
+    m_rfDFSILC.setStartStop(P25_DFSI_STOP_FLAG);
+    m_rfDFSILC.setType(type);
+
+    // Generate Identifier Data
+    m_rfDFSILC.encodeNID(buffer + 2U);
+
+    buffer[0U] = modem::TAG_EOT;
+    buffer[1U] = 0x00U;
+
+    // for whatever reason this is almost always sent twice
+    for (uint8_t i = 0; i < 2;i ++) {
+        m_p25->writeQueueRF(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+    }
 }

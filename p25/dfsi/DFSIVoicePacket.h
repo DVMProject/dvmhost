@@ -32,6 +32,7 @@
 
 #include "Defines.h"
 #include "p25/dfsi/LC.h"
+#include "p25/dfsi/DFSITrunkPacket.h"
 #include "p25/TrunkPacket.h"
 #include "p25/Control.h"
 #include "network/BaseNetwork.h"
@@ -65,6 +66,8 @@ namespace p25
             virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
         protected:
+            DFSITrunkPacket* m_trunk;
+
             LC m_rfDFSILC;
             LC m_netDFSILC;
 

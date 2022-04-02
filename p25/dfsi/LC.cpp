@@ -817,8 +817,8 @@ void LC::encodeStart(uint8_t* data)
     uint8_t rawFrame[P25_DFSI_START_LENGTH_BYTES];
     ::memset(rawFrame, 0x00U, P25_DFSI_START_LENGTH_BYTES);
 
-    rawFrame[0U] = 0x02U;
-    rawFrame[1U] = m_rtModeFlag;                                                    // RT Mode Flag
+    rawFrame[0U] = 0x02U;                                                           //
+    rawFrame[1U] = m_rtModeFlag;                                                    // RT/RT Mode Flag
     rawFrame[2U] = m_startStopFlag;                                                 // Start/Stop Flag
     rawFrame[3U] = m_typeFlag;                                                      // Type flag
 

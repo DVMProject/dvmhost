@@ -559,6 +559,60 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
             }
         }
     }
+    else if (frameType == P25_DFSI_START_STOP) {
+        if (m_rfDFSILC.getType() == P25_DFSI_TYPE_VOICE && m_rfDFSILC.getStartStop() == P25_DFSI_STOP_FLAG) {
+            if (m_p25->m_control) {
+                m_p25->m_trunk->releaseDstIdGrant(m_rfLC.getDstId(), false);
+            }
+
+            uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
+            ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
+
+            // Generate Sync
+            Sync::addP25Sync(data + 2U);
+
+            // Generate NID
+            m_p25->m_nid.encode(data + 2U, P25_DUID_TDU);
+
+            // Add busy bits
+            m_p25->addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
+
+            writeNetworkRF(data + 2U, P25_DUID_TDU);
+
+            m_lastDUID = P25_DUID_TDU;
+
+            m_p25->m_rfTimeout.stop();
+
+            if (m_p25->m_rfState == RS_RF_AUDIO) {
+                if (m_p25->m_rssi != 0U) {
+                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm", 
+                        float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits), m_p25->m_minRSSI, m_p25->m_maxRSSI, 
+                        m_p25->m_aveRSSI / m_p25->m_rssiCount);
+                }
+                else {
+                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%", 
+                        float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits));
+                }
+
+                LogMessage(LOG_RF, P25_TDU_STR " DFSI, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+                    m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
+
+                if (m_p25->m_dedicatedControl) {
+                    m_p25->m_tailOnIdle = false;
+                    writeRF_EndOfVoice();
+                }
+                else {
+                    m_p25->m_tailOnIdle = true;
+                }
+            }
+
+            m_p25->m_rfState = RS_RF_LISTENING;
+            return true;
+        }
+    }
+    else {
+        LogError(LOG_RF, "P25 unhandled DFSI frame type, frameType = $%02X", frameType);
+    }
 
     return false;
 }
@@ -743,6 +797,7 @@ bool DFSIVoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& contro
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 DFSIVoicePacket::DFSIVoicePacket(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
     VoicePacket(p25, network, debug, verbose),
+    m_trunk(NULL),
     m_rfDFSILC(),
     m_netDFSILC(),
     m_dfsiLDU1(NULL),
@@ -753,6 +808,9 @@ DFSIVoicePacket::DFSIVoicePacket(Control* p25, network::BaseNetwork* network, bo
 
     ::memset(m_dfsiLDU1, 0x00U, 9U * 25U);
     ::memset(m_dfsiLDU2, 0x00U, 9U * 25U);
+
+    // hmmm...this should hopefully be a safe cast...right?
+    m_trunk = (DFSITrunkPacket *)p25->m_trunk;
 }
 
 /// <summary>
@@ -773,21 +831,7 @@ void DFSIVoicePacket::writeNet_TDU()
         m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
     }
 
-    m_rfDFSILC.setFrameType(P25_DFSI_START_STOP);
-
-    uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
-    ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
-
-    buffer[0U] = modem::TAG_EOT;
-    buffer[1U] = 0x00U;
-
-    // Generate DFSI NID
-    m_rfDFSILC.encodeNID(buffer + 2U);
-
-    // stop writes the NID twice...
-    for (uint8_t i = 0; i < 2; i++) {
-        m_p25->writeQueueNet(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
-    }
+    m_trunk->writeRF_DSFI_Stop(P25_DFSI_TYPE_VOICE);
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u", m_netLC.getSrcId());
@@ -998,42 +1042,29 @@ void DFSIVoicePacket::writeNet_LDU1()
         m_netDFSILC.control(m_netLC);
         m_netDFSILC.lsd(lsd);
 
-        if (!m_p25->m_disableNetworkHDU) {
-            uint8_t buffer[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U];
-            ::memset(buffer, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U);
-            
-            // Generate Start/Stop
-            m_netDFSILC.setFrameType(P25_DFSI_START_STOP);
-            m_netDFSILC.encodeNID(buffer + 2U);
+        m_trunk->writeRF_DFSI_Start(P25_DFSI_TYPE_VOICE);
 
-            buffer[0U] = modem::TAG_DATA;
-            buffer[1U] = 0x00U;
-            m_p25->writeQueueNet(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+        uint8_t buffer[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U];
+        ::memset(buffer, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U);
 
-            // Generate Voice Header 1
-            m_netDFSILC.setFrameType(P25_DFSI_VHDR1);
-            m_netDFSILC.encodeVHDR1(buffer + 2U);
+        // Generate Voice Header 1
+        m_netDFSILC.setFrameType(P25_DFSI_VHDR1);
+        m_netDFSILC.encodeVHDR1(buffer + 2U);
 
-            buffer[0U] = modem::TAG_DATA;
-            buffer[1U] = 0x00U;
-            m_p25->writeQueueNet(buffer, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U);
+        buffer[0U] = modem::TAG_DATA;
+        buffer[1U] = 0x00U;
+        m_p25->writeQueueNet(buffer, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U);
 
-            // Generate Voice Header 2
-            m_netDFSILC.setFrameType(P25_DFSI_VHDR2);
-            m_netDFSILC.encodeVHDR2(buffer + 2U);
+        // Generate Voice Header 2
+        m_netDFSILC.setFrameType(P25_DFSI_VHDR2);
+        m_netDFSILC.encodeVHDR2(buffer + 2U);
 
-            buffer[0U] = modem::TAG_DATA;
-            buffer[1U] = 0x00U;
-            m_p25->writeQueueNet(buffer, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES + 2U);
+        buffer[0U] = modem::TAG_DATA;
+        buffer[1U] = 0x00U;
+        m_p25->writeQueueNet(buffer, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES + 2U);
 
-            if (m_verbose) {
-                LogMessage(LOG_NET, P25_HDU_STR " DFSI, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
-            }
-        }
-        else {
-            if (m_verbose) {
-                LogMessage(LOG_NET, P25_HDU_STR " DFSI, not transmitted; network HDU disabled, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
-            }
+        if (m_verbose) {
+            LogMessage(LOG_NET, P25_HDU_STR " DFSI, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
         }
     }
 

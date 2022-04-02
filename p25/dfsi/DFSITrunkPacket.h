@@ -78,6 +78,11 @@ namespace p25
             /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
             virtual void writeNet_TSDU();
 
+            /// <suimmary>Helper to write start DFSI data.</summary>
+            void writeRF_DFSI_Start(uint8_t type);
+            /// <suimmary>Helper to write stop DFSI data.</summary>
+            void writeRF_DSFI_Stop(uint8_t type);
+
         private:
             friend class DFSIVoicePacket;
             friend class p25::Control;

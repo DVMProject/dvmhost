@@ -79,9 +79,11 @@ namespace p25
         const uint8_t   P25_DFSI_RT_DISABLED = 0x04U;       //
 
         const uint8_t   P25_DFSI_START_FLAG = 0x0CU;        //
-        const uint8_t   P25_DFSI_STOP_FLAG = 0x00U;         //
+        const uint8_t   P25_DFSI_STOP_FLAG = 0x25U;         //
 
+        const uint8_t   P25_DFSI_TYPE_DATA_PAYLOAD = 0x06U; //
         const uint8_t   P25_DFSI_TYPE_VOICE = 0x0BU;        //
+        const uint8_t   P25_DFSI_TYPE_DATA = 0x0CU;         //
         const uint8_t   P25_DFSI_TYPE_TSBK = 0x0FU;         //
 
         const uint8_t   P25_DFSI_DEF_ICW_SOURCE = 0x00U;    // Infrastructure Source - Default Source
