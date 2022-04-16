@@ -35,6 +35,7 @@ using namespace p25::lc;
 using namespace p25;
 
 #include <cstdio>
+#include <cmath>
 #include <cassert>
 #include <cstring>
 
@@ -734,7 +735,7 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
         if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
             (m_siteIdenEntry.txOffsetMhz() != 0.0F) && (m_siteIdenEntry.baseFrequency() != 0U)) {
             uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-            uint32_t calcTxOffset = (uint32_t)((abs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
+            uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
             if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
                 calcTxOffset |= 0x2000U; // this sets a positive offset ...
 
@@ -748,7 +749,7 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }
         else {
-            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                 m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                 m_siteIdenEntry.chSpaceKhz());
             return; // blatently ignore creating this TSBK
@@ -831,7 +832,7 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
             }
 
             uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-            uint32_t calcTxOffset = (uint32_t)((abs(m_siteIdenEntry.txOffsetMhz()) * 1000000) / 250000);
+            uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) * 1000000) / 250000);
             if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
                 calcTxOffset |= 0x100U; // this sets a positive offset ...
 
@@ -845,7 +846,7 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }
         else {
-            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+            LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                 m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                 m_siteIdenEntry.chSpaceKhz());
             return; // blatently ignore creating this TSBK

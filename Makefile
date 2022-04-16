@@ -117,7 +117,8 @@ clean:
 
 install: all
 		mkdir -p /opt/dvm/bin || true
-		install -m 755 $(BIN) /opt/dvm/bin/
+		install -m 755 $(HOST_BIN) /opt/dvm/bin/
+		install -m 755 $(CMD_BIN) /opt/dvm/bin/
 		mkdir -p /opt/dvm || true
 		install -m 644 config.example.yml /opt/dvm/config.yml
 		install -m 644 iden_table.dat /opt/dvm/iden_table.dat

@@ -36,6 +36,7 @@ using namespace p25::lc;
 using namespace p25;
 
 #include <cstdio>
+#include <cmath>
 #include <cassert>
 #include <cstring>
 
@@ -402,7 +403,7 @@ void TDULC::encodeLC(uint8_t* rs)
             if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
                 (m_siteIdenEntry.txOffsetMhz() != 0U) && (m_siteIdenEntry.baseFrequency() != 0U)) {
                 uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-                uint32_t calcTxOffset = (uint32_t)((abs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
+                uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
                 if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
                     calcTxOffset |= 0x2000U; // this sets a positive offset ...
 
@@ -416,7 +417,7 @@ void TDULC::encodeLC(uint8_t* rs)
                 rsValue = (rsValue << 32) + calcBaseFreq;                           // Base Frequency
             }
             else {
-                LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %uMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+                LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                     m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
                     m_siteIdenEntry.chSpaceKhz());
                 return; // blatently ignore creating this TSBK
