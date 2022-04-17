@@ -735,16 +735,18 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
         if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
             (m_siteIdenEntry.txOffsetMhz() != 0.0F) && (m_siteIdenEntry.baseFrequency() != 0U)) {
             uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-            uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
+
+            float fCalcTxOffset = (fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000.0F;
+            uint32_t uCalcTxOffset = (uint32_t)fCalcTxOffset;
             if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
-                calcTxOffset |= 0x2000U; // this sets a positive offset ...
+                uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
 
             uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
             uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? P25_IDEN_UP_VU_BW_125K : P25_IDEN_UP_VU_BW_625K;
 
             tsbkValue = m_siteIdenEntry.channelId();                                // Channel ID
             tsbkValue = (tsbkValue << 4) + chanBw;                                  // Channel Bandwidth
-            tsbkValue = (tsbkValue << 14) + calcTxOffset;                           // Transmit Offset
+            tsbkValue = (tsbkValue << 14) + uCalcTxOffset;                          // Transmit Offset
             tsbkValue = (tsbkValue << 10) + calcSpace;                              // Channel Spacing
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }
@@ -832,16 +834,18 @@ void TSBK::encode(uint8_t * data, bool rawTSBK, bool noTrellis)
             }
 
             uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-            uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) * 1000000) / 250000);
+
+            float fCalcTxOffset = (fabs(m_siteIdenEntry.txOffsetMhz()) * 1000000.0F) / 250000.0F;
+            uint32_t uCalcTxOffset = (uint32_t)fCalcTxOffset;
             if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
-                calcTxOffset |= 0x100U; // this sets a positive offset ...
+                uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
 
             uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
             uint16_t chanBw = (uint16_t)((m_siteIdenEntry.chBandwidthKhz() * 1000) / 125);
 
             tsbkValue = m_siteIdenEntry.channelId();                                // Channel ID
             tsbkValue = (tsbkValue << 9) + chanBw;                                  // Channel Bandwidth
-            tsbkValue = (tsbkValue << 9) + calcTxOffset;                            // Transmit Offset
+            tsbkValue = (tsbkValue << 9) + uCalcTxOffset;                           // Transmit Offset
             tsbkValue = (tsbkValue << 10) + calcSpace;                              // Channel Spacing
             tsbkValue = (tsbkValue << 32) + calcBaseFreq;                           // Base Frequency
         }

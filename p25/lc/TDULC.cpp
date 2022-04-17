@@ -402,19 +402,39 @@ void TDULC::encodeLC(uint8_t* rs)
         {
             if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
                 (m_siteIdenEntry.txOffsetMhz() != 0U) && (m_siteIdenEntry.baseFrequency() != 0U)) {
-                uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-                uint32_t calcTxOffset = (uint32_t)((fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000);
-                if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
-                    calcTxOffset |= 0x2000U; // this sets a positive offset ...
+                if (m_siteIdenEntry.baseFrequency() < 762000000U) {
+                    uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
 
-                uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
-                uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? P25_IDEN_UP_VU_BW_125K : P25_IDEN_UP_VU_BW_625K;
+                    float fCalcTxOffset = (fabs(m_siteIdenEntry.txOffsetMhz()) / m_siteIdenEntry.chSpaceKhz()) * 1000.0F;
+                    uint32_t uCalcTxOffset = (uint32_t)fCalcTxOffset;
+                    if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
+                        uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
 
-                rsValue = m_siteIdenEntry.channelId();                              // Channel ID
-                rsValue = (rsValue << 4) + chanBw;                                  // Channel Bandwidth
-                rsValue = (rsValue << 14) + calcTxOffset;                           // Transmit Offset
-                rsValue = (rsValue << 10) + calcSpace;                              // Channel Spacing
-                rsValue = (rsValue << 32) + calcBaseFreq;                           // Base Frequency
+                    uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
+                    uint8_t chanBw = (m_siteIdenEntry.chBandwidthKhz() >= 12.5F) ? P25_IDEN_UP_VU_BW_125K : P25_IDEN_UP_VU_BW_625K;
+
+                    rsValue = m_siteIdenEntry.channelId();                              // Channel ID
+                    rsValue = (rsValue << 4) + chanBw;                                  // Channel Bandwidth
+                    rsValue = (rsValue << 14) + uCalcTxOffset;                          // Transmit Offset
+                    rsValue = (rsValue << 10) + calcSpace;                              // Channel Spacing
+                    rsValue = (rsValue << 32) + calcBaseFreq;                           // Base Frequency
+                } else {
+                    uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
+
+                    float fCalcTxOffset = (fabs(m_siteIdenEntry.txOffsetMhz()) * 1000000.0F) / 250000.0F;
+                    uint32_t uCalcTxOffset = (uint32_t)fCalcTxOffset;
+                    if (m_siteIdenEntry.txOffsetMhz() > 0.0F)
+                        uCalcTxOffset |= 0x2000U; // this sets a positive offset ...
+
+                    uint32_t calcBaseFreq = (uint32_t)(m_siteIdenEntry.baseFrequency() / 5);
+                    uint16_t chanBw = (uint16_t)((m_siteIdenEntry.chBandwidthKhz() * 1000) / 125);
+
+                    rsValue = m_siteIdenEntry.channelId();                              // Channel ID
+                    rsValue = (rsValue << 4) + chanBw;                                  // Channel Bandwidth
+                    rsValue = (rsValue << 14) + uCalcTxOffset;                          // Transmit Offset
+                    rsValue = (rsValue << 10) + calcSpace;                              // Channel Spacing
+                    rsValue = (rsValue << 32) + calcBaseFreq;                           // Base Frequency
+                }
             }
             else {
                 LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
