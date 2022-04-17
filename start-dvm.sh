@@ -8,7 +8,7 @@ if [ -z $1 ]; then exit 2; fi
 CONFIG=$1
 if [ ! -f ${R_PATH}/${CONFIG} ]; then exit 3; fi
 
-COMMAND="${R_PATH}/dvmhost -c ${R_PATH}/${CONFIG}"
+COMMAND="${R_PATH}/bin/dvmhost -c ${R_PATH}/${CONFIG}"
 nice -n -20 ${COMMAND}
 
 PID=`pgrep -f "${R_PATH}/${CONFIG}"`
