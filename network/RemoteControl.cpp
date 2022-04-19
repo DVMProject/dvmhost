@@ -64,6 +64,7 @@ using namespace modem;
 
 #define RCD_DMR_BEACON_CMD              "dmr-beacon"
 #define RCD_P25_CC_CMD                  "p25-cc"
+#define RCD_P25_CC_FALLBACK             "p25-cc-fallback"
 
 #define RCD_DMRD_MDM_INJ_CMD            "dmrd-mdm-inj"
 #define RCD_P25D_MDM_INJ_CMD            "p25d-mdm-inj"
@@ -306,6 +307,21 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 if (p25 != NULL) {
                     if (host->m_controlData) {
                         g_fireP25Control = true;
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "P25 control data is not enabled!");
+                    }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
+                }
+            }
+            else if (rcom == RCD_P25_CC_FALLBACK) {
+                // Command is in the form of: "p25-cc-fallback 0/1"
+                uint8_t fallback = getArgUInt8(args, 0U);
+                if (p25 != NULL) {
+                    if (host->m_controlData) {
+                        p25->trunk()->setConvFallback((fallback == 1U) ? true : false);
                     }
                     else {
                         LogError(LOG_RCON, CMD_FAILED_STR "P25 control data is not enabled!");

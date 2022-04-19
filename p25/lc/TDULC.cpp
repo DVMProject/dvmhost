@@ -446,7 +446,7 @@ void TDULC::encodeLC(uint8_t* rs)
         break;
     case LC_SYS_SRV_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
-        rsValue = 0U;                                                               //
+        rsValue = 0U;
         rsValue = (rsValue << 16) + services;                                       // System Services Available
         rsValue = (rsValue << 24) + services;                                       // System Services Supported
         break;
@@ -485,12 +485,21 @@ void TDULC::encodeLC(uint8_t* rs)
         break;
     case LC_NET_STS_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
-        rsValue = 0U;                                                               // 
+        rsValue = 0U;
         rsValue = (rsValue << 20) + m_siteData.netId();                             // Network ID
         rsValue = (rsValue << 12) + m_siteData.sysId();                             // System ID
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Channel ID
         rsValue = (rsValue << 12) + m_siteData.channelNo();                         // Channel Number
         rsValue = (rsValue << 8) + m_siteData.serviceClass();                       // System Service Class
+        break;
+    case LC_CONV_FALLBACK:
+        rsValue = 0U;
+        rsValue = (rsValue << 48) + m_siteData.channelId();                         // Channel ID 6
+        rsValue = (rsValue << 40) + m_siteData.channelId();                         // Channel ID 5
+        rsValue = (rsValue << 32) + m_siteData.channelId();                         // Channel ID 4
+        rsValue = (rsValue << 24) + m_siteData.channelId();                         // Channel ID 3
+        rsValue = (rsValue << 16) + m_siteData.channelId();                         // Channel ID 2
+        rsValue = (rsValue << 8) + m_siteData.channelId();                          // Channel ID 1
         break;
     default:
         LogError(LOG_P25, "TDULC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

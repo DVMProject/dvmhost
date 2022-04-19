@@ -107,6 +107,9 @@ namespace p25
         /// <summary>Helper to write a Motorola patch packet.</summary>
         void writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3);
 
+        /// <summary>Helper to change the conventional fallback state.</summary>
+        void setConvFallback(bool fallback);
+
         /// <summary>Helper to change the TSBK verbose state.</summary>
         void setTSBKVerbose(bool verbose);
 
@@ -154,6 +157,9 @@ namespace p25
         bool m_noStatusAck;
         bool m_noMessageAck;
         bool m_unitToUnitAvailCheck;
+        
+        uint8_t m_convFallbackPacketDelay;
+        bool m_convFallback;
 
         Timer m_adjSiteUpdateTimer;
         uint32_t m_adjSiteUpdateInterval;

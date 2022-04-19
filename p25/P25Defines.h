@@ -278,6 +278,7 @@ namespace p25
     const uint8_t   LC_ADJ_STS_BCAST = 0x22U;           // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   LC_RFSS_STS_BCAST = 0x23U;          // RFSS STS BCAST - RFSS Status Broadcast
     const uint8_t   LC_NET_STS_BCAST = 0x24U;           // NET STS BCAST - Network Status Broadcast
+    const uint8_t   LC_CONV_FALLBACK = 0x2AU;           // CONV FALLBACK - Conventional Fallback
 
     // TSBK ISP/OSP Shared Opcode(s)
     const uint8_t   TSBK_IOSP_GRP_VCH = 0x00U;          // GRP VCH REQ - Group Voice Channel Request (ISP), GRP VCH GRANT - Group Voice Channel Grant (OSP)

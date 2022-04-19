@@ -50,6 +50,11 @@ using namespace network;
 #undef __EXE_NAME__
 #define __EXE_NAME__ "dvmcmd"
 
+#define ERRNO_REMOTE_CMD 99
+#define ERRNO_SOCK_OPEN 98
+#define ERRNO_ADDR_LOOKUP 97
+#define ERRNO_FAILED_TO_SEND 96
+
 const uint32_t START_OF_TEXT = 0x02;
 const uint32_t REC_SEPARATOR = 0x1E;
 
@@ -181,7 +186,7 @@ int main(int argc, char** argv)
 
     if (argc < 2) {
         usage("error: %s", "must specify the remote command!");
-        return EXIT_FAILURE;
+        return ERRNO_REMOTE_CMD;
     }
 
     if (argc > 1) {
@@ -255,7 +260,7 @@ int CRemoteCommand::send(const std::string& command)
 
     bool ret = socket.open();
     if (!ret)
-        return EXIT_FAILURE;
+        return ERRNO_SOCK_OPEN;
 
     uint8_t buffer[RC_BUFFER_LENGTH];
     ::memset(buffer, 0x00U, RC_BUFFER_LENGTH);
@@ -263,11 +268,9 @@ int CRemoteCommand::send(const std::string& command)
     sockaddr_storage addr;
     uint32_t addrLen;
 
-    if (UDPSocket::lookup(m_address, m_port, addr, addrLen) != 0)
-        addrLen = 0U;
-
-    if (addrLen > 0U) {
-        return EXIT_FAILURE;
+    if (UDPSocket::lookup(m_address, m_port, addr, addrLen) != 0) {
+        ::LogError(LOG_HOST, "Could not lookup the address of remote");
+        return ERRNO_ADDR_LOOKUP;
     }
 
     ::LogInfoEx(LOG_HOST, "%s: sending command \"%s\" to %s:%u\r\n", g_progExe.c_str(), command.c_str(),
@@ -294,11 +297,11 @@ int CRemoteCommand::send(const std::string& command)
     buffer[33U] = REC_SEPARATOR;
     ::memcpy(buffer + 34U, command.c_str(), command.size());
 
-    ret = socket.write((uint8_t *)buffer, 34U + command.size(), addr, m_port);
+    ret = socket.write((uint8_t *)buffer, 34U + command.size(), addr, addrLen);
     if (!ret) {
         socket.close();
         ::LogError(LOG_HOST, "Failed to send command: \"%s\"\r\n", command.c_str());
-        return EXIT_FAILURE;
+        return ERRNO_FAILED_TO_SEND;
     }
 
     socket.close();

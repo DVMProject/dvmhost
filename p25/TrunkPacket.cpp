@@ -131,6 +131,7 @@ const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
 const uint32_t TSDU_CTRL_BURST_COUNT = 2U;
 const uint32_t TSBK_MBF_CNT = 3U;
 const uint32_t GRANT_TIMER_TIMEOUT = 15U;
+const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -1234,6 +1235,29 @@ void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint3
 }
 
 /// <summary>
+/// Helper to change the conventional fallback state.
+/// </summary>
+/// <param name="verbose">Flag indicating whether conventional fallback is enabled.</param>
+void TrunkPacket::setConvFallback(bool fallback)
+{
+    m_convFallback = fallback;
+    if (m_convFallback && m_p25->m_control) {
+        m_convFallbackPacketDelay = 0U;
+        uint8_t lco = m_rfTSBK.getLCO();
+
+        m_rfTSBK.setLCO(TSBK_OSP_MOT_PSH_CCH);
+        m_rfTSBK.setMFId(P25_MFG_MOT);
+
+        for (uint8_t i = 0U; i < 3U; i++) {
+            writeRF_TSDU_SBF(true);
+        }
+
+        m_rfTSBK.setLCO(lco);
+        m_rfTSBK.setMFId(P25_MFG_STANDARD);
+    }
+}
+
+/// <summary>
 /// Helper to change the TSBK verbose state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
@@ -1281,6 +1305,8 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_noStatusAck(false),
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
+    m_convFallbackPacketDelay(0U),
+    m_convFallback(false),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_ctrlTSDUMBF(true),
@@ -1350,6 +1376,26 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         return;
 
     resetRF();
+
+    if (m_convFallback) {
+        bool fallbackTx = (frameCnt % 253U) == 0U;
+        if (fallbackTx && n == 7U) {
+            if (m_convFallbackPacketDelay >= CONV_FALLBACK_PACKET_DELAY) {
+                lc::TDULC lc = lc::TDULC(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
+                lc.setLCO(LC_CONV_FALLBACK);
+
+                for (uint8_t i = 0U; i < 3U; i++) {
+                    writeRF_TDULC(lc, true);
+                }
+
+                m_convFallbackPacketDelay = 0U;
+            } else {
+                m_convFallbackPacketDelay++;
+            }
+        }
+
+        return;
+    }
 
     if (m_debug) {
         LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
