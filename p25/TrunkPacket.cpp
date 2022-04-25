@@ -2007,7 +2007,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
         writeRF_TSDU_MBF();
     }
     else {
-        writeRF_TSDU_SBF(false);
+        writeRF_TSDU_SBF(true);
     }
 }
 
