@@ -20,6 +20,7 @@ while [ true ]; do
         if [ $ERRNO -ne 0 ]; then
             logger "dvmhost start-dvm.sh script failed to start; errno ${ERRNO}"
         fi
+        PID=`cat $PID_FILE`
     fi
     sleep 5s
 done
