@@ -635,14 +635,6 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         break;
     case TSBK_OSP_SNDCP_CH_ANN:
     {
-        uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
-
-        uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_siteData.channelNo())) + calcTxOffset);
-
-        uint32_t rxRootFrequency = rxFrequency - m_siteIdenEntry.baseFrequency();
-        uint32_t rxChannelNo = rxRootFrequency / (m_siteIdenEntry.chSpaceKhz() * 1000);
-
         tsbkValue = 0U;                                                             // 
         tsbkValue = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
             (m_encrypted ? 0x40U : 0x00U);                                          // Encrypted Flag
@@ -652,7 +644,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
         tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (T) Number
         tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
-        tsbkValue = (tsbkValue << 12) + rxChannelNo;                                // Channel (R) Number
+        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (R) Number
         tsbkValue = (tsbkValue << 16) + m_sndcpDAC;                                 // Data Access Control
     }
     break;
