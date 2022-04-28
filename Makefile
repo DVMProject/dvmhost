@@ -14,6 +14,11 @@ EXTFLAGS=
 LIBS    = -lpthread -lutil
 LDFLAGS = -g
 
+TAR_ARCH =
+ifneq ($(ARCH),)
+TAR_ARCH = "_$(ARCH)"
+endif
+
 HOST_BIN = dvmhost
 HOST_OBJECTS = \
 		edac/AMBEFEC.o \
@@ -98,6 +103,8 @@ CMD_OBJECTS = \
         network/UDPSocket.cmd.o \
 		Log.cmd.o
 
+.PHONY: dvmhost dvmcmd all strip clean install dpkg tarball
+
 all: dvmhost dvmcmd
 dvmhost: $(HOST_OBJECTS) 
 		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(HOST_BIN)
@@ -112,7 +119,7 @@ strip:
 		-$($(ARCH)STRIP) $(CMD_BIN)
 clean:
 		$(RM) $(HOST_BIN) $(HOST_OBJECTS) $(CMD_BIN) $(CMD_OBJECTS) *.o *.d *.bak *~
-		$(RM) -r dpkg_build
+		$(RM) -r dpkg_build tar_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
 
 install: all
@@ -142,6 +149,16 @@ dpkg: clean
 		mv ../dvmhost_1.0.0.orig.tar.gz .
 		mkdir -p dpkg_build
 		cd dpkg_build; tar xvf ../dvmhost_1.0.0.orig.tar.gz .; debuild -us -uc
+tarball: clean dvmhost dvmcmd strip
+		mkdir -p tar_build/dvm
+		mkdir -p tar_build/dvm/bin
+		cp -v $(HOST_BIN) tar_build/dvm/bin
+		cp -v $(CMD_BIN) tar_build/dvm/bin
+		cp *.sh tar_build/dvm
+		chmod +x tar_build/dvm/*.sh
+		cp -v config*.yml tar_build/dvm
+		cp -v *.dat tar_build/dvm
+		cd tar_build; tar czvf ../dvmhost_1.0.0$(TAR_ARCH).tar.gz *
 
 install-service: install
 		@useradd --user-group -M --system dvmhost --shell /bin/false || true
