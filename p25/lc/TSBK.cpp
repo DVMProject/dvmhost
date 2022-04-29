@@ -897,9 +897,6 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     if (!m_vendorSkip) {
         // Motorola P25 vendor opcodes
-        /**
-         * The sequence of data in these opcodes was gleaned from the sdrtrunk project (https://github.com/DSheirer/sdrtrunk)
-         */
         if (m_mfId == P25_MFG_MOT) {
             switch (m_lco) {
             case TSBK_OSP_MOT_GRG_ADD:
