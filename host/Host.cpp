@@ -1412,17 +1412,29 @@ bool Host::readParams()
         uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
         float calcTxOffset = entry.txOffsetMhz() * 1000000;
 
-        m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
         m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+        m_rxFrequency = (uint32_t)(m_txFrequency + calcTxOffset);
+
+        if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
+            ::LogError(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), all frequencies must be higher then the base frequency.", m_channelId, m_channelNo,
+                m_rxFrequency, entry.baseFrequency());
+            return false;
+        }
 
         if (!m_duplex && simplexSameFreq) {
-            m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
-            m_txFrequency = m_rxFrequency;
+            m_rxFrequency = m_txFrequency;
         }
 
         yaml::Node& voiceChList = rfssConfig["voiceChNo"];
         for (size_t i = 0; i < voiceChList.size(); i++) {
             uint32_t chNo = (uint32_t)::strtoul(voiceChList[i].as<std::string>("1").c_str(), NULL, 16);
+            if (chNo == 0U) { // clamp to 1
+                chNo = 1U;
+            }
+            if (chNo > 4095U) { // clamp to 4095
+                chNo = 4095U;
+            }
+
             m_voiceChNo.push_back(chNo);
         }
 
