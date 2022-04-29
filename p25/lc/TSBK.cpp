@@ -590,6 +590,26 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 32) + m_dstId;                                    // Target Radio Address
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
         break;
+    case TSBK_OSP_SNDCP_CH_GNT:
+    {
+        uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
+        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
+
+        uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_dataChannelNo)));
+        uint32_t rxFrequency = (uint32_t)(txFrequency + calcTxOffset);
+
+        uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
+        uint32_t rxChNo = rootFreq / (m_siteIdenEntry.chSpaceKhz() * 1000);
+
+        tsbkValue = 0U;
+        tsbkValue = (tsbkValue << 8) + m_dataServiceOptions;                        // Data Service Options
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
+        tsbkValue = (tsbkValue << 12) + m_dataChannelNo;                            // Channel (T) Number
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
+        tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                          // Channel (R) Number
+        tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Target Radio Address
+    }
+    break;
     case TSBK_IOSP_STS_UPDT:
         tsbkValue = 0U;
         tsbkValue = (tsbkValue << 16) + m_statusValue;                              // Status Value
@@ -1111,6 +1131,9 @@ TSBK::TSBK(SiteData siteData) :
     m_messageValue(0U),
     m_statusValue(0U),
     m_extendedFunction(P25_EXT_FNCT_CHECK),
+    m_dataServiceOptions(0U),
+    m_dataAccessControl(0U),
+    m_dataChannelNo(0U),
     m_adjCFVA(P25_CFVA_FAILURE),
     m_adjRfssId(0U),
     m_adjSiteId(0U),
@@ -1175,6 +1198,8 @@ void TSBK::copy(const TSBK& data)
     m_statusValue = data.m_statusValue;
 
     m_extendedFunction = data.m_extendedFunction;
+
+    m_dataChannelNo = data.m_dataChannelNo;
 
     m_adjCFVA = data.m_adjCFVA;
     m_adjRfssId = data.m_adjRfssId;

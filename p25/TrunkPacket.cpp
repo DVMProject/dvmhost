@@ -309,9 +309,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
                         m_rfTSBK.getDataServiceOptions(), m_rfTSBK.getDataAccessControl(), srcId);
                 }
 
-                // SNDCP data channel requests are currently unsupported -- maybe in the future?
-
-                writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_ISP_SNDCP_CH_REQ);
+                writeRF_TSDU_Grant(false, false, false, true);
                 break;
             case TSBK_IOSP_STS_UPDT:
                 // validate the source RID
@@ -2017,8 +2015,9 @@ void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
 /// <param name="grp"></param>
 /// <param name="skip"></param>
 /// <param name="net"></param>
+/// <param name="sndcpGrant"></param>
 /// <returns></returns>
-bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
+bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool sndcpGrant)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -2101,6 +2100,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
 
                 m_grantChTable[m_rfTSBK.getDstId()] = chNo;
                 m_rfTSBK.setGrpVchNo(chNo);
+                m_rfTSBK.setDataChnNo(chNo);
 
                 m_grantTimers[m_rfTSBK.getDstId()] = Timer(1000U, GRANT_TIMER_TIMEOUT);
                 m_grantTimers[m_rfTSBK.getDstId()].start();
@@ -2112,9 +2112,28 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
         else {
             uint32_t chNo = m_grantChTable[m_rfTSBK.getDstId()];
             m_rfTSBK.setGrpVchNo(chNo);
+            m_rfTSBK.setDataChnNo(chNo);
 
             m_grantTimers[m_rfTSBK.getDstId()].start();
         }
+    }
+
+    if (sndcpGrant) {
+        if (!net) {
+            ::ActivityLog("P25", true, "SNDCP grant request from to %u", m_rfTSBK.getDstId());
+        }
+
+        if (m_verbose) {
+            LogMessage((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_OSP_SNDCP_CH_GNT (SNDCP Data Channel Grant), chNo = %u, dstId = %u",
+                m_rfTSBK.getDataChnNo(), m_rfTSBK.getDstId());
+        }
+
+        // transmit SNDCP grant
+        m_rfTSBK.setLCO(TSBK_OSP_SNDCP_CH_GNT);
+        writeRF_TSDU_SBF(false, true, net);
+
+        m_rfTSBK.setLCO(lco);
+        return true;
     }
 
     if (grp) {

@@ -148,6 +148,9 @@ namespace p25
             /// <summary>SNDCP Data Access Control</summary>
             __PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
 
+            /// <summary>SNDCP grant channel number.</summary>
+            __PROPERTY(uint32_t, dataChannelNo, DataChnNo);
+
             /** Adjacent Site Data */
             /// <summary>Adjacent site CFVA flags.</summary>
             __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
