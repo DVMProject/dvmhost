@@ -83,15 +83,25 @@ if __name__ == '__main__':
         space = cli_args.Spacing / 0.125
         chNo = int(cli_args.ChannelNo, 16)
 
-        rxFrequency = (cli_args.BaseFrequency + ((space * 125) * chNo)) + offsetHz
         txFrequency = (cli_args.BaseFrequency + ((space * 125) * chNo))
+        rxFrequency = txFrequency + offsetHz
         
+        if (cli_args.InputOffset < 0 and rxFrequency < cli_args.BaseFrequency):
+            print ('ERROR: Invalid channel number (' + '%x' % chNo + '), defines a Rx Frequency (' + '%.5f' % float(rxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
+                'Rx Frequency must be greater then the base frequency!')
+            quit()
+
         print ('\r\nChannel Number: ' + '%x' % chNo)
 
         print ('\r\nTx Frequency: ' + '%.5f' % (float(txFrequency / HZ_MHZ)) + ' MHz' +
                '\r\nRx Frequency: ' + '%.5f' % (float(rxFrequency / HZ_MHZ)) + ' MHz')
     else:
         rxFrequency = int(cli_args.TxFrequency + offsetHz)
+        
+        if (cli_args.InputOffset < 0 and rxFrequency < cli_args.BaseFrequency):
+            print ('ERROR: Rx Frequency (' + '%.5f' % float(rxFrequency / HZ_MHZ) + ') is out of band range for base frequency (' + '%.5f' % float(cli_args.BaseFrequency / HZ_MHZ) + '). ' + \
+                'Rx Frequency must be greater then the base frequency!')
+            quit()
 
         print ('Tx Frequency: ' + '%.5f' % (float(cli_args.TxFrequency / HZ_MHZ)) + ' MHz' +
                '\r\nRx Frequency: ' + '%.5f' % (float(rxFrequency / HZ_MHZ)) + ' MHz')
