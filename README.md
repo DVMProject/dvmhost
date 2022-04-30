@@ -81,5 +81,5 @@ Some extra notes for those who are using the Raspberry Pi, default Raspbian OS o
 
 ## License
 
-This project is licensed under the GPLv2 License - see the LICENSE.md file for details. Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.
+This project is licensed under the GPLv2 License - see the [LICENSE.md](LICENSE.md) file for details. Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.
 
