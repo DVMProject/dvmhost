@@ -89,6 +89,7 @@ int HostSetup::run()
     getHostVersion();
     ::LogInfo(">> Modem Setup");
 
+    yaml::Node logConf = m_conf["log"];
     yaml::Node systemConf = m_conf["system"];
     yaml::Node modemConfig = systemConf["modem"];
     m_duplex = systemConf["duplex"].as<bool>(true);
@@ -152,6 +153,86 @@ int HostSetup::run()
         switch (c) {
 
             /** Setup Commands */
+        case 'L':
+        {
+            logConf = m_conf["log"];
+            uint32_t logLevel = logConf["fileLevel"].as<uint32_t>(1U);
+            std::string logFilePath = logConf["filePath"].as<std::string>();
+            std::string logActFilePath = logConf["activityFilePath"].as<std::string>();
+
+            char value[128] = { '\0' };
+            ::fprintf(stdout, "> Log File Path [%s] ? ", logFilePath.c_str());
+            ::fflush(stdout);
+
+            m_console.getLine(value, 128, 0);
+            logFilePath = std::string(value);
+            if (logFilePath.length() > 0) {
+                m_conf["log"]["filePath"] = logFilePath;
+            }
+
+            ::fprintf(stdout, "> Activity File Path [%s] ? ", logActFilePath.c_str());
+            ::fflush(stdout);
+
+            m_console.getLine(value, 128, 0);
+            logActFilePath = std::string(value);
+            if (logActFilePath.length() > 0) {
+                m_conf["log"]["activityFilePath"] = logActFilePath;
+            }
+
+            ::fprintf(stdout, "> Logging Level [%u] (1-6 lowest) ? ", logLevel);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 1, 0);
+            uint32_t level = logLevel;
+            sscanf(value, "%u", &level);
+            if (value > 0) {
+                m_conf["log"]["displayLevel"] = __INT_STR(level);
+                m_conf["log"]["fileLevel"] = __INT_STR(level);
+            }
+
+            printStatus();
+        }
+        break;
+
+        case 'F':
+        {
+            yaml::Node idenTable = m_conf["system"]["iden_table"];
+            std::string idenFilePath = idenTable["file"].as<std::string>();
+            yaml::Node radioId = m_conf["system"]["radio_id"];
+            std::string ridFilePath = radioId["file"].as<std::string>();
+            yaml::Node talkgroupId = m_conf["system"]["talkgroup_id"];
+            std::string tgidFilePath = talkgroupId["file"].as<std::string>();
+
+            char value[128] = { '\0' };
+            ::fprintf(stdout, "> Channel Identity Table File Path [%s] ? ", idenFilePath.c_str());
+            ::fflush(stdout);
+
+            m_console.getLine(value, 128, 0);
+            idenFilePath = std::string(value);
+            if (idenFilePath.length() > 0) {
+                m_conf["system"]["iden_table"]["file"] = idenFilePath;
+            }
+
+            ::fprintf(stdout, "> RID ACL Table File Path [%s] ? ", ridFilePath.c_str());
+            ::fflush(stdout);
+
+            m_console.getLine(value, 128, 0);
+            ridFilePath = std::string(value);
+            if (ridFilePath.length() > 0) {
+                m_conf["system"]["radio_id"]["file"] = ridFilePath;
+            }
+
+            ::fprintf(stdout, "> TGID ACL Table File Path [%s] ? ", tgidFilePath.c_str());
+            ::fflush(stdout);
+
+            m_console.getLine(value, 128, 0);
+            tgidFilePath = std::string(value);
+            if (tgidFilePath.length() > 0) {
+                m_conf["system"]["talkgroup_id"]["file"] = tgidFilePath;
+            }
+        }
+        break;
+
         case 'M':
         {
             modemConfig = m_conf["system"]["modem"];
@@ -185,9 +266,17 @@ int HostSetup::run()
         }
         break;
 
-        case 'I':
+        case 's':
         {
             std::string identity = m_conf["system"]["identity"].as<std::string>();
+            uint32_t timeout = m_conf["system"]["timeout"].as<uint32_t>();
+            bool duplex = m_conf["system"]["duplex"].as<bool>(true);
+            bool simplexSameFrequency = m_conf["system"]["simplexSameFrequency"].as<bool>(false);
+            uint32_t modeHang = m_conf["system"]["modeHang"].as<uint32_t>();
+            uint32_t rfTalkgroupHang = m_conf["system"]["rfTalkgroupHang"].as<uint32_t>();
+            bool fixedMode = m_conf["system"]["fixedMode"].as<bool>(false);
+            bool dmrEnabled = m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
+            bool p25Enabled = m_conf["protocols"]["p25"]["enable"].as<bool>(true);
 
             char value[9] = { '\0' };
             ::fprintf(stdout, "> Identity [%s] ? ", identity.c_str());
@@ -198,6 +287,83 @@ int HostSetup::run()
             if (identity.length() > 0) {
                 m_conf["system"]["identity"] = identity;
             }
+
+            ::fprintf(stdout, "> Duplex Enabled [%u] (Y/N) ? ", duplex);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                duplex = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["system"]["duplex"] = __BOOL_STR(duplex);
+
+            ::fprintf(stdout, "> Simplex Frequency [%u] (Y/N) ? ", simplexSameFrequency);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                duplex = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["system"]["simplexSameFrequency"] = __BOOL_STR(simplexSameFrequency);
+
+            ::fprintf(stdout, "> Timeout [%u] ? ", timeout);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                sscanf(value, "%u", &timeout);
+                m_conf["system"]["timeout"] = __INT_STR(timeout);
+            }
+
+            ::fprintf(stdout, "> Mode Hangtime [%u] ? ", modeHang);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                sscanf(value, "%u", &modeHang);
+                m_conf["system"]["modeHang"] = __INT_STR(modeHang);
+            }
+
+            ::fprintf(stdout, "> RF Talkgroup Hangtime [%u] ? ", rfTalkgroupHang);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 5, 0);
+            if (value[0] != '\0') {
+                sscanf(value, "%u", &rfTalkgroupHang);
+                m_conf["system"]["rfTalkgroupHang"] = __INT_STR(rfTalkgroupHang);
+            }
+
+            ::fprintf(stdout, "> Fixed Mode [%u] (Y/N) ? ", fixedMode);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                fixedMode = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["system"]["fixedMode"] = __BOOL_STR(fixedMode);
+
+            ::fprintf(stdout, "> DMR Enabled [%u] (Y/N) ? ", dmrEnabled);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                dmrEnabled = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["protocols"]["dmr"]["enable"] = __BOOL_STR(dmrEnabled);
+
+            ::fprintf(stdout, "> P25 Enabled [%u] (Y/N) ? ", p25Enabled);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                p25Enabled = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["protocols"]["p25"]["enable"] = __BOOL_STR(p25Enabled);
 
             printStatus();
         }
@@ -475,7 +641,6 @@ int HostSetup::run()
             displayHelp();
             break;
         case 'S':
-        case 's':
         {
             yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
             LogMessage(LOG_SETUP, " - Saved configuration to %s", m_confFile.c_str());
@@ -516,11 +681,13 @@ void HostSetup::displayHelp()
     LogMessage(LOG_SETUP, "    V        Display version of host");
     LogMessage(LOG_SETUP, "    H/h      Display help");
     LogMessage(LOG_SETUP, "    !        Set \"null\" modem (disables modem communication)");
-    LogMessage(LOG_SETUP, "    S/s      Save settings to configuration file");
+    LogMessage(LOG_SETUP, "    S        Save settings to configuration file");
     LogMessage(LOG_SETUP, "    Q/q      Quit");
     LogMessage(LOG_SETUP, "Setup Commands:");
+    LogMessage(LOG_SETUP, "    L        Set DVM logging configuration");
+    LogMessage(LOG_SETUP, "    F        Set DVM data file paths");
     LogMessage(LOG_SETUP, "    M        Set modem port and speed");
-    LogMessage(LOG_SETUP, "    I        Set identity (logical name)");
+    LogMessage(LOG_SETUP, "    s        Set system configuration");
     LogMessage(LOG_SETUP, "    C        Set callsign and CW configuration");
     LogMessage(LOG_SETUP, "    N        Set site and network configuration");
     LogMessage(LOG_SETUP, "    a        Set NAC and Color Code");
@@ -601,6 +768,14 @@ void HostSetup::printStatus()
 
     {
         std::string identity = systemConf["identity"].as<std::string>();
+        uint32_t timeout = systemConf["timeout"].as<uint32_t>();
+        bool duplex = systemConf["duplex"].as<bool>(true);
+        bool simplexSameFrequency = systemConf["simplexSameFrequency"].as<bool>(false);
+        uint32_t modeHang = systemConf["modeHang"].as<uint32_t>();
+        uint32_t rfTalkgroupHang = systemConf["rfTalkgroupHang"].as<uint32_t>();
+        bool fixedMode = systemConf["fixedMode"].as<bool>(false);
+        bool dmrEnabled = m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
+        bool p25Enabled = m_conf["protocols"]["p25"]["enable"].as<bool>(true);
 
         IdenTable entry = m_idenTable->find(m_channelId);
         if (entry.baseFrequency() == 0U) {
@@ -609,7 +784,8 @@ void HostSetup::printStatus()
 
         calculateRxTxFreq();
 
-        LogMessage(LOG_SETUP, " - Identity: %s", identity.c_str());
+        LogMessage(LOG_SETUP, " - Identity: %s, Duplex: %u, Simplex Frequency: %u, Timeout: %u", identity.c_str(), duplex, simplexSameFrequency, timeout);
+        LogMessage(LOG_SETUP, " - Mode Hang: %u, RF Talkgroup Hang: %u, Fixed Mode: %u, DMR Enabled: %u, P25 Enabled: %u", modeHang, rfTalkgroupHang, fixedMode, dmrEnabled, p25Enabled);
         LogMessage(LOG_SETUP, " - Channel Id: %u, Channel No: %u", m_channelId, m_channelNo);
         LogMessage(LOG_SETUP, " - Base Freq: %uHz, TX Offset: %fMHz, Bandwidth: %fKHz, Channel Spacing: %fKHz", entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
         LogMessage(LOG_SETUP, " - Rx Freq: %uHz, Tx Freq: %uHz", m_rxFrequency, m_txFrequency);
