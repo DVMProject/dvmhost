@@ -122,7 +122,12 @@ clean:
 		$(RM) -r dpkg_build tar_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
 
-install: all
+install: 
+		@if ! [ "$(shell id -u)" = 0 ];then
+             @echo "You are not root, install will fail."
+             exit 1
+        fi
+		all
 		mkdir -p /opt/dvm/bin || true
 		install -m 755 $(HOST_BIN) /opt/dvm/bin/
 		install -m 755 $(CMD_BIN) /opt/dvm/bin/
