@@ -124,9 +124,9 @@ clean:
 
 install: 
 		@if ! [ "$(shell id -u)" = 0 ];then
-             @echo "You are not root, install will fail."
-             exit 1
-        fi
+        	@echo "You are not root, install will fail."
+        	exit 1
+		fi
 		all
 		mkdir -p /opt/dvm/bin || true
 		install -m 755 $(HOST_BIN) /opt/dvm/bin/
