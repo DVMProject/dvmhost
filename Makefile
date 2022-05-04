@@ -122,12 +122,16 @@ clean:
 		$(RM) -r dpkg_build tar_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
 
+<<<<<<< HEAD
 install: 
 		@if ! [ "$(shell id -u)" = 0 ];then
 			@echo "You are not root, install will fail."
 			exit 1
 		fi
 		all
+=======
+install: all
+>>>>>>> parent of f1dc49b (Update makefile to check for root before install)
 		mkdir -p /opt/dvm/bin || true
 		install -m 755 $(HOST_BIN) /opt/dvm/bin/
 		install -m 755 $(CMD_BIN) /opt/dvm/bin/
