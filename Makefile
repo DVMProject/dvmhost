@@ -124,8 +124,8 @@ clean:
 
 install: 
 		@if ! [ "$(shell id -u)" = 0 ];then
-        	@echo "You are not root, install will fail."
-        	exit 1
+			@echo "You are not root, install will fail."
+			exit 1
 		fi
 		all
 		mkdir -p /opt/dvm/bin || true
