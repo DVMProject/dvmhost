@@ -166,6 +166,8 @@ namespace p25
 
         bool m_ctrlTSDUMBF;
 
+        bool m_sndcpChGrant;
+
         bool m_dumpTSBK;
 
         bool m_verbose;

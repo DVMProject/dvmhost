@@ -231,6 +231,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_trunk->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_trunk->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
+    
+    m_trunk->m_sndcpChGrant = p25Protocol["sndcpGrant"].as<bool>(false);
 
     yaml::Node control = p25Protocol["control"];
     m_control = control["enable"].as<bool>(false);
@@ -309,6 +311,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
+
+        LogInfo("    SNDCP Channel Grant: %s", m_trunk->m_sndcpChGrant ? "yes" : "no");
 
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");

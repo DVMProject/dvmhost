@@ -69,6 +69,7 @@ protocols:
         noStatusAck: false
         noMessageAck: true
         unitToUnitAvailCheck: true
+        sndcpGrant: false
         silenceThreshold: 124
         disableNetworkHDU: false
         queueSize: 5000

@@ -309,7 +309,12 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
                         m_rfTSBK.getDataServiceOptions(), m_rfTSBK.getDataAccessControl(), srcId);
                 }
 
-                writeRF_TSDU_SNDCP_Grant(false, false);
+                if (m_sndcpChGrant) {
+                    writeRF_TSDU_SNDCP_Grant(false, false);
+                }
+                else {
+                    writeRF_TSDU_Deny(P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_ISP_SNDCP_CH_REQ);
+                }
                 break;
             case TSBK_IOSP_STS_UPDT:
                 // validate the source RID
@@ -1308,6 +1313,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_ctrlTSDUMBF(true),
+    m_sndcpChGrant(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
