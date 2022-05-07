@@ -839,6 +839,6 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
     rspHeader.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
-    writeRF_PDU(data, bitLength);
+    writeRF_PDU(data, bitLength, true);
     delete[] data;
 }

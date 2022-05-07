@@ -1670,7 +1670,7 @@ bool Host::createModem()
     LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
     LogInfo("    DC Blocker: %s", dcBlocker ? "yes" : "no");
     LogInfo("    COS Lockout: %s", cosLockout ? "yes" : "no");
-    LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2083F);
+    LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2222F);
     LogInfo("    DMR RX Delay: %u (%.1fms)", dmrRxDelay, float(dmrRxDelay) * 0.0416666F);
     LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
     LogInfo("    RX DC Offset: %d", rxDCOffset);
