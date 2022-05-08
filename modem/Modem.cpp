@@ -158,12 +158,12 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_openPortHandler(NULL),
     m_closePortHandler(NULL),
     m_rspHandler(NULL),
-    m_rxDMRData1(1000U, "Modem RX DMR1"),
-    m_rxDMRData2(1000U, "Modem RX DMR2"),
-    m_txDMRData1(1000U, "Modem TX DMR1"),
-    m_txDMRData2(1000U, "Modem TX DMR2"),
-    m_rxP25Data(1000U, "Modem RX P25"),
-    m_txP25Data(1000U, "Modem TX P25"),
+    m_rxDMRData1(1110U, "Modem RX DMR1"),
+    m_rxDMRData2(1110U, "Modem RX DMR2"),
+    m_txDMRData1(740U, "Modem TX DMR1"),
+    m_txDMRData2(740U, "Modem TX DMR2"),
+    m_rxP25Data(6000U, "Modem RX P25"),
+    m_txP25Data(864U, "Modem TX P25"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
@@ -786,7 +786,7 @@ void Modem::clock(uint32_t ms)
         m_txDMRData1.getData(m_buffer, len);
 
         //if (m_trace)
-        //    Utils::dump(1U, "TX DMR Data 1", m_buffer, len);
+        //    Utils::dump(1U, "Buffered TX DMR Data 1", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -804,7 +804,7 @@ void Modem::clock(uint32_t ms)
         m_txDMRData2.getData(m_buffer, len);
 
         //if (m_trace)
-        //    Utils::dump(1U, "TX DMR Data 2", m_buffer, len);
+        //    Utils::dump(1U, "Buffered TX DMR Data 2", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -822,7 +822,7 @@ void Modem::clock(uint32_t ms)
         m_txP25Data.getData(m_buffer, len);
 
         //if (m_trace)
-        //    Utils::dump(1U, "TX P25 Data", m_buffer, len);
+        //    Utils::dump(1U, "Buffered TX P25 Data", m_buffer, len);
 
         int ret = write(m_buffer, len);
         if (ret != int(len))
@@ -1117,7 +1117,7 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 {
     assert(data != NULL);
     assert(length > 0U);
@@ -1134,8 +1134,26 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
     ::memcpy(buffer + 3U, data + 1U, length - 1U);
 
     uint8_t len = length + 2U;
-    m_txDMRData1.addData(&len, 1U);
-    m_txDMRData1.addData(buffer, len);
+
+    // write or buffer DMR slot 1 data to air interface
+    if (immediate && m_dmrSpace1 > 1U) {
+        if (m_debug)
+            LogDebug(LOG_MODEM, "Modem::writeDMRData1(); immediate write (len %u)", length);
+        //if (m_trace)
+        //    Utils::dump(1U, "Immediate TX DMR Data 1", m_buffer, len);
+
+        int ret = write(m_buffer, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing DMR slot 1 data");
+
+        m_playoutTimer.start();
+
+        m_dmrSpace1--;
+    }
+    else {
+        m_txDMRData1.addData(&len, 1U);
+        m_txDMRData1.addData(buffer, len);
+    }
 
     return true;
 }
@@ -1145,8 +1163,9 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
+/// <param name="immediate">Flag indicating data should be immediately written.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 {
     assert(data != NULL);
     assert(length > 0U);
@@ -1163,8 +1182,26 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
     ::memcpy(buffer + 3U, data + 1U, length - 1U);
 
     uint8_t len = length + 2U;
-    m_txDMRData2.addData(&len, 1U);
-    m_txDMRData2.addData(buffer, len);
+
+    // write or buffer DMR slot 2 data to air interface
+    if (immediate && m_dmrSpace2 > 1U) {
+        if (m_debug)
+            LogDebug(LOG_MODEM, "Modem::writeDMRData2(); immediate write (len %u)", length);
+        //if (m_trace)
+        //    Utils::dump(1U, "Immediate TX DMR Data 2", m_buffer, len);
+
+        int ret = write(m_buffer, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing DMR slot 2 data");
+
+        m_playoutTimer.start();
+
+        m_dmrSpace2--;
+    }
+    else {
+        m_txDMRData2.addData(&len, 1U);
+        m_txDMRData2.addData(buffer, len);
+    }
 
     return true;
 }
@@ -1174,8 +1211,9 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
+/// <param name="immediate">Flag indicating data should be immediately written.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
+bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 {
     assert(data != NULL);
     assert(length > 0U);
@@ -1192,8 +1230,26 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
     ::memcpy(buffer + 3U, data + 1U, length - 1U);
 
     uint8_t len = length + 2U;
-    m_txP25Data.addData(&len, 1U);
-    m_txP25Data.addData(buffer, len);
+
+    // write or buffer P25 data to air interface
+    if (immediate && m_p25Space > 1U) {
+        if (m_debug)
+            LogDebug(LOG_MODEM, "Modem::writeP25Data(); immediate write (len %u)", length);
+        //if (m_trace)
+        //    Utils::dump(1U, "Immediate TX P25 Data", m_buffer, len);
+
+        int ret = write(m_buffer, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing P25 data");
+
+        m_playoutTimer.start();
+
+        m_p25Space--;
+    }
+    else {
+        m_txP25Data.addData(&len, 1U);
+        m_txP25Data.addData(buffer, len);
+    }
 
     return true;
 }
@@ -1669,7 +1725,7 @@ bool Modem::readFlash()
                 if (len == 249U) {
                     bool ret = edac::CRC::checkCCITT162(m_buffer + 3U, DVM_CONF_AREA_LEN);
                     if (!ret) {
-                        LogError(LOG_MODEM, "Modem::readFlash(), failed CRC CCITT-162 check");
+                        LogWarning(LOG_MODEM, "Modem configuration area does not contain a valid configuration!");
                     }
                     else {
                         bool isErased = (m_buffer[DVM_CONF_AREA_LEN] & 0x80U) == 0x80U;
@@ -1677,14 +1733,14 @@ bool Modem::readFlash()
 
                         if (!isErased) {
                             if (confAreaVersion != DVM_CONF_AREA_VER) {
-                                LogError(LOG_MODEM, "Modem::readFlash(), invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
+                                LogError(LOG_MODEM, "Invalid version for configuration area, %02X != %02X", DVM_CONF_AREA_VER, confAreaVersion);
                             }
                             else {
                                 processFlashConfig(m_buffer);
                             }
                         }
                         else {
-                            LogWarning(LOG_MODEM, "Modem::readFlash(), modem configuration area was erased and does not contain active configuration!");
+                            LogWarning(LOG_MODEM, "Modem configuration area was erased and does not contain active configuration!");
                         }
                     }
                 }

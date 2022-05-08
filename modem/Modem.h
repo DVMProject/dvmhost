@@ -298,11 +298,11 @@ namespace modem
         void injectP25Data(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
-        bool writeDMRData1(const uint8_t* data, uint32_t length);
+        bool writeDMRData1(const uint8_t* data, uint32_t length, bool immediate = false);
         /// <summary>Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.</summary>
-        bool writeDMRData2(const uint8_t* data, uint32_t length);
+        bool writeDMRData2(const uint8_t* data, uint32_t length, bool immediate = false);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
-        bool writeP25Data(const uint8_t* data, uint32_t length);
+        bool writeP25Data(const uint8_t* data, uint32_t length, bool immediate = false);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
         bool writeDMRStart(bool tx);
