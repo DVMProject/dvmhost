@@ -326,12 +326,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
 
             if (m_p25->m_control) {
-                if (group && (m_lastPatchGroup != dstId) &&
-                    (dstId != m_p25->m_trunk->m_patchSuperGroup)) {
-                    m_p25->m_trunk->writeRF_TSDU_Mot_Patch(dstId, 0U, 0U);
-                    m_lastPatchGroup = dstId;
-                }
-
                 // if the group wasn't granted out -- explicitly grant the group
                 if (!m_p25->m_trunk->hasDstIdGranted(dstId)) {
                     if (m_p25->m_legacyGroupGrnt) {
@@ -905,7 +899,6 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
     m_lastIMBE(NULL),
     m_hadVoice(false),
     m_lastRejectId(0U),
-    m_lastPatchGroup(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_vocLDU1Count(0U),
     m_verbose(verbose),
@@ -1192,14 +1185,6 @@ void VoicePacket::writeNet_LDU1()
         m_p25->writeRF_Preamble();
 
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-
-        if (m_p25->m_control) {
-            if (group && (m_lastPatchGroup != dstId) &&
-                (dstId != m_p25->m_trunk->m_patchSuperGroup)) {
-                m_p25->m_trunk->writeRF_TSDU_Mot_Patch(dstId, 0U, 0U);
-                m_lastPatchGroup = dstId;
-            }
-        }
 
         // single-channel trunking or voice on control support?
         if (m_p25->m_control && m_p25->m_voiceOnControl) {

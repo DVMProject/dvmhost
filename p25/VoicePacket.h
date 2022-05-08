@@ -107,8 +107,6 @@ namespace p25
         bool m_hadVoice;
         uint32_t m_lastRejectId;
 
-        uint32_t m_lastPatchGroup;
-
         uint32_t m_silenceThreshold;
 
         uint8_t m_vocLDU1Count;
