@@ -198,7 +198,7 @@ namespace p25
         void queueRF_TSBK_Ctrl(uint8_t lco);
 
         /// <summary>Helper to write a grant packet.</summary>
-        bool writeRF_TSDU_Grant(bool grp, bool skip = false, bool net = false);
+        bool writeRF_TSDU_Grant(bool grp, bool skip = false, bool net = false, bool skipNetCheck = false);
         /// <summary>Helper to write a SNDCP grant packet.</summary>
         bool writeRF_TSDU_SNDCP_Grant(bool skip = false, bool net = false);
         /// <summary>Helper to write a unit to unit answer request packet.</summary>

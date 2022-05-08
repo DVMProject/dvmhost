@@ -61,9 +61,10 @@ using namespace network;
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
+/// <param name="handleChGrants">Flag indicating that the system will handle channel grants from the network.</param>
 Network::Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
-    BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
+    bool duplex, bool debug, bool dmr, bool p25, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool handleChGrants) :
+    BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, handleChGrants),
     m_address(address),
     m_port(port),
     m_password(password),
@@ -350,6 +351,16 @@ void Network::clock(uint32_t ms)
         }
         else if (::memcmp(m_buffer, TAG_MASTER_PONG, 7U) == 0) {
             m_timeoutTimer.start();
+        }
+        else if (::memcmp(m_buffer, TAG_MASTER_GRANT, 7U) == 0) {
+            if (m_enabled && m_handleChGrants) {
+                if (m_debug)
+                    Utils::dump(1U, "Network Received, Channel Grant", m_buffer, length);
+
+                uint8_t len = length;
+                m_rxGrantData.addData(&len, 1U);
+                m_rxGrantData.addData(m_buffer, len);
+            }
         }
         else {
             Utils::dump("Unknown packet from the master", m_buffer, length);

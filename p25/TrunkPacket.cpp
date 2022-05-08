@@ -1054,6 +1054,24 @@ void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
 void TrunkPacket::clock(uint32_t ms)
 {
     if (m_p25->m_control) {
+        if (m_p25->m_network != NULL) {
+            if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive()) {
+                bool grp = true;
+                uint32_t srcId = 0U;
+                uint32_t dstId = 0U;
+                uint32_t grpVchNo = 0U;
+
+                // do we have a grant response?
+                if (m_p25->m_network->readGrantRsp(grp, srcId, dstId, grpVchNo)) {
+                    m_rfTSBK.setSrcId(srcId);
+                    m_rfTSBK.setDstId(dstId);
+                    m_rfTSBK.setGrpVchNo(grpVchNo);
+
+                    writeRF_TSDU_Grant(grp, true, true, true);
+                }
+            }
+        }
+
         // clock all the grant timers
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
         for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
@@ -2021,13 +2039,21 @@ void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
 /// <param name="grp"></param>
 /// <param name="skip"></param>
 /// <param name="net"></param>
+/// <param name="skipNetCheck"></param>
 /// <returns></returns>
-bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net)
+bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
     if (m_rfTSBK.getDstId() == P25_TGID_ALL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // do we have a network connection and are we handling grants at the network?
+    if (m_p25->m_network != NULL) {
+        if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive() && !skipNetCheck) {
+            return m_p25->m_network->writeGrantReq(grp, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
+        }
     }
 
     // are we skipping checking?

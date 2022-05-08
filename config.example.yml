@@ -22,6 +22,7 @@ network:
     updateLookups: false
     allowActivityTransfer: false
     allowDiagnosticTransfer: false
+    handleChGrants: false
     debug: false
 protocols:
     dmr:

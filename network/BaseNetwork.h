@@ -68,6 +68,8 @@
 #define TAG_MASTER_CLOSING      "MSTCL"
 #define TAG_MASTER_PONG         "MSTPONG"
 
+#define TAG_MASTER_GRANT        "MSTGRNT"
+
 #define TAG_REPEATER_LOGIN      "RPTL"
 #define TAG_REPEATER_AUTH       "RPTK"
 #define TAG_REPEATER_CONFIG     "RPTC"
@@ -75,6 +77,8 @@
 #define TAG_REPEATER_ACK        "RPTACK"
 #define TAG_REPEATER_CLOSING    "RPTCL"
 #define TAG_REPEATER_PING       "RPTPING"
+
+#define TAG_REPEATER_GRANT      "RPTGRNT"
 
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
@@ -118,17 +122,23 @@ namespace network
     class HOST_SW_API BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the BaseNetwork class.</summary>
-        BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog);
+        BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool handleChGrants);
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
 
+        /// <summary>Gets the flag indicating if the network is handling channel grants.</summary>
+        bool isHandlingChGrants() { return m_handleChGrants; }
+
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
         virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint32_t& len);
+
+        /// <summary>Reads a channel grant request from the network.</summary>
+        virtual bool readGrantRsp(bool& grp, uint32_t& srcId, uint32_t& dstId, uint32_t& grpVchNo);
 
         /// <summary>Writes DMR frame data to the network.</summary>
         virtual bool writeDMR(const dmr::data::Data& data);
@@ -143,6 +153,9 @@ namespace network
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
+
+        /// <summary>Writes a channel grant request to the network.</summary>
+        virtual bool writeGrantReq(const bool grp, const uint32_t srcId, const uint32_t dstId);
 
         /// <summary>Writes the local activity log to the network.</summary>
         virtual bool writeActLog(const char* message);
@@ -172,6 +185,7 @@ namespace network
 
         bool m_allowActivityTransfer;
         bool m_allowDiagnosticTransfer;
+        bool m_handleChGrants;
 
         bool m_duplex;
         bool m_debug;
@@ -192,6 +206,8 @@ namespace network
 
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
+
+        RingBuffer<uint8_t> m_rxGrantData;
 
         p25::Audio m_audio;
 

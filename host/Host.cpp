@@ -1750,6 +1750,7 @@ bool Host::createNetwork()
     bool allowActivityTransfer = networkConf["allowActivityTransfer"].as<bool>(false);
     bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
+    bool handleChGrants = networkConf["handleChGrants"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
     if (rconPassword.length() > 64) {
@@ -1784,12 +1785,13 @@ bool Host::createNetwork()
     LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
     LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
+    LogInfo("    Handle Channel Grants: %s", handleChGrants ? "yes" : "no");
 
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
-    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
+    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
     m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
