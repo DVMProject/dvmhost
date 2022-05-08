@@ -638,8 +638,7 @@ void Slot::writeQueueRF(const uint8_t *data)
     if (space < (len + 1U)) {
         uint32_t queueLen = m_queue.length();
         m_queue.resize(queueLen + QUEUE_RESIZE_SIZE);
-
-        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot RF queue; queue resized was %u is %u", m_slotNo, queueLen, m_queue.length());
+        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_queue.length());
         return;
     }
 
@@ -663,7 +662,7 @@ void Slot::writeQueueNet(const uint8_t *data)
 
     uint32_t space = m_queue.freeSpace();
     if (space < (len + 1U)) {
-        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot RF queue", m_slotNo);
+        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
         return;
     }
 
