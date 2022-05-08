@@ -78,7 +78,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 {
     assert(data != NULL);
 
-    ::Log(level, "DUMP", "%s", title.c_str());
+    ::Log(level, "DUMP", "%s (len %u)", title.c_str(), length);
 
     uint32_t offset = 0U;
 
@@ -162,7 +162,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
 {
     assert(data != NULL);
 
-    ::Log(2U, "SYMBOLS", "%s", title.c_str());
+    ::Log(2U, "SYMBOLS", "%s (len %u)", title.c_str(), length);
 
     uint32_t offset = 0U;
     uint32_t count = 0U;
