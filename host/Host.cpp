@@ -1022,14 +1022,7 @@ int Host::run()
                     else {
                         ret = p25->writeEndRF();
                         if (ret) {
-                            if (m_state == STATE_IDLE) {
-                                m_modeTimer.setTimeout(m_rfModeHang);
-                                setState(STATE_P25);
-                            }
-
-                            if (m_state == STATE_P25) {
-                                m_modeTimer.start();
-                            }
+                            m_modeTimer.start();
                         }
                     }
                 }
