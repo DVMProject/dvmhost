@@ -45,6 +45,7 @@ using namespace network;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Network class.
 /// </summary>
@@ -453,6 +454,7 @@ void Network::close()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Writes login request to the network.
 /// </summary>

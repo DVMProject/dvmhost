@@ -54,6 +54,7 @@ using namespace modem::port;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the PseudoPTYPort class.
 /// </summary>

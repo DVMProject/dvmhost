@@ -43,6 +43,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the EmbeddedData class.
 /// </summary>
@@ -248,6 +249,7 @@ void EmbeddedData::reset()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Unpack and error check an embedded LC.
 /// </summary>

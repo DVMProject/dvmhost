@@ -108,6 +108,7 @@ static inline void set_uint32(uint8_t* cp, uint32_t v)
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the SHA256 class.
 /// </summary>
@@ -392,6 +393,7 @@ uint8_t* SHA256::buffer(const uint8_t* buffer, uint32_t len, uint8_t* resblock)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 ///
 /// </summary>

@@ -40,6 +40,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the RSSIInterpolator class.
 /// </summary>

@@ -38,6 +38,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the IdenTableLookup class.
 /// </summary>
@@ -107,6 +108,7 @@ std::vector<IdenTable> IdenTableLookup::list()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Parses a table entry from the passed comma delimited string.
 /// </summary>

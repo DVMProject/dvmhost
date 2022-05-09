@@ -436,6 +436,12 @@ int UARTPort::setNonblock(bool nonblock)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+/// Initializes a new instance of the UARTPort class.
+/// </summary>
+/// <param name="speed">Serial port speed.</param>
+/// <param name="assertRTS"></param>
 UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_speed(speed),

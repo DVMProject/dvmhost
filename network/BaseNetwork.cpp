@@ -43,6 +43,7 @@ using namespace network;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the BaseNetwork class.
 /// </summary>
@@ -539,6 +540,7 @@ void BaseNetwork::resetP25()
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Writes DMR frame data to the network.
 /// </summary>

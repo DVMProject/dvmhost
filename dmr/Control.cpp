@@ -38,6 +38,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Control class.
 /// </summary>

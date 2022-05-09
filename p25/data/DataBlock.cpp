@@ -40,6 +40,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DataBlock class.
 /// </summary>

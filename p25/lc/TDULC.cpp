@@ -43,6 +43,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a copy instance of the TDULC class.
 /// </summary>
@@ -205,6 +206,7 @@ void TDULC::encode(uint8_t * data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the TDULC class.
 /// </summary>

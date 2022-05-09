@@ -41,6 +41,7 @@ using namespace edac;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the AMBEFEC class.
 /// </summary>
@@ -489,6 +490,7 @@ uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 ///
 /// </summary>

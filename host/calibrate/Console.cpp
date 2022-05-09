@@ -43,6 +43,7 @@
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 #if defined(_WIN32) || defined(_WIN64)
 /// <summary>
 /// Initializes a new instance of the Console class.

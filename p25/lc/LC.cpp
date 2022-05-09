@@ -48,6 +48,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
@@ -500,6 +501,7 @@ void LC::getMI(uint8_t* mi) const
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Internal helper to copy the the class.
 /// </summary>

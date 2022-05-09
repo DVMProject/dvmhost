@@ -46,6 +46,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
+    
     class HOST_SW_API VoicePacket;
     namespace dfsi { class HOST_SW_API DFSIVoicePacket; }
     class HOST_SW_API DataPacket;

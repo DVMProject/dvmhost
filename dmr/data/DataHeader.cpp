@@ -53,6 +53,7 @@ const uint8_t UDTF_NMEA = 0x05U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DataHeader class.
 /// </summary>

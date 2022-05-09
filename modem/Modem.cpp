@@ -64,6 +64,7 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
 // Check flash configuration value against class value.
 #define FLASH_VALUE_CHECK(_CLASS_VAL, _FLASH_VAL, _DEFAULT, _STR)                        \
     if (_CLASS_VAL == _DEFAULT && _CLASS_VAL != _FLASH_VAL) {                            \
@@ -89,6 +90,7 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Modem class.
 /// </summary>
@@ -1401,6 +1403,7 @@ bool Modem::sendCWId(const std::string& callsign)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Retrieve the air interface modem version.
 /// </summary>

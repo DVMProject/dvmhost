@@ -85,7 +85,7 @@ namespace edac
     private:
         uint32_t* m_state;
         uint32_t* m_total;
-        uint32_t            m_buflen;
+        uint32_t m_buflen;
         uint32_t* m_buffer;
 
         /// <summary></summary>

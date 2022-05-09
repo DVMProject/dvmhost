@@ -65,6 +65,7 @@ const uint32_t MAX_CCS_ERRS = 4U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the LowSpeedData class.
 /// </summary>
@@ -161,6 +162,7 @@ void LowSpeedData::encode(uint8_t* data) const
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 ///
 /// </summary>

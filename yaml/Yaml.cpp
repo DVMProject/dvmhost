@@ -94,6 +94,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the Exception class.
     /// </summary>
@@ -127,6 +128,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the InternalException class.
     /// </summary>
@@ -140,6 +142,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the ParsingException class.
     /// </summary>
@@ -153,6 +156,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the OperationException class.
     /// </summary>
@@ -842,6 +846,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the Iterator class.
     /// </summary>
@@ -1001,6 +1006,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the ConstIterator class.
     /// </summary>
@@ -1159,6 +1165,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the Node class.
     /// </summary>
@@ -1458,6 +1465,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Private Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary></summary>
     /// <returns></returns>
     const std::string& Node::asString() const
@@ -2235,6 +2243,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Parsing Functions
     // ---------------------------------------------------------------------------
+
     /// <summary>Populate given root node with deserialized data.</summary>
     /// <param name="root">Root node to populate.</param>
     /// <param name="filename">Path of input file.</param>
@@ -2296,6 +2305,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Public Class Members
     // ---------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the SerializeConfig struct.
     /// </summary>
@@ -2316,6 +2326,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Serialization Functions
     // ---------------------------------------------------------------------------
+
     /// <summary>Serialize node data.</summary>
     /// <param name="root">Root node to serialize.</param>
     /// <param name="filename">Path of output file.</param>
@@ -2533,6 +2544,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Global Functions
     // ---------------------------------------------------------------------------
+    
     std::string ExceptionMessage(const std::string& message, ReaderLine& line)
     {
         return message + std::string(" Line ") + std::to_string(line.No) + std::string(": ") + line.Data;

@@ -48,6 +48,7 @@ const uint32_t BUFFER_LENGTH = 2000U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the UDPPort class.
 /// </summary>

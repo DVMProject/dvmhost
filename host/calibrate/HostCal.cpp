@@ -119,6 +119,7 @@ unsigned char LDU2_1K[] = {
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the HostCal class.
 /// </summary>

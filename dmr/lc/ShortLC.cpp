@@ -42,6 +42,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the ShortLC class.
 /// </summary>
@@ -114,8 +115,9 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
 }
 
 // ---------------------------------------------------------------------------
-//   Private Class Members
+//  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 ///
 /// </summary>

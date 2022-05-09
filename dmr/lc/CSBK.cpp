@@ -44,6 +44,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the CSBK class.
 /// </summary>
@@ -483,6 +484,7 @@ void CSBK::encode(uint8_t* bytes)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the CSBK class.
 /// </summary>

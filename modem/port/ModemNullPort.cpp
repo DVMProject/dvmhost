@@ -43,6 +43,7 @@ const char* HARDWARE = "Null Modem Controller";
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the ModemNullPort class.
 /// </summary>
@@ -125,6 +126,7 @@ void ModemNullPort::close()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 ///
 /// </summary>

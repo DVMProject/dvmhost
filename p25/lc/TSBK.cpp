@@ -42,6 +42,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a copy instance of the TSBK class.
 /// </summary>
@@ -1091,6 +1092,7 @@ void TSBK::setCallsign(std::string callsign)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the TSBK class.
 /// </summary>

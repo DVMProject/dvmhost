@@ -77,6 +77,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Host class.
 /// </summary>
@@ -1283,6 +1284,7 @@ int Host::run()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Reads basic configuration parameters from the INI.
 /// </summary>

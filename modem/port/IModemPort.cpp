@@ -34,6 +34,7 @@ using namespace modem::port;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Finalizes a instance of the IModemPort class.
 /// </summary>

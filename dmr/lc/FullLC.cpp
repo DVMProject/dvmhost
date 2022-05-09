@@ -46,6 +46,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initialize a new instance of the FullLC class.
 /// </summary>

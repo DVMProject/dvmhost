@@ -40,6 +40,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Helper to append DMR data sync bytes to the passed buffer.
 /// </summary>

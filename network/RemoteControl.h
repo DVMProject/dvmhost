@@ -45,6 +45,7 @@
 // ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
+
 class HOST_SW_API Host;
 namespace dmr { class HOST_SW_API Control; }
 namespace p25 { class HOST_SW_API Control; }

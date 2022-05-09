@@ -53,6 +53,7 @@ const uint8_t ENCODE_TABLE[] = {
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Trellis class.
 /// </summary>
@@ -142,6 +143,7 @@ void Trellis::encode(const uint8_t* payload, uint8_t* data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Helper to deinterleave the input symbols into dibits.
 /// </summary>

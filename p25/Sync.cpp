@@ -40,6 +40,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Helper to append P25 sync bytes to the passed buffer.
 /// </summary>

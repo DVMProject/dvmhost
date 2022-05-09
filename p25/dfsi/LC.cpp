@@ -41,6 +41,7 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
@@ -763,6 +764,7 @@ void LC::encodeTSBK(uint8_t* data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Internal helper to copy the the class.
 /// </summary>

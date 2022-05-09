@@ -42,6 +42,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the HostSetup class.
 /// </summary>
