@@ -24,7 +24,7 @@
 *   GNU General Public License for more details.
 */
 #include "Defines.h"
-#include "dmr/DataPacket.h"
+#include "dmr/packet/Data.h"
 #include "dmr/acl/AccessControl.h"
 #include "dmr/data/EMB.h"
 #include "dmr/edac/Trellis.h"
@@ -39,6 +39,7 @@
 #include "Utils.h"
 
 using namespace dmr;
+using namespace dmr::packet;
 
 #include <cassert>
 #include <ctime>
@@ -73,7 +74,7 @@ using namespace dmr;
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool DataPacket::process(uint8_t* data, uint32_t len)
+bool Data::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -302,7 +303,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 /// Process a data frame from the network.
 /// </summary>
 /// <param name="dmrData"></param>
-void DataPacket::processNetwork(const data::Data& dmrData)
+void Data::processNetwork(const data::Data& dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
 
@@ -506,7 +507,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the DataPacket class.
+/// Initializes a new instance of the Data class.
 /// </summary>
 /// <param name="slot">DMR slot.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
@@ -514,7 +515,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 /// <param name="repeatDataPacket"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
-DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
+Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
     m_slot(slot),
     m_pduUserData(NULL),
     m_pduDataOffset(0U),
@@ -529,9 +530,9 @@ DataPacket::DataPacket(Slot* slot, network::BaseNetwork* network, bool dumpDataP
 }
 
 /// <summary>
-/// Finalizes a instance of the DataPacket class.
+/// Finalizes a instance of the Data class.
 /// </summary>
-DataPacket::~DataPacket()
+Data::~Data()
 {
     delete[] m_pduUserData;
 }

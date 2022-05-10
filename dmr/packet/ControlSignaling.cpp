@@ -24,7 +24,7 @@
 *   GNU General Public License for more details.
 */
 #include "Defines.h"
-#include "dmr/ControlPacket.h"
+#include "dmr/packet/ControlSignaling.h"
 #include "dmr/acl/AccessControl.h"
 #include "dmr/data/DataHeader.h"
 #include "dmr/data/EMB.h"
@@ -40,6 +40,7 @@
 #include "Utils.h"
 
 using namespace dmr;
+using namespace dmr::packet;
 
 #include <cassert>
 #include <ctime>
@@ -74,7 +75,7 @@ using namespace dmr;
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool ControlPacket::process(uint8_t* data, uint32_t len)
+bool ControlSignaling::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -224,7 +225,7 @@ bool ControlPacket::process(uint8_t* data, uint32_t len)
 /// Process a data frame from the network.
 /// </summary>
 /// <param name="dmrData"></param>
-void ControlPacket::processNetwork(const data::Data & dmrData)
+void ControlSignaling::processNetwork(const data::Data & dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
 
@@ -376,7 +377,7 @@ void ControlPacket::processNetwork(const data::Data & dmrData)
 /// <param name="func">Extended function opcode.</param>
 /// <param name="arg">Extended function argument.</param>
 /// <param name="dstId">Destination radio ID.</param>
-void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
+void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
     if (m_verbose) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
@@ -434,7 +435,7 @@ void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId
 /// </summary>
 /// <param name="srcId">Source radio ID.</param>
 /// <param name="dstId">Destination radio ID.</param>
-void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
+void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
     if (m_verbose) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %u",
@@ -482,14 +483,14 @@ void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the ControlPacket class.
+/// Initializes a new instance of the ControlSignaling class.
 /// </summary>
 /// <param name="slot">DMR slot.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpCSBKData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
-ControlPacket::ControlPacket(Slot * slot, network::BaseNetwork * network, bool dumpCSBKData, bool debug, bool verbose) :
+ControlSignaling::ControlSignaling(Slot * slot, network::BaseNetwork * network, bool dumpCSBKData, bool debug, bool verbose) :
     m_slot(slot),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
@@ -499,9 +500,9 @@ ControlPacket::ControlPacket(Slot * slot, network::BaseNetwork * network, bool d
 }
 
 /// <summary>
-/// Finalizes a instance of the ControlPacket class.
+/// Finalizes a instance of the ControlSignaling class.
 /// </summary>
-ControlPacket::~ControlPacket()
+ControlSignaling::~ControlSignaling()
 {
     /* stub */
 }
@@ -509,7 +510,7 @@ ControlPacket::~ControlPacket()
 /// <summary>
 /// Helper to write a TSCC Aloha broadcast packet on the RF interface.
 /// </summary>
-void ControlPacket::writeRF_TSCC_Aloha()
+void ControlSignaling::writeRF_TSCC_Aloha()
 {
     if (m_debug) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_ALOHA (Aloha)", m_slot->m_slotNo);
@@ -550,7 +551,7 @@ void ControlPacket::writeRF_TSCC_Aloha()
 /// </summary>
 /// <param name="channelNo"></param>
 /// <param name="annWd"></param>
-void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
+void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 {
     if (m_debug) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_ANN_WD_TSCC (Announce-WD TSCC Channel), channelNo = %u, annWd = %u",
@@ -595,7 +596,7 @@ void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 /// <summary>
 /// Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.
 /// </summary>
-void ControlPacket::writeRF_TSCC_Bcast_Sys_Parm()
+void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 {
     if (m_debug) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_SITE_PARMS (Announce Site Parms)", m_slot->m_slotNo);

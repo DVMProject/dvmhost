@@ -34,9 +34,9 @@
 #include "Defines.h"
 #include "dmr/Control.h"
 #include "dmr/SiteData.h"
-#include "dmr/ControlPacket.h"
-#include "dmr/DataPacket.h"
-#include "dmr/VoicePacket.h"
+#include "dmr/packet/ControlSignaling.h"
+#include "dmr/packet/Data.h"
+#include "dmr/packet/Voice.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "lookups/RSSIInterpolator.h"
@@ -55,9 +55,9 @@ namespace dmr
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     
-    class HOST_SW_API VoicePacket;
-    class HOST_SW_API DataPacket;
-    class HOST_SW_API ControlPacket;
+    namespace packet { class HOST_SW_API Voice; }
+    namespace packet { class HOST_SW_API Data; }
+    namespace packet { class HOST_SW_API ControlSignaling; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -86,8 +86,8 @@ namespace dmr
         /// <summary>Updates the slot processor.</summary>
         void clock();
 
-        /// <summary>Gets instance of the ControlPacket class.</summary>
-        ControlPacket* control() { return m_control; }
+        /// <summary>Gets instance of the ControlSignaling class.</summary>
+        packet::ControlSignaling* control() { return m_control; }
 
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
@@ -105,12 +105,12 @@ namespace dmr
         static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
 
     private:
-        friend class VoicePacket;
-        VoicePacket* m_voice;
-        friend class DataPacket;
-        DataPacket* m_data;
-        friend class ControlPacket;
-        ControlPacket* m_control;
+        friend class packet::Voice;
+        packet::Voice* m_voice;
+        friend class packet::Data;
+        packet::Data* m_data;
+        friend class packet::ControlSignaling;
+        packet::ControlSignaling* m_control;
 
         uint32_t m_slotNo;
 

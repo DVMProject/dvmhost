@@ -31,7 +31,7 @@
 #include "p25/P25Defines.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/dfsi/DFSIDefines.h"
-#include "p25/dfsi/DFSIVoicePacket.h"
+#include "p25/dfsi/packet/DFSIVoice.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "HostMain.h"
@@ -40,6 +40,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::packet;
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -54,9 +55,9 @@ const uint32_t VOC_LDU1_COUNT = 3U;
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
-void DFSIVoicePacket::resetRF()
+void DFSIVoice::resetRF()
 {
-    VoicePacket::resetRF();
+    Voice::resetRF();
 
     LC lc = LC();
     m_rfDFSILC = lc;
@@ -65,9 +66,9 @@ void DFSIVoicePacket::resetRF()
 /// <summary>
 /// Resets the data states for the network.
 /// </summary>
-void DFSIVoicePacket::resetNet()
+void DFSIVoice::resetNet()
 {
-    VoicePacket::resetNet();
+    Voice::resetNet();
 
     LC lc = LC();
     m_netDFSILC = lc;
@@ -79,7 +80,7 @@ void DFSIVoicePacket::resetNet()
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
+bool DFSIVoice::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -632,7 +633,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <returns></returns>
-bool DFSIVoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
     uint32_t count = 0U;
 
@@ -791,14 +792,14 @@ bool DFSIVoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& contro
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the DFSIVoicePacket class.
+/// Initializes a new instance of the DFSIVoice class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-DFSIVoicePacket::DFSIVoicePacket(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
-    VoicePacket(p25, network, debug, verbose),
+DFSIVoice::DFSIVoice(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
+    Voice(p25, network, debug, verbose),
     m_trunk(NULL),
     m_rfDFSILC(),
     m_netDFSILC(),
@@ -812,13 +813,13 @@ DFSIVoicePacket::DFSIVoicePacket(Control* p25, network::BaseNetwork* network, bo
     ::memset(m_dfsiLDU2, 0x00U, 9U * 25U);
 
     // hmmm...this should hopefully be a safe cast...right?
-    m_trunk = (DFSITrunkPacket *)p25->m_trunk;
+    m_trunk = (DFSITrunk *)p25->m_trunk;
 }
 
 /// <summary>
-/// Finalizes a instance of the DFSIVoicePacket class.
+/// Finalizes a instance of the DFSIVoice class.
 /// </summary>
-DFSIVoicePacket::~DFSIVoicePacket()
+DFSIVoice::~DFSIVoice()
 {
     delete[] m_dfsiLDU1;
     delete[] m_dfsiLDU2;
@@ -827,7 +828,7 @@ DFSIVoicePacket::~DFSIVoicePacket()
 /// <summary>
 /// Helper to write a network P25 TDU packet.
 /// </summary>
-void DFSIVoicePacket::writeNet_TDU()
+void DFSIVoice::writeNet_TDU()
 {
     if (m_p25->m_control) {
         m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
@@ -866,7 +867,7 @@ void DFSIVoicePacket::writeNet_TDU()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void DFSIVoicePacket::writeNet_LDU1()
+void DFSIVoice::writeNet_LDU1()
 {
     lc::LC control = lc::LC(m_dfsiLC.control());
     data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
@@ -1161,7 +1162,7 @@ void DFSIVoicePacket::writeNet_LDU1()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void DFSIVoicePacket::writeNet_LDU2()
+void DFSIVoice::writeNet_LDU2()
 {
     lc::LC control = lc::LC(m_dfsiLC.control());
     data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());

@@ -30,7 +30,7 @@
 */
 #include "Defines.h"
 #include "p25/P25Defines.h"
-#include "p25/DataPacket.h"
+#include "p25/packet/Data.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -41,6 +41,7 @@
 
 using namespace p25;
 using namespace p25::data;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstdio>
@@ -60,7 +61,7 @@ const uint32_t CONN_WAIT_TIMEOUT = 1U;
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
-void DataPacket::resetRF()
+void Data::resetRF()
 {
     m_rfDataBlockCnt = 0U;
     m_rfPDUCount = 0U;
@@ -75,7 +76,7 @@ void DataPacket::resetRF()
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool DataPacket::process(uint8_t* data, uint32_t len)
+bool Data::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -383,7 +384,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <returns></returns>
-bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool Data::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
     if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
         return false;
@@ -489,7 +490,7 @@ bool DataPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, da
 /// </summary>
 /// <param name="llId">Logical Link ID.</param>
 /// <returns>True, if ID has registered, otherwise false.</returns>
-bool DataPacket::hasLLIdFNEReg(uint32_t llId) const
+bool Data::hasLLIdFNEReg(uint32_t llId) const
 {
     // lookup dynamic FNE registration table entry
     try {
@@ -509,7 +510,7 @@ bool DataPacket::hasLLIdFNEReg(uint32_t llId) const
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
-void DataPacket::clock(uint32_t ms)
+void Data::clock(uint32_t ms)
 {
     // clock all the connect timers
     std::vector<uint32_t> connToClear = std::vector<uint32_t>();
@@ -554,7 +555,7 @@ void DataPacket::clock(uint32_t ms)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the DataPacket class.
+/// Initializes a new instance of the Data class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
@@ -562,7 +563,7 @@ void DataPacket::clock(uint32_t ms)
 /// <param name="repeatPDU"></param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-DataPacket::DataPacket(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
+Data::Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
     m_p25(p25),
     m_network(network),
     m_prevRfState(RS_RF_LISTENING),
@@ -611,9 +612,9 @@ DataPacket::DataPacket(Control* p25, network::BaseNetwork* network, bool dumpPDU
 }
 
 /// <summary>
-/// Finalizes a instance of the DataPacket class.
+/// Finalizes a instance of the Data class.
 /// </summary>
-DataPacket::~DataPacket()
+Data::~Data()
 {
     delete[] m_rfPDU;
     delete[] m_netPDU;
@@ -626,7 +627,7 @@ DataPacket::~DataPacket()
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
-void DataPacket::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
+void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -646,7 +647,7 @@ void DataPacket::writeNetwork(const uint8_t currentBlock, const uint8_t *data, u
 /// <param name="bitlength"></param>
 /// <param name="noNulls"></param>
 /// <remarks>This simply takes data packed into m_rfPDU and transmits it.</remarks>
-void DataPacket::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
+void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 {
     assert(pdu != NULL);
     assert(bitLength > 0U);
@@ -690,7 +691,7 @@ void DataPacket::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNull
 /// Helper to write a network P25 PDU packet.
 /// </summary>
 /// <remarks>This will take buffered network PDU data and repeat it over the air.</remarks>
-void DataPacket::writeNet_PDU_Buffered()
+void Data::writeNet_PDU_Buffered()
 {
     uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
@@ -741,7 +742,7 @@ void DataPacket::writeNet_PDU_Buffered()
 /// Helper to re-write a received P25 PDU packet.
 /// </summary>
 /// <remarks>This will take buffered received PDU data and repeat it over the air.</remarks>
-void DataPacket::writeRF_PDU_Buffered()
+void Data::writeRF_PDU_Buffered()
 {
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
@@ -794,7 +795,7 @@ void DataPacket::writeRF_PDU_Buffered()
 /// <param name="regType"></param>
 /// <param name="llId"></param>
 /// <param name="ipAddr"></param>
-void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr)
+void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr)
 {
     if ((regType != PDU_REG_TYPE_RSP_ACCPT) && (regType != PDU_REG_TYPE_RSP_DENY))
         return;
@@ -859,7 +860,7 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
 /// <param name="ackType"></param>
 /// <param name="llId"></param>
 /// <param name="noNulls"></param>
-void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls)
+void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls)
 {
     if (ackClass == PDU_ACK_CLASS_ACK && ackType != PDU_ACK_TYPE_ACK)
         return;

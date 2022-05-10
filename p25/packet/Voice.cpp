@@ -30,7 +30,7 @@
 */
 #include "Defines.h"
 #include "p25/P25Defines.h"
-#include "p25/VoicePacket.h"
+#include "p25/packet/Voice.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/dfsi/DFSIDefines.h"
 #include "p25/P25Utils.h"
@@ -41,6 +41,7 @@
 #include "Utils.h"
 
 using namespace p25;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstdio>
@@ -60,7 +61,7 @@ const uint32_t VOC_LDU1_COUNT = 3U;
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
-void VoicePacket::resetRF()
+void Voice::resetRF()
 {
     lc::LC lc = lc::LC(m_p25->m_siteData);
 
@@ -79,7 +80,7 @@ void VoicePacket::resetRF()
 /// <summary>
 /// Resets the data states for the network.
 /// </summary>
-void VoicePacket::resetNet()
+void Voice::resetNet()
 {
     lc::LC lc = lc::LC(m_p25->m_siteData);
 
@@ -97,7 +98,7 @@ void VoicePacket::resetNet()
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool VoicePacket::process(uint8_t* data, uint32_t len)
+bool Voice::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -689,7 +690,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <returns></returns>
-bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
     uint32_t count = 0U;
 
@@ -848,13 +849,13 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the VoicePacket class.
+/// Initializes a new instance of the Voice class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
+Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
     m_p25(p25),
     m_network(network),
     m_rfFrames(0U),
@@ -895,9 +896,9 @@ VoicePacket::VoicePacket(Control* p25, network::BaseNetwork* network, bool debug
 }
 
 /// <summary>
-/// Finalizes a instance of the VoicePacket class.
+/// Finalizes a instance of the Voice class.
 /// </summary>
-VoicePacket::~VoicePacket()
+Voice::~Voice()
 {
     delete[] m_netLDU1;
     delete[] m_netLDU2;
@@ -909,7 +910,7 @@ VoicePacket::~VoicePacket()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="duid"></param>
-void VoicePacket::writeNetwork(const uint8_t *data, uint8_t duid)
+void Voice::writeNetwork(const uint8_t *data, uint8_t duid)
 {
     assert(data != NULL);
 
@@ -943,7 +944,7 @@ void VoicePacket::writeNetwork(const uint8_t *data, uint8_t duid)
 /// Helper to write end of frame data.
 /// </summary>
 /// <returns></returns>
-void VoicePacket::writeRF_EndOfVoice()
+void Voice::writeRF_EndOfVoice()
 {
     if (!m_hadVoice) {
         return;
@@ -963,7 +964,7 @@ void VoicePacket::writeRF_EndOfVoice()
 /// <summary>
 /// Helper to write a network P25 TDU packet.
 /// </summary>
-void VoicePacket::writeNet_TDU()
+void Voice::writeNet_TDU()
 {
     if (m_p25->m_control) {
         m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
@@ -1017,7 +1018,7 @@ void VoicePacket::writeNet_TDU()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void VoicePacket::checkNet_LDU1()
+void Voice::checkNet_LDU1()
 {
     if (m_p25->m_netState == RS_NET_IDLE)
         return;
@@ -1034,7 +1035,7 @@ void VoicePacket::checkNet_LDU1()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void VoicePacket::writeNet_LDU1()
+void Voice::writeNet_LDU1()
 {
     lc::LC control = lc::LC(m_dfsiLC.control());
     data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
@@ -1308,7 +1309,7 @@ void VoicePacket::writeNet_LDU1()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void VoicePacket::checkNet_LDU2()
+void Voice::checkNet_LDU2()
 {
     if (m_p25->m_netState == RS_NET_IDLE)
         return;
@@ -1325,7 +1326,7 @@ void VoicePacket::checkNet_LDU2()
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
-void VoicePacket::writeNet_LDU2()
+void Voice::writeNet_LDU2()
 {
     lc::LC control = lc::LC(m_dfsiLC.control());
     data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
@@ -1411,7 +1412,7 @@ void VoicePacket::writeNet_LDU2()
 /// Helper to insert IMBE silence frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-void VoicePacket::insertMissingAudio(uint8_t* data)
+void Voice::insertMissingAudio(uint8_t* data)
 {
     if (data[10U] == 0x00U) {
         ::memcpy(data + 10U, m_lastIMBE, 11U);
@@ -1490,7 +1491,7 @@ void VoicePacket::insertMissingAudio(uint8_t* data)
 /// Helper to insert IMBE null frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-void VoicePacket::insertNullAudio(uint8_t* data)
+void Voice::insertNullAudio(uint8_t* data)
 {
     if (data[0U] == 0x00U) {
         ::memcpy(data + 10U, P25_NULL_IMBE, 11U);

@@ -25,7 +25,7 @@
 */
 #include "Defines.h"
 #include "p25/P25Defines.h"
-#include "p25/TrunkPacket.h"
+#include "p25/packet/Trunk.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -35,6 +35,7 @@
 
 using namespace p25;
 using namespace p25::data;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstdio>
@@ -141,7 +142,7 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
-void TrunkPacket::resetRF()
+void Trunk::resetRF()
 {
     lc::TSBK tsbk = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
     m_rfTSBK = tsbk;
@@ -150,7 +151,7 @@ void TrunkPacket::resetRF()
 /// <summary>
 /// Resets the data states for the network.
 /// </summary>
-void TrunkPacket::resetNet()
+void Trunk::resetNet()
 {
     lc::TSBK tsbk = lc::TSBK(m_p25->m_siteData, m_p25->m_idenEntry, m_dumpTSBK);
     m_netTSBK = tsbk;
@@ -163,7 +164,7 @@ void TrunkPacket::resetNet()
 /// <param name="len">Length of data frame.</param>
 /// <param name="preDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
 /// <returns></returns>
-bool TrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
+bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
 {
     assert(data != NULL);
 
@@ -527,7 +528,7 @@ bool TrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <returns></returns>
-bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
     if (!m_p25->m_control)
         return false;
@@ -794,7 +795,7 @@ bool TrunkPacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="dataBlock"></param>
-bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
+bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
 {
     uint8_t data[1U];
     ::memset(data, 0x00U, 1U);
@@ -807,7 +808,7 @@ bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
         uint8_t raw[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
         uint32_t len = blocks[i].getData(raw);
         if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
-            LogError(LOG_P25, "TrunkPacket::processMBT(), failed to read PDU data block");
+            LogError(LOG_P25, "Trunk::processMBT(), failed to read PDU data block");
             blockRead = false;
         }
 
@@ -827,7 +828,7 @@ bool TrunkPacket::processMBT(DataHeader dataHeader, DataBlock* blocks)
 /// <summary>
 /// Helper to write P25 adjacent site information to the network.
 /// </summary>
-void TrunkPacket::writeAdjSSNetwork()
+void Trunk::writeAdjSSNetwork()
 {
     if (!m_p25->m_control) {
         return;
@@ -867,7 +868,7 @@ void TrunkPacket::writeAdjSSNetwork()
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <returns></returns>
-bool TrunkPacket::hasSrcIdGrpAff(uint32_t srcId, uint32_t dstId) const
+bool Trunk::hasSrcIdGrpAff(uint32_t srcId, uint32_t dstId) const
 {
     // lookup dynamic affiliation table entry
     try {
@@ -888,7 +889,7 @@ bool TrunkPacket::hasSrcIdGrpAff(uint32_t srcId, uint32_t dstId) const
 /// </summary>
 /// <param name="srcId"></param>
 /// <returns></returns>
-bool TrunkPacket::hasSrcIdUnitReg(uint32_t srcId) const
+bool Trunk::hasSrcIdUnitReg(uint32_t srcId) const
 {
     // lookup dynamic unit registration table entry
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
@@ -904,7 +905,7 @@ bool TrunkPacket::hasSrcIdUnitReg(uint32_t srcId) const
 /// </summary>
 /// <param name="chNo"></param>
 /// <returns></returns>
-bool TrunkPacket::isChBusy(uint32_t chNo) const
+bool Trunk::isChBusy(uint32_t chNo) const
 {
     if (chNo == 0U) {
         return false;
@@ -925,7 +926,7 @@ bool TrunkPacket::isChBusy(uint32_t chNo) const
 /// </summary>
 /// <param name="dstId"></param>
 /// <returns></returns>
-bool TrunkPacket::hasDstIdGranted(uint32_t dstId) const
+bool Trunk::hasDstIdGranted(uint32_t dstId) const
 {
     if (dstId == 0U) {
         return false;
@@ -950,7 +951,7 @@ bool TrunkPacket::hasDstIdGranted(uint32_t dstId) const
 /// </summary>
 /// <param name="dstId"></param>
 /// <returns></returns>
-void TrunkPacket::touchDstIdGrant(uint32_t dstId)
+void Trunk::touchDstIdGrant(uint32_t dstId)
 {
     if (dstId == 0U) {
         return;
@@ -966,7 +967,7 @@ void TrunkPacket::touchDstIdGrant(uint32_t dstId)
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="releaseAll"></param>
-void TrunkPacket::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
+void Trunk::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
 {
     if (dstId == 0U && !releaseAll) {
         return;
@@ -1018,7 +1019,7 @@ void TrunkPacket::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="releaseAll"></param>
-void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
+void Trunk::clearGrpAff(uint32_t dstId, bool releaseAll)
 {
     if (dstId == 0U && !releaseAll) {
         return;
@@ -1053,7 +1054,7 @@ void TrunkPacket::clearGrpAff(uint32_t dstId, bool releaseAll)
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
-void TrunkPacket::clock(uint32_t ms)
+void Trunk::clock(uint32_t ms)
 {
     if (m_p25->m_control) {
         if (m_p25->m_network != NULL) {
@@ -1140,7 +1141,7 @@ void TrunkPacket::clock(uint32_t ms)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
+void Trunk::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_CALL_ALRT (Call Alert), srcId = %u, dstId = %u", srcId, dstId);
@@ -1160,7 +1161,7 @@ void TrunkPacket::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 /// <param name="func"></param>
 /// <param name="arg"></param>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
+void Trunk::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint8_t mfId = m_rfTSBK.getMFId();
@@ -1198,7 +1199,7 @@ void TrunkPacket::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
 /// Helper to write a group affiliation query packet.
 /// </summary>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
+void Trunk::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 {
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_GRP_AFF_Q (Group Affiliation Query), dstId = %u", dstId);
@@ -1216,7 +1217,7 @@ void TrunkPacket::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 /// Helper to write a unit registration command packet.
 /// </summary>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
+void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 {
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_U_REG_CMD (Unit Registration Command), dstId = %u", dstId);
@@ -1236,7 +1237,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 /// <param name="group1"></param>
 /// <param name="group2"></param>
 /// <param name="group3"></param>
-void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3)
+void Trunk::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -1261,7 +1262,7 @@ void TrunkPacket::writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint3
 /// Helper to change the conventional fallback state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether conventional fallback is enabled.</param>
-void TrunkPacket::setConvFallback(bool fallback)
+void Trunk::setConvFallback(bool fallback)
 {
     m_convFallback = fallback;
     if (m_convFallback && m_p25->m_control) {
@@ -1284,7 +1285,7 @@ void TrunkPacket::setConvFallback(bool fallback)
 /// Helper to change the TSBK verbose state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
-void TrunkPacket::setTSBKVerbose(bool verbose)
+void Trunk::setTSBKVerbose(bool verbose)
 {
     m_dumpTSBK = verbose;
 }
@@ -1294,14 +1295,14 @@ void TrunkPacket::setTSBKVerbose(bool verbose)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the TrunkPacket class.
+/// Initializes a new instance of the Trunk class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
+Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
     m_p25(p25),
     m_network(network),
     m_patchSuperGroup(0xFFFFU),
@@ -1362,9 +1363,9 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
 }
 
 /// <summary>
-/// Finalizes a instance of the TrunkPacket class.
+/// Finalizes a instance of the Trunk class.
 /// </summary>
-TrunkPacket::~TrunkPacket()
+Trunk::~Trunk()
 {
     delete[] m_rfMBF;
 }
@@ -1374,7 +1375,7 @@ TrunkPacket::~TrunkPacket()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="autoReset"></param>
-void TrunkPacket::writeNetworkRF(const uint8_t* data, bool autoReset)
+void Trunk::writeNetworkRF(const uint8_t* data, bool autoReset)
 {
     assert(data != NULL);
 
@@ -1395,7 +1396,7 @@ void TrunkPacket::writeNetworkRF(const uint8_t* data, bool autoReset)
 /// <param name="frameCnt"></param>
 /// <param name="n"></param>
 /// <param name="adjSS"></param>
-void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
+void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
     if (!m_p25->m_control)
         return;
@@ -1525,7 +1526,7 @@ void TrunkPacket::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// </summary>
 /// <param name="lc"></param>
 /// <param name="noNetwork"></param>
-void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
+void Trunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 {
     uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
@@ -1565,7 +1566,7 @@ void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 /// <param name="grp"></param>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
+void Trunk::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
 {
     if (!m_p25->m_duplex) {
         return;
@@ -1616,7 +1617,7 @@ void TrunkPacket::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t d
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="force"></param>
-void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
+void Trunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
 {
     if (!m_p25->m_control)
         return;
@@ -1680,7 +1681,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool f
 /// Helper to write a multi-block (3-block) P25 TSDU packet.
 /// </summary>
 /// <param name="clearBeforeWrite"></param>
-void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
+void Trunk::writeRF_TSDU_MBF(bool clearBeforeWrite)
 {
     if (!m_p25->m_control) {
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
@@ -1798,7 +1799,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
 /// Helper to generate the given control TSBK into the TSDU frame queue.
 /// </summary>
 /// <param name="lco"></param>
-void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
+void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 {
     if (!m_p25->m_control)
         return;
@@ -2044,7 +2045,7 @@ void TrunkPacket::queueRF_TSBK_Ctrl(uint8_t lco)
 /// <param name="net"></param>
 /// <param name="skipNetCheck"></param>
 /// <returns></returns>
-bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
+bool Trunk::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -2193,7 +2194,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNet
 /// <param name="skip"></param>
 /// <param name="net"></param>
 /// <returns></returns>
-bool TrunkPacket::writeRF_TSDU_SNDCP_Grant(bool skip, bool net)
+bool Trunk::writeRF_TSDU_SNDCP_Grant(bool skip, bool net)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -2276,7 +2277,7 @@ bool TrunkPacket::writeRF_TSDU_SNDCP_Grant(bool skip, bool net)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void TrunkPacket::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
+void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
     uint8_t lco = m_rfTSBK.getLCO();
 
@@ -2300,7 +2301,7 @@ void TrunkPacket::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 /// <param name="srcId"></param>
 /// <param name="service"></param>
 /// <param name="noNetwork"></param>
-void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
+void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint8_t mfId = m_rfTSBK.getMFId();
@@ -2333,7 +2334,7 @@ void TrunkPacket::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool ex
 /// </summary>
 /// <param name="reason"></param>
 /// <param name="service"></param>
-void TrunkPacket::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
+void Trunk::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint32_t srcId = m_rfTSBK.getSrcId();
@@ -2359,7 +2360,7 @@ void TrunkPacket::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-bool TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
+bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
@@ -2416,7 +2417,7 @@ bool TrunkPacket::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 /// Helper to write a unit registration response packet.
 /// </summary>
 /// <param name="srcId"></param>
-void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
+void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
 {
     m_rfTSBK.setLCO(TSBK_IOSP_U_REG);
     m_rfTSBK.setResponse(P25_RSP_ACCEPT);
@@ -2464,7 +2465,7 @@ void TrunkPacket::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
 /// Helper to write a unit de-registration acknowledge packet.
 /// </summary>
 /// <param name="srcId"></param>
-void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
+void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 {
     bool dereged = false;
 
@@ -2510,7 +2511,7 @@ void TrunkPacket::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// </summary>
 /// <param name="reason"></param>
 /// <param name="service"></param>
-void TrunkPacket::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
+void Trunk::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
 {
     uint8_t lco = m_rfTSBK.getLCO();
     uint32_t srcId = m_rfTSBK.getSrcId();
@@ -2536,7 +2537,7 @@ void TrunkPacket::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-bool TrunkPacket::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
+bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
@@ -2593,7 +2594,7 @@ bool TrunkPacket::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-bool TrunkPacket::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
+bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
@@ -2612,7 +2613,7 @@ bool TrunkPacket::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 /// Helper to write a network TSDU from the RF data queue.
 /// </summary>
 /// <param name="data"></param>
-void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
+void Trunk::writeNet_TSDU_From_RF(uint8_t* data)
 {
     ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
@@ -2637,7 +2638,7 @@ void TrunkPacket::writeNet_TSDU_From_RF(uint8_t* data)
 /// Helper to write a network P25 TDU w/ link control packet.
 /// </summary>
 /// <param name="lc"></param>
-void TrunkPacket::writeNet_TDULC(lc::TDULC lc)
+void Trunk::writeNet_TDULC(lc::TDULC lc)
 {
     uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
@@ -2683,7 +2684,7 @@ void TrunkPacket::writeNet_TDULC(lc::TDULC lc)
 /// <summary>
 /// Helper to write a network single-block P25 TSDU packet.
 /// </summary>
-void TrunkPacket::writeNet_TSDU()
+void Trunk::writeNet_TSDU()
 {
     uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
@@ -2717,7 +2718,7 @@ void TrunkPacket::writeNet_TSDU()
 /// Helper to automatically inhibit a source ID on a denial.
 /// </summary>
 /// <param name="srcId"></param>
-void TrunkPacket::denialInhibit(uint32_t srcId)
+void Trunk::denialInhibit(uint32_t srcId)
 {
     if (!m_p25->m_inhibitIllegal) {
         return;
@@ -2737,7 +2738,7 @@ void TrunkPacket::denialInhibit(uint32_t srcId)
 /// <param name="length"></param>
 /// <param name="b1"></param>
 /// <param name="b2"></param>
-void TrunkPacket::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+void Trunk::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != NULL);
 

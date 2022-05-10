@@ -32,9 +32,9 @@
 #define __P25_CONTROL_H__
 
 #include "Defines.h"
-#include "p25/TrunkPacket.h"
-#include "p25/DataPacket.h"
-#include "p25/VoicePacket.h"
+#include "p25/packet/Trunk.h"
+#include "p25/packet/Data.h"
+#include "p25/packet/Voice.h"
 #include "p25/NID.h"
 #include "p25/SiteData.h"
 #include "network/BaseNetwork.h"
@@ -56,11 +56,11 @@ namespace p25
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     
-    class HOST_SW_API VoicePacket;
-    namespace dfsi { class HOST_SW_API DFSIVoicePacket; }
-    class HOST_SW_API DataPacket;
-    class HOST_SW_API TrunkPacket;
-    namespace dfsi { class HOST_SW_API DFSITrunkPacket; }
+    namespace packet { class HOST_SW_API Voice; }
+    namespace dfsi::packet { class HOST_SW_API DFSIVoice; }
+    namespace packet { class HOST_SW_API Data; }
+    namespace packet { class HOST_SW_API Trunk; }
+    namespace dfsi::packet { class HOST_SW_API DFSITrunk; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -110,21 +110,21 @@ namespace p25
 
         /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
-        /// <summary>Gets instance of the TrunkPacket class.</summary>
-        TrunkPacket* trunk() { return m_trunk; }
+        /// <summary>Gets instance of the Trunk class.</summary>
+        packet::Trunk* trunk() { return m_trunk; }
 
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
 
     private:
-        friend class VoicePacket;
-        friend class dfsi::DFSIVoicePacket;
-        VoicePacket* m_voice;
-        friend class DataPacket;
-        DataPacket* m_data;
-        friend class TrunkPacket;
-        friend class dfsi::DFSITrunkPacket;
-        TrunkPacket* m_trunk;
+        friend class packet::Voice;
+        friend class dfsi::packet::DFSIVoice;
+        packet::Voice* m_voice;
+        friend class packet::Data;
+        packet::Data* m_data;
+        friend class packet::Trunk;
+        friend class dfsi::packet::DFSITrunk;
+        packet::Trunk* m_trunk;
 
         uint32_t m_nac;
         uint32_t m_txNAC;

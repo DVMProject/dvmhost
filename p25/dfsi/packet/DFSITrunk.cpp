@@ -26,7 +26,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/dfsi/DFSIDefines.h"
-#include "p25/dfsi/DFSITrunkPacket.h"
+#include "p25/dfsi/packet/DFSITrunk.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "Log.h"
@@ -34,6 +34,7 @@
 
 using namespace p25;
 using namespace p25::dfsi;
+using namespace p25::dfsi::packet;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -42,9 +43,9 @@ using namespace p25::dfsi;
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
-void DFSITrunkPacket::resetRF()
+void DFSITrunk::resetRF()
 {
-    TrunkPacket::resetRF();
+    Trunk::resetRF();
     LC lc = LC();
     m_rfDFSILC = lc;
 }
@@ -52,9 +53,9 @@ void DFSITrunkPacket::resetRF()
 /// <summary>
 /// Resets the data states for the network.
 /// </summary>
-void DFSITrunkPacket::resetNet()
+void DFSITrunk::resetNet()
 {
-    TrunkPacket::resetNet();
+    Trunk::resetNet();
     LC lc = LC();
     m_netDFSILC = lc;
 }
@@ -66,7 +67,7 @@ void DFSITrunkPacket::resetNet()
 /// <param name="len">Length of data frame.</param>
 /// <param name="preDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
 /// <returns></returns>
-bool DFSITrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
+bool DFSITrunk::process(uint8_t* data, uint32_t len, bool preDecoded)
 {
     assert(data != NULL);
 
@@ -77,7 +78,7 @@ bool DFSITrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
         return false;
 
     if (preDecoded) {
-        return TrunkPacket::process(data + 2U, len, preDecoded);
+        return Trunk::process(data + 2U, len, preDecoded);
     }
     else {
         resetRF();
@@ -85,7 +86,7 @@ bool DFSITrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
 
         if (m_rfDFSILC.decodeTSBK(data + 2U)) {
             m_rfTSBK = m_rfDFSILC.tsbk();
-            return TrunkPacket::process(tsbk, P25_TSBK_LENGTH_BYTES, true);
+            return Trunk::process(tsbk, P25_TSBK_LENGTH_BYTES, true);
         }
     }
 
@@ -97,23 +98,23 @@ bool DFSITrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the DFSITrunkPacket class.
+/// Initializes a new instance of the DFSITrunk class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-DFSITrunkPacket::DFSITrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
-    TrunkPacket(p25, network, dumpTSBKData, debug, verbose)
+DFSITrunk::DFSITrunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
+    Trunk(p25, network, dumpTSBKData, debug, verbose)
 {
     /* stub */
 }
 
 /// <summary>
-/// Finalizes a instance of the DFSITrunkPacket class.
+/// Finalizes a instance of the DFSITrunk class.
 /// </summary>
-DFSITrunkPacket::~DFSITrunkPacket()
+DFSITrunk::~DFSITrunk()
 {
     /* stub */
 }
@@ -123,7 +124,7 @@ DFSITrunkPacket::~DFSITrunkPacket()
 /// </summary>
 /// <param name="lc"></param>
 /// <param name="noNetwork"></param>
-void DFSITrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
+void DFSITrunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 {
     // for now this is ignored...
 }
@@ -134,7 +135,7 @@ void DFSITrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="force"></param>
-void DFSITrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
+void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
 {
     if (!m_p25->m_control)
         return;
@@ -199,7 +200,7 @@ void DFSITrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bo
 /// <summary>
 /// Helper to write a network single-block P25 TSDU packet.
 /// </summary>
-void DFSITrunkPacket::writeNet_TSDU()
+void DFSITrunk::writeNet_TSDU()
 {
     uint8_t buffer[P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
@@ -221,7 +222,7 @@ void DFSITrunkPacket::writeNet_TSDU()
 /// Helper to write start DFSI data.
 /// </summary>
 /// <param name="type"></param>
-void DFSITrunkPacket::writeRF_DFSI_Start(uint8_t type)
+void DFSITrunk::writeRF_DFSI_Start(uint8_t type)
 {
     uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
@@ -244,7 +245,7 @@ void DFSITrunkPacket::writeRF_DFSI_Start(uint8_t type)
 /// Helper to write stop DFSI data.
 /// </summary>
 /// <param name="type"></param>
-void DFSITrunkPacket::writeRF_DSFI_Stop(uint8_t type)
+void DFSITrunk::writeRF_DSFI_Stop(uint8_t type)
 {
     uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);

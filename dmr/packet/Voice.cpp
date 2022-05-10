@@ -24,7 +24,7 @@
 *   GNU General Public License for more details.
 */
 #include "Defines.h"
-#include "dmr/VoicePacket.h"
+#include "dmr/packet/Voice.h"
 #include "dmr/acl/AccessControl.h"
 #include "dmr/data/DataHeader.h"
 #include "dmr/data/EMB.h"
@@ -40,6 +40,7 @@
 #include "Utils.h"
 
 using namespace dmr;
+using namespace dmr::packet;
 
 #include <cassert>
 #include <ctime>
@@ -75,7 +76,7 @@ using namespace dmr;
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool VoicePacket::process(uint8_t* data, uint32_t len)
+bool Voice::process(uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -617,7 +618,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 /// Process a voice frame from the network.
 /// </summary>
 /// <param name="dmrData"></param>
-void VoicePacket::processNetwork(const data::Data& dmrData)
+void Voice::processNetwork(const data::Data& dmrData)
 {
     uint8_t dataType = dmrData.getDataType();
 
@@ -1059,7 +1060,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the VoicePacket class.
+/// Initializes a new instance of the Voice class.
 /// </summary>
 /// <param name="slot">DMR slot.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
@@ -1067,7 +1068,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 /// <param name="dumpTAData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
-VoicePacket::VoicePacket(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, bool dumpTAData, bool debug, bool verbose) :
+Voice::Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, bool dumpTAData, bool debug, bool verbose) :
     m_slot(slot),
     m_lastFrame(NULL),
     m_lastFrameValid(false),
@@ -1097,9 +1098,9 @@ VoicePacket::VoicePacket(Slot* slot, network::BaseNetwork* network, bool embedde
 }
 
 /// <summary>
-/// Finalizes a instance of the VoicePacket class.
+/// Finalizes a instance of the Voice class.
 /// </summary>
-VoicePacket::~VoicePacket()
+Voice::~Voice()
 {
     delete[] m_lastFrame;
 
@@ -1112,7 +1113,7 @@ VoicePacket::~VoicePacket()
 /// </summary>
 /// <param name="srcId">Source radio ID.</param>
 /// <param name="data"></param>
-void VoicePacket::logGPSPosition(const uint32_t srcId, const uint8_t* data)
+void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
 {
     uint32_t errorVal = (data[2U] & 0x0E) >> 1U;
 
@@ -1163,7 +1164,7 @@ void VoicePacket::logGPSPosition(const uint32_t srcId, const uint8_t* data)
 /// Helper to insert AMBE null frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-void VoicePacket::insertNullAudio(uint8_t* data)
+void Voice::insertNullAudio(uint8_t* data)
 {
     uint8_t* ambeBuffer = new uint8_t[dmr::DMR_AMBE_LENGTH_BYTES];
     ::memset(ambeBuffer, 0x00U, dmr::DMR_AMBE_LENGTH_BYTES);
@@ -1186,7 +1187,7 @@ void VoicePacket::insertNullAudio(uint8_t* data)
 /// <param name="data"></param>
 /// <param name="seqNo"></param>
 /// <returns></returns>
-bool VoicePacket::insertSilence(const uint8_t* data, uint8_t seqNo)
+bool Voice::insertSilence(const uint8_t* data, uint8_t seqNo)
 {
     assert(data != NULL);
 
@@ -1217,7 +1218,7 @@ bool VoicePacket::insertSilence(const uint8_t* data, uint8_t seqNo)
 /// Helper to insert DMR AMBE silence frames.
 /// </summary>
 /// <param name="count"></param>
-void VoicePacket::insertSilence(uint32_t count)
+void Voice::insertSilence(uint32_t count)
 {
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
 

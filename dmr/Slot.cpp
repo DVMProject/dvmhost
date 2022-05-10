@@ -37,6 +37,7 @@
 #include "Utils.h"
 
 using namespace dmr;
+using namespace dmr::packet;
 
 #include <cassert>
 #include <ctime>
@@ -153,9 +154,9 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
 {
     m_interval.start();
 
-    m_voice = new VoicePacket(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
-    m_data = new DataPacket(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
-    m_control = new ControlPacket(this, m_network, dumpCSBKData, debug, verbose);
+    m_voice = new Voice(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
+    m_data = new Data(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
+    m_control = new ControlSignaling(this, m_network, dumpCSBKData, debug, verbose);
 }
 
 /// <summary>

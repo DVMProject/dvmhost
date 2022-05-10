@@ -43,13 +43,13 @@ HOST_OBJECTS = \
 		dmr/lc/LC.o \
 		dmr/lc/PrivacyLC.o \
 		dmr/lc/ShortLC.o \
+		dmr/packet/ControlSignaling.o \
+		dmr/packet/Data.o \
+		dmr/packet/Voice.o \
 		dmr/Control.o \
-		dmr/ControlPacket.o \
-		dmr/DataPacket.o \
 		dmr/Slot.o \
 		dmr/SlotType.o \
 		dmr/Sync.o \
-		dmr/VoicePacket.o \
 		lookups/IdenTableLookup.o \
 		lookups/RadioIdLookup.o \
 		lookups/RSSIInterpolator.o \
@@ -59,20 +59,20 @@ HOST_OBJECTS = \
 		p25/data/DataHeader.o \
 		p25/data/LowSpeedData.o \
 		p25/dfsi/LC.o \
-		p25/dfsi/DFSITrunkPacket.o \
-		p25/dfsi/DFSIVoicePacket.o \
+		p25/dfsi/packet/DFSITrunk.o \
+		p25/dfsi/packet/DFSIVoice.o \
 		p25/edac/Trellis.o \
 		p25/lc/LC.o \
 		p25/lc/TDULC.o \
 		p25/lc/TSBK.o \
+		p25/packet/Data.o \
+		p25/packet/Trunk.o \
+		p25/packet/Voice.o \
 		p25/Audio.o \
 		p25/Control.o \
-		p25/DataPacket.o \
 		p25/NID.o \
 		p25/Sync.o \
-		p25/TrunkPacket.o \
 		p25/P25Utils.o \
-		p25/VoicePacket.o \
 		modem/port/IModemPort.o \
 		modem/port/ISerialPort.o \
 		modem/port/ModemNullPort.o \

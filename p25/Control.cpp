@@ -32,8 +32,8 @@
 #include "p25/P25Defines.h"
 #include "p25/Control.h"
 #include "p25/acl/AccessControl.h"
-#include "p25/dfsi/DFSITrunkPacket.h"
-#include "p25/dfsi/DFSIVoicePacket.h"
+#include "p25/dfsi/packet/DFSITrunk.h"
+#include "p25/dfsi/packet/DFSIVoice.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
@@ -42,6 +42,7 @@
 #include "Utils.h"
 
 using namespace p25;
+using namespace p25::packet;
 
 #include <cassert>
 #include <cstdio>
@@ -147,18 +148,18 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
 #if ENABLE_DFSI_SUPPORT
     if (m_modem->isP25DFSI()) {
         LogMessage(LOG_P25, "DFSI protocol mode is enabled.");
-        m_voice = new dfsi::DFSIVoicePacket(this, network, debug, verbose);
-        m_trunk = new dfsi::DFSITrunkPacket(this, network, dumpTSBKData, debug, verbose);
+        m_voice = new dfsi::packet::DFSIVoice(this, network, debug, verbose);
+        m_trunk = new dfsi::packet::DFSITrunk(this, network, dumpTSBKData, debug, verbose);
     }
     else {
-        m_voice = new VoicePacket(this, network, debug, verbose);
-        m_trunk = new TrunkPacket(this, network, dumpTSBKData, debug, verbose);
-        m_data = new DataPacket(this, network, dumpPDUData, repeatPDU, debug, verbose);
+        m_voice = new Voice(this, network, debug, verbose);
+        m_trunk = new Trunk(this, network, dumpTSBKData, debug, verbose);
+        m_data = new Data(this, network, dumpPDUData, repeatPDU, debug, verbose);
     }
 #else
-    m_voice = new VoicePacket(this, network, debug, verbose);
-    m_trunk = new TrunkPacket(this, network, dumpTSBKData, debug, verbose);
-    m_data = new DataPacket(this, network, dumpPDUData, repeatPDU, debug, verbose);
+    m_voice = new Voice(this, network, debug, verbose);
+    m_trunk = new Trunk(this, network, dumpTSBKData, debug, verbose);
+    m_data = new Data(this, network, dumpPDUData, repeatPDU, debug, verbose);
 #endif
 }
 
