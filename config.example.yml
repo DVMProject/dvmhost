@@ -20,8 +20,8 @@ network:
     slot1: true
     slot2: true
     updateLookups: false
-    allowActivityTransfer: false
-    allowDiagnosticTransfer: false
+    allowActivityTransfer: true
+    allowDiagnosticTransfer: true
     handleChGrants: false
     debug: false
 protocols:
