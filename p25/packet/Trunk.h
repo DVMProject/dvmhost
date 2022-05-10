@@ -48,7 +48,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     
     namespace packet { class HOST_SW_API Voice; }
-    namespace dfsi::packet { class HOST_SW_API DFSIVoice; }
+    namespace dfsi { namespace packet { class HOST_SW_API DFSIVoice; } }
     namespace packet { class HOST_SW_API Data; }
     class HOST_SW_API Control;
 

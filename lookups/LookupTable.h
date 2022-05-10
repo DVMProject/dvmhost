@@ -60,7 +60,8 @@ namespace lookups
         LookupTable(const std::string& filename, uint32_t reloadTime) :
             Thread(),
             m_filename(filename),
-            m_reloadTime(reloadTime)
+            m_reloadTime(reloadTime),
+            m_table()
         {
             /* stub */
         }
