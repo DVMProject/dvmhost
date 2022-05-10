@@ -67,6 +67,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Process DMR data frame from the RF interface.
 /// </summary>
@@ -135,9 +136,9 @@ bool ControlPacket::process(uint8_t* data, uint32_t len)
         data[1U] = 0x00U;
 
         if (m_slot->m_duplex)
-            m_slot->writeQueueRF(data);
+            m_slot->addFrame(data);
 
-        m_slot->writeNetworkRF(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         if (m_verbose) {
             switch (csbko) {
@@ -283,11 +284,11 @@ void ControlPacket::processNetwork(const data::Data & dmrData)
                 // Convert the Data Sync to be from the BS or MS as needed
                 Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-                m_slot->writeQueueNet(data);
+                m_slot->addFrame(data, true);
             }
         }
         else
-            m_slot->writeQueueNet(data);
+            m_slot->addFrame(data, true);
 
         if (m_verbose) {
             switch (csbko) {
@@ -425,7 +426,7 @@ void ControlPacket::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
-        m_slot->writeQueueRF(data);
+        m_slot->addFrame(data);
 }
 
 /// <summary>
@@ -473,12 +474,13 @@ void ControlPacket::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
-        m_slot->writeQueueRF(data);
+        m_slot->addFrame(data);
 }
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the ControlPacket class.
 /// </summary>
@@ -540,7 +542,7 @@ void ControlPacket::writeRF_TSCC_Aloha()
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
-        m_slot->writeQueueRF(data);
+        m_slot->addFrame(data);
 }
 
 /// <summary>
@@ -587,7 +589,7 @@ void ControlPacket::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
-        m_slot->writeQueueRF(data);
+        m_slot->addFrame(data);
 }
 
 /// <summary>
@@ -628,5 +630,5 @@ void ControlPacket::writeRF_TSCC_Bcast_Sys_Parm()
     data[1U] = 0x00U;
 
     if (m_slot->m_duplex)
-        m_slot->writeQueueRF(data);
+        m_slot->addFrame(data);
 }

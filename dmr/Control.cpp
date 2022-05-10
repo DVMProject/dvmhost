@@ -217,53 +217,44 @@ bool Control::processWakeup(const uint8_t* data)
 }
 
 /// <summary>
-/// Process a data frame for slot 1, from the RF interface.
+/// Process a data frame for slot, from the RF interface.
 /// </summary>
 /// <param name="data">DMR data frame buffer.</param>
 /// <param name="len">Length of data frame buffer.</param>
 /// <returns>True, if data frame was processed, otherwise false.</returns>
-bool Control::processFrame1(uint8_t *data, uint32_t len)
+bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
-    return m_slot1->processFrame(data, len);
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->processFrame(data, len);
+    case 2U:
+        return m_slot2->processFrame(data, len);
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        return false;
+    }
 }
 
 /// <summary>
-/// Get a frame data for slot 1, from data ring buffer.
+/// Get a data frame for slot, from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to put retrieved DMR data frame data.</param>
 /// <returns>Length of data retrieved from DMR ring buffer.</returns>
-uint32_t Control::getFrame1(uint8_t* data)
+uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 {
     assert(data != NULL);
 
-    return m_slot1->getFrame(data);
-}
-
-/// <summary>
-/// Process a data frame for slot 2, from the RF interface.
-/// </summary>
-/// <param name="data">DMR data frame buffer.</param>
-/// <param name="len">Length of data frame buffer.</param>
-/// <returns>True, if data frame was processed, otherwise false.</returns>
-bool Control::processFrame2(uint8_t *data, uint32_t len)
-{
-    assert(data != NULL);
-
-    return m_slot2->processFrame(data, len);
-}
-
-/// <summary>
-/// Get a frame data for slot 2, from data ring buffer.
-/// </summary>
-/// <param name="data">Buffer to put retrieved DMR data frame data.</param>
-/// <returns>Length of data retrieved from DMR ring buffer.</returns>
-uint32_t Control::getFrame2(uint8_t *data)
-{
-    assert(data != NULL);
-
-    return m_slot2->getFrame(data);
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->getFrame(data);
+    case 2U:
+        return m_slot2->getFrame(data);
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        return 0U;
+    }
 }
 
 /// <summary>

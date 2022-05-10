@@ -38,6 +38,7 @@ using namespace p25::dfsi;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
@@ -94,6 +95,7 @@ bool DFSITrunkPacket::process(uint8_t* data, uint32_t len, bool preDecoded)
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DFSITrunkPacket class.
 /// </summary>
@@ -189,7 +191,7 @@ void DFSITrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bo
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    m_p25->writeQueueRF(data, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(data, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
 
     writeRF_DSFI_Stop(P25_DFSI_TYPE_TSBK);
 }
@@ -209,7 +211,7 @@ void DFSITrunkPacket::writeNet_TSDU()
     m_netDFSILC.tsbk(m_netTSBK);
     m_netDFSILC.encodeTSBK(buffer + 2U);
 
-    m_p25->writeQueueNet(buffer, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(buffer, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_network != NULL)
         m_network->resetP25();
@@ -235,7 +237,7 @@ void DFSITrunkPacket::writeRF_DFSI_Start(uint8_t type)
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
 
-    m_p25->writeQueueRF(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
 }
 
 /// <suimmary>
@@ -260,6 +262,6 @@ void DFSITrunkPacket::writeRF_DSFI_Stop(uint8_t type)
 
     // for whatever reason this is almost always sent twice
     for (uint8_t i = 0; i < 2;i ++) {
-        m_p25->writeQueueRF(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(buffer, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
     }
 }

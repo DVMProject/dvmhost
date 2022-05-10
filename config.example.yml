@@ -43,7 +43,7 @@ protocols:
         callHang: 5
         txHang: 8
         silenceThreshold: 21
-        queueSize: 5000
+        queueSize: 31
         verbose: true
         debug: false
     p25:
@@ -73,7 +73,7 @@ protocols:
         sndcpGrant: false
         silenceThreshold: 124
         disableNetworkHDU: false
-        queueSize: 5000
+        queueSize: 12
         verbose: true
         debug: false
 system:

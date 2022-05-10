@@ -76,7 +76,7 @@ public:
     bool addData(const T* buffer, uint32_t length)
     {
         if (length >= freeSpace()) {
-            LogError(LOG_HOST, "%s buffer overflow, clearing the buffer. (%u >= %u)", m_name, length, freeSpace());
+            LogError(LOG_HOST, "[%s] buffer overflow, clearing the buffer. (%u >= %u)", m_name, length, freeSpace());
             clear();
             return false;
         }

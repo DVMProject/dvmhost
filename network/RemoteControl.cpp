@@ -306,7 +306,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_P25_CC_CMD) {
                 // Command is in the form of: "p25-cc"
                 if (p25 != NULL) {
-                    if (host->m_controlData) {
+                    if (host->m_p25CCData) {
                         g_fireP25Control = true;
                     }
                     else {
@@ -321,7 +321,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                 // Command is in the form of: "p25-cc-fallback 0/1"
                 uint8_t fallback = getArgUInt8(args, 0U);
                 if (p25 != NULL) {
-                    if (host->m_controlData) {
+                    if (host->m_p25CCData) {
                         p25->trunk()->setConvFallback((fallback == 1U) ? true : false);
                     }
                     else {
@@ -727,7 +727,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_P25_CC_DEDICATED_CMD) {
                 // Command is in the form of: "p25-cc-dedicated"
                 if (p25 != NULL) {
-                    if (host->m_controlData) {
+                    if (host->m_p25CCData) {
                         if (dmr != NULL) {
                             LogError(LOG_RCON, CMD_FAILED_STR "Can't enable P25 control channel while DMR is enabled!");
                         }
@@ -735,7 +735,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                             host->m_p25CtrlChannel = !host->m_p25CtrlChannel;
                             host->m_p25CtrlBroadcast = true;
                             g_fireP25Control = true;
-                            g_interruptP25Control = false;
+                            p25->setCCHalted(false);
 
                             LogInfoEx(LOG_RCON, "P25 CC is %s", host->m_p25CtrlChannel ? "enabled" : "disabled");
                         }
@@ -751,16 +751,16 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
             else if (rcom == RCD_P25_CC_BCAST_CMD) {
                 // Command is in the form of: "p25-cc-bcast"
                 if (p25 != NULL) {
-                    if (host->m_controlData) {
+                    if (host->m_p25CCData) {
                         host->m_p25CtrlBroadcast = !host->m_p25CtrlBroadcast;
 
                         if (!host->m_p25CtrlBroadcast) {
                             g_fireP25Control = false;
-                            g_interruptP25Control = true;
+                            p25->setCCHalted(true);
                         }
                         else {
                             g_fireP25Control = true;
-                            g_interruptP25Control = false;
+                            p25->setCCHalted(false);
                         }
 
                         LogInfoEx(LOG_RCON, "P25 CC broadcast is %s", host->m_p25CtrlBroadcast ? "enabled" : "disabled");

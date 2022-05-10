@@ -128,8 +128,6 @@ const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;
 const uint32_t  RCON_DEFAULT_PORT = 9990;
 
-const uint32_t  QUEUE_RESIZE_SIZE = 500;
-
 const uint8_t   BIT_MASK_TABLE[] = { 0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U };
 
 enum HOST_STATE {

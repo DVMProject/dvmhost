@@ -48,8 +48,15 @@ using namespace p25::data;
 #include <ctime>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t CONN_WAIT_TIMEOUT = 1U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
@@ -86,7 +93,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
 
     // are we interrupting a running CC?
     if (m_p25->m_ccRunning) {
-        g_interruptP25Control = true;
+        m_p25->m_ccHalted = true;
     }
 
     // handle individual DUIDs
@@ -227,7 +234,7 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                             }
                         }
 
-                        writeNetworkRF(m_rfDataBlockCnt, m_pduUserData + dataOffset, (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                        writeNetwork(m_rfDataBlockCnt, m_pduUserData + dataOffset, (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES);
                         m_rfDataBlockCnt++;
                     }
                     else {
@@ -273,33 +280,29 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
                             ulong64_t ipAddr = (m_pduUserData[8U] << 24) + (m_pduUserData[9U] << 16) +
                                 (m_pduUserData[10U] << 8) + m_pduUserData[11U];
 
+                            if (m_rfDataHeader.getAckNeeded()) {
+                                m_p25->m_writeImmediate = true;
+                                writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
+                            }
+
                             if (m_verbose) {
                                 LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                             }
 
-                            writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
+                            m_connQueueTable[llId] = ipAddr;
 
-                            if (!acl::AccessControl::validateSrcId(llId)) {
-                                LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
-                                writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
-                            }
-                            else {
-                                if (!hasLLIdFNEReg(llId)) {
-                                    // update dynamic FNE registration table entry
-                                    m_fneRegTable[llId] = ipAddr;
-                                }
-
-                                if (m_verbose) {
-                                    LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
-                                }
-
-                                writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
-                            }
+                            m_connTimerTable[llId] = Timer(1000U, CONN_WAIT_TIMEOUT);
+                            m_connTimerTable[llId].start();
                         }
                         break;
                         case PDU_REG_TYPE_REQ_DISCNCT:
                         {
                             uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
+
+                            if (m_rfDataHeader.getAckNeeded()) {
+                                m_p25->m_writeImmediate = true;
+                                writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
+                            }
 
                             if (m_verbose) {
                                 LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_DISCNCT (Registration Request Disconnect), llId = %u", llId);
@@ -502,9 +505,54 @@ bool DataPacket::hasLLIdFNEReg(uint32_t llId) const
     }
 }
 
+/// <summary>
+/// Updates the processor by the passed number of milliseconds.
+/// </summary>
+/// <param name="ms"></param>
+void DataPacket::clock(uint32_t ms)
+{
+    // clock all the connect timers
+    std::vector<uint32_t> connToClear = std::vector<uint32_t>();
+    for (auto it = m_connQueueTable.begin(); it != m_connQueueTable.end(); ++it) {
+        uint32_t llId = it->first;
+
+        m_connTimerTable[llId].clock(ms);
+        if (m_connTimerTable[llId].isRunning() && m_connTimerTable[llId].hasExpired()) {
+            connToClear.push_back(llId);
+        }
+    }
+
+    // handle PDU connection registration
+    for (auto it = connToClear.begin(); it != connToClear.end(); ++it) {
+        uint32_t llId = *it;
+        uint64_t ipAddr = m_connQueueTable[llId];
+
+        m_p25->m_writeImmediate = true;
+        if (!acl::AccessControl::validateSrcId(llId)) {
+            LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
+            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
+        }
+        else {
+            if (!hasLLIdFNEReg(llId)) {
+                // update dynamic FNE registration table entry
+                m_fneRegTable[llId] = ipAddr;
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
+            }
+
+            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
+        }
+
+        m_connQueueTable.erase(llId);
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DataPacket class.
 /// </summary>
@@ -537,6 +585,8 @@ DataPacket::DataPacket(Control* p25, network::BaseNetwork* network, bool dumpPDU
     m_pduUserData(NULL),
     m_pduUserDataLength(0U),
     m_fneRegTable(),
+    m_connQueueTable(),
+    m_connTimerTable(),
     m_dumpPDUData(dumpPDUData),
     m_repeatPDU(repeatPDU),
     m_verbose(verbose),
@@ -556,6 +606,8 @@ DataPacket::DataPacket(Control* p25, network::BaseNetwork* network, bool dumpPDU
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
     m_fneRegTable.clear();
+    m_connQueueTable.clear();
+    m_connTimerTable.clear();
 }
 
 /// <summary>
@@ -574,7 +626,7 @@ DataPacket::~DataPacket()
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
-void DataPacket::writeNetworkRF(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
+void DataPacket::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -624,7 +676,8 @@ void DataPacket::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNull
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
-        m_p25->writeQueueRF(data, newByteLength + 2U);
+
+        m_p25->addFrame(data, newByteLength + 2U);
     }
 
     // add trailing null pad; only if control data isn't being transmitted
@@ -805,7 +858,8 @@ void DataPacket::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong6
 /// <param name="ackClass"></param>
 /// <param name="ackType"></param>
 /// <param name="llId"></param>
-void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId)
+/// <param name="noNulls"></param>
+void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls)
 {
     if (ackClass == PDU_ACK_CLASS_ACK && ackType != PDU_ACK_TYPE_ACK)
         return;
@@ -839,6 +893,6 @@ void DataPacket::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uin
     rspHeader.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
-    writeRF_PDU(data, bitLength, true);
+    writeRF_PDU(data, bitLength, noNulls);
     delete[] data;
 }

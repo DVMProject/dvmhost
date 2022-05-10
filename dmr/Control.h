@@ -76,14 +76,10 @@ namespace dmr
         /// <summary>Helper to process wakeup frames from the RF interface.</summary>
         bool processWakeup(const uint8_t* data);
 
-        /// <summary>Process a data frame for slot 1, from the RF interface.</summary>
-        bool processFrame1(uint8_t* data, uint32_t len);
-        /// <summary>Get a frame data for slot 1, from data ring buffer.</summary>
-        uint32_t getFrame1(uint8_t* data);
-        /// <summary>Process a data frame for slot 2, from the RF interface.</summary>
-        bool processFrame2(uint8_t* data, uint32_t len);
-        /// <summary>Get a frame data for slot 2, from data ring buffer.</summary>
-        uint32_t getFrame2(uint8_t* data);
+        /// <summary>Process a data frame for slot, from the RF interface.</summary>
+        bool processFrame(uint32_t slotNo, uint8_t* data, uint32_t len);
+        /// <summary>Get a data frame for slot, from data ring buffer.</summary>
+        uint32_t getFrame(uint32_t slotNo, uint8_t* data);
 
         /// <summary>Updates the processor.</summary>
         void clock();

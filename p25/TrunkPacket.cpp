@@ -44,6 +44,7 @@ using namespace p25::data;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
 // Make sure control data is supported.
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_p25->m_control) {                                                            \
@@ -136,6 +137,7 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
@@ -1290,6 +1292,7 @@ void TrunkPacket::setTSBKVerbose(bool verbose)
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the TrunkPacket class.
 /// </summary>
@@ -1353,7 +1356,7 @@ TrunkPacket::TrunkPacket(Control* p25, network::BaseNetwork* network, bool dumpT
     m_grantChTable.clear();
     m_grantTimers.clear();
 
-    m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT + m_p25->m_ccBcstInterval;
+    m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT;
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
     m_adjSiteUpdateTimer.start();
 }
@@ -1548,7 +1551,7 @@ void TrunkPacket::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
         data[0U] = modem::TAG_EOT;
         data[1U] = 0x00U;
 
-        m_p25->writeQueueRF(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
     }
 
     //if (m_verbose) {
@@ -1669,7 +1672,7 @@ void TrunkPacket::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool f
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_p25->writeQueueRF(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
     }
 }
 
@@ -1768,7 +1771,7 @@ void TrunkPacket::writeRF_TSDU_MBF(bool clearBeforeWrite)
             m_p25->m_queue.clear();
         }
 
-        m_p25->writeQueueRF(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
 
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
@@ -2161,6 +2164,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNet
 
         // transmit group grant
         m_rfTSBK.setLCO(TSBK_IOSP_GRP_VCH);
+        m_p25->m_writeImmediate = true;
         writeRF_TSDU_SBF(false, true, net);
     }
     else {
@@ -2175,6 +2179,7 @@ bool TrunkPacket::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNet
 
         // transmit private grant
         m_rfTSBK.setLCO(TSBK_IOSP_UU_VCH);
+        m_p25->m_writeImmediate = true;
         writeRF_TSDU_SBF(false, true, net);
     }
 
@@ -2652,7 +2657,7 @@ void TrunkPacket::writeNet_TDULC(lc::TDULC lc)
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
 
-    m_p25->writeQueueNet(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc.getLCO(), lc.getSrcId());
@@ -2702,7 +2707,7 @@ void TrunkPacket::writeNet_TSDU()
     // Set first busy bits to 1,1
     m_p25->setBusyBits(buffer + 2U, P25_SS0_START, true, true);
 
-    m_p25->writeQueueNet(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_network != NULL)
         m_network->resetP25();

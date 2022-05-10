@@ -56,6 +56,7 @@ const uint32_t VOC_LDU1_COUNT = 3U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
@@ -123,7 +124,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
     // are we interrupting a running CC?
     if (m_p25->m_ccRunning) {
-        g_interruptP25Control = true;
+        m_p25->m_ccHalted = true;
     }
 
     if (m_p25->m_rfState != RS_RF_LISTENING) {
@@ -138,8 +139,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
     if (duid == P25_DUID_HDU) {
         m_lastDUID = P25_DUID_HDU;
 
-        if (m_p25->m_rfState == RS_RF_LISTENING && m_p25->m_ccRunning) {
-            m_p25->m_modem->clearP25Data();
+        if (m_p25->m_rfState == RS_RF_LISTENING) {
+            if (!m_p25->m_dedicatedControl) {
+                m_p25->m_modem->clearP25Data();
+            }
             m_p25->m_queue.clear();
             resetRF();
             resetNet();
@@ -196,6 +199,16 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
         m_lastDUID = P25_DUID_LDU1;
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
+            // if this is a late entry call, clear states
+            if (m_rfLastHDU.getDstId() == 0U) {
+                if (!m_p25->m_dedicatedControl) {
+                    m_p25->m_modem->clearP25Data();
+                }
+                m_p25->m_queue.clear();
+                resetRF();
+                resetNet();
+            }
+
             if (m_p25->m_control) {
                 if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
                     m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
@@ -350,7 +363,6 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
 
             // single-channel trunking or voice on control support?
             if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
                 m_p25->m_trunk->writeRF_TSDU_Grant(group, true);
             }
 
@@ -390,12 +402,13 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 // Add busy bits
                 m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-                writeNetworkRF(buffer, P25_DUID_HDU);
+                writeNetwork(buffer, P25_DUID_HDU);
 
                 if (m_p25->m_duplex) {
                     buffer[0U] = modem::TAG_DATA;
                     buffer[1U] = 0x00U;
-                    m_p25->writeQueueRF(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+
+                    m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
                 }
 
                 if (m_verbose) {
@@ -515,12 +528,13 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // Add busy bits
             m_p25->addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetworkRF(data + 2U, P25_DUID_LDU1);
+            writeNetwork(data + 2U, P25_DUID_LDU1);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
-                m_p25->writeQueueRF(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+                m_p25->addFrame(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
             }
 
             if (m_verbose) {
@@ -593,12 +607,13 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             // Add busy bits
             m_p25->addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetworkRF(data + 2U, P25_DUID_LDU2);
+            writeNetwork(data + 2U, P25_DUID_LDU2);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
-                m_p25->writeQueueRF(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+                m_p25->addFrame(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
             }
 
             if (m_verbose) {
@@ -729,12 +744,7 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     // are we interrupting a running CC?
                     if (m_p25->m_ccRunning) {
-                        g_interruptP25Control = true;
-                    }
-
-                    // single-channel trunking or voice on control support?
-                    if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+                        m_p25->m_ccHalted = true;
                     }
                 }
 
@@ -833,40 +843,10 @@ bool VoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, d
     return true;
 }
 
-/// <summary>
-/// Helper to write end of frame data.
-/// </summary>
-/// <returns></returns>
-bool VoicePacket::writeEndRF()
-{
-    if (m_p25->m_netState == RS_NET_IDLE && m_p25->m_rfState == RS_RF_LISTENING) {
-        writeRF_EndOfVoice();
-        
-        // this should have been cleared by writeRF_EndOfVoice; but if it hasn't clear it
-        // to prevent badness
-        if (m_hadVoice) {
-            m_hadVoice = false; 
-        }
-
-        if (m_p25->m_control && !m_p25->m_ccRunning) {
-            m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
-            m_p25->writeControlEndRF();
-        }
-
-        m_p25->m_tailOnIdle = false;
-
-        if (m_network != NULL)
-            m_network->resetP25();
-
-        return true;
-    }
-
-    return false;
-}
-
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the VoicePacket class.
 /// </summary>
@@ -929,7 +909,7 @@ VoicePacket::~VoicePacket()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="duid"></param>
-void VoicePacket::writeNetworkRF(const uint8_t *data, uint8_t duid)
+void VoicePacket::writeNetwork(const uint8_t *data, uint8_t duid)
 {
     assert(data != NULL);
 
@@ -1004,7 +984,7 @@ void VoicePacket::writeNet_TDU()
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
 
-    m_p25->writeQueueNet(buffer, P25_TDU_FRAME_LENGTH_BYTES + 2U);
+    m_p25->addFrame(buffer, P25_TDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
         LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u", m_netLC.getSrcId());
@@ -1188,7 +1168,6 @@ void VoicePacket::writeNet_LDU1()
 
         // single-channel trunking or voice on control support?
         if (m_p25->m_control && m_p25->m_voiceOnControl) {
-            m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
             if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
                 if (m_network != NULL)
                     m_network->resetP25();
@@ -1241,7 +1220,8 @@ void VoicePacket::writeNet_LDU1()
 
             buffer[0U] = modem::TAG_DATA;
             buffer[1U] = 0x00U;
-            m_p25->writeQueueNet(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+
+            m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U, true);
 
             if (m_verbose) {
                 LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
@@ -1299,7 +1279,8 @@ void VoicePacket::writeNet_LDU1()
 
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
-    m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+    m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
         uint32_t loss = 0;
@@ -1403,7 +1384,8 @@ void VoicePacket::writeNet_LDU2()
 
     buffer[0U] = modem::TAG_DATA;
     buffer[1U] = 0x00U;
-    m_p25->writeQueueNet(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+
+    m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
         uint32_t loss = 0;

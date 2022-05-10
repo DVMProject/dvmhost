@@ -48,6 +48,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
 // Don't process RF frames if the network isn't in a idle state.
 #define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
     if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
@@ -65,6 +66,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Process DMR data frame from the RF interface.
 /// </summary>
@@ -100,11 +102,11 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
             data[0U] = modem::TAG_EOT;
             data[1U] = 0x00U;
 
-            m_slot->writeNetworkRF(data, DT_TERMINATOR_WITH_LC);
+            m_slot->writeNetwork(data, DT_TERMINATOR_WITH_LC);
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
-                    m_slot->writeQueueRF(data);
+                    m_slot->addFrame(data);
             }
         }
 
@@ -184,9 +186,9 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         data[1U] = 0x00U;
 
         if (m_slot->m_duplex && m_repeatDataPacket)
-            m_slot->writeQueueRF(data);
+            m_slot->addFrame(data);
 
-        m_slot->writeNetworkRF(data, DT_DATA_HEADER);
+        m_slot->writeNetwork(data, DT_DATA_HEADER);
 
         m_slot->m_rfState = RS_RF_DATA;
         m_slot->m_rfLastDstId = dstId;
@@ -263,10 +265,10 @@ bool DataPacket::process(uint8_t* data, uint32_t len)
         // convert the Data Sync to be from the BS or MS as needed
         Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
-        m_slot->writeNetworkRF(data, dataType);
+        m_slot->writeNetwork(data, dataType);
 
         if (m_slot->m_duplex && m_repeatDataPacket) {
-            m_slot->writeQueueRF(data);
+            m_slot->addFrame(data);
         }
 
         if (m_slot->m_rfFrames == 0U) {
@@ -330,11 +332,11 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < m_slot->m_hangCount; i++)
-                    m_slot->writeQueueNet(data);
+                    m_slot->addFrame(data, true);
             }
             else {
                 for (uint32_t i = 0U; i < 3U; i++)
-                    m_slot->writeQueueNet(data);
+                    m_slot->addFrame(data, true);
             }
         }
 
@@ -387,10 +389,10 @@ void DataPacket::processNetwork(const data::Data& dmrData)
         data[1U] = 0x00U;
 
         // Put a small delay into starting transmission
-        m_slot->writeQueueNet(m_slot->m_idle);
-        m_slot->writeQueueNet(m_slot->m_idle);
+        m_slot->addFrame(m_slot->m_idle, true);
+        m_slot->addFrame(m_slot->m_idle, true);
 
-        m_slot->writeQueueNet(data);
+        m_slot->addFrame(data, true);
 
         m_slot->m_netState = RS_NET_DATA;
         m_slot->m_netLastDstId = dstId;
@@ -469,7 +471,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
             data[0U] = m_slot->m_netFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
-            m_slot->writeQueueNet(data);
+            m_slot->addFrame(data, true);
 
             if (m_verbose) {
                 if (dataType == DT_RATE_12_DATA) {
@@ -502,6 +504,7 @@ void DataPacket::processNetwork(const data::Data& dmrData)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DataPacket class.
 /// </summary>

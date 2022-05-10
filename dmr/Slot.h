@@ -54,6 +54,7 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
+    
     class HOST_SW_API VoicePacket;
     class HOST_SW_API DataPacket;
     class HOST_SW_API ControlPacket;
@@ -76,7 +77,7 @@ namespace dmr
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
-        /// <summary>Get frame data from data ring buffer.</summary>
+        /// <summary>Get data frame from data ring buffer.</summary>
         uint32_t getFrame(uint8_t* data);
 
         /// <summary>Process a data frames from the network.</summary>
@@ -208,14 +209,13 @@ namespace dmr
 
         static uint16_t m_tsccCnt;
 
-        /// <summary>Write data processed from RF to the data ring buffer.</summary>
-        void writeQueueRF(const uint8_t* data);
-        /// <summary>Write data processed from the network to the data ring buffer.</summary>
-        void writeQueueNet(const uint8_t* data);
-        /// <summary>Write data processed from RF to the network.</summary>
-        void writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);
-        /// <summary>Write data processed from RF to the network.</summary>
-        void writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
+        /// <summary>Add data frame to the data ring buffer.</summary>
+        void addFrame(const uint8_t* data, bool net = false);
+
+        /// <summary>Write data frame to the network.</summary>
+        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);
+        /// <summary>Write data frame to the network.</summary>
+        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
             uint32_t dstId, uint8_t errors = 0U);
 
         /// <summary>Helper to write RF end of frame data.</summary>

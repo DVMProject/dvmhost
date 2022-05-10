@@ -160,12 +160,12 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_openPortHandler(NULL),
     m_closePortHandler(NULL),
     m_rspHandler(NULL),
-    m_rxDMRData1(1110U, "Modem RX DMR1"),
-    m_rxDMRData2(1110U, "Modem RX DMR2"),
-    m_txDMRData1(740U, "Modem TX DMR1"),
-    m_txDMRData2(740U, "Modem TX DMR2"),
-    m_rxP25Data(6000U, "Modem RX P25"),
-    m_txP25Data(864U, "Modem TX P25"),
+    m_rxDMRData1(1089U, "Modem RX DMR1"),   // 1089 bytes = 33 DMR Frames
+    m_rxDMRData2(1089U, "Modem RX DMR2"),
+    m_txDMRData1(792U, "Modem TX DMR1"),    // 792 bytes = 24 DMR Frames
+    m_txDMRData2(792U, "Modem TX DMR2"),
+    m_rxP25Data(6048U, "Modem RX P25"),     // 6048 bytes = 28 P25 Frames
+    m_txP25Data(864U, "Modem TX P25"),      // 864 = 4 P25 Frames
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),

@@ -68,9 +68,6 @@ namespace p25
         /// <summary>Process a data frame from the network.</summary>
         virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
-        /// <summary>Helper to write end of frame data.</summary>
-        bool writeEndRF();
-
     protected:
         friend class TrunkPacket;
         friend class Control;
@@ -121,7 +118,7 @@ namespace p25
         virtual ~VoicePacket();
 
         /// <summary>Write data processed from RF to the network.</summary>
-        void writeNetworkRF(const uint8_t* data, uint8_t duid);
+        void writeNetwork(const uint8_t* data, uint8_t duid);
 
         /// <summary>Helper to write end of voice frame data.</summary>
         void writeRF_EndOfVoice();

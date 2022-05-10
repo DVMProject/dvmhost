@@ -93,6 +93,7 @@ uint16_t Slot::m_tsccCnt = 0U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the Slot class.
 /// </summary>
@@ -108,7 +109,7 @@ uint16_t Slot::m_tsccCnt = 0U;
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
     bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
-    m_queue(queueSize, "DMR Slot"),
+    m_queue(queueSize, "DMR Slot Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -621,25 +622,34 @@ void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
-/// Write data processed from RF to the data ring buffer.
+/// Add data frame to the data ring buffer.
 /// </summary>
 /// <param name="data"></param>
-void Slot::writeQueueRF(const uint8_t *data)
+/// <param name="net"></param>
+void Slot::addFrame(const uint8_t *data, bool net)
 {
     assert(data != NULL);
 
-    if (m_netState != RS_NET_IDLE)
-        return;
+    if (!net) {
+        if (m_netState != RS_NET_IDLE)
+            return;
+    }
 
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-
     uint32_t space = m_queue.freeSpace();
     if (space < (len + 1U)) {
-        uint32_t queueLen = m_queue.length();
-        m_queue.resize(queueLen + QUEUE_RESIZE_SIZE);
-        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_queue.length());
-        return;
+        if (!net) {
+            uint32_t queueLen = m_queue.length();
+            m_queue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_queue.length());
+            return;
+        }
+        else {
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
+            return;
+        }
     }
 
     if (m_debug) {
@@ -651,45 +661,21 @@ void Slot::writeQueueRF(const uint8_t *data)
 }
 
 /// <summary>
-/// Write data processed from the network to the data ring buffer.
-/// </summary>
-/// <param name="data"></param>
-void Slot::writeQueueNet(const uint8_t *data)
-{
-    assert(data != NULL);
-
-    uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-
-    uint32_t space = m_queue.freeSpace();
-    if (space < (len + 1U)) {
-        LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
-        return;
-    }
-
-    if (m_debug) {
-        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
-    }
-
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
-}
-
-/// <summary>
-/// Write data processed from RF to the network.
+/// Write data frame to the network.
 /// </summary>
 /// <param name="data"></param>
 /// <param name="dataType"></param>
 /// <param name="errors"></param>
-void Slot::writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t errors)
+void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors)
 {
     assert(data != NULL);
     assert(m_rfLC != NULL);
 
-    writeNetworkRF(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
+    writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
 }
 
 /// <summary>
-/// Write data processed from RF to the network.
+/// Write data frame to the network.
 /// </summary>
 /// <param name="data"></param>
 /// <param name="dataType"></param>
@@ -697,7 +683,7 @@ void Slot::writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t errors)
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <param name="errors"></param>
-void Slot::writeNetworkRF(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
+void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
     uint32_t dstId, uint8_t errors)
 {
     assert(data != NULL);
@@ -760,7 +746,7 @@ void Slot::writeEndRF(bool writeEnd)
             data[1U] = 0x00U;
 
             for (uint32_t i = 0U; i < m_hangCount; i++)
-                writeQueueRF(data);
+                addFrame(data);
         }
     }
 
@@ -818,11 +804,11 @@ void Slot::writeEndNet(bool writeEnd)
 
         if (m_duplex) {
             for (uint32_t i = 0U; i < m_hangCount; i++)
-                writeQueueNet(data);
+                addFrame(data, true);
         }
         else {
             for (uint32_t i = 0U; i < 3U; i++)
-                writeQueueNet(data);
+                addFrame(data, true);
         }
     }
 

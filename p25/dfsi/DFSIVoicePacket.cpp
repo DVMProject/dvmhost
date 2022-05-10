@@ -50,6 +50,7 @@ const uint32_t VOC_LDU1_COUNT = 3U;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Resets the data states for the RF interface.
 /// </summary>
@@ -90,7 +91,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
     uint8_t frameType = m_rfDFSILC.getFrameType();
     if (frameType == P25_DFSI_VHDR2) {
         if (m_p25->m_rfState == RS_RF_LISTENING && m_p25->m_ccRunning) {
-            m_p25->m_modem->clearP25Data();
+            //m_p25->m_modem->clearP25Data();
             m_p25->m_queue.clear();
             resetRF();
             resetNet();
@@ -333,7 +334,6 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
 
                     // single-channel trunking or voice on control support?
                     if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                        m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
                         m_p25->m_trunk->writeRF_TSDU_Grant(group, true);
                     }
 
@@ -373,7 +373,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
                         // Add busy bits
                         m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-                        writeNetworkRF(buffer, P25_DUID_HDU);
+                        writeNetwork(buffer, P25_DUID_HDU);
 
                         if (m_verbose) {
                             LogMessage(LOG_RF, P25_HDU_STR " DFSI, dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
@@ -448,7 +448,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
                     // Add busy bits
                     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-                    writeNetworkRF(buffer + 2U, P25_DUID_LDU1);
+                    writeNetwork(buffer + 2U, P25_DUID_LDU1);
 
                     if (m_verbose) {
                         LogMessage(LOG_RF, P25_LDU1_STR " DFSI, audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
@@ -540,7 +540,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
                     // Add busy bits
                     m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-                    writeNetworkRF(buffer + 2U, P25_DUID_LDU2);
+                    writeNetwork(buffer + 2U, P25_DUID_LDU2);
 
                     if (m_verbose) {
                         LogMessage(LOG_RF, P25_LDU2_STR " DFSI, audio, algo = $%02X, kid = $%04X",
@@ -571,7 +571,7 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
             // Add busy bits
             m_p25->addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
 
-            writeNetworkRF(data + 2U, P25_DUID_TDU);
+            writeNetwork(data + 2U, P25_DUID_TDU);
 
             m_lastDUID = P25_DUID_TDU;
 
@@ -675,12 +675,7 @@ bool DFSIVoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& contro
             if (m_p25->m_netState == RS_NET_IDLE) {
                 // are we interrupting a running CC?
                 if (m_p25->m_ccRunning) {
-                    g_interruptP25Control = true;
-                }
-
-                // single-channel trunking or voice on control support?
-                if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                    m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
+                    m_p25->m_ccHalted = true;
                 }
             }
 
@@ -782,6 +777,7 @@ bool DFSIVoicePacket::processNetwork(uint8_t* data, uint32_t len, lc::LC& contro
 // ---------------------------------------------------------------------------
 //  Protected Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the DFSIVoicePacket class.
 /// </summary>
@@ -990,7 +986,6 @@ void DFSIVoicePacket::writeNet_LDU1()
 
         // single-channel trunking or voice on control support?
         if (m_p25->m_control && m_p25->m_voiceOnControl) {
-            m_p25->m_ccRunning = false; // otherwise the grant will be bundled with other packets
             if (!m_p25->m_trunk->writeRF_TSDU_Grant(group, false, true)) {
                 if (m_network != NULL)
                     m_network->resetP25();
@@ -1039,7 +1034,7 @@ void DFSIVoicePacket::writeNet_LDU1()
 
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x00U;
-        m_p25->writeQueueNet(buffer, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(buffer, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES + 2U, true);
 
         // Generate Voice Header 2
         m_netDFSILC.setFrameType(P25_DFSI_VHDR2);
@@ -1047,7 +1042,7 @@ void DFSIVoicePacket::writeNet_LDU1()
 
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x00U;
-        m_p25->writeQueueNet(buffer, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(buffer, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES + 2U, true);
 
         if (m_verbose) {
             LogMessage(LOG_NET, P25_HDU_STR " DFSI, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
@@ -1124,7 +1119,8 @@ void DFSIVoicePacket::writeNet_LDU1()
         
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x00U;
-        m_p25->writeQueueNet(buffer, len + 2U);
+        
+        m_p25->addFrame(buffer, len + 2U, true);
     }
 
     if (m_verbose) {
@@ -1239,7 +1235,8 @@ void DFSIVoicePacket::writeNet_LDU2()
 
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x00U;
-        m_p25->writeQueueNet(buffer, len + 2U);
+
+        m_p25->addFrame(buffer, len + 2U, true);
     }
 
     if (m_verbose) {

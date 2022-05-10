@@ -73,7 +73,6 @@ bool g_killed = false;
 
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
-bool g_interruptP25Control = false;
 
 // ---------------------------------------------------------------------------
 //  Global Functions

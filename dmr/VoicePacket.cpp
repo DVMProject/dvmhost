@@ -49,6 +49,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
 #define CHECK_TRAFFIC_COLLISION_DELLC(_DST_ID)                                          \
     if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
         LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
@@ -67,6 +68,7 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Process DMR voice frame from the RF interface.
 /// </summary>
@@ -183,10 +185,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
 
                 for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
-                    m_slot->writeQueueRF(data);
+                    m_slot->addFrame(data);
             }
 
-            m_slot->writeNetworkRF(data, DT_VOICE_LC_HEADER);
+            m_slot->writeNetwork(data, DT_VOICE_LC_HEADER);
 
             m_slot->m_rfState = RS_RF_AUDIO;
             m_slot->m_rfLastDstId = dstId;
@@ -229,9 +231,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
             data[1U] = 0x00U;
 
             if (m_slot->m_duplex)
-                m_slot->writeQueueRF(data);
+                m_slot->addFrame(data);
 
-            m_slot->writeNetworkRF(data, DT_VOICE_PI_HEADER);
+            m_slot->writeNetwork(data, DT_VOICE_PI_HEADER);
 
             if (m_verbose) {
                 LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
@@ -284,9 +286,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 data[1U] = 0x00U;
 
                 if (m_slot->m_duplex)
-                    m_slot->writeQueueRF(data);
+                    m_slot->addFrame(data);
 
-                m_slot->writeNetworkRF(data, DT_VOICE_SYNC, errors);
+                m_slot->writeNetwork(data, DT_VOICE_SYNC, errors);
                 return true;
             }
 
@@ -438,7 +440,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 data[0U] = modem::TAG_DATA;
                 data[1U] = 0x00U;
 
-                m_slot->writeNetworkRF(data, DT_VOICE, errors);
+                m_slot->writeNetwork(data, DT_VOICE, errors);
 
                 if (m_embeddedLCOnly) {
                     // Only send the previously received LC
@@ -451,7 +453,7 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 }
 
                 if (m_slot->m_duplex)
-                    m_slot->writeQueueRF(data);
+                    m_slot->addFrame(data);
 
                 return true;
             }
@@ -539,10 +541,10 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                     m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
 
                     for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
-                        m_slot->writeQueueRF(start);
+                        m_slot->addFrame(start);
                 }
 
-                m_slot->writeNetworkRF(start, DT_VOICE_LC_HEADER);
+                m_slot->writeNetwork(start, DT_VOICE_LC_HEADER);
 
                 m_rfN = data[1U] & 0x0FU;
 
@@ -589,9 +591,9 @@ bool VoicePacket::process(uint8_t* data, uint32_t len)
                 data[1U] = 0x00U;
 
                 if (m_slot->m_duplex)
-                    m_slot->writeQueueRF(data);
+                    m_slot->addFrame(data);
 
-                m_slot->writeNetworkRF(data, DT_VOICE, errors);
+                m_slot->writeNetwork(data, DT_VOICE, errors);
 
                 m_slot->m_rfState = RS_RF_AUDIO;
 
@@ -690,15 +692,15 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         }
 
         for (uint32_t i = 0U; i < m_slot->m_jitterSlots; i++)
-            m_slot->writeQueueNet(m_slot->m_idle);
+            m_slot->addFrame(m_slot->m_idle, true);
 
         if (m_slot->m_duplex) {
             for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
-                m_slot->writeQueueNet(data);
+                m_slot->addFrame(data, true);
         }
         else {
             for (uint32_t i = 0U; i < NO_HEADERS_SIMPLEX; i++)
-                m_slot->writeQueueNet(data);
+                m_slot->addFrame(data, true);
         }
 
         m_slot->m_netState = RS_NET_AUDIO;
@@ -734,7 +736,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             }
 
             for (uint32_t i = 0U; i < m_slot->m_jitterSlots; i++)
-                m_slot->writeQueueNet(m_slot->m_idle);
+                m_slot->addFrame(m_slot->m_idle, true);
 
             // Create a dummy start frame
             uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -754,11 +756,11 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
-                    m_slot->writeQueueRF(start);
+                    m_slot->addFrame(start);
             }
             else {
                 for (uint32_t i = 0U; i < NO_HEADERS_SIMPLEX; i++)
-                    m_slot->writeQueueRF(start);
+                    m_slot->addFrame(start);
             }
 
             m_slot->m_netFrames = 0U;
@@ -800,7 +802,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_slot->writeQueueNet(data);
+        m_slot->addFrame(data, true);
 
         if (m_verbose) {
             LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
@@ -831,7 +833,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             }
 
             for (uint32_t i = 0U; i < m_slot->m_jitterSlots; i++)
-                m_slot->writeQueueNet(m_slot->m_idle);
+                m_slot->addFrame(m_slot->m_idle, true);
 
             // Create a dummy start frame
             uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -851,11 +853,11 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
             if (m_slot->m_duplex) {
                 for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
-                    m_slot->writeQueueRF(start);
+                    m_slot->addFrame(start);
             }
             else {
                 for (uint32_t i = 0U; i < NO_HEADERS_SIMPLEX; i++)
-                    m_slot->writeQueueRF(start);
+                    m_slot->addFrame(start);
             }
 
             m_slot->m_netFrames = 0U;
@@ -902,7 +904,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
             }
 
             if (!m_slot->m_netTimeout)
-                m_slot->writeQueueNet(data);
+                m_slot->addFrame(data, true);
 
             m_netEmbeddedReadN = (m_netEmbeddedReadN + 1U) % 2U;
             m_netEmbeddedWriteN = (m_netEmbeddedWriteN + 1U) % 2U;
@@ -1035,7 +1037,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 
         if (insertSilence(data, dmrData.getN())) {
             if (!m_slot->m_netTimeout)
-                m_slot->writeQueueNet(data);
+                m_slot->addFrame(data, true);
         }
 
         m_slot->m_packetTimer.start();
@@ -1055,6 +1057,7 @@ void VoicePacket::processNetwork(const data::Data& dmrData)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
 /// Initializes a new instance of the VoicePacket class.
 /// </summary>
@@ -1255,7 +1258,7 @@ void VoicePacket::insertSilence(uint32_t count)
             emb.encode(data + 2U);
         }
 
-        m_slot->writeQueueNet(data);
+        m_slot->addFrame(data, true);
 
         m_netN = n;
 

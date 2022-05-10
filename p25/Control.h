@@ -55,6 +55,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
+    
     class HOST_SW_API VoicePacket;
     namespace dfsi { class HOST_SW_API DFSIVoicePacket; }
     class HOST_SW_API DataPacket;
@@ -70,7 +71,7 @@ namespace p25
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
-            uint32_t timeout, uint32_t tgHang, uint32_t ccBcstInterval, bool duplex, lookups::RadioIdLookup* ridLookup,
+            uint32_t timeout, uint32_t tgHang, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
@@ -83,8 +84,15 @@ namespace p25
         void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
             uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId,
             uint8_t channelId, uint32_t channelNo, bool printOptions);
+        
+        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        bool getCCRunning() { return m_ccRunning; }
         /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
-        void setCCRunning(bool ccRunning);
+        void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
+        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        bool getCCHalted() { return m_ccHalted; }
+        /// <summary>Sets a flag indicating whether the P25 control channel is halted.</summary>
+        void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
@@ -94,12 +102,8 @@ namespace p25
         /// <summary>Helper to write P25 adjacent site information to the network.</summary>
         void writeAdjSSNetwork();
 
-        /// <summary>Helper to write control channel frame data.</summary>
-        bool writeControlRF();
-        /// <summary>Helper to write end of control channel frame data.</summary>
-        bool writeControlEndRF();
-        /// <summary>Helper to write end of frame data.</summary>
-        bool writeEndRF();
+        /// <summary>Helper to write end of voice call frame data.</summary>
+        bool writeRF_VoiceEnd();
 
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -154,14 +158,16 @@ namespace p25
         uint32_t m_netLastDstId;
 
         bool m_tailOnIdle;
-        bool m_ccOnIdle;
         bool m_ccRunning;
-        uint32_t m_ccBcstInterval;
+        bool m_ccPrevRunning;
+        bool m_ccHalted;
 
         Timer m_rfTimeout;
         Timer m_rfTGHang;
         Timer m_netTimeout;
         Timer m_networkWatchdog;
+
+        Timer m_ccPacketInterval;
 
         uint32_t m_hangCount;
         uint32_t m_tduPreambleCount;
@@ -180,13 +186,13 @@ namespace p25
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        bool m_writeImmediate; // This is essentially a "latch" that will auto-reset after a writeRF_Queue() call.
+
         bool m_verbose;
         bool m_debug;
 
-        /// <summary>Write data processed from RF to the data ring buffer.</summary>
-        void writeQueueRF(const uint8_t* data, uint32_t length);
-        /// <summary>Write data processed from the network to the data ring buffer.</summary>
-        void writeQueueNet(const uint8_t* data, uint32_t length);
+        /// <summary>Add data frame to the data ring buffer.</summary>
+        void addFrame(const uint8_t* data, uint32_t length, bool net = false);
 
 #if ENABLE_DFSI_SUPPORT
         /// <summary>Process a DFSI data frame from the RF interface.</summary>
@@ -195,6 +201,11 @@ namespace p25
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
+
+        /// <summary>Helper to write control channel frame data.</summary>
+        bool writeRF_ControlData();
+        /// <summary>Helper to write end of control channel frame data.</summary>
+        bool writeRF_ControlEnd();
 
         /// <summary>Helper to write data nulls.</summary>
         void writeRF_Nulls();

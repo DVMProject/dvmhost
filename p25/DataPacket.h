@@ -38,6 +38,7 @@
 #include "p25/lc/LC.h"
 #include "p25/Control.h"
 #include "network/BaseNetwork.h"
+#include "Timer.h"
 
 #include <cstdio>
 #include <string>
@@ -48,6 +49,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
+    
     class HOST_SW_API Control;
 
     // ---------------------------------------------------------------------------
@@ -67,6 +69,9 @@ namespace p25
 
         /// <summary>Helper to check if a logical link ID has registered with data services.</summary>
         bool hasLLIdFNEReg(uint32_t llId) const;
+
+        /// <summary>Updates the processor by the passed number of milliseconds.</summary>
+        void clock(uint32_t ms);
 
     private:
         friend class Control;
@@ -99,6 +104,9 @@ namespace p25
 
         std::unordered_map<uint32_t, ulong64_t> m_fneRegTable;
 
+        std::unordered_map<uint32_t, ulong64_t> m_connQueueTable;
+        std::unordered_map<uint32_t, Timer> m_connTimerTable;
+
         bool m_dumpPDUData;
         bool m_repeatPDU;
 
@@ -111,7 +119,7 @@ namespace p25
         ~DataPacket();
 
         /// <summary>Write data processed from RF to the network.</summary>
-        void writeNetworkRF(const uint8_t currentBlock, const uint8_t* data, uint32_t len);
+        void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len);
 
         /// <summary>Helper to write a P25 PDU packet.</summary>
         void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);
@@ -122,7 +130,7 @@ namespace p25
         /// <summary>Helper to write a PDU registration response.</summary>
         void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr);
         /// <summary>Helper to write a PDU acknowledge response.</summary>
-        void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId);
+        void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls = false);
     };
 } // namespace p25
 

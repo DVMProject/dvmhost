@@ -49,7 +49,6 @@ extern bool g_killed;
 
 extern bool g_fireDMRBeacon;
 extern bool g_fireP25Control;
-extern bool g_interruptP25Control;
 
 extern HOST_SW_API void fatal(const char* msg, ...);
 

@@ -83,10 +83,6 @@ private:
     bool m_dmrEnabled;
     bool m_p25Enabled;
 
-    bool m_p25CtrlChannel;
-    bool m_p25CtrlBroadcast;
-    bool m_dmrCtrlChannel;
-
     bool m_duplex;
     bool m_fixedMode;
     bool m_useDFSI;
@@ -118,7 +114,10 @@ private:
 
     bool m_dmrBeacons;
     bool m_dmrTSCCData;
-    bool m_controlData;
+    bool m_dmrCtrlChannel;
+    bool m_p25CCData;
+    bool m_p25CtrlChannel;
+    bool m_p25CtrlBroadcast;
 
     uint8_t m_siteId;
     uint32_t m_dmrNetId;
