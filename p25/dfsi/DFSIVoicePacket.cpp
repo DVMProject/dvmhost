@@ -90,8 +90,10 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
 
     uint8_t frameType = m_rfDFSILC.getFrameType();
     if (frameType == P25_DFSI_VHDR2) {
-        if (m_p25->m_rfState == RS_RF_LISTENING && m_p25->m_ccRunning) {
-            //m_p25->m_modem->clearP25Data();
+        if (m_p25->m_rfState == RS_RF_LISTENING) {
+            if (!m_p25->m_dedicatedControl) {
+                m_p25->m_modem->clearP25Data();
+            }
             m_p25->m_queue.clear();
             resetRF();
             resetNet();
@@ -175,6 +177,16 @@ bool DFSIVoicePacket::process(uint8_t* data, uint32_t len)
                 m_lastDUID = P25_DUID_LDU1;
 
                 if (m_p25->m_rfState == RS_RF_LISTENING) {
+                    // if this is a late entry call, clear states
+                    if (m_rfLastHDU.getDstId() == 0U) {
+                        if (!m_p25->m_dedicatedControl) {
+                            m_p25->m_modem->clearP25Data();
+                        }
+                        m_p25->m_queue.clear();
+                        resetRF();
+                        resetNet();
+                    }
+
                     if (m_p25->m_control) {
                         if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
                             m_p25->m_trunk->writeRF_ControlData(255U, 0U, false);
