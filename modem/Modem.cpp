@@ -1409,6 +1409,8 @@ void Modem::reset()
 
     close();
 
+    ::memset(m_buffer, 0x00U, BUFFER_LENGTH);
+
     Thread::sleep(2000U);        // 2s
     while (!open()) {
         Thread::sleep(5000U);    // 5s
@@ -1440,7 +1442,10 @@ bool Modem::getFirmwareVersion()
 
         for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
             Thread::sleep(10U);
-            RESP_TYPE_DVM resp = getResponse();
+            RESP_TYPE_DVM resp = getResponse(true);
+
+            if (resp == RTM_ERROR)
+                continue;
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
                 LogMessage(LOG_MODEM, "Protocol: %02x, CPU: %02X", m_buffer[3U], m_buffer[4U]);
@@ -1727,7 +1732,10 @@ bool Modem::readFlash()
 
         for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
             Thread::sleep(10U);
-            RESP_TYPE_DVM resp = getResponse();
+            RESP_TYPE_DVM resp = getResponse(true);
+
+            if (resp == RTM_ERROR)
+                continue;
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
                 LogWarning(LOG_MODEM, "Modem::readFlash(), old modem that doesn't support flash commands?");
@@ -1915,8 +1923,9 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 /// <summary>
 /// Helper to get the raw response packet from modem.
 /// </summary>
+/// <param name="noReportInvalid">Ignores invalid frame start and does not report as error.</param>
 /// <returns>Response type from modem.</returns>
-RESP_TYPE_DVM Modem::getResponse()
+RESP_TYPE_DVM Modem::getResponse(bool noReportInvalid)
 {
     m_rspDoubleLength = false;
 
@@ -1937,10 +1946,12 @@ RESP_TYPE_DVM Modem::getResponse()
         }
 
         if (m_buffer[0U] != DVM_FRAME_START) {
-            LogDebug(LOG_MODEM, "getResponse(), first byte not a frame start; byte = %02X", m_buffer[0U]);
-            if (m_dumpModemStatus) {
+            if (!noReportInvalid) {
+                LogError(LOG_MODEM, "Modem::getResponse(), illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
                 Utils::dump(1U, "Modem Invalid Frame", m_buffer, 250U);
             }
+
+            ::memset(m_buffer, 0x00U, BUFFER_LENGTH);
             return RTM_ERROR;
         }
 

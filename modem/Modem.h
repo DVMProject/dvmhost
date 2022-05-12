@@ -441,7 +441,7 @@ namespace modem
         void printDebug(const uint8_t* buffer, uint16_t len);
 
         /// <summary>Helper to get the raw response packet from modem.</summary>
-        RESP_TYPE_DVM getResponse();
+        RESP_TYPE_DVM getResponse(bool noReportInvalid = false);
 
     public:
         /// <summary>Flag indicating if modem trace is enabled.</summary>
