@@ -121,11 +121,12 @@ namespace lookups
         /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
         bool getACL();
 
-    private:
+    protected:
         bool m_acl;
 
-        /// <summary>Parses a table entry from the passed comma delimited string.</summary>
-        virtual TalkgroupId parse(std::string tableEntry);
+        /// <summary>Loads the table from the passed lookup table file.</summary>
+        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        virtual bool load();
     };
 } // namespace lookups
 

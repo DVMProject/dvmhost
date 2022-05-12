@@ -117,9 +117,10 @@ namespace lookups
         /// <summary>Returns the list of entries in this lookup table.</summary>
         std::vector<IdenTable> list();
 
-    private:
-        /// <summary>Parses a table entry from the passed comma delimited string.</summary>
-        IdenTable parse(std::string tableEntry);
+    protected:
+        /// <summary>Loads the table from the passed lookup table file.</summary>
+        /// <returns>True, if lookup table was loaded, otherwise false.</returns>
+        virtual bool load();
     };
 } // namespace lookups
 

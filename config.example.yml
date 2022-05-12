@@ -146,6 +146,7 @@ system:
         packetPlayoutTime: 10
         disableOFlowReset: false
         ignoreModemConfigArea: false
+        dumpModemStatus: false
         trace: false
         debug: false
     cwId:

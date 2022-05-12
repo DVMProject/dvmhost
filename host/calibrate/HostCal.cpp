@@ -404,7 +404,7 @@ int HostCal::run()
         return 2;
     }
 
-    m_modem = new Modem(modemPort, false, m_rxInvert, m_txInvert, m_pttInvert, m_dcBlocker, false, m_fdmaPreamble, m_dmrRxDelay, m_p25CorrCount, 10U, false, ignoreModemConfigArea, false, false);
+    m_modem = new Modem(modemPort, false, m_rxInvert, m_txInvert, m_pttInvert, m_dcBlocker, false, m_fdmaPreamble, m_dmrRxDelay, m_p25CorrCount, 10U, false, ignoreModemConfigArea, false, false, false);
     m_modem->setLevels(m_rxLevel, m_txLevel, m_txLevel, m_txLevel);
     m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
     m_modem->setDCOffsetParams(m_txDCOffset, m_rxDCOffset);

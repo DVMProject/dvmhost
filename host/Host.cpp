@@ -669,12 +669,12 @@ int Host::run()
         }
 
     // Macro to start DMR duplex idle transmission (or beacon)
-    #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
-        if (dmr != NULL) {                                                                                              \
-            if (m_duplex) {                                                                                             \
-                m_modem->writeDMRStart(x);                                                                              \
-                m_dmrTXTimer.start();                                                                                   \
-            }                                                                                                           \
+    #define START_DMR_DUPLEX_IDLE(x)                                                                                \
+        if (dmr != NULL) {                                                                                          \
+            if (m_duplex) {                                                                                         \
+                m_modem->writeDMRStart(x);                                                                          \
+                m_dmrTXTimer.start();                                                                               \
+            }                                                                                                       \
         }
 
     // main execution loop
@@ -1599,6 +1599,7 @@ bool Host::createModem()
     uint8_t packetPlayoutTime = (uint8_t)modemConf["packetPlayoutTime"].as<uint32_t>(10U);
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
     bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
+    bool dumpModemStatus = modemConf["dumpModemStatus"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
 
@@ -1730,12 +1731,16 @@ bool Host::createModem()
         LogInfo("    Ignore Modem Configuration Area: yes");
     }
 
+    if (dumpModemStatus) {
+        LogInfo("    Dump Modem Status: yes");
+    }
+
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
     m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
-        packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, trace, debug);
+        packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
     m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
     m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);

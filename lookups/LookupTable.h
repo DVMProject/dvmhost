@@ -40,7 +40,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
-#include <string>
 #include <unordered_map>
 
 namespace lookups
@@ -74,6 +73,10 @@ namespace lookups
         /// <summary></summary>
         virtual void entry()
         {
+            if (m_reloadTime == 0U) {
+                return;
+            }
+
             Timer timer(1U, 60U * m_reloadTime);
             timer.start();
 
@@ -157,56 +160,9 @@ namespace lookups
 
         bool m_acl;
 
-        /// <summary>Parses a table entry from the passed comma delimited string.</summary>
-        /// <param name="tableEntry">Comma delimited string to process into table entry.</param>
-        /// <returns>Table entry.</returns>
-        virtual T parse(std::string tableEntry) = 0;
-
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
-        virtual bool load()
-        {
-            if (strlen(m_filename.c_str()) <= 0) {
-                return false;
-            }
-
-            FILE* fp = ::fopen(m_filename.c_str(), "rt");
-            if (fp == NULL) {
-                LogError(LOG_HOST, "Cannot open the lookup file - %s", m_filename.c_str());
-                return false;
-            }
-
-            // clear table
-            clear();
-
-            m_mutex.lock();
-            {
-                char buffer[100U];
-                while (::fgets(buffer, 100U, fp) != NULL) {
-                    if (buffer[0U] == '#')
-                        continue;
-
-                    std::string strbuf = buffer;
-                    char* p1 = ::strtok(buffer, ",\r\n");
-
-                    if (p1 != NULL) {
-                        uint32_t id = (uint32_t)::atoi(p1);
-                        m_table[id] = parse(strbuf);
-                    }
-                }
-            }
-            m_mutex.unlock();
-
-            ::fclose(fp);
-
-            size_t size = m_table.size();
-            if (size == 0U)
-                return false;
-
-            LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
-
-            return true;
-        }
+        virtual bool load() = 0;
     };
 } // namespace lookups
 

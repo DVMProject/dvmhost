@@ -127,6 +127,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfTGHang(1000U, tgHang),
     m_netTimeoutTimer(1000U, timeout),
     m_packetTimer(1000U, 0U, 50U),
+    m_ccPacketInterval(1000U, 0U, 5U),
     m_interval(),
     m_elapsed(),
     m_rfFrames(0U),
@@ -404,28 +405,37 @@ void Slot::clock()
     }
 
     if (m_enableTSCC) {
-        // increment the TSCC counter on every slot 1 clock
-        m_tsccCnt++;
-        if (m_tsccCnt == TSCC_MAX_CNT) {
-            m_tsccCnt = 0U;
+        m_ccPacketInterval.clock(ms);
+        if (!m_ccPacketInterval.isRunning()) {
+            m_ccPacketInterval.start();
         }
 
-        if (m_ccSeq == 3U) {
-            m_ccSeq = 0U;
-        }
+        if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
+            // increment the TSCC counter on every slot 1 clock
+            m_tsccCnt++;
+            if (m_tsccCnt == TSCC_MAX_CNT) {
+                m_tsccCnt = 0U;
+            }
 
-        if (m_dedicatedTSCC) {
-            setShortLC_TSCC(m_siteData, m_tsccCnt);
-            writeRF_ControlData(m_tsccCnt, m_ccSeq);
-        }
-        else {
-            if (m_ccRunning) {
+            if (m_ccSeq == 3U) {
+                m_ccSeq = 0U;
+            }
+
+            if (m_dedicatedTSCC) {
                 setShortLC_TSCC(m_siteData, m_tsccCnt);
                 writeRF_ControlData(m_tsccCnt, m_ccSeq);
             }
-        }
+            else {
+                if (m_ccRunning) {
+                    setShortLC_TSCC(m_siteData, m_tsccCnt);
+                    writeRF_ControlData(m_tsccCnt, m_ccSeq);
+                }
+            }
 
-        m_ccSeq++;
+            m_ccSeq++;
+
+            m_ccPacketInterval.start();
+        }
     }
 
     m_rfTimeoutTimer.clock(ms);

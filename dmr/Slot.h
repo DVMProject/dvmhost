@@ -137,6 +137,8 @@ namespace dmr
         Timer m_netTimeoutTimer;
         Timer m_packetTimer;
 
+        Timer m_ccPacketInterval;
+
         StopWatch m_interval;
         StopWatch m_elapsed;
 

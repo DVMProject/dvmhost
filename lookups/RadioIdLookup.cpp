@@ -39,7 +39,9 @@ using namespace lookups;
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
+#include <string>
 #include <vector>
+#include <fstream>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -164,31 +166,69 @@ bool RadioIdLookup::getACL()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Parses a table entry from the passed comma delimited string.
+/// Loads the table from the passed lookup table file.
 /// </summary>
-/// <param name="tableEntry">Comma delimited string to process into table entry.</param>
-/// <returns>Table entry.</returns>
-RadioId RadioIdLookup::parse(std::string tableEntry)
+/// <returns>True, if lookup table was loaded, otherwise false.</returns>
+bool RadioIdLookup::load()
 {
-    std::string next;
-    std::vector<std::string> parsed;
-    char delim = ',';
+    if (m_filename.length() <= 0) {
+        return false;
+    }
 
-    for (auto it = tableEntry.begin(); it != tableEntry.end(); it++) {
-        if (*it == delim) {
-            if (!next.empty()) {
-                parsed.push_back(next);
-                next.clear();
+    std::ifstream file (m_filename, std::ifstream::in);
+    if (file.fail()) {
+        LogError(LOG_HOST, "Cannot open the lookup file - %s", m_filename.c_str());
+        return false;
+    }
+
+    // clear table
+    clear();
+
+    m_mutex.lock();
+    {
+        // read lines from file
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.length() > 0) {
+                if (line.at(0) == '#')
+                    continue;
+
+                // tokenize line
+                std::string next;
+                std::vector<std::string> parsed;
+                char delim = ',';
+
+                for (auto it = line.begin(); it != line.end(); it++) {
+                    if (*it == delim) {
+                        if (!next.empty()) {
+                            parsed.push_back(next);
+                            next.clear();
+                        }
+                    }
+                    else
+                        next += *it;
+                }
+                if (!next.empty())
+                    parsed.push_back(next);
+
+                // parse tokenized line
+                uint32_t id = ::atoi(parsed[0].c_str());
+                bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
+                bool radioDefault = false;
+
+                m_table[id] = RadioId(radioEnabled, radioDefault);
             }
         }
-        else
-            next += *it;
     }
-    if (!next.empty())
-        parsed.push_back(next);
+    m_mutex.unlock();
 
-    bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
-    bool radioDefault = false;
+    file.close();
 
-    return RadioId(radioEnabled, radioDefault);
+    size_t size = m_table.size();
+    if (size == 0U)
+        return false;
+
+    LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
+
+    return true;
 }

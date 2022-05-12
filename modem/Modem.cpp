@@ -107,11 +107,12 @@ using namespace modem;
 /// <param name="packetPlayoutTime">Length of time in MS between packets to send to modem.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="ignoreModemConfigArea">Flag indicating whether the modem configuration area is ignored.</param>
+/// <param name="dumpModemStatus">Flag indicating whether the modem status is dumped to the log.</param>
 /// <param name="trace">Flag indicating whether air interface modem trace is enabled.</param>
 /// <param name="debug">Flag indicating whether air interface modem debug is enabled.</param>
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
     uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset,
-    bool ignoreModemConfigArea, bool trace, bool debug) :
+    bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
     m_port(port),
     m_dmrColorCode(0U),
     m_p25NAC(0x293U),
@@ -160,12 +161,12 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_openPortHandler(NULL),
     m_closePortHandler(NULL),
     m_rspHandler(NULL),
-    m_rxDMRData1(1089U, "Modem RX DMR1"),   // 1089 bytes = 33 DMR Frames
-    m_rxDMRData2(1089U, "Modem RX DMR2"),
-    m_txDMRData1(792U, "Modem TX DMR1"),    // 792 bytes = 24 DMR Frames
-    m_txDMRData2(792U, "Modem TX DMR2"),
-    m_rxP25Data(6048U, "Modem RX P25"),     // 6048 bytes = 28 P25 Frames
-    m_txP25Data(864U, "Modem TX P25"),      // 864 = 4 P25 Frames
+    m_rxDMRData1(1000U, "Modem RX DMR1"),
+    m_rxDMRData2(1000U, "Modem RX DMR2"),
+    m_txDMRData1(1000U, "Modem TX DMR1"),
+    m_txDMRData2(1000U, "Modem TX DMR2"),
+    m_rxP25Data(1000U, "Modem RX P25"),
+    m_txP25Data(1000U, "Modem TX P25"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
@@ -178,6 +179,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_error(false),
     m_ignoreModemConfigArea(ignoreModemConfigArea),
     m_flashDisabled(false),
+    m_dumpModemStatus(dumpModemStatus),
     m_trace(trace),
     m_debug(debug),
     m_playoutTimer(1000U, 0U, packetPlayoutTime)
@@ -499,18 +501,7 @@ void Modem::clock(uint32_t ms)
     m_inactivityTimer.clock(ms);
     if (m_inactivityTimer.hasExpired()) {
         LogError(LOG_MODEM, "No reply from the modem for some time, resetting it");
-
-        m_error = true;
-        m_adcOverFlowCount = 0U;
-        m_dacOverFlowCount = 0U;
-
-        close();
-
-        Thread::sleep(2000U);        // 2s
-        while (!open()) {
-            Thread::sleep(5000U);    // 5s
-            close();
-        }
+        reset();
     }
 
     bool forceModemReset = false;
@@ -734,6 +725,17 @@ void Modem::clock(uint32_t ms)
             m_dmrSpace2 = m_buffer[8U];
             m_p25Space = m_buffer[10U];
 
+            if (m_dumpModemStatus) {
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u",
+                    m_isHotspot, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space);
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u",
+                    m_rxDMRData1.length(), m_rxDMRData1.dataSize(), m_rxDMRData1.freeSpace(), m_rxDMRData2.length(), m_rxDMRData2.dataSize(), m_rxDMRData2.freeSpace(),
+                    m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace());
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, txDMRData1 size = %u, len = %u, free = %u; txDMRData2 size = %u, len = %u, free = %u, txP25Data size = %u, len = %u, free = %u",
+                    m_txDMRData1.length(), m_txDMRData1.dataSize(), m_txDMRData1.freeSpace(), m_txDMRData2.length(), m_txDMRData2.dataSize(), m_txDMRData2.freeSpace(),
+                    m_txP25Data.length(), m_txP25Data.dataSize(), m_txP25Data.freeSpace());
+            }
+
             m_inactivityTimer.start();
         }
         break;
@@ -764,16 +766,8 @@ void Modem::clock(uint32_t ms)
 
     // force a modem reset because of a error condition
     if (forceModemReset) {
-        m_error = true;
         forceModemReset = false;
-        m_adcOverFlowCount = 0U;
-        m_dacOverFlowCount = 0U;
-
-        close();
-
-        Thread::sleep(2000U);        // 2s
-        while (!open())
-            Thread::sleep(5000U);    // 5s
+        reset();
     }
 
     // Only feed data to the modem if the playout timer has expired
@@ -1405,6 +1399,27 @@ bool Modem::sendCWId(const std::string& callsign)
 // ---------------------------------------------------------------------------
 
 /// <summary>
+/// Internal helper to warm reset the connection to the modem.
+/// </summary>
+void Modem::reset()
+{
+    m_error = true;
+    m_adcOverFlowCount = 0U;
+    m_dacOverFlowCount = 0U;
+
+    close();
+
+    Thread::sleep(2000U);        // 2s
+    while (!open()) {
+        Thread::sleep(5000U);    // 5s
+        close();
+    }
+
+    // reset modem to last state
+    setState(m_modemState);
+}
+
+/// <summary>
 /// Retrieve the air interface modem version.
 /// </summary>
 /// <returns></returns>
@@ -1923,7 +1938,10 @@ RESP_TYPE_DVM Modem::getResponse()
 
         if (m_buffer[0U] != DVM_FRAME_START) {
             LogDebug(LOG_MODEM, "getResponse(), first byte not a frame start; byte = %02X", m_buffer[0U]);
-            return RTM_TIMEOUT;
+            if (m_dumpModemStatus) {
+                Utils::dump(1U, "Modem Invalid Frame", m_buffer, 250U);
+            }
+            return RTM_ERROR;
         }
 
         //LogDebug(LOG_MODEM, "getResponse(), RESP_START");
