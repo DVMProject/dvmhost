@@ -544,7 +544,7 @@ bool Network::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    char* buffer = new char[json.length() + 8U];
+    char buffer[json.length() + 8U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     __SET_UINT32(m_id, buffer, 4U);
@@ -554,9 +554,7 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    bool ret = write((uint8_t*)buffer, json.length() + 8U);
-    delete[] buffer;
-    return ret;
+    return write((uint8_t*)buffer, json.length() + 8U);
 }
 
 /// <summary>

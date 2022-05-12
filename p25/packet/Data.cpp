@@ -696,7 +696,7 @@ void Data::writeNet_PDU_Buffered()
     uint32_t bitLength = ((m_netDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    uint8_t* data = new uint8_t[bitLength / 8U];
+    uint8_t data[bitLength / 8U];
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -735,7 +735,6 @@ void Data::writeNet_PDU_Buffered()
     }
 
     writeRF_PDU(data, bitLength);
-    delete[] data;
 }
 
 /// <summary>
@@ -747,7 +746,7 @@ void Data::writeRF_PDU_Buffered()
     uint32_t bitLength = ((m_rfDataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    uint8_t* data = new uint8_t[bitLength / 8U];
+    uint8_t data[bitLength / 8U];
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -786,7 +785,6 @@ void Data::writeRF_PDU_Buffered()
     }
 
     writeRF_PDU(data, bitLength);
-    delete[] data;
 }
 
 /// <summary>
@@ -803,7 +801,7 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ip
     uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    uint8_t* data = new uint8_t[bitLength / 8U];
+    uint8_t data[bitLength / 8U];
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -850,7 +848,6 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ip
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
     writeRF_PDU(data, bitLength);
-    delete[] data;
 }
 
 /// <summary>
@@ -868,7 +865,7 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t 
     uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
-    uint8_t* data = new uint8_t[bitLength / 8U];
+    uint8_t data[bitLength / 8U];
     ::memset(data, 0x00U, bitLength / 8U);
     uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
     ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -895,5 +892,4 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t 
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
     writeRF_PDU(data, bitLength, noNulls);
-    delete[] data;
 }
