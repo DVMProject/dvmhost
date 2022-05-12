@@ -1118,10 +1118,17 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
     assert(data != NULL);
     assert(length > 0U);
 
+    const uint8_t MAX_LENGTH = 40U;
+
     if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
         return false;
+    if (length > MAX_LENGTH) {
+        LogError(LOG_MODEM, "Modem::writeDMRData1(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+        Utils::dump(1U, "Modem::writeDMRData1(); Attmpted Data", data, length);
+        return false;
+    }
 
-    uint8_t buffer[40U];
+    uint8_t buffer[MAX_LENGTH];
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = length + 2U;
@@ -1166,10 +1173,17 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
     assert(data != NULL);
     assert(length > 0U);
 
+    const uint8_t MAX_LENGTH = 40U;
+
     if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
         return false;
+    if (length > MAX_LENGTH) {
+        LogError(LOG_MODEM, "Modem::writeDMRData2(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+        Utils::dump(1U, "Modem::writeDMRData2(); Attmpted Data", data, length);
+        return false;
+    }
 
-    uint8_t buffer[40U];
+    uint8_t buffer[MAX_LENGTH];
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = length + 2U;
@@ -1214,10 +1228,17 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
     assert(data != NULL);
     assert(length > 0U);
 
+    const uint8_t MAX_LENGTH = 250U;
+
     if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
         return false;
+    if (length > MAX_LENGTH) {
+        LogError(LOG_MODEM, "Modem::writeP25Data(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+        Utils::dump(1U, "Modem::writeP25Data(); Attmpted Data", data, length);
+        return false;
+    }
 
-    uint8_t buffer[250U];
+    uint8_t buffer[MAX_LENGTH];
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = length + 2U;
