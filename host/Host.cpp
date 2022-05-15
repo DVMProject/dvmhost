@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2021,2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
 *   Copyright (C) 2021 by Nat Moore <https://github.com/jelimoore>
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -669,12 +669,12 @@ int Host::run()
         }
 
     // Macro to start DMR duplex idle transmission (or beacon)
-    #define START_DMR_DUPLEX_IDLE(x)                                                                                \
-        if (dmr != NULL) {                                                                                          \
-            if (m_duplex) {                                                                                         \
-                m_modem->writeDMRStart(x);                                                                          \
-                m_dmrTXTimer.start();                                                                               \
-            }                                                                                                       \
+    #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
+        if (dmr != NULL) {                                                                                              \
+            if (m_duplex) {                                                                                             \
+                m_modem->writeDMRStart(x);                                                                              \
+                m_dmrTXTimer.start();                                                                                   \
+            }                                                                                                           \
         }
 
     // main execution loop

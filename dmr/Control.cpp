@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2021 by Bryan Biedenkapp <gatekeep@jmp.cx>
+*   Copyright (C) 2017-2022 by Bryan Biedenkapp <gatekeep@jmp.cx>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by

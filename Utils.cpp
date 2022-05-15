@@ -50,6 +50,8 @@ const uint8_t BITS_TABLE[] = {
 void getHostVersion()
 {
     LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
+    LogInfo("Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
+    LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
 }
 
 // ---------------------------------------------------------------------------
