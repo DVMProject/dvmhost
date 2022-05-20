@@ -2165,7 +2165,7 @@ bool Trunk::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
 
         // transmit group grant
         m_rfTSBK.setLCO(TSBK_IOSP_GRP_VCH);
-        m_p25->m_writeImmediate = true;
+//        m_p25->m_writeImmediate = true;
         writeRF_TSDU_SBF(false, true, net);
     }
     else {
@@ -2180,7 +2180,7 @@ bool Trunk::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
 
         // transmit private grant
         m_rfTSBK.setLCO(TSBK_IOSP_UU_VCH);
-        m_p25->m_writeImmediate = true;
+//        m_p25->m_writeImmediate = true;
         writeRF_TSDU_SBF(false, true, net);
     }
 
