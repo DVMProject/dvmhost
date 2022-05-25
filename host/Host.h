@@ -128,6 +128,9 @@ private:
     uint32_t m_p25SysId;
     uint8_t m_p25RfssId;
 
+    uint8_t m_activeTickDelay;
+    uint8_t m_idleTickDelay;
+
     friend class RemoteControl;
     RemoteControl* m_remoteControl;
 

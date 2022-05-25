@@ -86,6 +86,8 @@ system:
 #    netModeHang: 10
 #    fixedMode: false
     rfTalkgroupHang: 10
+    activeTickDelay: 5
+    idleTickDelay: 5
     info:
         latitude: -83.689428
         longitude: -39.194973

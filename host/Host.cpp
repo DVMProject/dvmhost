@@ -69,10 +69,8 @@ using namespace lookups;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define IDLE_SLEEP_MS 5U
-#define ACTIVE_SLEEP_MS 1U
-
 #define CW_IDLE_SLEEP_MS 50U
+#define IDLE_WARMUP_MS 5U
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -122,6 +120,8 @@ Host::Host(const std::string& confFile) :
     m_p25CCData(false),
     m_p25CtrlChannel(false),
     m_p25CtrlBroadcast(false),
+    m_activeTickDelay(5U),
+    m_idleTickDelay(5U),
     m_remoteControl(NULL)
 {
     UDPSocket::startup();
@@ -621,7 +621,7 @@ int Host::run()
             if (m_network != NULL)
                 m_network->clock(ms);
 
-            Thread::sleep(IDLE_SLEEP_MS);
+            Thread::sleep(IDLE_WARMUP_MS);
 
             if (elapsedMs > 15000U)
                 break;
@@ -1302,10 +1302,10 @@ int Host::run()
 
         m_modeTimer.clock(ms);
 
-        if ((m_state != STATE_IDLE) && ms <= 1U)
-            Thread::sleep(ACTIVE_SLEEP_MS);
+        if ((m_state != STATE_IDLE) && ms <= m_activeTickDelay)
+            Thread::sleep(m_activeTickDelay);
         if (m_state == STATE_IDLE)
-            Thread::sleep(IDLE_SLEEP_MS);
+            Thread::sleep(m_idleTickDelay);
     }
 
     setState(HOST_STATE_QUIT);
@@ -1359,6 +1359,13 @@ bool Host::readParams()
     if (!systemConf["modeHang"].isNone()) {
         m_rfModeHang = m_netModeHang = systemConf["modeHang"].as<uint32_t>();
     }
+    
+    m_activeTickDelay = (uint8_t)systemConf["activeTickDelay"].as<uint32_t>(5U);
+    if (m_activeTickDelay < 1U)
+        m_activeTickDelay = 1U;
+    m_idleTickDelay = (uint8_t)systemConf["idleTickDelay"].as<uint32_t>(5U);
+    if (m_idleTickDelay < 1U)
+        m_idleTickDelay = 1U;
 
     m_identity = systemConf["identity"].as<std::string>();
     m_fixedMode = systemConf["fixedMode"].as<bool>(false);
@@ -1380,6 +1387,8 @@ bool Host::readParams()
         if (!m_duplex) {
             LogInfo("    Simplex Same Frequency: %s", simplexSameFreq ? "yes" : "no");
         }
+        LogInfo("    Active Tick Delay: %ums", m_activeTickDelay);
+        LogInfo("    Idle Tick Delay: %ums", m_idleTickDelay);
         LogInfo("    Timeout: %us", m_timeout);
         LogInfo("    RF Mode Hang: %us", m_rfModeHang);
         LogInfo("    RF Talkgroup Hang: %us", m_rfTalkgroupHang);
