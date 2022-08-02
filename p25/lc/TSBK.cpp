@@ -692,7 +692,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 16) + m_dstId;                                    // Talkgroup Address
         tsbkValue = (tsbkValue << 32) + 0;
         break;
-    case TSBK_OSP_DENY_RSP:
+    case TSBK_OSP_DENY_RSP: // TSBK_ISP_EMERG_ALRM_REQ
     case TSBK_OSP_QUE_RSP:
     {
         if (m_response == 0U) {

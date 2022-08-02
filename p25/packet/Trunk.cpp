@@ -430,6 +430,9 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                     ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
 
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
+                    if (m_localEmergAlarm) {
+                        writeRF_TSDU_Emerg_Alrm(srcId, dstId);
+                    }
                 }
                 break;
             case TSBK_IOSP_GRP_AFF:
@@ -1232,6 +1235,35 @@ void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 }
 
 /// <summary>
+/// Helper to write a emergency alarm packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
+{
+    uint8_t lco = m_rfTSBK.getLCO();
+    uint32_t _srcId = m_rfTSBK.getSrcId();
+
+    m_rfTSBK.setLCO(TSBK_ISP_EMERG_ALRM_REQ);
+    m_rfTSBK.setSrcId(P25_WUID_FNE);
+    m_rfTSBK.setService(0U);
+    m_rfTSBK.setResponse(0U);
+
+    m_rfTSBK.setSrcId(srcId);
+    m_rfTSBK.setDstId(dstId);
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+            srcId, dstId);
+    }
+
+    writeRF_TSDU_SBF(true);
+
+    m_rfTSBK.setLCO(lco);
+    m_rfTSBK.setSrcId(_srcId);
+}
+
+/// <summary>
 /// Helper to write a Motorola patch packet.
 /// </summary>
 /// <param name="group1"></param>
@@ -1335,6 +1367,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_ctrlTSDUMBF(true),
+    m_localEmergAlarm(false),
     m_sndcpChGrant(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),

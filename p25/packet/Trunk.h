@@ -106,6 +106,8 @@ namespace p25
             void writeRF_TSDU_Grp_Aff_Q(uint32_t dstId);
             /// <summary>Helper to write a unit registration command packet.</summary>
             void writeRF_TSDU_U_Reg_Cmd(uint32_t dstId);
+            /// <summary>Helper to write a emergency alarm packet.</summary>
+            void writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId);
 
             /// <summary>Helper to write a Motorola patch packet.</summary>
             void writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3);
@@ -169,6 +171,7 @@ namespace p25
 
             bool m_ctrlTSDUMBF;
 
+            bool m_localEmergAlarm;
             bool m_sndcpChGrant;
 
             bool m_dumpTSBK;

@@ -236,6 +236,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_trunk->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
     
+    m_trunk->m_localEmergAlarm = p25Protocol["localEmergAlarm"].as<bool>(false);
     m_trunk->m_sndcpChGrant = p25Protocol["sndcpGrant"].as<bool>(false);
 
     yaml::Node control = p25Protocol["control"];

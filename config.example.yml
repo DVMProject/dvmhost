@@ -70,6 +70,7 @@ protocols:
         noStatusAck: false
         noMessageAck: true
         unitToUnitAvailCheck: true
+        localEmergAlarm: false
         sndcpGrant: false
         silenceThreshold: 124
         disableNetworkHDU: false
