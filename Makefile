@@ -19,6 +19,15 @@ ifneq ($(ARCH),)
 TAR_ARCH = "_$(ARCH)"
 endif
 
+GITFLAGS=
+GIT_VER =
+GIT_VER_HASH = 
+ifneq ("$(wildcard .git)",)
+	GIT_VER = \"$(shell git describe --abbrev=8 --dirty --always --tags)\"
+	GIT_VER_HASH = \"$(shell git describe --abbrev=8 --always --tags)\"
+	GITFLAGS= -D__GIT_VER__=$(GIT_VER) -D__GIT_VER_HASH__=$(GIT_VER_HASH)
+endif
+
 HOST_BIN = dvmhost
 HOST_OBJECTS = \
 		edac/AMBEFEC.o \
@@ -107,13 +116,13 @@ CMD_OBJECTS = \
 
 all: dvmhost dvmcmd
 dvmhost: $(HOST_OBJECTS) 
-		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(EXTFLAGS) $(LIBS) -o $(HOST_BIN)
+		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(GITFLAGS) $(EXTFLAGS) $(LIBS) -o $(HOST_BIN)
 dvmcmd: $(CMD_OBJECTS)
-		$($(ARCH)CXX) $(CMD_OBJECTS) $(CFLAGS) $(CCFLAGS) $(EXTFLAGS) $(LIBS) -o $(CMD_BIN)
+		$($(ARCH)CXX) $(CMD_OBJECTS) $(GITFLAGS) $(CFLAGS) $(CCFLAGS) $(EXTFLAGS) $(LIBS) -o $(CMD_BIN)
 %.o: %.cpp
-		$($(ARCH)CXX) $(CFLAGS) $(EXTFLAGS) -c -o $@ $<
+		$($(ARCH)CXX) $(CFLAGS) $(GITFLAGS) $(EXTFLAGS) -c -o $@ $<
 %.cmd.o: %.cpp
-		$($(ARCH)CXX) $(CFLAGS) $(CCFLAGS) $(EXTFLAGS) -c -o $@ $<
+		$($(ARCH)CXX) $(CFLAGS) $(CCFLAGS) $(GITFLAGS) $(EXTFLAGS) -c -o $@ $<
 strip:
 		-$($(ARCH)STRIP) $(HOST_BIN)
 		-$($(ARCH)STRIP) $(CMD_BIN)
@@ -122,7 +131,7 @@ clean:
 		$(RM) -r dpkg_build tar_build
 		$(RM) dvmhost_1.0.0* dvmhost-dbgsym*.deb
 
-install:all
+install: all
 		mkdir -p /opt/dvm/bin || true
 		install -m 755 $(HOST_BIN) /opt/dvm/bin/
 		install -m 755 $(CMD_BIN) /opt/dvm/bin/

@@ -93,6 +93,8 @@ namespace dmr
             void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
             /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Bcast_Sys_Parm();
+            /// <summary>Helper to write a TSCC Git Hash broadcast packet on the RF interface.</summary>
+            void writeRF_TSCC_Git_Hash();
         };
     } // namespace packet
 } // namespace dmr

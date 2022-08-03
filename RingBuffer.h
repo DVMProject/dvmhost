@@ -80,14 +80,18 @@ public:
             clear();
             return false;
         }
-
+#if DEBUG_RINGBUFFER
+        uint32_t iPtr_BeforeWrite = m_iPtr;
+#endif
         for (uint32_t i = 0U; i < length; i++) {
             m_buffer[m_iPtr++] = buffer[i];
 
             if (m_iPtr == m_length)
                 m_iPtr = 0U;
         }
-
+#if DEBUG_RINGBUFFER
+        LogDebug(LOG_HOST, "RingBuffer::addData(%s): iPtr_Before = %u, iPtr_After = %u, oPtr = %u, len = %u, len_Written = %u", m_name, iPtr_BeforeWrite, m_iPtr, m_oPtr, m_length, (m_iPtr - iPtr_BeforeWrite));
+#endif
         return true;
     }
 
@@ -101,14 +105,18 @@ public:
             LogError(LOG_HOST, "**** Underflow in %s ring buffer, %u < %u", m_name, dataSize(), length);
             return false;
         }
-
+#if DEBUG_RINGBUFFER
+        uint32_t oPtr_BeforeRead = m_oPtr;
+#endif
         for (uint32_t i = 0U; i < length; i++) {
             buffer[i] = m_buffer[m_oPtr++];
 
             if (m_oPtr == m_length)
                 m_oPtr = 0U;
         }
-
+#if DEBUG_RINGBUFFER
+        LogDebug(LOG_HOST, "RingBuffer::getData(%s): iPtr = %u, oPtr_Before = %u, oPtr_After = %u, len = %u, len_Read = %u", m_name, m_iPtr, oPtr_BeforeRead, m_oPtr, m_length, (m_oPtr - oPtr_BeforeRead));
+#endif
         return true;
     }
 

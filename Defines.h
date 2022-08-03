@@ -93,10 +93,17 @@ typedef unsigned long long  ulong64_t;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#ifndef __GIT_VER__
+#define __GIT_VER__ "00000000"
+#endif
+#ifndef __GIT_VER_HASH__
+#define __GIT_VER_HASH__ "00000000"
+#endif
+
 #define __PROG_NAME__ "Digital Voice Modem Host"
 #define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ "dvmhost"
-#define __VER__ "R01.00.00"
+#define __VER__ "R01.00.00 (" __GIT_VER__ ")"
 #define __BUILD__ __DATE__ " " __TIME__
 
 #define HOST_SW_API 
@@ -201,23 +208,23 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
 #define WRITE_BIT(p, i, b) p[(i) >> 3] = (b) ? (p[(i) >> 3] | BIT_MASK_TABLE[(i) & 7]) : (p[(i) >> 3] & ~BIT_MASK_TABLE[(i) & 7])
 #define READ_BIT(p, i)     (p[(i) >> 3] & BIT_MASK_TABLE[(i) & 7])
 
-#define __SET_UINT32(val, buffer, offset)           \
-            buffer[0U + offset] = val >> 24;        \
-            buffer[1U + offset] = val >> 16;        \
-            buffer[2U + offset] = val >> 8;         \
-            buffer[3U + offset] = val >> 0;          
-#define __GET_UINT32(buffer, offset)                \
-            (buffer[offset + 0U] << 24)     |       \
-                (buffer[offset + 1U] << 16) |       \
-                (buffer[offset + 2U] << 8)  |       \
+#define __SET_UINT32(val, buffer, offset)               \
+            buffer[0U + offset] = (val >> 24) & 0xFFU;  \
+            buffer[1U + offset] = (val >> 16) & 0xFFU;  \
+            buffer[2U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[3U + offset] = (val >> 0) & 0xFFU;          
+#define __GET_UINT32(buffer, offset)                    \
+            (buffer[offset + 0U] << 24)     |           \
+                (buffer[offset + 1U] << 16) |           \
+                (buffer[offset + 2U] << 8)  |           \
                 (buffer[offset + 3U] << 0);
-#define __SET_UINT16(val, buffer, offset)           \
-            buffer[0U + offset] = val >> 16;        \
-            buffer[1U + offset] = val >> 8;         \
-            buffer[2U + offset] = val >> 0;          
-#define __GET_UINT16(buffer, offset)                \
-            (buffer[offset + 0U] << 16)     |       \
-                (buffer[offset + 1U] << 8)  |       \
+#define __SET_UINT16(val, buffer, offset)               \
+            buffer[0U + offset] = (val >> 16) & 0xFFU;  \
+            buffer[1U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[2U + offset] = (val >> 0) & 0xFFU;          
+#define __GET_UINT16(buffer, offset)                    \
+            (buffer[offset + 0U] << 16)     |           \
+                (buffer[offset + 1U] << 8)  |           \
                 (buffer[offset + 2U] << 0);
 
 /**

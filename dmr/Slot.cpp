@@ -148,6 +148,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_ccSeq(0U),
     m_ccRunning(false),
+    m_ccPrevRunning(false),
+    m_ccHalted(false),
     m_enableTSCC(false),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
@@ -168,15 +170,6 @@ Slot::~Slot()
     delete m_voice;
     delete m_data;
     delete m_control;
-}
-
-/// <summary>
-/// Sets a flag indicating whether the DMR control channel is running.
-/// </summary>
-/// <param name="ccRunning"></param>
-void Slot::setCCRunning(bool ccRunning)
-{
-    m_ccRunning = ccRunning;
 }
 
 /// <summary>
@@ -332,7 +325,6 @@ uint32_t Slot::getFrame(uint8_t* data)
 
     uint8_t len = 0U;
     m_queue.getData(&len, 1U);
-
     m_queue.getData(data, len);
 
     return len;
@@ -404,37 +396,50 @@ void Slot::clock()
         }
     }
 
+    // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
-        m_ccPacketInterval.clock(ms);
-        if (!m_ccPacketInterval.isRunning()) {
+        if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
         }
 
-        if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
-            // increment the TSCC counter on every slot 1 clock
-            m_tsccCnt++;
-            if (m_tsccCnt == TSCC_MAX_CNT) {
-                m_tsccCnt = 0U;
+        if (m_ccHalted) {
+            if (!m_ccRunning) {
+                m_ccHalted = false;
+                m_ccPrevRunning = m_ccRunning;
+                m_queue.clear(); // clear the frame buffer
+            }
+        }
+        else {
+            m_ccPacketInterval.clock(ms);
+            if (!m_ccPacketInterval.isRunning()) {
+                m_ccPacketInterval.start();
             }
 
-            if (m_ccSeq == 3U) {
-                m_ccSeq = 0U;
-            }
-
-            if (m_dedicatedTSCC) {
-                setShortLC_TSCC(m_siteData, m_tsccCnt);
-                writeRF_ControlData(m_tsccCnt, m_ccSeq);
-            }
-            else {
+            if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
                 if (m_ccRunning) {
+                    // increment the TSCC counter on every slot 1 clock
+                    m_tsccCnt++;
+                    if (m_tsccCnt == TSCC_MAX_CNT) {
+                        m_tsccCnt = 0U;
+                    }
+
+                    if (m_ccSeq == 3U) {
+                        m_ccSeq = 0U;
+                    }
+
                     setShortLC_TSCC(m_siteData, m_tsccCnt);
                     writeRF_ControlData(m_tsccCnt, m_ccSeq);
+
+                    m_ccSeq++;
                 }
+
+                m_ccPacketInterval.start();
             }
+        }
 
-            m_ccSeq++;
-
-            m_ccPacketInterval.start();
+        if (m_ccPrevRunning && !m_ccRunning) {
+            m_queue.clear(); // clear the frame buffer
+            m_ccPrevRunning = m_ccRunning;
         }
     }
 
@@ -872,9 +877,20 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
         return;
     }
 
-    // loop to generate 2 control sequences
+    // loop to generate 3 control sequences
     if (frameCnt == 511U) {
         seqCnt = 3U;
+    }
+
+    // shuld we insert the Git Hash burst?
+    bool hash = (frameCnt % 256U) == 0U;
+    if (hash) {
+        m_control->writeRF_TSCC_Git_Hash();
+
+        if (seqCnt > 0U)
+            n++;
+
+        return;
     }
 
     do

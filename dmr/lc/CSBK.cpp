@@ -32,6 +32,7 @@
 #include "dmr/lc/CSBK.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
+#include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -427,7 +428,6 @@ void CSBK::encode(uint8_t* bytes)
                     csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
                     csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
                 }
-                break;
             }
 
             // split value into bytes
@@ -460,8 +460,58 @@ void CSBK::encode(uint8_t* bytes)
         m_data[7U] = (m_srcId >> 16) & 0xFFU;                                       // Source ID
         m_data[8U] = (m_srcId >> 8) & 0xFFU;
         m_data[9U] = (m_srcId >> 0) & 0xFFU;
-        LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
+        if ((m_FID == FID_ETSI) || (m_FID == FID_DMRA)) {
+            LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
+        }
         break;
+    }
+
+    // internal DMR vendor opcodes
+    if (m_FID == FID_DVM) {
+        switch (m_CSBKO) {
+        case CSBKO_DVM_GIT_HASH:
+            {
+                ulong64_t csbkValue = 0U;
+                csbkValue = g_gitHashBytes[0];                                          // ...
+                csbkValue = (csbkValue << 8) + (g_gitHashBytes[1U]);                    // ...
+                csbkValue = (csbkValue << 8) + (g_gitHashBytes[2U]);                    // ...
+                csbkValue = (csbkValue << 8) + (g_gitHashBytes[3U]);                    // ...
+                csbkValue = (csbkValue << 16) + 0U;
+                csbkValue = (csbkValue << 4) + m_siteIdenEntry.channelId();             // Channel ID
+                csbkValue = (csbkValue << 12) + m_logicalCh1;                           // Channel Number
+
+                // split value into bytes
+                m_data[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+                m_data[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+                m_data[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+                m_data[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+                m_data[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+                m_data[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+                m_data[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+                m_data[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+            }
+            break;
+        default:
+            if (m_GI) {
+                m_data[2U] |= 0x40U;                                            // Group or Individual
+            }
+
+            if (m_dataContent) {
+                m_data[2U] |= 0x80U;                                            //
+            }
+
+            m_data[3U] = m_CBF;                                                 //
+
+            m_data[4U] = (m_dstId >> 16) & 0xFFU;                               // Destination ID
+            m_data[5U] = (m_dstId >> 8) & 0xFFU;
+            m_data[6U] = (m_dstId >> 0) & 0xFFU;
+
+            m_data[7U] = (m_srcId >> 16) & 0xFFU;                               // Source ID
+            m_data[8U] = (m_srcId >> 8) & 0xFFU;
+            m_data[9U] = (m_srcId >> 0) & 0xFFU;
+            LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
+            break;
+        }
     }
 
     m_data[10U] ^= CSBK_CRC_MASK[0U];

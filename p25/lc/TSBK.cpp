@@ -28,6 +28,7 @@
 #include "p25/lc/TSBK.h"
 #include "p25/P25Utils.h"
 #include "edac/CRC.h"
+#include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -975,7 +976,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             break;
             case TSBK_OSP_MOT_CC_BSI:
                 tsbkValue = (m_siteCallsign[0] - 43U) & 0x3F;                       // Character 0
-                for (int i = 1; i < P25_MOT_CALLSIGN_LENGTH_BYTES; i++) {
+                for (uint8_t i = 1; i < P25_MOT_CALLSIGN_LENGTH_BYTES; i++) {
                     tsbkValue = (tsbkValue << 6) + ((m_siteCallsign[i] - 43U) & 0x3F); // Character 1 - 7
                 }
                 tsbkValue = (tsbkValue << 4) + m_siteData.channelId();              // Channel ID
@@ -1008,11 +1009,20 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         // internal P25 vendor opcodes
         if (m_mfId == P25_MFG_DVM) {
             switch (m_lco) {
+            case TSBK_OSP_DVM_GIT_HASH:
+                tsbkValue = g_gitHashBytes[0];                                      // ...
+                tsbkValue = (tsbkValue << 8) + (g_gitHashBytes[1U]);                // ...
+                tsbkValue = (tsbkValue << 8) + (g_gitHashBytes[2U]);                // ...
+                tsbkValue = (tsbkValue << 8) + (g_gitHashBytes[3U]);                // ...
+                tsbkValue = (tsbkValue << 16) + 0U;
+                tsbkValue = (tsbkValue << 4) + m_siteData.channelId();              // Channel ID
+                tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();             // Channel Number
+                break;
             case LC_CALL_TERM:
-                tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
-                tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                 // Channel Number
-                tsbkValue = (tsbkValue << 16) + m_dstId;                                    // Talkgroup Address
-                tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+                tsbkValue = (tsbkValue << 4) + m_siteData.channelId();              // Channel ID
+                tsbkValue = (tsbkValue << 12) + m_grpVchNo;                         // Channel Number
+                tsbkValue = (tsbkValue << 16) + m_dstId;                            // Talkgroup Address
+                tsbkValue = (tsbkValue << 24) + m_srcId;                            // Source Radio Address
                 break;
             default:
                 LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

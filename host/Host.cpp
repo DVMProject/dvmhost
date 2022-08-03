@@ -662,8 +662,10 @@ int Host::run()
     #define INTERRUPT_DMR_BEACON                                                                                        \
         if (dmr != NULL) {                                                                                              \
             if (dmrBeaconDurationTimer.isRunning() && !dmrBeaconDurationTimer.hasExpired()) {                           \
-                if (m_dmrTSCCData && !m_dmrCtrlChannel)                                                                 \
+                if (m_dmrTSCCData && !m_dmrCtrlChannel) {                                                               \
+                    dmr->setCCHalted(true);                                                                             \
                     dmr->setCCRunning(false);                                                                           \
+                }                                                                                                       \
             }                                                                                                           \
             dmrBeaconDurationTimer.stop();                                                                              \
         }
@@ -727,6 +729,8 @@ int Host::run()
             if (ret) {
                 len = dmr->getFrame(1U, data);
                 if (len > 0U) {
+                    LogDebug(LOG_HOST, "found DMR frame, len = %u", len);
+
                     // if the state is idle; set to DMR, start mode timer and start DMR idle frames
                     if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
@@ -1274,6 +1278,7 @@ int Host::run()
                     }
                     
                     dmr->setCCRunning(false);
+                    dmr->setCCHalted(true);
 
                     dmrBeaconDurationTimer.stop();
                     dmrBeaconIntervalTimer.stop();
@@ -2041,7 +2046,11 @@ void Host::setState(uint8_t state)
             }
             
             m_modem->setState(STATE_IDLE);
-            
+
+            m_modem->clearDMRData1();
+            m_modem->clearDMRData2();
+            m_modem->clearP25Data();
+
             if (m_state == HOST_STATE_ERROR) {
                 m_modem->sendCWId(m_cwCallsign);
 

@@ -1521,6 +1521,12 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         queueRF_TSBK_Ctrl(TSBK_OSP_MOT_CC_BSI);
     }
 
+    // shuld we insert the Git Hash burst?
+    bool hash = (frameCnt % 125U) == 0U;
+    if (hash && n > 3U) {
+        queueRF_TSBK_Ctrl(TSBK_OSP_DVM_GIT_HASH);
+    }
+
     // add padding after the last sequence or if forced; and only
     // if we're doing multiblock frames (MBF)
     if ((n >= 4U || forcePad) && m_ctrlTSDUMBF)
@@ -2056,6 +2062,17 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             // transmit motorola CC BSI burst
             m_rfTSBK.setLCO(TSBK_OSP_MOT_CC_BSI);
             m_rfTSBK.setMFId(P25_MFG_MOT);
+            break;
+
+        /** DVM CC data */
+        case TSBK_OSP_DVM_GIT_HASH:
+            if (m_debug) {
+                LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_DVM_GIT_HASH (DVM Git Hash)");
+            }
+
+            // transmit git hash burst
+            m_rfTSBK.setLCO(TSBK_OSP_DVM_GIT_HASH);
+            m_rfTSBK.setMFId(P25_MFG_DVM);
             break;
     }
 

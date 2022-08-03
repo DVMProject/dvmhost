@@ -113,7 +113,7 @@ namespace p25
 
     const uint8_t   P25_MFG_STANDARD = 0x00U;
     const uint8_t   P25_MFG_MOT = 0x90U;
-    const uint8_t   P25_MFG_DVM = 0xFEU; // internal P25 MFId used for internal signalling (shouldn't be air transmitted!)
+    const uint8_t   P25_MFG_DVM = 0xFEU; // internal P25 MFId used for internal signalling
 
     const uint8_t   P25_MOT_CALLSIGN_LENGTH_BYTES = 8U;
 
@@ -332,6 +332,9 @@ namespace p25
     const uint8_t   TSBK_OSP_MOT_GRG_VCH_UPD = 0x03U;   // MOT GRG GROUP VCH GRANT UPD / Group Regroup Voice Channel Grant Update
     const uint8_t   TSBK_OSP_MOT_CC_BSI = 0x0BU;        // MOT CC BSI - Motorola / Control Channel Base Station Identifier
     const uint8_t   TSBK_OSP_MOT_PSH_CCH = 0x0EU;       // MOT PSH CCH - Motorola / Planned Control Channel Shutdown
+
+    // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
+    const uint8_t   TSBK_OSP_DVM_GIT_HASH = 0xFBU;      //
 
     // Data Unit ID(s)
     const uint8_t   P25_DUID_HDU = 0x00U;               // Header Data Unit

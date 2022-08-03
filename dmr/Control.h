@@ -68,10 +68,15 @@ namespace dmr
 
         /// <summary>Helper to set DMR configuration options.</summary>
         void setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
         /// <summary>Sets a flag indicating whether the DMR control channel is running.</summary>
         void setCCRunning(bool ccRunning);
+        /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
+        bool getCCHalted() { return m_ccHalted; }
+        /// <summary>Sets a flag indicating whether the DMR control channel is halted.</summary>
+        void setCCHalted(bool ccHalted);
 
         /// <summary>Helper to process wakeup frames from the RF interface.</summary>
         bool processWakeup(const uint8_t* data);
@@ -107,6 +112,7 @@ namespace dmr
 
         uint8_t m_tsccSlotNo;
         bool m_ccRunning;
+        bool m_ccHalted;
 
         bool m_dumpCSBKData;
         bool m_verbose;

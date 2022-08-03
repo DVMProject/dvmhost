@@ -633,3 +633,42 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
     if (m_slot->m_duplex)
         m_slot->addFrame(data);
 }
+
+/// <summary>
+/// Helper to write a TSCC Git Hash broadcast packet on the RF interface.
+/// </summary>
+void ControlSignaling::writeRF_TSCC_Git_Hash()
+{
+    if (m_debug) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_DVM_GIT_HASH (DVM Git Hash)", m_slot->m_slotNo);
+    }
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_DVM_GIT_HASH);
+    csbk.setFID(FID_DVM);
+
+    // Regenerate the CSBK data
+    csbk.encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->addFrame(data);
+}

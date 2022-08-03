@@ -72,8 +72,14 @@ namespace dmr
         /// <summary>Finalizes a instance of the Slot class.</summary>
         ~Slot();
 
-        /// <summary>Sets a flag indicating whether the DMR control channel is running.</summary>
-        void setCCRunning(bool ccRunning);
+        /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
+        bool getCCRunning() { return m_ccRunning; }
+        /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
+        void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
+        /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
+        bool getCCHalted() { return m_ccHalted; }
+        /// <summary>Sets a flag indicating whether the DMR control channel is halted.</summary>
+        void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
@@ -165,6 +171,8 @@ namespace dmr
 
         uint8_t m_ccSeq;
         bool m_ccRunning;
+        bool m_ccPrevRunning;
+        bool m_ccHalted;
 
         bool m_enableTSCC;
         bool m_dedicatedTSCC;

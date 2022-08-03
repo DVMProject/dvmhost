@@ -74,6 +74,8 @@ bool g_killed = false;
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 
+uint8_t* g_gitHashBytes = NULL;
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
@@ -188,6 +190,12 @@ int checkArgs(int argc, char* argv[])
 
 int main(int argc, char** argv)
 {
+    g_gitHashBytes = new uint8_t[4U];
+    ::memset(g_gitHashBytes, 0x00U, 4U);
+
+    uint32_t hash = ::strtoul(__GIT_VER_HASH__, 0, 16);
+    __SET_UINT32(hash, g_gitHashBytes, 0U);
+
     if (argv[0] != NULL && *argv[0] != 0)
         g_progExe = std::string(argv[0]);
 

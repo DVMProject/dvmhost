@@ -160,6 +160,7 @@ namespace dmr
     // Feature IDs
     const uint8_t   FID_ETSI = 0x00U;                       // ETSI Standard Feature Set
     const uint8_t   FID_DMRA = 0x10U;                       //
+    const uint8_t   FID_DVM = 0xFEU; // internal DMR FID used for internal signalling
 
     // LC Service Options
     const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
@@ -247,6 +248,8 @@ namespace dmr
     const uint8_t   CSBKO_BTV_GRANT = 0x32U;                // BTV_GRANT - Broadcast Talkgroup Voice Channel Grant
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
+
+    const uint8_t   CSBKO_DVM_GIT_HASH = 0xFBU;             //
 
     const uint8_t   TALKER_ID_NONE = 0x00U;
     const uint8_t   TALKER_ID_HEADER = 0x01U;

@@ -50,6 +50,8 @@ extern bool g_killed;
 extern bool g_fireDMRBeacon;
 extern bool g_fireP25Control;
 
+extern uint8_t* g_gitHashBytes;
+
 extern HOST_SW_API void fatal(const char* msg, ...);
 
 #endif // __HOST_MAIN_H__

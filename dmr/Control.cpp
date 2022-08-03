@@ -76,6 +76,7 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     m_tidLookup(tidLookup),
     m_tsccSlotNo(0U),
     m_ccRunning(false),
+    m_ccHalted(false),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -169,6 +170,26 @@ void Control::setCCRunning(bool ccRunning)
         break;
     case 2U:
         m_slot2->setCCRunning(ccRunning);
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        break;
+    }
+}
+
+/// <summary>
+/// Sets a flag indicating whether the DMR control channel is halted.
+/// </summary>
+/// <param name="ccHalted"></param>
+void Control::setCCHalted(bool ccHalted)
+{
+    m_ccHalted = ccHalted;
+    switch (m_tsccSlotNo) {
+    case 1U:
+        m_slot1->setCCHalted(ccHalted);
+        break;
+    case 2U:
+        m_slot2->setCCHalted(ccHalted);
         break;
     default:
         LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
