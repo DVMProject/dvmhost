@@ -36,6 +36,8 @@
 #include "p25/data/DataHeader.h"
 #include "p25/lc/LC.h"
 #include "p25/P25Utils.h"
+#include "nxdn/NXDNDefines.h"
+#include "nxdn/channel/LICH.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -62,10 +64,12 @@ using namespace lookups;
 #define DMR_CAL_1K_STR      "[Tx] DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define DMR_DMO_CAL_1K_STR  "[Tx] DMR MS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define P25_CAL_1K_STR      "[Tx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1)"
+#define NXDN_CAL_1K_STR     "[Tx] NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)"
 #define DMR_FEC_STR         "[Rx] DMR MS FEC BER Test Mode"
 #define DMR_FEC_1K_STR      "[Rx] DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)"
 #define P25_FEC_STR         "[Rx] P25 FEC BER Test Mode"
 #define P25_FEC_1K_STR      "[Rx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1)"
+#define NXDN_FEC_STR        "[Rx] NXDN FEC BER Test Mode"
 #define RSSI_CAL_STR        "RSSI Calibration Mode"
 
 // Voice LC MS Header, CC: 1, srcID: 1, dstID: TG9
@@ -88,7 +92,7 @@ const uint8_t VOICE_1K[] = {
 
 // Recommended 1011 Hz test pattern for P25 Phase 1 (ANSI/TIA-102.CAAA)
 // NAC: 0x293, srcID: 1, dstID: TG1
-unsigned char LDU1_1K[] = {
+const uint8_t LDU1_1K[] = {
     0x55, 0x75, 0xF5, 0xFF, 0x77, 0xFF, 0x29, 0x35, 0x54, 0x7B, 0xCB, 0x19, 0x4D, 0x0D, 0xCE, 0x24, 0xA1, 0x24,
     0x0D, 0x43, 0x3C, 0x0B, 0xE1, 0xB9, 0x18, 0x44, 0xFC, 0xC1, 0x62, 0x96, 0x27, 0x60, 0xE4, 0xE2, 0x4A, 0x10,
     0x90, 0xD4, 0x33, 0xC0, 0xBE, 0x1B, 0x91, 0x84, 0x4C, 0xFC, 0x16, 0x29, 0x62, 0x76, 0x0E, 0xC0, 0x00, 0x00,
@@ -102,7 +106,7 @@ unsigned char LDU1_1K[] = {
     0x33, 0xC0, 0xBE, 0x1B, 0x91, 0x84, 0x4F, 0xF0, 0x58, 0x29, 0x62, 0x76, 0x0E, 0xC0, 0x00, 0x00, 0x00, 0x0C,
     0x89, 0x28, 0x49, 0x0D, 0x43, 0x3C, 0x0B, 0xE1, 0xB8, 0x46, 0x11, 0x3F, 0xC1, 0x62, 0x96, 0x27, 0x60, 0xE4 };
 
-unsigned char LDU2_1K[] = {
+const uint8_t LDU2_1K[] = {
     0x55, 0x75, 0xF5, 0xFF, 0x77, 0xFF, 0x29, 0x3A, 0xB8, 0xA4, 0xEF, 0xB0, 0x9A, 0x8A, 0xCE, 0x24, 0xA1, 0x24,
     0x0D, 0x43, 0x3C, 0x0B, 0xE1, 0xB9, 0x18, 0x44, 0xFC, 0xC1, 0x62, 0x96, 0x27, 0x60, 0xEC, 0xE2, 0x4A, 0x10,
     0x90, 0xD4, 0x33, 0xC0, 0xBE, 0x1B, 0x91, 0x84, 0x4C, 0xFC, 0x16, 0x29, 0x62, 0x76, 0x0E, 0x40, 0x00, 0x00,
@@ -116,6 +120,11 @@ unsigned char LDU2_1K[] = {
     0x33, 0xC0, 0xBE, 0x1B, 0x91, 0x84, 0x4F, 0xF0, 0x58, 0x29, 0x62, 0x76, 0x0E, 0x40, 0x00, 0x00, 0x00, 0x0C,
     0x89, 0x28, 0x49, 0x0D, 0x43, 0x3C, 0x0B, 0xE1, 0xB8, 0x46, 0x11, 0x3F, 0xC1, 0x62, 0x96, 0x27, 0x60, 0xEC };
 
+const uint8_t NXDN_SCRAMBLER[] = {
+	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
+	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
+	0x28U, 0x28U, 0x00U, 0x0AU, 0x02U, 0x82U, 0x20U, 0x28U, 0x82U, 0x2AU, 0xAAU, 0x20U, 0x22U, 0x80U,
+	0xA8U, 0x8AU, 0x08U, 0xA0U, 0xAAU, 0x02U };
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -142,6 +151,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_dmrRx1K(false),
     m_p25Enabled(false),
     m_p25Rx1K(false),
+    m_nxdnEnabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
     m_isHotspot(false),
@@ -302,17 +312,25 @@ int HostCal::run()
     m_rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     m_txLevel = modemConf["txLevel"].as<float>(50.0F);
 
-    m_dmrDiscBWAdj = modemConf["dmrDiscBWAdj"].as<int>(0);
-    m_p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
-    m_dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
-    m_p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
+    yaml::Node hotspotParams = modemConf["hotspot"];
 
-    m_adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
+    m_dmrDiscBWAdj = hotspotParams["dmrDiscBWAdj"].as<int>(0);
+    m_p25DiscBWAdj = hotspotParams["p25DiscBWAdj"].as<int>(0);
+    m_nxdnDiscBWAdj = hotspotParams["nxdnDiscBWAdj"].as<int>(0);
+    m_dmrPostBWAdj = hotspotParams["dmrPostBWAdj"].as<int>(0);
+    m_p25PostBWAdj = hotspotParams["p25PostBWAdj"].as<int>(0);
+    m_nxdnPostBWAdj = hotspotParams["nxdnPostBWAdj"].as<int>(0);
 
-    m_dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
-    m_dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
-    m_p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
-    m_p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
+    m_adfGainMode = (ADF_GAIN_MODE)hotspotParams["adfGainMode"].as<uint32_t>(0U);
+
+    yaml::Node repeaterParams = modemConf["repeater"];
+
+    m_dmrSymLevel3Adj = repeaterParams["dmrSymLvl3Adj"].as<int>(0);
+    m_dmrSymLevel1Adj = repeaterParams["dmrSymLvl1Adj"].as<int>(0);
+    m_p25SymLevel3Adj = repeaterParams["p25SymLvl3Adj"].as<int>(0);
+    m_p25SymLevel1Adj = repeaterParams["p25SymLvl1Adj"].as<int>(0);
+    m_nxdnSymLevel3Adj = repeaterParams["nxdnSymLvl3Adj"].as<int>(0);
+    m_nxdnSymLevel1Adj = repeaterParams["nxdnSymLvl1Adj"].as<int>(0);
 
     m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
@@ -405,10 +423,10 @@ int HostCal::run()
     }
 
     m_modem = new Modem(modemPort, false, m_rxInvert, m_txInvert, m_pttInvert, m_dcBlocker, false, m_fdmaPreamble, m_dmrRxDelay, m_p25CorrCount, 10U, false, ignoreModemConfigArea, false, false, false);
-    m_modem->setLevels(m_rxLevel, m_txLevel, m_txLevel, m_txLevel);
-    m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+    m_modem->setLevels(m_rxLevel, m_txLevel, m_txLevel, m_txLevel, m_txLevel);
+    m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj, m_nxdnSymLevel3Adj, m_nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(m_txDCOffset, m_rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_adfGainMode);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_nxdnDiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_nxdnPostBWAdj, m_adfGainMode);
 
     m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemOpen, this));
     m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemClose, this));
@@ -529,7 +547,7 @@ int HostCal::run()
             setTXDCOffset(1);
             break;
 
-        case 'N':
+        case 'X':
         {
             char value[5] = { '\0' };
             ::fprintf(stdout, "> FDMA Preambles [%u] ? ", m_fdmaPreamble);
@@ -669,6 +687,35 @@ int HostCal::run()
                 setP25SymLevel1Adj(1);
             break;
 
+        case ';':
+            if (!m_isHotspot && m_modem->getVersion() >= 3U)
+                setNXDNSymLevel3Adj(-1);
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+            break;
+        case '\'':
+            if (!m_isHotspot && m_modem->getVersion() >= 3U)
+                setNXDNSymLevel3Adj(1);
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+            break;
+        case ':':
+            if (!m_isHotspot && m_modem->getVersion() >= 3U)
+                setNXDNSymLevel1Adj(-1);
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+            break;
+        case '"':
+            if (!m_isHotspot && m_modem->getVersion() >= 3U)
+                setNXDNSymLevel1Adj(1);
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+            break;
+
         case '1':
         {
             if (m_isHotspot) {
@@ -711,6 +758,29 @@ int HostCal::run()
 
         case '3':
         {
+            if (m_isHotspot && m_modem->getVersion() >= 3U) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> NXDN Discriminator BW Offset [%d] ? ", m_nxdnDiscBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_nxdnDiscBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_nxdnDiscBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+            }
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+        }
+        break;
+
+        case '4':
+        {
             if (m_isHotspot) {
                 char value[5] = { '\0' };
                 ::fprintf(stdout, "> DMR Post Demodulation BW Offset [%d] ? ", m_dmrPostBWAdj);
@@ -729,7 +799,7 @@ int HostCal::run()
         }
         break;
 
-        case '4':
+        case '5':
         {
             if (m_isHotspot) {
                 char value[5] = { '\0' };
@@ -749,7 +819,30 @@ int HostCal::run()
         }
         break;
 
-        case '5':
+        case '6':
+        {
+            if (m_isHotspot && m_modem->getVersion() >= 3U) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> NXDN Post Demodulation BW Offset [%d] ? ", m_nxdnPostBWAdj);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 5, 0);
+                if (value[0] != '\0') {
+                    int bwAdj = m_nxdnPostBWAdj;
+                    sscanf(value, "%d", &bwAdj);
+
+                    m_nxdnPostBWAdj = bwAdj;
+
+                    writeRFParams();
+                }
+            }
+            else {
+                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+            }
+        }
+        break;
+
+        case '7':
         {
             if (m_isHotspot) {
                 char value[2] = { '\0' };
@@ -786,6 +879,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -800,6 +894,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -814,6 +909,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -828,6 +924,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -842,6 +939,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -856,6 +954,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -870,9 +969,31 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
+        }
+        break;
+        case 'N':
+        {
+            // are we on a protocol version 3 firmware?
+            if (m_modem->getVersion() >= 3U) {
+                m_mode = STATE_NXDN_CAL;
+                m_modeStr = NXDN_CAL_1K_STR;
+                m_duplex = true;
+                m_dmrEnabled = false;
+                m_dmrRx1K = false;
+                m_p25Enabled = false;
+                m_p25Rx1K = false;
+                m_nxdnEnabled = false;
+
+                LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+                writeConfig();
+            }
+            else {
+                LogWarning(LOG_CAL, "%s test mode is not supported on your firmware!", NXDN_CAL_1K_STR);
+            }
         }
         break;
         case 'B':
@@ -920,6 +1041,26 @@ int HostCal::run()
             writeConfig();
         }
         break;
+        case 'n':
+        {
+            // are we on a protocol version 3 firmware?
+            if (m_modem->getVersion() >= 3U) {
+                m_mode = STATE_NXDN;
+                m_modeStr = NXDN_FEC_STR;
+                m_duplex = false;
+                m_dmrEnabled = false;
+                m_p25Enabled = false;
+                m_p25Rx1K = false;
+                m_nxdnEnabled = true;
+
+                LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
+                writeConfig();
+            }
+            else {
+                LogWarning(LOG_CAL, "%s test mode is not supported on your firmware!", NXDN_FEC_STR);
+            }
+        }
+        break;
         case 'x':
         {
             m_mode = STATE_RSSI_CAL;
@@ -946,6 +1087,8 @@ int HostCal::run()
             getHostVersion();
             break;
         case 'v':
+            // bryanb: this actually polls the firmware -- should we do this or just
+            // call m_modem->getVersion()?
             m_modem->getFirmwareVersion();
             break;
         case 'H':
@@ -1115,6 +1258,24 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
         }
         break;
 
+        case CMD_NXDN_DATA:
+            processNXDNBER(buffer + 3U);
+            break;
+
+        case CMD_NXDN_LOST:
+        {
+            LogMessage(LOG_CAL, "NXDN Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
+
+            if (m_nxdnEnabled) {
+                m_berBits = 0U;
+                m_berErrs = 0U;
+                m_berFrames = 0U;
+                m_berUndecodableLC = 0U;
+                m_berUncorrectable = 0U;
+            }
+        }
+        break;
+
         case CMD_GET_STATUS:
         {
             m_isHotspot = (buffer[3U] & 0x01U) == 0x01U;
@@ -1234,7 +1395,7 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
         LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
     }
-    LogMessage(LOG_CAL, "    N        Set FDMA Preambles");
+    LogMessage(LOG_CAL, "    X        Set FDMA Preambles");
     LogMessage(LOG_CAL, "    W        Set DMR Rx Delay");
     if (!m_isHotspot) {
         LogMessage(LOG_CAL, "    w        Set P25 Correlation Count");
@@ -1251,10 +1412,12 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    M        %s", DMR_CAL_1K_STR);
     LogMessage(LOG_CAL, "    m        %s", DMR_DMO_CAL_1K_STR);
     LogMessage(LOG_CAL, "    P        %s", P25_CAL_1K_STR);
+    LogMessage(LOG_CAL, "    N        %s", NXDN_CAL_1K_STR);
     LogMessage(LOG_CAL, "    B        %s", DMR_FEC_STR);
     LogMessage(LOG_CAL, "    J        %s", DMR_FEC_1K_STR);
     LogMessage(LOG_CAL, "    b        %s", P25_FEC_STR);
     LogMessage(LOG_CAL, "    j        %s", P25_FEC_1K_STR);
+    LogMessage(LOG_CAL, "    n        %s", NXDN_FEC_STR);
     LogMessage(LOG_CAL, "    x        %s", RSSI_CAL_STR);
     LogMessage(LOG_CAL, "Engineering Commands:");
     if (!m_isHotspot) {
@@ -1262,13 +1425,17 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    _/+      Inc/Dec DMR +/- 1 Symbol Level");
         LogMessage(LOG_CAL, "    [/]      Inc/Dec P25 +/- 3 Symbol Level");
         LogMessage(LOG_CAL, "    {/}      Inc/Dec P25 +/- 1 Symbol Level");
+        LogMessage(LOG_CAL, "    ;/'      Inc/Dec NXDN +/- 3 Symbol Level");
+        LogMessage(LOG_CAL, "    :/\"     Inc/Dec NXDN +/- 1 Symbol Level");
     }
     else {
         LogMessage(LOG_CAL, "    1        Set DMR Disc. Bandwidth Offset");
         LogMessage(LOG_CAL, "    2        Set P25 Disc. Bandwidth Offset");
-        LogMessage(LOG_CAL, "    3        Set DMR Post Demod Bandwidth Offset");
-        LogMessage(LOG_CAL, "    4        Set P25 Post Demod Bandwidth Offset");
-        LogMessage(LOG_CAL, "    5        Set ADF7021 Rx Auto. Gain Mode");
+        LogMessage(LOG_CAL, "    3        Set NXDN Disc. Bandwidth Offset");
+        LogMessage(LOG_CAL, "    4        Set DMR Post Demod Bandwidth Offset");
+        LogMessage(LOG_CAL, "    5        Set P25 Post Demod Bandwidth Offset");
+        LogMessage(LOG_CAL, "    6        Set NXDN Post Demod Bandwidth Offset");
+        LogMessage(LOG_CAL, "    7        Set ADF7021 Rx Auto. Gain Mode");
     }
     if (!m_modem->m_flashDisabled) {
         LogMessage(LOG_CAL, "    E        Erase modem configuration area");
@@ -1466,6 +1633,50 @@ bool HostCal::setP25SymLevel1Adj(int incr)
     if (incr < 0 && m_p25SymLevel1Adj > -127) {
         m_p25SymLevel1Adj--;
         LogMessage(LOG_CAL, " - P25 Symbol Level +/- 1 Adjust: %d", m_p25SymLevel1Adj);
+        return writeSymbolAdjust();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the NXDN Symbol Level 3 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setNXDNSymLevel3Adj(int incr)
+{
+    if (incr > 0 && m_nxdnSymLevel3Adj < 127) {
+        m_nxdnSymLevel3Adj++;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 3 Adjust: %d", m_nxdnSymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_nxdnSymLevel3Adj > -127) {
+        m_nxdnSymLevel3Adj--;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 3 Adjust: %d", m_nxdnSymLevel3Adj);
+        return writeSymbolAdjust();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the NXDN Symbol Level 1 adjust.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setNXDNSymLevel1Adj(int incr)
+{
+    if (incr > 0 && m_nxdnSymLevel1Adj < 127) {
+        m_nxdnSymLevel1Adj++;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 1 Adjust: %d", m_nxdnSymLevel1Adj);
+        return writeSymbolAdjust();
+    }
+
+    if (incr < 0 && m_nxdnSymLevel1Adj > -127) {
+        m_nxdnSymLevel1Adj--;
+        LogMessage(LOG_CAL, " - P25 Symbol Level +/- 1 Adjust: %d", m_nxdnSymLevel1Adj);
         return writeSymbolAdjust();
     }
 
@@ -1952,6 +2163,64 @@ void HostCal::processP251KBER(const uint8_t* buffer)
 }
 
 /// <summary>
+/// Process NXDN Rx BER.
+/// </summary>
+/// <param name="buffer">Buffer containing P25 audio frames</param>
+void HostCal::processNXDNBER(const uint8_t* buffer)
+{
+    using namespace nxdn;
+
+    unsigned char data[NXDN_FRAME_LENGTH_BYTES];
+    ::memcpy(data, buffer, NXDN_FRAME_LENGTH_BYTES);
+    nxdnScrambler(data);
+
+    channel::LICH lich;
+    bool valid = lich.decode(data);
+
+    if (valid) {
+        uint8_t usc = lich.getFCT();
+        uint8_t opt = lich.getOption();
+
+        if (usc == NXDN_LICH_USC_SACCH_NS) {
+            if (m_berFrames == 0U) {
+                LogMessage(LOG_CAL, NXDN_MESSAGE_TYPE_VCALL ", 1031 Test Pattern Start");
+
+                timerStart();
+                m_berErrs = 0U;
+                m_berBits = 0U;
+                m_berFrames = 0U;
+                return;
+            } else {
+                float ber = float(m_berErrs * 100U) / float(m_berBits);
+                LogMessage(LOG_CAL, NXDN_MESSAGE_TYPE_TX_REL ", 1031 Test Pattern BER, frames: %u, errs: %.3f%% (%u/%u)", m_berFrames, ber, m_berErrs, m_berBits);
+
+                timerStop();
+                m_berErrs = 0U;
+                m_berBits = 0U;
+                m_berFrames = 0U;
+                return;
+            }
+        } else if (opt == NXDN_LICH_STEAL_NONE) {
+            timerStart();
+
+            uint32_t errors = 0U;
+
+            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
+            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
+            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
+            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+
+            m_berBits += 188U;
+            m_berErrs += errors;
+            m_berFrames++;
+
+            float ber = float(errors) / 1.88F;
+            LogMessage(LOG_CAL, NXDN_MESSAGE_TYPE_VCALL ", 1031 Test Pattern BER, (errs): %.3f%% (%u/188)", ber, errors);
+        }
+    }
+}
+
+/// <summary>
 /// Write configuration to the modem DSP.
 /// </summary>
 /// <returns>True, if configuration is written, otherwise false.</returns>
@@ -1967,7 +2236,8 @@ bool HostCal::writeConfig()
 /// <returns>True, if configuration is written, otherwise false.</returns>
 bool HostCal::writeConfig(uint8_t modeOverride)
 {
-    uint8_t buffer[50U];
+    uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 17U;
@@ -2034,7 +2304,17 @@ bool HostCal::writeConfig(uint8_t modeOverride)
     m_conf["system"]["modem"]["p25CorrCount"] = __INT_STR(m_p25CorrCount);
     buffer[14U] = (uint8_t)m_p25CorrCount;
 
-    int ret = m_modem->write(buffer, 17U);
+    // are we on a protocol version 3 firmware?
+    if (m_modem->getVersion() >= 3U) {
+        buffer[1U] = 18U;
+
+        if (m_nxdnEnabled)
+            buffer[4U] |= 0x10U;
+
+        buffer[18U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
+    }
+
+    int ret = m_modem->write(buffer, buffer[1U]);
     if (ret <= 0)
         return false;
 
@@ -2050,7 +2330,8 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 /// <returns></returns>
 bool HostCal::writeRFParams()
 {
-    unsigned char buffer[18U];
+    uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 18U;
@@ -2070,21 +2351,31 @@ bool HostCal::writeRFParams()
 
     buffer[12U] = (unsigned char)(100 * 2.55F + 0.5F); // cal sets power fixed to 100
 
-    m_conf["system"]["modem"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
+    m_conf["system"]["modem"]["hotspot"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
     buffer[13U] = (uint8_t)(m_dmrDiscBWAdj + 128);
-    m_conf["system"]["modem"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
+    m_conf["system"]["modem"]["hotspot"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
     buffer[14U] = (uint8_t)(m_p25DiscBWAdj + 128);
-    m_conf["system"]["modem"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
+    m_conf["system"]["modem"]["hotspot"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
     buffer[15U] = (uint8_t)(m_dmrPostBWAdj + 128);
-    m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
+    m_conf["system"]["modem"]["hotspot"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
     buffer[16U] = (uint8_t)(m_p25PostBWAdj + 128);
 
-    m_conf["system"]["modem"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
+    m_conf["system"]["modem"]["hotspot"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
     buffer[17U] = (uint8_t)m_adfGainMode;
 
-    // CUtils::dump(1U, "Written", buffer, len);
+    // are we on a protocol version 3 firmware?
+    if (m_modem->getVersion() >= 3U) {
+        buffer[1U] = 20U;
 
-    int ret = m_modem->write(buffer, 18U);
+        m_conf["system"]["modem"]["hotspot"]["nxdnDiscBWAdj"] = __INT_STR(m_nxdnDiscBWAdj);
+        buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
+        m_conf["system"]["modem"]["hotspot"]["nxdnPostBWAdj"] = __INT_STR(m_nxdnPostBWAdj);
+        buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
+    }
+
+    // CUtils::dump(1U, "Written", buffer, buffer[1U]);
+
+    int ret = m_modem->write(buffer, buffer[1U]);
     if (ret <= 0)
         return false;
 
@@ -2100,23 +2391,34 @@ bool HostCal::writeRFParams()
 /// <returns>True, if level adjustments are written, otherwise false.</returns>
 bool HostCal::writeSymbolAdjust()
 {
-    uint8_t buffer[10U];
+    uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 7U;
     buffer[2U] = CMD_SET_SYMLVLADJ;
 
-    m_conf["system"]["modem"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
+    m_conf["system"]["modem"]["repeater"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
     buffer[3U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
-    m_conf["system"]["modem"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
+    m_conf["system"]["modem"]["repeater"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
     buffer[4U] = (uint8_t)(m_dmrSymLevel1Adj + 128);
 
-    m_conf["system"]["modem"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
+    m_conf["system"]["modem"]["repeater"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
     buffer[5U] = (uint8_t)(m_p25SymLevel3Adj + 128);
-    m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
+    m_conf["system"]["modem"]["repeater"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
     buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
-    int ret = m_modem->write(buffer, 7U);
+    // are we on a protocol version 3 firmware?
+    if (m_modem->getVersion() >= 3U) {
+        buffer[1U] = 9U;
+
+        m_conf["system"]["modem"]["repeater"]["nxdnSymLvl3Adj"] = __INT_STR(m_nxdnSymLevel3Adj);
+        buffer[7U] = (uint8_t)(m_nxdnSymLevel3Adj + 128);
+        m_conf["system"]["modem"]["repeater"]["nxdnSymLvl1Adj"] = __INT_STR(m_nxdnSymLevel1Adj);
+        buffer[8U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
+    }
+
+    int ret = m_modem->write(buffer, buffer[1U]);
     if (ret <= 0)
         return false;
 
@@ -2210,30 +2512,46 @@ void HostCal::processFlashConfig(const uint8_t *buffer)
 
         // symbol adjust
         m_dmrSymLevel3Adj = int(buffer[35U]) - 128;
-        m_conf["system"]["modem"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
+        m_conf["system"]["modem"]["repeater"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
         m_dmrSymLevel1Adj = int(buffer[36U]) - 128;
-        m_conf["system"]["modem"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
+        m_conf["system"]["modem"]["repeater"]["dmrSymLvl1Adj"] = __INT_STR(m_dmrSymLevel1Adj);
 
         m_p25SymLevel3Adj = int(buffer[37U]) - 128;
-        m_conf["system"]["modem"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
+        m_conf["system"]["modem"]["repeater"]["p25SymLvl3Adj"] = __INT_STR(m_p25SymLevel3Adj);
         m_p25SymLevel1Adj = int(buffer[38U]) - 128;
-        m_conf["system"]["modem"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
+        m_conf["system"]["modem"]["repeater"]["p25SymLvl1Adj"] = __INT_STR(m_p25SymLevel1Adj);
+
+        // are we on a protocol version 3 firmware?
+        if (m_modem->getVersion() >= 3U) {
+            m_nxdnSymLevel3Adj = int(buffer[41U]) - 128;
+            m_conf["system"]["modem"]["repeater"]["nxdnSymLvl3Adj"] = __INT_STR(m_nxdnSymLevel3Adj);
+            m_nxdnSymLevel1Adj = int(buffer[42U]) - 128;
+            m_conf["system"]["modem"]["repeater"]["nxdnSymLvl1Adj"] = __INT_STR(m_nxdnSymLevel1Adj);
+        }
 
         writeSymbolAdjust();
         sleep(500);
 
         // RF parameters
         m_dmrDiscBWAdj = int8_t(buffer[20U]) - 128;
-        m_conf["system"]["modem"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
+        m_conf["system"]["modem"]["hotspot"]["dmrDiscBWAdj"] = __INT_STR(m_dmrDiscBWAdj);
         m_p25DiscBWAdj = int8_t(buffer[21U]) - 128;
-        m_conf["system"]["modem"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
+        m_conf["system"]["modem"]["hotspot"]["p25DiscBWAdj"] = __INT_STR(m_p25DiscBWAdj);
         m_dmrPostBWAdj = int8_t(buffer[22U]) - 128;
-        m_conf["system"]["modem"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
+        m_conf["system"]["modem"]["hotspot"]["dmrPostBWAdj"] = __INT_STR(m_dmrPostBWAdj);
         m_p25PostBWAdj = int8_t(buffer[23U]) - 128;
-        m_conf["system"]["modem"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
+        m_conf["system"]["modem"]["hotspot"]["p25PostBWAdj"] = __INT_STR(m_p25PostBWAdj);
 
         m_adfGainMode = (ADF_GAIN_MODE)buffer[24U];
-        m_conf["system"]["modem"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
+        m_conf["system"]["modem"]["hotspot"]["adfGainMode"] = __INT_STR((int)m_adfGainMode);
+
+        // are we on a protocol version 3 firmware?
+        if (m_modem->getVersion() >= 3U) {
+            m_nxdnDiscBWAdj = int8_t(buffer[39U]) - 128;
+            m_conf["system"]["modem"]["repeater"]["nxdnDiscBWAdj"] = __INT_STR(m_nxdnDiscBWAdj);
+            m_nxdnPostBWAdj = int8_t(buffer[40U]) - 128;
+            m_conf["system"]["modem"]["repeater"]["nxdnPostBWAdj"] = __INT_STR(m_nxdnPostBWAdj);
+        }
 
         m_txTuning = int(buffer[25U]) - 128;
         m_conf["system"]["modem"]["txTuning"] = __INT_STR(m_txTuning);
@@ -2344,6 +2662,15 @@ bool HostCal::writeFlash()
     buffer[37U] = (uint8_t)(m_p25SymLevel3Adj + 128);
     buffer[38U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
+    // are we on a protocol version 3 firmware?
+    if (m_modem->getVersion() >= 3U) {
+        buffer[39U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
+        buffer[40U] = (uint8_t)(m_nxdnPostBWAdj + 128);
+
+        buffer[41U] = (uint8_t)(m_nxdnSymLevel3Adj + 128);
+        buffer[42U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
+    }
+
     // software signature
     std::string software;
     software.append(__NET_NAME__ " " __VER__ " (built " __BUILD__ ")");
@@ -2441,7 +2768,7 @@ void HostCal::printStatus()
         std::string modemPort = uartConfig["port"].as<std::string>();
         uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
 
-        LogMessage(LOG_CAL, " - Operating Mode: %s, Port Type: %s, Modem Port: %s, Port Speed: %u", m_modeStr.c_str(), type.c_str(), modemPort.c_str(), portSpeed);
+        LogMessage(LOG_CAL, " - Operating Mode: %s, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", m_modeStr.c_str(), type.c_str(), modemPort.c_str(), portSpeed, m_modem->getVersion());
     }
 
     {
@@ -2454,10 +2781,23 @@ void HostCal::printStatus()
         if (!m_isHotspot) {
             LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
                 m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj);
+            
+            // are we on a protocol version 3 firmware?
+            if (m_modem->getVersion() >= 3U) {
+                LogMessage(LOG_CAL, " - NXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
+                    m_nxdnSymLevel3Adj, m_nxdnSymLevel1Adj);
+            }
         }
         if (m_isHotspot) {
             LogMessage(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
                 m_dmrDiscBWAdj, m_p25DiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj);
+
+            // are we on a protocol version 3 firmware?
+            if (m_modem->getVersion() >= 3U) {
+                LogMessage(LOG_CAL, " - NXDN Disc. BW: %d, NXDN Post Demod BW: %d",
+                    m_nxdnDiscBWAdj, m_nxdnPostBWAdj);
+            }
+
             switch (m_adfGainMode) {
                 case ADF_GAIN_AUTO_LIN:
                     LogMessage(LOG_CAL, " - ADF7021 Gain Mode: Auto High Linearity");
@@ -2481,6 +2821,18 @@ void HostCal::printStatus()
     }
 
     getStatus();
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="data"></param>
+void HostCal::nxdnScrambler(uint8_t* data) const
+{
+    assert(data != NULL);
+
+    for (uint32_t i = 0U; i < nxdn::NXDN_FRAME_LENGTH_BYTES; i++)
+        data[i] ^= NXDN_SCRAMBLER[i];
 }
 
 /// <summary>

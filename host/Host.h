@@ -82,6 +82,7 @@ private:
 
     bool m_dmrEnabled;
     bool m_p25Enabled;
+    bool m_nxdnEnabled;
 
     bool m_duplex;
     bool m_fixedMode;
@@ -127,6 +128,7 @@ private:
     uint32_t m_p25NetId;
     uint32_t m_p25SysId;
     uint8_t m_p25RfssId;
+    uint32_t m_nxdnRAN;
 
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;

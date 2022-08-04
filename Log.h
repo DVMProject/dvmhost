@@ -45,6 +45,7 @@
 #define LOG_RF      "RF"
 #define LOG_NET     "NET"
 #define LOG_P25     "P25"
+#define LOG_NXDN    "NXDN"
 #define LOG_DMR     "DMR"
 #define LOG_CAL     "CAL"
 #define LOG_SETUP   "SETUP"

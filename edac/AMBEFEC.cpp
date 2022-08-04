@@ -487,6 +487,62 @@ uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
     return errors;
 }
 
+/// <summary>
+/// Regenerates the NXDN AMBE FEC for the input bytes.
+/// </summary>
+/// <param name="bytes"></param>
+/// <returns>Count of errors.</returns>
+uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
+{
+    assert(bytes != NULL);
+
+    uint32_t a = 0U;
+    uint32_t MASK = 0x800000U;
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t aPos = DMR_A_TABLE[i];
+        if (READ_BIT(bytes, aPos))
+            a |= MASK;
+    }
+
+    uint32_t b = 0U;
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t bPos = DMR_B_TABLE[i];
+        if (READ_BIT(bytes, bPos))
+            b |= MASK;
+    }
+
+    uint32_t c = 0U;
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+        uint32_t cPos = DMR_C_TABLE[i];
+        if (READ_BIT(bytes, cPos))
+            c |= MASK;
+    }
+
+    uint32_t errors = regenerate(a, b, c, true);
+
+    MASK = 0x800000U;
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t aPos = DMR_A_TABLE[i];
+        WRITE_BIT(bytes, aPos, a & MASK);
+    }
+
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t bPos = DMR_B_TABLE[i];
+        WRITE_BIT(bytes, bPos, b & MASK);
+    }
+
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+        uint32_t cPos = DMR_C_TABLE[i];
+        WRITE_BIT(bytes, cPos, c & MASK);
+    }
+
+    return errors;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

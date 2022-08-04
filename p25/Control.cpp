@@ -203,7 +203,7 @@ void Control::reset()
 /// <summary>
 /// Helper to set P25 configuration options.
 /// </summary>
-/// <param name="conf">Instance of the ConfigINI class.</param>
+/// <param name="conf">Instance of the yaml::Node class.</param>
 /// <param name="cwCallsign"></param>
 /// <param name="voiceChNo"></param>
 /// <param name="pSuperGroup"></param>
@@ -734,10 +734,19 @@ void Control::clock(uint32_t ms)
 }
 
 /// <summary>
+/// Flag indicating whether the processor or is busy or not.
+/// </summary>
+/// <returns>True, if processor is busy, otherwise false.</returns>
+bool Control::isBusy() const
+{
+    return m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE;
+}
+
+/// <summary>
 /// Helper to change the debug and verbose state.
 /// </summary>
-/// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
-/// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
+/// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 void Control::setDebugVerbose(bool debug, bool verbose)
 {
     m_debug = m_voice->m_debug = m_data->m_debug = m_trunk->m_debug = debug;

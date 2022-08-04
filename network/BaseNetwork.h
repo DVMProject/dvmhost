@@ -34,6 +34,7 @@
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "p25/P25Defines.h"
+#include "nxdn/NXDNDefines.h"
 #include "dmr/data/Data.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/dfsi/DFSIDefines.h"
@@ -59,6 +60,7 @@
 
 #define TAG_DMR_DATA            "DMRD"
 #define TAG_P25_DATA            "P25D"
+#define TAG_NXDN_DATA           "NXDD"
 
 #define TAG_MASTER_WL_RID       "MSTWRID"
 #define TAG_MASTER_BL_RID       "MSTBRID"
@@ -137,6 +139,8 @@ namespace network
         virtual bool readDMR(dmr::data::Data& data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
         virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint32_t& len);
+        /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
+        virtual uint8_t* readNXDN(bool& ret, uint32_t& len);
 
         /// <summary>Reads a channel grant request from the network.</summary>
         virtual bool readGrantRsp(bool& grp, uint32_t& srcId, uint32_t& dstId, uint32_t& grpVchNo);
@@ -154,6 +158,9 @@ namespace network
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
+
+        /// <summary>Writes NXDN frame data to the network.</summary>
+        virtual bool writeNXDN(const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes a channel grant request to the network.</summary>
         virtual bool writeGrantReq(const bool grp, const uint32_t srcId, const uint32_t dstId);
@@ -177,6 +184,8 @@ namespace network
         virtual void resetDMR(uint32_t slotNo);
         /// <summary>Resets the P25 ring buffer.</summary>
         virtual void resetP25();
+        /// <summary>Resets the NXDN ring buffer.</summary>
+        virtual void resetNXDN();
 
     protected:
         uint32_t m_id;
@@ -204,9 +213,11 @@ namespace network
 
         uint32_t* m_streamId;
         uint32_t m_p25StreamId;
+        uint32_t m_nxdnStreamId;
 
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
+        RingBuffer<uint8_t> m_rxNXDNData;
 
         RingBuffer<uint8_t> m_rxGrantData;
 
@@ -227,6 +238,8 @@ namespace network
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         bool writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
+        /// <summary>Writes NXDN frame data to the network.</summary>
+        bool writeNXDN(const uint32_t id, const uint32_t streamId, const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes data to the network.</summary>
         virtual bool write(const uint8_t* data, uint32_t length);

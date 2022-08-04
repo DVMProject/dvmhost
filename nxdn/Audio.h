@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2010,2014,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2018 by Jonathan Naylor G4KLX
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -27,12 +27,12 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__AMBE_FEC_H__)
-#define __AMBE_FEC_H__
+#if !defined(__NXDN_AUDIO_H__)
+#define  __NXDN_AUDIO_H__
 
 #include "Defines.h"
 
-namespace edac
+namespace nxdn
 {
     // ---------------------------------------------------------------------------
     //  Constants
@@ -450,54 +450,39 @@ namespace edac
         0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U,
         0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U };
 
-    const uint32_t DMR_A_TABLE[] = {
+    const uint32_t A_TABLE[] = {  
         0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
         48U, 52U, 56U, 60U, 64U, 68U,  1U,  5U,  9U, 13U, 17U, 21U };
-    const uint32_t DMR_B_TABLE[] = {
+    const uint32_t B_TABLE[] = { 
         25U, 29U, 33U, 37U, 41U, 45U, 49U, 53U, 57U, 61U, 65U, 69U,
-        2U,  6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U, 46U };
-    const uint32_t DMR_C_TABLE[] = {
-        50U, 54U, 58U, 62U, 66U, 70U,  3U,  7U, 11U, 15U, 19U, 23U,
-        27U, 31U, 35U, 39U, 43U, 47U, 51U, 55U, 59U, 63U, 67U, 71U };
-
-    const uint32_t IMBE_INTERLEAVE[] = {
-        0,  7, 12, 19, 24, 31, 36, 43, 48, 55, 60, 67, 72, 79, 84, 91,  96, 103, 108, 115, 120, 127, 132, 139,
-        1,  6, 13, 18, 25, 30, 37, 42, 49, 54, 61, 66, 73, 78, 85, 90,  97, 102, 109, 114, 121, 126, 133, 138,
-        2,  9, 14, 21, 26, 33, 38, 45, 50, 57, 62, 69, 74, 81, 86, 93,  98, 105, 110, 117, 122, 129, 134, 141,
-        3,  8, 15, 20, 27, 32, 39, 44, 51, 56, 63, 68, 75, 80, 87, 92,  99, 104, 111, 116, 123, 128, 135, 140,
-        4, 11, 16, 23, 28, 35, 40, 47, 52, 59, 64, 71, 76, 83, 88, 95, 100, 107, 112, 119, 124, 131, 136, 143,
-        5, 10, 17, 22, 29, 34, 41, 46, 53, 58, 65, 70, 77, 82, 89, 94, 101, 106, 113, 118, 125, 130, 137, 142 };
+        2U,  6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U };
+    const uint32_t C_TABLE[] = { 
+        46U, 50U, 54U, 58U, 62U, 66U, 70U,  3U,  7U, 11U, 15U, 19U,
+        23U, 27U, 31U, 35U, 39U, 43U, 47U, 51U, 55U, 59U, 63U, 67U, 71U };
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements routines to regenerate DMR/IMBE data using forward error
-    //      correction.
+    //      Implements NXDN audio processing and interleaving.
     // ---------------------------------------------------------------------------
 
-    class HOST_SW_API AMBEFEC {
+    class HOST_SW_API Audio {
     public:
-        /// <summary>Initializes a new instance of the AMBEFEC class.</summary>
-        AMBEFEC();
-        /// <summary>Finalizes a instance of the AMBEFEC class.</summary>
-        ~AMBEFEC();
+        /// <summary>Initializes a new instance of the Audio class.</summary>
+        Audio();
+        /// <summary>Finalizes a instance of the Audio class.</summary>
+        ~Audio();
 
-        /// <summary>Regenerates the DMR AMBE FEC for the input bytes.</summary>
-        uint32_t regenerateDMR(uint8_t* bytes) const;
-        /// <summary>Returns the number of errors on the DMR BER input bytes.</summary>
-        uint32_t measureDMRBER(const uint8_t* bytes) const;
-
-        /// <summary>Regenerates the P25 IMBE FEC for the input bytes.</summary>
-        uint32_t regenerateIMBE(uint8_t* bytes) const;
-        /// <summary>Returns the number of errors on the P25 BER input bytes.</summary>
-        uint32_t measureP25BER(const uint8_t* bytes) const;
-
-        /// <summary>Regenerates the NXDN AMBE FEC for the input bytes.</summary>
-    	uint32_t regenerateNXDN(uint8_t* bytes) const;
+        /// <summary>Decode a NXDN AMBE audio frame.</summary>
+        void decode(const uint8_t* in, uint8_t* out) const;
+        /// <summary>Encode a NXDN AMBE audio frame.</summary>
+        void encode(const uint8_t* in, uint8_t* out) const;
 
     private:
         /// <summary></summary>
-        uint32_t regenerate(uint32_t& a, uint32_t& b, uint32_t& c, bool b23) const;
+        void decode(const uint8_t* in, uint8_t* out, uint32_t offset) const;
+        /// <summary></summary>
+        void encode(const uint8_t* in, uint8_t* out, uint32_t offset) const;
     };
-} // namespace edac
+} // namespace nxdn
 
-#endif // __AMBE_FEC_H__
+#endif // __NXDN_AUDIO_H__

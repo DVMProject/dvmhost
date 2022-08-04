@@ -63,6 +63,18 @@ HOST_OBJECTS = \
 		lookups/RadioIdLookup.o \
 		lookups/RSSIInterpolator.o \
 		lookups/TalkgroupIdLookup.o \
+		nxdn/acl/AccessControl.o \
+		nxdn/channel/FACCH1.o \
+		nxdn/channel/LICH.o \
+		nxdn/channel/SACCH.o \
+		nxdn/channel/UDCH.o \
+		nxdn/data/Layer3.o \
+		nxdn/packet/Data.o \
+		nxdn/packet/Voice.o \
+		nxdn/Audio.o \
+		nxdn/Control.o \
+		nxdn/Convolution.o \
+		nxdn/Sync.o \
 		p25/acl/AccessControl.o \
 		p25/data/DataBlock.o \
 		p25/data/DataHeader.o \

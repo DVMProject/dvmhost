@@ -57,6 +57,7 @@ using namespace network;
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
+/// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
 /// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
@@ -64,7 +65,7 @@ using namespace network;
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
 /// <param name="handleChGrants">Flag indicating that the system will handle channel grants from the network.</param>
 Network::Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool handleChGrants) :
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool handleChGrants) :
     BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, handleChGrants),
     m_address(address),
     m_port(port),
@@ -72,6 +73,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t local, uint
     m_enabled(false),
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
+    m_nxdnEnabled(nxdn),
     m_updateLookup(updateLookup),
     m_identity(),
     m_rxFrequency(0U),
@@ -229,6 +231,18 @@ void Network::clock(uint32_t ms)
                 m_rxP25Data.addData(&len, 1U);
                 m_rxP25Data.addData(m_buffer, len);
             }
+        }
+        else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {
+#if ENABLE_NXDN_SUPPORT
+            if (m_enabled && m_nxdnEnabled) {
+                if (m_debug)
+                    Utils::dump(1U, "Network Received, NXDN", m_buffer, length);
+
+                uint8_t len = length;
+                m_rxNXDNData.addData(&len, 1U);
+                m_rxNXDNData.addData(m_buffer, len);
+            }
+#endif
         }
         else if (::memcmp(m_buffer, TAG_MASTER_WL_RID, 7U) == 0) {
             if (m_enabled && m_updateLookup) {

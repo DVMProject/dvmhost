@@ -82,6 +82,7 @@ private:
     bool m_dmrRx1K;
     bool m_p25Enabled;
     bool m_p25Rx1K;
+    bool m_nxdnEnabled;
     int m_rxDCOffset;               // dedicated modem - Rx signal DC offset
     int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
@@ -89,8 +90,10 @@ private:
 
     int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
     int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
+    int8_t m_nxdnDiscBWAdj;         // hotspot modem - NXDN discriminator BW adjustment
     int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment
     int8_t m_p25PostBWAdj;          // hotspot modem - P25 post demod BW adjustment
+    int8_t m_nxdnPostBWAdj;         // hotspot modem - NXDN post demod BW adjustment
 
     modem::ADF_GAIN_MODE m_adfGainMode; // hotspot modem - ADF7021 Rx gain
 
@@ -98,6 +101,8 @@ private:
     int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
     int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment
     int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
+    int m_nxdnSymLevel3Adj;         // dedicated modem - +3/-3 NXDN symbol adjustment
+    int m_nxdnSymLevel1Adj;         // dedicated modem - +1/-1 NXDN symbol adjustment
 
     uint8_t m_fdmaPreamble;
     uint8_t m_dmrRxDelay;
@@ -161,6 +166,10 @@ private:
     bool setP25SymLevel3Adj(int incr);
     /// <summary>Helper to change the P25 Symbol Level 1 adjust.</summary>
     bool setP25SymLevel1Adj(int incr);
+    /// <summary>Helper to change the NXDN Symbol Level 3 adjust.</summary>
+    bool setNXDNSymLevel3Adj(int incr);
+    /// <summary>Helper to change the NXDN Symbol Level 1 adjust.</summary>
+    bool setNXDNSymLevel1Adj(int incr);
 
     /// <summary>Process DMR Rx BER.</summary>
     void processDMRBER(const uint8_t* buffer, uint8_t seq);
@@ -170,6 +179,8 @@ private:
     void processP25BER(const uint8_t* buffer);
     /// <summary>Process P25 Tx 1011hz BER.</summary>
     void processP251KBER(const uint8_t* buffer);
+    /// <summary>Process NXDN Rx BER.</summary>
+    void processNXDNBER(const uint8_t* buffer);
 
     /// <summary>Write configuration to the modem DSP.</summary>
     bool writeConfig();
@@ -202,6 +213,9 @@ private:
     void getStatus();
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
+
+    /// <summary></summary>
+    void nxdnScrambler(uint8_t* data) const;
 
     /// <summary>Counts the total number of bit errors between bytes.</summary>
     uint8_t countErrs(uint8_t a, uint8_t b);

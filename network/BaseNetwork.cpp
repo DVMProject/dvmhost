@@ -75,8 +75,10 @@ BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debu
     m_salt(NULL),
     m_streamId(NULL),
     m_p25StreamId(0U),
+    m_nxdnStreamId(0U),
     m_rxDMRData(4000U, "DMR Net Buffer"),
     m_rxP25Data(4000U, "P25 Net Buffer"),
+    m_rxNXDNData(4000U, "NXDN Net Buffer"),
     m_rxGrantData(4000U, "Grant Net Buffer"),
     m_audio(),
     m_random()
@@ -93,6 +95,7 @@ BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debu
 
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     m_p25StreamId = dist(m_random);
+    m_nxdnStreamId = dist(m_random);
     m_streamId[0U] = dist(m_random);
     m_streamId[1U] = dist(m_random);
 }
@@ -245,6 +248,47 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
             ::memset(data, 0x00U, len);
             ::memcpy(data, m_buffer + 24U, len);
         }
+    }
+
+    ret = true;
+    return data;
+}
+
+/// <summary>
+/// Reads NXDN frame data from the NXDN ring buffer.
+/// </summary>
+/// <param name="ret"></param>
+/// <param name="len"></param>
+/// <returns></returns>
+uint8_t* BaseNetwork::readNXDN(bool& ret, uint32_t& len)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
+        ret = false;
+        return NULL;
+    }
+
+    if (m_rxNXDNData.isEmpty()) {
+        ret = false;
+        return NULL;
+    }
+
+    uint8_t length = 0U;
+    m_rxNXDNData.getData(&length, 1U);
+    m_rxNXDNData.getData(m_buffer, length);
+
+    /* TODO TODO -- process more data out of the raw network frames? */
+
+    uint8_t* data = NULL;
+    len = m_buffer[23U];
+
+    if (len <= 24) {
+        data = new uint8_t[len];
+        ::memset(data, 0x00U, len);
+    }
+    else {
+        data = new uint8_t[len];
+        ::memset(data, 0x00U, len);
+        ::memcpy(data, m_buffer + 24U, len);
     }
 
     ret = true;
@@ -425,6 +469,26 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 }
 
 /// <summary>
+/// Writes NXDN frame data to the network.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <returns></returns>
+bool BaseNetwork::writeNXDN(const uint8_t* data, const uint32_t len)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    if (m_nxdnStreamId == 0U)
+        m_nxdnStreamId = dist(m_random);
+
+    m_streamId[0] = m_nxdnStreamId;
+
+    return writeNXDN(m_id, m_nxdnStreamId, data, len);
+}
+
+/// <summary>
 /// Writes a channel grant request to the network.
 /// </summary>
 /// <param name="grp"></param>
@@ -535,6 +599,18 @@ void BaseNetwork::resetP25()
     m_streamId[0] = m_p25StreamId;
 
     m_rxP25Data.clear();
+}
+
+/// <summary>
+/// Resets the NXDN ring buffer.
+/// </summary>
+void BaseNetwork::resetNXDN()
+{
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    m_nxdnStreamId = dist(m_random);
+    m_streamId[0] = m_nxdnStreamId;
+
+    m_rxNXDNData.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -982,6 +1058,48 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 
     if (m_debug)
         Utils::dump(1U, "Network Transmitted, P25 PDU", buffer, (count + PACKET_PAD));
+
+    write(buffer, (count + PACKET_PAD));
+
+    return true;
+}
+
+/// <summary>
+/// Writes NXDN frame data to the network.
+/// </summary>
+/// <param name="id"></param>
+/// <param name="streamId"></param>
+/// <param name="header"></param>
+/// <param name="secHeader"></param>
+/// <param name="currentBlock"></param>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <returns></returns>
+bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const uint8_t* data, const uint32_t len)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    assert(data != NULL);
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);
+
+    /* TODO TODO -- pack more data out of the raw network frames? */
+
+    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+
+    uint32_t count = 24U;
+
+    ::memcpy(buffer + 24U, data, len);
+    count += len;
+
+    buffer[23U] = count;
+
+    if (m_debug)
+        Utils::dump(1U, "Network Transmitted, NXDN", buffer, (count + PACKET_PAD));
 
     write(buffer, (count + PACKET_PAD));
 

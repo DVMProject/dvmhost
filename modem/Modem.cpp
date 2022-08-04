@@ -32,6 +32,7 @@
 #include "Defines.h"
 #include "dmr/DMRDefines.h"
 #include "p25/P25Defines.h"
+#include "nxdn/NXDNDefines.h"
 #include "modem/Modem.h"
 #include "edac/CRC.h"
 #include "Log.h"
@@ -114,6 +115,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset,
     bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
     m_port(port),
+    m_protoVer(0U),
     m_dmrColorCode(0U),
     m_p25NAC(0x293U),
     m_duplex(duplex),
@@ -129,9 +131,11 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_cwIdTXLevel(0U),
     m_dmrTXLevel(0U),
     m_p25TXLevel(0U),
+    m_nxdnTXLevel(0U),
     m_disableOFlowReset(disableOFlowReset),
     m_dmrEnabled(false),
     m_p25Enabled(false),
+    m_nxdnEnabled(false),
     m_rxDCOffset(0),
     m_txDCOffset(0),
     m_isHotspot(false),
@@ -142,13 +146,17 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_rfPower(0U),
     m_dmrDiscBWAdj(0),
     m_p25DiscBWAdj(0),
+    m_nxdnDiscBWAdj(0),
     m_dmrPostBWAdj(0),
     m_p25PostBWAdj(0),
+    m_nxdnPostBWAdj(0),
     m_adfGainMode(ADF_GAIN_AUTO),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
     m_p25SymLevel1Adj(0),
+    m_nxdnSymLevel3Adj(0),
+    m_nxdnSymLevel1Adj(0),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
     m_modemState(STATE_IDLE),
@@ -167,12 +175,15 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_txDMRData2(1000U, "Modem TX DMR2"),
     m_rxP25Data(1000U, "Modem RX P25"),
     m_txP25Data(1000U, "Modem TX P25"),
+    m_rxNXDNData(1000U, "Modem RX NXDN"),
+    m_txNXDNData(1000U, "Modem TX NXDN"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
     m_dmrSpace1(0U),
     m_dmrSpace2(0U),
     m_p25Space(0U),
+    m_nxdnSpace(0U),
     m_tx(false),
     m_cd(false),
     m_lockout(false),
@@ -214,7 +225,8 @@ void Modem::setDCOffsetParams(int txDCOffset, int rxDCOffset)
 /// </summary>
 /// <param name="dmrEnabled"></param>
 /// <param name="p25Enabled"></param>
-void Modem::setModeParams(bool dmrEnabled, bool p25Enabled)
+/// <param name="nxdnEnabled"></param>
+void Modem::setModeParams(bool dmrEnabled, bool p25Enabled, bool nxdnEnabled)
 {
     m_dmrEnabled = dmrEnabled;
     m_p25Enabled = p25Enabled;
@@ -227,12 +239,14 @@ void Modem::setModeParams(bool dmrEnabled, bool p25Enabled)
 /// <param name="cwIdTXLevel"></param>
 /// <param name="dmrTXLevel"></param>
 /// <param name="p25TXLevel"></param>
-void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel)
+/// <param name="nxdnTXLevel"></param>
+void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel, float nxdnTXLevel)
 {
     m_rxLevel = rxLevel;
     m_cwIdTXLevel = cwIdTXLevel;
     m_dmrTXLevel = dmrTXLevel;
     m_p25TXLevel = p25TXLevel;
+    m_nxdnTXLevel = nxdnTXLevel;
 }
 
 /// <summary>
@@ -242,7 +256,9 @@ void Modem::setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float 
 /// <param name="dmrSymLevel1Adj"></param>
 /// <param name="p25SymLevel3Adj"></param>
 /// <param name="p25SymLevel1Adj"></param>
-void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj)
+/// <param name="nxdnSymLevel3Adj"></param>
+/// <param name="nxdnSymLevel1Adj"></param>
+void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj, int nxdnSymLevel3Adj, int nxdnSymLevel1Adj)
 {
     m_dmrSymLevel3Adj = dmrSymLevel3Adj;
     if (dmrSymLevel3Adj > 128)
@@ -267,6 +283,18 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
         m_p25SymLevel1Adj = 0;
     if (p25SymLevel1Adj < -128)
         m_p25SymLevel1Adj = 0;
+
+    m_nxdnSymLevel3Adj = nxdnSymLevel3Adj;
+    if (nxdnSymLevel3Adj > 128)
+        m_nxdnSymLevel3Adj = 0;
+    if (nxdnSymLevel3Adj < -128)
+        m_nxdnSymLevel3Adj = 0;
+
+    m_nxdnSymLevel1Adj = nxdnSymLevel1Adj;
+    if (nxdnSymLevel1Adj > 128)
+        m_nxdnSymLevel1Adj = 0;
+    if (nxdnSymLevel1Adj < -128)
+        m_nxdnSymLevel1Adj = 0;
 }
 
 /// <summary>
@@ -277,11 +305,15 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
 /// <param name="rfPower"></param>
 /// <param name="dmrDiscBWAdj"></param>
 /// <param name="p25DiscBWAdj"></param>
+/// <param name="nxdnDiscBWAdj"></param>
 /// <param name="dmrPostBWAdj"></param>
 /// <param name="p25PostBWAdj"></param>
+/// <param name="nxdnPostBWAdj"></param>
 /// <param name="gainMode"></param>
 void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower,
-    int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode)
+    int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
+    int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj,
+    ADF_GAIN_MODE gainMode)
 {
     m_adfGainMode = gainMode;
     m_rfPower = rfPower;
@@ -292,8 +324,10 @@ void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTu
 
     m_dmrDiscBWAdj = dmrDiscBWAdj;
     m_p25DiscBWAdj = p25DiscBWAdj;
+    m_nxdnDiscBWAdj = nxdnDiscBWAdj;
     m_dmrPostBWAdj = dmrPostBWAdj;
     m_p25PostBWAdj = p25PostBWAdj;
+    m_nxdnPostBWAdj = nxdnPostBWAdj;
 }
 
 /// <summary>
@@ -647,6 +681,49 @@ void Modem::clock(uint32_t ms)
         }
         break;
 
+        /** Next Generation Digital Narrowband */
+        case CMD_NXDN_DATA:
+        {
+#if ENABLE_NXDN_SUPPORT
+            //if (m_trace)
+            //    Utils::dump(1U, "RX NXDN Data", m_buffer, m_length);
+
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_NXDN_DATA double length?; len = %u", m_length);
+                break;
+            }
+
+            uint8_t data = m_length - 2U;
+            m_rxNXDNData.addData(&data, 1U);
+
+            data = TAG_DATA;
+            m_rxNXDNData.addData(&data, 1U);
+
+            m_rxNXDNData.addData(m_buffer + 3U, m_length - 3U);
+#endif
+        }
+        break;
+
+        case CMD_NXDN_LOST:
+        {
+#if ENABLE_NXDN_SUPPORT
+            //if (m_trace)
+            //    Utils::dump(1U, "RX NXDN Lost", m_buffer, m_length);
+
+            if (m_rspDoubleLength) {
+                LogError(LOG_MODEM, "CMD_NXDN_LOST double length?; len = %u", m_length);
+                break;
+            }
+
+            uint8_t data = 1U;
+            m_rxNXDNData.addData(&data, 1U);
+
+            data = TAG_LOST;
+            m_rxNXDNData.addData(&data, 1U);
+#endif
+        }
+        break;
+
         /** General */
         case CMD_GET_STATUS:
         {
@@ -724,16 +801,17 @@ void Modem::clock(uint32_t ms)
             m_dmrSpace1 = m_buffer[7U];
             m_dmrSpace2 = m_buffer[8U];
             m_p25Space = m_buffer[10U];
+            m_nxdnSpace = m_buffer[11U];
 
             if (m_dumpModemStatus) {
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u",
                     m_isHotspot, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space);
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u",
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRData1.length(), m_rxDMRData1.dataSize(), m_rxDMRData1.freeSpace(), m_rxDMRData2.length(), m_rxDMRData2.dataSize(), m_rxDMRData2.freeSpace(),
-                    m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace());
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, txDMRData1 size = %u, len = %u, free = %u; txDMRData2 size = %u, len = %u, free = %u, txP25Data size = %u, len = %u, free = %u",
+                    m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace(), m_rxNXDNData.length(), m_rxNXDNData.dataSize(), m_rxNXDNData.freeSpace());
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, txDMRData1 size = %u, len = %u, free = %u; txDMRData2 size = %u, len = %u, free = %u, txP25Data size = %u, len = %u, free = %u, txNXDNData size = %u, len = %u, free = %u",
                     m_txDMRData1.length(), m_txDMRData1.dataSize(), m_txDMRData1.freeSpace(), m_txDMRData2.length(), m_txDMRData2.dataSize(), m_txDMRData2.freeSpace(),
-                    m_txP25Data.length(), m_txP25Data.dataSize(), m_txP25Data.freeSpace());
+                    m_txP25Data.length(), m_txP25Data.dataSize(), m_txP25Data.freeSpace(), m_txNXDNData.length(), m_txNXDNData.dataSize(), m_txNXDNData.freeSpace());
             }
 
             m_inactivityTimer.start();
@@ -902,6 +980,25 @@ uint32_t Modem::readP25Data(uint8_t* data)
 }
 
 /// <summary>
+/// Reads NXDN frame data from the NXDN ring buffer.
+/// </summary>
+/// <param name="data">Buffer to write frame data to.</param>
+/// <returns>Length of data read from ring buffer.</returns>
+uint32_t Modem::readNXDNData(uint8_t* data)
+{
+    assert(data != NULL);
+
+    if (m_rxNXDNData.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_rxNXDNData.getData(&len, 1U);
+    m_rxNXDNData.getData(data, len);
+
+    return len;
+}
+
+/// <summary>
 /// Helper to test if the DMR Slot 1 ring buffer has free space.
 /// </summary>
 /// <returns>True, if the DMR Slot 1 ring buffer has free space, otherwise false.</returns>
@@ -928,6 +1025,16 @@ bool Modem::hasDMRSpace2() const
 bool Modem::hasP25Space() const
 {
     uint32_t space = m_txP25Data.freeSpace() / (p25::P25_LDU_FRAME_LENGTH_BYTES + 4U);
+    return space > 1U;
+}
+
+/// <summary>
+/// Helper to test if the NXDN ring buffer has free space.
+/// </summary>
+/// <returns>True, if the NXDN ring buffer has free space, otherwise false.</returns>
+bool Modem::hasNXDNSpace() const
+{
+    uint32_t space = m_txNXDNData.freeSpace() / (nxdn::NXDN_FRAME_LENGTH_BYTES + 4U);
     return space > 1U;
 }
 
@@ -1026,6 +1133,16 @@ void Modem::clearP25Data()
 }
 
 /// <summary>
+/// Clears any buffered NXDN frame data to be sent to the air interface modem.
+/// </summary>
+void Modem::clearNXDNData()
+{
+    if (!m_txNXDNData.isEmpty()) {
+        m_txNXDNData.clear();
+    }
+}
+
+/// <summary>
 /// Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
@@ -1105,6 +1222,30 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
     m_rxP25Data.addData(&val, 1U);
 
     m_rxP25Data.addData(data, length);
+}
+
+/// <summary>
+/// Internal helper to inject NXDN frame data as if it came from the air interface modem.
+/// </summary>
+/// <param name="data">Data to write to ring buffer.</param>
+/// <param name="length">Length of data to write.</param>
+void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
+{
+    assert(data != NULL);
+    assert(length > 0U);
+
+    if (m_trace)
+        Utils::dump(1U, "Injected NXDN Data", data, length);
+
+    uint8_t val = length;
+    m_rxNXDNData.addData(&val, 1U);
+
+    val = TAG_DATA;
+    m_rxNXDNData.addData(&val, 1U);
+    val = 0x01U;    // valid sync
+    m_rxNXDNData.addData(&val, 1U);
+
+    m_rxNXDNData.addData(data, length);
 }
 
 /// <summary>
@@ -1272,6 +1413,61 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 }
 
 /// <summary>
+/// Writes NXDN frame data to the NXDN ring buffer.
+/// </summary>
+/// <param name="data">Data to write to ring buffer.</param>
+/// <param name="length">Length of data to write.</param>
+/// <param name="immediate">Flag indicating data should be immediately written.</param>
+/// <returns>True, if data is written, otherwise false.</returns>
+bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
+{
+    assert(data != NULL);
+    assert(length > 0U);
+
+    const uint8_t MAX_LENGTH = 250U;
+
+    if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
+        return false;
+    if (length > MAX_LENGTH) {
+        LogError(LOG_MODEM, "Modem::writeNXDNData(); request data to write >%u?, len = %u", MAX_LENGTH, length);
+        Utils::dump(1U, "Modem::writeNXDNData(); Attmpted Data", data, length);
+        return false;
+    }
+
+    uint8_t buffer[MAX_LENGTH];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = length + 2U;
+    buffer[2U] = CMD_NXDN_DATA;
+
+    ::memcpy(buffer + 3U, data + 1U, length - 1U);
+
+    uint8_t len = length + 2U;
+
+    // write or buffer NXDN data to air interface
+    if (immediate && m_nxdnSpace > 1U) {
+        if (m_debug)
+            LogDebug(LOG_MODEM, "Modem::writeNXDNData(); immediate write (len %u)", length);
+        //if (m_trace)
+        //    Utils::dump(1U, "Immediate TX NXDN Data", m_buffer, len);
+
+        int ret = write(m_buffer, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing NXDN data");
+
+        m_playoutTimer.start();
+
+        m_nxdnSpace--;
+    }
+    else {
+        m_txNXDNData.addData(&len, 1U);
+        m_txNXDNData.addData(buffer, len);
+    }
+
+    return true;
+}
+
+/// <summary>
 /// Triggers the start of DMR transmit.
 /// </summary>
 /// <param name="tx"></param>
@@ -1415,6 +1611,15 @@ bool Modem::sendCWId(const std::string& callsign)
     return write(buffer, length + 3U) == int(length + 3U);
 }
 
+/// <summary>
+/// Returns the protocol version of the connected modem.
+/// </param>
+/// <returns></returns>
+uint8_t Modem::getVersion() const
+{
+    return m_protoVer;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -1470,10 +1675,14 @@ bool Modem::getFirmwareVersion()
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_GET_VERSION) {
                 LogMessage(LOG_MODEM, "Protocol: %02x, CPU: %02X", m_buffer[3U], m_buffer[4U]);
-                uint8_t protoVer = m_buffer[3U];
-                switch (protoVer) {
-                case PROTOCOL_VERSION:
-                    LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, m_length - 21U, m_buffer + 21U, protoVer);
+                m_protoVer = m_buffer[3U];
+
+                if (m_protoVer >= 2U) {
+                    LogInfoEx(LOG_MODEM, MODEM_VERSION_STR, m_length - 21U, m_buffer + 21U, m_protoVer);
+                    if (m_protoVer < 3U) {
+                        LogWarning(LOG_MODEM, "Legacy firmware detected; this version of the firmware will not support NXDN or any future enhancments.");
+                    }
+
                     switch (m_buffer[4U]) {
                     case 0U:
                         LogMessage(LOG_MODEM, "Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U]);
@@ -1491,10 +1700,11 @@ bool Modem::getFirmwareVersion()
                         LogMessage(LOG_MODEM, "Unknown CPU type: %u", m_buffer[4U]);
                         break;
                     }
-                    return true;
 
-                default:
-                    LogError(LOG_MODEM, MODEM_UNSUPPORTED_STR, protoVer);
+                    return true;
+                }
+                else {
+                    LogError(LOG_MODEM, MODEM_UNSUPPORTED_STR, m_protoVer);
                     return false;
                 }
             }
@@ -1530,6 +1740,7 @@ bool Modem::getStatus()
 bool Modem::writeConfig()
 {
     uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 17U;
@@ -1585,10 +1796,22 @@ bool Modem::writeConfig()
     buffer[17U] = (uint8_t)(m_rxDCOffset + 128);
 
     buffer[14U] = m_p25CorrCount;
+
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        buffer[1U] = 18U;
+
+        if (m_nxdnEnabled)
+            buffer[4U] |= 0x10U;
+
+        buffer[18U] = (uint8_t)(m_nxdnTXLevel * 2.55F + 0.5F);
+    }
+
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::writeConfig(), Written", buffer, 17U);
+    Utils::dump(1U, "Modem::writeConfig(), Written", buffer, buffer[1U]);
 #endif
-    int ret = write(buffer, 17U);
+
+    int ret = write(buffer, buffer[1U]);
     if (ret != 17)
         return false;
 
@@ -1625,7 +1848,8 @@ bool Modem::writeConfig()
 /// <returns>True, if level adjustments are written, otherwise false.</returns>
 bool Modem::writeSymbolAdjust()
 {
-    uint8_t buffer[10U];
+    uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 7U;
@@ -1637,7 +1861,15 @@ bool Modem::writeSymbolAdjust()
     buffer[5U] = (uint8_t)(m_p25SymLevel3Adj + 128);
     buffer[6U] = (uint8_t)(m_p25SymLevel1Adj + 128);
 
-    int ret = write(buffer, 7U);
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        buffer[1U] = 9U;
+
+        buffer[7U] = (uint8_t)(m_nxdnSymLevel3Adj + 128);
+        buffer[8U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
+    }
+
+    int ret = write(buffer, buffer[1U]);
     if (ret <= 0)
         return false;
 
@@ -1672,7 +1904,8 @@ bool Modem::writeSymbolAdjust()
 /// <returns></returns>
 bool Modem::writeRFParams()
 {
-    unsigned char buffer[18U];
+    uint8_t buffer[20U];
+    ::memset(buffer, 0x00U, 20U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 18U;
@@ -1701,9 +1934,17 @@ bool Modem::writeRFParams()
 
     buffer[17U] = (uint8_t)m_adfGainMode;
 
-    // CUtils::dump(1U, "Written", buffer, len);
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        buffer[1U] = 20U;
 
-    int ret = m_port->write(buffer, 18U);
+        buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
+        buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
+    }
+
+    // CUtils::dump(1U, "Written", buffer, buffer[1U]);
+
+    int ret = m_port->write(buffer, buffer[1U]);
     if (ret <= 0)
         return false;
 
@@ -1840,6 +2081,7 @@ void Modem::processFlashConfig(const uint8_t *buffer)
     FLASH_VALUE_CHECK_FLOAT(m_cwIdTXLevel, txLevel, 50.0F, "cwIdTxLevel");
     FLASH_VALUE_CHECK_FLOAT(m_dmrTXLevel, txLevel, 50.0F, "dmrTxLevel");
     FLASH_VALUE_CHECK_FLOAT(m_p25TXLevel, txLevel, 50.0F, "p25TxLevel");
+    FLASH_VALUE_CHECK_FLOAT(m_nxdnTXLevel, txLevel, 50.0F, "nxdnTxLevel");
 
     uint8_t dmrRxDelay = buffer[10U];
     FLASH_VALUE_CHECK(m_dmrRxDelay, dmrRxDelay, 7U, "dmrRxDelay");
@@ -1863,6 +2105,14 @@ void Modem::processFlashConfig(const uint8_t *buffer)
     int8_t p25PostBWAdj = int8_t(buffer[23U]) - 128;
     FLASH_VALUE_CHECK(m_p25PostBWAdj, p25PostBWAdj, 0, "p25PostBWAdj");
 
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        int8_t nxdnDiscBWAdj = int8_t(buffer[39U]) - 128;
+        FLASH_VALUE_CHECK(m_nxdnDiscBWAdj, nxdnDiscBWAdj, 0, "nxdnDiscBWAdj");
+        int8_t nxdnPostBWAdj = int8_t(buffer[40U]) - 128;
+        FLASH_VALUE_CHECK(m_nxdnPostBWAdj, nxdnPostBWAdj, 0, "nxdnPostBWAdj");
+    }
+
     ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)buffer[24U];
     FLASH_VALUE_CHECK(m_adfGainMode, adfGainMode, ADF_GAIN_AUTO, "adfGainMode");
 
@@ -1883,6 +2133,14 @@ void Modem::processFlashConfig(const uint8_t *buffer)
     FLASH_VALUE_CHECK(m_p25SymLevel3Adj, p25SymLevel3Adj, 0, "p25SymLevel3Adj");
     int p25SymLevel1Adj = int(buffer[38U]) - 128;
     FLASH_VALUE_CHECK(m_p25SymLevel1Adj, p25SymLevel1Adj, 0, "p25SymLevel1Adj");
+
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        int nxdnSymLevel3Adj = int(buffer[41U]) - 128;
+        FLASH_VALUE_CHECK(m_nxdnSymLevel3Adj, nxdnSymLevel3Adj, 0, "nxdnSymLevel3Adj");
+        int nxdnSymLevel1Adj = int(buffer[42U]) - 128;
+        FLASH_VALUE_CHECK(m_nxdnSymLevel1Adj, nxdnSymLevel1Adj, 0, "nxdnSymLevel1Adj");
+    }
 }
 
 /// <summary>

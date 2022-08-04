@@ -111,6 +111,7 @@ namespace dmr
         static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
 
     private:
+        friend class Control;
         friend class packet::Voice;
         packet::Voice* m_voice;
         friend class packet::Data;

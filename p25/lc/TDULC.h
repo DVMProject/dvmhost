@@ -68,9 +68,9 @@ namespace p25
             /// <summary>Equals operator.</summary>
             TDULC& operator=(const TDULC& data);
 
-            /// <summary>Decode a trunking signalling block.</summary>
+            /// <summary>Decode a terminator data unit w/ link control.</summary>
             bool decode(const uint8_t* data);
-            /// <summary>Encode a trunking signalling block.</summary>
+            /// <summary>Encode a terminator data unit w/ link control.</summary>
             void encode(uint8_t* data);
 
         public:

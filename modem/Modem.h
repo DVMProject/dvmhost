@@ -50,8 +50,6 @@
 #define MODEM_RESP_HANDLER_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1, std::placeholders::_2, \
     std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)
 
-const uint8_t PROTOCOL_VERSION = 2U;
-
 // ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
@@ -76,6 +74,8 @@ namespace modem
         STATE_DMR = 1U,
         // Project 25
         STATE_P25 = 2U,
+        // NXDN
+        STATE_NXDN = 3U,
 
         // CW
         STATE_CW = 10U,
@@ -91,7 +91,8 @@ namespace modem
         STATE_RSSI_CAL = 96U,
 
         STATE_P25_CAL = 97U,
-        STATE_DMR_CAL = 98U
+        STATE_DMR_CAL = 98U,
+        STATE_NXDN_CAL = 99U
     };
 
     enum DVM_COMMANDS {
@@ -120,6 +121,9 @@ namespace modem
         CMD_P25_DATA = 0x31U,
         CMD_P25_LOST = 0x32U,
         CMD_P25_CLEAR = 0x33U,
+
+        CMD_NXDN_DATA = 0x41U,
+        CMD_NXDN_LOST = 0x42U,
 
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,
@@ -171,6 +175,7 @@ namespace modem
 
         RSN_DMR_DISABLED = 63U,
         RSN_P25_DISABLED = 64U,
+        RSN_NXDN_DISABLED = 65U
     };
 
     enum RESP_STATE {
@@ -190,7 +195,7 @@ namespace modem
 
     const uint8_t DVM_FRAME_START = 0xFEU;
 
-    const uint8_t DVM_CONF_AREA_VER = 0x01U;
+    const uint8_t DVM_CONF_AREA_VER = 0x02U;
     const uint8_t DVM_CONF_AREA_LEN = 246U;
 
     const uint8_t MAX_FDMA_PREAMBLE = 255U;
@@ -218,14 +223,14 @@ namespace modem
         /// <summary>Sets the RF DC offset parameters.</summary>
         void setDCOffsetParams(int txDCOffset, int rxDCOffset);
         /// <summary>Sets the enabled modes.</summary>
-        void setModeParams(bool dmrEnabled, bool p25Enabled);
+        void setModeParams(bool dmrEnabled, bool p25Enabled, bool nxdnEnabled);
         /// <summary>Sets the RF deviation levels.</summary>
-        void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel);
+        void setLevels(float rxLevel, float cwIdTXLevel, float dmrTXLevel, float p25TXLevel, float nxdnTXLevel);
         /// <summary>Sets the symbol adjustment levels.</summary>
-        void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj);
+        void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj, int nxdnSymLevel3Adj, int ndxnSymLevel1Adj);
         /// <summary>Sets the RF parameters.</summary>
-        void setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj,
-            int8_t dmrPostBWAdj, int8_t p25PostBWAdj, ADF_GAIN_MODE gainMode);
+        void setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
+            int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj, ADF_GAIN_MODE gainMode);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
@@ -260,6 +265,8 @@ namespace modem
         uint32_t readDMRData2(uint8_t* data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
         uint32_t readP25Data(uint8_t* data);
+        /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
+        uint32_t readNXDNData(uint8_t* data);
 
         /// <summary>Helper to test if the DMR Slot 1 ring buffer has free space.</summary>
         bool hasDMRSpace1() const;
@@ -267,6 +274,8 @@ namespace modem
         bool hasDMRSpace2() const;
         /// <summary>Helper to test if the P25 ring buffer has free space.</summary>
         bool hasP25Space() const;
+        /// <summary>Helper to test if the NXDN ring buffer has free space.</summary>
+        bool hasNXDNSpace() const;
         
         /// <summary>Helper to test if the modem is a hotspot.</summary>
         bool isHotspot() const;
@@ -290,6 +299,8 @@ namespace modem
         void clearDMRData2();
         /// <summary>Clears any buffered P25 frame data to be sent to the air interface modem.</summary>
         void clearP25Data();
+        /// <summary>Clears any buffered NXDN frame data to be sent to the air interface modem.</summary>
+        void clearNXDNData();
 
         /// <summary>Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.</summary>
         void injectDMRData1(const uint8_t* data, uint32_t length);
@@ -297,6 +308,8 @@ namespace modem
         void injectDMRData2(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject P25 frame data as if it came from the air interface modem.</summary>
         void injectP25Data(const uint8_t* data, uint32_t length);
+        /// <summary>Internal helper to inject NXDN frame data as if it came from the air interface modem.</summary>
+        void injectNXDNData(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
         bool writeDMRData1(const uint8_t* data, uint32_t length, bool immediate = false);
@@ -304,6 +317,8 @@ namespace modem
         bool writeDMRData2(const uint8_t* data, uint32_t length, bool immediate = false);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
         bool writeP25Data(const uint8_t* data, uint32_t length, bool immediate = false);
+        /// <summary>Writes NXDN frame data to the NXDN ring buffer.</summary>
+        bool writeNXDNData(const uint8_t* data, uint32_t length, bool immediate = false);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
         bool writeDMRStart(bool tx);
@@ -323,10 +338,15 @@ namespace modem
         /// <summary>Transmits the given string as CW morse.</summary>
         bool sendCWId(const std::string& callsign);
 
+        /// <summary>Returns the protocol version of the connected modem.</param>
+        uint8_t getVersion() const;
+
     private:
         friend class ::HostCal;
 
         port::IModemPort* m_port;
+
+        uint8_t m_protoVer;
 
         uint32_t m_dmrColorCode;
         uint32_t m_p25NAC;
@@ -348,11 +368,13 @@ namespace modem
         float m_cwIdTXLevel;            // dedicated/hotspot modem - CW ID Tx modulation level
         float m_dmrTXLevel;             // dedicated/hotspot modem - DMR Tx modulation level
         float m_p25TXLevel;             // dedicated/hotspot modem - P25 Tx modulation level
+        float m_nxdnTXLevel;            // dedicated/hotspot modem - P25 Tx modulation level
 
         bool m_disableOFlowReset;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;
+        bool m_nxdnEnabled;
         int m_rxDCOffset;               // dedicated modem - Rx signal DC offset
         int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
@@ -366,8 +388,10 @@ namespace modem
 
         int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
         int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
+        int8_t m_nxdnDiscBWAdj;         // hotspot modem - NXDN discriminator BW adjustment
         int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment
         int8_t m_p25PostBWAdj;          // hotspot modem - P25 post demod BW adjustment
+        int8_t m_nxdnPostBWAdj;         // hotspot modem - NXDN post demod BW adjustment
 
         ADF_GAIN_MODE m_adfGainMode;    // hotspot modem - ADF7021 Rx gain
 
@@ -375,6 +399,8 @@ namespace modem
         int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
         int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment
         int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
+        int m_nxdnSymLevel3Adj;         // dedicated modem - +3/-3 NXDN symbol adjustment
+        int m_nxdnSymLevel1Adj;         // dedicated modem - +1/-1 NXDN symbol adjustment
 
         uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count
@@ -398,6 +424,8 @@ namespace modem
         RingBuffer<uint8_t> m_txDMRData2;
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_txP25Data;
+        RingBuffer<uint8_t> m_rxNXDNData;
+        RingBuffer<uint8_t> m_txNXDNData;
 
         bool m_useDFSI;
 
@@ -407,6 +435,7 @@ namespace modem
         uint32_t m_dmrSpace1;
         uint32_t m_dmrSpace2;
         uint32_t m_p25Space;
+        uint32_t m_nxdnSpace;
 
         bool m_tx;
         bool m_cd;

@@ -278,6 +278,7 @@ int HostSetup::run()
             bool fixedMode = m_conf["system"]["fixedMode"].as<bool>(false);
             bool dmrEnabled = m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
             bool p25Enabled = m_conf["protocols"]["p25"]["enable"].as<bool>(true);
+            bool nxdnEnabled = m_conf["protocols"]["nxdn"]["enable"].as<bool>(true);
 
             char value[9] = { '\0' };
             ::fprintf(stdout, "> Identity [%s] ? ", identity.c_str());
@@ -365,6 +366,16 @@ int HostSetup::run()
             }
 
             m_conf["protocols"]["p25"]["enable"] = __BOOL_STR(p25Enabled);
+
+            ::fprintf(stdout, "> NXDN Enabled [%u] (Y/N) ? ", nxdnEnabled);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                nxdnEnabled = value[0] == 'Y' ? true : false;
+            }
+
+            m_conf["protocols"]["nxdn"]["enable"] = __BOOL_STR(nxdnEnabled);
 
             printStatus();
         }
@@ -485,6 +496,7 @@ int HostSetup::run()
             rfssConfig = m_conf["system"]["config"];
             uint32_t dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
             uint32_t p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
+            uint32_t nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
 
             char value[6] = { '\0' };
             ::fprintf(stdout, "> DMR Color Code [%u] ? ", dmrColorCode);
@@ -507,6 +519,16 @@ int HostSetup::run()
                 p25NAC = p25::P25Utils::nac(p25NAC);
 
                 m_conf["system"]["config"]["nac"] = __INT_HEX_STR(p25NAC);
+            }
+
+            ::fprintf(stdout, "> NXDN RAN [%u] ? ", nxdnRAN);
+            ::fflush(stdout);
+
+            m_console.getLine(value, 2, 0);
+            if (value[0] != '\0') {
+                sscanf(value, "%u", &nxdnRAN);
+
+                m_conf["system"]["config"]["ran"] = __INT_STR(nxdnRAN);
             }
 
             printStatus();
@@ -691,7 +713,7 @@ void HostSetup::displayHelp()
     LogMessage(LOG_SETUP, "    s        Set system configuration");
     LogMessage(LOG_SETUP, "    C        Set callsign and CW configuration");
     LogMessage(LOG_SETUP, "    N        Set site and network configuration");
-    LogMessage(LOG_SETUP, "    a        Set NAC and Color Code");
+    LogMessage(LOG_SETUP, "    a        Set NAC, Color Code and RAN");
     LogMessage(LOG_SETUP, "    i        Set logical channel ID");
     LogMessage(LOG_SETUP, "    c        Set logical channel number (by channel number)");
     LogMessage(LOG_SETUP, "    f        Set logical channel number (by Tx frequency)");

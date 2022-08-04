@@ -350,6 +350,16 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
 }
 
 /// <summary>
+/// Flag indicating whether the processor or is busy or not.
+/// </summary>
+/// <returns>True, if processor is busy, otherwise false.</returns>
+bool Control::isBusy() const
+{
+    return (m_slot1->m_rfState != RS_RF_LISTENING || m_slot1->m_netState != RS_NET_IDLE) &&
+        (m_slot2->m_rfState != RS_RF_LISTENING || m_slot2->m_netState != RS_NET_IDLE);
+}
+
+/// <summary>
 /// Helper to change the debug and verbose state.
 /// </summary>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>

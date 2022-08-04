@@ -138,7 +138,7 @@ void ModemNullPort::getVersion()
     reply[1U] = 0U;
     reply[2U] = CMD_GET_VERSION;
 
-    reply[3U] = PROTOCOL_VERSION;
+    reply[3U] = 3U;
     reply[4U] = 15U;
 
     // Reserve 16 bytes for the UDID

@@ -34,6 +34,7 @@
 #include "dmr/DMRUtils.h"
 #include "p25/Control.h"
 #include "p25/P25Utils.h"
+#include "nxdn/Control.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"
@@ -93,6 +94,7 @@ Host::Host(const std::string& confFile) :
     m_cwIdTimer(1000U),
     m_dmrEnabled(false),
     m_p25Enabled(false),
+    m_nxdnEnabled(false),
     m_duplex(false),
     m_fixedMode(false),
     m_timeout(180U),
@@ -529,13 +531,57 @@ int Host::run()
         }
     }
 
-    if (!m_dmrEnabled && !m_p25Enabled) {
-        ::LogError(LOG_HOST, "No modes enabled? DMR and/or P25 must be enabled!");
+    // initialize NXDN
+    nxdn::Control* nxdn = NULL;
+#if ENABLE_NXDN_SUPPORT
+    LogInfo("NXDN Parameters");
+    LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
+    if (m_nxdnEnabled) {
+        yaml::Node nxdnProtocol = protocolConf["nxdn"];
+        uint32_t callHang = nxdnProtocol["callHang"].as<uint32_t>(3U);
+        uint32_t queueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
+        bool nxdnVerbose = nxdnProtocol["verbose"].as<bool>(true);
+        bool nxdnDebug = nxdnProtocol["debug"].as<bool>(false);
+
+        // clamp queue size to no less then 24 and no greater the 100
+        if (queueSize <= 24U) {
+            LogWarning(LOG_HOST, "NXDN queue size must be greater then 24 frames, defaulting to 24 frames!");
+            queueSize = 24U;
+        }
+        if (queueSize > 100U) {
+            LogWarning(LOG_HOST, "NXDN queue size must be less then 100 frames, defaulting to 100 frames!");
+            queueSize = 100U; 
+        }
+        if (queueSize > 60U) {
+            LogWarning(LOG_HOST, "NXDN queue size is excessive, >60 frames!");
+        }
+
+        uint32_t queueSizeBytes = queueSize * (nxdn::NXDN_FRAME_LENGTH_BYTES * 5U);
+
+        LogInfo("    Call Hang: %us", callHang);
+        LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
+
+        nxdn = new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
+            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
+            nxdnDebug, nxdnVerbose);
+        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_channelId, m_channelNo, true);
+
+        if (nxdnVerbose) {
+            LogInfo("    Verbose: yes");
+        }
+        if (nxdnDebug) {
+            LogInfo("    Debug: yes");
+        }
+    }
+#endif
+
+    if (!m_dmrEnabled && !m_p25Enabled && !m_nxdnEnabled) {
+        ::LogError(LOG_HOST, "No modes enabled? DMR, P25 and/or NXDN must be enabled!");
         g_killed = true;
     }
 
-    if (m_fixedMode && m_dmrEnabled && m_p25Enabled) {
-        ::LogError(LOG_HOST, "Cannot have DMR enabled and P25 enabled when using fixed state! Choose one protocol for fixed state operation.");
+    if (m_fixedMode && ((m_dmrEnabled && m_p25Enabled) || (m_dmrEnabled && m_nxdnEnabled) || (m_p25Enabled && m_nxdnEnabled))) {
+        ::LogError(LOG_HOST, "Cannot have DMR, P25 and NXDN when using fixed state! Choose one protocol for fixed state operation.");
         g_killed = true;
     }
 
@@ -545,11 +591,21 @@ int Host::run()
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using DFSI!");
         g_killed = true;
     }
+
+    if (m_useDFSI && m_nxdnEnabled) {
+        ::LogError(LOG_HOST, "Cannot have NXDN enabled when using DFSI!");
+        g_killed = true;
+    }
 #endif
 
     // P25 CC checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
+        g_killed = true;
+    }
+
+    if (m_nxdnEnabled && m_p25CtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have NXDN enabled when using dedicated P25 control!");
         g_killed = true;
     }
 
@@ -565,6 +621,11 @@ int Host::run()
     // DMR TSCC checks
     if (m_p25Enabled && m_dmrCtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have P25 enabled when using dedicated DMR TSCC control!");
+        g_killed = true;
+    }
+
+    if (m_nxdnEnabled && m_dmrCtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have NXDN enabled when using dedicated DMR TSCC control!");
         g_killed = true;
     }
 
@@ -601,6 +662,8 @@ int Host::run()
                 setState(STATE_DMR);
             if (p25 != NULL)
                 setState(STATE_P25);
+            if (nxdn != NULL)
+                setState(STATE_NXDN);
         }
         else {
             setState(STATE_IDLE);
@@ -630,8 +693,10 @@ int Host::run()
         // check if the modem is a hotspot (this check must always be done after late init)
         if (m_modem->isHotspot())
         {
-            if (m_dmrEnabled && m_p25Enabled) {
-                ::LogError(LOG_HOST, "Dual-mode (DMR and P25) is not supported for hotspots!");
+            if ((m_dmrEnabled && m_p25Enabled) ||
+                (m_nxdnEnabled && m_dmrEnabled) ||
+                (m_nxdnEnabled && m_p25Enabled)) {
+                ::LogError(LOG_HOST, "Multi-mode (DMR, P25 and NXDN) is not supported for hotspots!");
                 g_killed = true;
                 killed = true;
             }
@@ -714,6 +779,10 @@ int Host::run()
                 LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_P25);
                 setState(STATE_P25);
             }
+            if (nxdn != NULL && m_state != STATE_NXDN && !m_modem->hasTX()) {
+                LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_NXDN);
+                setState(STATE_NXDN);
+            }
         }
 
         // ------------------------------------------------------
@@ -729,8 +798,6 @@ int Host::run()
             if (ret) {
                 len = dmr->getFrame(1U, data);
                 if (len > 0U) {
-                    LogDebug(LOG_HOST, "found DMR frame, len = %u", len);
-
                     // if the state is idle; set to DMR, start mode timer and start DMR idle frames
                     if (m_state == STATE_IDLE) {
                         m_modeTimer.setTimeout(m_netModeHang);
@@ -865,6 +932,42 @@ int Host::run()
             }
         }
 
+        /** Next Generation Digital Narrowband */
+        // check if there is space on the modem for NXDN frames,
+        // if there is read frames from the NXDN controller and write it
+        // to the modem
+#if ENABLE_NXDN_SUPPORT
+        if (nxdn != NULL) {
+            ret = m_modem->hasNXDNSpace();
+            if (ret) {
+                len = nxdn->getFrame(data);
+                if (len > 0U) {
+                    // if the state is idle; set to NXDN and start mode timer
+                    if (m_state == STATE_IDLE) {
+                        m_modeTimer.setTimeout(m_netModeHang);
+                        setState(STATE_NXDN);
+                    }
+
+                    // if the state is NXDN; write NXDN data
+                    if (m_state == STATE_NXDN) {
+                        m_modem->writeNXDNData(data, len);
+                        
+                        INTERRUPT_DMR_BEACON;
+                        
+                        // if there is a P25 CC running; halt the CC
+                        if (p25 != NULL) {
+                            if (p25->getCCRunning() && !p25->getCCHalted()) {
+                                p25->setCCHalted(true);
+                                INTERRUPT_P25_CONTROL;
+                            }
+                        }
+
+                        m_modeTimer.start();
+                    }
+                }
+            }
+        }
+#endif
         // ------------------------------------------------------
         //  -- Modem Clocking                                 --
         // ------------------------------------------------------
@@ -1066,6 +1169,38 @@ int Host::run()
             }
         }
 
+        /** NXDN */
+        // read NXDN frames from modem, and if there are frames
+        // write those frames to the NXDN controller
+#if ENABLE_NXDN_SUPPORT
+        if (nxdn != NULL) {
+            len = m_modem->readNXDNData(data);
+            if (len > 0U) {
+                if (m_state == STATE_IDLE) {
+                    // process NXDN frames
+                    bool ret = nxdn->processFrame(data, len);
+                    if (ret) {
+                        m_modeTimer.setTimeout(m_rfModeHang);
+                        setState(STATE_NXDN);
+
+                        INTERRUPT_DMR_BEACON;
+                        INTERRUPT_P25_CONTROL;
+                    }
+                }
+                else if (m_state == STATE_NXDN) {
+                    // process P25 frames
+                    bool ret = nxdn->processFrame(data, len);
+                    if (ret) {
+                        m_modeTimer.start();
+                        INTERRUPT_P25_CONTROL;
+                    }
+                }
+                else if (m_state != HOST_STATE_LOCKOUT) {
+                    LogWarning(LOG_HOST, "NXDN modem data received, state = %u", m_state);
+                }
+            }
+        }
+#endif
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
@@ -1077,7 +1212,10 @@ int Host::run()
             dmr->clock();
         if (p25 != NULL)
             p25->clock(ms);
-
+#if ENABLE_NXDN_SUPPORT
+        if (nxdn != NULL)
+            nxdn->clock(ms);
+#endif
         // ------------------------------------------------------
         //  -- Remote Control Processing                      --
         // ------------------------------------------------------
@@ -1322,7 +1460,11 @@ int Host::run()
     if (p25 != NULL) {
         delete p25;
     }
-
+#if ENABLE_NXDN_SUPPORT
+    if (nxdn != NULL) {
+        delete nxdn;
+    }
+#endif
     return EXIT_SUCCESS;
 }
 
@@ -1331,7 +1473,7 @@ int Host::run()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Reads basic configuration parameters from the INI.
+/// Reads basic configuration parameters from the YAML configuration file.
 /// </summary>
 bool Host::readParams()
 {
@@ -1352,6 +1494,10 @@ bool Host::readParams()
     yaml::Node protocolConf = m_conf["protocols"];
     m_dmrEnabled = protocolConf["dmr"]["enable"].as<bool>(false);
     m_p25Enabled = protocolConf["p25"]["enable"].as<bool>(false);
+    m_nxdnEnabled = protocolConf["nxdn"]["enable"].as<bool>(false);
+#if !ENABLE_NXDN_SUPPORT
+    m_nxdnEnabled = false; // hardcode to false when no NXDN support is compiled in
+#endif
 
     yaml::Node systemConf = m_conf["system"];
     m_duplex = systemConf["duplex"].as<bool>(true);
@@ -1387,6 +1533,7 @@ bool Host::readParams()
     LogInfo("General Parameters");
     LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
     LogInfo("    P25: %s", m_p25Enabled ? "enabled" : "disabled");
+    LogInfo("    NXDN: %s", m_nxdnEnabled ? "enabled" : "disabled");
     LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
     if (!udpMasterMode) {
         if (!m_duplex) {
@@ -1526,6 +1673,8 @@ bool Host::readParams()
         m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
         m_p25RfssId = p25::P25Utils::rfssId(m_p25RfssId);
 
+        m_nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
+
         LogInfo("System Config Parameters");
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
         LogInfo("    TX Frequency: %uHz", m_txFrequency);
@@ -1544,6 +1693,8 @@ bool Host::readParams()
         if (p25TxNAC != 0xF7EU && p25TxNAC != m_p25NAC) {
             LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
         }
+
+        LogInfo("    NXDN RAN: %u", m_nxdnRAN);
 
         LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
         LogInfo("    P25 Network Id: $%05X", m_p25NetId);
@@ -1566,7 +1717,7 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
-#if NO_NO_FEATURE
+#if ENABLE_DFSI_SUPPORT
     m_useDFSI = modemProtocol["dfsi"].as<bool>(false);
 #else
     m_useDFSI = false;
@@ -1594,21 +1745,33 @@ bool Host::createModem()
     int rxTuning = modemConf["rxTuning"].as<int>(0);
     int txTuning = modemConf["txTuning"].as<int>(0);
     uint8_t rfPower = (uint8_t)modemConf["rfPower"].as<uint32_t>(100U);
-    int dmrDiscBWAdj = modemConf["dmrDiscBWAdj"].as<int>(0);
-    int p25DiscBWAdj = modemConf["p25DiscBWAdj"].as<int>(0);
-    int dmrPostBWAdj = modemConf["dmrPostBWAdj"].as<int>(0);
-    int p25PostBWAdj = modemConf["p25PostBWAdj"].as<int>(0);
-    ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)modemConf["adfGainMode"].as<uint32_t>(0U);
-    int dmrSymLevel3Adj = modemConf["dmrSymLvl3Adj"].as<int>(0);
-    int dmrSymLevel1Adj = modemConf["dmrSymLvl1Adj"].as<int>(0);
-    int p25SymLevel3Adj = modemConf["p25SymLvl3Adj"].as<int>(0);
-    int p25SymLevel1Adj = modemConf["p25SymLvl1Adj"].as<int>(0);
+
+    yaml::Node hotspotParams = modemConf["hotspot"];
+
+    int dmrDiscBWAdj = hotspotParams["dmrDiscBWAdj"].as<int>(0);
+    int p25DiscBWAdj = hotspotParams["p25DiscBWAdj"].as<int>(0);
+    int nxdnDiscBWAdj = hotspotParams["nxdnDiscBWAdj"].as<int>(0);
+    int dmrPostBWAdj = hotspotParams["dmrPostBWAdj"].as<int>(0);
+    int p25PostBWAdj = hotspotParams["p25PostBWAdj"].as<int>(0);
+    int nxdnPostBWAdj = hotspotParams["nxdnPostBWAdj"].as<int>(0);
+    ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)hotspotParams["adfGainMode"].as<uint32_t>(0U);
+
+    yaml::Node repeaterParams = modemConf["repeater"];
+
+    int dmrSymLevel3Adj = repeaterParams["dmrSymLvl3Adj"].as<int>(0);
+    int dmrSymLevel1Adj = repeaterParams["dmrSymLvl1Adj"].as<int>(0);
+    int p25SymLevel3Adj = repeaterParams["p25SymLvl3Adj"].as<int>(0);
+    int p25SymLevel1Adj = repeaterParams["p25SymLvl1Adj"].as<int>(0);
+    int nxdnSymLevel3Adj = repeaterParams["nxdnSymLvl3Adj"].as<int>(0);
+    int nxdnSymLevel1Adj = repeaterParams["nxdnSymLvl1Adj"].as<int>(0);
+    
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
     float p25TXLevel = modemConf["p25TxLevel"].as<float>(50.0F);
+    float nxdnTXLevel = modemConf["nxdnTxLevel"].as<float>(50.0F);
     if (!modemConf["txLevel"].isNone()) {
-        cwIdTXLevel = dmrTXLevel = p25TXLevel = modemConf["txLevel"].as<float>(50.0F);
+        cwIdTXLevel = dmrTXLevel = p25TXLevel = nxdnTXLevel = modemConf["txLevel"].as<float>(50.0F);
     }
     uint8_t packetPlayoutTime = (uint8_t)modemConf["packetPlayoutTime"].as<uint32_t>(10U);
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
@@ -1734,6 +1897,7 @@ bool Host::createModem()
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
     LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
     LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
+    LogInfo("    NXDN TX Level: %.1f%%", nxdnTXLevel);
     LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
     LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
@@ -1755,11 +1919,12 @@ bool Host::createModem()
 
     m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
         packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
-    m_modem->setModeParams(m_dmrEnabled, m_p25Enabled);
-    m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel);
-    m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj);
+    m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
+    m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
+    m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, dmrPostBWAdj, p25PostBWAdj, adfGainMode);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
+        p25PostBWAdj, nxdnPostBWAdj, adfGainMode);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 #if ENABLE_DFSI_SUPPORT
@@ -1777,6 +1942,14 @@ bool Host::createModem()
         delete m_modem;
         m_modem = NULL;
         return false;
+    }
+
+    // are we on a protocol version older then 3?
+    if (m_modem->getVersion() < 3U) {
+        if (m_nxdnEnabled) {
+            ::LogError(LOG_HOST, "NXDN is not supported on legacy firmware.");
+            return false;
+        }
     }
 
     return true;
@@ -1845,7 +2018,7 @@ bool Host::createNetwork()
         LogInfo("    Debug: yes");
     }
 
-    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
+    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
     m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
@@ -2001,6 +2174,14 @@ void Host::setState(uint8_t state)
             m_modeTimer.start();
             //m_cwIdTimer.stop();
             createLockFile("P25");
+            break;
+
+        case STATE_NXDN:
+            m_modem->setState(STATE_NXDN);
+            m_state = STATE_NXDN;
+            m_modeTimer.start();
+            //m_cwIdTimer.stop();
+            createLockFile("NXDN");
             break;
 
         case HOST_STATE_LOCKOUT:
