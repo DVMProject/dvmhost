@@ -77,7 +77,9 @@ Some extra notes for those who are using the Raspberry Pi, default Raspbian OS o
  
  ```console=tty1 root=PARTUUID=[this is dynamic per partition] rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait```
  
- All thats being done is to remove the ```console=serial0,115200``` part. Do not change anything else. Save the file, then reboot.
+All thats being done is to remove the ```console=serial0,115200``` part. Do not change anything else. Save the file, then reboot.
+
+**NXDN Support Note**: NXDN support is currently experimental, while it is fully enabled in areas of the host, it is by default *entirely* disabled from normal host processing. In order to enable it compile dvmhost like this: ```make EXTFLAGS=-DENABLE_NXDN_SUPPORT```
 
 ## License
 
