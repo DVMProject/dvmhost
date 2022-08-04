@@ -789,7 +789,7 @@ int Host::run()
         //  -- Write to Modem Processing                      --
         // ------------------------------------------------------
 
-        /** DMR */
+        /** Digital Mobile Radio */
         if (dmr != NULL) {
             // check if there is space on the modem for DMR slot 1 frames,
             // if there is read frames from the DMR controller and write it
@@ -868,7 +868,7 @@ int Host::run()
             }
         }
 
-        /** P25 */
+        /** Project 25 */
         // check if there is space on the modem for P25 frames,
         // if there is read frames from the P25 controller and write it
         // to the modem
@@ -981,7 +981,7 @@ int Host::run()
         //  -- Read from Modem Processing                     --
         // ------------------------------------------------------
 
-        /** DMR */
+        /** Digital Mobile Radio */
         if (dmr != NULL) {
             // read DMR slot 1 frames from the modem, and if there is any
             // write those frames to the DMR controller
@@ -1099,7 +1099,7 @@ int Host::run()
             }
         }
 
-        /** P25 */
+        /** Project 25 */
         // read P25 frames from modem, and if there are frames
         // write those frames to the P25 controller
         if (p25 != NULL) {
@@ -1169,7 +1169,7 @@ int Host::run()
             }
         }
 
-        /** NXDN */
+        /** Next Generation Digital Narrowband */
         // read NXDN frames from modem, and if there are frames
         // write those frames to the NXDN controller
 #if ENABLE_NXDN_SUPPORT
