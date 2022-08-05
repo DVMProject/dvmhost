@@ -43,6 +43,7 @@
 #include "p25/lc/TSBK.h"
 #include "p25/lc/TDULC.h"
 #include "p25/Audio.h"
+#include "nxdn/data/Layer3.h"
 #include "network/UDPSocket.h"
 #include "RingBuffer.h"
 #include "Timer.h"
@@ -140,7 +141,7 @@ namespace network
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
         virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint32_t& len);
         /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        virtual uint8_t* readNXDN(bool& ret, uint32_t& len);
+        virtual uint8_t* readNXDN(bool& ret, nxdn::data::Layer3& layer3, uint32_t& len);
 
         /// <summary>Reads a channel grant request from the network.</summary>
         virtual bool readGrantRsp(bool& grp, uint32_t& srcId, uint32_t& dstId, uint32_t& grpVchNo);
@@ -160,7 +161,7 @@ namespace network
             const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes NXDN frame data to the network.</summary>
-        virtual bool writeNXDN(const uint8_t* data, const uint32_t len);
+        virtual bool writeNXDN(const nxdn::data::Layer3& layer3, const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes a channel grant request to the network.</summary>
         virtual bool writeGrantReq(const bool grp, const uint32_t srcId, const uint32_t dstId);
@@ -239,7 +240,7 @@ namespace network
         bool writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
         /// <summary>Writes NXDN frame data to the network.</summary>
-        bool writeNXDN(const uint32_t id, const uint32_t streamId, const uint8_t* data, const uint32_t len);
+        bool writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::data::Layer3& layer3, const uint8_t* data, const uint32_t len);
 
         /// <summary>Writes data to the network.</summary>
         virtual bool write(const uint8_t* data, uint32_t length);

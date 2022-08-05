@@ -258,9 +258,10 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 /// Reads NXDN frame data from the NXDN ring buffer.
 /// </summary>
 /// <param name="ret"></param>
+/// <param name="layer3"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readNXDN(bool& ret, uint32_t& len)
+uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::data::Layer3& layer3, uint32_t& len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
         ret = false;
@@ -276,7 +277,18 @@ uint8_t* BaseNetwork::readNXDN(bool& ret, uint32_t& len)
     m_rxNXDNData.getData(&length, 1U);
     m_rxNXDNData.getData(m_buffer, length);
 
-    /* TODO TODO -- process more data out of the raw network frames? */
+    uint8_t messageType = m_buffer[4U];
+
+    uint32_t srcId = (m_buffer[5U] << 16) | (m_buffer[6U] << 8) | (m_buffer[7U] << 0);
+
+    uint32_t dstId = (m_buffer[8U] << 16) | (m_buffer[9U] << 8) | (m_buffer[10U] << 0);
+
+    layer3.setMessageType(messageType);
+    layer3.setSrcId((uint16_t)srcId & 0xFFFFU);
+    layer3.setDstId((uint16_t)dstId & 0xFFFFU);
+
+    bool group = (m_buffer[15U] & 0x40U) == 0x40U ? false : true;
+    layer3.setGroup(group);
 
     uint8_t* data = NULL;
     len = m_buffer[23U];
@@ -471,10 +483,11 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 /// <summary>
 /// Writes NXDN frame data to the network.
 /// </summary>
+/// <param name="layer3"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeNXDN(const nxdn::data::Layer3& layer3, const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -485,7 +498,7 @@ bool BaseNetwork::writeNXDN(const uint8_t* data, const uint32_t len)
 
     m_streamId[0] = m_nxdnStreamId;
 
-    return writeNXDN(m_id, m_nxdnStreamId, data, len);
+    return writeNXDN(m_id, m_nxdnStreamId, layer3, data, len);
 }
 
 /// <summary>
@@ -1069,13 +1082,11 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 /// </summary>
 /// <param name="id"></param>
 /// <param name="streamId"></param>
-/// <param name="header"></param>
-/// <param name="secHeader"></param>
-/// <param name="currentBlock"></param>
+/// <param name="layer3"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::data::Layer3& layer3, const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -1087,7 +1098,15 @@ bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const ui
 
     ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);
 
-    /* TODO TODO -- pack more data out of the raw network frames? */
+    buffer[4U] = layer3.getMessageType();                                           // Message Type
+
+    uint32_t srcId = layer3.getSrcId();                                             // Source Address
+    __SET_UINT16(srcId, buffer, 5U);
+
+    uint32_t dstId = layer3.getDstId();                                             // Target Address
+    __SET_UINT16(dstId, buffer, 8U);
+
+    buffer[15U] |= layer3.getGroup() ? 0x00U : 0x40U;                               // Group
 
     __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 

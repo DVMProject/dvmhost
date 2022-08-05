@@ -463,9 +463,11 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
+    data::Layer3 layer3;
+
     uint32_t length = 100U;
     bool ret = false;
-    uint8_t* data = m_network->readNXDN(ret, length);
+    uint8_t* data = m_network->readNXDN(ret, layer3, length);
     if (!ret)
         return;
     if (length == 0U)
@@ -494,10 +496,10 @@ void Control::processNetwork()
 
     switch (usc) {
         case NXDN_LICH_USC_UDCH:
-            ret = m_data->processNetwork(option, data, length);
+            ret = m_data->processNetwork(option, layer3, data, length);
             break;
         default:
-            ret = m_voice->processNetwork(usc, option, data, length);
+            ret = m_voice->processNetwork(usc, option, layer3, data, length);
             break;
     }
 

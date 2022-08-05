@@ -574,7 +574,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
+bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3, uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -965,5 +965,5 @@ void Voice::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(data, len);
+    m_network->writeNXDN(m_nxdn->m_rfLayer3, data, len);
 }
