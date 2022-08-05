@@ -1275,7 +1275,7 @@ int Host::run()
             }
         }
 
-        /** DMR */
+        /** Digial Mobile Radio */
         if (dmr != NULL) {
             if (m_dmrTSCCData && m_dmrCtrlChannel) {
                 if (m_state != STATE_DMR)
@@ -1342,7 +1342,7 @@ int Host::run()
             }
         }
 
-        /** P25 */
+        /** Project 25 */
         if (p25 != NULL) {
             if (m_p25CCData) {
                 p25BcastIntervalTimer.clock(ms);
@@ -1764,7 +1764,16 @@ bool Host::createModem()
     int p25SymLevel1Adj = repeaterParams["p25SymLvl1Adj"].as<int>(0);
     int nxdnSymLevel3Adj = repeaterParams["nxdnSymLvl3Adj"].as<int>(0);
     int nxdnSymLevel1Adj = repeaterParams["nxdnSymLvl1Adj"].as<int>(0);
-    
+
+    yaml::Node softpotParams = modemConf["softpot"];
+
+    uint8_t rxCoarse = (uint8_t)softpotParams["rxCoarse"].as<uint32_t>(127U);
+    uint8_t rxFine = (uint8_t)softpotParams["rxFine"].as<uint32_t>(127U);
+    uint8_t txCoarse = (uint8_t)softpotParams["txCoarse"].as<uint32_t>(127U);
+    uint8_t txFine = (uint8_t)softpotParams["txFine"].as<uint32_t>(127U);
+    uint8_t rssiCoarse = (uint8_t)softpotParams["rssiCoarse"].as<uint32_t>(127U);
+    uint8_t rssiFine = (uint8_t)softpotParams["rssiFine"].as<uint32_t>(127U);
+
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
@@ -1892,6 +1901,9 @@ bool Host::createModem()
     LogInfo("    TX Tuning Offset: %dhz", txTuning);
     LogInfo("    RX Effective Frequency: %uhz", m_rxFrequency + rxTuning);
     LogInfo("    TX Effective Frequency: %uhz", m_txFrequency + txTuning);
+    LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
+    LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
+    LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
     LogInfo("    RF Power Level: %u", rfPower);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
@@ -1925,6 +1937,7 @@ bool Host::createModem()
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
     m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
         p25PostBWAdj, nxdnPostBWAdj, adfGainMode);
+    m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
 #if ENABLE_DFSI_SUPPORT

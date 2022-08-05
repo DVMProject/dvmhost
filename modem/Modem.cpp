@@ -157,6 +157,12 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25SymLevel1Adj(0),
     m_nxdnSymLevel3Adj(0),
     m_nxdnSymLevel1Adj(0),
+    m_rxCoarsePot(127U),
+    m_rxFinePot(127U),
+    m_txCoarsePot(127U),
+    m_txFinePot(127U),
+    m_rssiCoarsePot(127U),
+    m_rssiFinePot(127U),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
     m_modemState(STATE_IDLE),
@@ -328,6 +334,27 @@ void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTu
     m_dmrPostBWAdj = dmrPostBWAdj;
     m_p25PostBWAdj = p25PostBWAdj;
     m_nxdnPostBWAdj = nxdnPostBWAdj;
+}
+
+/// <summary>
+/// Sets the softpot parameters.
+/// </summary>
+/// <param name="rxCoarse"></param>
+/// <param name="rxFine"></param>
+/// <param name="txCoarse"></param>
+/// <param name="txFine"></param>
+/// <param name="rssiCoarse"></param>
+/// <param name="rssiFine"></param>
+void Modem::setSoftPot(uint8_t rxCoarse, uint8_t rxFine, uint8_t txCoarse, uint8_t txFine, uint8_t rssiCoarse, uint8_t rssiFine)
+{
+    m_rxCoarsePot = rxCoarse;
+    m_rxFinePot = rxFine;
+
+    m_txCoarsePot = txCoarse;
+    m_txFinePot = txFine;
+
+    m_rssiCoarsePot = rssiCoarse;
+    m_rssiFinePot = rssiFine;
 }
 
 /// <summary>
@@ -1739,8 +1766,8 @@ bool Modem::getStatus()
 /// <returns></returns>
 bool Modem::writeConfig()
 {
-    uint8_t buffer[20U];
-    ::memset(buffer, 0x00U, 20U);
+    uint8_t buffer[25U];
+    ::memset(buffer, 0x00U, 25U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 17U;
@@ -1799,12 +1826,19 @@ bool Modem::writeConfig()
 
     // are we on a protocol version 3 firmware?
     if (m_protoVer >= 3U) {
-        buffer[1U] = 18U;
+        buffer[1U] = 24U;
 
         if (m_nxdnEnabled)
             buffer[4U] |= 0x10U;
 
         buffer[18U] = (uint8_t)(m_nxdnTXLevel * 2.55F + 0.5F);
+
+        buffer[19U] = m_rxCoarsePot;
+        buffer[20U] = m_rxFinePot;
+        buffer[21U] = m_txCoarsePot;
+        buffer[22U] = m_txFinePot;
+        buffer[23U] = m_rssiCoarsePot;
+        buffer[24U] = m_rssiFinePot;
     }
 
 #if DEBUG_MODEM
@@ -2140,6 +2174,24 @@ void Modem::processFlashConfig(const uint8_t *buffer)
         FLASH_VALUE_CHECK(m_nxdnSymLevel3Adj, nxdnSymLevel3Adj, 0, "nxdnSymLevel3Adj");
         int nxdnSymLevel1Adj = int(buffer[42U]) - 128;
         FLASH_VALUE_CHECK(m_nxdnSymLevel1Adj, nxdnSymLevel1Adj, 0, "nxdnSymLevel1Adj");
+    }
+
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+        uint8_t rxCoarse = buffer[43U];
+        FLASH_VALUE_CHECK(m_rxCoarsePot, rxCoarse, 7U, "rxCoarse");
+        uint8_t rxFine = buffer[44U];
+        FLASH_VALUE_CHECK(m_rxFinePot, rxFine, 7U, "rxFine");
+
+        uint8_t txCoarse = buffer[45U];
+        FLASH_VALUE_CHECK(m_txCoarsePot, txCoarse, 7U, "txCoarse");
+        uint8_t txFine = buffer[46U];
+        FLASH_VALUE_CHECK(m_txFinePot, txFine, 7U, "txFine");
+
+        uint8_t rssiCoarse = buffer[47U];
+        FLASH_VALUE_CHECK(m_rssiCoarsePot, rssiCoarse, 7U, "rssiCoarse");
+        uint8_t rssiFine = buffer[48U];
+        FLASH_VALUE_CHECK(m_rssiFinePot, rssiFine, 7U, "rssiFine");
     }
 }
 

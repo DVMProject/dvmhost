@@ -231,6 +231,8 @@ namespace modem
         /// <summary>Sets the RF parameters.</summary>
         void setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
             int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj, ADF_GAIN_MODE gainMode);
+        /// <summary>Sets the softpot parameters.</summary>
+        void setSoftPot(uint8_t rxCoarse, uint8_t rxFine, uint8_t txCoarse, uint8_t txFine, uint8_t rssiCoarse, uint8_t rssiFine);
         /// <summary>Sets the DMR color code.</summary>
         void setDMRColorCode(uint32_t colorCode);
         /// <summary>Sets the P25 NAC.</summary>
@@ -401,6 +403,13 @@ namespace modem
         int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
         int m_nxdnSymLevel3Adj;         // dedicated modem - +3/-3 NXDN symbol adjustment
         int m_nxdnSymLevel1Adj;         // dedicated modem - +1/-1 NXDN symbol adjustment
+
+        uint8_t m_rxCoarsePot;          // dedicated modem - with softpot
+        uint8_t m_rxFinePot;            // dedicated modem - with softpot
+        uint8_t m_txCoarsePot;          // dedicated modem - with softpot
+        uint8_t m_txFinePot;            // dedicated modem - with softpot
+        uint8_t m_rssiCoarsePot;        // dedicated modem - with softpot
+        uint8_t m_rssiFinePot;          // dedicated modem - with softpot
 
         uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count

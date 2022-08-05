@@ -150,6 +150,13 @@ system:
             p25SymLvl1Adj: 0 # Valid values between -128 and 128
             nxdnSymLvl3Adj: 0 # Valid values between -128 and 128
             nxdnSymLvl1Adj: 0 # Valid values between -128 and 128
+        softpot:
+            rxCoarse: 127
+            rxFine: 127
+            txCoarse: 127
+            txFine: 127
+            rssiCoarse: 127
+            rssiFine: 127
         rxDCOffset: 0 # Valid values between -128 and 128
         txDCOffset: 0 # Valid values between -128 and 128
         txTuning: 0 # Freq offset for the hotspot, in hz

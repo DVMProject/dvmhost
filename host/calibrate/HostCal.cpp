@@ -164,6 +164,12 @@ HostCal::HostCal(const std::string& confFile) :
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
     m_p25SymLevel1Adj(0),
+    m_rxCoarsePot(127U),
+    m_rxFinePot(127U),
+    m_txCoarsePot(127U),
+    m_txFinePot(127U),
+    m_rssiCoarsePot(127U),
+    m_rssiFinePot(127U),
     m_fdmaPreamble(80U),
     m_dmrRxDelay(7U),
     m_p25CorrCount(5U),
@@ -332,6 +338,15 @@ int HostCal::run()
     m_nxdnSymLevel3Adj = repeaterParams["nxdnSymLvl3Adj"].as<int>(0);
     m_nxdnSymLevel1Adj = repeaterParams["nxdnSymLvl1Adj"].as<int>(0);
 
+    yaml::Node softpotParams = modemConf["softpot"];
+
+    m_rxCoarsePot = (uint8_t)softpotParams["rxCoarse"].as<uint32_t>(127U);
+    m_rxFinePot = (uint8_t)softpotParams["rxFine"].as<uint32_t>(127U);
+    m_txCoarsePot = (uint8_t)softpotParams["txCoarse"].as<uint32_t>(127U);
+    m_txFinePot = (uint8_t)softpotParams["txFine"].as<uint32_t>(127U);
+    m_rssiCoarsePot = (uint8_t)softpotParams["rssiCoarse"].as<uint32_t>(127U);
+    m_rssiFinePot = (uint8_t)softpotParams["rssiFine"].as<uint32_t>(127U);
+
     m_fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     m_dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
     m_p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
@@ -405,6 +420,9 @@ int HostCal::run()
         LogInfo("    TX Tuning Offset: %dhz", m_txTuning);
         LogInfo("    RX Effective Frequency: %uhz", m_rxAdjustedFreq);
         LogInfo("    TX Effective Frequency: %uhz", m_txAdjustedFreq);
+        LogInfo("    RX Coarse: %u, Fine: %u", m_rxCoarsePot, m_rxFinePot);
+        LogInfo("    TX Coarse: %u, Fine: %u", m_txCoarsePot, m_txFinePot);
+        LogInfo("    RSSI Coarse: %u, Fine: %u", m_rssiCoarsePot, m_rssiFinePot);
         LogInfo("    RX Level: %.1f%%", m_rxLevel);
         LogInfo("    TX Level: %.1f%%", m_txLevel);
 
@@ -427,6 +445,7 @@ int HostCal::run()
     m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj, m_nxdnSymLevel3Adj, m_nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(m_txDCOffset, m_rxDCOffset);
     m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_nxdnDiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_nxdnPostBWAdj, m_adfGainMode);
+    m_modem->setSoftPot(m_rxCoarsePot, m_rxFinePot, m_txCoarsePot, m_txFinePot, m_rssiCoarsePot, m_rssiFinePot);
 
     m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemOpen, this));
     m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemClose, this));
@@ -2236,8 +2255,8 @@ bool HostCal::writeConfig()
 /// <returns>True, if configuration is written, otherwise false.</returns>
 bool HostCal::writeConfig(uint8_t modeOverride)
 {
-    uint8_t buffer[20U];
-    ::memset(buffer, 0x00U, 20U);
+    uint8_t buffer[25U];
+    ::memset(buffer, 0x00U, 25U);
 
     buffer[0U] = DVM_FRAME_START;
     buffer[1U] = 17U;
@@ -2306,12 +2325,19 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     // are we on a protocol version 3 firmware?
     if (m_modem->getVersion() >= 3U) {
-        buffer[1U] = 18U;
+        buffer[1U] = 24U;
 
         if (m_nxdnEnabled)
             buffer[4U] |= 0x10U;
 
         buffer[18U] = (uint8_t)(m_txLevel * 2.55F + 0.5F);
+
+        buffer[19U] = m_rxCoarsePot;
+        buffer[20U] = m_rxFinePot;
+        buffer[21U] = m_txCoarsePot;
+        buffer[22U] = m_txFinePot;
+        buffer[23U] = m_rssiCoarsePot;
+        buffer[24U] = m_rssiFinePot;
     }
 
     int ret = m_modem->write(buffer, buffer[1U]);
@@ -2560,6 +2586,24 @@ void HostCal::processFlashConfig(const uint8_t *buffer)
         m_conf["system"]["modem"]["rxTuning"] = __INT_STR(m_rxTuning);
         m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
 
+        // are we on a protocol version 3 firmware?
+        if (m_modem->getVersion() >= 3U) {
+            m_rxCoarsePot = buffer[43U];
+            m_conf["system"]["modem"]["softpot"]["rxCoarse"] = __INT_STR(m_rxCoarsePot);
+            m_rxFinePot = buffer[44U];
+            m_conf["system"]["modem"]["softpot"]["rxFine"] = __INT_STR(m_rxFinePot);
+
+            m_txCoarsePot = buffer[45U];
+            m_conf["system"]["modem"]["softpot"]["txCoarse"] = __INT_STR(m_txCoarsePot);
+            m_txFinePot = buffer[46U];
+            m_conf["system"]["modem"]["softpot"]["txFine"] = __INT_STR(m_txFinePot);
+
+            m_rssiCoarsePot = buffer[47U];
+            m_conf["system"]["modem"]["softpot"]["rssiCoarse"] = __INT_STR(m_rssiCoarsePot);
+            m_rssiFinePot = buffer[48U];
+            m_conf["system"]["modem"]["softpot"]["rssiFine"] = __INT_STR(m_rssiFinePot);
+        }
+
         writeRFParams();
         sleep(500);
     }
@@ -2671,16 +2715,32 @@ bool HostCal::writeFlash()
         buffer[42U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
     }
 
+    // are we on a protocol version 3 firmware?
+    if (m_modem->getVersion() >= 3U) {
+        buffer[43U] = m_rxCoarsePot;
+        buffer[44U] = m_rxFinePot;
+
+        buffer[45U] = m_txCoarsePot;
+        buffer[46U] = m_txFinePot;
+
+        buffer[47U] = m_rssiCoarsePot;
+        buffer[48U] = m_rssiFinePot;
+    }
+
     // software signature
     std::string software;
     software.append(__NET_NAME__ " " __VER__ " (built " __BUILD__ ")");
     for (uint8_t i = 0; i < software.length(); i++) {
-        buffer[192U + i] = software[i];
+        buffer[176U + i] = software[i];
     }
 
     // configuration version
     buffer[DVM_CONF_AREA_LEN] = DVM_CONF_AREA_VER;
     edac::CRC::addCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
+
+#if DEBUG_MODEM_CAL
+    Utils::dump(1U, "HostCal::writeFlash(), Written", buffer, 249U);
+#endif
 
     int ret = m_modem->write(buffer, 249U);
     if (ret <= 0)

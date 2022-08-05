@@ -104,6 +104,13 @@ private:
     int m_nxdnSymLevel3Adj;         // dedicated modem - +3/-3 NXDN symbol adjustment
     int m_nxdnSymLevel1Adj;         // dedicated modem - +1/-1 NXDN symbol adjustment
 
+    uint8_t m_rxCoarsePot;          // dedicated modem - with softpot
+    uint8_t m_rxFinePot;            // dedicated modem - with softpot
+    uint8_t m_txCoarsePot;          // dedicated modem - with softpot
+    uint8_t m_txFinePot;            // dedicated modem - with softpot
+    uint8_t m_rssiCoarsePot;        // dedicated modem - with softpot
+    uint8_t m_rssiFinePot;          // dedicated modem - with softpot
+
     uint8_t m_fdmaPreamble;
     uint8_t m_dmrRxDelay;
     uint8_t m_p25CorrCount;
