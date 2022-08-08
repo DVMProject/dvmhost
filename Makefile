@@ -11,7 +11,6 @@ rpi-armSTRIP= /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf
 CFLAGS  = -g -O3 -Wall -std=c++0x -pthread -I.
 HSTFLAGS= -DENABLE_DMR -DENABLE_P25
 CMDFLAGS = -I..
-EXTFLAGS=
 LIBS    = -lpthread -lutil
 LDFLAGS = -g
 
@@ -129,13 +128,13 @@ CMD_OBJECTS = \
 
 all: dvmhost dvmcmd
 dvmhost: $(HOST_OBJECTS) 
-		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(HSTFLAGS) $(GITFLAGS) $(EXTFLAGS) $(LIBS) -o $(HOST_BIN)
+		$($(ARCH)CXX) $(HOST_OBJECTS) $(CFLAGS) $(HSTFLAGS) $(GITFLAGS) $(LIBS) -o $(HOST_BIN)
 dvmcmd: $(CMD_OBJECTS)
-		$($(ARCH)CXX) $(CMD_OBJECTS) $(GITFLAGS) $(CFLAGS) $(CMDFLAGS) $(EXTFLAGS) $(LIBS) -o $(CMD_BIN)
+		$($(ARCH)CXX) $(CMD_OBJECTS) $(GITFLAGS) $(CFLAGS) $(CMDFLAGS) $(LIBS) -o $(CMD_BIN)
 %.o: %.cpp
-		$($(ARCH)CXX) $(CFLAGS) $(HSTFLAGS) $(GITFLAGS) $(EXTFLAGS) -c -o $@ $<
+		$($(ARCH)CXX) $(CFLAGS) $(HSTFLAGS) $(GITFLAGS) -c -o $@ $<
 %.cmd.o: %.cpp
-		$($(ARCH)CXX) $(CFLAGS) $(HSTFLAGS) $(CMDFLAGS) $(GITFLAGS) $(EXTFLAGS) -c -o $@ $<
+		$($(ARCH)CXX) $(CFLAGS) $(HSTFLAGS) $(CMDFLAGS) $(GITFLAGS) -c -o $@ $<
 strip:
 		-$($(ARCH)STRIP) $(HOST_BIN)
 		-$($(ARCH)STRIP) $(CMD_BIN)
