@@ -1768,9 +1768,9 @@ bool Modem::writeConfig()
 {
     uint8_t buffer[25U];
     ::memset(buffer, 0x00U, 25U);
+    uint8_t lengthToWrite = 17U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_CONFIG;
 
     buffer[3U] = 0x00U;
@@ -1826,7 +1826,7 @@ bool Modem::writeConfig()
 
     // are we on a protocol version 3 firmware?
     if (m_protoVer >= 3U) {
-        buffer[1U] = 24U;
+        lengthToWrite = 24U;
 
         if (m_nxdnEnabled)
             buffer[4U] |= 0x10U;
@@ -1841,12 +1841,14 @@ bool Modem::writeConfig()
         buffer[24U] = m_rssiFinePot;
     }
 
+    buffer[1U] = lengthToWrite;
+
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::writeConfig(), Written", buffer, buffer[1U]);
+    Utils::dump(1U, "Modem::writeConfig(), Written", buffer, lengthToWrite);
 #endif
 
-    int ret = write(buffer, buffer[1U]);
-    if (ret != 17)
+    int ret = write(buffer, lengthToWrite);
+    if (ret != lengthToWrite)
         return false;
 
     uint32_t count = 0U;
@@ -1884,9 +1886,9 @@ bool Modem::writeSymbolAdjust()
 {
     uint8_t buffer[20U];
     ::memset(buffer, 0x00U, 20U);
+    uint8_t lengthToWrite = 7U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 7U;
     buffer[2U] = CMD_SET_SYMLVLADJ;
 
     buffer[3U] = (uint8_t)(m_dmrSymLevel3Adj + 128);
@@ -1897,13 +1899,15 @@ bool Modem::writeSymbolAdjust()
 
     // are we on a protocol version 3 firmware?
     if (m_protoVer >= 3U) {
-        buffer[1U] = 9U;
+        lengthToWrite = 9U;
 
         buffer[7U] = (uint8_t)(m_nxdnSymLevel3Adj + 128);
         buffer[8U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
     }
 
-    int ret = write(buffer, buffer[1U]);
+    buffer[1U] = lengthToWrite;
+
+    int ret = write(buffer, lengthToWrite);
     if (ret <= 0)
         return false;
 
@@ -1940,9 +1944,9 @@ bool Modem::writeRFParams()
 {
     uint8_t buffer[20U];
     ::memset(buffer, 0x00U, 20U);
+    uint8_t lengthToWrite = 18U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 18U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1970,15 +1974,15 @@ bool Modem::writeRFParams()
 
     // are we on a protocol version 3 firmware?
     if (m_protoVer >= 3U) {
-        buffer[1U] = 20U;
+        lengthToWrite = 20U;
 
         buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
         buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
     }
 
-    // CUtils::dump(1U, "Written", buffer, buffer[1U]);
+    buffer[1U] = lengthToWrite;
 
-    int ret = m_port->write(buffer, buffer[1U]);
+    int ret = m_port->write(buffer, lengthToWrite);
     if (ret <= 0)
         return false;
 

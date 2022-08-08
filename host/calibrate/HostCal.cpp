@@ -2263,9 +2263,9 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 {
     uint8_t buffer[25U];
     ::memset(buffer, 0x00U, 25U);
+    uint8_t lengthToWrite = 17U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 17U;
     buffer[2U] = CMD_SET_CONFIG;
 
     buffer[3U] = 0x00U;
@@ -2331,7 +2331,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     // are we on a protocol version 3 firmware?
     if (m_modem->getVersion() >= 3U) {
-        buffer[1U] = 24U;
+        lengthToWrite = 24U;
 
         if (m_nxdnEnabled)
             buffer[4U] |= 0x10U;
@@ -2346,8 +2346,10 @@ bool HostCal::writeConfig(uint8_t modeOverride)
         buffer[24U] = m_rssiFinePot;
     }
 
-    int ret = m_modem->write(buffer, buffer[1U]);
-    if (ret <= 0)
+    buffer[1U] = lengthToWrite;
+
+    int ret = m_modem->write(buffer, lengthToWrite);
+    if (ret != lengthToWrite)
         return false;
 
     sleep(10U);
@@ -2364,9 +2366,9 @@ bool HostCal::writeRFParams()
 {
     uint8_t buffer[20U];
     ::memset(buffer, 0x00U, 20U);
+    uint8_t lengthToWrite = 18U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 18U;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -2397,7 +2399,7 @@ bool HostCal::writeRFParams()
 
     // are we on a protocol version 3 firmware?
     if (m_modem->getVersion() >= 3U) {
-        buffer[1U] = 20U;
+        lengthToWrite = 20U;
 
         m_conf["system"]["modem"]["hotspot"]["nxdnDiscBWAdj"] = __INT_STR(m_nxdnDiscBWAdj);
         buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
@@ -2405,9 +2407,9 @@ bool HostCal::writeRFParams()
         buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
     }
 
-    // CUtils::dump(1U, "Written", buffer, buffer[1U]);
+    buffer[1U] = lengthToWrite;
 
-    int ret = m_modem->write(buffer, buffer[1U]);
+    int ret = m_modem->write(buffer, lengthToWrite);
     if (ret <= 0)
         return false;
 
@@ -2425,9 +2427,9 @@ bool HostCal::writeSymbolAdjust()
 {
     uint8_t buffer[20U];
     ::memset(buffer, 0x00U, 20U);
+    uint8_t lengthToWrite = 7U;
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 7U;
     buffer[2U] = CMD_SET_SYMLVLADJ;
 
     m_conf["system"]["modem"]["repeater"]["dmrSymLvl3Adj"] = __INT_STR(m_dmrSymLevel3Adj);
@@ -2442,7 +2444,7 @@ bool HostCal::writeSymbolAdjust()
 
     // are we on a protocol version 3 firmware?
     if (m_modem->getVersion() >= 3U) {
-        buffer[1U] = 9U;
+        lengthToWrite = 9U;
 
         m_conf["system"]["modem"]["repeater"]["nxdnSymLvl3Adj"] = __INT_STR(m_nxdnSymLevel3Adj);
         buffer[7U] = (uint8_t)(m_nxdnSymLevel3Adj + 128);
@@ -2450,7 +2452,9 @@ bool HostCal::writeSymbolAdjust()
         buffer[8U] = (uint8_t)(m_nxdnSymLevel1Adj + 128);
     }
 
-    int ret = m_modem->write(buffer, buffer[1U]);
+    buffer[1U] = lengthToWrite;
+
+    int ret = m_modem->write(buffer, lengthToWrite);
     if (ret <= 0)
         return false;
 
