@@ -25,7 +25,7 @@ Use the ```make``` command to build the software.
 
 ### Compiled Protocol Options
 
-These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols is enabled. And, support for the NXDN protocol is disabled. What "compiled-in" support means is whether or not the host will perform *any* processing for the specified protocol (and this is regardless of whether or not the ```config.yml``` has a protocol specified for being enabled or not).
+These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols are enabled. And, support for the NXDN protocol is disabled. What "compiled-in" support means is whether or not the host will perform *any* processing for the specified protocol (and this is regardless of whether or not the ```config.yml``` has a protocol specified for being enabled or not).
 
 There are 2 options to modify which protocol support is compiled in: Either modify the Makefile ```HSTFLAGS=``` line (multiple options are separated by a space) or specify it as a argument to ```make``` (again, multiple options are separated by a space), for example: ```make HSTFLAGS="-DENABLE_DMR -DENABLE_P25 -DENABLE_NXDN"```.
 
