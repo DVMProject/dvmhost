@@ -475,7 +475,7 @@ int HostCal::run()
         m_modem->clock(0U);
 
         timeout++;
-        if (timeout >= 25U) {
+        if (timeout >= 75U) {
             break;
         }
 
