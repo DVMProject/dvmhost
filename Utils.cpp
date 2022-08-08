@@ -40,6 +40,22 @@ const uint8_t BITS_TABLE[] = {
     B6(0), B6(1), B6(1), B6(2)
 };
 
+#if defined(ENABLE_DMR)
+#define DESCR_DMR        "DMR, "
+#else
+#define DESCR_DMR        ""
+#endif
+#if defined(ENABLE_P25)
+#define DESCR_P25        "P25, "
+#else
+#define DESCR_P25        ""
+#endif
+#if defined(ENABLE_NXDN)
+#define DESCR_NXDN       "NXDN, "
+#else
+#define DESCR_NXDN       ""
+#endif
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
@@ -49,7 +65,7 @@ const uint8_t BITS_TABLE[] = {
 /// </summary>
 void getHostVersion()
 {
-    LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
+    LogInfo(__PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
     LogInfo("Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
     LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
 }

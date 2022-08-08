@@ -56,6 +56,7 @@ using namespace modem;
 #define RCD_MODE_OPT_LCKOUT             "lockout"
 #define RCD_MODE_OPT_FDMR               "dmr"
 #define RCD_MODE_OPT_FP25               "p25"
+#define RCD_MODE_OPT_FNXDN              "nxdn"
 
 #define RCD_KILL_CMD                    "mdm-kill"
 
@@ -68,6 +69,7 @@ using namespace modem;
 
 #define RCD_DMRD_MDM_INJ_CMD            "dmrd-mdm-inj"
 #define RCD_P25D_MDM_INJ_CMD            "p25d-mdm-inj"
+#define RCD_NXDD_MDM_INJ_CMD            "nxdd-mdm-inj"
 
 #define RCD_DMR_RID_PAGE_CMD            "dmr-rid-page"
 #define RCD_DMR_RID_CHECK_CMD           "dmr-rid-check"
@@ -96,6 +98,7 @@ using namespace modem;
 #define RCD_DMR_DEBUG                   "dmr-debug"
 #define RCD_P25_DEBUG                   "p25-debug"
 #define RCD_P25_DUMP_TSBK               "p25-dump-tsbk"
+#define RCD_NXDN_DEBUG                  "nxdn-debug"
 
 const uint32_t START_OF_TEXT = 0x02;
 const uint32_t REC_SEPARATOR = 0x1E;
@@ -163,7 +166,8 @@ void RemoteControl::setLookups(lookups::RadioIdLookup* ridLookup, lookups::Talkg
 /// <param name="host">Instance of the Host class.</param>
 /// <param name="dmr">Instance of the Control class.</param>
 /// <param name="p25">Instance of the Control class.</param>
-void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
+/// <param name="nxdn">Instance of the Control class.</param>
+void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
 {
     std::vector<std::string> args = std::vector<std::string>();
     args.clear();
@@ -243,6 +247,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     host->setState(HOST_STATE_LOCKOUT);
                     LogInfoEx(LOG_RCON, "Lockout mode, mode %u", host->m_state);
                 }
+#if defined(ENABLE_DMR)
                 else if (mode == RCD_MODE_OPT_FDMR) {
                     if (dmr != NULL) {
                         host->m_fixedMode = true;
@@ -253,6 +258,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                         LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                     }
                 }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
                 else if (mode == RCD_MODE_OPT_FP25) {
                     if (p25 != NULL) {
                         host->m_fixedMode = true;
@@ -263,6 +270,19 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                         LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                     }
                 }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+                else if (mode == RCD_MODE_OPT_FNXDN) {
+                    if (p25 != NULL) {
+                        host->m_fixedMode = true;
+                        host->setState(STATE_NXDN);
+                        LogInfoEx(LOG_RCON, "Fixed mode, mode %u", host->m_state);
+                    }
+                    else {
+                        LogError(LOG_RCON, CMD_FAILED_STR "NXDN mode is not enabled!");
+                    }
+                }
+#endif // defined(ENABLE_NXDN)
             }
             else if (rcom == RCD_KILL_CMD) {
                 // Command is in the form of: "kill"
@@ -289,6 +309,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, INVALID_OPT_STR "tried to blacklist RID 0!");
                 }
             }
+#if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_BEACON_CMD) {
                 // Command is in the form of: "dmr-beacon"
                 if (dmr != NULL) {
@@ -303,6 +324,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC_CMD) {
                 // Command is in the form of: "p25-cc"
                 if (p25 != NULL) {
@@ -332,6 +355,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_DMR)
             else if (rcom == RCD_DMRD_MDM_INJ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "dmrd-mdm-inj <slot> <bin file>
                 if (dmr != NULL) {
@@ -397,6 +422,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             else if (rcom == RCD_P25D_MDM_INJ_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25d-mdm-inj <bin file>
                 if (p25 != NULL) {
@@ -453,6 +480,60 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            else if (rcom == RCD_NXDD_MDM_INJ_CMD && argCnt >= 1U) {
+                // Command is in the form of: "nxdd-mdm-inj <bin file>
+                if (p25 != NULL) {
+                    std::string argString = getArgString(args, 0U);
+                    const char* fileName = argString.c_str();
+                    if (fileName != NULL) {
+                        FILE* file = ::fopen(fileName, "r");
+                        if (file != NULL) {
+                            uint8_t* buffer = NULL;
+                            int32_t fileSize = 0;
+
+                            // obtain file size
+                            ::fseek(file, 0, SEEK_END);
+                            fileSize = ::ftell(file);
+                            ::rewind(file);
+
+                            // allocate a buffer and read file
+                            buffer = new uint8_t[fileSize];
+                            if (buffer != NULL) {
+                                int32_t bytes = ::fread(buffer, 1U, fileSize, file);
+                                if (bytes == fileSize) {
+                                    uint8_t sync[nxdn::NXDN_FSW_BYTES_LENGTH];
+                                    ::memcpy(sync, buffer, nxdn::NXDN_FSW_BYTES_LENGTH);
+
+                                    uint8_t errs = 0U;
+                                    for (uint8_t i = 0U; i < nxdn::NXDN_FSW_BYTES_LENGTH; i++)
+                                        errs += Utils::countBits8(sync[i] ^ nxdn::NXDN_FSW_BYTES[i]);
+
+                                    if (errs <= 4U) {
+                                        host->m_modem->injectNXDNData(buffer, fileSize);
+                                    }
+                                    else {
+                                        LogError(LOG_RCON, CMD_FAILED_STR "NXDN data has too many errors!");
+                                    }
+                                }
+                                else {
+                                    LogError(LOG_RCON, CMD_FAILED_STR "NXDN failed to open NXDN data!");
+                                }
+
+                                delete[] buffer;
+                            }
+
+                            ::fclose(file);
+                        }
+                    }
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "NXDN mode is not enabled!");
+                }
+            }
+#endif // defined(ENABLE_NXDN)
+#if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_RID_PAGE_CMD && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-page <slot> <RID>"
                 if (dmr != NULL) {
@@ -537,6 +618,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             else if (rcom == RCD_P25_SET_MFID_CMD && argCnt >= 1U) {
                 // Command is in the form of: "p25-set-mfid <Mfg. ID>
                 if (p25 != NULL) {
@@ -694,6 +777,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_CC_DEDICATED_CMD) {
                 // Command is in the form of: "dmr-cc-dedicated"
                 if (dmr != NULL) {
@@ -724,6 +809,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC_DEDICATED_CMD) {
                 // Command is in the form of: "p25-cc-dedicated"
                 if (p25 != NULL) {
@@ -773,6 +860,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_DEBUG) {
                 // Command is in the form of: "dmr-debug <debug 0/1> <trace 0/1>"
                 uint8_t debug = getArgUInt8(args, 0U);
@@ -784,6 +873,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "DMR mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             else if (rcom == RCD_P25_DEBUG) {
                 // Command is in the form of: "p25-debug <debug 0/1> <trace 0/1>"
                 uint8_t debug = getArgUInt8(args, 0U);
@@ -805,6 +896,20 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25)
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
                 }
             }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            else if (rcom == RCD_NXDN_DEBUG) {
+                // Command is in the form of: "nxdn-debug <debug 0/1> <trace 0/1>"
+                uint8_t debug = getArgUInt8(args, 0U);
+                uint8_t verbose = getArgUInt8(args, 1U);
+                if (nxdn != NULL) {
+                    nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
+                }
+                else {
+                    LogError(LOG_RCON, CMD_FAILED_STR "NXDN mode is not enabled!");
+                }
+            }
+#endif // defined(ENABLE_NXDN)
             else {
                 args.clear();
                 LogError(LOG_RCON, BAD_CMD_STR " (\"%s\")", rcom.c_str());

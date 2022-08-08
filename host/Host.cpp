@@ -208,7 +208,7 @@ int Host::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
-#endif
+#endif // !defined(_WIN32) && !defined(_WIN64)
 
     getHostVersion();
     ::LogInfo(">> Modem Controller");
@@ -346,6 +346,7 @@ int Host::run()
     Timer dmrBeaconDurationTimer(1000U);
 
     dmr::Control* dmr = NULL;
+#if defined(ENABLE_DMR)
     LogInfo("DMR Parameters");
     LogInfo("    Enabled: %s", m_dmrEnabled ? "yes" : "no");
     if (m_dmrEnabled) {
@@ -443,12 +444,14 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
+#endif // defined(ENABLE_DMR)
 
     // initialize P25
     Timer p25BcastIntervalTimer(1000U);
     Timer p25BcastDurationTimer(1000U);
 
     p25::Control* p25 = NULL;
+#if defined(ENABLE_P25)
     LogInfo("P25 Parameters");
     LogInfo("    Enabled: %s", m_p25Enabled ? "yes" : "no");
     if (m_p25Enabled) {
@@ -530,10 +533,11 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
+#endif // defined(ENABLE_P25)
 
     // initialize NXDN
     nxdn::Control* nxdn = NULL;
-#if ENABLE_NXDN_SUPPORT
+#if defined(ENABLE_NXDN)
     LogInfo("NXDN Parameters");
     LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
     if (m_nxdnEnabled) {
@@ -573,7 +577,7 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
-#endif
+#endif // defined(ENABLE_NXDN)
 
     if (!m_dmrEnabled && !m_p25Enabled && !m_nxdnEnabled) {
         ::LogError(LOG_HOST, "No modes enabled? DMR, P25 and/or NXDN must be enabled!");
@@ -585,7 +589,7 @@ int Host::run()
         g_killed = true;
     }
 
-#if ENABLE_DFSI_SUPPORT
+#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
     // DFSI checks
     if (m_useDFSI && m_dmrEnabled) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using DFSI!");
@@ -596,7 +600,7 @@ int Host::run()
         ::LogError(LOG_HOST, "Cannot have NXDN enabled when using DFSI!");
         g_killed = true;
     }
-#endif
+#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
 
     // P25 CC checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
@@ -654,16 +658,24 @@ int Host::run()
     if (!g_killed) {
         // fixed more or P25 control channel will force a state change
         if (m_fixedMode || m_p25CtrlChannel) {
+#if defined(ENABLE_P25)
             if (m_p25CtrlChannel) {
                 m_fixedMode = true;
+                setState(STATE_P25);
             }
-
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_DMR)
             if (dmr != NULL)
                 setState(STATE_DMR);
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
             if (p25 != NULL)
                 setState(STATE_P25);
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
             if (nxdn != NULL)
                 setState(STATE_NXDN);
+#endif // defined(ENABLE_NXDN)
         }
         else {
             setState(STATE_IDLE);
@@ -790,6 +802,7 @@ int Host::run()
         // ------------------------------------------------------
 
         /** Digital Mobile Radio */
+#if defined(ENABLE_DMR)
         if (dmr != NULL) {
             // check if there is space on the modem for DMR slot 1 frames,
             // if there is read frames from the DMR controller and write it
@@ -867,8 +880,10 @@ int Host::run()
                 }
             }
         }
+#endif // defined(ENABLE_DMR)
 
         /** Project 25 */
+#if defined(ENABLE_P25)
         // check if there is space on the modem for P25 frames,
         // if there is read frames from the P25 controller and write it
         // to the modem
@@ -931,12 +946,13 @@ int Host::run()
                 }
             }
         }
+#endif // defined(ENABLE_P25)
 
         /** Next Generation Digital Narrowband */
+#if defined(ENABLE_NXDN)
         // check if there is space on the modem for NXDN frames,
         // if there is read frames from the NXDN controller and write it
         // to the modem
-#if ENABLE_NXDN_SUPPORT
         if (nxdn != NULL) {
             ret = m_modem->hasNXDNSpace();
             if (ret) {
@@ -967,7 +983,8 @@ int Host::run()
                 }
             }
         }
-#endif
+#endif // defined(ENABLE_NXDN)
+
         // ------------------------------------------------------
         //  -- Modem Clocking                                 --
         // ------------------------------------------------------
@@ -982,6 +999,7 @@ int Host::run()
         // ------------------------------------------------------
 
         /** Digital Mobile Radio */
+#if defined(ENABLE_DMR)
         if (dmr != NULL) {
             // read DMR slot 1 frames from the modem, and if there is any
             // write those frames to the DMR controller
@@ -1098,8 +1116,10 @@ int Host::run()
                 }
             }
         }
+#endif // defined(ENABLE_DMR)
 
         /** Project 25 */
+#if defined(ENABLE_P25)
         // read P25 frames from modem, and if there are frames
         // write those frames to the P25 controller
         if (p25 != NULL) {
@@ -1168,11 +1188,12 @@ int Host::run()
                 }
             }
         }
+#endif // defined(ENABLE_P25)
 
         /** Next Generation Digital Narrowband */
         // read NXDN frames from modem, and if there are frames
         // write those frames to the NXDN controller
-#if ENABLE_NXDN_SUPPORT
+#if defined(ENABLE_NXDN)
         if (nxdn != NULL) {
             len = m_modem->readNXDNData(data);
             if (len > 0U) {
@@ -1200,7 +1221,8 @@ int Host::run()
                 }
             }
         }
-#endif
+#endif // defined(ENABLE_NXDN)
+
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
@@ -1208,20 +1230,25 @@ int Host::run()
         if (m_network != NULL)
             m_network->clock(ms);
 
+#if defined(ENABLE_DMR)
         if (dmr != NULL)
             dmr->clock();
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
         if (p25 != NULL)
             p25->clock(ms);
-#if ENABLE_NXDN_SUPPORT
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
         if (nxdn != NULL)
             nxdn->clock(ms);
-#endif
+#endif // defined(ENABLE_NXDN)
+
         // ------------------------------------------------------
         //  -- Remote Control Processing                      --
         // ------------------------------------------------------
 
         if (m_remoteControl != NULL) {
-            m_remoteControl->process(this, dmr, p25);
+            m_remoteControl->process(this, dmr, p25, nxdn);
         }
 
         // ------------------------------------------------------
@@ -1276,6 +1303,7 @@ int Host::run()
         }
 
         /** Digial Mobile Radio */
+#if defined(ENABLE_DMR)
         if (dmr != NULL) {
             if (m_dmrTSCCData && m_dmrCtrlChannel) {
                 if (m_state != STATE_DMR)
@@ -1341,8 +1369,10 @@ int Host::run()
                 m_dmrTXTimer.stop();
             }
         }
+#endif // defined(ENABLE_DMR)
 
         /** Project 25 */
+#if defined(ENABLE_P25)
         if (p25 != NULL) {
             if (m_p25CCData) {
                 p25BcastIntervalTimer.clock(ms);
@@ -1406,8 +1436,10 @@ int Host::run()
                 }
             }
         }
+#endif // defined(ENABLE_P25)
 
         if (g_killed) {
+#if defined(ENABLE_DMR)
             if (dmr != NULL) {
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
@@ -1422,7 +1454,9 @@ int Host::run()
                     dmrBeaconIntervalTimer.stop();
                 }
             }
+#endif // defined(ENABLE_DMR)
 
+#if defined(ENABLE_P25)
             if (p25 != NULL) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
@@ -1436,6 +1470,7 @@ int Host::run()
                     p25BcastIntervalTimer.stop();
                 }
             }
+#endif // defined(ENABLE_P25)
 
             hasTxShutdown = true;
             if (!m_modem->hasTX()) {
@@ -1453,18 +1488,21 @@ int Host::run()
 
     setState(HOST_STATE_QUIT);
 
+#if defined(ENABLE_DMR)
     if (dmr != NULL) {
         delete dmr;
     }
-
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     if (p25 != NULL) {
         delete p25;
     }
-#if ENABLE_NXDN_SUPPORT
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
     if (nxdn != NULL) {
         delete nxdn;
     }
-#endif
+#endif // defined(ENABLE_NXDN)
     return EXIT_SUCCESS;
 }
 
@@ -1492,12 +1530,21 @@ bool Host::readParams()
     }
 
     yaml::Node protocolConf = m_conf["protocols"];
+#if defined(ENABLE_DMR)
     m_dmrEnabled = protocolConf["dmr"]["enable"].as<bool>(false);
+#else
+    m_dmrEnabled = false; // hardcode to false when no DMR support is compiled in
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     m_p25Enabled = protocolConf["p25"]["enable"].as<bool>(false);
+#else
+    m_p25Enabled = false; // hardcode to false when no P25 support is compiled in
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
     m_nxdnEnabled = protocolConf["nxdn"]["enable"].as<bool>(false);
-#if !ENABLE_NXDN_SUPPORT
+#else
     m_nxdnEnabled = false; // hardcode to false when no NXDN support is compiled in
-#endif
+#endif // defined(ENABLE_NXDN)
 
     yaml::Node systemConf = m_conf["system"];
     m_duplex = systemConf["duplex"].as<bool>(true);
@@ -1717,11 +1764,11 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
-#if ENABLE_DFSI_SUPPORT
+#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
     m_useDFSI = modemProtocol["dfsi"].as<bool>(false);
 #else
     m_useDFSI = false;
-#endif
+#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
     
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
@@ -1853,7 +1900,7 @@ bool Host::createModem()
 #else
             LogError(LOG_HOST, "Pseudo PTY is not supported on Windows!");
             return false;
-#endif
+#endif // !defined(_WIN32) && !defined(_WIN64)
         }
         else {
             modemPort = new port::UARTPort(uartPort, serialSpeed, true);
@@ -1940,9 +1987,9 @@ bool Host::createModem()
     m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
     m_modem->setDMRColorCode(m_dmrColorCode);
     m_modem->setP25NAC(m_p25NAC);
-#if ENABLE_DFSI_SUPPORT
+#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
     m_modem->setP25DFSI(m_useDFSI);
-#endif
+#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
 
     if (m_modemRemote) {
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));

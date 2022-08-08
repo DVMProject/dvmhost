@@ -276,9 +276,6 @@ int HostSetup::run()
             uint32_t modeHang = m_conf["system"]["modeHang"].as<uint32_t>();
             uint32_t rfTalkgroupHang = m_conf["system"]["rfTalkgroupHang"].as<uint32_t>();
             bool fixedMode = m_conf["system"]["fixedMode"].as<bool>(false);
-            bool dmrEnabled = m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
-            bool p25Enabled = m_conf["protocols"]["p25"]["enable"].as<bool>(true);
-            bool nxdnEnabled = m_conf["protocols"]["nxdn"]["enable"].as<bool>(true);
 
             char value[9] = { '\0' };
             ::fprintf(stdout, "> Identity [%s] ? ", identity.c_str());
@@ -347,6 +344,9 @@ int HostSetup::run()
 
             m_conf["system"]["fixedMode"] = __BOOL_STR(fixedMode);
 
+#if defined(ENABLE_DMR)
+            bool dmrEnabled = m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
+
             ::fprintf(stdout, "> DMR Enabled [%u] (Y/N) ? ", dmrEnabled);
             ::fflush(stdout);
 
@@ -356,6 +356,9 @@ int HostSetup::run()
             }
 
             m_conf["protocols"]["dmr"]["enable"] = __BOOL_STR(dmrEnabled);
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+            bool p25Enabled = m_conf["protocols"]["p25"]["enable"].as<bool>(true);
 
             ::fprintf(stdout, "> P25 Enabled [%u] (Y/N) ? ", p25Enabled);
             ::fflush(stdout);
@@ -366,6 +369,9 @@ int HostSetup::run()
             }
 
             m_conf["protocols"]["p25"]["enable"] = __BOOL_STR(p25Enabled);
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            bool nxdnEnabled = m_conf["protocols"]["nxdn"]["enable"].as<bool>(true);
 
             ::fprintf(stdout, "> NXDN Enabled [%u] (Y/N) ? ", nxdnEnabled);
             ::fflush(stdout);
@@ -376,6 +382,7 @@ int HostSetup::run()
             }
 
             m_conf["protocols"]["nxdn"]["enable"] = __BOOL_STR(nxdnEnabled);
+#endif // defined(ENABLE_NXDN)
 
             printStatus();
         }
@@ -426,10 +433,6 @@ int HostSetup::run()
         {
             rfssConfig = m_conf["system"]["config"];
             uint32_t siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
-            uint32_t dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
-            uint32_t p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
-            uint32_t p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
-            uint32_t p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
 
             char value[6] = { '\0' };
             ::fprintf(stdout, "> Site ID [$%02X] ? ", siteId);
@@ -443,6 +446,9 @@ int HostSetup::run()
                 m_conf["system"]["config"]["siteId"] = __INT_HEX_STR(siteId);
             }
 
+#if defined(ENABLE_DMR)
+            uint32_t dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
+
             ::fprintf(stdout, "> DMR Network ID [$%05X] ? ", dmrNetId);
             ::fflush(stdout);
 
@@ -453,6 +459,13 @@ int HostSetup::run()
 
                 m_conf["system"]["config"]["dmrNetId"] = __INT_HEX_STR(dmrNetId);
             }
+#else
+            m_conf["system"]["config"]["dmrNetId"] = __INT_HEX_STR(1U);
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+            uint32_t p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
+            uint32_t p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
+            uint32_t p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
 
             ::fprintf(stdout, "> P25 Network ID [$%05X] ? ", p25NetId);
             ::fflush(stdout);
@@ -486,6 +499,11 @@ int HostSetup::run()
 
                 m_conf["system"]["config"]["rfssId"] = __INT_HEX_STR(p25RfssId);
             }
+#else
+            m_conf["system"]["config"]["netId"] = __INT_HEX_STR(0xBB800U);
+            m_conf["system"]["config"]["sysId"] = __INT_HEX_STR(1U);
+            m_conf["system"]["config"]["rfssId"] = __INT_HEX_STR(1U);
+#endif // defined(ENABLE_P25)
 
             printStatus();
         }
@@ -494,11 +512,12 @@ int HostSetup::run()
         case 'a':
         {
             rfssConfig = m_conf["system"]["config"];
-            uint32_t dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
-            uint32_t p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
-            uint32_t nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
 
             char value[6] = { '\0' };
+
+#if defined(ENABLE_DMR)
+            uint32_t dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
+
             ::fprintf(stdout, "> DMR Color Code [%u] ? ", dmrColorCode);
             ::fflush(stdout);
 
@@ -509,6 +528,11 @@ int HostSetup::run()
 
                 m_conf["system"]["config"]["colorCode"] = __INT_STR(dmrColorCode);
             }
+#else
+            m_conf["system"]["config"]["colorCode"] = __INT_STR(2U);
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+            uint32_t p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
 
             ::fprintf(stdout, "> P25 NAC [$%03X] ? ", p25NAC);
             ::fflush(stdout);
@@ -520,6 +544,11 @@ int HostSetup::run()
 
                 m_conf["system"]["config"]["nac"] = __INT_HEX_STR(p25NAC);
             }
+#else
+            m_conf["system"]["config"]["nac"] = __INT_HEX_STR(1U);
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            uint32_t nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
 
             ::fprintf(stdout, "> NXDN RAN [%u] ? ", nxdnRAN);
             ::fflush(stdout);
@@ -530,6 +559,9 @@ int HostSetup::run()
 
                 m_conf["system"]["config"]["ran"] = __INT_STR(nxdnRAN);
             }
+#else
+            m_conf["system"]["config"]["ran"] = __INT_STR(1U);
+#endif // defined(ENABLE_NXDN)
 
             printStatus();
         }

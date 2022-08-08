@@ -23,6 +23,20 @@ Use the ```make``` command to build the software.
 * For RPi using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically arm-gcc-none-eabi).
   1. Switch to "/opt" and checkout ```https://github.com/raspberrypi/tools.git```.
 
+### Compiled Protocol Options
+
+These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols is enabled. And, support for the NXDN protocol is disabled. What "compiled in" support means is whether or not the host will perform *any* processing for the specified protocol (and this is regardless of whether or not the ```config.yml``` has a protocol specified for being enabled or not).
+
+There are 2 options to modify which protocol support is compiled in. Either modify the Makefile ```HSTFLAGS=``` line, multiple options are allowed separated by a space or specify it as a argument to make, for example: ```make HSTFLAGS="-DENABLE_DMR -DENABLE_P25 -DENABLE_NXDN"```.
+
+These are the ```HSTFLAGS``` options:
+
+* ```-DENABLE_DMR``` - This will enable compiled-in DMR protocol support.
+* ```-DENABLE_P25``` - This will enable compiled-in P25 protocol support.
+* ```-DENABLE_NXDN``` - This will enable compiled-in NXDN protocol support.
+
+**NXDN Support Note**: NXDN support is currently experimental.
+
 ## Configuration
 
 When first setting up a DVM instance, it is required to properly set the "Logical Channel ID" (or LCN ID) data and then calibrate the modem.
@@ -78,8 +92,6 @@ Some extra notes for those who are using the Raspberry Pi, default Raspbian OS o
  ```console=tty1 root=PARTUUID=[this is dynamic per partition] rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait```
  
 All thats being done is to remove the ```console=serial0,115200``` part. Do not change anything else. Save the file, then reboot.
-
-**NXDN Support Note**: NXDN support is currently experimental, while it is fully enabled in areas of the host, it is by default *entirely* disabled from normal host processing. In order to enable it compile dvmhost like this: ```make EXTFLAGS=-DENABLE_NXDN_SUPPORT```
 
 ## License
 

@@ -35,6 +35,7 @@
 #include "network/UDPSocket.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
+#include "nxdn/Control.h"
 #include "host/Host.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
@@ -49,6 +50,7 @@
 class HOST_SW_API Host;
 namespace dmr { class HOST_SW_API Control; }
 namespace p25 { class HOST_SW_API Control; }
+namespace nxdn { class HOST_SW_API Control; }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -66,7 +68,7 @@ public:
     void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup);
 
     /// <summary>Process remote network command data.</summary>
-    void process(Host* host, dmr::Control* dmr, p25::Control* p25);
+    void process(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
 
     /// <summary>Opens connection to the network.</summary>
     bool open();
