@@ -487,6 +487,19 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
 
+            // replace audio with silence in cases where the error rate
+            // has exceeded the configured threshold
+            if (errors > m_silenceThreshold) {
+                // bryanb: this is probably the wrong way to go about this...
+                // generate null audio
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
+
+                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+            }
+
             m_rfErrs += errors;
             m_rfBits += 188U;
 
@@ -506,6 +519,17 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
             
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+
+            // replace audio with silence in cases where the error rate
+            // has exceeded the configured threshold
+            if (errors > (m_silenceThreshold / 2U)) {
+                // bryanb: this is probably the wrong way to go about this...
+                // generate null audio
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
+
+                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+            }
             
             m_rfErrs += errors;
             m_rfBits += 94U;
@@ -519,8 +543,19 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 
             uint32_t errors = 0U;
             
-            errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES);
+            errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
+
+            // replace audio with silence in cases where the error rate
+            // has exceeded the configured threshold
+            if (errors > (m_silenceThreshold / 2U)) {
+                // bryanb: this is probably the wrong way to go about this...
+                // generate null audio
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NXDN_NULL_AMBE, 9U);
+                ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NXDN_NULL_AMBE, 9U);
+
+                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+            }
             
             m_rfErrs += errors;
             m_rfBits += 94U;

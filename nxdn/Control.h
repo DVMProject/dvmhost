@@ -37,6 +37,7 @@
 #include "nxdn/lc/LC.h"
 #include "nxdn/packet/Voice.h"
 #include "nxdn/packet/Data.h"
+#include "nxdn/SiteData.h"
 #include "network/BaseNetwork.h"
 #include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
@@ -80,7 +81,7 @@ namespace nxdn
 
         /// <summary>Helper to set NXDN configuration options.</summary>
         void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            uint8_t channelId, uint32_t channelNo, bool printOptions);
+            uint16_t locId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
@@ -109,6 +110,9 @@ namespace nxdn
         network::BaseNetwork* m_network;
 
         bool m_duplex;
+        bool m_control;
+        bool m_dedicatedControl;
+        bool m_voiceOnControl;
 
         channel::LICH m_rfLastLICH;
         lc::LC m_rfLC;
@@ -130,10 +134,16 @@ namespace nxdn
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
 
+        bool m_ccRunning;
+        bool m_ccPrevRunning;
+        bool m_ccHalted;
+
         Timer m_rfTimeout;
         Timer m_rfTGHang;
         Timer m_netTimeout;
         Timer m_networkWatchdog;
+
+        SiteData m_siteData;
 
         lookups::RSSIInterpolator* m_rssiMapper;
         uint8_t m_rssi;

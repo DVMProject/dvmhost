@@ -152,6 +152,8 @@ namespace nxdn
     const uint32_t  MAX_NXDN_VOICE_ERRORS = 144U;
     const uint32_t  MAX_NXDN_VOICE_ERRORS_STEAL = 94U;
 
+    const uint8_t   NXDN_NULL_AMBE[] = { 0xB1U, 0xA8U, 0x22U, 0x25U, 0x6BU, 0xD1U, 0x6CU, 0xCFU, 0x67U };
+
     const uint32_t  NXDN_MI_LENGTH_BYTES = 8U;
     const uint32_t  NXDN_PCKT_INFO_LENGTH_BYTES = 3U;
 
@@ -181,8 +183,27 @@ namespace nxdn
     const uint8_t   NXDN_CAUSE_DISC_NORMAL = 0x01U;
     const uint8_t   NXDN_CAUSE_DISC_NORMAL_TC = 0x02U;
 
+    const uint8_t   NXDN_SIF1_DATA_CALL_SVC = 0x01U;
+    const uint8_t   NXDN_SIF1_VOICE_CALL_SVC = 0x02U;
+    const uint8_t   NXDN_SIF1_COMPOSITE_CONTROL = 0x04U;
+    const uint8_t   NXDN_SIF1_AUTH_SVC = 0x08U;
+    const uint8_t   NXDN_SIF1_GRP_REG_SVC = 0x10U;
+    const uint8_t   NXDN_SIF1_LOC_REG_SVC = 0x20U;
+    const uint8_t   NXDN_SIF1_MULTI_SYSTEM_SVC = 0x40U;
+    const uint8_t   NXDN_SIF1_MULTI_SITE_SVC = 0x80U;
+
+    const uint8_t   NXDN_SIF2_IP_NETWORK = 0x10U;
+    const uint8_t   NXDN_SIF2_PSTN_NETWORK = 0x20U;
+    const uint8_t   NXDN_SIF2_STATUS_CALL_REM_CTRL = 0x40U;
+    const uint8_t   NXDN_SIF2_SHORT_DATA_CALL_SVC = 0x80U;
+
     // Common Message Types
     const uint8_t   MESSAGE_TYPE_IDLE = 0x10U;                  // IDLE - Idle
+    const uint8_t   MESSAGE_TYPE_DISC = 0x11U;                  // DISC - Disconnect
+    const uint8_t   MESSAGE_TYPE_DST_ID_INFO = 0x17U;           // DST_ID_INFO - Digital Station ID
+    const uint8_t   MESSAGE_TYPE_SRV_INFO = 0x19U;              // SRV_INFO - Service Information
+    const uint8_t   MESSAGE_TYPE_CCH_INFO = 0x1AU;              // CCH_INFO - Control Channel Information
+    const uint8_t   MESSAGE_TYPE_ADJ_SITE_INFO = 0x1BU;         // ADJ_SITE_INFO - Adjacent Site Information
 
     // Traffic Channel Message Types
     const uint8_t   RTCH_MESSAGE_TYPE_VCALL = 0x01U;            // VCALL - Voice Call
@@ -199,6 +220,11 @@ namespace nxdn
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_RESP = 0x3BU;      // SDCALL_RESP - Short Data Call Response
 
     // Control Channel Message Types
+    const uint8_t   RCCH_MESSAGE_TYPE_SITE_INFO = 0x18U;        // SITE_INFO - Site Information
+    const uint8_t   RCCH_MESSAGE_TYPE_REG = 0x20U;              // REG - Registration Request (ISP) / Registration Response (OSP)
+    const uint8_t   RCCH_MESSAGE_TYPE_REG_C = 0x22U;            // REG_C - Registration Clear Request (ISP) / Registration Clear Response (OSP)
+    const uint8_t   RCCH_MESSAGE_TYPE_REG_COMM = 0x23U;         // REG_COMM - Registration Command
+    const uint8_t   RCCH_MESSAGE_TYPE_GRP_REG = 0x24U;          // GRP_REG - Group Registration Request (ISP) / Group Registration Response (OSP)
     const uint8_t   RCCH_MESSAGE_TYPE_PROP_FORM = 0x3FU;        // PROP_FORM - Proprietary Form
 
     // Call Types

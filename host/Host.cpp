@@ -122,6 +122,15 @@ Host::Host(const std::string& confFile) :
     m_p25CCData(false),
     m_p25CtrlChannel(false),
     m_p25CtrlBroadcast(false),
+    m_siteId(1U),
+    m_dmrNetId(1U),
+    m_dmrColorCode(1U),
+    m_p25NAC(0x293U),
+    m_p25PatchSuperGroup(0xFFFFU),
+    m_p25NetId(0xBB800U),
+    m_p25SysId(1U),
+    m_p25RfssId(1U),
+    m_nxdnRAN(1U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_remoteControl(NULL)
@@ -568,7 +577,7 @@ int Host::run()
         nxdn = new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDebug, nxdnVerbose);
-        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
 
         if (nxdnVerbose) {
             LogInfo("    Verbose: yes");

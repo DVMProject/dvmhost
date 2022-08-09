@@ -157,7 +157,7 @@ CAC& CAC::operator=(const CAC& data)
 }
 
 /// <summary>
-/// Decode a slow associated control channel.
+/// Decode a common access channel.
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if CAC was decoded, otherwise false.</returns>
@@ -223,7 +223,7 @@ bool CAC::decode(const uint8_t* data)
 }
 
 /// <summary>
-/// Encode a slow associated control channel.
+/// Encode a common access channel.
 /// </summary>
 /// <param name="data"></param>
 void CAC::encode(uint8_t* data) const

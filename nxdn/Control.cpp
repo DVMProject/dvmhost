@@ -92,6 +92,9 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_modem(modem),
     m_network(network),
     m_duplex(duplex),
+    m_control(false),
+    m_dedicatedControl(false),
+    m_voiceOnControl(false),
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
@@ -106,10 +109,14 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_ccRunning(false),
+    m_ccPrevRunning(false),
+    m_ccHalted(false),
     m_rfTimeout(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
+    m_siteData(),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
     m_maxRSSI(0U),
@@ -176,20 +183,47 @@ void Control::reset()
 /// <param name="conf">Instance of the yaml::Node class.</param>
 /// <param name="cwCallsign"></param>
 /// <param name="voiceChNo"></param>
+/// <param name="locId"></param>
 /// <param name="channelId"></param>
 /// <param name="channelNo"></param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    uint8_t channelId, uint32_t channelNo, bool printOptions)
+    uint16_t locId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
+
+    yaml::Node control = nxdnProtocol["control"];
+    m_control = control["enable"].as<bool>(false);
+    if (m_control) {
+        m_dedicatedControl = control["dedicated"].as<bool>(false);
+    }
+    else {
+        m_dedicatedControl = false;
+    }
+
+    m_voiceOnControl = nxdnProtocol["voiceOnControl"].as<bool>(false);
 
     m_voice->m_silenceThreshold = nxdnProtocol["silenceThreshold"].as<uint32_t>(nxdn::DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_NXDN_VOICE_ERRORS) {
         LogWarning(LOG_NXDN, "Silence threshold > %u, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS, nxdn::DEFAULT_SILENCE_THRESHOLD);
         m_voice->m_silenceThreshold = nxdn::DEFAULT_SILENCE_THRESHOLD;
     }
+
+    bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
+    uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
+    if (m_control) {
+        serviceClass |= NXDN_SIF1_GRP_REG_SVC;
+    }
+
+    if (m_voiceOnControl) {
+        if (!disableCompositeFlag) {
+            serviceClass |= NXDN_SIF1_COMPOSITE_CONTROL;
+        }
+    }
+
+    m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
+    m_siteData.setCallsign(cwCallsign);
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
@@ -202,6 +236,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
+
+        if (m_control) {
+            LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
+        }
     }
 
     if (m_voice != NULL) {
