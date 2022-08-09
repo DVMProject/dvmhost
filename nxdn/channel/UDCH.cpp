@@ -98,7 +98,7 @@ UDCH::UDCH() :
     m_ran(0U),
     m_data(NULL)
 {
-    m_data = new uint8_t[26U];
+    m_data = new uint8_t[NXDN_UDCH_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -129,7 +129,7 @@ UDCH::~UDCH()
 UDCH& UDCH::operator=(const UDCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, 26U);
+        ::memcpy(m_data, data.m_data, NXDN_UDCH_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
 
@@ -148,33 +148,34 @@ bool UDCH::decode(const uint8_t* data)
 {
     assert(data != NULL);
 
-    uint8_t buffer[NXDN_FACCH2_LENGTH_BYTES + 1U];
-    for (uint32_t i = 0U; i < NXDN_FACCH2_LENGTH_BITS; i++) {
+    uint8_t buffer[NXDN_UDCH_FEC_LENGTH_BYTES];
+
+    // deinterleave
+    for (uint32_t i = 0U; i < NXDN_UDCH_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS;
         bool b = READ_BIT(data, n);
         WRITE_BIT(buffer, i, b);
     }
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "UDCH::decode(), UDCH Raw", buffer, NXDN_FACCH2_LENGTH_BYTES + 1U);
+    Utils::dump(2U, "UDCH::decode(), UDCH Raw", buffer, NXDN_UDCH_FEC_LENGTH_BYTES);
 #endif
 
-    // deinterleave
-    uint8_t interleave[420U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < NXDN_FACCH2_LENGTH_BITS; i++) {
+    // depuncture
+    uint8_t puncture[420U];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_UDCH_FEC_LENGTH_BITS; i++) {
         if (n == PUNCTURE_LIST[index]) {
-            interleave[n++] = 1U;
+            puncture[n++] = 1U;
             index++;
         }
 
         bool b = READ_BIT(buffer, i);
-        interleave[n++] = b ? 2U : 0U;
+        puncture[n++] = b ? 2U : 0U;
     }
 
     for (uint32_t i = 0U; i < 8U; i++) {
-        interleave[n++] = 0U;
+        puncture[n++] = 0U;
     }
 
     // decode convolution
@@ -182,21 +183,21 @@ bool UDCH::decode(const uint8_t* data)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < 207U; i++) {
-        uint8_t s0 = interleave[n++];
-        uint8_t s1 = interleave[n++];
+    for (uint32_t i = 0U; i < (NXDN_UDCH_LENGTH_BITS + 4U); i++) {
+        uint8_t s0 = puncture[n++];
+        uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, 203U);
+    conv.chainback(m_data, NXDN_UDCH_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded UDCH", m_data, 26U);
+        Utils::dump(2U, "Decoded UDCH", m_data, NXDN_UDCH_LENGTH_BYTES);
     }
 
     // check CRC-15
-    bool ret = CRC::checkCRC15(m_data, 26U);
+    bool ret = CRC::checkCRC15(m_data, NXDH_UDCH_CRC_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "UDCH::decode(), failed CRC-15 check");
         return false;
@@ -217,47 +218,47 @@ void UDCH::encode(uint8_t* data) const
 
     m_data[0U] = m_ran;
 
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded UDCH", m_data, 26U);
-    }
-
-    uint8_t buffer[25U];
-    ::memset(buffer, 0x00U, 25U);
+    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_UDCH_LENGTH_BYTES);
     ::memcpy(buffer, m_data, 23U);
 
-    CRC::addCRC15(buffer, 184U);
+    CRC::addCRC15(buffer, NXDH_UDCH_CRC_BITS);
+
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_LENGTH_BYTES);
+    }
 
     // encode convolution
-    uint8_t convolution[51U];
+    uint8_t convolution[NXDN_UDCH_FEC_CONV_LENGTH_BYTES];
     Convolution conv;
-    conv.encode(buffer, convolution, 203U);
+    conv.encode(buffer, convolution, NXDN_UDCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "UDCH::encode(), UDCH Convolution", convolution, 51U);
+    Utils::dump(2U, "UDCH::encode(), UDCH Convolution", convolution, NXDN_UDCH_FEC_CONV_LENGTH_BYTES);
 #endif
 
-    // interleave and puncture
-    uint8_t raw[44U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < 406U; i++) {
+    // puncture
+    uint8_t puncture[NXDN_UDCH_FEC_LENGTH_BYTES];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_UDCH_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
-            WRITE_BIT(raw, n, b);
+            WRITE_BIT(puncture, n, b);
             n++;
         } else {
             index++;
         }
     }
 
-    for (uint32_t i = 0U; i < NXDN_FACCH2_LENGTH_BITS; i++) {
+    // interleave
+    for (uint32_t i = 0U; i < NXDN_UDCH_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS;
-        bool b = READ_BIT(raw, i);
+        bool b = READ_BIT(puncture, i);
         WRITE_BIT(data, n, b);
     }
 
 #if DEBUG_NXDN_UDCH
-    Utils::dump(2U, "UDCH::encode(), UDCH Interleave", raw, 44U);
+    Utils::dump(2U, "UDCH::encode(), UDCH Puncture and Interleave", data, NXDN_UDCH_FEC_LENGTH_BYTES);
 #endif
 }
 

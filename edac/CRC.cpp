@@ -484,17 +484,17 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 /// Check 6-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-bool CRC::checkCRC6(const uint8_t* in, uint32_t length)
+bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint8_t crc = createCRC6(in, length);
+    uint8_t crc = createCRC6(in, bitLength);
 
     uint8_t temp[1U];
     temp[0U] = 0x00U;
-    uint32_t j = length;
+    uint32_t j = bitLength;
     for (uint32_t i = 2U; i < 8U; i++, j++) {
         bool b = READ_BIT(in, j);
         WRITE_BIT(temp, i, b);
@@ -502,7 +502,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t length)
 
 #if DEBUG_CRC
     uint32_t inCrc = temp[0U];
-    LogDebug(LOG_HOST, "CRC::checkCRC6(), crc = $%08X, in = $%08X, len = %u", crc32, inCrc, length);
+    LogDebug(LOG_HOST, "CRC::checkCRC6(), crc = $%08X, in = $%08X, bitlen = %u", crc32, inCrc, bitLength);
 #endif
 
     return crc == temp[0U];
@@ -512,23 +512,23 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t length)
 /// Encode 6-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC6(uint8_t* in, uint32_t length)
+void CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
     uint8_t crc[1U];
-    crc[0U] = createCRC6(in, length);
+    crc[0U] = createCRC6(in, bitLength);
 
-    uint32_t n = length;
+    uint32_t n = bitLength;
     for (uint32_t i = 2U; i < 8U; i++, n++) {
         bool b = READ_BIT(crc, i);
         WRITE_BIT(in, n, b);
     }
 
 #if DEBUG_CRC
-    LogDebug(LOG_HOST, "CRC::addCRC6(), crc = $%04X, len = %u", crc[0U], length);
+    LogDebug(LOG_HOST, "CRC::addCRC6(), crc = $%04X, bitlen = %u", crc[0U], bitLength);
 #endif
 }
 
@@ -536,13 +536,13 @@ void CRC::addCRC6(uint8_t* in, uint32_t length)
 /// Check 12-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-bool CRC::checkCRC12(const uint8_t* in, uint32_t length)
+bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC12(in, length);
+    uint16_t crc = createCRC12(in, bitLength);
     uint8_t temp1[2U];
     temp1[0U] = (crc >> 8) & 0xFFU;
     temp1[1U] = (crc >> 0) & 0xFFU;
@@ -550,15 +550,15 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t length)
     uint8_t temp2[2U];
     temp2[0U] = 0x00U;
     temp2[1U] = 0x00U;
-    uint32_t j = length;
+    uint32_t j = bitLength;
     for (uint32_t i = 4U; i < 16U; i++, j++) {
         bool b = READ_BIT(in, j);
         WRITE_BIT(temp2, i, b);
     }
 
 #if DEBUG_CRC
-    uint16_t inCrc = (temp2[length - 2U] << 8) | (temp2[length - 1U] << 0);
-    LogDebug(LOG_HOST, "CRC:checkCRC12(), crc = $%04X, in = $%04X, len = %u", crc, inCrc, length);
+    uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
+    LogDebug(LOG_HOST, "CRC:checkCRC12(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
 
     return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
@@ -568,26 +568,26 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t length)
 /// Encode 12-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC12(uint8_t* in, uint32_t length)
+void CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC12(in, length);
+    uint16_t crc = createCRC12(in, bitLength);
 
     uint8_t temp[2U];
     temp[0U] = (crc >> 8) & 0xFFU;
     temp[1U] = (crc >> 0) & 0xFFU;
 
-    uint32_t n = length;
+    uint32_t n = bitLength;
     for (uint32_t i = 4U; i < 16U; i++, n++) {
         bool b = READ_BIT(temp, i);
         WRITE_BIT(in, n, b);
     }
 
 #if DEBUG_CRC
-    LogDebug(LOG_HOST, "CRC::addCRC12(), crc = $%04X, len = %u", crc, length);
+    LogDebug(LOG_HOST, "CRC::addCRC12(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
 }
 
@@ -595,13 +595,13 @@ void CRC::addCRC12(uint8_t* in, uint32_t length)
 /// Check 15-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-bool CRC::checkCRC15(const uint8_t* in, uint32_t length)
+bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC15(in, length);
+    uint16_t crc = createCRC15(in, bitLength);
     uint8_t temp1[2U];
     temp1[0U] = (crc >> 8) & 0xFFU;
     temp1[1U] = (crc >> 0) & 0xFFU;
@@ -609,15 +609,15 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t length)
     uint8_t temp2[2U];
     temp2[0U] = 0x00U;
     temp2[1U] = 0x00U;
-    uint32_t j = length;
+    uint32_t j = bitLength;
     for (uint32_t i = 1U; i < 16U; i++, j++) {
         bool b = READ_BIT(in, j);
         WRITE_BIT(temp2, i, b);
     }
 
 #if DEBUG_CRC
-    uint16_t inCrc = (temp2[length - 2U] << 8) | (temp2[length - 1U] << 0);
-    LogDebug(LOG_HOST, "CRC:checkCRC15(), crc = $%04X, in = $%04X, len = %u", crc, inCrc, length);
+    uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
+    LogDebug(LOG_HOST, "CRC:checkCRC15(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
 
     return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
@@ -627,26 +627,85 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t length)
 /// Encode 15-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC15(uint8_t* in, uint32_t length)
+void CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC15(in, length);
+    uint16_t crc = createCRC15(in, bitLength);
 
     uint8_t temp[2U];
     temp[0U] = (crc >> 8) & 0xFFU;
     temp[1U] = (crc >> 0) & 0xFFU;
 
-    uint32_t n = length;
+    uint32_t n = bitLength;
     for (uint32_t i = 1U; i < 16U; i++, n++) {
         bool b = READ_BIT(temp, i);
         WRITE_BIT(in, n, b);
     }
 
 #if DEBUG_CRC
-    LogDebug(LOG_HOST, "CRC::addCRC15(), crc = $%04X, len = %u", crc, length);
+    LogDebug(LOG_HOST, "CRC::addCRC15(), crc = $%04X, bitlen = %u", crc, bitLength);
+#endif
+}
+
+/// <summary>
+/// Check 16-bit CRC.
+/// </summary>
+/// <param name="in">Input byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
+/// <returns>True, if CRC is valid, otherwise false.</returns>
+bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
+{
+    assert(in != NULL);
+
+    uint16_t crc = createCRC15(in, bitLength);
+    uint8_t temp1[2U];
+    temp1[0U] = (crc >> 8) & 0xFFU;
+    temp1[1U] = (crc >> 0) & 0xFFU;
+
+    uint8_t temp2[2U];
+    temp2[0U] = 0x00U;
+    temp2[1U] = 0x00U;
+    uint32_t j = bitLength;
+    for (uint32_t i = 1U; i < 16U; i++, j++) {
+        bool b = READ_BIT(in, j);
+        WRITE_BIT(temp2, i, b);
+    }
+
+#if DEBUG_CRC
+    uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
+    LogDebug(LOG_HOST, "CRC:checkCRC16(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
+#endif
+
+    return temp1[0U] == temp2[0U] && temp1[1U] == temp2[1U];
+}
+
+/// <summary>
+/// Encode 16-bit CRC.
+/// </summary>
+/// <param name="in">Input byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
+/// <returns>True, if CRC is valid, otherwise false.</returns>
+void CRC::addCRC16(uint8_t* in, uint32_t bitLength)
+{
+    assert(in != NULL);
+
+    uint16_t crc = createCRC15(in, bitLength);
+
+    uint8_t temp[2U];
+    temp[0U] = (crc >> 8) & 0xFFU;
+    temp[1U] = (crc >> 0) & 0xFFU;
+
+    uint32_t n = bitLength;
+    for (uint32_t i = 1U; i < 16U; i++, n++) {
+        bool b = READ_BIT(temp, i);
+        WRITE_BIT(in, n, b);
+    }
+
+#if DEBUG_CRC
+    LogDebug(LOG_HOST, "CRC::addCRC16(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
 }
 
@@ -658,13 +717,13 @@ void CRC::addCRC15(uint8_t* in, uint32_t length)
 /// 
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns></returns>
-uint8_t CRC::createCRC6(const uint8_t* in, uint32_t length)
+uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
 {
     uint8_t crc = 0x3FU;
 
-    for (uint32_t i = 0U; i < length; i++) {
+    for (uint32_t i = 0U; i < bitLength; i++) {
         bool bit1 = READ_BIT(in, i) != 0x00U;
         bool bit2 = (crc & 0x20U) == 0x20U;
 
@@ -681,13 +740,13 @@ uint8_t CRC::createCRC6(const uint8_t* in, uint32_t length)
 /// 
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns></returns>
-uint16_t CRC::createCRC12(const uint8_t* in, uint32_t length)
+uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x0FFFU;
 
-    for (uint32_t i = 0U; i < length; i++) {
+    for (uint32_t i = 0U; i < bitLength; i++) {
         bool bit1 = READ_BIT(in, i) != 0x00U;
         bool bit2 = (crc & 0x0800U) == 0x0800U;
 
@@ -704,13 +763,13 @@ uint16_t CRC::createCRC12(const uint8_t* in, uint32_t length)
 /// 
 /// </summary>
 /// <param name="in">Input byte array.</param>
-/// <param name="length">Length of byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
 /// <returns></returns>
-uint16_t CRC::createCRC15(const uint8_t* in, uint32_t length)
+uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 {
     uint16_t crc = 0x7FFFU;
 
-    for (uint32_t i = 0U; i < length; i++) {
+    for (uint32_t i = 0U; i < bitLength; i++) {
         bool bit1 = READ_BIT(in, i) != 0x00U;
         bool bit2 = (crc & 0x4000U) == 0x4000U;
 
@@ -721,4 +780,27 @@ uint16_t CRC::createCRC15(const uint8_t* in, uint32_t length)
     }
 
     return crc & 0x7FFFU;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="in">Input byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
+/// <returns></returns>
+uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
+{
+    uint16_t crc = 0xFFFFU;
+
+    for (uint32_t i = 0U; i < bitLength; i++) {
+        bool bit1 = READ_BIT(in, i) != 0x00U;
+        bool bit2 = (crc & 0x8000U) == 0x8000U;
+
+        crc <<= 1;
+
+        if (bit1 ^ bit2)
+            crc ^= 0x1021U;
+    }
+
+    return crc & 0xFFFFU;
 }

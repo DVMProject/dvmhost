@@ -64,6 +64,7 @@ HOST_OBJECTS = \
 		lookups/RSSIInterpolator.o \
 		lookups/TalkgroupIdLookup.o \
 		nxdn/acl/AccessControl.o \
+		nxdn/channel/CAC.o \
 		nxdn/channel/FACCH1.o \
 		nxdn/channel/LICH.o \
 		nxdn/channel/SACCH.o \

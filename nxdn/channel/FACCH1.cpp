@@ -75,7 +75,7 @@ FACCH1::FACCH1() :
     m_verbose(false),
     m_data(NULL)
 {
-    m_data = new uint8_t[12U];
+    m_data = new uint8_t[NXDN_FACCH1_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -105,7 +105,7 @@ FACCH1::~FACCH1()
 FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, 12U);
+        ::memcpy(m_data, data.m_data, NXDN_FACCH1_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
     }
@@ -122,33 +122,34 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 {
     assert(data != NULL);
 
-    uint8_t buffer[NXDN_FACCH1_LENGTH_BYTES];
-    for (uint32_t i = 0U; i < NXDN_FACCH1_LENGTH_BITS; i++) {
+    uint8_t buffer[NXDN_FACCH1_FEC_LENGTH_BYTES];
+
+    // deinterleave
+    for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + offset;
         bool b = READ_BIT(data, n);
         WRITE_BIT(buffer, i, b);
     }
 
 #if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "FACCH1::decode(), FACCH1 Raw", buffer, NXDN_FACCH1_LENGTH_BYTES);
+    Utils::dump(2U, "FACCH1::decode(), FACCH1 Raw", buffer, NXDN_FACCH1_FEC_LENGTH_BYTES);
 #endif
 
-    // deinterleave
-    uint8_t interleave[210U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < NXDN_FACCH1_LENGTH_BITS; i++) {
+    // depuncture
+    uint8_t puncture[210U];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
         if (n == PUNCTURE_LIST[index]) {
-            interleave[n++] = 1U;
+            puncture[n++] = 1U;
             index++;
         }
 
         bool b = READ_BIT(buffer, i);
-        interleave[n++] = b ? 2U : 0U;
+        puncture[n++] = b ? 2U : 0U;
     }
 
     for (uint32_t i = 0U; i < 8U; i++) {
-        interleave[n++] = 0U;
+        puncture[n++] = 0U;
     }
 
     // decode convolution
@@ -156,21 +157,21 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < 100U; i++) {
-        uint8_t s0 = interleave[n++];
-        uint8_t s1 = interleave[n++];
+    for (uint32_t i = 0U; i < (NXDN_FACCH1_LENGTH_BITS + 4U); i++) {
+        uint8_t s0 = puncture[n++];
+        uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, 96U);
+    conv.chainback(m_data, NXDN_FACCH1_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded FACCH1", m_data, 12U);
+        Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_LENGTH_BYTES);
     }
 
     // check CRC-12
-    bool ret = CRC::checkCRC12(m_data, 80U);
+    bool ret = CRC::checkCRC12(m_data, NXDN_FACCH1_CRC_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "FACCH1::decode(), failed CRC-12 check");
         return false;
@@ -188,30 +189,29 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 {
     assert(data != NULL);
 
+    uint8_t buffer[NXDN_FACCH1_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_FACCH1_LENGTH_BYTES);
+    ::memcpy(buffer, m_data, NXDN_FACCH1_LENGTH_BYTES - 2U);
+
+    CRC::addCRC12(buffer, NXDN_FACCH1_CRC_BITS);
+
     if (m_verbose) {
-        Utils::dump(2U, "Encoded FACCH1", m_data, 12U);
+        Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_LENGTH_BYTES);
     }
 
-    uint8_t buffer[12U];
-    ::memset(buffer, 0x00U, 12U);
-    ::memcpy(buffer, m_data, 10U);
-
-    CRC::addCRC12(buffer, 80U);
-
     // encode convolution
-    uint8_t convolution[24U];
+    uint8_t convolution[NXDN_FACCH1_FEC_CONV_LENGTH_BYTES];
     Convolution conv;
-    conv.encode(buffer, convolution, 96U);
+    conv.encode(buffer, convolution, NXDN_FACCH1_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "FACCH1::encode(), FACCH1 Convolution", convolution, 24U);
+    Utils::dump(2U, "FACCH1::encode(), FACCH1 Convolution", convolution, NXDN_FACCH1_FEC_CONV_LENGTH_BYTES);
 #endif
 
-    // interleave and puncture
-    uint8_t raw[18U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < 192U; i++) {
+    // puncture
+    uint8_t raw[NXDN_FACCH1_FEC_LENGTH_BYTES];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
             WRITE_BIT(raw, n, b);
@@ -221,14 +221,15 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
         }
     }
 
-    for (uint32_t i = 0U; i < NXDN_FACCH1_LENGTH_BITS; i++) {
+    // interleave
+    for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + offset;
         bool b = READ_BIT(raw, i);
         WRITE_BIT(data, n, b);
     }
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "FACCH1::encode(), FACCH1 Interleave", raw, 18U);
+    Utils::dump(2U, "FACCH1::encode(), FACCH1 Puncture and Interleave", data, NXDN_FACCH1_FEC_LENGTH_BYTES);
 #endif
 }
 
@@ -240,7 +241,7 @@ void FACCH1::getData(uint8_t* data) const
 {
     assert(data != NULL);
 
-    ::memcpy(data, m_data, 10U);
+    ::memcpy(data, m_data, NXDN_FACCH1_LENGTH_BYTES - 2U);
 }
 
 /// <summary>
@@ -251,7 +252,7 @@ void FACCH1::setData(const uint8_t* data)
 {
     assert(data != NULL);
 
-    ::memcpy(m_data, data, 10U);
+    ::memcpy(m_data, data, NXDN_FACCH1_LENGTH_BYTES - 2U);
 }
 
 // ---------------------------------------------------------------------------
@@ -264,8 +265,8 @@ void FACCH1::setData(const uint8_t* data)
 /// <param name="data"></param>
 void FACCH1::copy(const FACCH1& data)
 {
-    m_data = new uint8_t[12U];
-    ::memcpy(m_data, data.m_data, 12U);
+    m_data = new uint8_t[NXDN_FACCH1_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_FACCH1_LENGTH_BYTES);
 
     m_verbose = data.m_verbose;
 }

@@ -69,27 +69,34 @@ namespace edac
         static uint16_t crc9(const uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 6-bit CRC.</summary>
-        static bool checkCRC6(const uint8_t* in, uint32_t length);
+        static bool checkCRC6(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 6-bit CRC.</summary>
-        static void addCRC6(uint8_t* in, uint32_t length);
+        static void addCRC6(uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 12-bit CRC.</summary>
-        static bool checkCRC12(const uint8_t* in, uint32_t length);
+        static bool checkCRC12(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 12-bit CRC.</summary>
-        static void addCRC12(uint8_t* in, uint32_t length);
+        static void addCRC12(uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 15-bit CRC.</summary>
-        static bool checkCRC15(const uint8_t* in, uint32_t length);
+        static bool checkCRC15(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 15-bit CRC.</summary>
-        static void addCRC15(uint8_t* in, uint32_t length);
+        static void addCRC15(uint8_t* in, uint32_t bitLength);
+
+        /// <summary>Check 16-bit CRC-CCITT.</summary>
+        static bool checkCRC16(const uint8_t* in, uint32_t bitLength);
+        /// <summary>Encode 15-bit CRC.</summary>
+        static void addCRC16(uint8_t* in, uint32_t bitLength);
 
     private:
         /// <summary></summary>
-        static uint8_t createCRC6(const uint8_t* in, uint32_t length);
+        static uint8_t createCRC6(const uint8_t* in, uint32_t bitLength);
         /// <summary></summary>
-        static uint16_t createCRC12(const uint8_t* in, uint32_t length);
+        static uint16_t createCRC12(const uint8_t* in, uint32_t bitLength);
         /// <summary></summary>
-        static uint16_t createCRC15(const uint8_t* in, uint32_t length);
+        static uint16_t createCRC15(const uint8_t* in, uint32_t bitLength);
+        /// <summary></summary>
+        static uint16_t createCRC16(const uint8_t* in, uint32_t bitLength);
     };
 } // namespace edac
 

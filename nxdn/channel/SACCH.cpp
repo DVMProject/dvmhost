@@ -70,7 +70,7 @@ SACCH::SACCH() :
     m_structure(0U),
     m_data(NULL)
 {
-    m_data = new uint8_t[5U];
+    m_data = new uint8_t[NXDN_SACCH_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -102,7 +102,7 @@ SACCH::~SACCH()
 SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, 5U);
+        ::memcpy(m_data, data.m_data, NXDN_SACCH_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
 
@@ -122,33 +122,34 @@ bool SACCH::decode(const uint8_t* data)
 {
     assert(data != NULL);
 
-    uint8_t buffer[NXDN_SACCH_LENGTH_BYTES + 1U];
-    for (uint32_t i = 0U; i < NXDN_SACCH_LENGTH_BITS; i++) {
+    uint8_t buffer[NXDN_SACCH_FEC_LENGTH_BYTES];
+
+    // deinterleave
+    for (uint32_t i = 0U; i < NXDN_SACCH_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS;
         bool b = READ_BIT(data, n);
         WRITE_BIT(buffer, i, b);
     }
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "SACCH::decode(), SACCH Raw", buffer, NXDN_SACCH_LENGTH_BYTES + 1U);
+    Utils::dump(2U, "SACCH::decode(), SACCH Raw", buffer, NXDN_SACCH_FEC_LENGTH_BYTES);
 #endif
 
-    // deinterleave
-    uint8_t interleave[90U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < NXDN_SACCH_LENGTH_BITS; i++) {
+    // depuncture
+    uint8_t puncture[90U];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_SACCH_FEC_LENGTH_BITS; i++) {
         if (n == PUNCTURE_LIST[index]) {
-            interleave[n++] = 1U;
+            puncture[n++] = 1U;
             index++;
         }
 
         bool b = READ_BIT(buffer, i);
-        interleave[n++] = b ? 2U : 0U;
+        puncture[n++] = b ? 2U : 0U;
     }
 
     for (uint32_t i = 0U; i < 8U; i++) {
-        interleave[n++] = 0U;
+        puncture[n++] = 0U;
     }
 
     // decode convolution
@@ -156,21 +157,21 @@ bool SACCH::decode(const uint8_t* data)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < 40U; i++) {
-        uint8_t s0 = interleave[n++];
-        uint8_t s1 = interleave[n++];
+    for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS + 4U); i++) {
+        uint8_t s0 = puncture[n++];
+        uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, 36U);
+    conv.chainback(m_data, NXDN_SACCH_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded SACCH", m_data, 5U);
+        Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_LENGTH_BYTES);
     }
 
     // check CRC-6
-    bool ret = CRC::checkCRC6(m_data, 26U);
+    bool ret = CRC::checkCRC6(m_data, NXDN_SACCH_CRC_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "SACCH::decode(), failed CRC-6 check");
         return false;
@@ -196,51 +197,51 @@ void SACCH::encode(uint8_t* data) const
 	m_data[0U] &= 0x3FU;
 	m_data[0U] |= (m_structure << 6) & 0xC0U;
 
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded SACCH", m_data, 5U);
-    }
+    uint8_t buffer[NXDN_SACCH_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_SACCH_LENGTH_BYTES);
 
-    uint8_t buffer[5U];
-    ::memset(buffer, 0x00U, 5U);
-
-    for (uint32_t i = 0U; i < 26U; i++) {
+    for (uint32_t i = 0U; i < NXDN_SACCH_CRC_BITS; i++) {
         bool b = READ_BIT(m_data, i);
         WRITE_BIT(buffer, i, b);
     }
 
-    CRC::addCRC6(buffer, 26U);
+    CRC::addCRC6(buffer, NXDN_SACCH_CRC_BITS);
+
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_LENGTH_BYTES);
+    }
 
     // encode convolution
-    uint8_t convolution[9U];
+    uint8_t convolution[NXDN_SACCH_FEC_CONV_LENGTH_BYTES];
     Convolution conv;
-    conv.encode(buffer, convolution, 36U);
+    conv.encode(buffer, convolution, NXDN_SACCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "SACCH::encode(), SACCH Convolution", convolution, 9U);
+    Utils::dump(2U, "SACCH::encode(), SACCH Convolution", convolution, NXDN_SACCH_FEC_CONV_LENGTH_BYTES);
 #endif
 
-    // interleave and puncture
-    uint8_t raw[8U];
-    uint32_t n = 0U;
-    uint32_t index = 0U;
-    for (uint32_t i = 0U; i < 72U; i++) {
+    // puncture
+    uint8_t puncture[NXDN_SACCH_FEC_LENGTH_BYTES];
+    uint32_t n = 0U, index = 0U;
+    for (uint32_t i = 0U; i < NXDN_SACCH_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
-            WRITE_BIT(raw, n, b);
+            WRITE_BIT(puncture, n, b);
             n++;
         } else {
             index++;
         }
     }
 
-    for (uint32_t i = 0U; i < NXDN_SACCH_LENGTH_BITS; i++) {
+    // interleave
+    for (uint32_t i = 0U; i < NXDN_SACCH_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS;
-        bool b = READ_BIT(raw, i);
+        bool b = READ_BIT(puncture, i);
         WRITE_BIT(data, n, b);
     }
 
 #if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "SACCH::encode(), SACCH Interleave", raw, 8U);
+    Utils::dump(2U, "SACCH::encode(), SACCH Puncture and Interleave", data, NXDN_SACCH_FEC_LENGTH_BYTES);
 #endif
 }
 
@@ -253,7 +254,7 @@ void SACCH::getData(uint8_t* data) const
     assert(data != NULL);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < 18U; i++, offset++) {
+    for (uint32_t i = 0U; i < (NXDN_SACCH_CRC_BITS - 8); i++, offset++) {
         bool b = READ_BIT(m_data, offset);
         WRITE_BIT(data, i, b);
     }
@@ -268,7 +269,7 @@ void SACCH::setData(const uint8_t* data)
     assert(data != NULL);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < 18U; i++, offset++) {
+    for (uint32_t i = 0U; i < (NXDN_SACCH_CRC_BITS - 8); i++, offset++) {
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
     }
@@ -287,8 +288,8 @@ void SACCH::setData(const uint8_t* data)
 /// <param name="data"></param>
 void SACCH::copy(const SACCH& data)
 {
-    m_data = new uint8_t[5U];
-    ::memcpy(m_data, data.m_data, 5U);
+    m_data = new uint8_t[NXDN_SACCH_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_SACCH_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
     m_structure = (m_data[0U] >> 6) & 0x03U;
