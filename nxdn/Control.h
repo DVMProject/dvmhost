@@ -34,7 +34,7 @@
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
-#include "nxdn/data/Layer3.h"
+#include "nxdn/lc/LC.h"
 #include "nxdn/packet/Voice.h"
 #include "nxdn/packet/Data.h"
 #include "network/BaseNetwork.h"
@@ -111,8 +111,8 @@ namespace nxdn
         bool m_duplex;
 
         channel::LICH m_rfLastLICH;
-        data::Layer3 m_rfLayer3;
-        data::Layer3 m_netLayer3;
+        lc::LC m_rfLC;
+        lc::LC m_netLC;
 
         uint8_t m_rfMask;
         uint8_t m_netMask;

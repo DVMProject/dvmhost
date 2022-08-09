@@ -43,26 +43,6 @@ using namespace nxdn::channel;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a copy instance of the LICH class.
-/// </summary>
-/// <param name="data"></param>
-LICH::LICH(const LICH& data) :
-    m_rfct(NXDN_LICH_RFCT_RCCH),
-    m_fct(NXDN_LICH_USC_SACCH_NS),
-    m_option(0U),
-    m_direction(NXDN_LICH_DIRECTION_OUTBOUND),
-    m_data(NULL)
-{
-    m_data = new uint8_t[1U];
-    m_data[0U] = data.m_data[0U];
-
-    m_rfct = (m_data[0U] >> 6) & 0x03U;
-    m_fct = (m_data[0U] >> 4) & 0x03U;
-    m_option = (m_data[0U] >> 2) & 0x03U;
-    m_direction = (m_data[0U] >> 1) & 0x01U;
-}
-
-/// <summary>
 /// Initializes a new instance of the LICH class.
 /// </summary>
 LICH::LICH() :
@@ -73,6 +53,20 @@ LICH::LICH() :
     m_data(NULL)
 {
     m_data = new uint8_t[1U];
+}
+
+/// <summary>
+/// Initializes a copy instance of the LICH class.
+/// </summary>
+/// <param name="data"></param>
+LICH::LICH(const LICH& data) :
+    m_rfct(NXDN_LICH_RFCT_RCCH),
+    m_fct(NXDN_LICH_USC_SACCH_NS),
+    m_option(0U),
+    m_direction(NXDN_LICH_DIRECTION_OUTBOUND),
+    m_data(NULL)
+{
+    copy(data);
 }
 
 /// <summary>
@@ -167,6 +161,21 @@ void LICH::encode(uint8_t* data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void LICH::copy(const LICH& data)
+{
+    m_data = new uint8_t[1U];
+    m_data[0U] = data.m_data[0U];
+
+    m_rfct = (m_data[0U] >> 6) & 0x03U;
+    m_fct = (m_data[0U] >> 4) & 0x03U;
+    m_option = (m_data[0U] >> 2) & 0x03U;
+    m_direction = (m_data[0U] >> 1) & 0x01U;
+}
 
 /// <summary>
 /// 

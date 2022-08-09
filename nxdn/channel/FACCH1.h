@@ -27,8 +27,8 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_FACCH1_H__)
-#define  __NXDN_FACCH1_H__
+#if !defined(__NXDN_CHANNEL__FACCH1_H__)
+#define  __NXDN_CHANNEL__FACCH1_H__
 
 #include "Defines.h"
 
@@ -43,10 +43,10 @@ namespace nxdn
 
         class HOST_SW_API FACCH1 {
         public:
-            /// <summary>Initializes a copy instance of the FACCH1 class.</summary>
-            FACCH1(const FACCH1& data);
             /// <summary>Initializes a new instance of the FACCH1 class.</summary>
             FACCH1();
+            /// <summary>Initializes a copy instance of the FACCH1 class.</summary>
+            FACCH1(const FACCH1& data);
             /// <summary>Finalizes a instance of the FACCH1 class.</summary>
             ~FACCH1();
 
@@ -69,8 +69,11 @@ namespace nxdn
 
         private:
             uint8_t* m_data;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const FACCH1& data);
         };
     } // namespace channel
 } // namespace nxdn
 
-#endif // __NXDN_FACCH1_H__
+#endif // __NXDN_CHANNEL__FACCH1_H__

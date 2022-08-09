@@ -28,8 +28,8 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_SACCH_H__)
-#define  __NXDN_SACCH_H__
+#if !defined(__NXDN_CHANNEL__SACCH_H__)
+#define  __NXDN_CHANNEL__SACCH_H__
 
 #include "Defines.h"
 
@@ -44,10 +44,10 @@ namespace nxdn
 
         class HOST_SW_API SACCH {
         public:
-            /// <summary>Initializes a copy instance of the SACCH class.</summary>
-            SACCH(const SACCH& data);
             /// <summary>Initializes a new instance of the SACCH class.</summary>
             SACCH();
+            /// <summary>Initializes a copy instance of the SACCH class.</summary>
+            SACCH(const SACCH& data);
             /// <summary>Finalizes a instance of the SACCH class.</summary>
             ~SACCH();
 
@@ -76,8 +76,11 @@ namespace nxdn
 
         private:
             uint8_t* m_data;
+
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const SACCH& data);
         };
     } // namespace channel
 } // namespace nxdn
 
-#endif // __NXDN_SACCH_H__
+#endif // __NXDN_CHANNEL__SACCH_H__

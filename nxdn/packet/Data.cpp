@@ -62,9 +62,9 @@ using namespace nxdn::packet;
     }                                                                                   \
                                                                                         \
     if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
-        if (m_nxdn->m_netLayer3.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
+        if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId, \
-                m_nxdn->m_netLayer3.getSrcId(), m_nxdn->m_netLastDstId);                \
+                m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                    \
             resetRF();                                                                  \
             return false;                                                               \
         }                                                                               \
@@ -196,15 +196,15 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     uint8_t buffer[23U];
     udch.getData(buffer);
 
-    data::Layer3 layer3;
-    layer3.decode(buffer, 184U);
-    uint16_t dstId = layer3.getDstId();
-    uint16_t srcId = layer3.getSrcId();
-    bool group = layer3.getGroup();
+    lc::LC lc;
+    lc.decode(buffer, 184U);
+    uint16_t dstId = lc.getDstId();
+    uint16_t srcId = lc.getSrcId();
+    bool group = lc.getGroup();
 
     if (m_nxdn->m_rfState == RS_RF_LISTENING) {
-        uint8_t type = layer3.getMessageType();
-        if (type != MESSAGE_TYPE_DCALL_HDR)
+        uint8_t type = lc.getMessageType();
+        if (type != RTCH_MESSAGE_TYPE_DCALL_HDR)
             return false;
 
         CHECK_TRAFFIC_COLLISION(srcId, dstId);
@@ -215,16 +215,14 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
         // validate destination ID
         VALID_DSTID(srcId, dstId, group);
 
-        uint8_t frames = layer3.getDataBlocks();
-
         if (m_verbose) {
-            LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_DCALL ", srcId = %u, dstId = %u, blocks = %u",
-                srcId, dstId, frames);
+            LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_DCALL ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+                srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
 
-        m_nxdn->m_rfLayer3 = layer3;
+        m_nxdn->m_rfLC = lc;
         m_nxdn->m_voice->m_rfFrames = 0U;
 
         m_nxdn->m_rfState = RS_RF_DATA;
@@ -244,10 +242,10 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 
     lich.setDirection(NXDN_LICH_DIRECTION_INBOUND);
 
-    uint8_t type = MESSAGE_TYPE_DCALL_DATA;
+    uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;
     if (validUDCH) {
-        type = layer3.getMessageType();
-        data[0U] = type == MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+        type = lc.getMessageType();
+        data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
 
         udch.setRAN(m_nxdn->m_ran);
         udch.encode(data + 2U);
@@ -282,10 +280,11 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 /// Process a data frame from the RF interface.
 /// </summary>
 /// <param name="option"></param>
+/// <param name="netLC"></param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Data::processNetwork(uint8_t option, data::Layer3& netLayer3, uint8_t* data, uint32_t len)
+bool Data::processNetwork(uint8_t option, lc::LC& netLC, uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -305,18 +304,18 @@ bool Data::processNetwork(uint8_t option, data::Layer3& netLayer3, uint8_t* data
     uint8_t buffer[23U];
     udch.getData(buffer);
 
-    data::Layer3 layer3;
-    layer3.decode(buffer, 184U);
-    uint16_t dstId = layer3.getDstId();
-    uint16_t srcId = layer3.getSrcId();
-    bool group = layer3.getGroup();
+    lc::LC lc;
+    lc.decode(buffer, 184U);
+    uint16_t dstId = lc.getDstId();
+    uint16_t srcId = lc.getSrcId();
+    bool group = lc.getGroup();
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
-        uint8_t type = layer3.getMessageType();
-        if (type != MESSAGE_TYPE_DCALL_HDR)
+        uint8_t type = lc.getMessageType();
+        if (type != RTCH_MESSAGE_TYPE_DCALL_HDR)
             return false;
 
-        CHECK_NET_TRAFFIC_COLLISION(layer3, srcId, dstId);
+        CHECK_NET_TRAFFIC_COLLISION(lc, srcId, dstId);
 
         // validate source RID
         VALID_SRCID(srcId, dstId, group);
@@ -324,16 +323,14 @@ bool Data::processNetwork(uint8_t option, data::Layer3& netLayer3, uint8_t* data
         // validate destination ID
         VALID_DSTID(srcId, dstId, group);
 
-        uint8_t frames = layer3.getDataBlocks();
-
         if (m_verbose) {
-            LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_DCALL ", srcId = %u, dstId = %u, blocks = %u",
-                srcId, dstId, frames);
+            LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_DCALL ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+                srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
 
-        m_nxdn->m_netLayer3 = layer3;
+        m_nxdn->m_netLC = lc;
         m_nxdn->m_voice->m_netFrames = 0U;
 
         m_nxdn->m_netState = RS_NET_DATA;
@@ -351,10 +348,10 @@ bool Data::processNetwork(uint8_t option, data::Layer3& netLayer3, uint8_t* data
     lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
     lich.encode(data + 2U);
 
-    uint8_t type = MESSAGE_TYPE_DCALL_DATA;
+    uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;
     if (validUDCH) {
-        type = layer3.getMessageType();
-        data[0U] = type == MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+        type = lc.getMessageType();
+        data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
 
         udch.setRAN(m_nxdn->m_ran);
         udch.encode(data + 2U);
@@ -427,5 +424,5 @@ void Data::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(m_nxdn->m_rfLayer3, data, len);
+    m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }

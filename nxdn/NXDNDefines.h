@@ -91,44 +91,74 @@ namespace nxdn
     const uint8_t   NXDN_SR_2_4 = 2U;
     const uint8_t   NXDN_SR_1_4 = 3U;
 
+    const uint8_t   SACCH_IDLE[] = { 0x10U, 0x00U, 0x00U };
+
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 14U;
     const uint32_t  MAX_NXDN_VOICE_ERRORS = 144U;
     const uint32_t  MAX_NXDN_VOICE_ERRORS_STEAL = 94U;
 
-    // Message Types
-    const uint8_t   MESSAGE_TYPE_VCALL = 0x01U;
-    const uint8_t   MESSAGE_TYPE_VCALL_IV = 0x03U;
-    const uint8_t   MESSAGE_TYPE_DCALL_HDR = 0x09U;
-    const uint8_t   MESSAGE_TYPE_DCALL_DATA = 0x0BU;
-    const uint8_t   MESSAGE_TYPE_DCALL_ACK = 0x0CU;
-    const uint8_t   MESSAGE_TYPE_TX_REL = 0x08U;
-    const uint8_t   MESSAGE_TYPE_HEAD_DLY = 0x0FU;
-    const uint8_t   MESSAGE_TYPE_SDCALL_REQ_HDR = 0x38U;
-    const uint8_t   MESSAGE_TYPE_SDCALL_REQ_DATA = 0x39U;
-    const uint8_t   MESSAGE_TYPE_SDCALL_RESP = 0x3BU;
-    const uint8_t   MESSAGE_TYPE_SDCALL_IV = 0x3AU;
-    const uint8_t   MESSAGE_TYPE_STAT_INQ_REQ = 0x30U;
-    const uint8_t   MESSAGE_TYPE_STAT_INQ_RESP = 0x31U;
-    const uint8_t   MESSAGE_TYPE_STAT_REQ = 0x32U;
-    const uint8_t   MESSAGE_TYPE_STAT_RESP = 0x33U;
-    const uint8_t   MESSAGE_TYPE_REM_CON_REQ = 0x34U;
-    const uint8_t   MESSAGE_TYPE_REM_CON_RESP = 0x35U;
-    const uint8_t   MESSAGE_TYPE_IDLE = 0x10U;
-    const uint8_t   MESSAGE_TYPE_AUTH_INQ_REQ = 0x28U;
-    const uint8_t   MESSAGE_TYPE_AUTH_INQ_RESP = 0x29U;
-    const uint8_t   MESSAGE_TYPE_PROP_FORM = 0x3FU;
+    const uint32_t  NXDN_MI_LENGTH_BYTES = 8U;
+    const uint32_t  NXDN_PCKT_INFO_LENGTH_BYTES = 3U;
 
-    // Voice Call Options
-    const uint8_t   VOICE_CALL_OPTION_HALF_DUPLEX = 0x00U;
-    const uint8_t   VOICE_CALL_OPTION_DUPLEX = 0x10U;
+    const uint8_t   NXDN_CIPHER_TYPE_NONE = 0x00U;
 
-    // Data Call Options
-    const uint8_t   DATA_CALL_OPTION_HALF_DUPLEX = 0x00U;
-    const uint8_t   DATA_CALL_OPTION_DUPLEX = 0x10U;
-    const uint8_t   DATA_CALL_OPTION_4800 = 0x00U;
-    const uint8_t   DATA_CALL_OPTION_9600 = 0x02U;
+    const uint8_t   DATA_RSP_CLASS_ACK = 0x00U;
+    const uint8_t   DATA_RSP_CLASS_ACK_S = 0x01U;
+    const uint8_t   DATA_RSP_CLASS_NACK = 0x03U;
+    
+    const uint8_t   NXDN_CAUSE_RESOURCE_NOT_AVAIL = 0x05U;
+    const uint8_t   NXDN_CAUSE_SVC_UNAVAILABLE = 0x06U;
+    const uint8_t   NXDN_CAUSE_PROC_ERROR = 0x07U;
 
-    const uint8_t   SACCH_IDLE[] = { MESSAGE_TYPE_IDLE, 0x00U, 0x00U };
+    const uint8_t   NXDN_CAUSE_MM_NORMAL_1 = 0x01U;
+    const uint8_t   NXDN_CAUSE_MM_NORMAL_2 = 0x04U;
+
+    const uint8_t   NXDN_CAUSE_VD_NORMAL_1 = 0x01U;
+    const uint8_t   NXDN_CAUSE_VD_NORMAL_2 = 0x02U;
+    const uint8_t   NXDN_CAUSE_VD_QUEUED = 0x03U;
+
+    const uint8_t   NXDN_CAUSE_SS_NORMAL = 0x00U;
+    const uint8_t   NXDN_CAUSE_SS_NORMAL_1 = 0x01U;
+    const uint8_t   NXDN_CAUSE_SS_NORMAL_2 = 0x02U;
+
+    const uint8_t   NXDN_CAUSE_DREQ_NORMAL = 0x01U;
+
+    const uint8_t   NXDN_CAUSE_DISC_NORMAL = 0x01U;
+    const uint8_t   NXDN_CAUSE_DISC_NORMAL_TC = 0x02U;
+
+    // Common Message Types
+    const uint8_t   MESSAGE_TYPE_IDLE = 0x10U;                  // IDLE - Idle
+
+    // Traffic Channel Message Types
+    const uint8_t   RTCH_MESSAGE_TYPE_VCALL = 0x01U;            // VCALL - Voice Call
+    const uint8_t   RTCH_MESSAGE_TYPE_VCALL_IV = 0x03U;         // VCALL_IV - Voice Call Initialization Vector
+    const uint8_t   RTCH_MESSAGE_TYPE_TX_REL_EX = 0x07U;        // TX_REL_EX - Transmission Release Extension
+    const uint8_t   RTCH_MESSAGE_TYPE_TX_REL = 0x08U;           // TX_REL - Transmission Release
+    const uint8_t   RTCH_MESSAGE_TYPE_DCALL_HDR = 0x09U;        // DCALL - Data Call (Header)
+    const uint8_t   RTCH_MESSAGE_TYPE_DCALL_DATA = 0x0BU;       // DCALL - Data Call (User Data Format)
+    const uint8_t   RTCH_MESSAGE_TYPE_DCALL_ACK = 0x0CU;        // DCALL_ACK - Data Call Acknowledge
+    const uint8_t   RTCH_MESSAGE_TYPE_HEAD_DLY = 0x0FU;         // HEAD_DLY - Header Delay
+    const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_REQ_HDR = 0x38U;   // SDCALL_REQ - Short Data Call Request (Header)
+    const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_REQ_DATA = 0x39U;  // SDCALL_REQ - Short Data Call Request (User Data Format)
+    const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_IV = 0x3AU;        // SDCALL_IV - Short Data Call Initialization Vector
+    const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_RESP = 0x3BU;      // SDCALL_RESP - Short Data Call Response
+
+    // Control Channel Message Types
+    const uint8_t   RCCH_MESSAGE_TYPE_PROP_FORM = 0x3FU;        // PROP_FORM - Proprietary Form
+
+    // Call Types
+    const uint8_t   CALL_TYPE_BROADCAST = 0x00U;
+    const uint8_t   CALL_TYPE_CONFERENCE = 0x01U;
+    const uint8_t   CALL_TYPE_UNSPECIFIED = 0x02U;
+    const uint8_t   CALL_TYPE_INDIVIDUAL = 0x04U;
+    const uint8_t   CALL_TYPE_INTERCONNECT = 0x06U;
+    const uint8_t   CALL_TYPE_SPEED_DIAL = 0x07U;
+
+    // Transmission Mode
+    const uint8_t   TRANSMISSION_MODE_4800 = 0x00U;
+    const uint8_t   TRANSMISSION_MODE_9600 = 0x02U;
+    const uint8_t   TRANSMISSION_MODE_9600_EFR = 0x03U; // should never be used on data calls
+
 } // namespace nxdn
 
 #endif // __NXDN_DEFINES_H__

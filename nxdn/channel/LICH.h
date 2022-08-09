@@ -28,8 +28,8 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_LICH_H__)
-#define  __NXDN_LICH_H__
+#if !defined(__NXDN_CHANNEL__LICH_H__)
+#define  __NXDN_CHANNEL__LICH_H__
 
 #include "Defines.h"
 
@@ -44,10 +44,10 @@ namespace nxdn
 
         class HOST_SW_API LICH {
         public:
-            /// <summary>Initializes a copy instance of the LICH class.</summary>
-            LICH(const LICH& lich);
             /// <summary>Initializes a new instance of the LICH class.</summary>
             LICH();
+            /// <summary>Initializes a copy instance of the LICH class.</summary>
+            LICH(const LICH& lich);
             /// <summary>Finalizes a instance of the LICH class.</summary>
             ~LICH();
 
@@ -73,10 +73,13 @@ namespace nxdn
         private:
             uint8_t* m_data;
 
+            /// <summary>Internal helper to copy the class.</summary>
+            void copy(const LICH& data);
+
             /// <summary></summary>
             bool getParity() const;
         };
     } // namespace channel
 } // namespace nxdn
 
-#endif // __NXDN_LICH_H__
+#endif // __NXDN_CHANNEL__LICH_H__

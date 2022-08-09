@@ -69,18 +69,6 @@ const uint32_t PUNCTURE_LIST[] = {
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a copy instance of the FACCH1 class.
-/// </summary>
-/// <param name="data"></param>
-FACCH1::FACCH1(const FACCH1& data) :
-    m_verbose(false),
-    m_data(NULL)
-{
-    m_data = new uint8_t[12U];
-    ::memcpy(m_data, data.m_data, 12U);
-}
-
-/// <summary>
 /// Initializes a new instance of the FACCH1 class.
 /// </summary>
 FACCH1::FACCH1() :
@@ -88,6 +76,17 @@ FACCH1::FACCH1() :
     m_data(NULL)
 {
     m_data = new uint8_t[12U];
+}
+
+/// <summary>
+/// Initializes a copy instance of the FACCH1 class.
+/// </summary>
+/// <param name="data"></param>
+FACCH1::FACCH1(const FACCH1& data) :
+    m_verbose(false),
+    m_data(NULL)
+{
+    copy(data);
 }
 
 /// <summary>
@@ -253,4 +252,20 @@ void FACCH1::setData(const uint8_t* data)
     assert(data != NULL);
 
     ::memcpy(m_data, data, 10U);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void FACCH1::copy(const FACCH1& data)
+{
+    m_data = new uint8_t[12U];
+    ::memcpy(m_data, data.m_data, 12U);
+
+    m_verbose = data.m_verbose;
 }

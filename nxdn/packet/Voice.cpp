@@ -64,9 +64,9 @@ using namespace nxdn::packet;
     }                                                                                   \
                                                                                         \
     if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
-        if (m_nxdn->m_netLayer3.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
+        if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId, \
-                m_nxdn->m_netLayer3.getSrcId(), m_nxdn->m_netLastDstId);                \
+                m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                    \
             resetRF();                                                                  \
             return false;                                                               \
         }                                                                               \
@@ -210,21 +210,22 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
         uint8_t buffer[10U];
         facch.getData(buffer);
 
-        data::Layer3 layer3;
-        layer3.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
-        uint16_t dstId = layer3.getDstId();
-        uint16_t srcId = layer3.getSrcId();
-        bool group = layer3.getGroup();
+        lc::LC lc;
+        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+        uint16_t dstId = lc.getDstId();
+        uint16_t srcId = lc.getSrcId();
+        bool group = lc.getGroup();
+        bool encrypted = lc.getEncrypted();
 
-        uint8_t type = layer3.getMessageType();
-        if (type == MESSAGE_TYPE_TX_REL) {
+        uint8_t type = lc.getMessageType();
+        if (type == RTCH_MESSAGE_TYPE_TX_REL) {
             if (m_nxdn->m_rfState != RS_RF_AUDIO) {
                 m_nxdn->m_rfState = RS_RF_LISTENING;
                 m_nxdn->m_rfMask  = 0x00U;
-                m_nxdn->m_rfLayer3.reset();
+                m_nxdn->m_rfLC.reset();
                 return false;
             }
-        } else if (type == MESSAGE_TYPE_VCALL) {
+        } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
             CHECK_TRAFFIC_COLLISION(srcId, dstId);
 
             // validate source RID
@@ -236,7 +237,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
             return false;
         }
 
-        m_nxdn->m_rfLayer3 = layer3;
+        m_nxdn->m_rfLC = lc;
 
         Sync::addNXDNSync(data + 2U);
 
@@ -250,9 +251,9 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 
         // generate the SACCH
         channel::SACCH sacch;
+        sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
         sacch.setStructure(NXDN_SR_SINGLE);
-        sacch.setData(SACCH_IDLE);
         sacch.encode(data + 2U);
 
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -263,7 +264,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
         if (m_nxdn->m_duplex) {
-            data[0U] = type == MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+            data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -297,7 +298,12 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
             m_nxdn->m_aveRSSI = m_nxdn->m_rssi;
             m_nxdn->m_rssiCount = 1U;
 
-            ::ActivityLog("NXDN", true, "RF voice transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+            if (m_verbose) {
+                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                    srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
+            }
+
+            ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
         }
 
 		return true;
@@ -326,14 +332,14 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 uint8_t buffer[10U];
                 facch.getData(buffer);
 
-                data::Layer3 layer3;
-                layer3.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+                lc::LC lc;
+                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
-                hasInfo = layer3.getMessageType() == MESSAGE_TYPE_VCALL;
+                hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
                 if (!hasInfo)
                     return false;
 
-                m_nxdn->m_rfLayer3 = layer3;
+                m_nxdn->m_rfLC = lc;
             }
 
             if (!hasInfo) {
@@ -343,23 +349,23 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 uint8_t structure = sacch.getStructure();
                 switch (structure) {
                 case NXDN_SR_1_4:
-                    m_nxdn->m_rfLayer3.decode(message, 18U, 0U);
-                    if(m_nxdn->m_rfLayer3.getMessageType() == MESSAGE_TYPE_VCALL)
+                    m_nxdn->m_rfLC.decode(message, 18U, 0U);
+                    if(m_nxdn->m_rfLC.getMessageType() == RTCH_MESSAGE_TYPE_VCALL)
                         m_nxdn->m_rfMask = 0x01U;
                     else
                         m_nxdn->m_rfMask = 0x00U;
                     break;
                 case NXDN_SR_2_4:
                     m_nxdn->m_rfMask |= 0x02U;
-                    m_nxdn->m_rfLayer3.decode(message, 18U, 18U);
+                    m_nxdn->m_rfLC.decode(message, 18U, 18U);
                     break;
                 case NXDN_SR_3_4:
                     m_nxdn->m_rfMask |= 0x04U;
-                    m_nxdn->m_rfLayer3.decode(message, 18U, 36U);
+                    m_nxdn->m_rfLC.decode(message, 18U, 36U);
                     break;
                 case NXDN_SR_4_4:
                     m_nxdn->m_rfMask |= 0x08U;
-                    m_nxdn->m_rfLayer3.decode(message, 18U, 54U);
+                    m_nxdn->m_rfLC.decode(message, 18U, 54U);
                     break;
                 default:
                     break;
@@ -368,14 +374,15 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 if (m_nxdn->m_rfMask != 0x0FU)
                     return false;
 
-                uint8_t type = m_nxdn->m_rfLayer3.getMessageType();
-                if (type != MESSAGE_TYPE_VCALL)
+                uint8_t type = m_nxdn->m_rfLC.getMessageType();
+                if (type != RTCH_MESSAGE_TYPE_VCALL)
                     return false;
             }
 
-            uint16_t dstId = m_nxdn->m_rfLayer3.getDstId();
-            uint16_t srcId = m_nxdn->m_rfLayer3.getSrcId();
-            bool group = m_nxdn->m_rfLayer3.getGroup();
+            uint16_t dstId = m_nxdn->m_rfLC.getDstId();
+            uint16_t srcId = m_nxdn->m_rfLC.getSrcId();
+            bool group = m_nxdn->m_rfLC.getGroup();
+            bool encrypted = m_nxdn->m_rfLC.getEncrypted();
 
             CHECK_TRAFFIC_COLLISION(srcId, dstId);
 
@@ -396,7 +403,12 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
             m_nxdn->m_aveRSSI = m_nxdn->m_rssi;
             m_nxdn->m_rssiCount = 1U;
 
-            ::ActivityLog("NXDN", true, "RF late entry from %u to %s%u", srcId, group ? "TG " : "", dstId);
+            if (m_verbose) {
+                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                    srcId, dstId, group, m_nxdn->m_rfLC.getEmergency(), encrypted, m_nxdn->m_rfLC.getPriority(), m_nxdn->m_rfLC.getAlgId(), m_nxdn->m_rfLC.getKId());
+            }
+
+            ::ActivityLog("NXDN", true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -417,13 +429,13 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 
             // generate the SACCH
             channel::SACCH sacch;
+            sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
             sacch.setStructure(NXDN_SR_SINGLE);
-            sacch.setData(SACCH_IDLE);
             sacch.encode(start + 2U);
 
             uint8_t message[22U];
-            m_nxdn->m_rfLayer3.getData(message);
+            m_nxdn->m_rfLC.getData(message);
 
             facch.setData(message);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -482,11 +494,6 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)",
                     errors, float(errors) / 1.88F);
             }
-/*
-            Audio audio;
-            audio.decode(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, netData + 5U + 0U);
-            audio.decode(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, netData + 5U + 14U);
-*/            
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -507,10 +514,6 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
                     errors, float(errors) / 0.94F);
             }
-/*
-            Audio audio;
-            audio.decode(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, netData + 5U + 14U);
-*/
         } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
 
@@ -526,10 +529,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
                     errors, float(errors) / 0.94F);
             }
-/*
-            Audio audio;
-            audio.decode(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, netData + 5U + 0U);
-*/
+
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
             if (valid)
@@ -571,10 +571,11 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 /// </summary>
 /// <param name="usc"></param>
 /// <param name="option"></param>
+/// <param name="netLC"></param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3, uint8_t* data, uint32_t len)
+bool Voice::processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -600,22 +601,23 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
         uint8_t buffer[10U];
         facch.getData(buffer);
 
-        data::Layer3 layer3;
-        layer3.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
-        uint16_t dstId = layer3.getDstId();
-        uint16_t srcId = layer3.getSrcId();
-        bool group = layer3.getGroup();
+        lc::LC lc;
+        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+        uint16_t dstId = lc.getDstId();
+        uint16_t srcId = lc.getSrcId();
+        bool group = lc.getGroup();
+        bool encrypted = lc.getEncrypted();
 
-        uint8_t type = layer3.getMessageType();
-        if (type == MESSAGE_TYPE_TX_REL) {
+        uint8_t type = lc.getMessageType();
+        if (type == RTCH_MESSAGE_TYPE_TX_REL) {
             if (m_nxdn->m_netState != RS_NET_AUDIO) {
                 m_nxdn->m_netState = RS_NET_IDLE;
                 m_nxdn->m_netMask  = 0x00U;
-                m_nxdn->m_netLayer3.reset();
+                m_nxdn->m_netLC.reset();
                 return false;
             }
-        } else if (type == MESSAGE_TYPE_VCALL) {
-            CHECK_NET_TRAFFIC_COLLISION(layer3, srcId, dstId);
+        } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
+            CHECK_NET_TRAFFIC_COLLISION(lc, srcId, dstId);
 
             // validate source RID
             VALID_SRCID(srcId, dstId, group);
@@ -626,7 +628,7 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
             return false;
         }
 
-        m_nxdn->m_netLayer3 = layer3;
+        m_nxdn->m_netLC = lc;
 
         Sync::addNXDNSync(data + 2U);
 
@@ -640,9 +642,9 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
 
         // generate the SACCH
         channel::SACCH sacch;
+        sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
         sacch.setStructure(NXDN_SR_SINGLE);
-        sacch.setData(SACCH_IDLE);
         sacch.encode(data + 2U);
 
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -651,7 +653,7 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
 		m_nxdn->scrambler(data + 2U);
 
         if (m_nxdn->m_duplex) {
-            data[0U] = type == MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
+            data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
             data[1U] = 0x00U;
 
             m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, true);
@@ -671,7 +673,12 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
             m_nxdn->m_netTimeout.start();
             m_nxdn->m_netState = RS_NET_AUDIO;
 
-            ::ActivityLog("NXDN", false, "network voice transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+            if (m_verbose) {
+                LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                    srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
+            }
+
+            ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
         }
 
 		return true;
@@ -700,14 +707,14 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
                 uint8_t buffer[10U];
                 facch.getData(buffer);
 
-                data::Layer3 layer3;
-                layer3.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+                lc::LC lc;
+                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
-                hasInfo = layer3.getMessageType() == MESSAGE_TYPE_VCALL;
+                hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
                 if (!hasInfo)
                     return false;
 
-                m_nxdn->m_netLayer3 = layer3;
+                m_nxdn->m_netLC = lc;
             }
 
             if (!hasInfo) {
@@ -717,23 +724,23 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
                 uint8_t structure = sacch.getStructure();
                 switch (structure) {
                 case NXDN_SR_1_4:
-                    m_nxdn->m_netLayer3.decode(message, 18U, 0U);
-                    if(m_nxdn->m_netLayer3.getMessageType() == MESSAGE_TYPE_VCALL)
+                    m_nxdn->m_netLC.decode(message, 18U, 0U);
+                    if(m_nxdn->m_netLC.getMessageType() == RTCH_MESSAGE_TYPE_VCALL)
                         m_nxdn->m_netMask = 0x01U;
                     else
                         m_nxdn->m_netMask = 0x00U;
                     break;
                 case NXDN_SR_2_4:
                     m_nxdn->m_netMask |= 0x02U;
-                    m_nxdn->m_netLayer3.decode(message, 18U, 18U);
+                    m_nxdn->m_netLC.decode(message, 18U, 18U);
                     break;
                 case NXDN_SR_3_4:
                     m_nxdn->m_netMask |= 0x04U;
-                    m_nxdn->m_netLayer3.decode(message, 18U, 36U);
+                    m_nxdn->m_netLC.decode(message, 18U, 36U);
                     break;
                 case NXDN_SR_4_4:
                     m_nxdn->m_netMask |= 0x08U;
-                    m_nxdn->m_netLayer3.decode(message, 18U, 54U);
+                    m_nxdn->m_netLC.decode(message, 18U, 54U);
                     break;
                 default:
                     break;
@@ -742,16 +749,17 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
                 if (m_nxdn->m_netMask != 0x0FU)
                     return false;
 
-                uint8_t type = m_nxdn->m_netLayer3.getMessageType();
-                if (type != MESSAGE_TYPE_VCALL)
+                uint8_t type = m_nxdn->m_netLC.getMessageType();
+                if (type != RTCH_MESSAGE_TYPE_VCALL)
                     return false;
             }
 
-            uint16_t dstId = m_nxdn->m_netLayer3.getDstId();
-            uint16_t srcId = m_nxdn->m_netLayer3.getSrcId();
-            bool group = m_nxdn->m_netLayer3.getGroup();
+            uint16_t dstId = m_nxdn->m_netLC.getDstId();
+            uint16_t srcId = m_nxdn->m_netLC.getSrcId();
+            bool group = m_nxdn->m_netLC.getGroup();
+            bool encrypted = m_nxdn->m_netLC.getEncrypted();
 
-            CHECK_NET_TRAFFIC_COLLISION(m_nxdn->m_netLayer3, srcId, dstId);
+            CHECK_NET_TRAFFIC_COLLISION(m_nxdn->m_netLC, srcId, dstId);
 
             // validate source RID
             VALID_SRCID(srcId, dstId, group);
@@ -765,7 +773,12 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
             m_nxdn->m_netTimeout.start();
             m_nxdn->m_netState = RS_NET_AUDIO;
 
-            ::ActivityLog("NXDN", false, "network late entry from %u to %s%u", srcId, group ? "TG " : "", dstId);
+            if (m_verbose) {
+                LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                    srcId, dstId, group, m_nxdn->m_netLC.getEmergency(), encrypted, m_nxdn->m_netLC.getPriority(), m_nxdn->m_netLC.getAlgId(), m_nxdn->m_netLC.getKId());
+            }
+
+            ::ActivityLog("NXDN", false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
 
             // create a dummy start message
             uint8_t start[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -784,13 +797,13 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, data::Layer3& netLayer3,
 
             // generate the SACCH
             channel::SACCH sacch;
+            sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
             sacch.setStructure(NXDN_SR_SINGLE);
-            sacch.setData(SACCH_IDLE);
             sacch.encode(start + 2U);
 
             uint8_t message[22U];
-            m_nxdn->m_rfLayer3.getData(message);
+            m_nxdn->m_rfLC.getData(message);
 
             facch.setData(message);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -965,5 +978,5 @@ void Voice::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(m_nxdn->m_rfLayer3, data, len);
+    m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }

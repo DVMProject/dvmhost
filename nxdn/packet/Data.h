@@ -63,7 +63,7 @@ namespace nxdn
             /// <summary>Process a data frame from the RF interface.</summary>
             virtual bool process(uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t option, data::Layer3& netLayer3, uint8_t* data, uint32_t len);
+            virtual bool processNetwork(uint8_t option, lc::LC& netLC, uint8_t* data, uint32_t len);
 
         protected:
             friend class nxdn::Control;

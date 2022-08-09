@@ -62,23 +62,6 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a copy instance of the SACCH class.
-/// </summary>
-/// <param name="data"></param>
-SACCH::SACCH(const SACCH& data) :
-    m_verbose(false),
-    m_ran(0U),
-    m_structure(0U),
-    m_data(NULL)
-{
-    m_data = new uint8_t[5U];
-    ::memcpy(m_data, data.m_data, 5U);
-
-    m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
-}
-
-/// <summary>
 /// Initializes a new instance of the SACCH class.
 /// </summary>
 SACCH::SACCH() :
@@ -88,6 +71,19 @@ SACCH::SACCH() :
     m_data(NULL)
 {
     m_data = new uint8_t[5U];
+}
+
+/// <summary>
+/// Initializes a copy instance of the SACCH class.
+/// </summary>
+/// <param name="data"></param>
+SACCH::SACCH(const SACCH& data) :
+    m_verbose(false),
+    m_ran(0U),
+    m_structure(0U),
+    m_data(NULL)
+{
+    copy(data);
 }
 
 /// <summary>
@@ -276,6 +272,23 @@ void SACCH::setData(const uint8_t* data)
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
     }
+
+    m_ran = m_data[0U] & 0x3FU;
+    m_structure = (m_data[0U] >> 6) & 0x03U;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void SACCH::copy(const SACCH& data)
+{
+    m_data = new uint8_t[5U];
+    ::memcpy(m_data, data.m_data, 5U);
 
     m_ran = m_data[0U] & 0x3FU;
     m_structure = (m_data[0U] >> 6) & 0x03U;

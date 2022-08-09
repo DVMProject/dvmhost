@@ -93,8 +93,8 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_network(network),
     m_duplex(duplex),
     m_rfLastLICH(),
-    m_rfLayer3(),
-    m_netLayer3(),
+    m_rfLC(),
+    m_netLC(),
     m_rfMask(0U),
     m_netMask(0U),
     m_idenTable(idenTable),
@@ -162,12 +162,12 @@ void Control::reset()
     m_queue.clear();
 
     m_rfMask = 0x00U;
-    m_rfLayer3.reset();
+    m_rfLC.reset();
 
     m_netState = RS_NET_IDLE;
 
     m_netMask = 0x00U;
-    m_netLayer3.reset();
+    m_netLC.reset();
 }
 
 /// <summary>
@@ -251,7 +251,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 	if (type == modem::TAG_LOST) {
 		m_rfState = RS_RF_LISTENING;
 		m_rfMask  = 0x00U;
-		m_rfLayer3.reset();
+		m_rfLC.reset();
 		return false;
 	}
 
@@ -463,11 +463,11 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
-    data::Layer3 layer3;
+    lc::LC lc;
 
     uint32_t length = 100U;
     bool ret = false;
-    uint8_t* data = m_network->readNXDN(ret, layer3, length);
+    uint8_t* data = m_network->readNXDN(ret, lc, length);
     if (!ret)
         return;
     if (length == 0U)
@@ -496,10 +496,10 @@ void Control::processNetwork()
 
     switch (usc) {
         case NXDN_LICH_USC_UDCH:
-            ret = m_data->processNetwork(option, layer3, data, length);
+            ret = m_data->processNetwork(option, lc, data, length);
             break;
         default:
-            ret = m_voice->processNetwork(usc, option, layer3, data, length);
+            ret = m_voice->processNetwork(usc, option, lc, data, length);
             break;
     }
 
@@ -514,7 +514,7 @@ void Control::writeEndRF()
     m_rfState = RS_RF_LISTENING;
 
     m_rfMask = 0x00U;
-    m_rfLayer3.reset();
+    m_rfLC.reset();
 
     m_rfTimeout.stop();
 }
@@ -527,7 +527,7 @@ void Control::writeEndNet()
     m_netState = RS_NET_IDLE;
 
     m_netMask = 0x00U;
-    m_netLayer3.reset();
+    m_netLC.reset();
 
     m_netTimeout.stop();
     m_networkWatchdog.stop();

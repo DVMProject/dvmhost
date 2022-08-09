@@ -91,21 +91,6 @@ const uint32_t PUNCTURE_LIST[] = {
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a copy instance of the UDCH class.
-/// </summary>
-/// <param name="data"></param>
-UDCH::UDCH(const UDCH& data) :
-    m_verbose(false),
-    m_ran(0U),
-    m_data(NULL)
-{
-    m_data = new uint8_t[26U];
-    ::memcpy(m_data, data.m_data, 26U);
-
-    m_ran = m_data[0U] & 0x3FU;
-}
-
-/// <summary>
 /// Initializes a new instance of the UDCH class.
 /// </summary>
 UDCH::UDCH() :
@@ -114,6 +99,18 @@ UDCH::UDCH() :
     m_data(NULL)
 {
     m_data = new uint8_t[26U];
+}
+
+/// <summary>
+/// Initializes a copy instance of the UDCH class.
+/// </summary>
+/// <param name="data"></param>
+UDCH::UDCH(const UDCH& data) :
+    m_verbose(false),
+    m_ran(0U),
+    m_data(NULL)
+{
+    copy(data);
 }
 
 /// <summary>
@@ -284,6 +281,22 @@ void UDCH::setData(const uint8_t* data)
     assert(data != NULL);
 
     ::memcpy(m_data + 1U, data, 22U);
+
+    m_ran = m_data[0U] & 0x3FU;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void UDCH::copy(const UDCH& data)
+{
+    m_data = new uint8_t[26U];
+    ::memcpy(m_data, data.m_data, 26U);
 
     m_ran = m_data[0U] & 0x3FU;
 }
