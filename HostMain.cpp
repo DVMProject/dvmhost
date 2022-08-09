@@ -52,6 +52,26 @@ using namespace lookups;
 #endif
 
 // ---------------------------------------------------------------------------
+//	Constants
+// ---------------------------------------------------------------------------
+
+#if defined(ENABLE_DMR)
+#define DESCR_DMR        "DMR, "
+#else
+#define DESCR_DMR        ""
+#endif
+#if defined(ENABLE_P25)
+#define DESCR_P25        "P25, "
+#else
+#define DESCR_P25        ""
+#endif
+#if defined(ENABLE_NXDN)
+#define DESCR_NXDN       "NXDN, "
+#else
+#define DESCR_NXDN       ""
+#endif
+
+// ---------------------------------------------------------------------------
 //	Macros
 // ---------------------------------------------------------------------------
 
@@ -106,7 +126,7 @@ void fatal(const char* msg, ...)
 
 void usage(const char* message, const char* arg)
 {
-    ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
+    ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
     if (message != NULL) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
         ::fprintf(stderr, message, arg);
@@ -163,7 +183,7 @@ int checkArgs(int argc, char* argv[])
             p += 2;
         }
         else if (IS("-v")) {
-            ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
+            ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
             if (argc == 2)
                 exit(EXIT_SUCCESS);
         }
