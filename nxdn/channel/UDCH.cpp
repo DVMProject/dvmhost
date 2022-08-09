@@ -282,8 +282,6 @@ void UDCH::setData(const uint8_t* data)
     assert(data != NULL);
 
     ::memcpy(m_data + 1U, data, 22U);
-
-    m_ran = m_data[0U] & 0x3FU;
 }
 
 // ---------------------------------------------------------------------------

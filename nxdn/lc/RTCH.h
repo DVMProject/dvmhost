@@ -28,8 +28,8 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_LC__LC_H__)
-#define  __NXDN_LC__LC_H__
+#if !defined(__NXDN_LC__RTCH_H__)
+#define  __NXDN_LC__RTCH_H__
 
 #include "Defines.h"
 #include "nxdn/lc/PacketInformation.h"
@@ -40,20 +40,20 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Represents link control data for NXDN calls.
+        //      Represents link control data for traffic channel NXDN calls.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API LC {
+        class HOST_SW_API RTCH {
         public:
-            /// <summary>Initializes a new instance of the LC class.</summary>
-            LC();
-            /// <summary>Initializes a copy instance of the LC class.</summary>
-            LC(const LC& data);
-            /// <summary>Finalizes a instance of the LC class.</summary>
-            ~LC();
+            /// <summary>Initializes a new instance of the RTCH class.</summary>
+            RTCH();
+            /// <summary>Initializes a copy instance of the RTCH class.</summary>
+            RTCH(const RTCH& data);
+            /// <summary>Finalizes a instance of the RTCH class.</summary>
+            ~RTCH();
 
             /// <summary>Equals operator.</summary>
-            LC& operator=(const LC& data);
+            RTCH& operator=(const RTCH& data);
 
             /// <summary>Decode layer 3 data.</summary>
             void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
@@ -134,9 +134,9 @@ namespace nxdn
             void encodeLC(uint8_t* data);
 
             /// <summary>Internal helper to copy the class.</summary>
-            void copy(const LC& data);
+            void copy(const RTCH& data);
         };
     } // namespace lc
 } // namespace nxdn
 
-#endif // __NXDN_LC__LC_H__
+#endif // __NXDN_LC__RTCH_H__

@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015-2020 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -62,9 +62,9 @@ namespace nxdn
             virtual void resetNet();
 
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len);
+            virtual bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t* data, uint32_t len);
+            virtual bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
 
         protected:
             friend class packet::Data;

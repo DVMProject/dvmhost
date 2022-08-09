@@ -34,8 +34,9 @@
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
-#include "nxdn/lc/LC.h"
+#include "nxdn/lc/RTCH.h"
 #include "nxdn/packet/Voice.h"
+#include "nxdn/packet/Trunk.h"
 #include "nxdn/packet/Data.h"
 #include "nxdn/SiteData.h"
 #include "network/BaseNetwork.h"
@@ -59,6 +60,7 @@ namespace nxdn
     // ---------------------------------------------------------------------------
     
     namespace packet { class HOST_SW_API Voice; }
+    namespace packet { class HOST_SW_API Trunk; }
     namespace packet { class HOST_SW_API Data; }
 
     // ---------------------------------------------------------------------------
@@ -66,13 +68,13 @@ namespace nxdn
     //      This class implements core logic for handling NXDN.
     // ---------------------------------------------------------------------------
 
-    class Control {
+    class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang, 
             modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
-            bool debug, bool verbose);
+            bool dumpRCCHData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
@@ -82,6 +84,15 @@ namespace nxdn
         /// <summary>Helper to set NXDN configuration options.</summary>
         void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
             uint16_t locId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        
+        /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
+        bool getCCRunning() { return m_ccRunning; }
+        /// <summary>Sets a flag indicating whether the NXDN control channel is running.</summary>
+        void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
+        /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
+        bool getCCHalted() { return m_ccHalted; }
+        /// <summary>Sets a flag indicating whether the NXDN control channel is halted.</summary>
+        void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
@@ -102,6 +113,8 @@ namespace nxdn
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
+        friend class packet::Trunk;
+        packet::Trunk* m_trunk;
 
         uint32_t m_ran;
         uint32_t m_timeout;
@@ -115,8 +128,8 @@ namespace nxdn
         bool m_voiceOnControl;
 
         channel::LICH m_rfLastLICH;
-        lc::LC m_rfLC;
-        lc::LC m_netLC;
+        lc::RTCH m_rfLC;
+        lc::RTCH m_netLC;
 
         uint8_t m_rfMask;
         uint8_t m_netMask;
@@ -143,6 +156,11 @@ namespace nxdn
         Timer m_netTimeout;
         Timer m_networkWatchdog;
 
+        Timer m_ccPacketInterval;
+        
+        uint8_t m_ccFrameCnt;
+        uint8_t m_ccSeq;
+
         SiteData m_siteData;
 
         lookups::RSSIInterpolator* m_rssiMapper;
@@ -160,6 +178,9 @@ namespace nxdn
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
+
+        /// <summary>Helper to write control channel frame data.</summary>
+        bool writeRF_ControlData();
 
         /// <summary></summary>
         void scrambler(uint8_t* data) const;

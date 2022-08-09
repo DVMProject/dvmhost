@@ -29,7 +29,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/NXDNDefines.h"
-#include "nxdn/lc/LC.h"
+#include "nxdn/lc/RTCH.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -45,9 +45,9 @@ using namespace nxdn::lc;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the LC class.
+/// Initializes a new instance of the RTCH class.
 /// </summary>
-LC::LC() :
+RTCH::RTCH() :
     m_verbose(false),
     m_messageType(MESSAGE_TYPE_IDLE),
     m_callType(CALL_TYPE_UNSPECIFIED),
@@ -69,18 +69,18 @@ LC::LC() :
     m_causeRsp(NXDN_CAUSE_VD_NORMAL_1),
     m_data(NULL)
 {
-    m_data = new uint8_t[22U];
-    ::memset(m_data, 0x00U, 22U);
+    m_data = new uint8_t[NXDN_RTCH_LC_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
 
     m_mi = new uint8_t[NXDN_MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, NXDN_MI_LENGTH_BYTES);
 }
 
 /// <summary>
-/// Initializes a copy instance of the LC class.
+/// Initializes a copy instance of the RTCH class.
 /// </summary>
 /// <param name="data"></param>
-LC::LC(const LC& data) :
+RTCH::RTCH(const RTCH& data) :
     m_verbose(false),
     m_messageType(MESSAGE_TYPE_IDLE),
     m_callType(CALL_TYPE_UNSPECIFIED),
@@ -106,9 +106,9 @@ LC::LC(const LC& data) :
 }
 
 /// <summary>
-/// Finalizes a instance of LC class.
+/// Finalizes a instance of RTCH class.
 /// </summary>
-LC::~LC()
+RTCH::~RTCH()
 {
     delete[] m_data;
     delete[] m_mi;
@@ -119,10 +119,10 @@ LC::~LC()
 /// </summary>
 /// <param name="data"></param>
 /// <returns></returns>
-LC& LC::operator=(const LC& data)
+RTCH& RTCH::operator=(const RTCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, 22U);
+        ::memcpy(m_data, data.m_data, NXDN_RTCH_LC_LENGTH_BYTES);
         decodeLC(m_data);
     }
 
@@ -133,8 +133,8 @@ LC& LC::operator=(const LC& data)
 /// Decode call link control data.
 /// </summary>
 /// <param name="data"></param>
-/// <returns>True, if LC was decoded, otherwise false.</returns>
-void LC::decode(const uint8_t* data, uint32_t length, uint32_t offset)
+/// <returns>True, if RTCH was decoded, otherwise false.</returns>
+void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != NULL);
 
@@ -144,7 +144,7 @@ void LC::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded LC Data", m_data, 22U);
+        Utils::dump(2U, "Decoded RTCH Data", m_data, NXDN_RTCH_LC_LENGTH_BYTES);
     }
 
     decodeLC(m_data);
@@ -156,7 +156,7 @@ void LC::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 /// <param name="data"></param>
 /// <param name="length"></param>
 /// <param name="offset"></param>
-void LC::encode(uint8_t* data, uint32_t length, uint32_t offset)
+void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != NULL);
 
@@ -168,16 +168,16 @@ void LC::encode(uint8_t* data, uint32_t length, uint32_t offset)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded LC Data", data, length);
+        Utils::dump(2U, "Encoded RTCH Data", data, length);
     }
 }
 
 /// <summary>
 ///
 /// </summary>
-void LC::reset()
+void RTCH::reset()
 {
-    ::memset(m_data, 0x00U, 22U);
+    ::memset(m_data, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
 
     m_messageType = MESSAGE_TYPE_IDLE;
     m_callType = CALL_TYPE_UNSPECIFIED;
@@ -209,9 +209,9 @@ void LC::reset()
 /// Gets the raw layer 3 data.
 /// </summary>
 /// <param name="data"></param>
-void LC::getData(uint8_t* data) const
+void RTCH::getData(uint8_t* data) const
 {
-    ::memcpy(data, m_data, 22U);
+    ::memcpy(data, m_data, NXDN_RTCH_LC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -219,9 +219,9 @@ void LC::getData(uint8_t* data) const
 /// </summary>
 /// <param name="data"></param>
 /// <param name="length"></param>
-void LC::setData(const uint8_t* data, uint32_t length)
+void RTCH::setData(const uint8_t* data, uint32_t length)
 {
-    ::memset(m_data, 0x00U, 22U);
+    ::memset(m_data, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
     ::memcpy(m_data, data, length);
 
     decodeLC(m_data);
@@ -237,7 +237,7 @@ void LC::setData(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data"></param>
 /// <returns></returns>
-bool LC::decodeLC(const uint8_t* data)
+bool RTCH::decodeLC(const uint8_t* data)
 {
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
@@ -340,7 +340,7 @@ bool LC::decodeLC(const uint8_t* data)
         m_causeRsp = data[7U];                                                      // Cause (SS)
         break;
     default:
-        LogError(LOG_NXDN, "LC::decodeLC(), unknown LC value, messageType = $%02X", m_messageType);
+        LogError(LOG_NXDN, "RTCH::decodeRTCH(), unknown RTCH value, messageType = $%02X", m_messageType);
         return false;
     }
 
@@ -351,7 +351,7 @@ bool LC::decodeLC(const uint8_t* data)
 /// Encode link control.
 /// </summary>
 /// <param name="rs"></param>
-void LC::encodeLC(uint8_t* data)
+void RTCH::encodeLC(uint8_t* data)
 {
     m_messageType = m_data[0U] & 0x3FU;                                             // Message Type
 
@@ -460,7 +460,7 @@ void LC::encodeLC(uint8_t* data)
         m_packetInfo.encode(m_messageType, data + 8U);                              // Packet Information
         break;
     default:
-        LogError(LOG_NXDN, "LC::encodeLC(), unknown LC value, messageType = $%02X", m_messageType);
+        LogError(LOG_NXDN, "RTCH::encodeRTCH(), unknown RTCH value, messageType = $%02X", m_messageType);
         return;
     }
 }
@@ -469,10 +469,10 @@ void LC::encodeLC(uint8_t* data)
 /// Internal helper to copy the the class.
 /// </summary>
 /// <param name="data"></param>
-void LC::copy(const LC& data)
+void RTCH::copy(const RTCH& data)
 {
-    m_data = new uint8_t[22U];
-    ::memcpy(m_data, data.m_data, 22U);
+    m_data = new uint8_t[NXDN_RTCH_LC_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_RTCH_LC_LENGTH_BYTES);
 
     m_verbose = data.m_verbose;
 

@@ -173,7 +173,7 @@ void Data::resetNet()
 /// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
-/// <param name="option"></param>
+/// <param name="option">Channel options.</param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
@@ -192,12 +192,12 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
             return false;
     }
 
-    // The layer3 data will only be correct if valid is true
-    uint8_t buffer[23U];
+    // the layer 3 LC data will only be correct if valid is true
+    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
     udch.getData(buffer);
 
-    lc::LC lc;
-    lc.decode(buffer, 184U);
+    lc::RTCH lc;
+    lc.decode(buffer, NXDH_UDCH_CRC_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
@@ -279,12 +279,12 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 /// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
-/// <param name="option"></param>
+/// <param name="option">Channel options.</param>
 /// <param name="netLC"></param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Data::processNetwork(uint8_t option, lc::LC& netLC, uint8_t* data, uint32_t len)
+bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -301,11 +301,11 @@ bool Data::processNetwork(uint8_t option, lc::LC& netLC, uint8_t* data, uint32_t
         return false;
 
     // The layer3 data will only be correct if valid is true
-    uint8_t buffer[23U];
+    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
     udch.getData(buffer);
 
-    lc::LC lc;
-    lc.decode(buffer, 184U);
+    lc::RTCH lc;
+    lc.decode(buffer, NXDH_UDCH_CRC_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();

@@ -79,6 +79,15 @@ protocols:
         debug: false
     nxdn:
         enable: false
+        control:
+            enable: false
+            dedicated: false
+            broadcast: true
+            interval: 300
+            duration: 1
+        voiceOnControl: false
+        disableCompositeFlag: false
+        dumpRcchData: false
         callHang: 5
         silenceThreshold: 14
         queueSize: 12

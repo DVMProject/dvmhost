@@ -11,7 +11,6 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2015-2020 by Jonathan Naylor G4KLX
 *   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -28,11 +27,12 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_PACKET_DATA_H__)
-#define __NXDN_PACKET_DATA_H__
+#if !defined(__NXDN_PACKET_TRUNK_H__)
+#define __NXDN_PACKET_TRUNK_H__
 
 #include "Defines.h"
 #include "nxdn/Control.h"
+#include "nxdn/lc/RCCH.h"
 #include "network/BaseNetwork.h"
 
 #include <cstdio>
@@ -50,10 +50,10 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements handling logic for NXDN data packets.
+        //      This class implements handling logic for NXDN control signalling packets.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API Data {
+        class HOST_SW_API Trunk {
         public:
             /// <summary>Resets the data states for the RF interface.</summary>
             virtual void resetRF();
@@ -61,9 +61,12 @@ namespace nxdn
             virtual void resetNet();
 
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t option, uint8_t* data, uint32_t len);
+            virtual bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
+            virtual bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
+
+            /// <summary>Updates the processor by the passed number of milliseconds.</summary>
+            void clock(uint32_t ms);
 
         protected:
             friend class nxdn::Control;
@@ -71,20 +74,33 @@ namespace nxdn
 
             network::BaseNetwork* m_network;
 
+            lc::RCCH m_rfLC;
+            lc::RCCH m_netLC;
+
             uint16_t m_lastRejectId;
+
+            bool m_dumpRCCH;
 
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Data class.</summary>
-            Data(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Data class.</summary>
-            virtual ~Data();
+            /// <summary>Initializes a new instance of the Trunk class.</summary>
+            Trunk(Control* nxdn, network::BaseNetwork* network, bool dumpRCCHData, bool debug, bool verbose);
+            /// <summary>Finalizes a instance of the Trunk class.</summary>
+            virtual ~Trunk();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint32_t len);
+
+            /// <summary>Helper to write control channel packet data.</summary>
+            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
+
+            /// <summary>Helper to write a CC SITE_INFO broadcast packet on the RF interface.</summary>
+            void writeRF_CC_Site_Info();
+            /// <summary>Helper to write a CC SRV_INFO broadcast packet on the RF interface.</summary>
+            void writeRF_CC_Service_Info();
         };
     } // namespace packet
 } // namespace nxdn
 
-#endif // __NXDN_PACKET_DATA_H__
+#endif // __NXDN_PACKET_TRUNK_H__

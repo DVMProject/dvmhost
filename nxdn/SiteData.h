@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@ namespace nxdn
         /// <param name="channelNo">Channel Number.</param>
         /// <param name="serviceClass">Service class.</param>
         /// <param name="requireReg"></param>
-        SiteData(uint16_t locId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, bool requireReq) :
+        SiteData(uint32_t locId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, bool requireReq) :
             m_locId(locId),
             m_channelId(1U),
             m_channelNo(1U),
@@ -71,8 +71,8 @@ namespace nxdn
             m_requireReg(requireReq),
             m_netActive(false)
         {
-            if (m_locId > 0xFFFU)
-                m_locId = 0xFFFU;
+            if (m_locId > 0xFFFFFU)
+                m_locId = 0xFFFFFU;
 
             // channel id clamping
             if (channelId > 15U)
@@ -110,8 +110,8 @@ namespace nxdn
         /// <param name="serviceClass">Service class.</param>
         void setAdjSite(uint32_t locId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
-            if (locId > 0xFFFU)
-                locId = 0xFFFU;
+            if (m_locId > 0xFFFFFU)
+                m_locId = 0xFFFFFU;
 
             // channel id clamping
             if (channelId > 15U)
@@ -165,7 +165,7 @@ namespace nxdn
 
     public:
         /// <summary>NXDN location ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, locId, locId);
+        __READONLY_PROPERTY_PLAIN(uint32_t, locId, locId);
         /// <summary>Channel ID.</summary>
         __READONLY_PROPERTY_PLAIN(uint8_t, channelId, channelId);
         /// <summary>Channel number.</summary>

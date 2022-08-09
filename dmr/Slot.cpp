@@ -882,7 +882,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
         seqCnt = 3U;
     }
 
-    // shuld we insert the Git Hash burst?
+    // should we insert the Git Hash burst?
     bool hash = (frameCnt % 256U) == 0U;
     if (hash) {
         m_control->writeRF_TSCC_Git_Hash();

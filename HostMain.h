@@ -49,6 +49,7 @@ extern bool g_killed;
 
 extern bool g_fireDMRBeacon;
 extern bool g_fireP25Control;
+extern bool g_fireNXDNControl;
 
 extern uint8_t* g_gitHashBytes;
 

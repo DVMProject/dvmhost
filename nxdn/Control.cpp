@@ -76,15 +76,13 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
-/// <param name="dumpPDUData"></param>
-/// <param name="repeatPDU"></param>
-/// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
+/// <param name="dumpRCCHData">Flag indicating whether RCCH data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
     modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
-    bool debug, bool verbose) :
+    bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(NULL),
     m_data(NULL),
     m_ran(ran),
@@ -116,6 +114,9 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
+    m_ccPacketInterval(1000U, 0U, 5U),
+    m_ccFrameCnt(0U),
+    m_ccSeq(0U),
     m_siteData(),
     m_rssiMapper(rssiMapper),
     m_rssi(0U),
@@ -134,6 +135,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
     m_voice = new Voice(this, network, debug, verbose);
+    m_trunk = new Trunk(this, network, debug, verbose, dumpRCCHData);
     m_data = new Data(this, network, debug, verbose);
 }
 
@@ -144,6 +146,10 @@ Control::~Control()
 {
     if (m_voice != NULL) {
         delete m_voice;
+    }
+
+    if (m_trunk != NULL) {
+        delete m_trunk;
     }
 
     if (m_data != NULL) {
@@ -157,6 +163,7 @@ Control::~Control()
 void Control::reset()
 {
     m_rfState = RS_RF_LISTENING;
+    m_ccHalted = false;
 
     if (m_voice != NULL) {
         m_voice->resetRF();
@@ -250,6 +257,11 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     if (m_data != NULL) {
         m_data->resetRF();
     }
+
+    if (m_trunk != NULL) {
+        m_trunk->resetRF();
+        m_trunk->resetNet();
+    }
 }
 
 /// <summary>
@@ -325,18 +337,49 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     if (valid)
         m_rfLastLICH = lich;
 
-    uint8_t usc = m_rfLastLICH.getFCT();
+    uint8_t rfct = m_rfLastLICH.getRFCT();
+    uint8_t fct = m_rfLastLICH.getFCT();
     uint8_t option = m_rfLastLICH.getOption();
+
+    if (m_debug) {
+        LogDebug(LOG_RF, "NXDN, rfState = %u, netState = %u, fct = %u", m_rfState, m_netState, fct);
+    }
+
+    // are we interrupting a running CC?
+    if (m_ccRunning) {
+        if ((fct != NXDN_LICH_CAC_INBOUND_SHORT) || (fct != NXDN_LICH_CAC_INBOUND_LONG)) {
+            m_ccHalted = true;
+        }
+    }
 
     bool ret = false;
 
-    switch (usc) {
-        case NXDN_LICH_USC_UDCH:
-            ret = m_data->process(option, data, len);
-            break;
-        default:
-            ret = m_voice->process(usc, option, data, len);
-            break;
+    if (rfct == NXDN_LICH_RFCT_RCCH) {
+        ret = m_trunk->process(fct, option, data, len);
+    }
+    else if (rfct == NXDN_LICH_RFCT_RTCH || rfct == NXDN_LICH_RFCT_RDCH) {
+        switch (fct) {
+            case NXDN_LICH_USC_UDCH:
+                if (!m_dedicatedControl) {
+                    ret = m_data->process(option, data, len);
+                }
+                else {
+                    if (m_voiceOnControl) {
+                        ret = m_data->process(option, data, len);
+                    }
+                }
+                break;
+            default:
+                if (!m_dedicatedControl) {
+                    ret = m_voice->process(fct, option, data, len);
+                }
+                else {
+                    if (m_voiceOnControl) {
+                        ret = m_voice->process(fct, option, data, len);
+                    }
+                }
+                break;
+        }
     }
 
     return ret;
@@ -369,6 +412,45 @@ void Control::clock(uint32_t ms)
 {
     if (m_network != NULL) {
         processNetwork();
+
+        if (m_network->getStatus() == network::NET_STAT_RUNNING) {
+            m_siteData.setNetActive(true);
+        }
+        else {
+            m_siteData.setNetActive(false);
+        }
+    }
+
+    // if we have control enabled; do clocking to generate a CC data stream
+    if (m_control) {
+        if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
+            m_ccPacketInterval.start();
+        }
+
+        if (m_ccHalted) {
+            if (!m_ccRunning) {
+                m_ccHalted = false;
+                m_ccPrevRunning = m_ccRunning;
+            }
+        }
+        else {
+            m_ccPacketInterval.clock(ms);
+            if (!m_ccPacketInterval.isRunning()) {
+                m_ccPacketInterval.start();
+            }
+
+            if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
+                if (m_ccRunning) {
+                    writeRF_ControlData();
+                }
+
+                m_ccPacketInterval.start();
+            }
+        }
+
+        if (m_ccPrevRunning && !m_ccRunning) {
+            m_ccPrevRunning = m_ccRunning;
+        }
     }
 
     // handle timeouts and hang timers
@@ -425,6 +507,11 @@ void Control::clock(uint32_t ms)
             m_network->resetNXDN();
 
         m_rfState = RS_RF_LISTENING;
+    }
+
+    // clock data and trunking
+    if (m_trunk != NULL) {
+        m_trunk->clock(ms);
     }
 }
 
@@ -501,7 +588,7 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
-    lc::LC lc;
+    lc::RTCH lc;
 
     uint32_t length = 100U;
     bool ret = false;
@@ -542,6 +629,45 @@ void Control::processNetwork()
     }
 
     delete data;
+}
+
+/// <summary>
+/// Helper to write control channel frame data.
+/// </summary>
+/// <returns></returns>
+bool Control::writeRF_ControlData()
+{
+    if (!m_control)
+        return false;
+
+    if (m_ccFrameCnt == 254U) {
+        m_ccFrameCnt = 0U;
+    }
+
+    // don't add any frames if the queue is full
+    uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
+    uint32_t space = m_queue.freeSpace();
+    if (space < (len + 1U)) {
+        return false;
+    }
+
+    const uint8_t maxSeq = 8U;
+    if (m_ccSeq == maxSeq) {
+        m_ccSeq = 0U;
+    }
+
+    if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
+        m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
+        
+        m_ccSeq++;
+        if (m_ccSeq == maxSeq) {
+            m_ccFrameCnt++;
+        }
+        
+        return true;
+    }
+
+    return false;
 }
 
 /// <summary>

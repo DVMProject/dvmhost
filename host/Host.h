@@ -119,6 +119,9 @@ private:
     bool m_p25CCData;
     bool m_p25CtrlChannel;
     bool m_p25CtrlBroadcast;
+    bool m_nxdnCCData;
+    bool m_nxdnCtrlChannel;
+    bool m_nxdnCtrlBroadcast;
 
     uint8_t m_siteId;
     uint32_t m_dmrNetId;

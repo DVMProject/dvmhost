@@ -179,12 +179,12 @@ void Voice::resetNet()
 /// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
-/// <param name="usc"></param>
-/// <param name="option"></param>
+/// <param name="fct">Functional channel type.</param>
+/// <param name="option">Channel options.</param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
+bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -198,7 +198,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
         return false;
     }
 
-    if (usc == NXDN_LICH_USC_SACCH_NS) {
+    if (fct == NXDN_LICH_USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
         bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -210,7 +210,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
         uint8_t buffer[10U];
         facch.getData(buffer);
 
-        lc::LC lc;
+        lc::RTCH lc;
         lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
@@ -332,7 +332,7 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
                 uint8_t buffer[10U];
                 facch.getData(buffer);
 
-                lc::LC lc;
+                lc::RTCH lc;
                 lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
@@ -604,13 +604,13 @@ bool Voice::process(uint8_t usc, uint8_t option, uint8_t* data, uint32_t len)
 /// <summary>
 /// Process a data frame from the network.
 /// </summary>
-/// <param name="usc"></param>
-/// <param name="option"></param>
+/// <param name="fct">Functional channel type.</param>
+/// <param name="option">Channel options.</param>
 /// <param name="netLC"></param>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t *data, uint32_t len)
+bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t *data, uint32_t len)
 {
     assert(data != NULL);
 
@@ -624,7 +624,7 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t *
     channel::SACCH sacch;
     sacch.decode(data + 2U);
 
-    if (usc == NXDN_LICH_USC_SACCH_NS) {
+    if (fct == NXDN_LICH_USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
         bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
@@ -636,7 +636,7 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t *
         uint8_t buffer[10U];
         facch.getData(buffer);
 
-        lc::LC lc;
+        lc::RTCH lc;
         lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
@@ -742,7 +742,7 @@ bool Voice::processNetwork(uint8_t usc, uint8_t option, lc::LC& netLC, uint8_t *
                 uint8_t buffer[10U];
                 facch.getData(buffer);
 
-                lc::LC lc;
+                lc::RTCH lc;
                 lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;

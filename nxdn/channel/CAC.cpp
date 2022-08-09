@@ -316,7 +316,7 @@ void CAC::getData(uint8_t* data) const
     assert(data != NULL);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < (NXDN_CAC_LONG_IN_CRC_BITS - 8); i++, offset++) {
+    for (uint32_t i = 0U; i < (NXDN_CAC_SHORT_IN_CRC_BITS - 8); i++, offset++) {
         bool b = READ_BIT(m_data, offset);
         WRITE_BIT(data, i, b);
     }
@@ -335,8 +335,6 @@ void CAC::setData(const uint8_t* data)
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
     }
-
-    m_ran = m_data[0U] & 0x3FU;
 }
 
 // ---------------------------------------------------------------------------

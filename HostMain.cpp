@@ -93,6 +93,7 @@ bool g_killed = false;
 
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
+bool g_fireNXDNControl = false;
 
 uint8_t* g_gitHashBytes = NULL;
 

@@ -69,9 +69,11 @@ HOST_OBJECTS = \
 		nxdn/channel/LICH.o \
 		nxdn/channel/SACCH.o \
 		nxdn/channel/UDCH.o \
-		nxdn/lc/LC.o \
 		nxdn/lc/PacketInformation.o \
+		nxdn/lc/RCCH.o \
+		nxdn/lc/RTCH.o \
 		nxdn/packet/Data.o \
+		nxdn/packet/Trunk.o \
 		nxdn/packet/Voice.o \
 		nxdn/Audio.o \
 		nxdn/Control.o \

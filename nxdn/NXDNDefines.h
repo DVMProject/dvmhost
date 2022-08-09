@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -80,6 +81,7 @@ namespace nxdn
     const uint32_t  NXDN_UDCH_LENGTH_BITS = 203U;                                                   // Data + CRC-15 + 4-bit NULL
     const uint32_t  NXDN_UDCH_LENGTH_BYTES = (NXDN_UDCH_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDH_UDCH_CRC_BITS = 184U;                                                      // Data
+    const uint32_t  NXDH_UDCH_CRC_BYTES = NXDH_UDCH_CRC_BITS / 8U;
 
     const uint32_t  NXDN_CAC_LENGTH_BITS = 384U;
     const uint32_t  NXDN_CAC_LENGTH_BYTES = (NXDN_CAC_LENGTH_BITS / 8U);
@@ -100,12 +102,17 @@ namespace nxdn
     const uint32_t  NXDN_CAC_LONG_IN_LENGTH_BITS = 156U;                                            // Data + CRC-16 + 4-bit NULL
     const uint32_t  NXDN_CAC_LONG_IN_LENGTH_BYTES = (NXDN_CAC_LONG_IN_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDN_CAC_LONG_IN_CRC_BITS = 136U;                                               // Data
+    const uint32_t  NXDN_CAC_LONG_IN_CRC_BYTES = NXDN_CAC_LONG_IN_CRC_BITS / 8U;
 
     const uint32_t  NXDN_CAC_SHORT_IN_FEC_LENGTH_BITS = 252U;                                       // Interleave Length
     const uint32_t  NXDN_CAC_SHORT_IN_FEC_LENGTH_BYTES = (NXDN_CAC_SHORT_IN_FEC_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDN_CAC_SHORT_IN_LENGTH_BITS = 126U;                                           // Data + CRC-16 + 4-bit NULL
     const uint32_t  NXDN_CAC_SHORT_IN_LENGTH_BYTES = (NXDN_CAC_SHORT_IN_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDN_CAC_SHORT_IN_CRC_BITS = 106U;                                              // Data
+    const uint32_t  NXDN_CAC_SHORT_IN_CRC_BYTES = (NXDN_CAC_SHORT_IN_CRC_BITS / 8U) + 1U;
+
+    const uint32_t  NXDN_RTCH_LC_LENGTH_BYTES = 22U;
+    const uint32_t  NXDN_RCCH_LC_LENGTH_BYTES = 22U;
 
     const uint32_t  NXDN_E_POST_FIELD_BITS = 24U;
 
@@ -154,6 +161,8 @@ namespace nxdn
 
     const uint8_t   NXDN_NULL_AMBE[] = { 0xB1U, 0xA8U, 0x22U, 0x25U, 0x6BU, 0xD1U, 0x6CU, 0xCFU, 0x67U };
 
+    const uint8_t   NXDN_CALLSIGN_LENGTH_BYTES = 8U;
+
     const uint32_t  NXDN_MI_LENGTH_BYTES = 8U;
     const uint32_t  NXDN_PCKT_INFO_LENGTH_BYTES = 3U;
 
@@ -196,6 +205,16 @@ namespace nxdn
     const uint8_t   NXDN_SIF2_PSTN_NETWORK = 0x20U;
     const uint8_t   NXDN_SIF2_STATUS_CALL_REM_CTRL = 0x40U;
     const uint8_t   NXDN_SIF2_SHORT_DATA_CALL_SVC = 0x80U;
+
+    const uint8_t   NXDN_CH_ACCESS_STEP_SYS_DEFINED = 0x00U;
+    const uint8_t   NXDN_CH_ACCESS_STEP_1DOT25K = 0x02U;
+    const uint8_t   NXDN_CH_ACCESS_STEP_3DOT125K = 0x03U;
+
+    const uint8_t   NXDN_CH_ACCESS_BASE_FREQ_100 = 0x01U;
+    const uint8_t   NXDN_CH_ACCESS_BASE_FREQ_330 = 0x02U;
+    const uint8_t   NXDN_CH_ACCESS_BASE_FREQ_400 = 0x03U;
+    const uint8_t   NXDN_CH_ACCESS_BASE_FREQ_750 = 0x04U;
+    const uint8_t   NXDN_CH_ACCESS_BASE_FREQ_SYS_DEFINED = 0x07U;
 
     // Common Message Types
     const uint8_t   MESSAGE_TYPE_IDLE = 0x10U;                  // IDLE - Idle

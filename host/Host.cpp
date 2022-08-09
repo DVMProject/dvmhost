@@ -122,6 +122,9 @@ Host::Host(const std::string& confFile) :
     m_p25CCData(false),
     m_p25CtrlChannel(false),
     m_p25CtrlBroadcast(false),
+    m_nxdnCCData(false),
+    m_nxdnCtrlChannel(false),
+    m_nxdnCtrlBroadcast(false),
     m_siteId(1U),
     m_dmrNetId(1U),
     m_dmrColorCode(1U),
@@ -545,12 +548,19 @@ int Host::run()
 #endif // defined(ENABLE_P25)
 
     // initialize NXDN
+    Timer nxdnBcastIntervalTimer(1000U);
+    Timer nxdnBcastDurationTimer(1000U);
+
     nxdn::Control* nxdn = NULL;
 #if defined(ENABLE_NXDN)
     LogInfo("NXDN Parameters");
     LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
     if (m_nxdnEnabled) {
         yaml::Node nxdnProtocol = protocolConf["nxdn"];
+        m_nxdnCCData = nxdnProtocol["control"]["enable"].as<bool>(false);
+        bool nxdnCtrlChannel = nxdnProtocol["control"]["dedicated"].as<bool>(false);
+        bool nxdnCtrlBroadcast = nxdnProtocol["control"]["broadcast"].as<bool>(true);
+        bool nxdnDumpRcchData = nxdnProtocol["dumpRcchData"].as<bool>(false);
         uint32_t callHang = nxdnProtocol["callHang"].as<uint32_t>(3U);
         uint32_t queueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
         bool nxdnVerbose = nxdnProtocol["verbose"].as<bool>(true);
@@ -574,9 +584,35 @@ int Host::run()
         LogInfo("    Call Hang: %us", callHang);
         LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
 
+        LogInfo("    Control: %s", m_nxdnCCData ? "yes" : "no");
+
+        uint32_t nxdnControlBcstInterval = nxdnProtocol["control"]["interval"].as<uint32_t>(300U);
+        uint32_t nxdnControlBcstDuration = nxdnProtocol["control"]["duration"].as<uint32_t>(1U);
+        if (m_nxdnCCData) {
+            LogInfo("    Control Broadcast: %s", nxdnCtrlBroadcast ? "yes" : "no");
+            LogInfo("    Control Channel: %s", nxdnCtrlChannel ? "yes" : "no");
+            if (nxdnCtrlChannel) {
+                m_nxdnCtrlChannel = nxdnCtrlChannel;
+            }
+            else {
+                LogInfo("    Control Broadcast Interval: %us", nxdnControlBcstInterval);
+                LogInfo("    Control Broadcast Duration: %us", nxdnControlBcstDuration);
+            }
+
+            nxdnBcastDurationTimer.setTimeout(nxdnControlBcstDuration);
+
+            nxdnBcastIntervalTimer.setTimeout(nxdnControlBcstInterval);
+            nxdnBcastIntervalTimer.start();
+
+            m_nxdnCtrlBroadcast = nxdnCtrlBroadcast;
+            if (nxdnCtrlBroadcast) {
+                g_fireNXDNControl = true;
+            }
+        }
+
         nxdn = new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
-            nxdnDebug, nxdnVerbose);
+            nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
         nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
 
         if (nxdnVerbose) {
@@ -651,6 +687,26 @@ int Host::run()
         g_killed = true;
     }
 
+    // NXDN CC checks
+    if (m_dmrEnabled && m_nxdnCtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated NXDN control!");
+        g_killed = true;
+    }
+
+    if (m_p25Enabled && m_nxdnCtrlChannel) {
+        ::LogError(LOG_HOST, "Cannot have P25 enabled when using dedicated NXDN control!");
+        g_killed = true;
+    }
+
+    if (!m_fixedMode && m_nxdnCtrlChannel) {
+        ::LogWarning(LOG_HOST, "Fixed mode should be enabled when using dedicated NXDN control!");
+    }
+
+    if (!m_duplex && m_nxdnCCData) {
+        ::LogError(LOG_HOST, "Cannot have NXDN control and simplex mode at the same time.");
+        g_killed = true;
+    }
+
     // DMR beacon checks
     if (m_dmrBeacons && m_p25CCData) {
         ::LogError(LOG_HOST, "Cannot have DMR roaming becaons and P25 control at the same time.");
@@ -673,6 +729,13 @@ int Host::run()
                 setState(STATE_P25);
             }
 #endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            if (m_nxdnCtrlChannel) {
+                m_fixedMode = true;
+                setState(STATE_NXDN);
+            }
+#endif // defined(ENABLE_NXDN)
+
 #if defined(ENABLE_DMR)
             if (dmr != NULL)
                 setState(STATE_DMR);
@@ -687,6 +750,19 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
         }
         else {
+#if defined(ENABLE_P25)
+            if (m_p25CtrlChannel) {
+                m_fixedMode = true;
+                setState(STATE_P25);
+            }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+            if (m_nxdnCtrlChannel) {
+                m_fixedMode = true;
+                setState(STATE_NXDN);
+            }
+#endif // defined(ENABLE_NXDN)
+
             setState(STATE_IDLE);
         }
 
@@ -754,6 +830,15 @@ int Host::run()
                 }                                                                                                       \
             }                                                                                                           \
             dmrBeaconDurationTimer.stop();                                                                              \
+        }
+
+    // Macro to interrupt a running NXDN control channel transmission
+    #define INTERRUPT_NXDN_CONTROL                                                                                      \
+        if (nxdn != NULL) {                                                                                             \
+            nxdn->setCCHalted(true);                                                                                    \
+            if (nxdnBcastDurationTimer.isRunning() && !nxdnBcastDurationTimer.isPaused()) {                             \
+                nxdnBcastDurationTimer.pause();                                                                         \
+            }                                                                                                           \
         }
 
     // Macro to start DMR duplex idle transmission (or beacon)
@@ -847,6 +932,14 @@ int Host::run()
                             }
                         }
 
+                        // if there is a NXDN CC running; halt the CC
+                        if (nxdn != NULL) {
+                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                                nxdn->setCCHalted(true);
+                                INTERRUPT_NXDN_CONTROL;
+                            }
+                        }
+
                         m_modeTimer.start();
                     }
                 }
@@ -884,6 +977,14 @@ int Host::run()
                             INTERRUPT_P25_CONTROL;
                         }
 
+                        // if there is a NXDN CC running; halt the CC
+                        if (nxdn != NULL) {
+                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                                nxdn->setCCHalted(true);
+                                INTERRUPT_NXDN_CONTROL;
+                            }
+                        }
+
                         m_modeTimer.start();
                     }
                 }
@@ -912,6 +1013,14 @@ int Host::run()
                         m_modem->writeP25Data(data, len);
                         
                         INTERRUPT_DMR_BEACON;
+
+                        // if there is a NXDN CC running; halt the CC
+                        if (nxdn != NULL) {
+                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                                nxdn->setCCHalted(true);
+                                INTERRUPT_NXDN_CONTROL;
+                            }
+                        }
                         
                         m_modeTimer.start();
                     }
@@ -1026,6 +1135,7 @@ int Host::run()
                             
                             INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
+                            INTERRUPT_NXDN_CONTROL;
                         }
                     }
                     else {
@@ -1037,7 +1147,8 @@ int Host::run()
                         dmr->processFrame(1U, data, len);
 
                         INTERRUPT_DMR_BEACON;
-                        p25BcastDurationTimer.stop();
+                        INTERRUPT_P25_CONTROL;
+                        INTERRUPT_NXDN_CONTROL;
                     }
                 }
                 else if (m_state == STATE_DMR) {
@@ -1056,6 +1167,7 @@ int Host::run()
                         if (ret) {
                             INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
+                            INTERRUPT_NXDN_CONTROL;
 
                             m_modeTimer.start();
                             if (m_duplex)
@@ -1083,6 +1195,7 @@ int Host::run()
 
                             INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
+                            INTERRUPT_NXDN_CONTROL;
                         }
                     }
                     else {
@@ -1095,6 +1208,7 @@ int Host::run()
 
                         INTERRUPT_DMR_BEACON;
                         INTERRUPT_P25_CONTROL;
+                        INTERRUPT_NXDN_CONTROL;
                     }
                 }
                 else if (m_state == STATE_DMR) {
@@ -1113,6 +1227,7 @@ int Host::run()
                         if (ret) {
                             INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
+                            INTERRUPT_NXDN_CONTROL;
 
                             m_modeTimer.start();
                             if (m_duplex)
@@ -1143,11 +1258,13 @@ int Host::run()
 
                         INTERRUPT_DMR_BEACON;
                         INTERRUPT_P25_CONTROL;
+                        INTERRUPT_NXDN_CONTROL;
                     }
                     else {
                         ret = p25->writeRF_VoiceEnd();
                         if (ret) {
                             INTERRUPT_DMR_BEACON;
+                            INTERRUPT_NXDN_CONTROL;
 
                             if (m_state == STATE_IDLE) {
                                 m_modeTimer.setTimeout(m_rfModeHang);
@@ -1218,11 +1335,11 @@ int Host::run()
                     }
                 }
                 else if (m_state == STATE_NXDN) {
-                    // process P25 frames
+                    // process NXDN frames
                     bool ret = nxdn->processFrame(data, len);
                     if (ret) {
                         m_modeTimer.start();
-                        INTERRUPT_P25_CONTROL;
+                        INTERRUPT_NXDN_CONTROL;
                     }
                 }
                 else if (m_state != HOST_STATE_LOCKOUT) {
@@ -1447,6 +1564,73 @@ int Host::run()
         }
 #endif // defined(ENABLE_P25)
 
+        /** Next Generation Digital Narrowband */
+#if defined(ENABLE_NXDN)
+        if (nxdn != NULL) {
+            if (m_nxdnCCData) {
+                nxdnBcastIntervalTimer.clock(ms);
+
+                if (!m_nxdnCtrlChannel && m_nxdnCtrlBroadcast) {
+                    // clock and check NXDN CC broadcast interval timer
+                    if ((nxdnBcastIntervalTimer.isRunning() && nxdnBcastIntervalTimer.hasExpired()) || g_fireNXDNControl) {
+                        if ((m_state == STATE_IDLE || m_state == STATE_NXDN) && !m_modem->hasTX()) {
+                            if (m_modeTimer.isRunning()) {
+                                m_modeTimer.stop();
+                            }
+
+                            if (m_state != STATE_NXDN)
+                                setState(STATE_NXDN);
+
+                            //nxdn->writeAdjSSNetwork();
+                            nxdn->setCCRunning(true);
+
+                            // hide this message for continuous CC -- otherwise display every time we process
+                            if (!m_nxdnCtrlChannel) {
+                                LogMessage(LOG_HOST, "NXDN, start CC broadcast");
+                            }
+
+                            g_fireNXDNControl = false;
+                            nxdnBcastIntervalTimer.start();
+                            nxdnBcastDurationTimer.start();
+
+                            // if the CC is continuous -- clock one cycle into the duration timer
+                            if (m_nxdnCtrlChannel) {
+                                nxdnBcastDurationTimer.clock(ms);
+                            }
+                        }
+                    }
+
+                    if (nxdnBcastDurationTimer.isPaused()) {
+                        nxdnBcastDurationTimer.resume();
+                    }
+
+                    // clock and check NXDN CC broadcast duration timer
+                    nxdnBcastDurationTimer.clock(ms);
+                    if (nxdnBcastDurationTimer.isRunning() && nxdnBcastDurationTimer.hasExpired()) {
+                        nxdnBcastDurationTimer.stop();
+
+                        nxdn->setCCRunning(false);
+
+                        if (m_state == STATE_NXDN && !m_modeTimer.isRunning()) {
+                            m_modeTimer.setTimeout(m_rfModeHang);
+                            m_modeTimer.start();
+                        }
+                    }
+                }
+                else {
+                    // simply use the NXDN CC interval timer in a non-broadcast state to transmit adjacent site data over
+                    // the network
+                    if (nxdnBcastIntervalTimer.isRunning() && nxdnBcastIntervalTimer.hasExpired()) {
+                        if ((m_state == STATE_IDLE || m_state == STATE_NXDN) && !m_modem->hasTX()) {
+                            //nxdn->writeAdjSSNetwork();
+                            nxdnBcastIntervalTimer.start();
+                        }
+                    }
+                }
+            }
+        }
+#endif // defined(ENABLE_NXDN)
+
         if (g_killed) {
 #if defined(ENABLE_DMR)
             if (dmr != NULL) {
@@ -1480,6 +1664,22 @@ int Host::run()
                 }
             }
 #endif // defined(ENABLE_P25)
+
+#if defined(ENABLE_NXDN)
+            if (nxdn != NULL) {
+                if (m_nxdnCtrlChannel) {
+                    if (!hasTxShutdown) {
+                        m_modem->clearNXDNData();
+                        nxdn->reset();
+                    }
+
+                    nxdn->setCCRunning(false);
+
+                    nxdnBcastDurationTimer.stop();
+                    nxdnBcastIntervalTimer.stop();
+                }
+            }
+#endif // defined(ENABLE_NXDN)
 
             hasTxShutdown = true;
             if (!m_modem->hasTX()) {

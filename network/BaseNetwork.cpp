@@ -261,7 +261,7 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 /// <param name="lc"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::LC& lc, uint32_t& len)
+uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
         ret = false;
@@ -487,7 +487,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const nxdn::lc::LC& lc, const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -1086,7 +1086,7 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::lc::LC& lc, const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;

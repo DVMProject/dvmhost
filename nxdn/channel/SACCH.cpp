@@ -273,9 +273,6 @@ void SACCH::setData(const uint8_t* data)
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
     }
-
-    m_ran = m_data[0U] & 0x3FU;
-    m_structure = (m_data[0U] >> 6) & 0x03U;
 }
 
 // ---------------------------------------------------------------------------
