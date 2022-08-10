@@ -66,7 +66,7 @@ RTCH::RTCH() :
     m_delayCount(0U),
     m_algId(NXDN_CIPHER_TYPE_NONE),
     m_kId(0U),
-    m_causeRsp(NXDN_CAUSE_VD_NORMAL_1),
+    m_causeRsp(NXDN_CAUSE_VD_ACCEPTED),
     m_data(NULL)
 {
     m_data = new uint8_t[NXDN_RTCH_LC_LENGTH_BYTES];
@@ -99,7 +99,7 @@ RTCH::RTCH(const RTCH& data) :
     m_delayCount(0U),
     m_algId(NXDN_CIPHER_TYPE_NONE),
     m_kId(0U),
-    m_causeRsp(NXDN_CAUSE_VD_NORMAL_1),
+    m_causeRsp(NXDN_CAUSE_VD_ACCEPTED),
     m_data(NULL)
 {
     copy(data);
@@ -202,7 +202,7 @@ void RTCH::reset()
     m_algId = NXDN_CIPHER_TYPE_NONE;
     m_kId = 0U;
 
-    m_causeRsp = NXDN_CAUSE_VD_NORMAL_1;
+    m_causeRsp = NXDN_CAUSE_VD_ACCEPTED;
 }
 
 /// <summary>

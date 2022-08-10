@@ -87,6 +87,8 @@ protocols:
             duration: 1
         voiceOnControl: false
         disableCompositeFlag: false
+        verifyAff: false
+        verifyReg: false
         dumpRcchData: false
         callHang: 5
         silenceThreshold: 14

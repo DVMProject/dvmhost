@@ -32,7 +32,10 @@
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/Control.h"
 #include "nxdn/acl/AccessControl.h"
+#include "nxdn/channel/UDCH.h"
+#include "nxdn/lc/RTCH.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/AMBEFEC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -101,6 +104,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_affiliations("NXDN Affiliations", verbose),
     m_idenEntry(),
     m_queue(queueSize, "NXDN Frame"),
     m_rfState(RS_RF_LISTENING),
@@ -200,6 +204,9 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
 
+    m_trunk->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
+    m_trunk->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);
+
     yaml::Node control = nxdnProtocol["control"];
     m_control = control["enable"].as<bool>(false);
     if (m_control) {
@@ -241,12 +248,20 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         }
     }
 
+    std::vector<uint32_t> availCh = voiceChNo;
+    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
+        m_affiliations.addRFCh(*it);
+    }
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
         }
+
+        LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
+        LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
     }
 
     if (m_voice != NULL) {
@@ -286,8 +301,12 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                 float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
         }
 
-        LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
-            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+        LogMessage(LOG_RF, "NXDN %s, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+            NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+
+        if (m_control) {
+            m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        }
 
         writeEndRF();
         return false;
@@ -364,7 +383,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                     ret = m_data->process(option, data, len);
                 }
                 else {
-                    if (m_voiceOnControl) {
+                    if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
                         ret = m_data->process(option, data, len);
                     }
                 }
@@ -374,7 +393,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                     ret = m_voice->process(fct, option, data, len);
                 }
                 else {
-                    if (m_voiceOnControl) {
+                    if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
                         ret = m_voice->process(fct, option, data, len);
                     }
                 }
@@ -483,8 +502,14 @@ void Control::clock(uint32_t ms)
 
             m_networkWatchdog.stop();
 
-            if (m_network != NULL)
-                m_network->resetNXDN();
+            if (m_control) {
+                m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+            }
+
+            if (m_dedicatedControl) {
+                if (m_network != NULL)
+                    m_network->resetNXDN();
+            }
 
             m_netState = RS_NET_IDLE;
 
@@ -671,6 +696,48 @@ bool Control::writeRF_ControlData()
 }
 
 /// <summary>
+/// Helper to write a Tx release packet.
+/// </summary>
+/// <param name="noNetwork"></param>
+void Control::writeRF_Message_Tx_Rel(bool noNetwork)
+{
+    uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
+
+    Sync::addNXDNSync(data + 2U);
+
+    channel::LICH lich;
+    lich.setRFCT(NXDN_LICH_RFCT_RDCH);
+    lich.setFCT(NXDN_LICH_USC_UDCH);
+    lich.setOption(NXDN_LICH_USC_UDCH);
+    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.encode(data + 2U);
+
+    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_UDCH_LENGTH_BYTES);
+
+    m_rfLC.setMessageType(RTCH_MESSAGE_TYPE_TX_REL);
+    m_rfLC.encode(buffer, NXDH_UDCH_CRC_BITS);
+
+    channel::UDCH udch;
+    udch.setRAN(m_ran);
+    udch.setData(buffer);
+    udch.encode(data + 2U);
+
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
+
+    scrambler(data + 2U);
+
+    if (!noNetwork)
+        m_data->writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+
+    if (m_duplex) {
+        addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+    }
+}
+
+/// <summary>
 /// Helper to write RF end of frame data.
 /// </summary>
 void Control::writeEndRF()
@@ -681,6 +748,10 @@ void Control::writeEndRF()
     m_rfLC.reset();
 
     m_rfTimeout.stop();
+    //m_queue.clear();
+
+    if (m_network != NULL)
+        m_network->resetNXDN();
 }
 
 /// <summary>

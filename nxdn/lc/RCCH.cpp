@@ -157,7 +157,7 @@ void RCCH::reset()
 
     m_version = 0U;
 
-    m_causeRsp = NXDN_CAUSE_MM_NORMAL_1;
+    m_causeRsp = NXDN_CAUSE_MM_REG_ACCEPTED;
 
     m_grpVchNo = 0U;
 
@@ -232,7 +232,7 @@ RCCH::RCCH(SiteData siteData) :
     m_locId(0U),
     m_regOption(0U),
     m_version(0U),
-    m_causeRsp(NXDN_CAUSE_MM_NORMAL_1),
+    m_causeRsp(NXDN_CAUSE_MM_REG_ACCEPTED),
     m_grpVchNo(0U),
     m_callType(CALL_TYPE_UNSPECIFIED),
     m_emergency(false),

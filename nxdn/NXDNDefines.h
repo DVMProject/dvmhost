@@ -33,11 +33,6 @@
 
 #include "Defines.h"
 
-// Message Type String(s)
-#define NXDN_MESSAGE_TYPE_VCALL "MESSAGE_TYPE_VCALL (NXDN Voice Call)"
-#define NXDN_MESSAGE_TYPE_TX_REL "MESSAGE_TYPE_TX_REL (NXDN Transmit Release)"
-#define NXDN_MESSAGE_TYPE_DCALL "MESSAGE_TYPE_VCALL (NXDN Data Call)"
-
 namespace nxdn
 {
     // ---------------------------------------------------------------------------
@@ -172,25 +167,42 @@ namespace nxdn
     const uint8_t   DATA_RSP_CLASS_ACK_S = 0x01U;
     const uint8_t   DATA_RSP_CLASS_NACK = 0x03U;
     
-    const uint8_t   NXDN_CAUSE_RESOURCE_NOT_AVAIL = 0x05U;
+    const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_NETWORK = 0x51U;
+    const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_TEMP = 0x52U;
+    const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_QUEUED = 0x53U;
     const uint8_t   NXDN_CAUSE_SVC_UNAVAILABLE = 0x06U;
-    const uint8_t   NXDN_CAUSE_PROC_ERROR = 0x07U;
+    const uint8_t   NXDN_CAUSE_PROC_ERROR = 0x70U;
+    const uint8_t   NXDN_CAUSE_PROC_ERROR_UNDEF = 0x71U;
 
-    const uint8_t   NXDN_CAUSE_MM_NORMAL_1 = 0x01U;
-    const uint8_t   NXDN_CAUSE_MM_NORMAL_2 = 0x04U;
+    const uint8_t   NXDN_CAUSE_MM_REG_ACCEPTED = 0x01U;
+    const uint8_t   NXDN_CAUSE_MM_LOC_ACPT_GRP_FAIL = 0x04U;
+    const uint8_t   NXDN_CAUSE_MM_LOC_ACPT_GRP_REFUSE = 0x04U;
+    const uint8_t   NXDN_CAUSE_MM_REG_FAILED = 0x06U;
+    const uint8_t   NXDN_CAUSE_MM_REG_REFUSED = 0x08U;
 
-    const uint8_t   NXDN_CAUSE_VD_NORMAL_1 = 0x01U;
-    const uint8_t   NXDN_CAUSE_VD_NORMAL_2 = 0x02U;
-    const uint8_t   NXDN_CAUSE_VD_QUEUED = 0x03U;
+    const uint8_t   NXDN_CAUSE_VD_ACCEPTED = 0x10U;
+    const uint8_t   NXDN_CAUSE_VD_GRP_NOT_PERM = 0x11U;
+    const uint8_t   NXDN_CAUSE_VD_REQ_UNIT_NOT_PERM = 0x12U;
+    const uint8_t   NXDN_CAUSE_VD_TGT_UNIT_NOT_PERM = 0x13U;
+    const uint8_t   NXDN_CAUSE_VD_REQ_UNIT_NOT_REG = 0x1CU;
+    const uint8_t   NXDN_CAUSE_VD_QUE_CHN_RESOURCE_NOT_AVAIL = 0x30U;
+    const uint8_t   NXDN_CAUSE_VD_QUE_TGT_UNIT_BUSY = 0x38U;
+    const uint8_t   NXDN_CAUSE_VD_QUE_GRP_BUSY = 0x39U;
 
-    const uint8_t   NXDN_CAUSE_SS_NORMAL = 0x00U;
-    const uint8_t   NXDN_CAUSE_SS_NORMAL_1 = 0x01U;
-    const uint8_t   NXDN_CAUSE_SS_NORMAL_2 = 0x02U;
+    const uint8_t   NXDN_CAUSE_SS_ACK_R = 0x01U;
+    const uint8_t   NXDN_CAUSE_SS_ACK_S = 0x02U;
+    const uint8_t   NXDN_CAUSE_SS_NACK = 0x08U;
+    const uint8_t   NXDN_CAUSE_SS_ACCEPTED = 0x10U;
+    const uint8_t   NXDN_CAUSE_SS_GRP_NOT_PERM = 0x11U;
+    const uint8_t   NXDN_CAUSE_SS_REQ_UNIT_NOT_PERM = 0x12U;
+    const uint8_t   NXDN_CAUSE_SS_TGT_UNIT_NOT_PERM = 0x13U;
+    const uint8_t   NXDN_CAUSE_SS_REQ_UNIT_NOT_REG = 0x1CU;
 
-    const uint8_t   NXDN_CAUSE_DREQ_NORMAL = 0x01U;
+    const uint8_t   NXDN_CAUSE_DREQ_USER = 0x10U;
+    const uint8_t   NXDN_CAUSE_DREQ_OTHER = 0x1FU;
 
-    const uint8_t   NXDN_CAUSE_DISC_NORMAL = 0x01U;
-    const uint8_t   NXDN_CAUSE_DISC_NORMAL_TC = 0x02U;
+    const uint8_t   NXDN_CAUSE_DISC_USER = 0x10U;
+    const uint8_t   NXDN_CAUSE_DISC_OTHER = 0x1FU;
 
     const uint8_t   NXDN_SIF1_DATA_CALL_SVC = 0x01U;
     const uint8_t   NXDN_SIF1_VOICE_CALL_SVC = 0x02U;

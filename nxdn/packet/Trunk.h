@@ -78,6 +78,9 @@ namespace nxdn
 
             network::BaseNetwork* m_network;
 
+            bool m_verifyAff;
+            bool m_verifyReg;
+
             lc::RCCH m_rfLC;
             lc::RCCH m_netLC;
 
@@ -99,10 +102,22 @@ namespace nxdn
             /// <summary>Helper to write control channel packet data.</summary>
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
+            /// <summary>Helper to write a single-block RCCH packet.</summary>
+            void writeRF_Message(bool noNetwork, bool clearBeforeWrite = false);
+
+            /// <summary>Helper to write a grant packet.</summary>
+            bool writeRF_Message_Grant(bool grp, bool skip = false, bool net = false, bool skipNetCheck = false);
+            /// <summary>Helper to write a deny packet.</summary>
+            void writeRF_Message_Deny(uint8_t reason, uint8_t service);
+            /// <summary>Helper to write a group registration response packet.</summary>
+            bool writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId);
+            /// <summary>Helper to write a unit registration response packet.</summary>
+            void writeRF_Message_U_Reg_Rsp(uint32_t srcId);
+
             /// <summary>Helper to write a CC SITE_INFO broadcast packet on the RF interface.</summary>
-            void writeRF_CC_Site_Info();
+            void writeRF_CC_Message_Site_Info();
             /// <summary>Helper to write a CC SRV_INFO broadcast packet on the RF interface.</summary>
-            void writeRF_CC_Service_Info();
+            void writeRF_CC_Message_Service_Info();
         };
     } // namespace packet
 } // namespace nxdn

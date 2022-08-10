@@ -36,6 +36,7 @@
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/Audio.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -110,7 +111,8 @@ using namespace nxdn::packet;
 #define VALID_SRCID(_SRC_ID, _DST_ID, _GROUP)                                           \
     if (!acl::AccessControl::validateSrcId(_SRC_ID)) {                                  \
         if (m_lastRejectId == 0U || m_lastRejectId != _SRC_ID) {                        \
-            LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL " denial, RID rejection, srcId = %u", _SRC_ID); \
+            LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u",            \
+               NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), _SRC_ID);       \
             ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
             m_lastRejectId = _SRC_ID;                                                   \
         }                                                                               \
@@ -126,7 +128,8 @@ using namespace nxdn::packet;
     if (!_GROUP) {                                                                      \
         if (!acl::AccessControl::validateSrcId(_DST_ID)) {                              \
             if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL " denial, RID rejection, dstId = %u", _DST_ID); \
+                LogWarning(LOG_RF, "NXDN %s denial, RID rejection, dstId = %u",         \
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), _DST_ID);  \
                 ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
                 m_lastRejectId = _DST_ID;                                               \
             }                                                                           \
@@ -140,7 +143,8 @@ using namespace nxdn::packet;
     else {                                                                              \
         if (!acl::AccessControl::validateTGId(_DST_ID)) {                               \
             if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL " denial, TGID rejection, dstId = %u", _DST_ID); \
+                LogWarning(LOG_RF, "NXDN %s denial, TGID rejection, dstId = %u",        \
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), _DST_ID);  \
                 ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
                 m_lastRejectId = _DST_ID;                                               \
             }                                                                           \
@@ -237,6 +241,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             return false;
         }
 
+        m_nxdn->m_rfLastDstId = lc.getDstId();
         m_nxdn->m_rfLC = lc;
 
         Sync::addNXDNSync(data + 2U);
@@ -282,8 +287,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                     float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
-            LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
-                m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
+            LogMessage(LOG_RF, "NXDN %s, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+                NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
             m_nxdn->writeEndRF();
         } else {
@@ -299,8 +304,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_nxdn->m_rssiCount = 1U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
-                    srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
+                LogMessage(LOG_RF, "NXDN %s, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
             ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
@@ -392,6 +397,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             // validate destination ID
             VALID_DSTID(srcId, dstId, group);
 
+            m_nxdn->m_rfLastDstId = m_nxdn->m_rfLC.getDstId();
             m_rfFrames = 0U;
             m_rfErrs = 0U;
             m_rfBits = 1U;
@@ -404,8 +410,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_nxdn->m_rssiCount = 1U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
-                    srcId, dstId, group, m_nxdn->m_rfLC.getEmergency(), encrypted, m_nxdn->m_rfLC.getPriority(), m_nxdn->m_rfLC.getAlgId(), m_nxdn->m_rfLC.getKId());
+                LogMessage(LOG_RF, "NXDN %s, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), srcId, dstId, group, m_nxdn->m_rfLC.getEmergency(), encrypted, m_nxdn->m_rfLC.getPriority(), m_nxdn->m_rfLC.getAlgId(), m_nxdn->m_rfLC.getKId());
             }
 
             ::ActivityLog("NXDN", true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
@@ -497,15 +503,16 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
 
-                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+                LogWarning(LOG_RF, "NXDN %s, exceeded lost audio threshold, filling in",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL));
             }
 
             m_rfErrs += errors;
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)",
-                    errors, float(errors) / 1.88F);
+                LogMessage(LOG_RF, "NXDN %s, audio, errs = %u/141 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
@@ -528,15 +535,16 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NXDN_NULL_AMBE, 9U);
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NXDN_NULL_AMBE, 9U);
 
-                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+                LogWarning(LOG_RF, "NXDN %s, exceeded lost audio threshold, filling in",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL));
             }
             
             m_rfErrs += errors;
             m_rfBits += 94U;
             
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
-                    errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN %s, audio, errs = %u/94 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 0.94F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -554,15 +562,16 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NXDN_NULL_AMBE, 9U);
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NXDN_NULL_AMBE, 9U);
 
-                LogWarning(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", exceeded lost audio threshold, filling in");
+                LogWarning(LOG_RF, "NXDN %s, exceeded lost audio threshold, filling in",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL));
             }
             
             m_rfErrs += errors;
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
-                    errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN %s, audio, errs = %u/94 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 0.94F);
             }
 
             channel::FACCH1 facch1;
@@ -663,6 +672,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             return false;
         }
 
+        m_nxdn->m_netLastDstId = lc.getDstId();
         m_nxdn->m_netLC = lc;
 
         Sync::addNXDNSync(data + 2U);
@@ -699,8 +709,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds", 
                 float(m_netFrames) / 12.5F);
 
-            LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_TX_REL ", total frames: %d", 
-                m_netFrames);
+            LogMessage(LOG_NET, "NXDN %s, total frames: %d", 
+                NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_netFrames);
 
             m_nxdn->writeEndNet();
         } else {
@@ -709,8 +719,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_nxdn->m_netState = RS_NET_AUDIO;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
-                    srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
+                LogMessage(LOG_NET, "NXDN %s, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%02X",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
             ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
@@ -802,6 +812,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             // validate destination ID
             VALID_DSTID(srcId, dstId, group);
 
+            m_nxdn->m_netLastDstId = m_nxdn->m_netLC.getDstId();
             m_rfFrames = 0U;
             m_rfErrs = 0U;
             m_rfBits = 1U;
@@ -809,8 +820,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_nxdn->m_netState = RS_NET_AUDIO;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_VCALL ", srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
-                    srcId, dstId, group, m_nxdn->m_netLC.getEmergency(), encrypted, m_nxdn->m_netLC.getPriority(), m_nxdn->m_netLC.getAlgId(), m_nxdn->m_netLC.getKId());
+                LogMessage(LOG_NET, "NXDN %s, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, algo = $%02X, kid = $%04X",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), srcId, dstId, group, m_nxdn->m_netLC.getEmergency(), encrypted, m_nxdn->m_netLC.getPriority(), m_nxdn->m_netLC.getAlgId(), m_nxdn->m_netLC.getKId());
             }
 
             ::ActivityLog("NXDN", false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
@@ -890,8 +901,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)",
-                    errors, float(errors) / 1.88F);
+                LogMessage(LOG_NET, "NXDN %s, audio, errs = %u/141 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
@@ -910,8 +921,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 94U;
             
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
-                    errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN %s, audio, errs = %u/94 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 0.94F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -925,8 +936,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, NXDN_MESSAGE_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)",
-                    errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN %s, audio, errs = %u/94 (%.1f%%)",
+                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_VCALL), errors, float(errors) / 0.94F);
             }
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);

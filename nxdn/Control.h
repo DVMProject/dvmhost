@@ -45,6 +45,7 @@
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "lookups/AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "RingBuffer.h"
 #include "Timer.h"
@@ -137,6 +138,7 @@ namespace nxdn
         lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupIdLookup* m_tidLookup;
+        lookups::AffiliationLookup m_affiliations;
 
         lookups::IdenTable m_idenEntry;
 
@@ -181,6 +183,9 @@ namespace nxdn
 
         /// <summary>Helper to write control channel frame data.</summary>
         bool writeRF_ControlData();
+
+        /// <summary>Helper to write a Tx release packet.</summary>
+        void writeRF_Message_Tx_Rel(bool noNetwork);
 
         /// <summary></summary>
         void scrambler(uint8_t* data) const;
