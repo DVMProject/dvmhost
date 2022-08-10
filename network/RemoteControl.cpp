@@ -30,6 +30,10 @@
 */
 #include "Defines.h"
 #include "edac/SHA256.h"
+#include "dmr/Control.h"
+#include "p25/Control.h"
+#include "nxdn/Control.h"
+#include "host/Host.h"
 #include "RemoteControl.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -755,7 +759,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             else if (rcom == RCD_P25_RELEASE_GRANTS_CMD) {
                 // Command is in the form of: "p25-rel-grnts"
                 if (p25 != NULL) {
-                    p25->trunk()->releaseDstIdGrant(0, true);
+                    p25->affiliations().releaseGrant(0, true);
                 }
                 else {
                     LogError(LOG_RCON, CMD_FAILED_STR "P25 mode is not enabled!");
@@ -767,10 +771,10 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     uint32_t grp = getArgUInt32(args, 0U);
 
                     if (grp == 0) {
-                        p25->trunk()->clearGrpAff(0, true);
+                        p25->affiliations().clearGroupAff(0, true);
                     }
                     else {
-                        p25->trunk()->clearGrpAff(grp, false);
+                        p25->affiliations().clearGroupAff(grp, false);
                     }
                 }
                 else {

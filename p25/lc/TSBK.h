@@ -68,11 +68,11 @@ namespace p25
             /// <summary>Initializes a copy instance of the TSBK class.</summary>
             TSBK(const TSBK& data);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, lookups::IdenTable entry);
+            TSBK(SiteData siteData, ::lookups::IdenTable entry);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose, bool warnCRC);
+            TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose, bool warnCRC);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(LC* lc);
             /// <summary>Finalizes a instance of the TSBK class.</summary>
@@ -205,7 +205,7 @@ namespace p25
             /// <summary>Local Site Data.</summary>
             __PROPERTY_PLAIN(SiteData, siteData, siteData);
             /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+            __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
 
         private:
             /// <summary>Initializes a new instance of the TSBK class.</summary>

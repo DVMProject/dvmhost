@@ -31,6 +31,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/packet/Data.h"
+#include "p25/packet/Trunk.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"

@@ -35,7 +35,6 @@
 #include "dmr/data/Data.h"
 #include "dmr/data/EmbeddedData.h"
 #include "dmr/lc/LC.h"
-#include "dmr/Slot.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "RingBuffer.h"

@@ -36,7 +36,6 @@
 #include "dmr/data/DataHeader.h"
 #include "dmr/data/EmbeddedData.h"
 #include "dmr/lc/LC.h"
-#include "dmr/Slot.h"
 #include "edac/AMBEFEC.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"

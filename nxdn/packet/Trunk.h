@@ -44,6 +44,8 @@ namespace nxdn
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     
+    namespace packet { class HOST_SW_API Data; }
+    namespace packet { class HOST_SW_API Voice; }
     class HOST_SW_API Control;
 
     namespace packet
@@ -69,6 +71,8 @@ namespace nxdn
             void clock(uint32_t ms);
 
         protected:
+            friend class nxdn::packet::Data;
+            friend class nxdn::packet::Voice;
             friend class nxdn::Control;
             Control* m_nxdn;
 

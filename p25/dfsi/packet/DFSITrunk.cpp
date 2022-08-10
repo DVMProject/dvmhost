@@ -26,6 +26,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/dfsi/DFSIDefines.h"
+#include "p25/packet/Trunk.h"
 #include "p25/dfsi/packet/DFSITrunk.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"

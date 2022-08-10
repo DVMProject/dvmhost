@@ -82,8 +82,8 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
-    uint32_t timeout, uint32_t tgHang, bool duplex, lookups::RadioIdLookup* ridLookup,
-    lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+    uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
+    ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
     m_voice(NULL),
     m_data(NULL),
@@ -105,6 +105,7 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_affiliations(this, verbose),
     m_idenEntry(),
     m_queue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
@@ -281,9 +282,9 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass);
     m_siteData.setCallsign(cwCallsign);
 
-    std::vector<lookups::IdenTable> entries = m_idenTable->list();
+    std::vector<::lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
-        lookups::IdenTable entry = *it;
+        ::lookups::IdenTable entry = *it;
         if (entry.channelId() == channelId) {
             m_idenEntry = entry;
             break;
@@ -291,11 +292,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     }
 
     std::vector<uint32_t> availCh = voiceChNo;
-    m_trunk->m_voiceChCnt = (uint8_t)availCh.size();
     m_siteData.setChCnt((uint8_t)availCh.size());
 
     for (auto it = availCh.begin(); it != availCh.end(); ++it) {
-        m_trunk->m_voiceChTable.push_back(*it);
+        m_affiliations.addRFCh(*it);
     }
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
@@ -382,7 +382,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         if (m_control) {
-            m_trunk->releaseDstIdGrant(m_voice->m_rfLC.getDstId(), false);
+            m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
         }
 
         writeRF_TDU(false);
@@ -509,7 +509,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             if (!m_dedicatedControl)
                 ret = m_voice->process(data, len);
             else {
-                if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
+                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
                     ret = m_voice->process(data, len);
                 }
             }
@@ -524,7 +524,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             if (!m_dedicatedControl)
                 ret = m_data->process(data, len);
             else {
-                if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
+                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
                     ret = m_data->process(data, len);
                 }
             }
@@ -686,7 +686,7 @@ void Control::clock(uint32_t ms)
             m_networkWatchdog.stop();
 
             if (m_control) {
-                m_trunk->releaseDstIdGrant(m_voice->m_netLC.getDstId(), false);
+                m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
             }
 
             if (m_dedicatedControl) {

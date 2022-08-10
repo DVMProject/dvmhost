@@ -58,7 +58,7 @@ TDULC::TDULC(const TDULC& data) : TDULC()
 /// </summary>
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
-TDULC::TDULC(SiteData siteData, lookups::IdenTable entry) : TDULC(siteData)
+TDULC::TDULC(SiteData siteData, ::lookups::IdenTable entry) : TDULC(siteData)
 {
     m_siteIdenEntry = entry;
     m_grpVchNo = m_siteData.channelNo();
@@ -70,7 +70,7 @@ TDULC::TDULC(SiteData siteData, lookups::IdenTable entry) : TDULC(siteData)
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
 /// <param name="verbose"></param>
-TDULC::TDULC(SiteData siteData, lookups::IdenTable entry, bool verbose) : TDULC(siteData)
+TDULC::TDULC(SiteData siteData, ::lookups::IdenTable entry, bool verbose) : TDULC(siteData)
 {
     m_verbose = verbose;
     m_siteIdenEntry = entry;

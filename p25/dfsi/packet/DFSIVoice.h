@@ -33,7 +33,6 @@
 #include "Defines.h"
 #include "p25/dfsi/LC.h"
 #include "p25/dfsi/packet/DFSITrunk.h"
-#include "p25/packet/Trunk.h"
 #include "p25/Control.h"
 #include "network/BaseNetwork.h"
 

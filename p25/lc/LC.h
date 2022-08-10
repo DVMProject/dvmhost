@@ -36,7 +36,6 @@
 #include "p25/lc/TDULC.h"
 #include "p25/SiteData.h"
 #include "edac/RS634717.h"
-#include "lookups/IdenTableLookup.h"
 
 #include <string>
 

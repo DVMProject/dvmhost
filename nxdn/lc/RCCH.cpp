@@ -158,6 +158,15 @@ void RCCH::reset()
     m_version = 0U;
 
     m_causeRsp = NXDN_CAUSE_MM_NORMAL_1;
+
+    m_grpVchNo = 0U;
+
+    m_emergency = false;
+    m_encrypted = false;
+    m_priority = false;
+    m_group = true;
+    m_duplex = false;
+    m_transmissionMode = TRANSMISSION_MODE_4800;
 }
 
 /// <summary>
@@ -224,6 +233,14 @@ RCCH::RCCH(SiteData siteData) :
     m_regOption(0U),
     m_version(0U),
     m_causeRsp(NXDN_CAUSE_MM_NORMAL_1),
+    m_grpVchNo(0U),
+    m_callType(CALL_TYPE_UNSPECIFIED),
+    m_emergency(false),
+    m_encrypted(false),
+    m_priority(false),
+    m_group(true),
+    m_duplex(false),
+    m_transmissionMode(TRANSMISSION_MODE_4800),
     m_siteData(siteData),
     m_siteIdenEntry(),
     m_data(NULL)
@@ -251,6 +268,25 @@ bool RCCH::decodeLC(const uint8_t* data)
 
     // message type opcodes
     switch (m_messageType) {
+    case RTCH_MESSAGE_TYPE_VCALL:
+    case RCCH_MESSAGE_TYPE_VCALL_CONN:
+        m_callType = (data[2U] >> 5) & 0x07U;                                       // Call Type
+        m_emergency = (data[1U] & 0x80U) == 0x80U;                                  // Emergency Flag
+        m_priority = (data[1U] & 0x20U) == 0x20U;                                   // Priority Flag
+        m_duplex = (data[2U] & 0x10U) == 0x10U;                                     // Half/Full Duplex Flag
+        m_transmissionMode = (data[2U] & 0x07U);                                    // Transmission Mode
+        m_srcId = (uint16_t)((data[3U] << 8) | data[4U]) & 0xFFFFU;                 // Source Radio Address
+        m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
+        break;
+    case RTCH_MESSAGE_TYPE_DCALL_HDR:
+        m_callType = (data[2U] >> 5) & 0x07U;                                       // Call Type
+        m_emergency = (data[1U] & 0x80U) == 0x80U;                                  // Emergency Flag
+        m_priority = (data[1U] & 0x20U) == 0x20U;                                   // Priority Flag
+        m_duplex = (data[2U] & 0x10U) == 0x10U;                                     // Half/Full Duplex Flag
+        m_transmissionMode = (data[2U] & 0x07U);                                    // Transmission Mode
+        m_srcId = (uint16_t)((data[3U] << 8) | data[4U]) & 0xFFFFU;                 // Source Radio Address
+        m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
+        break;
     case MESSAGE_TYPE_IDLE:
         break;
     case RCCH_MESSAGE_TYPE_REG:
@@ -289,6 +325,58 @@ void RCCH::encodeLC(uint8_t* data)
 
     // message type opcodes
     switch (m_messageType) {
+    case RTCH_MESSAGE_TYPE_VCALL:
+    case RCCH_MESSAGE_TYPE_VCALL_CONN:
+        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+            (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
+        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+            (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
+            (m_transmissionMode & 0x07U);                                           // Transmission Mode
+
+        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
+        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
+        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
+        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+
+        m_data[7U] = m_causeRsp;                                                    // Cause (VD)
+        m_data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
+        m_data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        break;
+    case RCCH_MESSAGE_TYPE_VCALL_ASSGN:
+    case RCCH_MESSAGE_TYPE_DCALL_ASSGN:
+        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+            (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
+        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+            (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
+            (m_transmissionMode & 0x07U);                                           // Transmission Mode
+
+        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
+        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
+        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
+        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+
+        m_data[7U] = (m_grpVchNo >> 10) & 0x03U;                                    // Channel
+        m_data[8U] = (m_grpVchNo & 0xFFU);                                          // ...
+        
+        m_data[10U] = (m_siteData.locId() >> 8) & 0xFFU;                            // Location ID
+        m_data[11U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        break;
+    case RTCH_MESSAGE_TYPE_DCALL_HDR:
+        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+            (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
+        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+            (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
+            (m_transmissionMode & 0x07U);                                           // Transmission Mode
+
+        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
+        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
+        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
+        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+
+        m_data[7U] = m_causeRsp;                                                    // Cause (VD)
+        m_data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
+        m_data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        break;
     case MESSAGE_TYPE_IDLE:
         break;
     case MESSAGE_TYPE_DST_ID_INFO:

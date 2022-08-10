@@ -239,6 +239,9 @@ namespace nxdn
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_RESP = 0x3BU;      // SDCALL_RESP - Short Data Call Response
 
     // Control Channel Message Types
+    const uint8_t   RCCH_MESSAGE_TYPE_VCALL_CONN = 0x03U;       // VCALL_CONN - Voice Call Connection Request (ISP) / Voice Call Connection Response (OSP)
+    const uint8_t   RCCH_MESSAGE_TYPE_VCALL_ASSGN = 0x04U;      // VCALL_ASSGN - Voice Call Assignment
+    const uint8_t   RCCH_MESSAGE_TYPE_DCALL_ASSGN = 0x14U;      // DCALL_ASSGN - Data Call Assignment
     const uint8_t   RCCH_MESSAGE_TYPE_SITE_INFO = 0x18U;        // SITE_INFO - Site Information
     const uint8_t   RCCH_MESSAGE_TYPE_REG = 0x20U;              // REG - Registration Request (ISP) / Registration Response (OSP)
     const uint8_t   RCCH_MESSAGE_TYPE_REG_C = 0x22U;            // REG_C - Registration Clear Request (ISP) / Registration Clear Response (OSP)

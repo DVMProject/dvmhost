@@ -32,6 +32,7 @@
 #include "dmr/lc/ShortLC.h"
 #include "dmr/lc/FullLC.h"
 #include "dmr/lc/CSBK.h"
+#include "dmr/Slot.h"
 #include "dmr/SlotType.h"
 #include "dmr/Sync.h"
 #include "edac/BPTC19696.h"

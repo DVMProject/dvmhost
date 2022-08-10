@@ -57,9 +57,9 @@ namespace p25
             /// <summary>Initializes a copy instance of the TDULC class.</summary>
             TDULC(const TDULC& data);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC(SiteData siteData, lookups::IdenTable entry);
+            TDULC(SiteData siteData, ::lookups::IdenTable entry);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            TDULC(SiteData siteData, ::lookups::IdenTable entry, bool verbose);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
             TDULC(LC* lc);
             /// <summary>Finalizes a instance of the TDULC class.</summary>
@@ -123,7 +123,7 @@ namespace p25
             /// <summary>Local Site Data.</summary>
             __PROPERTY_PLAIN(SiteData, siteData, siteData);
             /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+            __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
 
         private:
             /// <summary>Initializes a new instance of the TDULC class.</summary>

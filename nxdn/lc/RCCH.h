@@ -98,6 +98,28 @@ namespace nxdn
             /// <summary>Cause Response.</summary>
             __PROPERTY(uint8_t, causeRsp, CauseResponse);
 
+            /// <summary>Voice channel number.</summary>
+            __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+
+            /** Call Data */
+            /// <summary>Call Type</summary>
+            __PROPERTY(uint8_t, callType, CallType);
+
+            /** Common Call Options */
+            /// <summary>Flag indicating the emergency bits are set.</summary>
+            __PROPERTY(bool, emergency, Emergency);
+            /// <summary>Flag indicating that encryption is enabled.</summary>
+            __PROPERTY(bool, encrypted, Encrypted);
+            /// <summary>Flag indicating priority paging.</summary>
+            __PROPERTY(bool, priority, Priority);
+            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            __PROPERTY(bool, group, Group);
+            /// <summary>Flag indicating a half/full duplex operation.</summary>
+            __PROPERTY(bool, duplex, Duplex);
+
+            /// <summary>Transmission mode.</summary>
+            __PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+
             /** Local Site data */
             /// <summary>Local Site Data.</summary>
             __PROPERTY_PLAIN(SiteData, siteData, siteData);

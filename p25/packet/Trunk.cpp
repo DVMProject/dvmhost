@@ -25,8 +25,10 @@
 */
 #include "Defines.h"
 #include "p25/P25Defines.h"
+#include "p25/packet/Voice.h"
 #include "p25/packet/Trunk.h"
 #include "p25/acl/AccessControl.h"
+#include "p25/lookups/P25AffiliationLookup.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
@@ -85,7 +87,7 @@ using namespace p25::packet;
 
 // Verify the source RID is registered.
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID)                                      \
-    if (!hasSrcIdUnitReg(_SRCID) && m_verifyReg) {                                      \
+    if (!m_p25->m_affiliations.isUnitReg(_SRCID) && m_verifyReg) {                      \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not registered, srcId = %u", _SRCID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);                       \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
@@ -95,7 +97,7 @@ using namespace p25::packet;
 
 // Verify the source RID is affiliated.
 #define VERIFY_SRCID_AFF(_PCKT_STR, _PCKT, _SRCID, _DSTID)                              \
-    if (!hasSrcIdGrpAff(_SRCID, _DSTID) && m_verifyAff) {                               \
+    if (!m_p25->m_affiliations.isGroupAff(_SRCID, _DSTID) && m_verifyAff) {             \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _SRCID, _DSTID); \
         writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);                       \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
@@ -617,8 +619,8 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                                 }
 
                                 // is the specified channel granted?
-                                if (isChBusy(chNo) && hasDstIdGranted(dstId)) {
-                                    releaseDstIdGrant(dstId, false);
+                                if (m_p25->m_affiliations.isChBusy(chNo) && m_p25->m_affiliations.isGranted(dstId)) {
+                                    m_p25->m_affiliations.releaseGrant(dstId, false);
                                 }
                             }
                             break;
@@ -641,7 +643,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         }
 
                         // workaround for single channel dedicated sites to pass network traffic on a lone VC
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_voiceChTable.size() == 1U) {
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
                             m_rfTSBK.setSrcId(srcId);
                             m_rfTSBK.setDstId(dstId);
 
@@ -660,7 +662,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         }
 
                         // workaround for single channel dedicated sites to pass network traffic on a lone VC
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_voiceChTable.size() == 1U) {
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
                             m_rfTSBK.setSrcId(srcId);
                             m_rfTSBK.setDstId(dstId);
 
@@ -866,194 +868,6 @@ void Trunk::writeAdjSSNetwork()
 }
 
 /// <summary>
-/// Helper to determine if the source ID has affiliated to the group destination ID.
-/// </summary>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <returns></returns>
-bool Trunk::hasSrcIdGrpAff(uint32_t srcId, uint32_t dstId) const
-{
-    // lookup dynamic affiliation table entry
-    try {
-        uint32_t tblDstId = m_grpAffTable.at(srcId);
-        if (tblDstId == dstId) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
-}
-
-/// <summary>
-/// Helper to determine if the source ID has unit registered.
-/// </summary>
-/// <param name="srcId"></param>
-/// <returns></returns>
-bool Trunk::hasSrcIdUnitReg(uint32_t srcId) const
-{
-    // lookup dynamic unit registration table entry
-    if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-/// <summary>
-/// Helper to determine if the channel number is busy.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
-bool Trunk::isChBusy(uint32_t chNo) const
-{
-    if (chNo == 0U) {
-        return false;
-    }
-
-    // lookup dynamic channel grant table entry
-    for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
-        if (it->second == chNo) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/// <summary>
-/// Helper to determine if the destination ID is already granted.
-/// </summary>
-/// <param name="dstId"></param>
-/// <returns></returns>
-bool Trunk::hasDstIdGranted(uint32_t dstId) const
-{
-    if (dstId == 0U) {
-        return false;
-    }
-
-    // lookup dynamic channel grant table entry
-    try {
-        uint32_t chNo = m_grantChTable.at(dstId);
-        if (chNo != 0U) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
-}
-
-/// <summary>
-/// Helper to start the destination ID grant timer.
-/// </summary>
-/// <param name="dstId"></param>
-/// <returns></returns>
-void Trunk::touchDstIdGrant(uint32_t dstId)
-{
-    if (dstId == 0U) {
-        return;
-    }
-
-    if (hasDstIdGranted(dstId)) {
-        m_grantTimers[dstId].start();
-    }
-}
-
-/// <summary>
-/// Helper to release the channel grant for the destination ID.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="releaseAll"></param>
-void Trunk::releaseDstIdGrant(uint32_t dstId, bool releaseAll)
-{
-    if (dstId == 0U && !releaseAll) {
-        return;
-    }
-
-    if (dstId == 0U && releaseAll) {
-        LogWarning(LOG_RF, "P25, force releasing all channel grants");
-
-        std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
-        for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
-            uint32_t dstId = it->first;
-            gntsToRel.push_back(dstId);
-        }
-
-        // release grants
-        for (auto it = gntsToRel.begin(); it != gntsToRel.end(); ++it) {
-            releaseDstIdGrant(*it, false);
-        }
-
-        return;
-    }
-
-    if (hasDstIdGranted(dstId)) {
-        uint32_t chNo = m_grantChTable.at(dstId);
-
-        if (m_verbose) {
-            LogMessage(LOG_RF, "P25, releasing channel grant, chNo = %u, dstId = %u",
-                chNo, dstId);
-        }
-
-        m_grantChTable[dstId] = 0U;
-        m_voiceChTable.push_back(chNo);
-
-        if (m_voiceGrantChCnt > 0U) {
-            m_voiceGrantChCnt--;
-            m_p25->m_siteData.setChCnt(m_voiceChCnt + m_voiceGrantChCnt);
-        }
-        else {
-            m_voiceGrantChCnt = 0U;
-            m_p25->m_siteData.setChCnt(m_voiceChCnt);
-        }
-
-        m_grantTimers[dstId].stop();
-    }
-}
-
-/// <summary>
-/// Helper to release group affiliations.
-/// </summary>
-/// <param name="dstId"></param>
-/// <param name="releaseAll"></param>
-void Trunk::clearGrpAff(uint32_t dstId, bool releaseAll)
-{
-    if (dstId == 0U && !releaseAll) {
-        return;
-    }
-
-    std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
-    if (dstId == 0U && releaseAll) {
-        LogWarning(LOG_RF, "P25, releasing all group affiliations");
-        for (auto it = m_grpAffTable.begin(); it != m_grpAffTable.end(); ++it) {
-            uint32_t srcId = it->first;
-            srcToRel.push_back(srcId);
-        }
-    }
-    else {
-        LogWarning(LOG_RF, "P25, releasing group affiliations, dstId = %u", dstId);
-        for (auto it = m_grpAffTable.begin(); it != m_grpAffTable.end(); ++it) {
-            uint32_t srcId = it->first;
-            uint32_t grpId = it->second;
-            if (grpId == dstId) {
-                srcToRel.push_back(srcId);
-            }
-        }
-    }
-
-    // release affiliations
-    for (auto it = srcToRel.begin(); it != srcToRel.end(); ++it) {
-        writeRF_TSDU_U_Dereg_Ack(*it);
-    }
-}
-
-/// <summary>
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
@@ -1079,20 +893,7 @@ void Trunk::clock(uint32_t ms)
         }
 
         // clock all the grant timers
-        std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
-        for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
-            uint32_t dstId = it->first;
-
-            m_grantTimers[dstId].clock(ms);
-            if (m_grantTimers[dstId].isRunning() && m_grantTimers[dstId].hasExpired()) {
-                gntsToRel.push_back(dstId);
-            }
-        }
-
-        // release grants that have timed out
-        for (auto it = gntsToRel.begin(); it != gntsToRel.end(); ++it) {
-            releaseDstIdGrant(*it, false);
-        }
+        m_p25->m_affiliations.clock(ms);
 
         // clock adjacent site and SCCB update timers
         m_adjSiteUpdateTimer.clock(ms);
@@ -1340,25 +1141,18 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_patchSuperGroup(0xFFFFU),
     m_verifyAff(false),
     m_verifyReg(false),
-    m_rfTSBK(SiteData(), lookups::IdenTable()),
-    m_netTSBK(SiteData(), lookups::IdenTable()),
+    m_rfTSBK(SiteData(), ::lookups::IdenTable()),
+    m_netTSBK(SiteData(), ::lookups::IdenTable()),
     m_rfMBF(NULL),
     m_mbfCnt(0U),
     m_mbfIdenCnt(0U),
     m_mbfAdjSSCnt(0U),
     m_mbfSCCBCnt(0U),
     m_mbfGrpGrntCnt(0U),
-    m_voiceChTable(),
     m_adjSiteTable(),
     m_adjSiteUpdateCnt(),
     m_sccbTable(),
     m_sccbUpdateCnt(),
-    m_unitRegTable(),
-    m_grpAffTable(),
-    m_grantChTable(),
-    m_grantTimers(),
-    m_voiceChCnt(1U),
-    m_voiceGrantChCnt(0U),
     m_noStatusAck(false),
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
@@ -1375,20 +1169,12 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
 {
     m_rfMBF = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-
-    m_voiceChTable.clear();
  
     m_adjSiteTable.clear();
     m_adjSiteUpdateCnt.clear();
 
     m_sccbTable.clear();
     m_sccbUpdateCnt.clear();
- 
-    m_unitRegTable.clear();
-    m_grpAffTable.clear();
-
-    m_grantChTable.clear();
-    m_grantTimers.clear();
 
     m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT;
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
@@ -1489,7 +1275,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         break;
     /** update data */
     case 4:
-        if (m_grantChTable.size() > 0) {
+        if (m_p25->m_affiliations.grantSize() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_GRP_VCH_GRANT_UPD);
         }
         break;
@@ -1542,7 +1328,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
         // pad MBF if we have 2 queued TSDUs
         if (m_mbfCnt == 2U) {
-            std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
+            std::vector<::lookups::IdenTable> entries = m_p25->m_idenTable->list();
             if (entries.size() > 1U) {
                 queueRF_TSBK_Ctrl(TSBK_OSP_IDEN_UP);
             }
@@ -1848,8 +1634,8 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
     switch (lco) {
         case TSBK_OSP_GRP_VCH_GRANT_UPD:
             // write group voice grant update
-            if (m_grantChTable.size() > 0) {
-                if (m_mbfGrpGrntCnt >= m_grantChTable.size())
+            if (m_p25->m_affiliations.grantSize() > 0) {
+                if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())
                     m_mbfGrpGrntCnt = 0U;
 
                 if (m_debug) {
@@ -1858,7 +1644,9 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 
                 bool noData = false;
                 uint8_t i = 0U;
-                for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
+                std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations.grantTable();
+                for (auto it = grantTable.begin(); it != grantTable.end(); ++it)
+                {
                     // no good very bad way of skipping entries...
                     if (i != m_mbfGrpGrntCnt) {
                         i++;
@@ -1899,7 +1687,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_IDEN_UP (Identity Update)");
                 }
 
-                std::vector<lookups::IdenTable> entries = m_p25->m_idenTable->list();
+                std::vector<::lookups::IdenTable> entries = m_p25->m_idenTable->list();
                 if (m_mbfIdenCnt >= entries.size())
                     m_mbfIdenCnt = 0U;
 
@@ -1911,7 +1699,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                         continue;
                     }
                     else {
-                        lookups::IdenTable entry = *it;
+                        ::lookups::IdenTable entry = *it;
 
                         // LogDebug(LOG_P25, "baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                         //    entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
@@ -2151,8 +1939,8 @@ bool Trunk::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
             }
         }
 
-        if (!hasDstIdGranted(m_rfTSBK.getDstId())) {
-            if (m_voiceChTable.empty()) {
+        if (!m_p25->m_affiliations.isGranted(m_rfTSBK.getDstId())) {
+            if (!m_p25->m_affiliations.isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", m_rfTSBK.getDstId());
@@ -2179,27 +1967,20 @@ bool Trunk::writeRF_TSDU_Grant(bool grp, bool skip, bool net, bool skipNetCheck)
                 }
             }
             else {
-                uint32_t chNo = m_voiceChTable.at(0);
-                auto it = std::find(m_voiceChTable.begin(), m_voiceChTable.end(), chNo);
-                m_voiceChTable.erase(it);
-
-                m_grantChTable[m_rfTSBK.getDstId()] = chNo;
-                m_rfTSBK.setGrpVchNo(chNo);
-                m_rfTSBK.setDataChnNo(chNo);
-
-                m_grantTimers[m_rfTSBK.getDstId()] = Timer(1000U, GRANT_TIMER_TIMEOUT);
-                m_grantTimers[m_rfTSBK.getDstId()].start();
-
-                m_voiceGrantChCnt++;
-                m_p25->m_siteData.setChCnt(m_voiceChCnt + m_voiceGrantChCnt);
+                if (m_p25->m_affiliations.grantCh(m_rfTSBK.getDstId(), GRANT_TIMER_TIMEOUT)) {
+                    uint32_t chNo = m_p25->m_affiliations.getGrantedCh(m_rfTSBK.getDstId());
+                    m_rfTSBK.setGrpVchNo(chNo);
+                    m_rfTSBK.setDataChnNo(chNo);
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
+                }
             }
         }
         else {
-            uint32_t chNo = m_grantChTable[m_rfTSBK.getDstId()];
+            uint32_t chNo = m_p25->m_affiliations.getGrantedCh(m_rfTSBK.getDstId());
             m_rfTSBK.setGrpVchNo(chNo);
             m_rfTSBK.setDataChnNo(chNo);
 
-            m_grantTimers[m_rfTSBK.getDstId()].start();
+            m_p25->m_affiliations.touchGrant(m_rfTSBK.getDstId());
         }
     }
 
@@ -2267,8 +2048,8 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(bool skip, bool net)
             return false;
         }
 
-        if (!hasDstIdGranted(m_rfTSBK.getSrcId())) {
-            if (m_voiceChTable.empty()) {
+        if (!m_p25->m_affiliations.isGranted(m_rfTSBK.getSrcId())) {
+            if (!m_p25->m_affiliations.isRFChAvailable()) {
                 if (!net) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) queued, no channels available, srcId = %u", m_rfTSBK.getSrcId());
                     writeRF_TSDU_Queue(P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
@@ -2281,27 +2062,20 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(bool skip, bool net)
                 return false;
             }
             else {
-                uint32_t chNo = m_voiceChTable.at(0);
-                auto it = std::find(m_voiceChTable.begin(), m_voiceChTable.end(), chNo);
-                m_voiceChTable.erase(it);
-
-                m_grantChTable[m_rfTSBK.getSrcId()] = chNo;
-                m_rfTSBK.setGrpVchNo(chNo);
-                m_rfTSBK.setDataChnNo(chNo);
-
-                m_grantTimers[m_rfTSBK.getSrcId()] = Timer(1000U, GRANT_TIMER_TIMEOUT);
-                m_grantTimers[m_rfTSBK.getSrcId()].start();
-
-                m_voiceGrantChCnt++;
-                m_p25->m_siteData.setChCnt(m_voiceChCnt + m_voiceGrantChCnt);
+                if (m_p25->m_affiliations.grantCh(m_rfTSBK.getSrcId(), GRANT_TIMER_TIMEOUT)) {
+                    uint32_t chNo = m_p25->m_affiliations.getGrantedCh(m_rfTSBK.getSrcId());
+                    m_rfTSBK.setGrpVchNo(chNo);
+                    m_rfTSBK.setDataChnNo(chNo);
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
+                }
             }
         }
         else {
-            uint32_t chNo = m_grantChTable[m_rfTSBK.getSrcId()];
+            uint32_t chNo = m_p25->m_affiliations.getGrantedCh(m_rfTSBK.getSrcId());
             m_rfTSBK.setGrpVchNo(chNo);
             m_rfTSBK.setDataChnNo(chNo);
 
-            m_grantTimers[m_rfTSBK.getSrcId()].start();
+            m_p25->m_affiliations.touchGrant(m_rfTSBK.getSrcId());
         }
     }
 
@@ -2426,7 +2200,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     }
 
     // validate the source RID is registered
-    if (!hasSrcIdUnitReg(srcId) && m_verifyReg) {
+    if (!m_p25->m_affiliations.isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Response) denial, RID not registered, srcId = %u", srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         m_rfTSBK.setResponse(P25_RSP_REFUSED);
@@ -2456,7 +2230,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         ret = true;
 
         // update dynamic affiliation table
-        m_grpAffTable[srcId] = dstId;
+        m_p25->m_affiliations.groupAff(srcId, dstId);
     }
 
     writeRF_TSDU_SBF(false);
@@ -2495,8 +2269,8 @@ void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId)
         ::ActivityLog("P25", true, "unit registration request from %u", srcId);
 
         // update dynamic unit registration table
-        if (!hasSrcIdUnitReg(srcId)) {
-            m_unitRegTable.push_back(srcId);
+        if (!m_p25->m_affiliations.isUnitReg(srcId)) {
+            m_p25->m_affiliations.unitReg(srcId);
         }
     }
 
@@ -2527,21 +2301,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     }
 
     // remove dynamic unit registration table entry
-    if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
-        auto it = std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId);
-        m_unitRegTable.erase(it);
-        dereged = true;
-    }
-
-    // remove dynamic affiliation table entry
-    try {
-        m_grpAffTable.at(srcId);
-        m_grpAffTable.erase(srcId);
-        dereged = true;
-    }
-    catch (...) {
-        // stub
-    }
+    dereged = m_p25->m_affiliations.unitDereg(srcId);
 
     if (dereged) {
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
@@ -2604,7 +2364,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId)
     }
 
     // validate the source RID is registered
-    if (!hasSrcIdUnitReg(srcId)) {
+    if (!m_p25->m_affiliations.isUnitReg(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_OSP_LOC_REG_RSP (Location Registration Response) denial, RID not registered, srcId = %u", srcId);
         ::ActivityLog("P25", true, "location registration request from %u denied", srcId);
         writeRF_TSDU_U_Reg_Cmd(srcId);

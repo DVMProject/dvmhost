@@ -59,6 +59,7 @@ HOST_OBJECTS = \
 		dmr/Slot.o \
 		dmr/SlotType.o \
 		dmr/Sync.o \
+		lookups/AffiliationLookup.o \
 		lookups/IdenTableLookup.o \
 		lookups/RadioIdLookup.o \
 		lookups/RSSIInterpolator.o \
@@ -90,6 +91,7 @@ HOST_OBJECTS = \
 		p25/lc/LC.o \
 		p25/lc/TDULC.o \
 		p25/lc/TSBK.o \
+		p25/lookups/P25AffiliationLookup.o \
 		p25/packet/Data.o \
 		p25/packet/Trunk.o \
 		p25/packet/Voice.o \

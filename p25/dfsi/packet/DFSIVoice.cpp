@@ -31,6 +31,8 @@
 #include "p25/P25Defines.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/dfsi/DFSIDefines.h"
+#include "p25/packet/Trunk.h"
+#include "p25/packet/Voice.h"
 #include "p25/dfsi/packet/DFSIVoice.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -295,7 +297,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     // verify the source RID is affiliated to the group TGID; only if control data
                     // is supported
                     if (group && m_p25->m_control) {
-                        if (!m_p25->m_trunk->hasSrcIdGrpAff(srcId, dstId) && m_p25->m_trunk->m_verifyAff) {
+                        if (!m_p25->m_affiliations.isGroupAff(srcId, dstId) && m_p25->m_trunk->m_verifyAff) {
                             if (m_lastRejectId == 0 || m_lastRejectId != srcId) {
                                 LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
                                 m_p25->m_trunk->writeRF_TSDU_Deny(P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH);
@@ -321,11 +323,11 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 
                     if (m_p25->m_control) {
                         // if the group wasn't granted out -- explicitly grant the group
-                        if (!m_p25->m_trunk->hasDstIdGranted(dstId)) {
+                        if (!m_p25->m_affiliations.isGranted(dstId)) {
                             if (m_p25->m_legacyGroupGrnt) {
                                 // are we auto-registering legacy radios to groups?
                                 if (m_p25->m_legacyGroupReg && group) {
-                                    if (!m_p25->m_trunk->hasSrcIdGrpAff(srcId, dstId)) {
+                                    if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
                                         if (!m_p25->m_trunk->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId)) {
                                             ::memset(m_dfsiLDU1, 0x00U, 9U * 25U);
                                             return false;
@@ -414,7 +416,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     }
 
                     if (m_p25->m_control) {
-                        m_p25->m_trunk->touchDstIdGrant(m_rfLC.getDstId());
+                        m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
                     }
 
                     // single-channel trunking or voice on control support?
@@ -569,7 +571,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
     else if (frameType == P25_DFSI_START_STOP) {
         if (m_rfDFSILC.getType() == P25_DFSI_TYPE_VOICE && m_rfDFSILC.getStartStop() == P25_DFSI_STOP_FLAG) {
             if (m_p25->m_control) {
-                m_p25->m_trunk->releaseDstIdGrant(m_rfLC.getDstId(), false);
+                m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
             }
 
             uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
@@ -772,7 +774,7 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
         }
 
         if (m_p25->m_control) {
-            m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
+            m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
         }
 
         if (m_p25->m_netState != RS_NET_IDLE) {
@@ -831,7 +833,7 @@ DFSIVoice::~DFSIVoice()
 void DFSIVoice::writeNet_TDU()
 {
     if (m_p25->m_control) {
-        m_p25->m_trunk->releaseDstIdGrant(m_netLC.getDstId(), false);
+        m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
     }
 
     m_trunk->writeRF_DSFI_Stop(P25_DFSI_TYPE_VOICE);
@@ -928,7 +930,7 @@ void DFSIVoice::writeNet_LDU1()
     }
 
     if (m_p25->m_control) {
-        m_p25->m_trunk->touchDstIdGrant(m_rfLC.getDstId());
+        m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
     }
 
     // set network and RF link control states

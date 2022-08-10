@@ -33,10 +33,6 @@
 
 #include "Defines.h"
 #include "network/UDPSocket.h"
-#include "dmr/Control.h"
-#include "p25/Control.h"
-#include "nxdn/Control.h"
-#include "host/Host.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
 
@@ -65,7 +61,7 @@ public:
     ~RemoteControl();
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
-    void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup);
+    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup);
 
     /// <summary>Process remote network command data.</summary>
     void process(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
@@ -84,8 +80,8 @@ private:
     uint8_t* m_passwordHash;
     bool m_debug;
 
-    lookups::RadioIdLookup* m_ridLookup;
-    lookups::TalkgroupIdLookup* m_tidLookup;
+    ::lookups::RadioIdLookup* m_ridLookup;
+    ::lookups::TalkgroupIdLookup* m_tidLookup;
 
     /// <summary></summary>
     std::string getArgString(std::vector<std::string> args, uint32_t n) const;

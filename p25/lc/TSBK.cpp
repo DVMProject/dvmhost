@@ -58,7 +58,7 @@ TSBK::TSBK(const TSBK& data) : TSBK()
 /// </summary>
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
-TSBK::TSBK(SiteData siteData, lookups::IdenTable entry) : TSBK(siteData)
+TSBK::TSBK(SiteData siteData, ::lookups::IdenTable entry) : TSBK(siteData)
 {
     m_siteIdenEntry = entry;
 }
@@ -69,7 +69,7 @@ TSBK::TSBK(SiteData siteData, lookups::IdenTable entry) : TSBK(siteData)
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
 /// <param name="verbose"></param>
-TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : TSBK(siteData, entry, verbose, false)
+TSBK::TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose) : TSBK(siteData, entry, verbose, false)
 {
     m_verbose = verbose;
 }
@@ -80,7 +80,7 @@ TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : TSBK(sit
 /// <param name="siteData"></param>
 /// <param name="entry"></param>
 /// <param name="verbose"></param>
-TSBK::TSBK(SiteData siteData, lookups::IdenTable entry, bool verbose, bool warnCRC) : TSBK(siteData)
+TSBK::TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose, bool warnCRC) : TSBK(siteData)
 {
     m_warnCRC = warnCRC;
     m_siteIdenEntry = entry;

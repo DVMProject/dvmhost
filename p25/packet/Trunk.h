@@ -50,6 +50,7 @@ namespace p25
     namespace packet { class HOST_SW_API Voice; }
     namespace dfsi { namespace packet { class HOST_SW_API DFSIVoice; } }
     namespace packet { class HOST_SW_API Data; }
+    namespace lookups { class HOST_SW_API P25AffiliationLookup; }
     class HOST_SW_API Control;
 
     namespace packet
@@ -76,22 +77,6 @@ namespace p25
 
             /// <summary>Helper to write P25 adjacent site information to the network.</summary>
             void writeAdjSSNetwork();
-
-            /// <summary>Helper to determine if the source ID has affiliated to the group destination ID.</summary>
-            bool hasSrcIdGrpAff(uint32_t srcId, uint32_t dstId) const;
-            /// <summary>Helper to determine if the source ID has unit registered.</summary>
-            bool hasSrcIdUnitReg(uint32_t srcId) const;
-
-            /// <summary>Helper to determine if the channel number is busy.</summary>
-            bool isChBusy(uint32_t chNo) const;
-            /// <summary>Helper to determine if the destination ID is already granted.</summary>
-            bool hasDstIdGranted(uint32_t dstId) const;
-            /// <summary>Helper to start the destination ID grant timer.</summary>
-            void touchDstIdGrant(uint32_t dstId);
-            /// <summary>Helper to release the channel grant for the destination ID.</summary>
-            void releaseDstIdGrant(uint32_t dstId, bool releaseAll);
-            /// <summary>Helper to release group affiliations.</summary>
-            void clearGrpAff(uint32_t dstId, bool releaseAll);
 
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
@@ -124,6 +109,7 @@ namespace p25
             friend class packet::Data;
             friend class p25::Control;
             Control* m_p25;
+            friend class lookups::P25AffiliationLookup;
 
             network::BaseNetwork* m_network;
 
@@ -142,22 +128,11 @@ namespace p25
             uint8_t m_mbfSCCBCnt;
             uint8_t m_mbfGrpGrntCnt;
 
-            std::vector<uint32_t> m_voiceChTable;
-
             std::unordered_map<uint8_t, SiteData> m_adjSiteTable;
             std::unordered_map<uint8_t, uint8_t> m_adjSiteUpdateCnt;
 
             std::unordered_map<uint8_t, SiteData> m_sccbTable;
             std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
-
-            std::vector<uint32_t> m_unitRegTable;
-            std::unordered_map<uint32_t, uint32_t> m_grpAffTable;
-
-            std::unordered_map<uint32_t, uint32_t> m_grantChTable;
-            std::unordered_map<uint32_t, Timer> m_grantTimers;
-
-            uint8_t m_voiceChCnt;
-            uint8_t m_voiceGrantChCnt;
 
             bool m_noStatusAck;
             bool m_noMessageAck;

@@ -32,17 +32,18 @@
 #define __P25_CONTROL_H__
 
 #include "Defines.h"
-#include "p25/packet/Trunk.h"
-#include "p25/packet/Data.h"
-#include "p25/packet/Voice.h"
 #include "p25/NID.h"
 #include "p25/SiteData.h"
+#include "p25/packet/Data.h"
+#include "p25/packet/Voice.h"
+#include "p25/packet/Trunk.h"
 #include "network/BaseNetwork.h"
 #include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "p25/lookups/P25AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "RingBuffer.h"
 #include "Timer.h"
@@ -61,6 +62,7 @@ namespace p25
     namespace packet { class HOST_SW_API Data; }
     namespace packet { class HOST_SW_API Trunk; }
     namespace dfsi { namespace packet { class HOST_SW_API DFSITrunk; } }
+    namespace lookups { class HOST_SW_API P25AffiliationLookup; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -71,8 +73,8 @@ namespace p25
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
-            uint32_t timeout, uint32_t tgHang, bool duplex, lookups::RadioIdLookup* ridLookup,
-            lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+            uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
+            ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
@@ -112,6 +114,8 @@ namespace p25
         NID nid() { return m_nid; }
         /// <summary>Gets instance of the Trunk class.</summary>
         packet::Trunk* trunk() { return m_trunk; }
+        /// <summary>Gets instance of the P25AffiliationLookup class.</summary>
+        lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
 
         /// <summary>Flag indicating whether the processor or is busy or not.</summary>
         bool isBusy() const;
@@ -128,6 +132,7 @@ namespace p25
         friend class packet::Trunk;
         friend class dfsi::packet::DFSITrunk;
         packet::Trunk* m_trunk;
+        friend class lookups::P25AffiliationLookup;
 
         uint32_t m_nac;
         uint32_t m_txNAC;
@@ -147,11 +152,12 @@ namespace p25
         bool m_ackTSBKRequests;
         bool m_disableNetworkHDU;
 
-        lookups::IdenTableLookup* m_idenTable;
-        lookups::RadioIdLookup* m_ridLookup;
-        lookups::TalkgroupIdLookup* m_tidLookup;
+        ::lookups::IdenTableLookup* m_idenTable;
+        ::lookups::RadioIdLookup* m_ridLookup;
+        ::lookups::TalkgroupIdLookup* m_tidLookup;
+        lookups::P25AffiliationLookup m_affiliations;
 
-        lookups::IdenTable m_idenEntry;
+        ::lookups::IdenTable m_idenEntry;
 
         RingBuffer<uint8_t> m_queue;
 
@@ -182,7 +188,7 @@ namespace p25
 
         SiteData m_siteData;
 
-        lookups::RSSIInterpolator* m_rssiMapper;
+        ::lookups::RSSIInterpolator* m_rssiMapper;
         uint8_t m_rssi;
         uint8_t m_maxRSSI;
         uint8_t m_minRSSI;
