@@ -76,6 +76,11 @@ AffiliationLookup::~AffiliationLookup()
 void AffiliationLookup::unitReg(uint32_t srcId)
 {
     m_unitRegTable.push_back(srcId);
+
+    if (m_verbose) {
+        LogMessage(LOG_HOST, "%s, unit registration, srcId = %u",
+            m_name, srcId);
+    }
 }
 
 /// <summary>
@@ -85,7 +90,12 @@ void AffiliationLookup::unitReg(uint32_t srcId)
 bool AffiliationLookup::unitDereg(uint32_t srcId)
 {
     bool ret = false;
-   
+
+    if (m_verbose) {
+        LogMessage(LOG_HOST, "%s, unit deregistration, srcId = %u",
+            m_name, srcId);
+    }
+
     groupUnaff(srcId);
 
     // remove dynamic unit registration table entry
@@ -123,6 +133,11 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 {
     // update dynamic affiliation table
     m_grpAffTable[srcId] = dstId;
+
+    if (m_verbose) {
+        LogMessage(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
+            m_name, srcId, dstId);
+    }
 }
 
 /// <summary>
@@ -131,6 +146,17 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 /// <param name="srcId"></param>
 bool AffiliationLookup::groupUnaff(uint32_t srcId)
 {
+    // lookup dynamic affiliation table entry
+    try {
+        uint32_t tblDstId = m_grpAffTable.at(srcId);
+        if (m_verbose) {
+            LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
+                m_name, srcId, tblDstId);
+        }
+    } catch (...) {
+        /* stub */
+    }
+
     // remove dynamic affiliation table entry
     try {
         m_grpAffTable.at(srcId);
@@ -222,6 +248,11 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t grantTimeout)
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
+
+    if (m_verbose) {
+        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u",
+            m_name, chNo, dstId);
+    }
 
     return true;
 }

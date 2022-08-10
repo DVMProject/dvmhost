@@ -44,7 +44,7 @@ using namespace p25::lookups;
 /// </summary>
 /// <param name="name">Name of lookup table.</param>
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
-P25AffiliationLookup::P25AffiliationLookup(Control* p25, bool verbose) : ::lookups::AffiliationLookup("P25 Aff", verbose),
+P25AffiliationLookup::P25AffiliationLookup(Control* p25, bool verbose) : ::lookups::AffiliationLookup("P25 Affiliation", verbose),
     m_p25(p25)
 {
     /* stub */
