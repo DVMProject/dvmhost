@@ -293,14 +293,14 @@ void CAC::encode(uint8_t* data) const
     control[1U] = (m_rxCRC >> 8U);
     control[2U] = (m_rxCRC >> 0U);
 
-    uint32_t offset = NXDN_CAC_OUT_FEC_LENGTH_BITS;
+    uint32_t offset = NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_OUT_FEC_LENGTH_BITS;
     for (uint32_t i = 0U; i < NXDN_E_POST_FIELD_BITS; i++, offset++) {
         bool b = READ_BIT(control, i);
         WRITE_BIT(data, offset + i, b);
     }
 
     // post field
-    offset = NXDN_CAC_OUT_FEC_LENGTH_BITS + NXDN_E_POST_FIELD_BITS;
+    offset = NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_OUT_FEC_LENGTH_BITS + NXDN_E_POST_FIELD_BITS;
     for (uint32_t i = 0U; i < NXDN_E_POST_FIELD_BITS; i++, offset++) {
         bool b = READ_BIT(POST_FIELD, i);
         WRITE_BIT(data, offset + i, b);
