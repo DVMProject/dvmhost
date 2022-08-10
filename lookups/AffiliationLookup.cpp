@@ -75,6 +75,10 @@ AffiliationLookup::~AffiliationLookup()
 /// <param name="srcId"></param>
 void AffiliationLookup::unitReg(uint32_t srcId)
 {
+    if (isUnitReg(srcId)) {
+        return;
+    }
+
     m_unitRegTable.push_back(srcId);
 
     if (m_verbose) {
@@ -90,6 +94,10 @@ void AffiliationLookup::unitReg(uint32_t srcId)
 bool AffiliationLookup::unitDereg(uint32_t srcId)
 {
     bool ret = false;
+
+    if (!isUnitReg(srcId)) {
+        return false;
+    }
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, unit deregistration, srcId = %u",
@@ -131,12 +139,14 @@ bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 /// <param name="dstId"></param>
 void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 {
-    // update dynamic affiliation table
-    m_grpAffTable[srcId] = dstId;
+    if (!isGroupAff(srcId, dstId)) {
+        // update dynamic affiliation table
+        m_grpAffTable[srcId] = dstId;
 
-    if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
-            m_name, srcId, dstId);
+        if (m_verbose) {
+            LogMessage(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
+                m_name, srcId, dstId);
+        }
     }
 }
 
@@ -154,7 +164,7 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
                 m_name, srcId, tblDstId);
         }
     } catch (...) {
-        /* stub */
+        return false;
     }
 
     // remove dynamic affiliation table entry
