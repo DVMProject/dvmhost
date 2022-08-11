@@ -502,7 +502,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 
 #if DEBUG_CRC
     uint32_t inCrc = temp[0U];
-    LogDebug(LOG_HOST, "CRC::checkCRC6(), crc = $%08X, in = $%08X, bitlen = %u", crc32, inCrc, bitLength);
+    LogDebug(LOG_HOST, "CRC::checkCRC6(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
 
     return crc == temp[0U];
