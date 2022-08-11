@@ -321,7 +321,7 @@ bool RCCH::decodeLC(const uint8_t* data)
 /// <param name="rs"></param>
 void RCCH::encodeLC(uint8_t* data)
 {
-    m_messageType = m_data[0U] & 0x3FU;                                             // Message Type
+    m_data[0U] = m_messageType & 0x3FU;                                             // Message Type
 
     // message type opcodes
     switch (m_messageType) {
