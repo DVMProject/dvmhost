@@ -33,6 +33,33 @@
 
 #include "Defines.h"
 
+// Message Type Strings
+#define NXDN_RTCH_MSG_TYPE_VCALL "VCALL (Voice Call)"
+#define NXDN_RTCH_MSG_TYPE_VCALL_REQ "VCALL_REQ (Voice Call Request)"
+#define NXDN_RTCH_MSG_TYPE_VCALL_RESP "VCALL_RESP (Voice Call Response)"
+#define NXDN_RTCH_MSG_TYPE_VCALL_IV "VCALL_IV (Voice Call Init Vector)"
+#define NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ "VCALL_CONN_REQ (Voice Call Connection Request)"
+#define NXDN_RCCH_MSG_TYPE_VCALL_CONN_RESP "VCALL_CONN_RESP (Voice Call Connection Response)"
+#define NXDN_RCCH_MSG_TYPE_VCALL_ASSGN "VCALL_ASSGN (Voice Call Assignment)"
+#define NXDN_RTCH_MSG_TYPE_TX_REL_EX "TX_REL_EX (Transmission Release Extension)"
+#define NXDN_RTCH_MSG_TYPE_TX_REL "TX_REL (Transmission Release)"
+#define NXDN_RTCH_MSG_TYPE_DCALL_HDR "DCALL (Data Call Header)"
+#define NXDN_RCCH_MSG_TYPE_DCALL_REQ "DCALL_REQ (Data Call Request)"
+#define NXDN_RCCH_MSG_TYPE_DCALL_RESP "DCALL_RESP (Data Call Response)"
+#define NXDN_RTCH_MSG_TYPE_DCALL_DATA "DCALL (Data Call User Data)"
+#define NXDN_RTCH_MSG_TYPE_DCALL_ACK "DCALL_ACL (Data Call Acknowledge)"
+#define NXDN_RTCH_MSG_TYPE_HEAD_DLY "HEAD_DLY (Header Delay)"
+#define NXDN_MSG_TYPE_IDLE "IDLE (Idle)"
+#define NXDN_MSG_TYPE_DISC "DISC (Disconnect)"
+#define NXDN_RCCH_MSG_TYPE_DCALL_ASSGN "DCALL_ASSGN (Data Call Assignment)"
+#define NXDN_RCCH_MSG_TYPE_REG_REQ "REG_REQ (Registration Request)"
+#define NXDN_RCCH_MSG_TYPE_REG_RESP "REG_RESP (Registration Response)"
+#define NXDN_RCCH_MSG_TYPE_REG_C_REQ "REG_C_REQ (Registration Clear Request)"
+#define NXDN_RCCH_MSG_TYPE_REG_C_RESP "REG_C_RESP (Registration Clear Response)"
+#define NXDN_RCCH_MSG_TYPE_REG_COMM "REG_COMM (Registration Command)"
+#define NXDN_RCCH_MSG_TYPE_GRP_REG_REQ "GRP_REG_REQ (Group Registration Request)"
+#define NXDN_RCCH_MSG_TYPE_GRP_REG_RESP "GRP_REG_RESP (Group Registration Response)"
+
 namespace nxdn
 {
     // ---------------------------------------------------------------------------

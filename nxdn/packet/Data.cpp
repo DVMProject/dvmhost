@@ -34,7 +34,6 @@
 #include "nxdn/packet/Data.h"
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/Sync.h"
-#include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -109,8 +108,7 @@ using namespace nxdn::packet;
 #define VALID_SRCID(_SRC_ID, _DST_ID, _GROUP)                                           \
     if (!acl::AccessControl::validateSrcId(_SRC_ID)) {                                  \
         if (m_lastRejectId == 0U || m_lastRejectId != _SRC_ID) {                        \
-            LogWarning(LOG_RF, "NXDN %s denial, RID rejection, srcId = %u",             \
-                NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_DCALL_HDR), _SRC_ID);  \
+            LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, srcId = %u", _SRC_ID); \
             ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
             m_lastRejectId = _SRC_ID;                                                   \
         }                                                                               \
@@ -126,8 +124,7 @@ using namespace nxdn::packet;
     if (!_GROUP) {                                                                      \
         if (!acl::AccessControl::validateSrcId(_DST_ID)) {                              \
             if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, "NXDN %s denial, RID rejection, dstId = %u",         \
-                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_DCALL_HDR), _DST_ID); \
+                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, dstId = %u", _DST_ID); \
                 ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
                 m_lastRejectId = _DST_ID;                                               \
             }                                                                           \
@@ -141,8 +138,7 @@ using namespace nxdn::packet;
     else {                                                                              \
         if (!acl::AccessControl::validateTGId(_DST_ID)) {                               \
             if (m_lastRejectId == 0 || m_lastRejectId != _DST_ID) {                     \
-                LogWarning(LOG_RF, "NXDN %s denial, TGID rejection, dstId = %u",        \
-                    NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_DCALL_HDR), _DST_ID); \
+                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID rejection, dstId = %u", _DST_ID); \
                 ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", _SRC_ID, _GROUP ? "TG " : "", _DST_ID); \
                 m_lastRejectId = _DST_ID;                                               \
             }                                                                           \
@@ -220,8 +216,8 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
         VALID_DSTID(srcId, dstId, group);
 
         if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN %s, srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
-                NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_DCALL_HDR), srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
+            LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+                srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
@@ -271,8 +267,8 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "RF ended RF data transmission");
 
-        LogMessage(LOG_RF, "NXDN %s, total frames: %d", 
-            NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_nxdn->m_voice->m_rfFrames);
+        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", 
+            m_nxdn->m_voice->m_rfFrames);
 
         m_nxdn->writeEndRF();
     }
@@ -328,8 +324,8 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
         VALID_DSTID(srcId, dstId, group);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, "NXDN %s, srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
-                NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_DCALL_HDR), srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
+            LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR ", srcId = %u, dstId = %u, ack = %u, blocksToFollow = %u, padCount = %u, firstFragment = %u, fragmentCount = %u",
+                srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
         ::ActivityLog("NXDN", false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
@@ -375,8 +371,8 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "network ended RF data transmission");
 
-        LogMessage(LOG_NET, "NXDN %s, total frames: %d", 
-            NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_nxdn->m_voice->m_netFrames);
+        LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", 
+            m_nxdn->m_voice->m_netFrames);
 
         m_nxdn->writeEndNet();
     }

@@ -35,7 +35,6 @@
 #include "nxdn/channel/UDCH.h"
 #include "nxdn/lc/RTCH.h"
 #include "nxdn/Sync.h"
-#include "nxdn/NXDNUtils.h"
 #include "edac/AMBEFEC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -118,7 +117,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_ccPacketInterval(1000U, 0U, 5U),
+    m_ccPacketInterval(1000U, 0U, 250U),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_siteData(),
@@ -301,8 +300,8 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                 float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
         }
 
-        LogMessage(LOG_RF, "NXDN %s, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
-            NXDNUtils::messageTypeToString(RTCH_MESSAGE_TYPE_TX_REL), m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         if (m_control) {
             m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
