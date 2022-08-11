@@ -771,6 +771,10 @@ void Modem::clock(uint32_t ms)
 
             m_isHotspot = (m_buffer[3U] & 0x01U) == 0x01U;
 
+            bool dmrEnable = (m_buffer[3U] & 0x02U) == 0x02U;
+            bool p25Enable = (m_buffer[3U] & 0x08U) == 0x08U;
+            bool nxdnEnable = (m_buffer[3U] & 0x10U) == 0x10U;
+
             m_modemState = (DVM_STATE)m_buffer[4U];
 
             m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
@@ -843,8 +847,8 @@ void Modem::clock(uint32_t ms)
             m_nxdnSpace = m_buffer[11U];
 
             if (m_dumpModemStatus) {
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u",
-                    m_isHotspot, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space);
+                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u, p25 = %u, nxdn = %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
+                    m_isHotspot, dmrEnable, p25Enable, nxdnEnable, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRData1.length(), m_rxDMRData1.dataSize(), m_rxDMRData1.freeSpace(), m_rxDMRData2.length(), m_rxDMRData2.dataSize(), m_rxDMRData2.freeSpace(),
                     m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace(), m_rxNXDNData.length(), m_rxNXDNData.dataSize(), m_rxNXDNData.freeSpace());
