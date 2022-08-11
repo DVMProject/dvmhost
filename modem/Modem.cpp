@@ -589,6 +589,7 @@ void Modem::clock(uint32_t ms)
         /** Digital Mobile Radio */
         case CMD_DMR_DATA1:
         {
+#if defined(ENABLE_DMR)
             //if (m_trace)
             //    Utils::dump(1U, "RX DMR Data 1", m_buffer, m_length);
 
@@ -608,10 +609,12 @@ void Modem::clock(uint32_t ms)
 
             m_rxDMRData1.addData(m_buffer + 3U, m_length - 3U);
         }
+#endif // defined(ENABLE_DMR)
         break;
 
         case CMD_DMR_DATA2:
         {
+#if defined(ENABLE_DMR)
             //if (m_trace)
             //    Utils::dump(1U, "RX DMR Data 2", m_buffer, m_length);
 
@@ -630,11 +633,13 @@ void Modem::clock(uint32_t ms)
             m_rxDMRData2.addData(&data, 1U);
 
             m_rxDMRData2.addData(m_buffer + 3U, m_length - 3U);
+#endif // defined(ENABLE_DMR)
         }
         break;
 
         case CMD_DMR_LOST1:
         {
+#if defined(ENABLE_DMR)
             //if (m_trace)
             //    Utils::dump(1U, "RX DMR Lost 1", m_buffer, m_length);
 
@@ -648,11 +653,13 @@ void Modem::clock(uint32_t ms)
 
             data = TAG_LOST;
             m_rxDMRData1.addData(&data, 1U);
+#endif // defined(ENABLE_DMR)
         }
         break;
 
         case CMD_DMR_LOST2:
         {
+#if defined(ENABLE_DMR)
             //if (m_trace)
             //    Utils::dump(1U, "RX DMR Lost 2", m_buffer, m_length);
 
@@ -666,12 +673,14 @@ void Modem::clock(uint32_t ms)
 
             data = TAG_LOST;
             m_rxDMRData2.addData(&data, 1U);
+#endif // defined(ENABLE_DMR)
         }
         break;
 
         /** Project 25 */
         case CMD_P25_DATA:
         {
+#if defined(ENABLE_P25)
             //if (m_trace)
             //    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
 
@@ -687,11 +696,13 @@ void Modem::clock(uint32_t ms)
             m_rxP25Data.addData(&data, 1U);
 
             m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
+#endif // defined(ENABLE_P25)
         }
         break;
 
         case CMD_P25_LOST:
         {
+#if defined(ENABLE_P25)
             //if (m_trace)
             //    Utils::dump(1U, "RX P25 Lost", m_buffer, m_length);
 
@@ -705,13 +716,14 @@ void Modem::clock(uint32_t ms)
 
             data = TAG_LOST;
             m_rxP25Data.addData(&data, 1U);
+#endif // defined(ENABLE_P25)
         }
         break;
 
         /** Next Generation Digital Narrowband */
         case CMD_NXDN_DATA:
         {
-#if ENABLE_NXDN_SUPPORT
+#if defined(ENABLE_NXDN)
             //if (m_trace)
             //    Utils::dump(1U, "RX NXDN Data", m_buffer, m_length);
 
@@ -727,13 +739,13 @@ void Modem::clock(uint32_t ms)
             m_rxNXDNData.addData(&data, 1U);
 
             m_rxNXDNData.addData(m_buffer + 3U, m_length - 3U);
-#endif
+#endif // defined(ENABLE_NXDN)
         }
         break;
 
         case CMD_NXDN_LOST:
         {
-#if ENABLE_NXDN_SUPPORT
+#if defined(ENABLE_NXDN)
             //if (m_trace)
             //    Utils::dump(1U, "RX NXDN Lost", m_buffer, m_length);
 
@@ -747,7 +759,7 @@ void Modem::clock(uint32_t ms)
 
             data = TAG_LOST;
             m_rxNXDNData.addData(&data, 1U);
-#endif
+#endif // defined(ENABLE_NXDN)
         }
         break;
 
@@ -880,6 +892,8 @@ void Modem::clock(uint32_t ms)
     if (!m_playoutTimer.hasExpired())
         return;
 
+    /** Digital Mobile Radio */
+#if defined(ENABLE_DMR)
     // write DMR slot 1 data to air interface
     if (m_dmrSpace1 > 1U && !m_txDMRData1.isEmpty()) {
         uint8_t len = 0U;
@@ -915,7 +929,10 @@ void Modem::clock(uint32_t ms)
 
         m_dmrSpace2--;
     }
+#endif // defined(ENABLE_DMR)
 
+    /** Project 25 */
+#if defined(ENABLE_P25)
     // write P25 data to air interface
     if (m_p25Space > 1U && !m_txP25Data.isEmpty()) {
         uint8_t len = 0U;
@@ -933,6 +950,28 @@ void Modem::clock(uint32_t ms)
 
         m_p25Space--;
     }
+#endif // defined(ENABLE_P25)
+
+    /** Next Generation Digital Narrowband */
+#if defined(ENABLE_NXDN)
+    // write NXDN data to air interface
+    if (m_nxdnSpace > 1U && !m_txNXDNData.isEmpty()) {
+        uint8_t len = 0U;
+        m_txNXDNData.getData(&len, 1U);
+        m_txNXDNData.getData(m_buffer, len);
+
+        //if (m_trace)
+        //    Utils::dump(1U, "Buffered TX NXDN Data", m_buffer, len);
+
+        int ret = write(m_buffer, len);
+        if (ret != int(len))
+            LogError(LOG_MODEM, "Error writing NXDN data");
+
+        m_playoutTimer.start();
+
+        m_nxdnSpace--;
+    }
+#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1176,6 +1215,7 @@ void Modem::clearNXDNData()
 /// <param name="length">Length of data to write.</param>
 void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
 {
+#if defined(ENABLE_DMR)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1196,6 +1236,7 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
     m_rxDMRData1.addData(&val, 1U);
 
     m_rxDMRData1.addData(data, length);
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1205,6 +1246,7 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
 /// <param name="length">Length of data to write.</param>
 void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 {
+#if defined(ENABLE_DMR)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1225,6 +1267,7 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
     m_rxDMRData2.addData(&val, 1U);
 
     m_rxDMRData2.addData(data, length);
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1234,6 +1277,7 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 /// <param name="length">Length of data to write.</param>
 void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 {
+#if defined(ENABLE_P25)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1249,6 +1293,7 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
     m_rxP25Data.addData(&val, 1U);
 
     m_rxP25Data.addData(data, length);
+#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -1258,6 +1303,7 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 /// <param name="length">Length of data to write.</param>
 void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 {
+#if defined(ENABLE_NXDN)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1273,6 +1319,7 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
     m_rxNXDNData.addData(&val, 1U);
 
     m_rxNXDNData.addData(data, length);
+#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1283,6 +1330,7 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 /// <returns>True, if data is written, otherwise false.</returns>
 bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 {
+#if defined(ENABLE_DMR)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1327,6 +1375,9 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
     }
 
     return true;
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1338,6 +1389,7 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 /// <returns>True, if data is written, otherwise false.</returns>
 bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 {
+#if defined(ENABLE_DMR)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1382,6 +1434,9 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
     }
 
     return true;
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1393,6 +1448,7 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 /// <returns>True, if data is written, otherwise false.</returns>
 bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 {
+#if defined(ENABLE_P25)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1437,6 +1493,9 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
     }
 
     return true;
+#else
+    return false;
+#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -1448,6 +1507,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 /// <returns>True, if data is written, otherwise false.</returns>
 bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
 {
+#if defined(ENABLE_NXDN)
     assert(data != NULL);
     assert(length > 0U);
 
@@ -1492,6 +1552,9 @@ bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
     }
 
     return true;
+#else
+    return false;
+#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1501,6 +1564,7 @@ bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
 /// <returns>True, if DMR transmit started, otherwise false.</returns>
 bool Modem::writeDMRStart(bool tx)
 {
+#if defined(ENABLE_DMR)
     if (tx && m_tx)
         return true;
     if (!tx && !m_tx)
@@ -1516,6 +1580,9 @@ bool Modem::writeDMRStart(bool tx)
     Utils::dump(1U, "Modem::writeDMRStart(), Written", buffer, 4U);
 #endif
     return write(buffer, 4U) == 4;
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1525,6 +1592,7 @@ bool Modem::writeDMRStart(bool tx)
 /// <returns>True, if DMR LC is written, otherwise false.</returns>
 bool Modem::writeDMRShortLC(const uint8_t* lc)
 {
+#if defined(ENABLE_DMR)
     assert(lc != NULL);
 
     uint8_t buffer[12U];
@@ -1545,6 +1613,9 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
     Utils::dump(1U, "Modem::writeDMRShortLC(), Written", buffer, 12U);
 #endif
     return write(buffer, 12U) == 12;
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1554,6 +1625,7 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
 /// <returns>True, if DMR abort is written, otherwise false.</returns>
 bool Modem::writeDMRAbort(uint32_t slotNo)
 {
+#if defined(ENABLE_DMR)
     if (slotNo == 1U)
         m_txDMRData1.clear();
     else
@@ -1569,6 +1641,9 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
     Utils::dump(1U, "Modem::writeDMRAbort(), Written", buffer, 4U);
 #endif
     return write(buffer, 4U) == 4;
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1791,10 +1866,14 @@ bool Modem::writeConfig()
     if (m_cosLockout)
         buffer[4U] |= 0x04U;
 
+#if defined(ENABLE_DMR)
     if (m_dmrEnabled)
         buffer[4U] |= 0x02U;
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     if (m_p25Enabled)
         buffer[4U] |= 0x08U;
+#endif // defined(ENABLE_P25)
 
     if (m_fdmaPreamble > MAX_FDMA_PREAMBLE) {
         LogWarning(LOG_P25, "oversized FDMA preamble count, reducing to maximum %u", MAX_FDMA_PREAMBLE);
@@ -1828,8 +1907,10 @@ bool Modem::writeConfig()
     if (m_protoVer >= 3U) {
         lengthToWrite = 24U;
 
+#if defined(ENABLE_NXDN)
         if (m_nxdnEnabled)
             buffer[4U] |= 0x10U;
+#endif // defined(ENABLE_NXDN)
 
         buffer[18U] = (uint8_t)(m_nxdnTXLevel * 2.55F + 0.5F);
 
