@@ -615,6 +615,10 @@ int Host::run()
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
         nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
 
+        if (nxdnCtrlChannel) {
+            nxdn->setCCRunning(true);
+        }
+
         if (nxdnVerbose) {
             LogInfo("    Verbose: yes");
         }
