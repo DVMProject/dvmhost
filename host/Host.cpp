@@ -2138,7 +2138,8 @@ bool Host::createModem()
         LogInfo("    UDP Address: %s", g_remoteAddress.c_str());
         LogInfo("    UDP Port: %u", g_remotePort);
     }
-    else {
+
+    if (!m_modemRemote) {
         LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
         LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
         LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");

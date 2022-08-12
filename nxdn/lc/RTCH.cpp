@@ -123,7 +123,13 @@ RTCH& RTCH::operator=(const RTCH& data)
 {
     if (&data != this) {
         ::memcpy(m_data, data.m_data, NXDN_RTCH_LC_LENGTH_BYTES);
-        decodeLC(m_data);
+
+        m_verbose = data.m_verbose;
+        if (m_data != NULL) {
+            if ((m_data[0] & 0x3FU) != 0U) {
+                decodeLC(m_data);
+            }
+        }
     }
 
     return *this;

@@ -75,7 +75,8 @@ FACCH1::FACCH1() :
     m_verbose(false),
     m_data(NULL)
 {
-    m_data = new uint8_t[NXDN_FACCH1_LENGTH_BYTES];
+    m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -105,7 +106,7 @@ FACCH1::~FACCH1()
 FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_FACCH1_LENGTH_BYTES);
+        ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
     }
@@ -123,6 +124,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     assert(data != NULL);
 
     uint8_t buffer[NXDN_FACCH1_FEC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_FACCH1_FEC_LENGTH_BYTES);
 
     // deinterleave
     for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
@@ -157,21 +159,21 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < (NXDN_FACCH1_LENGTH_BITS + 4U); i++) {
+    for (uint32_t i = 0U; i < (NXDN_FACCH1_CRC_LENGTH_BITS + 4U); i++) {
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, NXDN_FACCH1_LENGTH_BITS);
+    conv.chainback(m_data, NXDN_FACCH1_CRC_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_LENGTH_BYTES);
+        Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
     }
 
     // check CRC-12
-    bool ret = CRC::checkCRC12(m_data, NXDN_FACCH1_CRC_BITS);
+    bool ret = CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "FACCH1::decode(), failed CRC-12 check");
         return false;
@@ -189,32 +191,36 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 {
     assert(data != NULL);
 
-    uint8_t buffer[NXDN_FACCH1_LENGTH_BYTES];
-    ::memset(buffer, 0x00U, NXDN_FACCH1_LENGTH_BYTES);
-    ::memcpy(buffer, m_data, NXDN_FACCH1_LENGTH_BYTES - 2U);
+    uint8_t buffer[NXDN_FACCH1_CRC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
+    ::memcpy(buffer, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 
-    CRC::addCRC12(buffer, NXDN_FACCH1_CRC_BITS);
+    CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_LENGTH_BYTES);
+        Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
     }
 
     // encode convolution
     uint8_t convolution[NXDN_FACCH1_FEC_CONV_LENGTH_BYTES];
+    ::memset(convolution, 0x00U, NXDN_FACCH1_FEC_CONV_LENGTH_BYTES);
+
     Convolution conv;
-    conv.encode(buffer, convolution, NXDN_FACCH1_LENGTH_BITS);
+    conv.encode(buffer, convolution, NXDN_FACCH1_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
     Utils::dump(2U, "FACCH1::encode(), FACCH1 Convolution", convolution, NXDN_FACCH1_FEC_CONV_LENGTH_BYTES);
 #endif
 
     // puncture
-    uint8_t raw[NXDN_FACCH1_FEC_LENGTH_BYTES];
+    uint8_t puncture[NXDN_FACCH1_FEC_LENGTH_BYTES];
+    ::memset(puncture, 0x00U, NXDN_FACCH1_FEC_LENGTH_BYTES);
+
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
-            WRITE_BIT(raw, n, b);
+            WRITE_BIT(puncture, n, b);
             n++;
         } else {
             index++;
@@ -224,7 +230,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     // interleave
     for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
         uint32_t n = INTERLEAVE_TABLE[i] + offset;
-        bool b = READ_BIT(raw, i);
+        bool b = READ_BIT(puncture, i);
         WRITE_BIT(data, n, b);
     }
 
@@ -241,7 +247,7 @@ void FACCH1::getData(uint8_t* data) const
 {
     assert(data != NULL);
 
-    ::memcpy(data, m_data, NXDN_FACCH1_LENGTH_BYTES - 2U);
+    ::memcpy(data, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 }
 
 /// <summary>
@@ -252,7 +258,7 @@ void FACCH1::setData(const uint8_t* data)
 {
     assert(data != NULL);
 
-    ::memcpy(m_data, data, NXDN_FACCH1_LENGTH_BYTES - 2U);
+    ::memcpy(m_data, data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 }
 
 // ---------------------------------------------------------------------------
@@ -265,8 +271,8 @@ void FACCH1::setData(const uint8_t* data)
 /// <param name="data"></param>
 void FACCH1::copy(const FACCH1& data)
 {
-    m_data = new uint8_t[NXDN_FACCH1_LENGTH_BYTES];
-    ::memcpy(m_data, data.m_data, NXDN_FACCH1_LENGTH_BYTES);
+    m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
 
     m_verbose = data.m_verbose;
 }

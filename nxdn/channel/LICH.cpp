@@ -30,6 +30,7 @@
 */
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
+#include "Log.h"
 
 using namespace nxdn;
 using namespace nxdn::channel;
@@ -49,10 +50,10 @@ LICH::LICH() :
     m_rfct(NXDN_LICH_RFCT_RCCH),
     m_fct(NXDN_LICH_USC_SACCH_NS),
     m_option(0U),
-    m_direction(NXDN_LICH_DIRECTION_OUTBOUND),
-    m_data(NULL)
+    m_outbound(true),
+    m_lich(0U)
 {
-    m_data = new uint8_t[1U];
+    /* stub */
 }
 
 /// <summary>
@@ -63,8 +64,8 @@ LICH::LICH(const LICH& data) :
     m_rfct(NXDN_LICH_RFCT_RCCH),
     m_fct(NXDN_LICH_USC_SACCH_NS),
     m_option(0U),
-    m_direction(NXDN_LICH_DIRECTION_OUTBOUND),
-    m_data(NULL)
+    m_outbound(true),
+    m_lich(0U)
 {
     copy(data);
 }
@@ -74,7 +75,7 @@ LICH::LICH(const LICH& data) :
 /// </summary>
 LICH::~LICH()
 {
-    delete[] m_data;
+    /* stub */
 }
 
 /// <summary>
@@ -85,12 +86,12 @@ LICH::~LICH()
 LICH& LICH::operator=(const LICH& data)
 {
     if (&data != this) {
-        m_data[0U] = data.m_data[0U];
+        m_lich = data.m_lich;
 
         m_rfct = data.m_rfct;
         m_fct = data.m_fct;
         m_option = data.m_option;
-        m_direction = data.m_direction;
+        m_outbound = data.m_outbound;
     }
 
     return *this;
@@ -108,16 +109,20 @@ bool LICH::decode(const uint8_t* data)
     uint32_t offset = NXDN_FSW_LENGTH_BITS;
     for (uint32_t i = 0U; i < (NXDN_LICH_LENGTH_BITS / 2U); i++, offset += 2U) {
         bool b = READ_BIT(data, offset);
-        WRITE_BIT(m_data, i, b);
+        m_lich = (b) ? (m_lich | BIT_MASK_TABLE[(i) & 7]) : (m_lich & ~BIT_MASK_TABLE[(i) & 7]);
     }
 
-    bool newParity = getParity();
-    bool origParity = (m_data[0U] & 0x01U) == 0x01U;
+#if DEBUG_NXDN_LICH
+    LogDebug(LOG_NXDN, "LICH::decode(), m_lich = %02X", m_lich);
+#endif
 
-    m_rfct = (m_data[0U] >> 6) & 0x03U;
-    m_fct = (m_data[0U] >> 4) & 0x03U;
-    m_option = (m_data[0U] >> 2) & 0x03U;
-    m_direction = (m_data[0U] >> 1) & 0x01U;
+    bool newParity = getParity();
+    bool origParity = (m_lich & 0x01U) == 0x01U;
+
+    m_rfct = (m_lich >> 6) & 0x03U;
+    m_fct = (m_lich >> 4) & 0x03U;
+    m_option = (m_lich >> 2) & 0x03U;
+    m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
 
     return origParity == newParity;
 }
@@ -130,27 +135,33 @@ void LICH::encode(uint8_t* data)
 {
     assert(data != NULL);
 
-    m_data[0U] &= 0x3FU;
-    m_data[0U] |= (m_rfct << 6) & 0xC0U;
+    m_lich = 0U;
 
-    m_data[0U] &= 0xCFU;
-    m_data[0U] |= (m_fct << 4) & 0x30U;
+	m_lich &= 0x3FU;
+    m_lich |= (m_rfct & 0x03U) << 6;
 
-    m_data[0U] &= 0xF3U;
-    m_data[0U] |= (m_option << 2) & 0x0CU;
+	m_lich &= 0xCFU;
+    m_lich |= (m_fct & 0x03U) << 4;
 
-    m_data[0U] &= 0xFDU;
-    m_data[0U] |= (m_direction << 1) & 0x02U;
+	m_lich &= 0xF3U;
+    m_lich |= (m_option & 0x03U) << 2;
+
+	m_lich &= 0xFDU;
+    m_lich |= (m_outbound ? 0x01U : 0x00U) << 1;
+
+#if DEBUG_NXDN_LICH
+    LogDebug(LOG_NXDN, "LICH::encode(), m_lich = %02X", m_lich);
+#endif
 
     bool parity = getParity();
     if (parity)
-        m_data[0U] |= 0x01U;
+        m_lich |= 0x01U;
     else
-        m_data[0U] &= 0xFEU;
+        m_lich &= 0xFEU;
 
     uint32_t offset = NXDN_FSW_LENGTH_BITS;
     for (uint32_t i = 0U; i < (NXDN_LICH_LENGTH_BITS / 2U); i++) {
-        bool b = READ_BIT(m_data, i);
+        bool b = (m_lich & BIT_MASK_TABLE[(i) & 7]);
         WRITE_BIT(data, offset, b);
         offset++;
         WRITE_BIT(data, offset, true);
@@ -168,13 +179,12 @@ void LICH::encode(uint8_t* data)
 /// <param name="data"></param>
 void LICH::copy(const LICH& data)
 {
-    m_data = new uint8_t[1U];
-    m_data[0U] = data.m_data[0U];
+    m_lich = data.m_lich;
 
-    m_rfct = (m_data[0U] >> 6) & 0x03U;
-    m_fct = (m_data[0U] >> 4) & 0x03U;
-    m_option = (m_data[0U] >> 2) & 0x03U;
-    m_direction = (m_data[0U] >> 1) & 0x01U;
+    m_rfct = (m_lich >> 6) & 0x03U;
+    m_fct = (m_lich >> 4) & 0x03U;
+    m_option = (m_lich >> 2) & 0x03U;
+    m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
 }
 
 /// <summary>
@@ -183,7 +193,7 @@ void LICH::copy(const LICH& data)
 /// <returns></returns>
 bool LICH::getParity() const
 {
-    switch (m_data[0U] & 0xF0U) {
+    switch (m_lich & 0xF0U) {
     case 0x80U:
     case 0xB0U:
         return true;

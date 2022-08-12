@@ -67,11 +67,11 @@ namespace nxdn
             __PROPERTY(uint8_t, fct, FCT);
             /// <summary>Channel Options</summary>
             __PROPERTY(uint8_t, option, Option);
-            /// <summary>Channel Direction</summary>
-            __PROPERTY(uint8_t, direction, Direction);
+            /// <summary>Flag indicating outbound traffic direction</summary>
+            __PROPERTY(bool, outbound, Outbound);
 
         private:
-            uint8_t* m_data;
+            uint8_t m_lich;
 
             /// <summary>Internal helper to copy the class.</summary>
             void copy(const LICH& data);

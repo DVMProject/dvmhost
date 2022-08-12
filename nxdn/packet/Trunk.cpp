@@ -163,10 +163,10 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
     m_nxdn->m_queue.clear();
 
     // the layer3 data will only be correct if valid is true
-    uint8_t buffer[NXDN_CAC_LENGTH_BYTES];
+    uint8_t buffer[NXDN_CAC_FRAME_LENGTH_BYTES];
     cac.getData(buffer);
 
-    m_rfLC.decode(buffer, NXDN_CAC_SHORT_IN_CRC_BITS);
+    m_rfLC.decode(buffer, NXDN_RCCH_CAC_LC_SHORT_LENGTH_BITS);
 
     uint16_t srcId = m_rfLC.getSrcId();
     uint16_t dstId = m_rfLC.getDstId();
@@ -388,15 +388,16 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
     lich.setOption(NXDN_LICH_DATA_NORMAL);
-    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOutbound(true);
     lich.encode(data + 2U);
 
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
-    m_rfLC.encode(buffer, NXDN_CAC_OUT_CRC_BITS);
+    m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
     channel::CAC cac;
+    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
     cac.setData(buffer);
     cac.encode(data + 2U);
@@ -687,18 +688,20 @@ void Trunk::writeRF_CC_Message_Site_Info()
     channel::LICH lich;
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
-    lich.setOption(NXDN_LICH_DATA_NORMAL);
-    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOption(NXDN_LICH_DATA_COMMON);
+    lich.setOutbound(true);
     lich.encode(data + 2U);
 
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
     m_rfLC.setMessageType(RCCH_MESSAGE_TYPE_SITE_INFO);
-    m_rfLC.encode(buffer, NXDN_CAC_OUT_CRC_BITS);
+    m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
     channel::CAC cac;
+    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
+    cac.setStructure(NXDN_SR_RCCH_HEAD_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 
@@ -730,17 +733,19 @@ void Trunk::writeRF_CC_Message_Service_Info()
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
     lich.setOption(NXDN_LICH_DATA_NORMAL);
-    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOutbound(true);
     lich.encode(data + 2U);
 
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
     m_rfLC.setMessageType(MESSAGE_TYPE_SRV_INFO);
-    m_rfLC.encode(buffer, NXDN_CAC_OUT_CRC_BITS);
+    m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
     channel::CAC cac;
+    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
+    cac.setStructure(NXDN_SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 

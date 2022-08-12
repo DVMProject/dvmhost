@@ -70,6 +70,8 @@ namespace nxdn
             /** Common Data */
             /// <summary>Radio Access Number</summary>
             __PROPERTY(uint8_t, ran, RAN);
+            /// <summary></summary>
+            __PROPERTY(uint8_t, structure, Structure);
 
             /** Collision Control Field */
             /// <summary>Idle/Busy.</summary>

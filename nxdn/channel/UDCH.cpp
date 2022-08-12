@@ -98,7 +98,8 @@ UDCH::UDCH() :
     m_ran(0U),
     m_data(NULL)
 {
-    m_data = new uint8_t[NXDN_UDCH_LENGTH_BYTES];
+    m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -129,7 +130,7 @@ UDCH::~UDCH()
 UDCH& UDCH::operator=(const UDCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_UDCH_LENGTH_BYTES);
+        ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
 
@@ -149,6 +150,7 @@ bool UDCH::decode(const uint8_t* data)
     assert(data != NULL);
 
     uint8_t buffer[NXDN_UDCH_FEC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_UDCH_FEC_LENGTH_BYTES);
 
     // deinterleave
     for (uint32_t i = 0U; i < NXDN_UDCH_FEC_LENGTH_BITS; i++) {
@@ -183,21 +185,21 @@ bool UDCH::decode(const uint8_t* data)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < (NXDN_UDCH_LENGTH_BITS + 4U); i++) {
+    for (uint32_t i = 0U; i < (NXDN_UDCH_CRC_LENGTH_BITS + 4U); i++) {
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, NXDN_UDCH_LENGTH_BITS);
+    conv.chainback(m_data, NXDN_UDCH_CRC_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded UDCH", m_data, NXDN_UDCH_LENGTH_BYTES);
+        Utils::dump(2U, "Decoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
     }
 
     // check CRC-15
-    bool ret = CRC::checkCRC15(m_data, NXDH_UDCH_CRC_BITS);
+    bool ret = CRC::checkCRC15(m_data, NXDN_UDCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "UDCH::decode(), failed CRC-15 check");
         return false;
@@ -218,20 +220,22 @@ void UDCH::encode(uint8_t* data) const
 
     m_data[0U] = m_ran;
 
-    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
-    ::memset(buffer, 0x00U, NXDN_UDCH_LENGTH_BYTES);
+    uint8_t buffer[NXDN_UDCH_CRC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
     ::memcpy(buffer, m_data, 23U);
 
-    CRC::addCRC15(buffer, NXDH_UDCH_CRC_BITS);
+    CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_LENGTH_BYTES);
+        Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
     }
 
     // encode convolution
     uint8_t convolution[NXDN_UDCH_FEC_CONV_LENGTH_BYTES];
+    ::memset(convolution, 0x00U, NXDN_UDCH_FEC_CONV_LENGTH_BYTES);
+
     Convolution conv;
-    conv.encode(buffer, convolution, NXDN_UDCH_LENGTH_BITS);
+    conv.encode(buffer, convolution, NXDN_UDCH_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
     Utils::dump(2U, "UDCH::encode(), UDCH Convolution", convolution, NXDN_UDCH_FEC_CONV_LENGTH_BYTES);
@@ -239,6 +243,8 @@ void UDCH::encode(uint8_t* data) const
 
     // puncture
     uint8_t puncture[NXDN_UDCH_FEC_LENGTH_BYTES];
+    ::memset(puncture, 0x00U, NXDN_UDCH_FEC_LENGTH_BYTES);
+
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_UDCH_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
@@ -270,7 +276,7 @@ void UDCH::getData(uint8_t* data) const
 {
     assert(data != NULL);
 
-    ::memcpy(data, m_data + 1U, 22U);
+    ::memcpy(data, m_data + 1U, NXDN_RTCH_LC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -281,7 +287,7 @@ void UDCH::setData(const uint8_t* data)
 {
     assert(data != NULL);
 
-    ::memcpy(m_data + 1U, data, 22U);
+    ::memcpy(m_data + 1U, data, NXDN_RTCH_LC_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -294,8 +300,8 @@ void UDCH::setData(const uint8_t* data)
 /// <param name="data"></param>
 void UDCH::copy(const UDCH& data)
 {
-    m_data = new uint8_t[26U];
-    ::memcpy(m_data, data.m_data, 26U);
+    m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
 }

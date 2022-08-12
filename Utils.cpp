@@ -212,7 +212,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
             }
 
             for (unsigned i = 0U; i < 9U; i++) {
-                if (symOffset + i > length) {
+                if (symOffset + i >= length) {
                     break;
                 }
 

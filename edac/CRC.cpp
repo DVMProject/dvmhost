@@ -660,7 +660,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC15(in, bitLength);
+    uint16_t crc = createCRC16(in, bitLength);
     uint8_t temp1[2U];
     temp1[0U] = (crc >> 8) & 0xFFU;
     temp1[1U] = (crc >> 0) & 0xFFU;
@@ -669,7 +669,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
     temp2[0U] = 0x00U;
     temp2[1U] = 0x00U;
     uint32_t j = bitLength;
-    for (uint32_t i = 1U; i < 16U; i++, j++) {
+    for (uint32_t i = 0U; i < 16U; i++, j++) {
         bool b = READ_BIT(in, j);
         WRITE_BIT(temp2, i, b);
     }
@@ -692,14 +692,14 @@ void CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
     assert(in != NULL);
 
-    uint16_t crc = createCRC15(in, bitLength);
+    uint16_t crc = createCRC16(in, bitLength);
 
     uint8_t temp[2U];
     temp[0U] = (crc >> 8) & 0xFFU;
     temp[1U] = (crc >> 0) & 0xFFU;
 
     uint32_t n = bitLength;
-    for (uint32_t i = 1U; i < 16U; i++, n++) {
+    for (uint32_t i = 0U; i < 16U; i++, n++) {
         bool b = READ_BIT(temp, i);
         WRITE_BIT(in, n, b);
     }
@@ -790,7 +790,7 @@ uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 /// <returns></returns>
 uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 {
-    uint16_t crc = 0xFFFFU;
+    uint16_t crc = 0x0000U;
 
     for (uint32_t i = 0U; i < bitLength; i++) {
         bool bit1 = READ_BIT(in, i) != 0x00U;
@@ -802,5 +802,6 @@ uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
             crc ^= 0x1021U;
     }
 
+    crc = ~crc;
     return crc & 0xFFFFU;
 }

@@ -66,11 +66,12 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 /// </summary>
 SACCH::SACCH() :
     m_verbose(false),
-    m_ran(0U),
-    m_structure(0U),
+    m_ran(1U),
+    m_structure(NXDN_SR_SINGLE),
     m_data(NULL)
 {
-    m_data = new uint8_t[NXDN_SACCH_LENGTH_BYTES];
+    m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, NXDN_SACCH_CRC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -79,8 +80,8 @@ SACCH::SACCH() :
 /// <param name="data"></param>
 SACCH::SACCH(const SACCH& data) :
     m_verbose(false),
-    m_ran(0U),
-    m_structure(0U),
+    m_ran(1U),
+    m_structure(NXDN_SR_SINGLE),
     m_data(NULL)
 {
     copy(data);
@@ -102,7 +103,7 @@ SACCH::~SACCH()
 SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_SACCH_LENGTH_BYTES);
+        ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
 
@@ -123,6 +124,7 @@ bool SACCH::decode(const uint8_t* data)
     assert(data != NULL);
 
     uint8_t buffer[NXDN_SACCH_FEC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_SACCH_FEC_LENGTH_BYTES);
 
     // deinterleave
     for (uint32_t i = 0U; i < NXDN_SACCH_FEC_LENGTH_BITS; i++) {
@@ -157,21 +159,21 @@ bool SACCH::decode(const uint8_t* data)
     conv.start();
 
     n = 0U;
-    for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS + 4U); i++) {
+    for (uint32_t i = 0U; i < (NXDN_SACCH_CRC_LENGTH_BITS + 4U); i++) {
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
         conv.decode(s0, s1);
     }
 
-    conv.chainback(m_data, NXDN_SACCH_LENGTH_BITS);
+    conv.chainback(m_data, NXDN_SACCH_CRC_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_LENGTH_BYTES);
+        Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
     }
 
     // check CRC-6
-    bool ret = CRC::checkCRC6(m_data, NXDN_SACCH_CRC_BITS);
+    bool ret = CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "SACCH::decode(), failed CRC-6 check");
         return false;
@@ -191,30 +193,32 @@ void SACCH::encode(uint8_t* data) const
 {
     assert(data != NULL);
 
-	m_data[0U] &= 0xC0U;
-	m_data[0U] |= m_ran;
+    m_data[0U] &= 0xC0U;
+    m_data[0U] |= m_ran;
 
-	m_data[0U] &= 0x3FU;
-	m_data[0U] |= (m_structure << 6) & 0xC0U;
+    m_data[0U] &= 0x3FU;
+    m_data[0U] |= (m_structure << 6) & 0xC0U;
 
-    uint8_t buffer[NXDN_SACCH_LENGTH_BYTES];
-    ::memset(buffer, 0x00U, NXDN_SACCH_LENGTH_BYTES);
+    uint8_t buffer[NXDN_SACCH_CRC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_SACCH_CRC_LENGTH_BYTES);
 
-    for (uint32_t i = 0U; i < NXDN_SACCH_CRC_BITS; i++) {
+    for (uint32_t i = 0U; i < NXDN_SACCH_LENGTH_BITS; i++) {
         bool b = READ_BIT(m_data, i);
         WRITE_BIT(buffer, i, b);
     }
 
-    CRC::addCRC6(buffer, NXDN_SACCH_CRC_BITS);
+    CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_LENGTH_BYTES);
+        Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);
     }
 
     // encode convolution
     uint8_t convolution[NXDN_SACCH_FEC_CONV_LENGTH_BYTES];
+    ::memset(convolution, 0x00U, NXDN_SACCH_FEC_CONV_LENGTH_BYTES);
+
     Convolution conv;
-    conv.encode(buffer, convolution, NXDN_SACCH_LENGTH_BITS);
+    conv.encode(buffer, convolution, NXDN_SACCH_CRC_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
     Utils::dump(2U, "SACCH::encode(), SACCH Convolution", convolution, NXDN_SACCH_FEC_CONV_LENGTH_BYTES);
@@ -222,6 +226,8 @@ void SACCH::encode(uint8_t* data) const
 
     // puncture
     uint8_t puncture[NXDN_SACCH_FEC_LENGTH_BYTES];
+    ::memset(puncture, 0x00U, NXDN_SACCH_FEC_LENGTH_BYTES);
+
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_SACCH_FEC_CONV_LENGTH_BITS; i++) {
         if (i != PUNCTURE_LIST[index]) {
@@ -254,7 +260,7 @@ void SACCH::getData(uint8_t* data) const
     assert(data != NULL);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < (NXDN_SACCH_CRC_BITS - 8); i++, offset++) {
+    for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS - 8); i++, offset++) {
         bool b = READ_BIT(m_data, offset);
         WRITE_BIT(data, i, b);
     }
@@ -269,7 +275,7 @@ void SACCH::setData(const uint8_t* data)
     assert(data != NULL);
 
     uint32_t offset = 8U;
-    for (uint32_t i = 0U; i < (NXDN_SACCH_CRC_BITS - 8); i++, offset++) {
+    for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS - 8); i++, offset++) {
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
     }
@@ -285,8 +291,8 @@ void SACCH::setData(const uint8_t* data)
 /// <param name="data"></param>
 void SACCH::copy(const SACCH& data)
 {
-    m_data = new uint8_t[NXDN_SACCH_LENGTH_BYTES];
-    ::memcpy(m_data, data.m_data, NXDN_SACCH_LENGTH_BYTES);
+    m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
     m_structure = (m_data[0U] >> 6) & 0x03U;

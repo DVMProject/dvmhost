@@ -91,7 +91,13 @@ RCCH& RCCH::operator=(const RCCH& data)
 {
     if (&data != this) {
         ::memcpy(m_data, data.m_data, NXDN_RCCH_LC_LENGTH_BYTES);
-        decodeLC(m_data);
+
+        m_verbose = data.m_verbose;
+        if (m_data != NULL) {
+            if ((m_data[0] & 0x3FU) != 0U) {
+                decodeLC(m_data);
+            }
+        }
     }
 
     return *this;
@@ -101,6 +107,8 @@ RCCH& RCCH::operator=(const RCCH& data)
 /// Decode call link control data.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="length"></param>
+/// <param name="offset"></param>
 /// <returns>True, if RCCH was decoded, otherwise false.</returns>
 void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
@@ -109,10 +117,6 @@ void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     for (uint32_t i = 0U; i < length; i++, offset++) {
         bool b = READ_BIT(data, i);
         WRITE_BIT(m_data, offset, b);
-    }
-
-    if (m_verbose) {
-        Utils::dump(2U, "Decoded RCCH Data", m_data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 
     decodeLC(m_data);
@@ -133,10 +137,6 @@ void RCCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     for (uint32_t i = 0U; i < length; i++, offset++) {
         bool b = READ_BIT(m_data, offset);
         WRITE_BIT(data, i, b);
-    }
-
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded RCCH Data", data, length);
     }
 }
 

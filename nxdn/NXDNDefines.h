@@ -84,59 +84,51 @@ namespace nxdn
     const uint32_t  NXDN_SACCH_FEC_LENGTH_BYTES = (NXDN_SACCH_FEC_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDN_SACCH_FEC_CONV_LENGTH_BITS = 72U;                                          // Convolution Length
     const uint32_t  NXDN_SACCH_FEC_CONV_LENGTH_BYTES = NXDN_SACCH_FEC_CONV_LENGTH_BITS / 8U;
-    const uint32_t  NXDN_SACCH_LENGTH_BITS = 36U;                                                   // Data + CRC-6 + 4-bit NULL
-    const uint32_t  NXDN_SACCH_LENGTH_BYTES = (NXDN_SACCH_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_SACCH_CRC_BITS = 26U;                                                      // Data
+    const uint32_t  NXDN_SACCH_CRC_LENGTH_BITS = 36U;                                               // Data + CRC-6 + 4-bit NULL
+    const uint32_t  NXDN_SACCH_CRC_LENGTH_BYTES = (NXDN_SACCH_CRC_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_SACCH_LENGTH_BITS = 26U;
 
     const uint32_t  NXDN_FACCH1_FEC_LENGTH_BITS = 144U;                                             // Puncture and Interleave Length
     const uint32_t  NXDN_FACCH1_FEC_LENGTH_BYTES = NXDN_FACCH1_FEC_LENGTH_BITS / 8U;
     const uint32_t  NXDN_FACCH1_FEC_CONV_LENGTH_BITS = 192U;                                        // Convolution Length
     const uint32_t  NXDN_FACCH1_FEC_CONV_LENGTH_BYTES = NXDN_FACCH1_FEC_CONV_LENGTH_BITS / 8U;
-    const uint32_t  NXDN_FACCH1_LENGTH_BITS = 96U;                                                  // Data + CRC-12 + 4-bit NULL
-    const uint32_t  NXDN_FACCH1_LENGTH_BYTES = NXDN_FACCH1_LENGTH_BITS / 8U;
-    const uint32_t  NXDN_FACCH1_CRC_BITS = 80U;                                                     // Data
+    const uint32_t  NXDN_FACCH1_CRC_LENGTH_BITS = 96U;                                              // Data + CRC-12 + 4-bit NULL
+    const uint32_t  NXDN_FACCH1_CRC_LENGTH_BYTES = NXDN_FACCH1_CRC_LENGTH_BITS / 8U;
+    const uint32_t  NXDN_FACCH1_LENGTH_BITS = 80U;
 
     const uint32_t  NXDN_UDCH_FEC_LENGTH_BITS = 348U;                                               // Puncture and Interleave Length
     const uint32_t  NXDN_UDCH_FEC_LENGTH_BYTES = (NXDN_UDCH_FEC_LENGTH_BITS / 8U) + 1U;
     const uint32_t  NXDN_UDCH_FEC_CONV_LENGTH_BITS = 406U;                                          // Convolution Length
     const uint32_t  NXDN_UDCH_FEC_CONV_LENGTH_BYTES = (NXDN_UDCH_FEC_CONV_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_UDCH_LENGTH_BITS = 203U;                                                   // Data + CRC-15 + 4-bit NULL
-    const uint32_t  NXDN_UDCH_LENGTH_BYTES = (NXDN_UDCH_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDH_UDCH_CRC_BITS = 184U;                                                      // Data
-    const uint32_t  NXDH_UDCH_CRC_BYTES = NXDH_UDCH_CRC_BITS / 8U;
+    const uint32_t  NXDN_UDCH_CRC_LENGTH_BITS = 203U;                                               // Data + CRC-15 + 4-bit NULL
+    const uint32_t  NXDN_UDCH_CRC_LENGTH_BYTES = (NXDN_UDCH_CRC_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_UDCH_LENGTH_BITS = 184U;
 
-    const uint32_t  NXDN_CAC_LENGTH_BITS = 384U;
-    const uint32_t  NXDN_CAC_LENGTH_BYTES = (NXDN_CAC_LENGTH_BITS / 8U);
-
-    const uint32_t  NXDN_CAC_OUT_FEC_LENGTH_BITS = 300U;                                            // Puncture and Interleave Length
-    const uint32_t  NXDN_CAC_OUT_FEC_LENGTH_BYTES = (NXDN_CAC_OUT_FEC_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_OUT_FEC_CONV_LENGTH_BITS = 350U;                                       // Convolution Length
-    const uint32_t  NXDN_CAC_OUT_FEC_CONV_LENGTH_BYTES = (NXDN_CAC_OUT_FEC_CONV_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_OUT_LENGTH_BITS = 175U;                                                // Data + CRC-16 + 4-bit NULL
-    const uint32_t  NXDN_CAC_OUT_LENGTH_BYTES = (NXDN_CAC_OUT_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_OUT_CRC_BITS = 155U;                                                   // Data
+    const uint32_t  NXDN_CAC_FRAME_LENGTH_BITS = 348U;
+    const uint32_t  NXDN_CAC_FRAME_LENGTH_BYTES = (NXDN_CAC_FRAME_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_CAC_FEC_LENGTH_BITS = 300U;                                                // Puncture and Interleave Length
+    const uint32_t  NXDN_CAC_FEC_LENGTH_BYTES = (NXDN_CAC_FEC_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_CAC_FEC_CONV_LENGTH_BITS = 350U;                                           // Convolution Length
+    const uint32_t  NXDN_CAC_FEC_CONV_LENGTH_BYTES = (NXDN_CAC_FEC_CONV_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_CAC_CRC_LENGTH_BITS = 175U;                                                // Data + CRC-16 + 4-bit NULL
+    const uint32_t  NXDN_CAC_LENGTH_BITS = 155U;
+    const uint32_t  NXDN_CAC_E_POST_FIELD_BITS = 24U;
 
     const uint32_t  NXDN_CAC_IN_FEC_LENGTH_BITS = 252U;                                             // Puncture and Interleave Length
     const uint32_t  NXDN_CAC_IN_FEC_LENGTH_BYTES = (NXDN_CAC_IN_FEC_LENGTH_BITS / 8U) + 1U;
+    const uint32_t  NXDN_CAC_LONG_FEC_CONV_LENGTH_BITS = 312U;                                      // Convolution Length
+    const uint32_t  NXDN_CAC_LONG_FEC_CONV_LENGTH_BYTES = NXDN_CAC_LONG_FEC_CONV_LENGTH_BITS / 8U;
+    const uint32_t  NXDN_CAC_LONG_CRC_LENGTH_BITS = 156U;                                           // Data + CRC-16 + 4-bit NULL
+    const uint32_t  NXDN_CAC_LONG_LENGTH_BITS = 136U;
+    const uint32_t  NXDN_CAC_SHORT_CRC_LENGTH_BITS = 126U;                                          // Data + CRC-16 + 4-bit NULL
+    const uint32_t  NXDN_CAC_SHORT_LENGTH_BITS = 106U;
 
-    const uint32_t  NXDN_CAC_LONG_IN_FEC_CONV_LENGTH_BITS = 312U;                                   // Convolution Length
-    const uint32_t  NXDN_CAC_LONG_IN_FEC_CONV_LENGTH_BYTES = NXDN_CAC_LONG_IN_FEC_CONV_LENGTH_BITS / 8U;
-    const uint32_t  NXDN_CAC_LONG_IN_LENGTH_BITS = 156U;                                            // Data + CRC-16 + 4-bit NULL
-    const uint32_t  NXDN_CAC_LONG_IN_LENGTH_BYTES = (NXDN_CAC_LONG_IN_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_LONG_IN_CRC_BITS = 136U;                                               // Data
-    const uint32_t  NXDN_CAC_LONG_IN_CRC_BYTES = NXDN_CAC_LONG_IN_CRC_BITS / 8U;
+    const uint32_t  NXDN_RTCH_LC_LENGTH_BYTES = 22U; // this is really the UDCH size...
 
-    const uint32_t  NXDN_CAC_SHORT_IN_FEC_LENGTH_BITS = 252U;                                       // Interleave Length
-    const uint32_t  NXDN_CAC_SHORT_IN_FEC_LENGTH_BYTES = (NXDN_CAC_SHORT_IN_FEC_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_SHORT_IN_LENGTH_BITS = 126U;                                           // Data + CRC-16 + 4-bit NULL
-    const uint32_t  NXDN_CAC_SHORT_IN_LENGTH_BYTES = (NXDN_CAC_SHORT_IN_LENGTH_BITS / 8U) + 1U;
-    const uint32_t  NXDN_CAC_SHORT_IN_CRC_BITS = 106U;                                              // Data
-    const uint32_t  NXDN_CAC_SHORT_IN_CRC_BYTES = (NXDN_CAC_SHORT_IN_CRC_BITS / 8U) + 1U;
-
-    const uint32_t  NXDN_RTCH_LC_LENGTH_BYTES = 22U;
-    const uint32_t  NXDN_RCCH_LC_LENGTH_BYTES = 22U;
-
-    const uint32_t  NXDN_E_POST_FIELD_BITS = 24U;
+    const uint32_t  NXDN_RCCH_LC_LENGTH_BITS = 144U;
+    const uint32_t  NXDN_RCCH_LC_LENGTH_BYTES = (NXDN_RCCH_LC_LENGTH_BITS / 8U);
+    const uint32_t  NXDN_RCCH_CAC_LC_LONG_LENGTH_BITS = 128U;
+    const uint32_t  NXDN_RCCH_CAC_LC_SHORT_LENGTH_BITS = 96U;
 
     const uint8_t   POST_FIELD[] = { 0x57U, 0x75U, 0xFDU };
 
@@ -166,8 +158,10 @@ namespace nxdn
     const uint8_t   NXDN_LICH_STEAL_FACCH1_1 = 1U;
     const uint8_t   NXDN_LICH_STEAL_FACCH = 0U;
 
-    const uint8_t   NXDN_LICH_DIRECTION_INBOUND  = 0U;
-    const uint8_t   NXDN_LICH_DIRECTION_OUTBOUND = 1U;
+    const uint8_t   NXDN_SR_RCCH_SINGLE = 0x00U;
+    const uint8_t   NXDN_SR_RCCH_DUAL = 0x01U;
+    const uint8_t   NXDN_SR_RCCH_HEAD_SINGLE = 0x02U;
+    const uint8_t   NXDN_SR_RCCH_HEAD_DUAL = 0x03U;
 
     const uint8_t   NXDN_SR_SINGLE = 0U;
     const uint8_t   NXDN_SR_4_4 = 0U;

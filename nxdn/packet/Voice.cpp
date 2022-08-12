@@ -247,7 +247,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         lich.setRFCT(NXDN_LICH_RFCT_RDCH);
         lich.setFCT(NXDN_LICH_USC_SACCH_NS);
         lich.setOption(NXDN_LICH_STEAL_FACCH);
-        lich.setDirection(!m_nxdn->m_duplex ? NXDN_LICH_DIRECTION_INBOUND : NXDN_LICH_DIRECTION_OUTBOUND);
+        lich.setOutbound(!m_nxdn->m_duplex ? false : true);
         lich.encode(data + 2U);
 
         // generate the SACCH
@@ -424,10 +424,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             lich.setRFCT(NXDN_LICH_RFCT_RDCH);
             lich.setFCT(NXDN_LICH_USC_SACCH_NS);
             lich.setOption(NXDN_LICH_STEAL_FACCH);
-            lich.setDirection(!m_nxdn->m_duplex ? NXDN_LICH_DIRECTION_INBOUND : NXDN_LICH_DIRECTION_OUTBOUND);
+            lich.setOutbound(!m_nxdn->m_duplex ? false : true);
             lich.encode(start + 2U);
 
-            lich.setDirection(NXDN_LICH_DIRECTION_INBOUND);
+            lich.setOutbound(false);
 
             // generate the SACCH
             channel::SACCH sacch;
@@ -436,7 +436,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             sacch.setStructure(NXDN_SR_SINGLE);
             sacch.encode(start + 2U);
 
-            uint8_t message[22U];
+            uint8_t message[NXDN_RTCH_LC_LENGTH_BYTES];
             m_nxdn->m_rfLC.getData(message);
 
             facch.setData(message);
@@ -465,10 +465,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         lich.setRFCT(NXDN_LICH_RFCT_RDCH);
         lich.setFCT(NXDN_LICH_USC_SACCH_SS);
         lich.setOption(option);
-        lich.setDirection(!m_nxdn->m_duplex ? NXDN_LICH_DIRECTION_INBOUND : NXDN_LICH_DIRECTION_OUTBOUND);
+        lich.setOutbound(!m_nxdn->m_duplex ? false : true);
         lich.encode(data + 2U);
 
-        lich.setDirection(NXDN_LICH_DIRECTION_INBOUND);
+        lich.setOutbound(false);
 
         // regenerate SACCH if it's valid
         channel::SACCH sacch;
@@ -672,7 +672,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         lich.setRFCT(NXDN_LICH_RFCT_RDCH);
         lich.setFCT(NXDN_LICH_USC_SACCH_NS);
         lich.setOption(NXDN_LICH_STEAL_FACCH);
-        lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+        lich.setOutbound(true);
         lich.encode(data + 2U);
 
         // generate the SACCH
@@ -827,7 +827,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             lich.setRFCT(NXDN_LICH_RFCT_RDCH);
             lich.setFCT(NXDN_LICH_USC_SACCH_NS);
             lich.setOption(NXDN_LICH_STEAL_FACCH);
-            lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+            lich.setOutbound(true);
             lich.encode(start + 2U);
 
             // generate the SACCH
@@ -837,7 +837,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             sacch.setStructure(NXDN_SR_SINGLE);
             sacch.encode(start + 2U);
 
-            uint8_t message[22U];
+            uint8_t message[NXDN_RTCH_LC_LENGTH_BYTES];
             m_nxdn->m_rfLC.getData(message);
 
             facch.setData(message);
@@ -864,7 +864,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         lich.setRFCT(NXDN_LICH_RFCT_RDCH);
         lich.setFCT(NXDN_LICH_USC_SACCH_SS);
         lich.setOption(option);
-        lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+        lich.setOutbound(true);
         lich.encode(data + 2U);
 
         // regenerate SACCH if it's valid

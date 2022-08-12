@@ -193,11 +193,11 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     }
 
     // the layer 3 LC data will only be correct if valid is true
-    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
+    uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
     udch.getData(buffer);
 
     lc::RTCH lc;
-    lc.decode(buffer, NXDH_UDCH_CRC_BITS);
+    lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
@@ -237,10 +237,10 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     lich.setRFCT(NXDN_LICH_RFCT_RDCH);
     lich.setFCT(NXDN_LICH_USC_UDCH);
     lich.setOption(option);
-    lich.setDirection(!m_nxdn->m_duplex ? NXDN_LICH_DIRECTION_INBOUND : NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOutbound(!m_nxdn->m_duplex ? false : true);
     lich.encode(data + 2U);
 
-    lich.setDirection(NXDN_LICH_DIRECTION_INBOUND);
+    lich.setOutbound(false);
 
     uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;
     if (validUDCH) {
@@ -301,11 +301,11 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
         return false;
 
     // The layer3 data will only be correct if valid is true
-    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
+    uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
     udch.getData(buffer);
 
     lc::RTCH lc;
-    lc.decode(buffer, NXDH_UDCH_CRC_BITS);
+    lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
@@ -345,7 +345,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     lich.setRFCT(NXDN_LICH_RFCT_RDCH);
     lich.setFCT(NXDN_LICH_USC_UDCH);
     lich.setOption(option);
-    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOutbound(true);
     lich.encode(data + 2U);
 
     uint8_t type = RTCH_MESSAGE_TYPE_DCALL_DATA;

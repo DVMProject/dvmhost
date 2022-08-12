@@ -117,7 +117,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_ccPacketInterval(1000U, 0U, 25U),
+    m_ccPacketInterval(1000U, 0U, 10U),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_siteData(),
@@ -709,14 +709,14 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
     lich.setRFCT(NXDN_LICH_RFCT_RDCH);
     lich.setFCT(NXDN_LICH_USC_UDCH);
     lich.setOption(NXDN_LICH_USC_UDCH);
-    lich.setDirection(NXDN_LICH_DIRECTION_OUTBOUND);
+    lich.setOutbound(true);
     lich.encode(data + 2U);
 
-    uint8_t buffer[NXDN_UDCH_LENGTH_BYTES];
-    ::memset(buffer, 0x00U, NXDN_UDCH_LENGTH_BYTES);
+    uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
 
     m_rfLC.setMessageType(RTCH_MESSAGE_TYPE_TX_REL);
-    m_rfLC.encode(buffer, NXDH_UDCH_CRC_BITS);
+    m_rfLC.encode(buffer, NXDN_UDCH_LENGTH_BITS);
 
     channel::UDCH udch;
     udch.setRAN(m_ran);
@@ -777,6 +777,10 @@ void Control::writeEndNet()
 void Control::scrambler(uint8_t* data) const
 {
     assert(data != NULL);
+
+    if (m_debug) {
+        Utils::symbols("!!! *Tx NXDN (Unscrambled)", data, NXDN_FRAME_LENGTH_BYTES);
+    }
 
     for (uint32_t i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
         data[i] ^= SCRAMBLER[i];
