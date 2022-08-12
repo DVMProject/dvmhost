@@ -261,7 +261,7 @@ int Host::run()
                 m_modem->clock(ms);
 
             // ------------------------------------------------------
-            //  -- Modem, DMR, P25 and Network Clocking           --
+            //  -- Modem Clocking                                 --
             // ------------------------------------------------------
 
             ms = stopWatch.elapsed();
@@ -2125,6 +2125,7 @@ bool Host::createModem()
         if (portType == UART_PORT || portType == PTY_PORT) {
             m_modemRemotePort = new port::UDPPort(g_remoteAddress, g_remotePort);
             m_modemRemote = true;
+            ignoreModemConfigArea = true;
 
         }
         else {
@@ -2137,43 +2138,44 @@ bool Host::createModem()
         LogInfo("    UDP Address: %s", g_remoteAddress.c_str());
         LogInfo("    UDP Port: %u", g_remotePort);
     }
+    else {
+        LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
+        LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
+        LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
+        LogInfo("    DC Blocker: %s", dcBlocker ? "yes" : "no");
+        LogInfo("    COS Lockout: %s", cosLockout ? "yes" : "no");
+        LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2222F);
+        LogInfo("    DMR RX Delay: %u (%.1fms)", dmrRxDelay, float(dmrRxDelay) * 0.0416666F);
+        LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
+        LogInfo("    RX DC Offset: %d", rxDCOffset);
+        LogInfo("    TX DC Offset: %d", txDCOffset);
+        LogInfo("    RX Tuning Offset: %dhz", rxTuning);
+        LogInfo("    TX Tuning Offset: %dhz", txTuning);
+        LogInfo("    RX Effective Frequency: %uhz", m_rxFrequency + rxTuning);
+        LogInfo("    TX Effective Frequency: %uhz", m_txFrequency + txTuning);
+        LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
+        LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
+        LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
+        LogInfo("    RF Power Level: %u", rfPower);
+        LogInfo("    RX Level: %.1f%%", rxLevel);
+        LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
+        LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
+        LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
+        LogInfo("    NXDN TX Level: %.1f%%", nxdnTXLevel);
+        LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
+        LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
-    LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
-    LogInfo("    TX Invert: %s", txInvert ? "yes" : "no");
-    LogInfo("    PTT Invert: %s", pttInvert ? "yes" : "no");
-    LogInfo("    DC Blocker: %s", dcBlocker ? "yes" : "no");
-    LogInfo("    COS Lockout: %s", cosLockout ? "yes" : "no");
-    LogInfo("    FDMA Preambles: %u (%.1fms)", fdmaPreamble, float(fdmaPreamble) * 0.2222F);
-    LogInfo("    DMR RX Delay: %u (%.1fms)", dmrRxDelay, float(dmrRxDelay) * 0.0416666F);
-    LogInfo("    P25 Corr. Count: %u (%.1fms)", p25CorrCount, float(p25CorrCount) * 0.667F);
-    LogInfo("    RX DC Offset: %d", rxDCOffset);
-    LogInfo("    TX DC Offset: %d", txDCOffset);
-    LogInfo("    RX Tuning Offset: %dhz", rxTuning);
-    LogInfo("    TX Tuning Offset: %dhz", txTuning);
-    LogInfo("    RX Effective Frequency: %uhz", m_rxFrequency + rxTuning);
-    LogInfo("    TX Effective Frequency: %uhz", m_txFrequency + txTuning);
-    LogInfo("    RX Coarse: %u, Fine: %u", rxCoarse, rxFine);
-    LogInfo("    TX Coarse: %u, Fine: %u", txCoarse, txFine);
-    LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarse, rssiFine);
-    LogInfo("    RF Power Level: %u", rfPower);
-    LogInfo("    RX Level: %.1f%%", rxLevel);
-    LogInfo("    CW Id TX Level: %.1f%%", cwIdTXLevel);
-    LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
-    LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
-    LogInfo("    NXDN TX Level: %.1f%%", nxdnTXLevel);
-    LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
-    LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
+        if (m_useDFSI) {
+            LogInfo("    Digital Fixed Station Interface: yes");
+        }
 
-    if (m_useDFSI) {
-        LogInfo("    Digital Fixed Station Interface: yes");
-    }
+        if (ignoreModemConfigArea) {
+            LogInfo("    Ignore Modem Configuration Area: yes");
+        }
 
-    if (ignoreModemConfigArea) {
-        LogInfo("    Ignore Modem Configuration Area: yes");
-    }
-
-    if (dumpModemStatus) {
-        LogInfo("    Dump Modem Status: yes");
+        if (dumpModemStatus) {
+            LogInfo("    Dump Modem Status: yes");
+        }
     }
 
     if (debug) {
@@ -2182,18 +2184,20 @@ bool Host::createModem()
 
     m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
         packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
-    m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
-    m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
-    m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
-    m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
-        p25PostBWAdj, nxdnPostBWAdj, adfGainMode);
-    m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
-    m_modem->setDMRColorCode(m_dmrColorCode);
-    m_modem->setP25NAC(m_p25NAC);
+    if (!m_modemRemote) {
+        m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
+        m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
+        m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
+        m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
+        m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
+            p25PostBWAdj, nxdnPostBWAdj, adfGainMode);
+        m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
+        m_modem->setDMRColorCode(m_dmrColorCode);
+        m_modem->setP25NAC(m_p25NAC);
 #if defined(ENABLE_P25) && defined(ENABLE_DFSI)
-    m_modem->setP25DFSI(m_useDFSI);
+        m_modem->setP25DFSI(m_useDFSI);
 #endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
+    }
 
     if (m_modemRemote) {
         m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(Host::rmtPortModemOpen, this));
