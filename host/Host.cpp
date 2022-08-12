@@ -1738,7 +1738,7 @@ bool Host::readParams()
 
     bool udpMasterMode = false;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
-    if (portType == UDP_PORT && udpMode == UDP_MODE_MASTER) {
+    if ((portType == UART_PORT || portType == PTY_PORT) && g_remoteModemMode) {
         udpMasterMode = true;
     }
 
@@ -1987,11 +1987,6 @@ bool Host::createModem()
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
 
-    yaml::Node udpProtocol = modemProtocol["udp"];
-    std::string udpMode = udpProtocol["mode"].as<std::string>("master");
-    std::string udpAddress = udpProtocol["endpointAddress"].as<std::string>();
-    uint16_t udpPort = (uint16_t)udpProtocol["port"].as<uint32_t>(REMOTE_MODEM_PORT);
-
     bool rxInvert = modemConf["rxInvert"].as<bool>(false);
     bool txInvert = modemConf["txInvert"].as<bool>(false);
     bool pttInvert = modemConf["pttInvert"].as<bool>(false);
@@ -2068,7 +2063,7 @@ bool Host::createModem()
     if (portType == NULL_PORT) {
         modemPort = new port::ModemNullPort();
     }
-    else if (portType == UART_PORT || portType == UDP_PORT || portType == PTY_PORT) {
+    else if (portType == UART_PORT || portType == PTY_PORT) {
         port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
         switch (uartSpeed) {
         case 1200:
@@ -2126,25 +2121,21 @@ bool Host::createModem()
         return false;
     }
 
-    if (portType == UDP_PORT) {
-        std::transform(udpMode.begin(), udpMode.end(), udpMode.begin(), ::tolower);
-        if (udpMode == UDP_MODE_MASTER) {
-            m_modemRemotePort = new port::UDPPort(udpAddress, udpPort);
+    if (g_remoteModemMode) {
+        if (portType == UART_PORT || portType == PTY_PORT) {
+            m_modemRemotePort = new port::UDPPort(g_remoteAddress, g_remotePort);
             m_modemRemote = true;
-        }
-        else if (udpMode == UDP_MODE_PEER) {
-            delete modemPort;
-            modemPort = new port::UDPPort(udpAddress, udpPort);
-            m_modemRemote = false;
+
         }
         else {
-            LogError(LOG_HOST, "Invalid UDP mode, %s!", udpMode.c_str());
-            return false;
+            delete modemPort;
+            modemPort = new port::UDPPort(g_remoteAddress, g_remotePort);
+            m_modemRemote = false;
         }
 
-        LogInfo("    UDP Mode: %s", udpMode.c_str());
-        LogInfo("    UDP Address: %s", udpAddress.c_str());
-        LogInfo("    UDP Port: %u", udpPort);
+        LogInfo("    UDP Mode: %s", m_modemRemote ? "master" : "peer");
+        LogInfo("    UDP Address: %s", g_remoteAddress.c_str());
+        LogInfo("    UDP Port: %u", g_remotePort);
     }
 
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");

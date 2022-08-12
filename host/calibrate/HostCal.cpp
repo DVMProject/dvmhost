@@ -430,7 +430,7 @@ int HostCal::run()
             LogInfo("    Ignore Modem Configuration Area: yes");
         }
     }
-    else if (portType == UDP_PORT) {
+    else if (g_remoteModemMode) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with a remote modem!");
         return 2;
     }

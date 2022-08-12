@@ -47,6 +47,10 @@ extern std::string g_lockFile;
 extern bool g_foreground;
 extern bool g_killed;
 
+extern bool g_remoteModemMode;
+extern std::string g_remoteAddress;
+extern uint16_t g_remotePort;
+
 extern bool g_fireDMRBeacon;
 extern bool g_fireP25Control;
 extern bool g_fireNXDNControl;

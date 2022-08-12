@@ -130,10 +130,6 @@ typedef unsigned long long  ulong64_t;
 #define NULL_PORT "null"
 #define UART_PORT "uart"
 #define PTY_PORT "pty"
-#define UDP_PORT "udp"
-
-#define UDP_MODE_MASTER "master"
-#define UDP_MODE_PEER "peer"
 
 const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;

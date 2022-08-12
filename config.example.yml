@@ -130,14 +130,10 @@ system:
         siteId: 1
     modem:
         protocol:
-            type: "null" # Valid values are "null", "uart", and "udp"
+            type: "null" # Valid values are "null", and "uart"
             uart:
                 port: /dev/ttyUSB0
                 speed: 115200
-            udp:
-                mode: master # Valid values are "master", and "peer"
-                endpointAddress: 0.0.0.0
-                port: 3334
         rxInvert: false
         txInvert: false
         pttInvert: false

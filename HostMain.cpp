@@ -91,6 +91,10 @@ std::string g_lockFile = std::string(DEFAULT_LOCK_FILE);
 bool g_foreground = false;
 bool g_killed = false;
 
+bool g_remoteModemMode = false;
+std::string g_remoteAddress = std::string("127.0.0.1");
+uint16_t g_remotePort = REMOTE_MODEM_PORT;
+
 bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 bool g_fireNXDNControl = false;
@@ -136,10 +140,14 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-v] [-f] [--cal] [--setup] [-c <configuration file>]\n\n"
+    ::fprintf(stdout, "usage: %s [-v] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
         "  -f       foreground mode\n"
         "  --cal    calibration mode\n"
         "  --setup  setup mode\n"
+        "\n"
+        "  --remote remote modem mode\n"
+        "  -a       remote modem command address\n"
+        "  -p       remote modem command port\n"
         "\n"
         "  -v       show version information\n"
         "  -h       show this screen\n"
@@ -182,6 +190,29 @@ int checkArgs(int argc, char* argv[])
 
             if (g_iniFile == "")
                 usage("error: %s", "configuration file cannot be blank!");
+
+            p += 2;
+        }
+        else if (IS("--remote")) {
+            g_remoteModemMode = true;
+        }
+        else if (IS("-a")) {
+            if ((argc - 1) <= 0)
+                usage("error: %s", "must specify the address to connect to");
+            g_remoteAddress = std::string(argv[++i]);
+
+            if (g_remoteAddress == "")
+                usage("error: %s", "remote address cannot be blank!");
+
+            p += 2;
+        }
+        else if (IS("-p")) {
+            if ((argc - 1) <= 0)
+                usage("error: %s", "must specify the port to connect to");
+            g_remotePort = (uint16_t)::atoi(argv[++i]);
+
+            if (g_remotePort == 0)
+                usage("error: %s", "remote port number cannot be blank or 0!");
 
             p += 2;
         }
