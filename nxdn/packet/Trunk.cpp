@@ -384,10 +384,11 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
 
     Sync::addNXDNSync(data + 2U);
 
+    // generate the LICH
     channel::LICH lich;
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
-    lich.setOption(NXDN_LICH_DATA_NORMAL);
+    lich.setOption(NXDN_LICH_DATA_COMMON);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
@@ -396,9 +397,11 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
 
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
+    // generate the CAC
     channel::CAC cac;
     cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
+    cac.setStructure(NXDN_SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 
@@ -685,6 +688,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
 
     Sync::addNXDNSync(data + 2U);
 
+    // generate the LICH
     channel::LICH lich;
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
@@ -698,6 +702,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
     m_rfLC.setMessageType(RCCH_MESSAGE_TYPE_SITE_INFO);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
+    // generate the CAC
     channel::CAC cac;
     cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
@@ -729,6 +734,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
 
     Sync::addNXDNSync(data + 2U);
 
+    // generate the LICH
     channel::LICH lich;
     lich.setRFCT(NXDN_LICH_RFCT_RCCH);
     lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
@@ -742,6 +748,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
     m_rfLC.setMessageType(MESSAGE_TYPE_SRV_INFO);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
+    // generate the CAC
     channel::CAC cac;
     cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);

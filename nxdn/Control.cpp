@@ -32,7 +32,8 @@
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/Control.h"
 #include "nxdn/acl/AccessControl.h"
-#include "nxdn/channel/UDCH.h"
+#include "nxdn/channel/SACCH.h"
+#include "nxdn/channel/FACCH1.h"
 #include "nxdn/lc/RTCH.h"
 #include "nxdn/Sync.h"
 #include "edac/AMBEFEC.h"
@@ -467,6 +468,8 @@ void Control::clock(uint32_t ms)
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
+            m_queue.clear();
+            m_ccPacketInterval.stop();
             m_ccPrevRunning = m_ccRunning;
         }
     }
@@ -705,10 +708,11 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
 
     Sync::addNXDNSync(data + 2U);
 
+    // generate the LICH
     channel::LICH lich;
-    lich.setRFCT(NXDN_LICH_RFCT_RDCH);
-    lich.setFCT(NXDN_LICH_USC_UDCH);
-    lich.setOption(NXDN_LICH_USC_UDCH);
+    lich.setRFCT(NXDN_LICH_RFCT_RTCH);
+    lich.setFCT(NXDN_LICH_USC_SACCH_NS);
+    lich.setOption(NXDN_LICH_STEAL_FACCH);
     lich.setOutbound(true);
     lich.encode(data + 2U);
 
@@ -718,10 +722,18 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
     m_rfLC.setMessageType(RTCH_MESSAGE_TYPE_TX_REL);
     m_rfLC.encode(buffer, NXDN_UDCH_LENGTH_BITS);
 
-    channel::UDCH udch;
-    udch.setRAN(m_ran);
-    udch.setData(buffer);
-    udch.encode(data + 2U);
+    // generate the SACCH
+    channel::SACCH sacch;
+    sacch.setData(SACCH_IDLE);
+    sacch.setRAN(m_ran);
+    sacch.setStructure(NXDN_SR_SINGLE);
+    sacch.encode(data + 2U);
+
+    // generate the FACCH1
+    channel::FACCH1 facch;
+    facch.setData(buffer);
+    facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+    facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
 
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
