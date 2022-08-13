@@ -63,11 +63,6 @@ namespace nxdn
             /// <summary></summary>
             void reset();
 
-            /// <summary>Gets the raw layer 3 data.</summary>
-            void getData(uint8_t* data) const;
-            /// <summary>Sets the raw layer 3 data.</summary>
-            void setData(const uint8_t* data, uint32_t length);
-
         public:
             /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);

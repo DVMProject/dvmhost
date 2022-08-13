@@ -118,7 +118,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_ccPacketInterval(1000U, 0U, 10U),
+    m_ccPacketInterval(1000U, 0U, 40U),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_siteData(),
@@ -678,7 +678,7 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = 8U;
+    const uint8_t maxSeq = 6U;
     if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }

@@ -436,10 +436,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             sacch.setStructure(NXDN_SR_SINGLE);
             sacch.encode(start + 2U);
 
-            uint8_t message[NXDN_RTCH_LC_LENGTH_BYTES];
-            m_nxdn->m_rfLC.getData(message);
+            uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
+            m_nxdn->m_rfLC.encode(buffer, NXDN_RTCH_LC_LENGTH_BITS);
 
-            facch.setData(message);
+            facch.setData(buffer);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
 
@@ -837,10 +837,10 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             sacch.setStructure(NXDN_SR_SINGLE);
             sacch.encode(start + 2U);
 
-            uint8_t message[NXDN_RTCH_LC_LENGTH_BYTES];
-            m_nxdn->m_rfLC.getData(message);
+            uint8_t buffer[NXDN_RTCH_LC_LENGTH_BYTES];
+            m_nxdn->m_rfLC.encode(buffer, NXDN_RTCH_LC_LENGTH_BITS);
 
-            facch.setData(message);
+            facch.setData(buffer);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
 

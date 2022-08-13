@@ -128,8 +128,8 @@ CAC::CAC() :
     m_data(NULL),
     m_rxCRC(0U)
 {
-    m_data = new uint8_t[NXDN_CAC_FRAME_LENGTH_BYTES];
-    ::memset(m_data, 0x00U, NXDN_CAC_FRAME_LENGTH_BYTES);
+    m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, NXDN_CAC_CRC_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -165,7 +165,7 @@ CAC::~CAC()
 CAC& CAC::operator=(const CAC& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_CAC_FRAME_LENGTH_BYTES);
+        ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
 
         m_verbose = data.m_verbose;
 
@@ -317,7 +317,7 @@ void CAC::encode(uint8_t* data) const
     }
 
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::encode(), CAC Puncture and Interleave", data, NXDN_CAC_FRAME_LENGTH_BYTES);
+    Utils::dump(2U, "CAC::encode(), CAC Puncture and Interleave", data, NXDN_FRAME_LENGTH_BYTES);
 #endif
 
     // apply control field
@@ -374,7 +374,7 @@ void CAC::setData(const uint8_t* data)
 {
     assert(data != NULL);
 
-    ::memset(m_data, 0x00U, NXDN_CAC_FRAME_LENGTH_BYTES);
+    ::memset(m_data, 0x00U, NXDN_CAC_CRC_LENGTH_BYTES);
 
     uint32_t offset = 8U;
     for (uint32_t i = 0U; i < (NXDN_CAC_CRC_LENGTH_BITS - 31); i++, offset++) {
@@ -393,8 +393,8 @@ void CAC::setData(const uint8_t* data)
 /// <param name="data"></param>
 void CAC::copy(const CAC& data)
 {
-    m_data = new uint8_t[NXDN_CAC_FRAME_LENGTH_BYTES];
-    ::memcpy(m_data, data.m_data, NXDN_CAC_FRAME_LENGTH_BYTES);
+    m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
 
     m_ran = m_data[0U] & 0x3FU;
     m_structure = (m_data[0U] >> 6) & 0x03U;

@@ -66,11 +66,6 @@ namespace nxdn
             /// <summary></summary>
             void reset();
 
-            /// <summary>Gets the raw layer 3 data.</summary>
-            void getData(uint8_t* data) const;
-            /// <summary>Sets the raw layer 3 data.</summary>
-            void setData(const uint8_t* data, uint32_t length);
-
             /// <summary>Sets the callsign.</summary>
             void setCallsign(std::string callsign);
 

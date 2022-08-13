@@ -82,8 +82,8 @@ namespace nxdn
             if (m_channelNo == 0U) { // clamp to 1
                 m_channelNo = 1U;
             }
-            if (m_channelNo > 4095U) { // clamp to 4095
-                m_channelNo = 4095U;
+            if (m_channelNo > 1023U) { // clamp to 1023
+                m_channelNo = 1023U;
             }
 
             m_serviceClass = serviceClass;
@@ -121,8 +121,8 @@ namespace nxdn
             if (channelNo == 0U) { // clamp to 1
                 channelNo = 1U;
             }
-            if (channelNo > 4095U) { // clamp to 4095
-                channelNo = 4095U;
+            if (channelNo > 1023U) { // clamp to 1023
+                channelNo = 1023U;
             }
 
             m_locId = locId;

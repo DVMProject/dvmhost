@@ -145,8 +145,8 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     assert(data != NULL);
 
     for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(data, i);
-        WRITE_BIT(m_data, offset, b);
+        bool b = READ_BIT(data, offset);
+        WRITE_BIT(m_data, i, b);
     }
 
     if (m_verbose) {
@@ -169,8 +169,8 @@ void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     encodeLC(m_data);
 
     for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(m_data, offset);
-        WRITE_BIT(data, i, b);
+        bool b = READ_BIT(m_data, i);
+        WRITE_BIT(data, offset, b);
     }
 
     if (m_verbose) {
@@ -211,32 +211,9 @@ void RTCH::reset()
     m_causeRsp = NXDN_CAUSE_VD_ACCEPTED;
 }
 
-/// <summary>
-/// Gets the raw layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-void RTCH::getData(uint8_t* data) const
-{
-    ::memcpy(data, m_data, NXDN_RTCH_LC_LENGTH_BYTES);
-}
-
-/// <summary>
-/// Sets the raw layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-void RTCH::setData(const uint8_t* data, uint32_t length)
-{
-    ::memset(m_data, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
-    ::memcpy(m_data, data, length);
-
-    decodeLC(m_data);
-}
-
 /// ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
-
 
 /// <summary>
 /// Decode link control.

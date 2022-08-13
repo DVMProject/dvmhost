@@ -115,8 +115,12 @@ void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
     assert(data != NULL);
 
     for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(data, i);
-        WRITE_BIT(m_data, offset, b);
+        bool b = READ_BIT(data, offset);
+        WRITE_BIT(m_data, i, b);
+    }
+
+    if (m_verbose) {
+        Utils::dump(2U, "Decoded RCCH Data", m_data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 
     decodeLC(m_data);
@@ -135,8 +139,12 @@ void RCCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
     encodeLC(m_data);
 
     for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(m_data, offset);
-        WRITE_BIT(data, i, b);
+        bool b = READ_BIT(m_data, i);
+        WRITE_BIT(data, offset, b);
+    }
+
+    if (m_verbose) {
+        Utils::dump(2U, "Encoded RCCH Data", data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 }
 
@@ -167,28 +175,6 @@ void RCCH::reset()
     m_group = true;
     m_duplex = false;
     m_transmissionMode = TRANSMISSION_MODE_4800;
-}
-
-/// <summary>
-/// Gets the raw layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-void RCCH::getData(uint8_t* data) const
-{
-    ::memcpy(data, m_data, NXDN_RCCH_LC_LENGTH_BYTES);
-}
-
-/// <summary>
-/// Sets the raw layer 3 data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-void RCCH::setData(const uint8_t* data, uint32_t length)
-{
-    ::memset(m_data, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
-    ::memcpy(m_data, data, length);
-
-    decodeLC(m_data);
 }
 
 /// <summary>
@@ -260,10 +246,6 @@ RCCH::RCCH(SiteData siteData) :
 /// <returns></returns>
 bool RCCH::decodeLC(const uint8_t* data)
 {
-    if (m_verbose) {
-        Utils::dump(2U, "Decoded RCCH", data, NXDN_RCCH_LC_LENGTH_BYTES);
-    }
-
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
     // message type opcodes
@@ -393,10 +375,10 @@ void RCCH::encodeLC(uint8_t* data)
         m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
 
         // bryanb: this is currently fixed -- maybe dynamic in the future
-        m_data[4U] = (1 << 6) +                                                     // Channel Structure - Number of BCCH (1)
+        m_data[4U] = (2 << 6) +                                                     // Channel Structure - Number of BCCH (2)
             (1 << 3) +                                                              // ...               - Number of Grouping (1)
-            (1 << 0);                                                               // ...               - Number of Paging Frames (1)
-        m_data[5U] = (1 << 0);                                                      // ...               - Number of Iteration (1)
+            (2 << 0);                                                               // ...               - Number of Paging Frames (2)
+        m_data[5U] = (3 << 0);                                                      // ...               - Number of Iteration (3)
 
         m_data[6U] = m_siteData.serviceClass();                                     // Service Information
         m_data[7U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);       // ...
@@ -411,7 +393,7 @@ void RCCH::encodeLC(uint8_t* data)
 
         m_data[14U] = 1U;                                                           // Version
 
-        uint32_t channelNo = m_siteData.channelNo();
+        uint16_t channelNo = m_siteData.channelNo() & 0x3FFU;
         m_data[15U] = (channelNo >> 6) & 0x0FU;                                     // 1st Control Channel
         m_data[16U] = (channelNo & 0x3FU) << 2;                                     // ...
     }
@@ -462,10 +444,6 @@ void RCCH::encodeLC(uint8_t* data)
     default:
         LogError(LOG_NXDN, "RCCH::encodeRCCH(), unknown RCCH value, messageType = $%02X", m_messageType);
         return;
-    }
-
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded RCCH", m_data, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 }
 
