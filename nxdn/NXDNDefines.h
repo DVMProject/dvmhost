@@ -77,6 +77,8 @@ namespace nxdn
     const uint8_t   NXDN_FSW_BYTES_MASK[] = { 0xFFU, 0xFFU, 0xF0U };
     const uint32_t  NXDN_FSW_BYTES_LENGTH = 3U;
 
+    const uint8_t   NXDN_PREAMBLE[] = { 0x57U, 0x75U, 0xFDU };
+
     const uint32_t  NXDN_LICH_LENGTH_BITS = 16U;
     const uint32_t  NXDN_LICH_LENGTH_BYTES = NXDN_LICH_LENGTH_BITS / 8U;
 
@@ -129,8 +131,6 @@ namespace nxdn
     const uint32_t  NXDN_RCCH_LC_LENGTH_BYTES = (NXDN_RCCH_LC_LENGTH_BITS / 8U);
     const uint32_t  NXDN_RCCH_CAC_LC_LONG_LENGTH_BITS = 128U;
     const uint32_t  NXDN_RCCH_CAC_LC_SHORT_LENGTH_BITS = 96U;
-
-    const uint8_t   POST_FIELD[] = { 0x57U, 0x75U, 0xFDU };
 
     const uint32_t  NXDN_FSW_LICH_SACCH_LENGTH_BITS  = NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS;
     const uint32_t  NXDN_FSW_LICH_SACCH_LENGTH_BYTES = NXDN_FSW_LICH_SACCH_LENGTH_BITS / 8U;

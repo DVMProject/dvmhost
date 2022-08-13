@@ -410,6 +410,8 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
 
     m_nxdn->scrambler(data + 2U);
 
+    addPostBits(data + 2U);
+
     if (!noNetwork)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -706,7 +708,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
     channel::CAC cac;
     cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
-    cac.setStructure(NXDN_SR_RCCH_HEAD_SINGLE);
+    cac.setStructure(NXDN_SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 
@@ -714,6 +716,8 @@ void Trunk::writeRF_CC_Message_Site_Info()
     data[1U] = 0x00U;
 
     m_nxdn->scrambler(data + 2U);
+
+    addPostBits(data + 2U);
 
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -762,7 +766,25 @@ void Trunk::writeRF_CC_Message_Service_Info()
 
     m_nxdn->scrambler(data + 2U);
 
+    addPostBits(data + 2U);
+
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+    }
+}
+
+/// <summary>
+/// Helper to add the post field bits on NXDN frame data.
+/// </summary>
+/// <param name="data"></param>
+void Trunk::addPostBits(uint8_t* data)
+{
+    assert(data != NULL);
+
+    // post field
+    for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {
+        uint32_t n = i + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_FEC_LENGTH_BITS + NXDN_CAC_E_POST_FIELD_BITS;
+        bool b = READ_BIT(NXDN_PREAMBLE, i);
+        WRITE_BIT(data, n, b);
     }
 }

@@ -339,15 +339,8 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(data, n, b);
     }
 
-    // post field
-    for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {
-        uint32_t n = i + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_FEC_LENGTH_BITS + NXDN_CAC_E_POST_FIELD_BITS;
-        bool b = READ_BIT(POST_FIELD, i);
-        WRITE_BIT(data, n, b);
-    }
-
 #if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::encode(), CAC + E + Post", data, NXDN_FRAME_LENGTH_BYTES);
+    Utils::dump(2U, "CAC::encode(), CAC + Control", data, NXDN_FRAME_LENGTH_BYTES);
 #endif
 }
 
