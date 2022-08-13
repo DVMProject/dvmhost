@@ -229,6 +229,11 @@ RCCH::RCCH(SiteData siteData) :
     m_transmissionMode(TRANSMISSION_MODE_4800),
     m_siteData(siteData),
     m_siteIdenEntry(),
+    m_bcchCnt(1U),
+    m_rcchGroupingCnt(1U),
+    m_ccchPagingCnt(2U),
+    m_ccchMultiCnt(2U),
+    m_rcchIterateCnt(2U),
     m_data(NULL)
 {
     m_data = new uint8_t[NXDN_RCCH_LC_LENGTH_BYTES];
@@ -373,12 +378,12 @@ void RCCH::encodeLC(uint8_t* data)
         m_data[1U] = (m_siteData.locId() >> 16) & 0xFFU;                            // Location ID
         m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // ...
         m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-
-        // bryanb: this is currently fixed -- maybe dynamic in the future
-        m_data[4U] = (2 << 6) +                                                     // Channel Structure - Number of BCCH (2)
-            (1 << 3) +                                                              // ...               - Number of Grouping (1)
-            (2 << 0);                                                               // ...               - Number of Paging Frames (2)
-        m_data[5U] = (3 << 0);                                                      // ...               - Number of Iteration (3)
+        m_data[4U] = ((m_bcchCnt & 0x03U) << 6) +                                   // Channel Structure - Number of BCCH
+            ((m_rcchGroupingCnt & 0x07U) << 3) +                                    // ...               - Number of Grouping
+            (((m_ccchPagingCnt >> 1) & 0x07U) << 0);                                // ...               - Number of Paging Frames
+        m_data[5U] = ((m_ccchPagingCnt & 0x01U) << 7) +                             // ...               - Number of Paging Frames
+            ((m_ccchMultiCnt & 0x07U) << 4) +                                       // ...               - Number of Multipurpose Frames
+            ((m_rcchIterateCnt & 0x0FU) << 0);                                      // ...               - Number of Iteration
 
         m_data[6U] = m_siteData.serviceClass();                                     // Service Information
         m_data[7U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);       // ...
@@ -467,6 +472,12 @@ void RCCH::copy(const RCCH& data)
     ::memcpy(callsign, data.m_siteCallsign, NXDN_CALLSIGN_LENGTH_BYTES);
 
     m_siteCallsign = callsign;
+
+    m_bcchCnt = data.m_bcchCnt;
+    m_rcchGroupingCnt = data.m_rcchGroupingCnt;
+    m_ccchPagingCnt = data.m_ccchPagingCnt;
+    m_ccchMultiCnt = data.m_ccchMultiCnt;
+    m_rcchIterateCnt = data.m_rcchIterateCnt;
 
     decodeLC(m_data);
 }

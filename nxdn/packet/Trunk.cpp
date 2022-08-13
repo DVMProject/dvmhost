@@ -354,7 +354,6 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
         switch (n)
         {            
-        case 1:
         case 0:
             writeRF_CC_Message_Site_Info();
             break;
@@ -708,7 +707,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
     channel::CAC cac;
     cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
-    cac.setStructure(NXDN_SR_RCCH_SINGLE);
+    cac.setStructure(NXDN_SR_RCCH_HEAD_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 

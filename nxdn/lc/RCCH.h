@@ -121,6 +121,18 @@ namespace nxdn
             /// <summary>Local Site Identity Entry.</summary>
             __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
 
+            /** Channel Structure Data */
+            /// <summary>Count of BCCH frames per RCCH superframe.</summary>
+            __PROPERTY(uint8_t, bcchCnt, BcchCnt);
+            /// <summary>Count of RCCH frame groupings per RCCH superframe.</summary>
+            __PROPERTY(uint8_t, rcchGroupingCnt, RcchGroupingCnt);
+            /// <summary>Count of CCCH/UPCH paging frames per RCCH superframe.</summary>
+            __PROPERTY(uint8_t, ccchPagingCnt, CcchPagingCnt);
+            /// <summary>Count of CCCH/UPCH multi-purpose frames per RCCH superframe.</summary>
+            __PROPERTY(uint8_t, ccchMultiCnt, CcchMultiCnt);
+            /// <summary>Count of group iterations per RCCH superframe.</summary>
+            __PROPERTY(uint8_t, rcchIterateCnt, RcchIterateCount);
+
         private:
             /// <summary>Initializes a new instance of the RCCH class.</summary>
             RCCH();
