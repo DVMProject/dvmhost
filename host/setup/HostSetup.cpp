@@ -186,7 +186,7 @@ int HostSetup::run()
             m_console.getLine(value, 1, 0);
             uint32_t level = logLevel;
             sscanf(value, "%u", &level);
-            if (value > 0) {
+            if (level > 0) {
                 m_conf["log"]["displayLevel"] = __INT_STR(level);
                 m_conf["log"]["fileLevel"] = __INT_STR(level);
             }
@@ -421,7 +421,7 @@ int HostSetup::run()
             m_console.getLine(value, 4, 0);
             uint32_t time = cwTime;
             sscanf(value, "%u", &time);
-            if (value > 0) {
+            if (time > 0) {
                 m_conf["system"]["cwId"]["time"] = __INT_STR(time);
             }
 
