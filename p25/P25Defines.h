@@ -304,8 +304,8 @@ namespace p25
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_STS_Q_RSP = 0x019          // STS_Q_RSP - Status Query Responce
-    const uint8_t   TSBK_ISP_STS_Q_REQ = 0X01C          // STS_Q_REQ - Status Query Request
+    const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;          // STS_Q_RSP - Status Query Responce
+    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;          // STS_Q_REQ - Status Query Request
 
     // TSBK Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_GRP_VCH_GRANT_UPD = 0x02U; // GRP VCH GRANT UPD - Group Voice Channel Grant Update
@@ -326,7 +326,8 @@ namespace p25
     const uint8_t   TSBK_OSP_NET_STS_BCAST = 0x3BU;     // NET STS BCAST - Network Status Broadcast
     const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
-    const uint8_t   TSBK_OSP_STS_Q = 0x01A;             // STS_Q - Status Query
+    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
+    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME_DATE_ANN - Time and Date Announcement
 
 
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
