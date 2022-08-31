@@ -901,7 +901,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         unsigned int tmMDAY = local_tm.tm_mday;
         unsigned int tmY = local_tm.tm_year + 1000;
         unsigned int tmH = local_tm.tm_hour;
-        unsigned int tmM = local_tm.tm_min;
+        unsigned int tmMin = local_tm.tm_min;
         unsigned int tmS;
         int i = local_tm.tm_sec;
         if ( i < 59 )
