@@ -929,7 +929,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = ( tsbkValue << 29 ) + tmM; //Min
         tsbkValue = ( tsbkValue << 23 ) + tmS; //Second
         tsbkValue = ( tsbkValue << 0 ) + 0x6B; //Add filler data to the bottom of 9 to make it not 00s
-        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (DEBUG) Month-$%02X,Day-$%02X,Year-$%02X, Year Adj-$%02X ,Hour-$%02X,Min-$%02X,Sec-$%02X,TSBK RAW= $%02X" , tmM , tmMDAY, tmY, tmYAdj, tmH, tmMin, tmS, tsbkValue );
+        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (DEBUG) Month-$%02X,Day-$%02X,Year-$%02X ,Hour-$%02X,Min-$%02X,Sec-$%02X,TSBK RAW= $%02X" , tmM , tmMDAY, tmY, tmH, tmMin, tmS, tsbkValue );
     }break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
