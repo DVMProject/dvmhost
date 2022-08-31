@@ -132,21 +132,6 @@ TSBK& TSBK::operator=(const TSBK& data)
     return *this;
 }
 
-//Helper for roses smoothbrain
-//This Spits out ints BTW
-unsigned int DecimalToBinary( int n )
-{
-    int binaryNumber[ 100 ] , num = n;
-    unsigned int i = 0;
-    while ( n > 0 )
-    {
-        binaryNumber[ i ] = n % 2;
-        n = n / 2;
-        i++;
-    }
-    return i;
-}
-
 /// <summary>
 /// Decode a alternate trunking signalling block.
 /// </summary>
@@ -912,29 +897,35 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         time_t tt = std::chrono::system_clock::to_time_t( now );
         tm local_tm = *localtime( &tt );
-
-        tsbkValue = 0U; //Zero out tsbkValue
-        tsbkValue = ( tsbkValue << 63 ) + 1; //VD = Valid
-        tsbkValue = ( tsbkValue << 62 ) + 1; //VT = Valid
-        tsbkValue = ( tsbkValue << 61 ) + 0; //VL = Invalid
-        tsbkValue = ( tsbkValue << 48 ) + 01010010011; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
-        //Date
-        tsbkValue = ( tsbkValue << 44 ) + DecimalToBinary( local_tm.tm_mon + 1 ); //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
-        tsbkValue = ( tsbkValue << 39 ) + DecimalToBinary( local_tm.tm_mday ); //Day of month
-        tsbkValue = ( tsbkValue << 40 ) + DecimalToBinary( local_tm.tm_year + 1000 ); //Year; add 1000 to tm_year to account for TM being from 1900 and P25 being from 2000
-        //Time
-        tsbkValue = ( tsbkValue << 35 ) + DecimalToBinary( local_tm.tm_hour ); //Hour
-        tsbkValue = ( tsbkValue << 29 ) + DecimalToBinary( local_tm.tm_min ); //Min
+        unsigned int tmM = local_tm.tm_mon + 1;
+        unsigned int tmMDAY = local_tm.tm_mday;
+        unsigned int tmY = local_tm.tm_year + 1000;
+        unsigned int tmH = local_tm.tm_hour;
+        unsigned int tmM = local_tm.tm_min;
+        unsigned int tmS;
         int i = local_tm.tm_sec;
         if ( i < 59 )
         {
-            tsbkValue = ( tsbkValue << 23 ) + DecimalToBinary( 59 ); //Catch leap seconds in tm_sec and set them to 59 for a bit
-        }
-        else
+            tmS = 0x3B; //Catch leap seconds in tm_sec and set them to 59 for a bit
+        } else
         {
-            tsbkValue = ( tsbkValue << 23 ) + DecimalToBinary( i );
+            tmS = i;
         }
-        tsbkValue = ( tsbkValue << 23 ) + 1111111;
+
+        tsbkValue = 0U; //Zero out tsbkValue
+        tsbkValue = ( tsbkValue << 63 ) + 0x1; //VD = Valid
+        tsbkValue = ( tsbkValue << 62 ) + 0x1; //VT = Valid
+        tsbkValue = ( tsbkValue << 61 ) + 0x0; //VL = Invalid
+        tsbkValue = ( tsbkValue << 48 ) + 0x526; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
+        //Date
+        tsbkValue = ( tsbkValue << 44 ) + tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        tsbkValue = ( tsbkValue << 39 ) + tmMDAY; //Day of month
+        tsbkValue = ( tsbkValue << 40 ) + tmY; //Year; add 1000 to tm_year to account for TM being from 1900 and P25 being from 2000
+        //Time
+        tsbkValue = ( tsbkValue << 35 ) + tmH; //Hour
+        tsbkValue = ( tsbkValue << 29 ) + tmM; //Min
+        tsbkValue = ( tsbkValue << 23 ) + tmS; //Second
+        tsbkValue = ( tsbkValue << 0 ) + 0x6B; //Add filler data to the bottom of 9 to make it not 00s
 
     }break;
     default:
