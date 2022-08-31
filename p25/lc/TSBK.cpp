@@ -899,11 +899,12 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tm local_tm = *localtime( &tt );
         unsigned int tmM = local_tm.tm_mon + 1;
         unsigned int tmMDAY = local_tm.tm_mday;
-        unsigned int tmY = (local_tm.tm_year - 0x44C);
+        unsigned int tmY = local_tm.tm_year; //-1100U
         unsigned int tmH = local_tm.tm_hour;
         unsigned int tmMin = local_tm.tm_min;
         unsigned int tmS;
         int i = local_tm.tm_sec;
+
         if ( i > 59 )
         {
             tmS = 0x3B; //Catch leap seconds in tm_sec and set them to 59 for a bit
@@ -911,6 +912,8 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         {
             tmS = i;
         }
+
+        tmY = tmY - 1100U;
 
         tsbkValue = 0U; //Zero out tsbkValue
         tsbkValue = ( tsbkValue << 63 ) + 0x1; //VD = Valid
