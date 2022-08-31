@@ -899,11 +899,10 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tm local_tm = *localtime( &tt );
         unsigned int tmM = local_tm.tm_mon + 1;
         unsigned int tmMDAY = local_tm.tm_mday;
-        unsigned int tmY = local_tm.tm_year; //-1100U
+        unsigned int tmY = local_tm.tm_year;
         unsigned int tmH = local_tm.tm_hour;
         unsigned int tmMin = local_tm.tm_min;
         unsigned int tmS;
-        unsigned int tmYAdj;//TEMP: REMOVE ME
         int i = local_tm.tm_sec;
 
         if ( i > 59 )
@@ -914,23 +913,23 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             tmS = i;
         }
 
-        tmYAdj = tmY - 100U;
+        tmY = tmY - 100U;
 
         tsbkValue = 0U; //Zero out tsbkValue
-        tsbkValue = ( tsbkValue << 63 ) + 0x1; //VD = Valid
-        tsbkValue = ( tsbkValue << 62 ) + 0x1; //VT = Valid
-        tsbkValue = ( tsbkValue << 61 ) + 0x0; //VL = Invalid
-        tsbkValue = ( tsbkValue << 48 ) + 0x526; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
+        tsbkValue = ( tsbkValue << 63 ) + 1U; //VD = Valid
+        tsbkValue = ( tsbkValue << 62 ) + 1U; //VT = Valid
+        tsbkValue = ( tsbkValue << 61 ) + 0U; //VL = Invalid
+        tsbkValue = ( tsbkValue << 48 ) + 176U; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
         //Date
-        tsbkValue = ( tsbkValue << 44 ) + tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
-        tsbkValue = ( tsbkValue << 39 ) + tmMDAY; //Day of month
-        tsbkValue = ( tsbkValue << 40 ) + tmY; //Year;
+        tsbkValue = ( tsbkValue << 44 ) + 15U;//tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        tsbkValue = ( tsbkValue << 39 ) + 9U;//tmMDAY; //Day of month
+        tsbkValue = ( tsbkValue << 40 ) + 8191U;///tmY; //Year;
         //Time
         tsbkValue = ( tsbkValue << 35 ) + tmH; //Hour
         tsbkValue = ( tsbkValue << 29 ) + tmM; //Min
         tsbkValue = ( tsbkValue << 23 ) + tmS; //Second
         tsbkValue = ( tsbkValue << 0 ) + 0x6B; //Add filler data to the bottom of 9 to make it not 00s
-        LogError( LOG_P25 , "Month-$%02X,Day-$%02X,Year-$%02X, Year Adj-$%02X ,Hour-$%02X,Min-$%02X,Sec-$%02X,TSBK RAW= $%02X" , tmM , tmMDAY, tmY, tmYAdj, tmH, tmMin, tmS, tsbkValue );
+        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (DEBUG) Month-$%02X,Day-$%02X,Year-$%02X, Year Adj-$%02X ,Hour-$%02X,Min-$%02X,Sec-$%02X,TSBK RAW= $%02X" , tmM , tmMDAY, tmY, tmYAdj, tmH, tmMin, tmS, tsbkValue );
     }break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
