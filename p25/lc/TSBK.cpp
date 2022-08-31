@@ -913,7 +913,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         time_t tt = std::chrono::system_clock::to_time_t( now );
         tm local_tm = *localtime( &tt );
 
-        tsbkValue = 0U;
+        tsbkValue = 0U; //Zero out tsbkValue
         tsbkValue = ( tsbkValue << 63 ) + 1; //VD = Valid
         tsbkValue = ( tsbkValue << 62 ) + 1; //VT = Valid
         tsbkValue = ( tsbkValue << 61 ) + 0; //VL = Invalid
