@@ -134,10 +134,10 @@ TSBK& TSBK::operator=(const TSBK& data)
 
 //Helper for roses smoothbrain
 //This Spits out ints BTW
-int DecimalToBinary( int n )
+unsigned int DecimalToBinary( int n )
 {
     int binaryNumber[ 100 ] , num = n;
-    int i = 0;
+    unsigned int i = 0;
     while ( n > 0 )
     {
         binaryNumber[ i ] = n % 2;
@@ -913,16 +913,14 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         time_t tt = std::chrono::system_clock::to_time_t( now );
         tm local_tm = *localtime( &tt );
 
-
-
         tsbkValue = 0U;
-        tsbkValue = ( tsbkValue << 79 ) + 1; //VD = Valid
-        tsbkValue = ( tsbkValue << 78 ) + 1; //VT = Valid
-        tsbkValue = ( tsbkValue << 77 ) + 0; //VL = Invalid
-        tsbkValue = ( tsbkValue << 64 ) + 010100100110; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
+        tsbkValue = ( tsbkValue << 63 ) + 1; //VD = Valid
+        tsbkValue = ( tsbkValue << 62 ) + 1; //VT = Valid
+        tsbkValue = ( tsbkValue << 61 ) + 0; //VL = Invalid
+        tsbkValue = ( tsbkValue << 48 ) + 010100100110; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
         //Date
-        tsbkValue = ( tsbkValue << 60 ) + DecimalToBinary( local_tm.tm_mon + 1 ); //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
-        tsbkValue = ( tsbkValue << 55 ) + DecimalToBinary( local_tm.tm_mday ); //Day of month
+        tsbkValue = ( tsbkValue << 44 ) + DecimalToBinary( local_tm.tm_mon + 1 ); //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        tsbkValue = ( tsbkValue << 39 ) + DecimalToBinary( local_tm.tm_mday ); //Day of month
         tsbkValue = ( tsbkValue << 40 ) + DecimalToBinary( local_tm.tm_year + 1000 ); //Year; add 1000 to tm_year to account for TM being from 1900 and P25 being from 2000
         //Time
         tsbkValue = ( tsbkValue << 35 ) + DecimalToBinary( local_tm.tm_hour ); //Hour
