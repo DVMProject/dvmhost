@@ -914,7 +914,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             tmS = i;
         }
 
-        tmYAdj = tmY - 1100U;
+        tmYAdj = tmY - 100U;
 
         tsbkValue = 0U; //Zero out tsbkValue
         tsbkValue = ( tsbkValue << 63 ) + 0x1; //VD = Valid
