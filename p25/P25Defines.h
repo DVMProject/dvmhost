@@ -326,7 +326,7 @@ namespace p25
     const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
     const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
-    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME_DATE_ANN - Time and Date Announcement
+    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0xB5U;     // TIME_DATE_ANN - Time and Date Announcement
 
 
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)

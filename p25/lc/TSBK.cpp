@@ -917,7 +917,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = ( tsbkValue << 63 ) + 1; //VD = Valid
         tsbkValue = ( tsbkValue << 62 ) + 1; //VT = Valid
         tsbkValue = ( tsbkValue << 61 ) + 0; //VL = Invalid
-        tsbkValue = ( tsbkValue << 48 ) + 010100100110; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
+        tsbkValue = ( tsbkValue << 48 ) + 01010010011; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
         //Date
         tsbkValue = ( tsbkValue << 44 ) + DecimalToBinary( local_tm.tm_mon + 1 ); //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
         tsbkValue = ( tsbkValue << 39 ) + DecimalToBinary( local_tm.tm_mday ); //Day of month
