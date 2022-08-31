@@ -34,7 +34,6 @@
 
 using namespace p25::lc;
 using namespace p25;
-using namespace std::chrono;
 
 #include <cstdio>
 #include <cmath>
@@ -131,6 +130,21 @@ TSBK& TSBK::operator=(const TSBK& data)
     }
 
     return *this;
+}
+
+//Helper for roses smoothbrain
+//This Spits out ints BTW
+int DecimalToBinary( int n )
+{
+    int binaryNumber[ 100 ] , num = n;
+    int i = 0;
+    while ( n > 0 )
+    {
+        binaryNumber[ i ] = n % 2;
+        n = n / 2;
+        i++;
+    }
+    return i;
 }
 
 /// <summary>
@@ -895,8 +909,8 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     break;
     case TSBK_OSP_TIME_DATE_ANN:
     {
-        system_clock::time_point now = system_clock::now();
-        time_t tt = system_clock::to_time_t( now );
+        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        time_t tt = std::chrono::system_clock::to_time_t( now );
         tm local_tm = *localtime( &tt );
 
 
@@ -1278,19 +1292,4 @@ void TSBK::copy(const TSBK& data)
     ::memcpy(callsign, data.m_siteCallsign, P25_MOT_CALLSIGN_LENGTH_BYTES);
 
     m_siteCallsign = callsign;
-}
-
-//Helper for roses smoothbrain
-//This Spits out ints BTW
-int DecimalToBinary( int n )
-{
-    int binaryNumber[ 100 ] , num = n;
-    int i = 0;
-    while ( n > 0 )
-    {
-        binaryNumber[ i ] = n % 2;
-        n = n / 2;
-        i++;
-    }
-    return i;
 }
