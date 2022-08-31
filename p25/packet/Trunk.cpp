@@ -187,7 +187,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
     }
 
     RPT_RF_STATE prevRfState = m_p25->m_rfState;
-    
+
     // handle individual DUIDs
     if (duid == P25_DUID_TSDU) {
         if (m_p25->m_rfState != RS_RF_DATA) {
@@ -199,7 +199,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
         if (!preDecoded) {
             resetRF();
             resetNet();
-            
+
             bool ret = m_rfTSBK.decode(data + 2U);
             if (!ret) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", undecodable LC");
@@ -270,7 +270,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 VALID_DSTID("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response)", TSBK_IOSP_UU_ANS, dstId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u", 
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u",
                         m_rfTSBK.getResponse(), srcId, dstId);
                 }
 
@@ -344,7 +344,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 RF_TO_WRITE_NET();
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u", 
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u",
                         m_rfTSBK.getMessage(), srcId, dstId);
                 }
 
@@ -377,7 +377,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 VALID_DSTID("TSBK_IOSP_ACK_RSP (Acknowledge Response)", TSBK_IOSP_ACK_RSP, dstId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u", 
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                         m_rfTSBK.getAIV(), m_rfTSBK.getService(), srcId, dstId);
                 }
 
@@ -405,7 +405,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 break;
             case TSBK_IOSP_EXT_FNCT:
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u", 
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
                         m_rfTSBK.getExtendedFunction(), dstId, srcId);
                 }
 
@@ -456,7 +456,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 IS_SUPPORT_CONTROL_CHECK("TSBK_IOSP_GRP_AFF (Group Affiliation Query Response)", TSBK_ISP_GRP_AFF_Q_RSP, srcId);
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Query Response), srcId = %u, dstId = %u, anncId = %u", srcId, dstId, 
+                    LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Query Response), srcId = %u, dstId = %u, anncId = %u", srcId, dstId,
                         m_rfTSBK.getPatchSuperGroupId());
                 }
 
@@ -692,7 +692,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         VALID_SRCID_NET("TSBK_IOSP_STS_UPDT (Status Update)", srcId);
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u", 
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u",
                                 m_netTSBK.getStatus(), srcId);
                         }
 
@@ -703,7 +703,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         VALID_SRCID_NET("TSBK_IOSP_MSG_UPDT (Message Update)", srcId);
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u", 
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u",
                                 m_netTSBK.getMessage(), srcId, dstId);
                         }
 
@@ -736,7 +736,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         VALID_DSTID_NET("TSBK_IOSP_ACK_RSP (Acknowledge Response)", dstId);
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u", 
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                                 m_netTSBK.getAIV(), m_netTSBK.getService(), dstId, srcId);
                         }
 
@@ -747,7 +747,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         VALID_DSTID_NET("TSBK_IOSP_EXT_FNCT (Extended Function)", dstId);
 
                         if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), serviceType = $%02X, arg = %u, tgt = %u", 
+                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), serviceType = $%02X, arg = %u, tgt = %u",
                                 m_netTSBK.getService(), srcId, dstId);
                         }
                         break;
@@ -844,7 +844,7 @@ void Trunk::writeAdjSSNetwork()
 
     if (m_network != NULL) {
         if (m_verbose) {
-            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", 
+            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
                 m_p25->m_siteData.sysId(), m_p25->m_siteData.rfssId(), m_p25->m_siteData.siteId(), m_p25->m_siteData.channelId(), m_p25->m_siteData.channelNo(), m_p25->m_siteData.serviceClass());
         }
 
@@ -862,7 +862,7 @@ void Trunk::writeAdjSSNetwork()
         m_rfTSBK.setAdjSiteChnId(m_p25->m_siteData.channelId());
         m_rfTSBK.setAdjSiteChnNo(m_p25->m_siteData.channelNo());
         m_rfTSBK.setAdjSiteSvcClass(m_p25->m_siteData.serviceClass());
-        
+
         RF_TO_WRITE_NET();
     }
 }
@@ -901,12 +901,12 @@ void Trunk::clock(uint32_t ms)
             // update adjacent site data
             for (auto it = m_adjSiteUpdateCnt.begin(); it != m_adjSiteUpdateCnt.end(); ++it) {
                 uint8_t siteId = it->first;
-                
+
                 uint8_t updateCnt = it->second;
                 if (updateCnt > 0U) {
                     updateCnt--;
                 }
-                
+
                 if (updateCnt == 0U) {
                     SiteData siteData = m_adjSiteTable[siteId];
                     LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
@@ -1169,7 +1169,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
 {
     m_rfMBF = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
- 
+
     m_adjSiteTable.clear();
     m_adjSiteUpdateCnt.clear();
 
@@ -1299,6 +1299,10 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
             break;
         }
         break;
+    case 8:
+        // write TIME_DATE_ANN
+        queueRF_TSBK_Ctrl( TSBK_OSP_TIME_DATE_ANN );
+            break;
     }
 
     // should we insert the BSI bursts?
@@ -1562,7 +1566,7 @@ void Trunk::writeRF_TSDU_MBF(bool clearBeforeWrite)
 
                 Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", tsbk, P25_TSBK_FEC_LENGTH_BYTES);
             }
-                
+
             // Add TSBK data
             Utils::setBitRange(tsbk, tsdu, offset, P25_TSBK_FEC_LENGTH_BITS);
 
@@ -1591,7 +1595,7 @@ void Trunk::writeRF_TSDU_MBF(bool clearBeforeWrite)
 
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
-        
+
         if (clearBeforeWrite) {
             m_p25->m_modem->clearP25Data();
             m_p25->m_queue.clear();
@@ -2169,7 +2173,7 @@ void Trunk::writeRF_TSDU_Deny(uint8_t reason, uint8_t service)
     m_rfTSBK.setResponse(reason);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, service = $%02X, srcId = %u, dstId = %u", 
+        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
             m_rfTSBK.getAIV(), reason, service, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
     }
 
@@ -2332,7 +2336,7 @@ void Trunk::writeRF_TSDU_Queue(uint8_t reason, uint8_t service)
     m_rfTSBK.setResponse(reason);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u", 
+        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
             m_rfTSBK.getAIV(), reason, m_rfTSBK.getSrcId(), m_rfTSBK.getDstId());
     }
 
@@ -2475,7 +2479,7 @@ void Trunk::writeNet_TDULC(lc::TDULC lc)
     }
 
     if (m_p25->m_voice->m_netFrames > 0) {
-        ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss", 
+        ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss",
             float(m_p25->m_voice->m_netFrames) / 50.0F, (m_p25->m_voice->m_netLost * 100U) / m_p25->m_voice->m_netFrames);
     }
     else {

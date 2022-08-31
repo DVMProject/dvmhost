@@ -304,7 +304,6 @@ namespace p25
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;          // STS_Q_RSP - Status Query Responce
     const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;          // STS_Q_REQ - Status Query Request
 
     // TSBK Outbound Signalling Packet (OSP) Opcode(s)
