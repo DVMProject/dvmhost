@@ -1873,7 +1873,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
             m_rfTSBK.setLCO( TSBK_OSP_TIME_DATE_ANN );
             m_rfTSBK.setMFId( P25_MFG_STANDARD );
-            case;
+            break;
     }
 
     m_rfTSBK.setLastBlock(true); // always set last block
