@@ -903,11 +903,11 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         unsigned int tmH = local_tm.tm_hour;
         unsigned int tmMin = local_tm.tm_min;
         unsigned int tmS;
-        int i = local_tm.tm_sec;
+        unsigned int i = local_tm.tm_sec;
 
-        if ( i > 59 )
+        if ( i > 59U )
         {
-            tmS = 0x3B; //Catch leap seconds in tm_sec and set them to 59 for a bit
+            tmS = 59U; //Catch leap seconds in tm_sec and set them to 59 for a bit
         } else
         {
             tmS = i;
@@ -916,10 +916,11 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tmY = tmY - 100U;
 
         tsbkValue = 0U; //Zero out tsbkValue
-        tsbkValue = ( tsbkValue << 63 ) + 1U; //VD = Valid
-        tsbkValue = ( tsbkValue << 62 ) + 1U; //VT = Valid
-        tsbkValue = ( tsbkValue << 61 ) + 0U; //VL = Invalid
-        //tsbkValue = ( tsbkValue << 48 ) + 2831U; //Local Time Offset, Currently Set to ignored by VL=0 will implement later by adding a entry into the config
+        tsbkValue = ( tsbkValue << 63 ) + 0x1; //VD = Valid
+        tsbkValue = ( tsbkValue << 62 ) + 0x1; //VT = Valid
+        tsbkValue = ( tsbkValue << 61 ) + 0x0; //VL = Invalid
+        tsbkValue = ( tsbkValue << 59 ) + 0x1; //LTO Pos or Neg (1= Subtract, 0= Add)
+        tsbkValue = ( tsbkValue << 48 ) + 0x168; //Local Time Offset, Hard code 6 Hours (360 Min)
         //Date
         tsbkValue = ( tsbkValue << 44 ) + 15U;//tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
         tsbkValue = ( tsbkValue << 39 ) + 9U;//tmMDAY; //Day of month
@@ -929,7 +930,17 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = ( tsbkValue << 13 ) + 45U;//tmM; //Min
         tsbkValue = ( tsbkValue << 7 ) + 63U;//tmS; //Second
         //tsbkValue = ( tsbkValue << 0 ) + 107U; //Add filler data to the bottom of 9 to make it not 00s
-        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (DEBUG) Month-$%02X,Day-$%02X,Year-$%02X ,Hour-$%02X,Min-$%02X,Sec-$%02X,TSBK RAW= $%02X" , tmM , tmMDAY, tmY, tmH, tmMin, tmS, tsbkValue );
+
+        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Debug Dump Start)" );
+        LogError( LOG_P25 , "tsbkValue RAW= $%X" , tsbkValue );
+        LogError( LOG_P25 , "tmM= $%X" , tmM );
+        LogError( LOG_P25 , "tmMDAY= $%X" , tmMDAY );
+        LogError( LOG_P25 , "tmY= $%X" , tmY );
+        LogError( LOG_P25 , "tmH= $%X" , tmH );
+        LogError( LOG_P25 , "tmMin= $%X" , tmMin );
+        LogError( LOG_P25 , "tmS= $%X" , tmS );
+        LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Debug Dump End)" );
+
     }break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
