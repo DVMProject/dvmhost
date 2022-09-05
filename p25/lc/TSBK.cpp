@@ -920,17 +920,17 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = ( tsbkValue << 62 ) + 0x1; //VT = Valid
         tsbkValue = ( tsbkValue << 61 ) + 0x0; //VL = Invalid
         tsbkValue = ( tsbkValue << 59 ) + 0x1; //LTO Pos or Neg (1= Subtract, 0= Add)
-        tsbkValue = ( tsbkValue << 48 ) + 0x168; //Local Time Offset, Hard code 6 Hours (360 Min)
+        tsbkValue = ( tsbkValue << 48 ) + 0x168; //Local Time Offset, Hard code 6 Hours (360 Min), Will Add .conf option later
         //Date
-        tsbkValue = ( tsbkValue << 44 ) + 15U;//tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
-        tsbkValue = ( tsbkValue << 39 ) + 9U;//tmMDAY; //Day of month
-        tsbkValue = ( tsbkValue << 26 ) + 8191U;///tmY; //Year;
+        tsbkValue = ( tsbkValue << 44 ) + tmM; //Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        tsbkValue = ( tsbkValue << 39 ) + tmMDAY; //Day of month
+        tsbkValue = ( tsbkValue << 26 ) + tmY; //Year;
         //Time
-        tsbkValue = ( tsbkValue << 19 ) + 17U;//tmH; //Hour
-        tsbkValue = ( tsbkValue << 13 ) + 45U;//tmM; //Min
-        tsbkValue = ( tsbkValue << 7 ) + 63U;//tmS; //Second
-        //tsbkValue = ( tsbkValue << 0 ) + 107U; //Add filler data to the bottom of 9 to make it not 00s
+        tsbkValue = ( tsbkValue << 19 ) + tmH; //Hour
+        tsbkValue = ( tsbkValue << 13 ) + tmM; //Min
+        tsbkValue = ( tsbkValue << 7 ) + tmS; //Second
 
+#if DEBUG
         LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Debug Dump Start)" );
         LogError( LOG_P25 , "tsbkValue RAW= $%X" , tsbkValue );
         LogError( LOG_P25 , "tmM= $%X" , tmM );
@@ -940,6 +940,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         LogError( LOG_P25 , "tmMin= $%X" , tmMin );
         LogError( LOG_P25 , "tmS= $%X" , tmS );
         LogError( LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Debug Dump End)" );
+#endif
 
     }break;
     default:
