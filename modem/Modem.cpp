@@ -609,8 +609,8 @@ void Modem::clock(uint32_t ms)
             m_rxDMRData1.addData(&data, 1U);
 
             m_rxDMRData1.addData(m_buffer + 3U, m_length - 3U);
-        }
 #endif // defined(ENABLE_DMR)
+        }
         break;
 
         case CMD_DMR_DATA2:
