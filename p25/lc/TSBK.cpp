@@ -897,7 +897,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         //Setup
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         time_t tt = std::chrono::system_clock::to_time_t( now );
-        tm local_tm = *localtime( &tt );
+        tm local_tm = *gmtime( &tt );
         unsigned long tmM = 0b000;//Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
         unsigned long tmMDAY = 0b00000;//Day of month
         unsigned int tmY = 0b0000000000000;//Year
@@ -912,7 +912,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tmH |= local_tm.tm_hour;//Hour
         tmMin |= local_tm.tm_min;//Min
         unsigned int i = local_tm.tm_sec;
-        unsigned long VFLAGS = 0b11000000; // VL,VT,VD, Res(leave 0),LTO direction, LTO
+        unsigned long VFLAGS = 0b11100000; // VL,VT,VD, Res(leave 0),LTO direction, LTO
         unsigned long VLTO = 0b00000000; // LTO
 
         //Catch Leap Seconds
