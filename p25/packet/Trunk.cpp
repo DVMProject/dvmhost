@@ -1868,7 +1868,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             break;
         case TSBK_OSP_TIME_DATE_ANN:
             if ( m_debug ) {
-                LogMessage( LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)" );
+                LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)");
             }
             m_rfTSBK.setLCO( TSBK_OSP_TIME_DATE_ANN );
             m_rfTSBK.setMFId( P25_MFG_STANDARD );
