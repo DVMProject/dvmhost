@@ -898,67 +898,57 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         time_t tt = std::chrono::system_clock::to_time_t(now);
         tm local_tm = *gmtime(&tt);
-        unsigned long tmM = 0b000;
-        unsigned long tmMDAY = 0b00000;
-        uint32_t tmY = 0b0000000000000;
-        uint32_t tmH = 0b00000;
-        uint32_t tmMin = 0b000000;
-        uint32_t tmS = 0b000000;
 
-        //Assign Values
-        tmM |= (local_tm.tm_mon + 1);//Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
-        tmMDAY |= local_tm.tm_mday;//Day of month
-        tmY |= local_tm.tm_year;//Year
-        tmH |= local_tm.tm_hour;//Hour
-        tmMin |= local_tm.tm_min;//Min
+        unsigned long tmM = 0U;
+        tmM |= (local_tm.tm_mon + 1);   // Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        unsigned long tmMDAY = 0U;
+        tmMDAY |= local_tm.tm_mday;     // Day of month
+        uint32_t tmY = 0U;
+        tmY |= local_tm.tm_year;        // Year
+        uint32_t tmH = 0U;
+        tmH |= local_tm.tm_hour;        // Hour
+        uint32_t tmMin = 0U;
+        tmMin |= local_tm.tm_min;       // Min
         uint32_t i = local_tm.tm_sec;
-        unsigned long VFLAGS = 0xE0; // VL,VT,VD, Res(leave 0),LTO direction, LTO
-        unsigned long VLTO = 0b00000000; // LTO
 
-        //Catch Leap Seconds
+        uint16_t lto = 0U;
+
+        // catch Leap Seconds
+        uint32_t tmS = 0U;
         if (i > 59U) {
             tmS |= 59U;
         } else {
             tmS |= i;
         }
 
-        //Fix Year from from 1900 to from 2000
+        // fix Year from from 1900 to from 2000
         tmY = tmY - 100U;
 
-        //Shift Shift
-        VFLAGS = VFLAGS << 56 ; //Flags
-        VLTO = VLTO << 48; //LTO
-        tmM = tmM << 44; //Month
-        tmMDAY = tmMDAY << 39; //Day of month
-        tmY = tmY << 26; //Year
-        tmH = tmH << 19; //Hour
-        tmMin = tmMin << 13; //Min
-        tmS = tmS << 7; //Second
+        tsbkValue = 0xE0U +                 // VL, VT and VD flags set
+                    ((lto >> 8) & 0x0F);    // LTO MSB (Upper 4-bits)
+        tsbkValue = (tsbkValue << 8) +
+                    (lto & 0xFFU);          // LTO LSB
 
-        //Build tsbkValue
-        tsbkValue = 0U; //Zero out tsbkValue
-        //Flags
-        tsbkValue = tsbkValue + VFLAGS;
-        tsbkValue = tsbkValue + VLTO;
-        //Date
-        tsbkValue = tsbkValue + tmM;
-        tsbkValue = tsbkValue + tmMDAY;
-        tsbkValue = tsbkValue + tmY;
-        //Time
-        tsbkValue = tsbkValue + tmH;
-        tsbkValue = tsbkValue + tmMin;
-        tsbkValue = tsbkValue + tmS;
+        // Date
+        tsbkValue = (tsbkValue << 4) +
+                    (tmM & 0x0FU);          // Month
+        tsbkValue = (tsbkValue << 5) +
+                    (tmMDAY & 0x1FU);       // Day of Month
+        tsbkValue = (tsbkValue << 13) +
+                    (tmY & 0x1FFFU);        // Year
+        tsbkValue = (tsbkValue << 2);       // Reserved
+
+        // Time
+        tsbkValue = (tsbkValue << 5) +
+                    (tmH & 0x1FU);          // Hour
+        tsbkValue = (tsbkValue << 6) +
+                    (tmMin & 0x3FU);        // Minute
+        tsbkValue = (tsbkValue << 6) +
+                    (tmS & 0x3FU);          // Seconds
+        tsbkValue = (tsbkValue << 7);       // Reserved
 
 #if DEBUG_P25_TSBK
-        LogError(LOG_P25, "TSBK_OSP_TIME_DATE_ANN (Dump Start)");
-        LogError(LOG_P25, "tsbkValue RAW= $%p" , tsbkValue);
-        LogError(LOG_P25, "tmM= $%p" , tmM);
-        LogError(LOG_P25, "tmMDAY= $%p" , tmMDAY);
-        LogError(LOG_P25, "tmY= $%p" , tmY);
-        LogError(LOG_P25, "tmH= $%p" , tmH);
-        LogError(LOG_P25, "tmMin= $%p" , tmMin);
-        LogError(LOG_P25, "tmS= $%p" , tmS);
-        LogError(LOG_P25, "TSBK_OSP_TIME_DATE_ANN (Dump End)");
+        LogDebug(LOG_P25, "TSBK_OSP_TIME_DATE_ANN, tmM = %u, tmMDAY = %u, tmY = %u, tmH = %u, tmMin = %u, tmS = %u", tmM, tmMDAY, tmY, tmH, tmMin, tmS);
 #endif
     }
     break;
@@ -1112,6 +1102,10 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbk[7U] = (uint8_t)((tsbkValue >> 16) & 0xFFU);
     tsbk[8U] = (uint8_t)((tsbkValue >> 8) & 0xFFU);
     tsbk[9U] = (uint8_t)((tsbkValue >> 0) & 0xFFU);
+
+#if DEBUG_P25_TSBK
+    Utils::dump(2U, "TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
+#endif
 
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
