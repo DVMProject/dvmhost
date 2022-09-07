@@ -896,8 +896,8 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     {
         //Setup
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-        time_t tt = std::chrono::system_clock::to_time_t( now );
-        tm local_tm = *gmtime( &tt );
+        time_t tt = std::chrono::system_clock::to_time_t(now);
+        tm local_tm = *gmtime(&tt);
         unsigned long tmM = 0b000;
         unsigned long tmMDAY = 0b00000;
         uint32_t tmY = 0b0000000000000;
@@ -950,18 +950,19 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = tsbkValue + tmS;
 
 #if DEBUG_P25_TSBK
-        LogError(LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Dump Start)");
-        LogError(LOG_P25 , "tsbkValue RAW= $%p" , tsbkValue);
-        LogError(LOG_P25 , "tmM= $%p" , tmM);
-        LogError(LOG_P25 , "tmMDAY= $%p" , tmMDAY);
-        LogError(LOG_P25 , "tmY= $%p" , tmY);
-        LogError(LOG_P25 , "tmH= $%p" , tmH);
-        LogError(LOG_P25 , "tmMin= $%p" , tmMin);
-        LogError(LOG_P25 , "tmS= $%p" , tmS);
-        LogError(LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Dump End)");
+        LogError(LOG_P25, "TSBK_OSP_TIME_DATE_ANN (Dump Start)");
+        LogError(LOG_P25, "tsbkValue RAW= $%p" , tsbkValue);
+        LogError(LOG_P25, "tmM= $%p" , tmM);
+        LogError(LOG_P25, "tmMDAY= $%p" , tmMDAY);
+        LogError(LOG_P25, "tmY= $%p" , tmY);
+        LogError(LOG_P25, "tmH= $%p" , tmH);
+        LogError(LOG_P25, "tmMin= $%p" , tmMin);
+        LogError(LOG_P25, "tmS= $%p" , tmS);
+        LogError(LOG_P25, "TSBK_OSP_TIME_DATE_ANN (Dump End)");
 #endif
 
-    }break;
+    }
+    break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
             LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

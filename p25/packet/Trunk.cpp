@@ -1834,6 +1834,14 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             // transmit SNDCP announcement
             m_rfTSBK.setLCO(TSBK_OSP_SNDCP_CH_ANN);
             break;
+        case TSBK_OSP_TIME_DATE_ANN:
+            if (m_debug) {
+                LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)");
+            }
+            
+            m_rfTSBK.setLCO(TSBK_OSP_TIME_DATE_ANN);
+            m_rfTSBK.setMFId(P25_MFG_STANDARD);
+            break;
 
         /** Motorola CC data */
         case TSBK_OSP_MOT_PSH_CCH:
@@ -1865,13 +1873,6 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             // transmit git hash burst
             m_rfTSBK.setLCO(TSBK_OSP_DVM_GIT_HASH);
             m_rfTSBK.setMFId(P25_MFG_DVM);
-            break;
-        case TSBK_OSP_TIME_DATE_ANN:
-            if ( m_debug ) {
-                LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)");
-            }
-            m_rfTSBK.setLCO( TSBK_OSP_TIME_DATE_ANN );
-            m_rfTSBK.setMFId( P25_MFG_STANDARD );
             break;
     }
 
