@@ -1103,15 +1103,11 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbk[8U] = (uint8_t)((tsbkValue >> 8) & 0xFFU);
     tsbk[9U] = (uint8_t)((tsbkValue >> 0) & 0xFFU);
 
-#if DEBUG_P25_TSBK
-    Utils::dump(2U, "TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
-#endif
-
     // compute CRC-CCITT 16
     edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "TSBK::encode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
