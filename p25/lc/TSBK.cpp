@@ -960,7 +960,6 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         LogError(LOG_P25, "tmS= $%p" , tmS);
         LogError(LOG_P25, "TSBK_OSP_TIME_DATE_ANN (Dump End)");
 #endif
-
     }
     break;
     default:
