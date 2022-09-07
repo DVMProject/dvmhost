@@ -921,31 +921,24 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             tmS |= i;
         }
 
-        // fix Year from from 1900 to from 2000
+        // fix year from from 1900 to, from 2000
         tmY = tmY - 100U;
 
-        tsbkValue = 0xE0U +                 // VL, VT and VD flags set
-                    ((lto >> 8) & 0x0F);    // LTO MSB (Upper 4-bits)
-        tsbkValue = (tsbkValue << 8) +
-                    (lto & 0xFFU);          // LTO LSB
+        tsbkValue = 0xE0U +                                                         // VL, VT and VD flags set
+                    ((lto >> 8) & 0x0F);                                            // LTO MSB (Upper 4-bits)
+        tsbkValue = (tsbkValue << 8) + (lto & 0xFFU);                               // LTO LSB
 
         // Date
-        tsbkValue = (tsbkValue << 4) +
-                    (tmM & 0x0FU);          // Month
-        tsbkValue = (tsbkValue << 5) +
-                    (tmMDAY & 0x1FU);       // Day of Month
-        tsbkValue = (tsbkValue << 13) +
-                    (tmY & 0x1FFFU);        // Year
-        tsbkValue = (tsbkValue << 2);       // Reserved
+        tsbkValue = (tsbkValue << 4) + (tmM & 0x0FU);                               // Month
+        tsbkValue = (tsbkValue << 5) + (tmMDAY & 0x1FU);                            // Day of Month
+        tsbkValue = (tsbkValue << 13) + (tmY & 0x1FFFU);                            // Year
+        tsbkValue = (tsbkValue << 2);                                               // Reserved
 
         // Time
-        tsbkValue = (tsbkValue << 5) +
-                    (tmH & 0x1FU);          // Hour
-        tsbkValue = (tsbkValue << 6) +
-                    (tmMin & 0x3FU);        // Minute
-        tsbkValue = (tsbkValue << 6) +
-                    (tmS & 0x3FU);          // Seconds
-        tsbkValue = (tsbkValue << 7);       // Reserved
+        tsbkValue = (tsbkValue << 5) + (tmH & 0x1FU);                               // Hour
+        tsbkValue = (tsbkValue << 6) + (tmMin & 0x3FU);                             // Minute
+        tsbkValue = (tsbkValue << 6) + (tmS & 0x3FU);                               // Seconds
+        tsbkValue = (tsbkValue << 7);                                               // Reserved
 
 #if DEBUG_P25_TSBK
         LogDebug(LOG_P25, "TSBK_OSP_TIME_DATE_ANN, tmM = %u, tmMDAY = %u, tmY = %u, tmH = %u, tmMin = %u, tmS = %u", tmM, tmMDAY, tmY, tmH, tmMin, tmS);
