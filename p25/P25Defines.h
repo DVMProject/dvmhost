@@ -213,7 +213,7 @@ namespace p25
     const uint8_t   PDU_FMT_CONFIRMED = 0x16U;
     const uint8_t   PDU_FMT_AMBT = 0x17U;
 
-    // PDU SAP 
+    // PDU SAP
     const uint8_t   PDU_SAP_USER_DATA = 0x00U;
     const uint8_t   PDU_SAP_ENC_USER_DATA = 0x01U;
 
@@ -269,9 +269,9 @@ namespace p25
     const uint8_t   LC_GROUP = 0x00U;                   // GRP VCH USER - Group Voice Channel User
     const uint8_t   LC_GROUP_UPDT = 0x02U;              // GRP VCH UPDT - Group Voice Channel Update
     const uint8_t   LC_PRIVATE = 0x03U;                 // UU VCH USER - Unit-to-Unit Voice Channel User
-    const uint8_t   LC_UU_ANS_REQ = 0x05U;              // UU ANS REQ - Unit to Unit Answer Request 
-    const uint8_t   LC_TEL_INT_VCH_USER = 0x06U;        // TEL INT VCH USER - Telephone Interconnect Voice Channel User 
-    const uint8_t   LC_TEL_INT_ANS_RQST = 0x07U;        // TEL INT ANS RQST - Telephone Interconnect Answer Request 
+    const uint8_t   LC_UU_ANS_REQ = 0x05U;              // UU ANS REQ - Unit to Unit Answer Request
+    const uint8_t   LC_TEL_INT_VCH_USER = 0x06U;        // TEL INT VCH USER - Telephone Interconnect Voice Channel User
+    const uint8_t   LC_TEL_INT_ANS_RQST = 0x07U;        // TEL INT ANS RQST - Telephone Interconnect Answer Request
     const uint8_t   LC_CALL_TERM = 0x0FU;               // CALL TERM - Call Termination or Cancellation
     const uint8_t   LC_IDEN_UP = 0x18U;                 // IDEN UP - Channel Identifier Update
     const uint8_t   LC_SYS_SRV_BCAST = 0x20U;           // SYS SRV BCAST - System Service Broadcast
@@ -304,6 +304,7 @@ namespace p25
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
+    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;          // STS_Q_REQ - Status Query Request
 
     // TSBK Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_GRP_VCH_GRANT_UPD = 0x02U; // GRP VCH GRANT UPD - Group Voice Channel Grant Update
@@ -311,7 +312,7 @@ namespace p25
     const uint8_t   TSBK_OSP_SNDCP_CH_GNT = 0x14U;      // SNDCP CH GNT - SNDCP Data Channel Grant
     const uint8_t   TSBK_OSP_SNDCP_CH_ANN = 0x16U;      // SNDCP CH ANN - SNDCP Data Channel Announcement
     const uint8_t   TSBK_OSP_DENY_RSP = 0x27U;          // DENY RSP - Deny Response
-    const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit 
+    const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit
     const uint8_t   TSBK_OSP_GRP_AFF_Q = 0x2AU;         // GRP AFF Q - Group Affiliation Query
     const uint8_t   TSBK_OSP_LOC_REG_RSP = 0x2BU;       // LOC REG RSP - Location Registration Response
     const uint8_t   TSBK_OSP_U_REG_CMD = 0x2DU;         // U REG CMD - Unit Registration Command
@@ -324,6 +325,9 @@ namespace p25
     const uint8_t   TSBK_OSP_NET_STS_BCAST = 0x3BU;     // NET STS BCAST - Network Status Broadcast
     const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
+    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
+    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME_DATE_ANN - Time and Date Announcement
+
 
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_MOT_GRG_ADD = 0x00U;       // MOT GRG ADD - Motorola / Group Regroup Add (Patch Supergroup)
@@ -342,7 +346,7 @@ namespace p25
     const uint8_t   P25_DUID_LDU1 = 0x05U;              // Logical Link Data Unit 1
     const uint8_t   P25_DUID_TSDU = 0x07U;              // Trunking System Data Unit
     const uint8_t   P25_DUID_LDU2 = 0x0AU;              // Logical Link Data Unit 2
-    const uint8_t   P25_DUID_PDU = 0x0CU;               // Packet Data Unit 
+    const uint8_t   P25_DUID_PDU = 0x0CU;               // Packet Data Unit
     const uint8_t   P25_DUID_TDULC = 0x0FU;             // Terminator Data Unit with Link Control
 } // namespace p25
 

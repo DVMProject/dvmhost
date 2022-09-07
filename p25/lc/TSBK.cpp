@@ -39,6 +39,8 @@ using namespace p25;
 #include <cmath>
 #include <cassert>
 #include <cstring>
+#include <chrono>
+#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -279,7 +281,7 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     if (rawTSBK) {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
-        
+
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
             if (m_warnCRC) {
@@ -323,7 +325,7 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
             Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
             return false;
         }
-    } 
+    }
 
     if (m_verbose) {
         Utils::dump(2U, "Decoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
@@ -666,7 +668,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
         uint32_t rxChNo = rootFreq / (m_siteIdenEntry.chSpaceKhz() * 1000);
 
-        tsbkValue = 0U;                                                             // 
+        tsbkValue = 0U;                                                             //
         tsbkValue = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
             (m_encrypted ? 0x40U : 0x00U);                                          // Encrypted Flag
         tsbkValue = (tsbkValue << 8) +
@@ -890,6 +892,76 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         }
     }
     break;
+    case TSBK_OSP_TIME_DATE_ANN:
+    {
+        //Setup
+        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        time_t tt = std::chrono::system_clock::to_time_t( now );
+        tm local_tm = *gmtime( &tt );
+        unsigned long tmM = 0b000;
+        unsigned long tmMDAY = 0b00000;
+        uint32_t tmY = 0b0000000000000;
+        uint32_t tmH = 0b00000;
+        uint32_t tmMin = 0b000000;
+        uint32_t tmS = 0b000000;
+
+        //Assign Values
+        tmM |= (local_tm.tm_mon + 1);//Month; +1 to account for tm_mon being 0-11 and p25 being 1-12
+        tmMDAY |= local_tm.tm_mday;//Day of month
+        tmY |= local_tm.tm_year;//Year
+        tmH |= local_tm.tm_hour;//Hour
+        tmMin |= local_tm.tm_min;//Min
+        uint32_t i = local_tm.tm_sec;
+        unsigned long VFLAGS = 0xE0; // VL,VT,VD, Res(leave 0),LTO direction, LTO
+        unsigned long VLTO = 0b00000000; // LTO
+
+        //Catch Leap Seconds
+        if (i > 59U) {
+            tmS |= 59U;
+        } else {
+            tmS |= i;
+        }
+
+        //Fix Year from from 1900 to from 2000
+        tmY = tmY - 100U;
+
+        //Shift Shift
+        VFLAGS = VFLAGS << 56 ; //Flags
+        VLTO = VLTO << 48; //LTO
+        tmM = tmM << 44; //Month
+        tmMDAY = tmMDAY << 39; //Day of month
+        tmY = tmY << 26; //Year
+        tmH = tmH << 19; //Hour
+        tmMin = tmMin << 13; //Min
+        tmS = tmS << 7; //Second
+
+        //Build tsbkValue
+        tsbkValue = 0U; //Zero out tsbkValue
+        //Flags
+        tsbkValue = tsbkValue + VFLAGS;
+        tsbkValue = tsbkValue + VLTO;
+        //Date
+        tsbkValue = tsbkValue + tmM;
+        tsbkValue = tsbkValue + tmMDAY;
+        tsbkValue = tsbkValue + tmY;
+        //Time
+        tsbkValue = tsbkValue + tmH;
+        tsbkValue = tsbkValue + tmMin;
+        tsbkValue = tsbkValue + tmS;
+
+#if DEBUG_P25_TSBK
+        LogError(LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Dump Start)");
+        LogError(LOG_P25 , "tsbkValue RAW= $%p" , tsbkValue);
+        LogError(LOG_P25 , "tmM= $%p" , tmM);
+        LogError(LOG_P25 , "tmMDAY= $%p" , tmMDAY);
+        LogError(LOG_P25 , "tmY= $%p" , tmY);
+        LogError(LOG_P25 , "tmH= $%p" , tmH);
+        LogError(LOG_P25 , "tmMin= $%p" , tmMin);
+        LogError(LOG_P25 , "tmS= $%p" , tmS);
+        LogError(LOG_P25 , "TSBK_OSP_TIME_DATE_ANN (Dump End)");
+#endif
+
+    }break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
             LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);

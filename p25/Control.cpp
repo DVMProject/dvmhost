@@ -236,7 +236,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_trunk->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_trunk->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
-    
+
     m_trunk->m_localEmergAlarm = p25Protocol["localEmergAlarm"].as<bool>(false);
     m_trunk->m_sndcpChGrant = p25Protocol["sndcpGrant"].as<bool>(false);
 
@@ -370,15 +370,15 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
         }
         else {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%", 
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%",
                 float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
         }
 
-        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         if (m_control) {
@@ -580,11 +580,11 @@ bool Control::writeRF_VoiceEnd()
             bool ret = false;
             if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
                 m_voice->writeRF_EndOfVoice();
-                
+
                 // this should have been cleared by writeRF_EndOfVoice; but if it hasn't clear it
                 // to prevent badness
                 if (m_voice->m_hadVoice) {
-                    m_voice->m_hadVoice = false; 
+                    m_voice->m_hadVoice = false;
                 }
 
                 m_tailOnIdle = false;
@@ -1045,19 +1045,19 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = 8U;
+    const uint8_t maxSeq = 9U;
     if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
-        
+
         m_ccSeq++;
         if (m_ccSeq == maxSeq) {
             m_ccFrameCnt++;
         }
-        
+
         return true;
     }
 
@@ -1094,7 +1094,7 @@ bool Control::writeRF_ControlEnd()
 void Control::writeRF_Nulls()
 {
     const uint8_t NULLS_LENGTH_BYTES = 25U;
-    
+
     // write null bits (0x00)
     uint8_t data[NULLS_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NULLS_LENGTH_BYTES);
@@ -1203,7 +1203,7 @@ void Control::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != NULL);
 
-    // insert the "10" (Unknown, use for inbound or outbound) status bits 
+    // insert the "10" (Unknown, use for inbound or outbound) status bits
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
         uint32_t ss1Pos = ss0Pos + 1U;
         WRITE_BIT(data, ss0Pos, true);  // 1
