@@ -46,7 +46,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Voice; }
     namespace dfsi { namespace packet { class HOST_SW_API DFSIVoice; } }
     namespace packet { class HOST_SW_API Data; }
@@ -85,6 +85,8 @@ namespace p25
             void setMFId(uint8_t val) { m_rfTSBK.setMFId(val); }
             /// <summary>Helper to write a call alert packet.</summary>
             void writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId);
+            /// <summary>Helper to write a call alert packet.</summary>
+            void writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txmult);
             /// <summary>Helper to write a extended function packet.</summary>
             void writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
             /// <summary>Helper to write a group affiliation query packet.</summary>
@@ -137,7 +139,7 @@ namespace p25
             bool m_noStatusAck;
             bool m_noMessageAck;
             bool m_unitToUnitAvailCheck;
-            
+
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
 

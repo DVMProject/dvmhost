@@ -304,12 +304,14 @@ namespace p25
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;          // STS_Q_REQ - Status Query Request
-    const uint8_t   TSBK_ISP_AUTH_Q = 0x2EU;            // AUTH_Q - Authentication Query
-    const uint8_t   TSBK_ISP_AUTH_RSP = 0x2FU;           // AUTH_RSP - Authentication Response
+    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS_Q_REQ - Status Query Request
+    const uint8_t   TSBK_ISP_RAD_MON_REQ = 0x1DU;       // RAD_MON_REQ - Radio Unit Monitor Request
+    const uint8_t   TSBK_ISP_RAD_MON_ENH_REQ = 0x1EU;   // RAD_MON_ENH_REQ - Radio Unit Monitor Enhanced Request
+    const uint8_t   TSBK_ISP_AUTH_FNE_RST = 0x3AU;      // AUTH_FNE_RST - Authentication FNE Result
+    const uint8_t   TSBK_ISP_AUTH_RESP = 0x38U;         // AUTH_RESP - Authentication Response
+    const uint8_t   TSBK_ISP_AUTH_RESP_M = 0x39U;       // AUTH_RESP_M - Authentication Response Mutual
+    const uint8_t   TSBK_ISP_AUTH_SU_DMD = 0x3BU;       // AUTH_SU_DMD - Authentication SU Demand
 
-
-    
     // TSBK Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_GRP_VCH_GRANT_UPD = 0x02U; // GRP VCH GRANT UPD - Group Voice Channel Grant Update
     const uint8_t   TSBK_OSP_UU_VCH_GRANT_UPD = 0x06U;  // UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
@@ -331,8 +333,12 @@ namespace p25
     const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
     const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
-    const uint8_t   TSBK_OSP_AUTH_CMD = 0x2EU;           // AUTH_CMD - Authentication Command
-    
+    const uint8_t   TSBK_OSP_AUTH_DMD = 0x31U;          // AUTH_DMD - Authentication Demand
+    const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH_FNE_RESP - Authentication FNE Response
+    const uint8_t   TSBK_OSP_RAD_MON_CMD = 0x1DU;       // RAD_MON_CMD - Radio Monitor Command
+    const uint8_t   TSBK_OSP_RAD_MON_ENH_CMD = 0x1EU;   // RAD_MON_ENH_CMD - Radio Unit Monitor Enhanced Command
+
+
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_MOT_GRG_ADD = 0x00U;       // MOT GRG ADD - Motorola / Group Regroup Add (Patch Supergroup)
     const uint8_t   TSBK_OSP_MOT_GRG_DEL = 0x01U;       // MOT GRG DEL - Motorola / Group Regroup Delete (Unpatch Supergroup)

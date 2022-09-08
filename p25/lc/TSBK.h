@@ -54,7 +54,7 @@ namespace p25
         // ---------------------------------------------------------------------------
         //  Class Prototypes
         // ---------------------------------------------------------------------------
-        
+
         class HOST_SW_API LC;
         class HOST_SW_API TDULC;
 
@@ -206,6 +206,10 @@ namespace p25
             __PROPERTY_PLAIN(SiteData, siteData, siteData);
             /// <summary>Local Site Identity Entry.</summary>
             __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
+            /** Radio Unit Monitor */
+            /// <summary>Radio Unit Monitor.</summary>
+            __PROPERTY(uint8_t, txMult, TxMult);
 
         private:
             /// <summary>Initializes a new instance of the TSBK class.</summary>
