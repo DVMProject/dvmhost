@@ -8,6 +8,7 @@
 */
 /*
 *   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022 by Rosesam N5UWU
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -213,6 +214,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
 
         uint32_t srcId = m_rfTSBK.getSrcId();
         uint32_t dstId = m_rfTSBK.getDstId();
+        uint8_t txMult = m_rfTSBK.getTxMult();
 
         // handle standard P25 reference opcodes
         switch (m_rfTSBK.getLCO()) {
@@ -504,6 +506,21 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
 
                 writeRF_TSDU_Loc_Reg_Rsp(srcId, dstId);
                 break;
+            case TSBK_ISP_RAD_MON_REQ:
+                // validate the source RID
+                VALID_SRCID("TSBK_ISP_RAD_MON_REQ (Radio Monitor)" , TSBK_ISP_RAD_MON_REQ , srcId);
+
+                // validate the target RID
+                VALID_DSTID("TSBK_ISP_RAD_MON_REQ (Radio monitor)" , TSBK_ISP_RAD_MON_REQ , dstId);
+
+                if ( m_verbose ) {
+                    LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u" , srcId , dstId);
+                }
+
+                ::ActivityLog("P25" , true , "radio monitor request from %u to %u" , srcId , dstId);
+
+                writeRF_TSDU_Radio_Mon(srcId , dstId, txMult);
+                break;
             default:
                 LogError(LOG_RF, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_rfTSBK.getMFId(), m_rfTSBK.getLCO());
                 break;
@@ -606,6 +623,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 uint32_t srcId = m_netTSBK.getSrcId();
                 uint32_t dstId = m_netTSBK.getDstId();
+                uint8_t txMult = m_rfTSBK.getTxMult();
 
                 // handle internal DVM TSDUs
                 if (m_netTSBK.getMFId() == P25_MFG_DVM) {
@@ -779,6 +797,21 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
                                 m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
                         }
+                        break;
+                    case TSBK_ISP_RAD_MON_REQ:
+                        // validate the source RID
+                        VALID_SRCID("TSBK_ISP_RAD_MON_REQ (Radio Monitor)" , TSBK_ISP_RAD_MON_REQ , srcId);
+
+                        // validate the target RID
+                        VALID_DSTID("TSBK_ISP_RAD_MON_REQ (Radio monitor)" , TSBK_ISP_RAD_MON_REQ , dstId);
+
+                        if ( m_verbose ) {
+                            LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u" , srcId , dstId);
+                        }
+
+                        ::ActivityLog("P25" , true , "radio monitor request from %u to %u" , srcId , dstId);
+
+                        writeRF_TSDU_Radio_Mon(srcId , dstId , txMult);
                         break;
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_netTSBK.getMFId(), m_netTSBK.getLCO());
@@ -956,6 +989,27 @@ void Trunk::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
     m_rfTSBK.setLCO(TSBK_IOSP_CALL_ALRT);
     m_rfTSBK.setSrcId(srcId);
     m_rfTSBK.setDstId(dstId);
+    writeRF_TSDU_SBF(false);
+}
+
+/// <summary>
+/// Helper to write a radio monitor packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="txmult"></param>
+void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txmult)
+{
+    if (m_verbose) {
+        LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_RAD_MON_CMD (Radio monitor), srcId = %u, dstId = %u, txmult = %u" , srcId, dstId, txmult);
+    }
+
+    ::ActivityLog("P25" , true , "call alert request from %u to %u" , srcId , dstId);
+
+    m_rfTSBK.setLCO(TSBK_OSP_RAD_MON_CMD);
+    m_rfTSBK.setSrcId(srcId);
+    m_rfTSBK.setDstId(dstId);
+    m_rfTSBK.setTxMult(txmult);
     writeRF_TSDU_SBF(false);
 }
 
@@ -1838,7 +1892,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             if (m_debug) {
                 LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)");
             }
-            
+
             m_rfTSBK.setLCO(TSBK_OSP_TIME_DATE_ANN);
             m_rfTSBK.setMFId(P25_MFG_STANDARD);
             break;

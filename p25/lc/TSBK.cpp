@@ -8,6 +8,7 @@
 */
 /*
 *   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022 by Rosesam N5UWU
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -535,6 +536,11 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
         m_adjChannelNo = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                     // Site Channel Number
         m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                           // Site Service Class
         break;
+    case TSBK_ISP_RAD_MON_REQ:
+        m_txMult = (uint8_t)((tsbkValue >> 48) & 0x3U);                             // TX Multiplier
+        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
     default:
         LogError(LOG_P25, "TSBK::decode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
@@ -945,6 +951,12 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 #endif
     }
     break;
+    case TSBK_OSP_RAD_MON_CMD:
+    {
+        tsbkValue = (tsbkValue << 48) + (m_txMult & 0x3U);                          // TX Multiplier
+        tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                      // Source Radio Address
+        tsbkValue = tsbkValue + (m_dstId & 0xFFFFFFU);                              // Target Radio Address
+    }break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
             LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
