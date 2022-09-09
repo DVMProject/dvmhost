@@ -8,7 +8,7 @@
 */
 /*
 *   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
-*   Copyright (C) 2022 by Rosesam N5UWU
+*   Copyright (C) 2022 by Centex Trunked Radio System - TIME_DATE_ANN & RAD_MON_CMD
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by

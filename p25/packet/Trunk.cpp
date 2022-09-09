@@ -8,7 +8,7 @@
 */
 /*
 *   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
-*   Copyright (C) 2022 by Rosesam N5UWU
+*   Copyright (C) 2022 by Centex Trunked Radio System - TIME_DATE_ANN & RAD_MON_CMD
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -1004,7 +1004,7 @@ void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txmul
         LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_RAD_MON_CMD (Radio monitor), srcId = %u, dstId = %u, txmult = %u" , srcId, dstId, txmult);
     }
 
-    ::ActivityLog("P25" , true , "call alert request from %u to %u" , srcId , dstId);
+    ::ActivityLog("P25" , true , "Radio Unit Monitor request from %u to %u" , srcId , dstId);
 
     m_rfTSBK.setLCO(TSBK_OSP_RAD_MON_CMD);
     m_rfTSBK.setSrcId(srcId);
