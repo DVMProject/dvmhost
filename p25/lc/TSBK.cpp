@@ -8,7 +8,7 @@
 */
 /*
 *   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
-*   Copyright (C) 2022 by Centex Trunked Radio System - TIME_DATE_ANN & RAD_MON_CMD
+*   Copyright (C) 2022 by Jason- UWU - TIME_DATE_ANN & RAD_MON_CMD
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -956,7 +956,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 48) + (m_txMult & 0x3U);                          // TX Multiplier
         tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                      // Source Radio Address
         tsbkValue = tsbkValue + (m_dstId & 0xFFFFFFU);                              // Target Radio Address
-    }break;
+    } break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
             LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
