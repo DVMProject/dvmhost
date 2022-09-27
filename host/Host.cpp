@@ -1788,6 +1788,8 @@ bool Host::readParams()
         ::LogWarning(LOG_HOST, "System Identity \"%s\" is too long; truncating to 8 characters, \"%s\".", identity.c_str(), m_identity.c_str());
     }
 
+    int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
+
     removeLockFile();
 
     LogInfo("General Parameters");
@@ -1808,6 +1810,7 @@ bool Host::readParams()
         LogInfo("    Identity: %s", m_identity.c_str());
         LogInfo("    Fixed Mode: %s", m_fixedMode ? "yes" : "no");
         LogInfo("    Lock Filename: %s", g_lockFile.c_str());
+        LogInfo("    Local Time Offset: %dh", lto);
 
         yaml::Node systemInfo = systemConf["info"];
         m_latitude = systemInfo["latitude"].as<float>(0.0F);

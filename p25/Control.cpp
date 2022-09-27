@@ -279,7 +279,9 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         }
     }
 
-    m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass);
+    int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
+
+    m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     m_siteData.setCallsign(cwCallsign);
 
     std::vector<::lookups::IdenTable> entries = m_idenTable->list();

@@ -1214,6 +1214,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_convFallback(false),
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
+    m_microslotCount(0U),
     m_ctrlTSDUMBF(true),
     m_localEmergAlarm(false),
     m_sndcpChGrant(false),
@@ -1300,6 +1301,11 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         LogDebug(LOG_P25, "writeRF_ControlData, mbfCnt = %u, frameCnt = %u, seq = %u, adjSS = %u", m_mbfCnt, frameCnt, n, adjSS);
     }
 
+    // bryanb: this is just a simple counter because we treat the SYNC_BCST as unlocked
+    m_microslotCount++;
+    if (m_microslotCount > 7999U)
+        m_microslotCount = 0;
+
     bool forcePad = false;
     bool alt = (frameCnt % 2U) > 0U;
     switch (n)
@@ -1327,17 +1333,20 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         else
             queueRF_TSBK_Ctrl(TSBK_OSP_NET_STS_BCAST);
         break;
-    /** update data */
     case 4:
+        queueRF_TSBK_Ctrl(TSBK_OSP_SYNC_BCAST);
+        break;
+    /** update data */
+    case 5:
         if (m_p25->m_affiliations.grantSize() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_GRP_VCH_GRANT_UPD);
         }
         break;
     /** extra data */
-    case 5:
+    case 6:
         queueRF_TSBK_Ctrl(TSBK_OSP_SNDCP_CH_ANN);
         break;
-    case 6:
+    case 7:
         // write ADJSS
         if (adjSS && m_adjSiteTable.size() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_ADJ_STS_BCAST);
@@ -1346,17 +1355,13 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
             forcePad = true;
         }
         break;
-    case 7:
+    case 8:
         // write SCCB
         if (adjSS && m_sccbTable.size() > 0) {
             queueRF_TSBK_Ctrl(TSBK_OSP_SCCB_EXP);
             break;
         }
         break;
-    case 8:
-        // write TIME_DATE_ANN
-        queueRF_TSBK_Ctrl(TSBK_OSP_TIME_DATE_ANN);
-            break;
     }
 
     // should we insert the BSI bursts?
@@ -1888,12 +1893,13 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             // transmit SNDCP announcement
             m_rfTSBK.setLCO(TSBK_OSP_SNDCP_CH_ANN);
             break;
-        case TSBK_OSP_TIME_DATE_ANN:
+        case TSBK_OSP_SYNC_BCAST:
             if (m_debug) {
-                LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time Date Announce)");
+                LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_SYNC_BCAST (Synchronization Broadcast)");
             }
-
-            m_rfTSBK.setLCO(TSBK_OSP_TIME_DATE_ANN);
+            
+            m_rfTSBK.setLCO(TSBK_OSP_SYNC_BCAST);
+            m_rfTSBK.setMicroslotCount(m_microslotCount);
             m_rfTSBK.setMFId(P25_MFG_STANDARD);
             break;
 

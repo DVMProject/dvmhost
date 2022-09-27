@@ -560,6 +560,8 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     assert(data != NULL);
 
     const uint32_t services = (m_siteData.netActive()) ? P25_SYS_SRV_NET_ACTIVE : 0U | P25_SYS_SRV_DEFAULT;
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    time_t tt = std::chrono::system_clock::to_time_t(now);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -771,6 +773,54 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                         // System ID
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
         break;
+    case TSBK_OSP_SYNC_BCAST:
+    {
+        tm local_tm = *gmtime(&tt);
+
+        uint32_t tmM = (local_tm.tm_mon + 1);
+        uint32_t tmY = (local_tm.tm_year + 1900) - 2000;
+
+#if DEBUG_P25_TSBK
+        LogDebug(LOG_P25, "TSBK_OSP_SYNC_BCAST, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);
+#endif
+
+        // determine LTO and direction (positive or negative)
+        bool negativeLTO = false;
+        uint8_t lto = fabs(m_siteData.lto()) * 2U; // this will cause a bug for half-hour timezone intervals...
+        if (m_siteData.lto() < 0)
+            negativeLTO = true;
+
+        // mark the LTO as valid if its non-zero
+        bool vl = false;
+        if (lto > 0U)
+            vl = true;
+
+        uint8_t mc = 0U;
+
+        // wrap microslot count if necessary
+        if (m_microslotCount > 7999U)
+            m_microslotCount = 0U;
+
+        tsbkValue = 0x0AU +                                                         // US - Unsynced Flag Set / MMU - Microslot/Minute Unlock Flag Set
+            ((mc & 0x03U) >> 1);                                                    // Minute Correction MSB
+        tsbkValue = (tsbkValue << 8) +
+            ((mc & 0x01U) << 7) +                                                   // Minute Correction LSB
+            (vl ? 0x40U : 0x00U) +                                                  // Valid LTO Flag
+            (negativeLTO ? 0x20U : 0x00U) +                                         // Add/Subtract LTO Flag
+            (lto & 0x1F);                                                           // LTO
+
+        // Date
+        tsbkValue = (tsbkValue << 7) + (tmY & 0x7FU);                               // Number of Years Past 2000
+        tsbkValue = (tsbkValue << 4) + (tmM & 0x0FU);                               // Month
+        tsbkValue = (tsbkValue << 5) + (local_tm.tm_mday & 0x1FU);                  // Day of Month
+        
+        // Time
+        tsbkValue = (tsbkValue << 5) + (local_tm.tm_hour & 0x1FU);                  // Hour
+        tsbkValue = (tsbkValue << 6) + (local_tm.tm_min & 0x3FU);                   // Minute
+
+        tsbkValue = (tsbkValue << 13) + (m_microslotCount & 0x1FFFU);               // Microslot Count
+    }
+    break;
     case TSBK_OSP_IDEN_UP_VU:
     {
         if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
@@ -898,6 +948,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         }
     }
     break;
+<<<<<<< HEAD
     case TSBK_OSP_TIME_DATE_ANN:
     {
         //Setup
@@ -956,7 +1007,8 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 48) + (m_txMult & 0x3U);                          // TX Multiplier
         tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                      // Source Radio Address
         tsbkValue = tsbkValue + (m_dstId & 0xFFFFFFU);                              // Target Radio Address
-    } break;
+    } 
+    break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
             LogError(LOG_P25, "TSBK::encode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
@@ -1207,6 +1259,7 @@ TSBK::TSBK(SiteData siteData) :
     m_messageValue(0U),
     m_statusValue(0U),
     m_extendedFunction(P25_EXT_FNCT_CHECK),
+    m_microslotCount(0U),
     m_dataServiceOptions(0U),
     m_dataAccessControl(0U),
     m_dataChannelNo(0U),
@@ -1274,6 +1327,8 @@ void TSBK::copy(const TSBK& data)
     m_statusValue = data.m_statusValue;
 
     m_extendedFunction = data.m_extendedFunction;
+
+    m_microslotCount = data.m_microslotCount;
 
     m_dataChannelNo = data.m_dataChannelNo;
 

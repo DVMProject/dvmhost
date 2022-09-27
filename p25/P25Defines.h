@@ -299,12 +299,12 @@ namespace p25
     const uint8_t   TSBK_ISP_TELE_INT_PSTN_REQ = 0x09U; // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
     const uint8_t   TSBK_ISP_SNDCP_CH_REQ = 0x12U;      // SNDCP CH REQ - SNDCP Data Channel Request
     const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;         // STS Q RSP - Status Query Response
+    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS_Q_REQ - Status Query Request
     const uint8_t   TSBK_ISP_CAN_SRV_REQ = 0x23U;       // CAN SRV REQ - Cancel Service Request
     const uint8_t   TSBK_ISP_EMERG_ALRM_REQ = 0x27U;    // EMERG ALRM REQ - Emergency Alarm Request
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS_Q_REQ - Status Query Request
     const uint8_t   TSBK_ISP_RAD_MON_REQ = 0x1DU;       // RAD_MON_REQ - Radio Unit Monitor Request
     const uint8_t   TSBK_ISP_RAD_MON_ENH_REQ = 0x1EU;   // RAD_MON_ENH_REQ - Radio Unit Monitor Enhanced Request
     const uint8_t   TSBK_ISP_AUTH_FNE_RST = 0x3AU;      // AUTH_FNE_RST - Authentication FNE Result
@@ -317,27 +317,26 @@ namespace p25
     const uint8_t   TSBK_OSP_UU_VCH_GRANT_UPD = 0x06U;  // UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
     const uint8_t   TSBK_OSP_SNDCP_CH_GNT = 0x14U;      // SNDCP CH GNT - SNDCP Data Channel Grant
     const uint8_t   TSBK_OSP_SNDCP_CH_ANN = 0x16U;      // SNDCP CH ANN - SNDCP Data Channel Announcement
+    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
     const uint8_t   TSBK_OSP_DENY_RSP = 0x27U;          // DENY RSP - Deny Response
     const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit
     const uint8_t   TSBK_OSP_GRP_AFF_Q = 0x2AU;         // GRP AFF Q - Group Affiliation Query
     const uint8_t   TSBK_OSP_LOC_REG_RSP = 0x2BU;       // LOC REG RSP - Location Registration Response
     const uint8_t   TSBK_OSP_U_REG_CMD = 0x2DU;         // U REG CMD - Unit Registration Command
     const uint8_t   TSBK_OSP_U_DEREG_ACK = 0x2FU;       // U DE REG ACK - Unit De-Registration Acknowledge
+    const uint8_t   TSBK_OSP_SYNC_BCAST = 0x30U;        // SYNC BCAST - Synchronization Broadcast
     const uint8_t   TSBK_OSP_QUE_RSP = 0x33U;           // QUE RSP - Queued Response
     const uint8_t   TSBK_OSP_IDEN_UP_VU = 0x34U;        // IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
-    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME_DATE_ANN - Time and Date Announcement
     const uint8_t   TSBK_OSP_SYS_SRV_BCAST = 0x38U;     // SYS SRV BCAST - System Service Broadcast
     const uint8_t   TSBK_OSP_SCCB = 0x39U;              // SCCB - Secondary Control Channel Broadcast
     const uint8_t   TSBK_OSP_RFSS_STS_BCAST = 0x3AU;    // RFSS STS BCAST - RFSS Status Broadcast
     const uint8_t   TSBK_OSP_NET_STS_BCAST = 0x3BU;     // NET STS BCAST - Network Status Broadcast
     const uint8_t   TSBK_OSP_ADJ_STS_BCAST = 0x3CU;     // ADJ STS BCAST - Adjacent Site Status Broadcast
     const uint8_t   TSBK_OSP_IDEN_UP = 0x3DU;           // IDEN UP - Channel Identifier Update
-    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
     const uint8_t   TSBK_OSP_AUTH_DMD = 0x31U;          // AUTH_DMD - Authentication Demand
     const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH_FNE_RESP - Authentication FNE Response
     const uint8_t   TSBK_OSP_RAD_MON_CMD = 0x1DU;       // RAD_MON_CMD - Radio Monitor Command
     const uint8_t   TSBK_OSP_RAD_MON_ENH_CMD = 0x1EU;   // RAD_MON_ENH_CMD - Radio Unit Monitor Enhanced Command
-
 
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_MOT_GRG_ADD = 0x00U;       // MOT GRG ADD - Motorola / Group Regroup Add (Patch Supergroup)

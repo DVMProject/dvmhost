@@ -52,7 +52,8 @@ namespace p25
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_chCnt(0U),
-            m_netActive(false)
+            m_netActive(false),
+            m_lto(0)
         {
             /* stub */
         }
@@ -65,7 +66,8 @@ namespace p25
         /// <param name="channelId">Channel ID.</param>
         /// <param name="channelNo">Channel Number.</param>
         /// <param name="serviceClass">Service class.</param>
-        SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass) :
+        /// <param name="lto">Local time offset.</param>
+        SiteData(uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t lra, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, int8_t lto) :
             m_lra(0U),
             m_netId(P25_WACN_STD_DEFAULT),
             m_sysId(P25_SID_STD_DEFAULT),
@@ -77,7 +79,8 @@ namespace p25
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
             m_chCnt(0U),
-            m_netActive(false)
+            m_netActive(false),
+            m_lto(0)
         {
             // lra clamping
             if (lra > 0xFFU) // clamp to $FF
@@ -119,6 +122,8 @@ namespace p25
             m_channelNo = channelNo;
 
             m_serviceClass = serviceClass;
+
+            m_lto = lto;
         }
 
         /// <summary>Helper to set the site callsign.</summary>
@@ -190,6 +195,7 @@ namespace p25
             m_callsign = "ADJSITE ";
             m_chCnt = -1; // don't store channel count for adjacent sites
             m_netActive = true; // adjacent sites are explicitly network active
+            m_lto = 0;
         }
 
         /// <summary>Equals operator.</summary>
@@ -217,6 +223,8 @@ namespace p25
                 m_chCnt = data.m_chCnt;
 
                 m_netActive = data.m_netActive;
+
+                m_lto = data.m_lto;
             }
 
             return *this;
@@ -247,6 +255,8 @@ namespace p25
         __READONLY_PROPERTY_PLAIN(uint8_t, chCnt, chCnt);
         /// <summary>Flag indicating whether this site is a linked active network member.</summary>
         __READONLY_PROPERTY_PLAIN(bool, netActive, netActive);
+        /// <summary>Local Time Offset.</summary>
+        __READONLY_PROPERTY_PLAIN(int8_t, lto, lto);
     };
 } // namespace p25
 
