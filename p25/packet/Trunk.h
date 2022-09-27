@@ -144,6 +144,8 @@ namespace p25
             Timer m_adjSiteUpdateTimer;
             uint32_t m_adjSiteUpdateInterval;
 
+            uint16_t m_microslotCount;
+
             bool m_ctrlTSDUMBF;
 
             bool m_localEmergAlarm;

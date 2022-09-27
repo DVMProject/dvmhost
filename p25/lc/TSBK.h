@@ -144,6 +144,9 @@ namespace p25
             /// <summary>Extended function opcode.</summary>
             __PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
 
+            /// <summary>Microslot count.</summary>
+            __PROPERTY(uint16_t, microslotCount, MicroslotCount);
+
             /** SNDCP Channel Request */
             /// <summary>SNDCP Data Service Options</summary>
             __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);

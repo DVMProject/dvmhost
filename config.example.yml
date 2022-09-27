@@ -107,6 +107,7 @@ system:
     rfTalkgroupHang: 10
     activeTickDelay: 5
     idleTickDelay: 5
+    localTimeOffset: 0
     info:
         latitude: -83.689428
         longitude: -39.194973
