@@ -340,12 +340,13 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
-    dataHeader.setFormat(PDU_FMT_UNCONFIRMED);
+    dataHeader.setFormat(PDU_FMT_AMBT);
     dataHeader.setMFId(m_mfId);
     dataHeader.setAckNeeded(false);
     dataHeader.setOutbound(true);
     dataHeader.setSAP(PDU_SAP_TRUNK_CTRL);
     dataHeader.setLLId(m_srcId);
+    dataHeader.setFullMessage(true);
     dataHeader.setBlocksToFollow(1U);
 
     dataHeader.setAMBTOpcode(m_lco);
