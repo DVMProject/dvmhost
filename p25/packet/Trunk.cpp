@@ -838,29 +838,12 @@ bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
     uint8_t data[1U];
     ::memset(data, 0x00U, 1U);
 
-    bool ret = true;
-    for (uint32_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
-        bool blockRead = true;
-
-        // get the raw block data
-        uint8_t raw[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-        uint32_t len = blocks[i].getData(raw);
-        if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
-            LogError(LOG_P25, "Trunk::processMBT(), failed to read PDU data block");
-            blockRead = false;
-        }
-
-        if (blockRead) {
-            bool mbtDecode = m_rfTSBK.decodeMBT(dataHeader, raw);
-            if (mbtDecode) {
-                process(data, 1U, true);
-            } else {
-                ret = false;
-            }
-        }
+    bool mbtDecode = m_rfTSBK.decodeMBT(dataHeader, blocks);
+    if (mbtDecode) {
+        return process(data, 1U, true);
+    } else {
+        return false;
     }
-
-    return ret;
 }
 
 /// <summary>

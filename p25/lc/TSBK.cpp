@@ -116,6 +116,21 @@ TSBK::TSBK(LC* lc) : TSBK(lc->siteData())
 /// </summary>
 TSBK::~TSBK()
 {
+    if (m_authRes != NULL) {
+        delete[] m_authRes;
+        m_authRes = NULL;
+    }
+
+    if (m_authRS != NULL) {
+        delete[] m_authRS;
+        m_authRS = NULL;
+    }
+
+    if (m_authRand != NULL) {
+        delete[] m_authRand;
+        m_authRand = NULL;
+    }
+
     delete[] m_siteCallsign;
 }
 
@@ -137,10 +152,22 @@ TSBK& TSBK::operator=(const TSBK& data)
 /// Decode a alternate trunking signalling block.
 /// </summary>
 /// <param name="dataHeader"></param>
-/// <param name="block"></param>
+/// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
+bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
 {
+    assert(blocks != NULL);
+
+    if (dataHeader.getFormat() != PDU_FMT_AMBT) {
+        LogError(LOG_P25, "TSBK::decodeMBT(), PDU is not a AMBT PDU");
+        return false;
+    }
+
+    if (dataHeader.getBlocksToFollow() == 0U) {
+        LogError(LOG_P25, "TSBK::decodeMBT(), PDU contains no data blocks");
+        return false;
+    }
+
     m_lco = dataHeader.getAMBTOpcode();                                             // LCO
     m_lastBlock = true;
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
@@ -149,29 +176,35 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
         LogWarning(LOG_P25, "TSBK::decodeMBT(), MBT is an outbound MBT?, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
     }
 
+    // get the first data block
+    uint8_t block1[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    uint32_t len = blocks[0U].getData(block1);
+    if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+        LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
+        return false;
+    }
+
+    // get the second data block
+    uint8_t block2[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    if (dataHeader.getBlocksToFollow() == 2U) {
+        uint32_t len = blocks[1U].getData(block2);
+        if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+            LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
+            return false;
+        }
+    }
+
     ulong64_t tsbkValue = 0U;
 
-    if (dataHeader.getFormat() == PDU_FMT_AMBT) {
-        // combine bytes into rs value
-        tsbkValue = dataHeader.getAMBTField8();
-        tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
-        tsbkValue = (tsbkValue << 8) + block[0U];
-        tsbkValue = (tsbkValue << 8) + block[1U];
-        tsbkValue = (tsbkValue << 8) + block[2U];
-        tsbkValue = (tsbkValue << 8) + block[3U];
-        tsbkValue = (tsbkValue << 8) + block[4U];
-        tsbkValue = (tsbkValue << 8) + block[5U];
-    } else {
-        // combine bytes into rs value
-        tsbkValue = block[0U];
-        tsbkValue = (tsbkValue << 8) + block[1U];
-        tsbkValue = (tsbkValue << 8) + block[2U];
-        tsbkValue = (tsbkValue << 8) + block[3U];
-        tsbkValue = (tsbkValue << 8) + block[4U];
-        tsbkValue = (tsbkValue << 8) + block[5U];
-        tsbkValue = (tsbkValue << 8) + block[6U];
-        tsbkValue = (tsbkValue << 8) + block[7U];
-    }
+    // combine bytes into rs value
+    tsbkValue = dataHeader.getAMBTField8();
+    tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
+    tsbkValue = (tsbkValue << 8) + block1[0U];
+    tsbkValue = (tsbkValue << 8) + block1[1U];
+    tsbkValue = (tsbkValue << 8) + block1[2U];
+    tsbkValue = (tsbkValue << 8) + block1[3U];
+    tsbkValue = (tsbkValue << 8) + block1[4U];
+    tsbkValue = (tsbkValue << 8) + block1[5U];
 
     // Motorola P25 vendor opcodes
     if (m_mfId == P25_MFG_MOT) {
@@ -215,14 +248,14 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
         m_statusValue = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                     // Message Value
         m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
-        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];             // Target Radio Address
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U];            // Target Radio Address
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_MSG_UPDT:
         m_messageValue = (uint32_t)((tsbkValue >> 48) & 0xFFFFU);                   // Message Value
         m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
-        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];             // Target Radio Address
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U];            // Target Radio Address
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_CALL_ALRT:
@@ -252,13 +285,40 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const uint8_t* block)
         m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                            // System ID
         m_dstId = (uint32_t)((((tsbkValue) & 0xFFU) << 16) +                        // Target Radio Address
-            (block[6U] << 8) + (block[7U]));
+            (block1[6U] << 8) + (block1[7U]));
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_EXT_FNCT:
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
-        m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block[6U];  // Extended Function
+        m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U]; // Extended Function
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+        break;
+    case TSBK_ISP_AUTH_RESP_M:
+    {
+        if (dataHeader.getBlocksToFollow() != 2) {
+            LogError(LOG_P25, "TSBK::decodeMBT(), PDU does not contain the appropriate amount of data blocks");
+            return false;
+        }
+
+        m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
+        m_authStandalone = ((block2[2U] & 0xFFU) & 0x01U) == 0x01U;                 // Authentication Standalone Flag
+        m_authRand[4U] = (uint8_t)block1[5U] & 0xFFU;                               // Random Salt b0
+        m_authRand[3U] = (uint8_t)block1[6U] & 0xFFU;                               // Random Salt b0
+        m_authRand[2U] = (uint8_t)block1[7U] & 0xFFU;                               // Random Salt b0
+        m_authRand[1U] = (uint8_t)block1[8U] & 0xFFU;                               // Random Salt b0
+        m_authRand[0U] = (uint8_t)block1[9U] & 0xFFU;                               // Random Salt b0
+        m_authRes[3U] = (uint8_t)block1[10U] & 0xFFU;                               // Result b3
+        m_authRes[2U] = (uint8_t)block1[11U] & 0xFFU;                               // Result b2
+        m_authRes[1U] = (uint8_t)block2[0U] & 0xFFU;                                // Result b1
+        m_authRes[0U] = (uint8_t)block2[1U] & 0xFFU;                                // Result b0
+        m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+    }
+    break;
+    case TSBK_ISP_AUTH_SU_DMD:
+        m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     default:
@@ -456,6 +516,11 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
+    case TSBK_ISP_RAD_MON_REQ:
+        m_txMult = (uint8_t)((tsbkValue >> 48) & 0x3U);                             // TX Multiplier
+        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
     case TSBK_IOSP_CALL_ALRT:
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
@@ -528,6 +593,22 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
         m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                          // Talkgroup Address
         m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
+    case TSBK_ISP_AUTH_RESP:
+        m_authStandalone = (((tsbkValue >> 56) & 0xFFU) & 0x01U) == 0x01U;          // Authentication Standalone Flag
+        m_authRes[3U] = (uint8_t)((tsbkValue >> 48) & 0xFFU);                       // Result b3
+        m_authRes[2U] = (uint8_t)((tsbkValue >> 40) & 0xFFU);                       // Result b2
+        m_authRes[1U] = (uint8_t)((tsbkValue >> 32) & 0xFFU);                       // Result b1
+        m_authRes[0U] = (uint8_t)((tsbkValue >> 24) & 0xFFU);                       // Result b0
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
+    case TSBK_ISP_AUTH_FNE_RST:
+        m_authSuccess = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             // Authentication Success Flag
+        m_authStandalone = (((tsbkValue >> 56) & 0xFFU) & 0x01U) == 0x01U;          // Authentication Standalone Flag
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
+    case TSBK_ISP_AUTH_SU_DMD:
+        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
+        break;
     case TSBK_OSP_ADJ_STS_BCAST:
         m_adjSysId = (uint32_t)((tsbkValue >> 40) & 0xFFFU);                        // Site System ID
         m_adjRfssId = (uint8_t)((tsbkValue >> 32) & 0xFFU);                         // Site RFSS ID
@@ -535,11 +616,6 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
         m_adjChannelId = (uint8_t)((tsbkValue >> 20) & 0xFU);                       // Site Channel ID
         m_adjChannelNo = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                     // Site Channel Number
         m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                           // Site Service Class
-        break;
-    case TSBK_ISP_RAD_MON_REQ:
-        m_txMult = (uint8_t)((tsbkValue >> 48) & 0x3U);                             // TX Multiplier
-        m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
-        m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     default:
         LogError(LOG_P25, "TSBK::decode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
@@ -622,6 +698,30 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Target Radio Address
     }
     break;
+    case TSBK_OSP_SNDCP_CH_ANN:
+    {
+        uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
+        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
+
+        uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_siteData.channelNo())));
+        uint32_t rxFrequency = (uint32_t)(txFrequency + calcTxOffset);
+
+        uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
+        uint32_t rxChNo = rootFreq / (m_siteIdenEntry.chSpaceKhz() * 1000);
+
+        tsbkValue = 0U;                                                             //
+        tsbkValue = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
+            (m_encrypted ? 0x40U : 0x00U);                                          // Encrypted Flag
+        tsbkValue = (tsbkValue << 8) +
+            (m_sndcpAutoAccess ? 0x80U : 0x00U) +                                   // Autonomous Access
+            (m_sndcpAutoAccess ? 0x40U : 0x00U);                                    // Requested Access
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
+        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (T) Number
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
+        tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                          // Channel (R) Number
+        tsbkValue = (tsbkValue << 16) + m_sndcpDAC;                                 // Data Access Control
+    }
+    break;
     case TSBK_IOSP_STS_UPDT:
         tsbkValue = 0U;
         tsbkValue = (tsbkValue << 16) + m_statusValue;                              // Status Value
@@ -633,6 +733,11 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 16) + m_messageValue;                             // Message Value
         tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Target Radio Address
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+        break;
+    case TSBK_OSP_RAD_MON_CMD:
+        tsbkValue = (tsbkValue << 48) + (m_txMult & 0x3U);                          // TX Multiplier
+        tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                      // Source Radio Address
+        tsbkValue = tsbkValue + (m_dstId & 0xFFFFFFU);                              // Target Radio Address
         break;
     case TSBK_IOSP_CALL_ALRT:
         tsbkValue = 0U;
@@ -665,30 +770,6 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 16) + (m_dstId & 0xFFFFU);                        // Talkgroup Address
         tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
         break;
-    case TSBK_OSP_SNDCP_CH_ANN:
-    {
-        uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-        float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
-
-        uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_siteData.channelNo())));
-        uint32_t rxFrequency = (uint32_t)(txFrequency + calcTxOffset);
-
-        uint32_t rootFreq = rxFrequency - m_siteIdenEntry.baseFrequency();
-        uint32_t rxChNo = rootFreq / (m_siteIdenEntry.chSpaceKhz() * 1000);
-
-        tsbkValue = 0U;                                                             //
-        tsbkValue = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
-            (m_encrypted ? 0x40U : 0x00U);                                          // Encrypted Flag
-        tsbkValue = (tsbkValue << 8) +
-            (m_sndcpAutoAccess ? 0x80U : 0x00U) +                                   // Autonomous Access
-            (m_sndcpAutoAccess ? 0x40U : 0x00U);                                    // Requested Access
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
-        tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                     // Channel (T) Number
-        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
-        tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                          // Channel (R) Number
-        tsbkValue = (tsbkValue << 16) + m_sndcpDAC;                                 // Data Access Control
-    }
-    break;
     case TSBK_IOSP_U_REG:
         tsbkValue = 0U;
         tsbkValue = (tsbkValue << 2) + (m_response & 0x3U);                         // Unit Registration Response
@@ -821,6 +902,14 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 13) + (m_microslotCount & 0x1FFFU);               // Microslot Count
     }
     break;
+    case TSBK_OSP_AUTH_FNE_RESP:
+        tsbkValue = 0U;
+        tsbkValue = (tsbkValue << 8) + m_authRes[3U];                               // Result b3
+        tsbkValue = (tsbkValue << 8) + m_authRes[2U];                               // Result b2
+        tsbkValue = (tsbkValue << 8) + m_authRes[1U];                               // Result b1
+        tsbkValue = (tsbkValue << 8) + m_authRes[0U];                               // Result b0
+        tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+        break;
     case TSBK_OSP_IDEN_UP_VU:
     {
         if ((m_siteIdenEntry.chBandwidthKhz() != 0.0F) && (m_siteIdenEntry.chSpaceKhz() != 0.0F) &&
@@ -947,13 +1036,6 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
             return; // blatently ignore creating this TSBK
         }
     }
-    break;
-    case TSBK_OSP_RAD_MON_CMD:
-    {
-        tsbkValue = (tsbkValue << 48) + (m_txMult & 0x3U);                          // TX Multiplier
-        tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                      // Source Radio Address
-        tsbkValue = tsbkValue + (m_dstId & 0xFFFFFFU);                              // Target Radio Address
-    } 
     break;
     default:
         if (m_mfId == P25_MFG_STANDARD) {
@@ -1227,6 +1309,9 @@ TSBK::TSBK(SiteData siteData) :
     m_encrypted(false),
     m_priority(4U),
     m_group(true),
+    m_txMult(0U),
+    m_authSuccess(false),
+    m_authStandalone(false),
     m_siteData(siteData),
     m_siteIdenEntry(),
     m_rs(),
@@ -1235,11 +1320,21 @@ TSBK::TSBK(SiteData siteData) :
     m_sndcpAutoAccess(true),
     m_sndcpReqAccess(false),
     m_sndcpDAC(1U),
+    m_authRes(NULL),
+    m_authRS(NULL),
+    m_authRand(NULL),
     m_siteCallsign(NULL)
 {
     m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
     ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
     setCallsign(siteData.callsign());
+
+    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
+    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRS = new uint8_t[P25_AUTH_RS_LENGTH_BYTES];
+    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RS_LENGTH_BYTES);
+    m_authRand = new uint8_t[P25_AUTH_RAND_LENGTH_BYTES];
+    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RAND_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -1302,8 +1397,34 @@ void TSBK::copy(const TSBK& data)
 
     m_group = data.m_group;
 
+    m_txMult = data.m_txMult;
+
+    m_authSuccess = data.m_authSuccess;
+    m_authStandalone = data.m_authStandalone;
+
     m_siteData = data.m_siteData;
     m_siteIdenEntry = data.m_siteIdenEntry;
+
+    if (m_authRes != NULL) {
+        delete[] m_authRes;
+    }
+
+    m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
+    ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+
+    if (m_authRS != NULL) {
+        delete[] m_authRes;
+    }
+
+    m_authRS = new uint8_t[P25_AUTH_RS_LENGTH_BYTES];
+    ::memcpy(m_authRS, data.m_authRS, P25_AUTH_RS_LENGTH_BYTES);
+
+    if (m_authRand != NULL) {
+        delete[] m_authRand;
+    }
+
+    m_authRand = new uint8_t[P25_AUTH_RAND_LENGTH_BYTES];
+    ::memcpy(m_authRand, data.m_authRand, P25_AUTH_RAND_LENGTH_BYTES);
 
     delete[] m_siteCallsign;
 

@@ -335,9 +335,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
-                        for (uint32_t i = 0; i < blocksToFollow; i++) {
-                            m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
-                        }
+                        m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
                     }
                     break;
                     default:

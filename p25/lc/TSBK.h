@@ -82,7 +82,7 @@ namespace p25
             TSBK& operator=(const TSBK& data);
 
             /// <summary>Decode a alternate trunking signalling block.</summary>
-            bool decodeMBT(const data::DataHeader dataHeader, const uint8_t* block);
+            bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data, bool rawTSBK = false);
@@ -204,15 +204,21 @@ namespace p25
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
             __PROPERTY(bool, group, Group);
 
+            /** Radio Unit Monitor */
+            /// <summary>Radio Unit Monitor.</summary>
+            __PROPERTY(uint8_t, txMult, TxMult);
+
+            /** Authentication Handshake */
+            /// <summary>Flag indicating authentication was successful.</summary>
+            __PROPERTY(bool, authSuccess, AuthSuccess);
+            /// <summary>Flag indicating authentication is standalone.</summary>
+            __PROPERTY(bool, authStandalone, AuthStandalone);
+
             /** Local Site data */
             /// <summary>Local Site Data.</summary>
             __PROPERTY_PLAIN(SiteData, siteData, siteData);
             /// <summary>Local Site Identity Entry.</summary>
             __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
-
-            /** Radio Unit Monitor */
-            /// <summary>Radio Unit Monitor.</summary>
-            __PROPERTY(uint8_t, txMult, TxMult);
 
         private:
             /// <summary>Initializes a new instance of the TSBK class.</summary>
@@ -230,6 +236,11 @@ namespace p25
             bool m_sndcpAutoAccess;
             bool m_sndcpReqAccess;
             uint16_t m_sndcpDAC;
+
+            /** Authentication data */
+            uint8_t* m_authRes;
+            uint8_t* m_authRS;
+            uint8_t* m_authRand;
 
             /** Local Site data */
             uint8_t* m_siteCallsign;
