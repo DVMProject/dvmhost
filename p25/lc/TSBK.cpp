@@ -334,13 +334,10 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
 /// Encode a alternate trunking signalling block.
 /// </summary>
 /// <param name="dataHeader"></param>
-/// <param name="blocks"></param>
-void TSBK::encodeMBT(data::DataHeader& dataHeader, data::DataBlock* blocks)
+/// <param name="pduUserData"></param>
+void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(blocks != NULL);
-
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * 2U];
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * 2U);
+    assert(pduUserData != NULL);
 
     dataHeader.setFormat(PDU_FMT_UNCONFIRMED);
     dataHeader.setMFId(m_mfId);
@@ -394,15 +391,8 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, data::DataBlock* blocks)
     // generate packet CRC-32 and set data blocks
     if (dataHeader.getBlocksToFollow() > 1U) {
         edac::CRC::addCRC32(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
-
-        uint8_t offs = 0U;
-        for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
-            blocks[i].setData(pduUserData + offs);
-            offs += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
-        }
     } else {
         edac::CRC::addCRC32(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
-        blocks[0U].setData(pduUserData);
     }
 }
 

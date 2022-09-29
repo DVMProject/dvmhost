@@ -178,6 +178,8 @@ namespace p25
             virtual void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
             void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
+            /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
+            void writeRF_PDU_AMBT(bool clearBeforeWrite = false);
 
             /// <summary>Helper to generate the given control TSBK into the TSDU frame queue.</summary>
             void queueRF_TSBK_Ctrl(uint8_t lco);

@@ -51,6 +51,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     
     class HOST_SW_API Control;
+    namespace packet { class HOST_SW_API Trunk; }
 
     namespace packet
     {
@@ -78,6 +79,7 @@ namespace p25
         private:
             friend class p25::Control;
             Control* m_p25;
+            friend class p25::packet::Trunk;
 
             network::BaseNetwork* m_network;
 
