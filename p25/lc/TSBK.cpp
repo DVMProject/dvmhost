@@ -398,10 +398,12 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
         /** Block 1 */
         pduUserData[0U] = (m_siteData.rfssId()) & 0xFFU;                            // RF Sub-System ID
         pduUserData[1U] = (m_siteData.siteId()) & 0xFFU;                            // Site ID
-        pduUserData[2U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Transmit Channel Number
-        pduUserData[3U] = (m_siteData.channelNo() >> 0) & 0xFFU;
-        pduUserData[4U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Receive Channel Number
-        pduUserData[5U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[2U] = ((m_siteData.channelId() & 0x0FU) << 4) +                 // Transmit Channel ID & Channel Number MSB
+            ((m_siteData.channelNo() >> 8) & 0xFFU);
+        pduUserData[3U] = (m_siteData.channelNo() >> 0) & 0xFFU;                    // Transmit Channel Number LSB
+        pduUserData[4U] = ((m_siteData.channelId() & 0x0FU) << 4) +                 // Receive Channel ID & Channel Number MSB
+            ((m_siteData.channelNo() >> 8) & 0xFFU);
+        pduUserData[5U] = (m_siteData.channelNo() >> 0) & 0xFFU;                    // Receive Channel Number LSB
         pduUserData[6U] = m_siteData.serviceClass();                                // System Service Class
     }
     break;
@@ -416,10 +418,12 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
         pduUserData[0U] = (m_siteData.netId() >> 12) & 0xFFU;                       // Network ID (b19-12)
         pduUserData[1U] = (m_siteData.netId() >> 4) & 0xFFU;                        // Network ID (b11-b4)
         pduUserData[2U] = (m_siteData.netId() & 0x0FU) << 4;                        // Network ID (b3-b0)
-        pduUserData[3U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Transmit Channel Number
-        pduUserData[4U] = (m_siteData.channelNo() >> 0) & 0xFFU;
-        pduUserData[5U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Receive Channel Number
-        pduUserData[6U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[3U] = ((m_siteData.channelId() & 0x0FU) << 4) +                 // Transmit Channel ID & Channel Number MSB
+            ((m_siteData.channelNo() >> 8) & 0xFFU);
+        pduUserData[4U] = (m_siteData.channelNo() >> 0) & 0xFFU;                    // Transmit Channel Number LSB
+        pduUserData[5U] = ((m_siteData.channelId() & 0x0FU) << 4) +                 // Receive Channel ID & Channel Number MSB
+            ((m_siteData.channelNo() >> 8) & 0xFFU);
+        pduUserData[6U] = (m_siteData.channelNo() >> 0) & 0xFFU;                    // Receive Channel Number LSB
         pduUserData[7U] = m_siteData.serviceClass();                                // System Service Class
     }
     break;
@@ -440,10 +444,12 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
             dataHeader.setAMBTField9(m_adjSiteId);                                  // Site ID
 
             /** Block 1 */
-            pduUserData[0U] = (m_adjChannelNo >> 8) & 0xFFU;                        // Transmit Channel Number
-            pduUserData[1U] = (m_adjChannelNo >> 0) & 0xFFU;
-            pduUserData[2U] = (m_adjChannelNo >> 8) & 0xFFU;                        // Receive Channel Number
-            pduUserData[3U] = (m_adjChannelNo >> 0) & 0xFFU;
+            pduUserData[0U] = ((m_adjChannelId & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
+                ((m_adjChannelNo >> 8) & 0xFFU);
+            pduUserData[1U] = (m_adjChannelNo >> 0) & 0xFFU;                        // Transmit Channel Number LSB
+            pduUserData[2U] = ((m_adjChannelId & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
+                ((m_adjChannelNo >> 8) & 0xFFU);
+            pduUserData[3U] = (m_adjChannelNo >> 0) & 0xFFU;                        // Receive Channel Number LSB
             pduUserData[4U] = m_adjServiceClass;                                    // System Service Class
             pduUserData[5U] = (m_siteData.netId() >> 12) & 0xFFU;                   // Network ID (b19-12)
             pduUserData[6U] = (m_siteData.netId() >> 4) & 0xFFU;                    // Network ID (b11-b4)
