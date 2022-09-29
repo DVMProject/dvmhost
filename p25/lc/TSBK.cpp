@@ -126,9 +126,9 @@ TSBK::~TSBK()
         m_authRS = NULL;
     }
 
-    if (m_authRand != NULL) {
-        delete[] m_authRand;
-        m_authRand = NULL;
+    if (m_authRC != NULL) {
+        delete[] m_authRC;
+        m_authRC = NULL;
     }
 
     delete[] m_siteCallsign;
@@ -304,11 +304,11 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
         m_authStandalone = ((block2[2U] & 0xFFU) & 0x01U) == 0x01U;                 // Authentication Standalone Flag
-        m_authRand[4U] = (uint8_t)block1[5U] & 0xFFU;                               // Random Challenge b4
-        m_authRand[3U] = (uint8_t)block1[6U] & 0xFFU;                               // Random Challenge b3
-        m_authRand[2U] = (uint8_t)block1[7U] & 0xFFU;                               // Random Challenge b2
-        m_authRand[1U] = (uint8_t)block1[8U] & 0xFFU;                               // Random Challenge b1
-        m_authRand[0U] = (uint8_t)block1[9U] & 0xFFU;                               // Random Challenge b0
+        m_authRC[4U] = (uint8_t)block1[5U] & 0xFFU;                                 // Random Challenge b4
+        m_authRC[3U] = (uint8_t)block1[6U] & 0xFFU;                                 // Random Challenge b3
+        m_authRC[2U] = (uint8_t)block1[7U] & 0xFFU;                                 // Random Challenge b2
+        m_authRC[1U] = (uint8_t)block1[8U] & 0xFFU;                                 // Random Challenge b1
+        m_authRC[0U] = (uint8_t)block1[9U] & 0xFFU;                                 // Random Challenge b0
         m_authRes[3U] = (uint8_t)block1[10U] & 0xFFU;                               // Result b3
         m_authRes[2U] = (uint8_t)block1[11U] & 0xFFU;                               // Result b2
         m_authRes[1U] = (uint8_t)block2[0U] & 0xFFU;                                // Result b1
@@ -379,11 +379,11 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, data::DataBlock* blocks)
         pduUserData[12U] = m_authRS[2U];                                            // Random Salt b2
         pduUserData[13U] = m_authRS[1U];                                            // Random Salt b1
         pduUserData[14U] = m_authRS[0U];                                            // Random Salt b0
-        pduUserData[15U] = m_authRand[4U];                                          // Random Challenge b4
-        pduUserData[16U] = m_authRand[3U];                                          // Random Challenge b3
-        pduUserData[17U] = m_authRand[2U];                                          // Random Challenge b2
-        pduUserData[18U] = m_authRand[1U];                                          // Random Challenge b1
-        pduUserData[19U] = m_authRand[0U];                                          // Random Challenge b0
+        pduUserData[15U] = m_authRC[4U];                                            // Random Challenge b4
+        pduUserData[16U] = m_authRC[3U];                                            // Random Challenge b3
+        pduUserData[17U] = m_authRC[2U];                                            // Random Challenge b2
+        pduUserData[18U] = m_authRC[1U];                                            // Random Challenge b1
+        pduUserData[19U] = m_authRC[0U];                                            // Random Challenge b0
     }
     break;
     default:
@@ -1339,7 +1339,7 @@ void TSBK::setAuthRS(const uint8_t* rs)
 {
     assert(rs != NULL);
 
-    ::memcpy(m_authRS, rs, P25_AUTH_RS_LENGTH_BYTES);
+    ::memcpy(m_authRS, rs, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
 /// <summary>Gets the authentication random seed.</summary>
@@ -1348,25 +1348,25 @@ void TSBK::getAuthRS(uint8_t* rs) const
 {
     assert(rs != NULL);
 
-    ::memcpy(rs, m_authRS, P25_AUTH_RS_LENGTH_BYTES);
+    ::memcpy(rs, m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 }
 
 /// <summary>Sets the authentication random challenge.</summary>
-/// <param name="mi"></param>
-void TSBK::setAuthRand(const uint8_t* rand)
+/// <param name="rc"></param>
+void TSBK::setAuthRC(const uint8_t* rc)
 {
-    assert(rand != NULL);
+    assert(rc != NULL);
 
-    ::memcpy(m_authRand, rand, P25_AUTH_RAND_LENGTH_BYTES);
+    ::memcpy(m_authRC, rc, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>Gets the authentication random challenge.</summary>
 /// <returns></returns>
-void TSBK::getAuthRand(uint8_t* rand) const
+void TSBK::getAuthRC(uint8_t* rc) const
 {
-    assert(rand != NULL);
+    assert(rc != NULL);
 
-    ::memcpy(rand, m_authRand, P25_AUTH_RAND_LENGTH_BYTES);
+    ::memcpy(rc, m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -1445,7 +1445,7 @@ TSBK::TSBK(SiteData siteData) :
     m_sndcpDAC(1U),
     m_authRes(NULL),
     m_authRS(NULL),
-    m_authRand(NULL),
+    m_authRC(NULL),
     m_siteCallsign(NULL)
 {
     m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
@@ -1453,11 +1453,11 @@ TSBK::TSBK(SiteData siteData) :
     setCallsign(siteData.callsign());
 
     m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
-    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
-    m_authRS = new uint8_t[P25_AUTH_RS_LENGTH_BYTES];
-    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RS_LENGTH_BYTES);
-    m_authRand = new uint8_t[P25_AUTH_RAND_LENGTH_BYTES];
-    ::memset(m_siteCallsign, 0x00U, P25_AUTH_RAND_LENGTH_BYTES);
+    ::memset(m_authRes, 0x00U, P25_AUTH_RES_LENGTH_BYTES);
+    m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
+    ::memset(m_authRS, 0x00U, P25_AUTH_RAND_SEED_LENGTH_BYTES);
+    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memset(m_authRC, 0x00U, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -1539,15 +1539,15 @@ void TSBK::copy(const TSBK& data)
         delete[] m_authRes;
     }
 
-    m_authRS = new uint8_t[P25_AUTH_RS_LENGTH_BYTES];
-    ::memcpy(m_authRS, data.m_authRS, P25_AUTH_RS_LENGTH_BYTES);
+    m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
+    ::memcpy(m_authRS, data.m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 
-    if (m_authRand != NULL) {
-        delete[] m_authRand;
+    if (m_authRC != NULL) {
+        delete[] m_authRC;
     }
 
-    m_authRand = new uint8_t[P25_AUTH_RAND_LENGTH_BYTES];
-    ::memcpy(m_authRand, data.m_authRand, P25_AUTH_RAND_LENGTH_BYTES);
+    m_authRC = new uint8_t[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
+    ::memcpy(m_authRC, data.m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 
     delete[] m_siteCallsign;
 

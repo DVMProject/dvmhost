@@ -118,8 +118,8 @@ namespace p25
     const uint8_t   P25_MOT_CALLSIGN_LENGTH_BYTES = 8U;
 
     const uint8_t   P25_AUTH_RES_LENGTH_BYTES = 4U;
-    const uint8_t   P25_AUTH_RS_LENGTH_BYTES = 10U;
-    const uint8_t   P25_AUTH_RAND_LENGTH_BYTES = 5U;
+    const uint8_t   P25_AUTH_RAND_SEED_LENGTH_BYTES = 10U;
+    const uint8_t   P25_AUTH_RAND_CHLNG_LENGTH_BYTES = 5U;
 
     const uint8_t   P25_ALGO_UNENCRYPT = 0x80U;
 

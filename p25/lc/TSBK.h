@@ -104,12 +104,12 @@ namespace p25
             /// <summary>Sets the authentication random seed.</summary>
             void setAuthRS(const uint8_t* rs);
             /// <summary>Gets the authentication random seed.</summary>
-            void getAuthRS(uint8_t* mi) const;
+            void getAuthRS(uint8_t* rs) const;
 
             /// <summary>Sets the authentication random challenge.</summary>
-            void setAuthRand(const uint8_t* rand);
+            void setAuthRC(const uint8_t* rc);
             /// <summary>Gets the authentication random challenge.</summary>
-            void getAuthRand(uint8_t* mrandi) const;
+            void getAuthRC(uint8_t* rc) const;
 
         public:
             /// <summary>Flag indicating verbose log output.</summary>
@@ -256,7 +256,7 @@ namespace p25
             /** Authentication data */
             uint8_t* m_authRes;
             uint8_t* m_authRS;
-            uint8_t* m_authRand;
+            uint8_t* m_authRC;
 
             /** Local Site data */
             uint8_t* m_siteCallsign;
