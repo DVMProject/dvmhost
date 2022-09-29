@@ -176,22 +176,19 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
         LogWarning(LOG_P25, "TSBK::decodeMBT(), MBT is an outbound MBT?, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
     }
 
-    // get the first data block
-    uint8_t block1[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-    uint32_t len = blocks[0U].getData(block1);
-    if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
-        LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
-        return false;
-    }
+    // get PDU block data
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
 
-    // get the second data block
-    uint8_t block2[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-    if (dataHeader.getBlocksToFollow() >= 2U) {
-        uint32_t len = blocks[1U].getData(block2);
+    uint32_t dataOffset = 0U;
+    for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
+        uint32_t len = blocks[i].getData(pduUserData + dataOffset);
         if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
             LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
             return false;
         }
+
+        dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
 
     ulong64_t tsbkValue = 0U;
@@ -199,12 +196,12 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
     // combine bytes into rs value
     tsbkValue = dataHeader.getAMBTField8();
     tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
-    tsbkValue = (tsbkValue << 8) + block1[0U];
-    tsbkValue = (tsbkValue << 8) + block1[1U];
-    tsbkValue = (tsbkValue << 8) + block1[2U];
-    tsbkValue = (tsbkValue << 8) + block1[3U];
-    tsbkValue = (tsbkValue << 8) + block1[4U];
-    tsbkValue = (tsbkValue << 8) + block1[5U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[0U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[1U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[2U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[3U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[4U];
+    tsbkValue = (tsbkValue << 8) + pduUserData[5U];
 
     // Motorola P25 vendor opcodes
     if (m_mfId == P25_MFG_MOT) {
@@ -248,14 +245,14 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
         m_statusValue = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                     // Message Value
         m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
-        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U];            // Target Radio Address
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];       // Target Radio Address
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_MSG_UPDT:
         m_messageValue = (uint32_t)((tsbkValue >> 48) & 0xFFFFU);                   // Message Value
         m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                           // System ID
-        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U];            // Target Radio Address
+        m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];       // Target Radio Address
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_CALL_ALRT:
@@ -285,13 +282,14 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
         m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                            // System ID
         m_dstId = (uint32_t)((((tsbkValue) & 0xFFU) << 16) +                        // Target Radio Address
-            (block1[6U] << 8) + (block1[7U]));
+            (pduUserData[6U] << 8) + (pduUserData[7U]));
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_IOSP_EXT_FNCT:
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
-        m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + block1[6U]; // Extended Function
+        m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) +             // Extended Function
+            pduUserData[6U];
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
         break;
     case TSBK_ISP_AUTH_RESP_M:
@@ -303,17 +301,21 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
 
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
-        m_authStandalone = ((block2[2U] & 0xFFU) & 0x01U) == 0x01U;                 // Authentication Standalone Flag
-        m_authRC[4U] = (uint8_t)block1[5U] & 0xFFU;                                 // Random Challenge b4
-        m_authRC[3U] = (uint8_t)block1[6U] & 0xFFU;                                 // Random Challenge b3
-        m_authRC[2U] = (uint8_t)block1[7U] & 0xFFU;                                 // Random Challenge b2
-        m_authRC[1U] = (uint8_t)block1[8U] & 0xFFU;                                 // Random Challenge b1
-        m_authRC[0U] = (uint8_t)block1[9U] & 0xFFU;                                 // Random Challenge b0
-        m_authRes[3U] = (uint8_t)block1[10U] & 0xFFU;                               // Result b3
-        m_authRes[2U] = (uint8_t)block1[11U] & 0xFFU;                               // Result b2
-        m_authRes[1U] = (uint8_t)block2[0U] & 0xFFU;                                // Result b1
-        m_authRes[0U] = (uint8_t)block2[1U] & 0xFFU;                                // Result b0
         m_srcId = dataHeader.getLLId();                                             // Source Radio Address
+
+        /** Block 1 */
+        m_authRC[4U] = (uint8_t)pduUserData[5U] & 0xFFU;                            // Random Challenge b4
+        m_authRC[3U] = (uint8_t)pduUserData[6U] & 0xFFU;                            // Random Challenge b3
+        m_authRC[2U] = (uint8_t)pduUserData[7U] & 0xFFU;                            // Random Challenge b2
+        m_authRC[1U] = (uint8_t)pduUserData[8U] & 0xFFU;                            // Random Challenge b1
+        m_authRC[0U] = (uint8_t)pduUserData[9U] & 0xFFU;                            // Random Challenge b0
+        m_authRes[3U] = (uint8_t)pduUserData[10U] & 0xFFU;                          // Result b3
+        m_authRes[2U] = (uint8_t)pduUserData[11U] & 0xFFU;                          // Result b2
+
+        /** Block 2 */
+        m_authRes[1U] = (uint8_t)pduUserData[12U] & 0xFFU;                          // Result b1
+        m_authRes[0U] = (uint8_t)pduUserData[13U] & 0xFFU;                          // Result b0
+        m_authStandalone = ((pduUserData[14U] & 0xFFU) & 0x01U) == 0x01U;           // Authentication Standalone Flag
     }
     break;
     case TSBK_ISP_AUTH_SU_DMD:
@@ -328,7 +330,6 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
 
     return true;
 }
-
 
 /// <summary>
 /// Encode a alternate trunking signalling block.

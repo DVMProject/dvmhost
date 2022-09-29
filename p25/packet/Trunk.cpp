@@ -1706,17 +1706,17 @@ void Trunk::writeRF_PDU_AMBT(bool clearBeforeWrite)
 
     // Generate the PDU data
     DataBlock rspBlock = DataBlock();
-    uint8_t offs = 0U;
+    uint32_t dataOffset = 0U;
     for (uint8_t i = 0; i < rspHeader.getBlocksToFollow(); i++) {
         rspBlock.setFormat(PDU_FMT_UNCONFIRMED);
         rspBlock.setSerialNo(0U);
-        rspBlock.setData(rspData + offs);
+        rspBlock.setData(rspData + dataOffset);
 
         ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
         rspBlock.encode(block);
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
         offset += P25_PDU_FEC_LENGTH_BITS;
-        offs += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+        dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
 
     if (clearBeforeWrite) {
