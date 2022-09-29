@@ -385,6 +385,77 @@ void TSBK::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
         pduUserData[19U] = m_authRC[0U];                                            // Random Challenge b0
     }
     break;
+    case TSBK_OSP_RFSS_STS_BCAST:
+    {
+        // pack LRA and system ID into LLID
+        uint32_t llId = m_siteData.lra();                                           // Location Registration Area
+        llId = (llId << 12) + m_siteData.siteId();                                  // System ID
+        if (m_siteData.netActive()) {
+            llId |= 0x1000U;                                                        // Network Active Flag
+        }
+        dataHeader.setLLId(llId);
+
+        /** Block 1 */
+        pduUserData[0U] = (m_siteData.rfssId()) & 0xFFU;                            // RF Sub-System ID
+        pduUserData[1U] = (m_siteData.siteId()) & 0xFFU;                            // Site ID
+        pduUserData[2U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Transmit Channel Number
+        pduUserData[3U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[4U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Receive Channel Number
+        pduUserData[5U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[6U] = m_siteData.serviceClass();                                // System Service Class
+    }
+    break;
+    case TSBK_OSP_NET_STS_BCAST:
+    {
+        // pack LRA and system ID into LLID
+        uint32_t llId = m_siteData.lra();                                           // Location Registration Area
+        llId = (llId << 12) + m_siteData.siteId();                                  // System ID
+        dataHeader.setLLId(llId);
+
+        /** Block 1 */
+        pduUserData[0U] = (m_siteData.netId() >> 12) & 0xFFU;                       // Network ID (b19-12)
+        pduUserData[1U] = (m_siteData.netId() >> 4) & 0xFFU;                        // Network ID (b11-b4)
+        pduUserData[2U] = (m_siteData.netId() & 0x0FU) << 4;                        // Network ID (b3-b0)
+        pduUserData[3U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Transmit Channel Number
+        pduUserData[4U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[5U] = (m_siteData.channelNo() >> 8) & 0xFFU;                    // Receive Channel Number
+        pduUserData[6U] = (m_siteData.channelNo() >> 0) & 0xFFU;
+        pduUserData[7U] = m_siteData.serviceClass();                                // System Service Class
+    }
+    break;
+    case TSBK_OSP_ADJ_STS_BCAST:
+    {
+        if ((m_adjRfssId != 0U) && (m_adjSiteId != 0U) && (m_adjChannelNo != 0U)) {
+            if (m_adjSysId == 0U) {
+                m_adjSysId = m_siteData.sysId();
+            }
+
+            // pack LRA, CFVA and system ID into LLID
+            uint32_t llId = m_siteData.lra();                                       // Location Registration Area
+            llId = (llId << 8) + m_adjCFVA;                                         // CFVA
+            llId = (llId << 4) + m_siteData.siteId();                               // System ID
+            dataHeader.setLLId(llId);
+
+            dataHeader.setAMBTField8(m_adjRfssId);                                  // RF Sub-System ID
+            dataHeader.setAMBTField9(m_adjSiteId);                                  // Site ID
+
+            /** Block 1 */
+            pduUserData[0U] = (m_adjChannelNo >> 8) & 0xFFU;                        // Transmit Channel Number
+            pduUserData[1U] = (m_adjChannelNo >> 0) & 0xFFU;
+            pduUserData[2U] = (m_adjChannelNo >> 8) & 0xFFU;                        // Receive Channel Number
+            pduUserData[3U] = (m_adjChannelNo >> 0) & 0xFFU;
+            pduUserData[4U] = m_adjServiceClass;                                    // System Service Class
+            pduUserData[5U] = (m_siteData.netId() >> 12) & 0xFFU;                   // Network ID (b19-12)
+            pduUserData[6U] = (m_siteData.netId() >> 4) & 0xFFU;                    // Network ID (b11-b4)
+            pduUserData[7U] = (m_siteData.netId() & 0x0FU) << 4;                    // Network ID (b3-b0)
+        }
+        else {
+            LogError(LOG_P25, "TSBK::encodeMBT(), invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
+                m_adjRfssId, m_adjSiteId, m_adjChannelId, m_adjChannelNo, m_adjServiceClass);
+            return; // blatently ignore creating this TSBK
+        }
+    }
+    break;
     default:
         LogError(LOG_P25, "TSBK::encodeMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
