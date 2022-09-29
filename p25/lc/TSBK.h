@@ -95,6 +95,20 @@ namespace p25
             /// <summary>Sets the callsign.</summary>
             void setCallsign(std::string callsign);
 
+            /** Authentication data */
+            /// <summary>Gets the authentication result.</summary>
+            void getAuthRes(uint8_t* res) const;
+
+            /// <summary>Sets the authentication random seed.</summary>
+            void setAuthRS(const uint8_t* rs);
+            /// <summary>Gets the authentication random seed.</summary>
+            void getAuthRS(uint8_t* mi) const;
+
+            /// <summary>Sets the authentication random challenge.</summary>
+            void setAuthRand(const uint8_t* rand);
+            /// <summary>Gets the authentication random challenge.</summary>
+            void getAuthRand(uint8_t* mrandi) const;
+
         public:
             /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);

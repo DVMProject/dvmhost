@@ -1246,6 +1246,52 @@ void TSBK::setCallsign(std::string callsign)
     }
 }
 
+/** Authentication data */
+/// <summary>Gets the authentication result.</summary>
+/// <returns></returns>
+void TSBK::getAuthRes(uint8_t* res) const
+{
+    assert(res != NULL);
+
+    ::memcpy(res, m_authRes, P25_AUTH_RES_LENGTH_BYTES);
+}
+
+/// <summary>Sets the authentication random seed.</summary>
+/// <param name="mi"></param>
+void TSBK::setAuthRS(const uint8_t* rs)
+{
+    assert(rs != NULL);
+
+    ::memcpy(m_authRS, rs, P25_AUTH_RS_LENGTH_BYTES);
+}
+
+/// <summary>Gets the authentication random seed.</summary>
+/// <returns></returns>
+void TSBK::getAuthRS(uint8_t* rs) const
+{
+    assert(rs != NULL);
+
+    ::memcpy(rs, m_authRS, P25_AUTH_RS_LENGTH_BYTES);
+}
+
+/// <summary>Sets the authentication random challenge.</summary>
+/// <param name="mi"></param>
+void TSBK::setAuthRand(const uint8_t* rand)
+{
+    assert(rand != NULL);
+
+    ::memcpy(m_authRand, rand, P25_AUTH_RAND_LENGTH_BYTES);
+}
+
+/// <summary>Gets the authentication random challenge.</summary>
+/// <returns></returns>
+void TSBK::getAuthRand(uint8_t* rand) const
+{
+    assert(rand != NULL);
+
+    ::memcpy(rand, m_authRand, P25_AUTH_RAND_LENGTH_BYTES);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
