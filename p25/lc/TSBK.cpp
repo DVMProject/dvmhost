@@ -1605,7 +1605,7 @@ void TSBK::copy(const TSBK& data)
     ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
 
     if (m_authRS != NULL) {
-        delete[] m_authRes;
+        delete[] m_authRS;
     }
 
     m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
