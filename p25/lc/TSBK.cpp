@@ -186,7 +186,7 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
 
     // get the second data block
     uint8_t block2[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-    if (dataHeader.getBlocksToFollow() == 2U) {
+    if (dataHeader.getBlocksToFollow() >= 2U) {
         uint32_t len = blocks[1U].getData(block2);
         if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
             LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
@@ -304,11 +304,11 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
         m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                         // Network ID
         m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                           // System ID
         m_authStandalone = ((block2[2U] & 0xFFU) & 0x01U) == 0x01U;                 // Authentication Standalone Flag
-        m_authRand[4U] = (uint8_t)block1[5U] & 0xFFU;                               // Random Salt b0
-        m_authRand[3U] = (uint8_t)block1[6U] & 0xFFU;                               // Random Salt b0
-        m_authRand[2U] = (uint8_t)block1[7U] & 0xFFU;                               // Random Salt b0
-        m_authRand[1U] = (uint8_t)block1[8U] & 0xFFU;                               // Random Salt b0
-        m_authRand[0U] = (uint8_t)block1[9U] & 0xFFU;                               // Random Salt b0
+        m_authRand[4U] = (uint8_t)block1[5U] & 0xFFU;                               // Random Challenge b4
+        m_authRand[3U] = (uint8_t)block1[6U] & 0xFFU;                               // Random Challenge b3
+        m_authRand[2U] = (uint8_t)block1[7U] & 0xFFU;                               // Random Challenge b2
+        m_authRand[1U] = (uint8_t)block1[8U] & 0xFFU;                               // Random Challenge b1
+        m_authRand[0U] = (uint8_t)block1[9U] & 0xFFU;                               // Random Challenge b0
         m_authRes[3U] = (uint8_t)block1[10U] & 0xFFU;                               // Result b3
         m_authRes[2U] = (uint8_t)block1[11U] & 0xFFU;                               // Result b2
         m_authRes[1U] = (uint8_t)block2[0U] & 0xFFU;                                // Result b1
@@ -327,6 +327,83 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
     }
 
     return true;
+}
+
+
+/// <summary>
+/// Encode a alternate trunking signalling block.
+/// </summary>
+/// <param name="dataHeader"></param>
+/// <param name="blocks"></param>
+void TSBK::encodeMBT(data::DataHeader& dataHeader, data::DataBlock* blocks)
+{
+    assert(blocks != NULL);
+
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * 2U];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * 2U);
+
+    dataHeader.setFormat(PDU_FMT_UNCONFIRMED);
+    dataHeader.setMFId(m_mfId);
+    dataHeader.setAckNeeded(false);
+    dataHeader.setOutbound(true);
+    dataHeader.setSAP(PDU_SAP_TRUNK_CTRL);
+    dataHeader.setLLId(m_srcId);
+    dataHeader.setBlocksToFollow(1U);
+
+    dataHeader.setAMBTOpcode(m_lco);
+
+    // standard P25 reference opcodes
+    switch (m_lco) {
+    case TSBK_OSP_AUTH_DMD:
+    {
+        dataHeader.setBlocksToFollow(2U);
+
+        dataHeader.setAMBTField8((m_netId >> 12) & 0xFFU);                          // Network ID (b19-12)
+        dataHeader.setAMBTField9((m_netId >> 4) & 0xFFU);                           // Network ID (b11-b4)
+
+        /** Block 1 */
+        pduUserData[0U] = ((m_netId & 0x0FU) << 4) + ((m_sysId >> 8) & 0xFFU);      // Network ID (b3-b0) + System ID (b11-b8)
+        pduUserData[1U] = (m_sysId & 0xFFU);                                        // System ID (b7-b0)
+
+        __SET_UINT16(m_dstId, pduUserData, 2U);                                     // Target Radio Address
+
+        pduUserData[5U] = m_authRS[9U];                                             // Random Salt b9
+        pduUserData[6U] = m_authRS[8U];                                             // Random Salt b8
+        pduUserData[7U] = m_authRS[7U];                                             // Random Salt b7
+        pduUserData[8U] = m_authRS[6U];                                             // Random Salt b6
+        pduUserData[9U] = m_authRS[5U];                                             // Random Salt b5
+        pduUserData[10U] = m_authRS[4U];                                            // Random Salt b4
+        pduUserData[11U] = m_authRS[3U];                                            // Random Salt b3
+
+        /** Block 2 */
+        pduUserData[12U] = m_authRS[2U];                                            // Random Salt b2
+        pduUserData[13U] = m_authRS[1U];                                            // Random Salt b1
+        pduUserData[14U] = m_authRS[0U];                                            // Random Salt b0
+        pduUserData[15U] = m_authRand[4U];                                          // Random Challenge b4
+        pduUserData[16U] = m_authRand[3U];                                          // Random Challenge b3
+        pduUserData[17U] = m_authRand[2U];                                          // Random Challenge b2
+        pduUserData[18U] = m_authRand[1U];                                          // Random Challenge b1
+        pduUserData[19U] = m_authRand[0U];                                          // Random Challenge b0
+    }
+    break;
+    default:
+        LogError(LOG_P25, "TSBK::encodeMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        break;
+    }
+
+    // generate packet CRC-32 and set data blocks
+    if (dataHeader.getBlocksToFollow() > 1U) {
+        edac::CRC::addCRC32(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+
+        uint8_t offs = 0U;
+        for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
+            blocks[i].setData(pduUserData + offs);
+            offs += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+        }
+    } else {
+        edac::CRC::addCRC32(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+        blocks[0U].setData(pduUserData);
+    }
 }
 
 /// <summary>

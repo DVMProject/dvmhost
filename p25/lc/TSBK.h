@@ -83,6 +83,8 @@ namespace p25
 
             /// <summary>Decode a alternate trunking signalling block.</summary>
             bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
+            /// <summary>Encode a alternate trunking signalling block.</summary>
+            void encodeMBT(data::DataHeader& dataHeader, data::DataBlock* blocks);
 
             /// <summary>Decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data, bool rawTSBK = false);
