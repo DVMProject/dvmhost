@@ -74,6 +74,8 @@ namespace p25
 
                 /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
                 virtual void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+                /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
+                virtual void writeRF_TSDU_AMBT(bool clearBeforeWrite = false);
 
                 /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
                 //virtual void writeNet_TDULC(lc::TDULC lc);

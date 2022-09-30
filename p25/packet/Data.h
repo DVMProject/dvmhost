@@ -73,13 +73,15 @@ namespace p25
             /// <summary>Helper to check if a logical link ID has registered with data services.</summary>
             bool hasLLIdFNEReg(uint32_t llId) const;
 
+            /// <summary>Helper to write user data as a P25 PDU packet.</summary>
+            void writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite = false);
+
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
 
         private:
             friend class p25::Control;
             Control* m_p25;
-            friend class p25::packet::Trunk;
 
             network::BaseNetwork* m_network;
 

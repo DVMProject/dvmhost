@@ -83,6 +83,7 @@ namespace p25
 
             /// <summary>Helper to set the TSBK manufacturer ID.</summary>
             void setMFId(uint8_t val) { m_rfTSBK.setMFId(val); }
+
             /// <summary>Helper to write a call alert packet.</summary>
             void writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId);
             /// <summary>Helper to write a call alert packet.</summary>
@@ -179,7 +180,7 @@ namespace p25
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
             void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
             /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
-            void writeRF_PDU_AMBT(bool clearBeforeWrite = false);
+            virtual void writeRF_TSDU_AMBT(bool clearBeforeWrite = false);
 
             /// <summary>Helper to generate the given control TSBK into the TSDU frame queue.</summary>
             void queueRF_TSBK_Ctrl(uint8_t lco);

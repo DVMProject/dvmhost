@@ -1670,61 +1670,32 @@ void Trunk::writeRF_TSDU_MBF(bool clearBeforeWrite)
 /// Helper to write a alternate multi-block trunking PDU packet.
 /// </summary>
 /// <param name="clearBeforeWrite"></param>
-void Trunk::writeRF_PDU_AMBT(bool clearBeforeWrite)
+void Trunk::writeRF_TSDU_AMBT(bool clearBeforeWrite)
 {
     if (!m_p25->m_control)
         return;
 
-    DataHeader rspHeader = DataHeader();
-    uint8_t rspData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
-    ::memset(rspData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT);
+    DataHeader header = DataHeader();
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT);
 
     // Generate TSBK block
     m_rfTSBK.setLastBlock(true); // always set last block -- this a Single Block TSDU
-    m_rfTSBK.encodeMBT(rspHeader, rspData);
+    m_rfTSBK.encodeMBT(header, pduUserData);
 
     if (m_debug) {
+        LogDebug(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, hdrOffset = %u",
+            header.getAckNeeded(), header.getOutbound(), header.getFormat(), header.getSAP(), header.getFullMessage(),
+            header.getBlocksToFollow(), header.getPadCount(), header.getNs(), header.getFSN(),
+            header.getHeaderOffset());
         LogDebug(LOG_RF, P25_PDU_STR " AMBT, lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
             m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
             m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
 
-        Utils::dump(1U, "!!! *TSDU (AMBT) TSBK Block Data", rspData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * rspHeader.getBlocksToFollow());
+        Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    uint32_t bitLength = ((rspHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
-    uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
-
-    uint8_t data[bitLength / 8U];
-    ::memset(data, 0x00U, bitLength / 8U);
-    uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
-    ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-
-    // Generate the PDU header and 1/2 rate Trellis
-    rspHeader.encode(block);
-    Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
-    offset += P25_PDU_FEC_LENGTH_BITS;
-
-    // Generate the PDU data
-    DataBlock rspBlock = DataBlock();
-    uint32_t dataOffset = 0U;
-    for (uint8_t i = 0; i < rspHeader.getBlocksToFollow(); i++) {
-        rspBlock.setFormat(PDU_FMT_UNCONFIRMED);
-        rspBlock.setSerialNo(0U);
-        rspBlock.setData(rspData + dataOffset);
-
-        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-        rspBlock.encode(block);
-        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
-        offset += P25_PDU_FEC_LENGTH_BITS;
-        dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
-    }
-
-    if (clearBeforeWrite) {
-        m_p25->m_modem->clearP25Data();
-        m_p25->m_queue.clear();
-    }
-
-    m_p25->m_data->writeRF_PDU(data, bitLength);
+    m_p25->m_data->writeRF_PDU_User(header, pduUserData, clearBeforeWrite);
 }
 
 /// <summary>

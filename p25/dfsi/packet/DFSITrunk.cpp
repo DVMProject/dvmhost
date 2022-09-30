@@ -199,6 +199,18 @@ void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool for
 }
 
 /// <summary>
+/// Helper to write a alternate multi-block trunking PDU packet.
+/// </summary>
+/// <param name="clearBeforeWrite"></param>
+void DFSITrunk::writeRF_TSDU_AMBT(bool clearBeforeWrite)
+{
+    if (!m_p25->m_control)
+        return;
+
+    // for now this is ignored...
+}
+
+/// <summary>
 /// Helper to write a network single-block P25 TSDU packet.
 /// </summary>
 void DFSITrunk::writeNet_TSDU()

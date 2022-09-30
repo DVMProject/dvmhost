@@ -506,6 +506,52 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
 }
 
 /// <summary>
+/// Helper to write user data as a P25 PDU packet.
+/// </summary>
+/// <param name="dataHeader"></param>
+/// <param name="pduUserData"></param>
+/// <param name="clearBeforeWrite"></param>
+void Data::writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite)
+{
+    assert(pduUserData != NULL);
+
+    uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
+
+    uint8_t data[bitLength / 8U];
+    ::memset(data, 0x00U, bitLength / 8U);
+    uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
+    ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+
+    // Generate the PDU header and 1/2 rate Trellis
+    dataHeader.encode(block);
+    Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+    offset += P25_PDU_FEC_LENGTH_BITS;
+
+    // Generate the PDU data
+    DataBlock rspBlock = DataBlock();
+    uint32_t dataOffset = 0U;
+    for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
+        rspBlock.setFormat(PDU_FMT_UNCONFIRMED);
+        rspBlock.setSerialNo(0U);
+        rspBlock.setData(pduUserData + dataOffset);
+
+        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+        rspBlock.encode(block);
+        Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
+        offset += P25_PDU_FEC_LENGTH_BITS;
+        dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+    }
+
+    if (clearBeforeWrite) {
+        m_p25->m_modem->clearP25Data();
+        m_p25->m_queue.clear();
+    }
+
+    writeRF_PDU(data, bitLength);
+}
+
+/// <summary>
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
