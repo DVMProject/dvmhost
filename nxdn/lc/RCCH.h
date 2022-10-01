@@ -139,8 +139,6 @@ namespace nxdn
             /// <summary>Initializes a new instance of the RCCH class.</summary>
             RCCH(SiteData siteData);
 
-            uint8_t* m_data;
-
             /** Local Site data */
             uint8_t* m_siteCallsign;
 

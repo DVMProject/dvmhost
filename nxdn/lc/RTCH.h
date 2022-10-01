@@ -118,8 +118,6 @@ namespace nxdn
             __PROPERTY(uint8_t, causeRsp, CauseResponse);
 
         private:
-            uint8_t* m_data;
-
             /** Encryption data */
             uint8_t* m_mi;
 

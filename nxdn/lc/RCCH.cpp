@@ -79,7 +79,7 @@ RCCH::RCCH(SiteData siteData, lookups::IdenTable entry, bool verbose) : RCCH(sit
 /// </summary>
 RCCH::~RCCH()
 {
-    delete[] m_data;
+    /* stub */
 }
 
 /// <summary>
@@ -90,14 +90,7 @@ RCCH::~RCCH()
 RCCH& RCCH::operator=(const RCCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_RCCH_LC_LENGTH_BYTES);
-
-        m_verbose = data.m_verbose;
-        if (m_data != NULL) {
-            if ((m_data[0] & 0x3FU) != 0U) {
-                decodeLC(m_data);
-            }
-        }
+        copy(data);
     }
 
     return *this;
@@ -114,16 +107,19 @@ void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != NULL);
 
+    uint8_t rcch[22U];
+    ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
+
     for (uint32_t i = 0U; i < length; i++, offset++) {
         bool b = READ_BIT(data, offset);
-        WRITE_BIT(m_data, i, b);
+        WRITE_BIT(rcch, i, b);
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded RCCH Data", m_data, NXDN_RCCH_LC_LENGTH_BYTES);
+        Utils::dump(2U, "Decoded RCCH Data", rcch, NXDN_RCCH_LC_LENGTH_BYTES);
     }
 
-    decodeLC(m_data);
+    decodeLC(rcch);
 }
 
 /// <summary>
@@ -136,10 +132,13 @@ void RCCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != NULL);
 
-    encodeLC(m_data);
+    uint8_t rcch[22U];
+    ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
+
+    encodeLC(rcch);
 
     for (uint32_t i = 0U; i < length; i++, offset++) {
-        bool b = READ_BIT(m_data, i);
+        bool b = READ_BIT(rcch, i);
         WRITE_BIT(data, offset, b);
     }
 
@@ -153,8 +152,6 @@ void RCCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 /// </summary>
 void RCCH::reset()
 {
-    ::memset(m_data, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
-
     m_messageType = MESSAGE_TYPE_IDLE;
 
     m_srcId = 0U;
@@ -233,12 +230,8 @@ RCCH::RCCH(SiteData siteData) :
     m_rcchGroupingCnt(1U),
     m_ccchPagingCnt(2U),
     m_ccchMultiCnt(2U),
-    m_rcchIterateCnt(2U),
-    m_data(NULL)
+    m_rcchIterateCnt(2U)
 {
-    m_data = new uint8_t[NXDN_RCCH_LC_LENGTH_BYTES];
-    ::memset(m_data, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
-
     m_siteCallsign = new uint8_t[NXDN_CALLSIGN_LENGTH_BYTES];
     ::memset(m_siteCallsign, 0x00U, NXDN_CALLSIGN_LENGTH_BYTES);
     setCallsign(siteData.callsign());
@@ -251,6 +244,8 @@ RCCH::RCCH(SiteData siteData) :
 /// <returns></returns>
 bool RCCH::decodeLC(const uint8_t* data)
 {
+    assert(data != NULL);
+
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
     // message type opcodes
@@ -308,143 +303,145 @@ bool RCCH::decodeLC(const uint8_t* data)
 /// <param name="rs"></param>
 void RCCH::encodeLC(uint8_t* data)
 {
-    m_data[0U] = m_messageType & 0x3FU;                                             // Message Type
+    assert(data != NULL);
+
+    data[0U] = m_messageType & 0x3FU;                                               // Message Type
 
     // message type opcodes
     switch (m_messageType) {
     case RTCH_MESSAGE_TYPE_VCALL:
     case RCCH_MESSAGE_TYPE_VCALL_CONN:
-        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+        data[1U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
             (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
-        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+        data[2U] = ((m_callType & 0x07U) << 5) +                                    // Call Type
             (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
             (m_transmissionMode & 0x07U);                                           // Transmission Mode
 
-        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
-        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
-        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+        data[3U] = (m_srcId >> 8U) & 0xFFU;                                         // Source Radio Address
+        data[4U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
+        data[5U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[6U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
 
-        m_data[7U] = m_causeRsp;                                                    // Cause (VD)
-        m_data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
-        m_data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        data[7U] = m_causeRsp;                                                      // Cause (VD)
+        data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                               // Location ID
+        data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                              // ...
         break;
     case RCCH_MESSAGE_TYPE_VCALL_ASSGN:
     case RCCH_MESSAGE_TYPE_DCALL_ASSGN:
-        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+        data[1U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
             (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
-        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+        data[2U] = ((m_callType & 0x07U) << 5) +                                    // Call Type
             (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
             (m_transmissionMode & 0x07U);                                           // Transmission Mode
 
-        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
-        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
-        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+        data[3U] = (m_srcId >> 8U) & 0xFFU;                                         // Source Radio Address
+        data[4U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
+        data[5U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[6U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
 
-        m_data[7U] = (m_grpVchNo >> 10) & 0x03U;                                    // Channel
-        m_data[8U] = (m_grpVchNo & 0xFFU);                                          // ...
+        data[7U] = (m_grpVchNo >> 10) & 0x03U;                                      // Channel
+        data[8U] = (m_grpVchNo & 0xFFU);                                            // ...
         
-        m_data[10U] = (m_siteData.locId() >> 8) & 0xFFU;                            // Location ID
-        m_data[11U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        data[10U] = (m_siteData.locId() >> 8) & 0xFFU;                              // Location ID
+        data[11U] = (m_siteData.locId() >> 0) & 0xFFU;                              // ...
         break;
     case RTCH_MESSAGE_TYPE_DCALL_HDR:
-        m_data[1U] = (m_emergency ? 0x80U : 0x00U) +                                // Emergency Flag
+        data[1U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
             (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
-        m_data[2U] = ((m_callType & 0x07U) << 5) +                                  // Call Type
+        data[2U] = ((m_callType & 0x07U) << 5) +                                    // Call Type
             (m_duplex ? 0x10U : 0x00U) +                                            // Half/Full Duplex Flag
             (m_transmissionMode & 0x07U);                                           // Transmission Mode
 
-        m_data[3U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
-        m_data[4U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
-        m_data[5U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[6U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+        data[3U] = (m_srcId >> 8U) & 0xFFU;                                         // Source Radio Address
+        data[4U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
+        data[5U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[6U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
 
-        m_data[7U] = m_causeRsp;                                                    // Cause (VD)
-        m_data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
-        m_data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                            // ...
+        data[7U] = m_causeRsp;                                                      // Cause (VD)
+        data[9U] = (m_siteData.locId() >> 8) & 0xFFU;                               // Location ID
+        data[10U] = (m_siteData.locId() >> 0) & 0xFFU;                              // ...
         break;
     case MESSAGE_TYPE_IDLE:
         break;
     case MESSAGE_TYPE_DST_ID_INFO:
-        m_data[1U] = 0xC0U + NXDN_CALLSIGN_LENGTH_BYTES;                            // Station ID Option - Start / End / Character Count
-        m_data[2U] = (m_siteCallsign[0]);                                           // Character 0
+        data[1U] = 0xC0U + NXDN_CALLSIGN_LENGTH_BYTES;                              // Station ID Option - Start / End / Character Count
+        data[2U] = (m_siteCallsign[0]);                                             // Character 0
         for (uint8_t i = 1; i < NXDN_CALLSIGN_LENGTH_BYTES; i++) {
-            m_data[i + 2U] = m_siteCallsign[i];                                     // Character 1 - 7
+            data[i + 2U] = m_siteCallsign[i];                                       // Character 1 - 7
         }
         break;
     case RCCH_MESSAGE_TYPE_SITE_INFO:
     {
-        m_data[1U] = (m_siteData.locId() >> 16) & 0xFFU;                            // Location ID
-        m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // ...
-        m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-        m_data[4U] = ((m_bcchCnt & 0x03U) << 6) +                                   // Channel Structure - Number of BCCH
+        data[1U] = (m_siteData.locId() >> 16) & 0xFFU;                              // Location ID
+        data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                               // ...
+        data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
+        data[4U] = ((m_bcchCnt & 0x03U) << 6) +                                     // Channel Structure - Number of BCCH
             ((m_rcchGroupingCnt & 0x07U) << 3) +                                    // ...               - Number of Grouping
             (((m_ccchPagingCnt >> 1) & 0x07U) << 0);                                // ...               - Number of Paging Frames
-        m_data[5U] = ((m_ccchPagingCnt & 0x01U) << 7) +                             // ...               - Number of Paging Frames
+        data[5U] = ((m_ccchPagingCnt & 0x01U) << 7) +                               // ...               - Number of Paging Frames
             ((m_ccchMultiCnt & 0x07U) << 4) +                                       // ...               - Number of Multipurpose Frames
             ((m_rcchIterateCnt & 0x0FU) << 0);                                      // ...               - Number of Iteration
 
-        m_data[6U] = m_siteData.serviceClass();                                     // Service Information
-        m_data[7U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);       // ...
+        data[6U] = m_siteData.serviceClass();                                       // Service Information
+        data[7U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);         // ...
 
         // bryanb: this is currently fixed -- maybe dynamic in the future
-        m_data[8U] = 0U;                                                            // Restriction Information - No access restriction / No cycle restriction
-        m_data[9U] = 0x08U;                                                         // ...                     - No group restriction / GMS; Location Registration Restriction
-        m_data[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                    // ...                     - No group ratio restriction / No delay time extension / ISO
+        data[8U] = 0U;                                                              // Restriction Information - No access restriction / No cycle restriction
+        data[9U] = 0x08U;                                                           // ...                     - No group restriction / GMS; Location Registration Restriction
+        data[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                      // ...                     - No group ratio restriction / No delay time extension / ISO
 
         // bryanb: this is currently fixed -- maybe dynamic in the future
-        m_data[11U] = NXDN_CH_ACCESS_BASE_FREQ_SYS_DEFINED;                         // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
+        data[11U] = NXDN_CH_ACCESS_BASE_FREQ_SYS_DEFINED;                           // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
 
-        m_data[14U] = 1U;                                                           // Version
+        data[14U] = 1U;                                                             // Version
 
         uint16_t channelNo = m_siteData.channelNo() & 0x3FFU;
-        m_data[15U] = (channelNo >> 6) & 0x0FU;                                     // 1st Control Channel
-        m_data[16U] = (channelNo & 0x3FU) << 2;                                     // ...
+        data[15U] = (channelNo >> 6) & 0x0FU;                                       // 1st Control Channel
+        data[16U] = (channelNo & 0x3FU) << 2;                                       // ...
     }
     break;
     case MESSAGE_TYPE_SRV_INFO:
-        m_data[1U] = (m_siteData.locId() >> 16) & 0xFFU;                            // Location ID
-        m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // ...
-        m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-        m_data[4U] = m_siteData.serviceClass();                                     // Service Information
-        m_data[5U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);       // ...
+        data[1U] = (m_siteData.locId() >> 16) & 0xFFU;                              // Location ID
+        data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                               // ...
+        data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
+        data[4U] = m_siteData.serviceClass();                                       // Service Information
+        data[5U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);         // ...
 
         // bryanb: this is currently fixed -- maybe dynamic in the future
-        m_data[6U] = 0U;                                                            // Restriction Information - No access restriction / No cycle restriction
-        m_data[7U] = 0x08U;                                                         // ...                     - No group restriction / GMS; Location Registration Restriction
-        m_data[8U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                     // ...                     - No group ratio restriction / No delay time extension / ISO
+        data[6U] = 0U;                                                              // Restriction Information - No access restriction / No cycle restriction
+        data[7U] = 0x08U;                                                           // ...                     - No group restriction / GMS; Location Registration Restriction
+        data[8U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                       // ...                     - No group ratio restriction / No delay time extension / ISO
         break;
     case RCCH_MESSAGE_TYPE_REG:
-        m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // ...
-        m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-        m_data[4U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
-        m_data[5U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
-        m_data[6U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[7U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
-        m_data[8U] = m_causeRsp;                                                    // Cause (MM)
+        data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                               // ...
+        data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
+        data[4U] = (m_srcId >> 8U) & 0xFFU;                                         // Source Radio Address
+        data[5U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
+        data[6U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[7U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
+        data[8U] = m_causeRsp;                                                      // Cause (MM)
         break;
     case RCCH_MESSAGE_TYPE_REG_C:
-        m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
-        m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-        m_data[4U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[5U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
-        m_data[6U] = m_causeRsp;                                                    // Cause (MM)
+        data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                               // Location ID
+        data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
+        data[4U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[5U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
+        data[6U] = m_causeRsp;                                                      // Cause (MM)
         break;
     case RCCH_MESSAGE_TYPE_REG_COMM:
-        m_data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
-        m_data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
-        m_data[4U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[5U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
+        data[2U] = (m_siteData.locId() >> 8) & 0xFFU;                               // Location ID
+        data[3U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
+        data[4U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[5U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
         break;
     case RCCH_MESSAGE_TYPE_GRP_REG:
-        m_data[2U] = (m_srcId >> 8U) & 0xFFU;                                       // Source Radio Address
-        m_data[3U] = (m_srcId >> 0U) & 0xFFU;                                       // ...
-        m_data[4U] = (m_dstId >> 8U) & 0xFFU;                                       // Target Radio Address
-        m_data[5U] = (m_dstId >> 0U) & 0xFFU;                                       // ...
-        m_data[6U] = m_causeRsp;                                                    // Cause (MM)
-        m_data[8U] = (m_siteData.locId() >> 8) & 0xFFU;                             // Location ID
-        m_data[9U] = (m_siteData.locId() >> 0) & 0xFFU;                             // ...
+        data[2U] = (m_srcId >> 8U) & 0xFFU;                                         // Source Radio Address
+        data[3U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
+        data[4U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
+        data[5U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
+        data[6U] = m_causeRsp;                                                      // Cause (MM)
+        data[8U] = (m_siteData.locId() >> 8) & 0xFFU;                               // Location ID
+        data[9U] = (m_siteData.locId() >> 0) & 0xFFU;                               // ...
         break;
     default:
         LogError(LOG_NXDN, "RCCH::encodeRCCH(), unknown RCCH value, messageType = $%02X", m_messageType);
@@ -458,10 +455,29 @@ void RCCH::encodeLC(uint8_t* data)
 /// <param name="data"></param>
 void RCCH::copy(const RCCH& data)
 {
-    m_data = new uint8_t[22U];
-    ::memcpy(m_data, data.m_data, 22U);
-
     m_verbose = data.m_verbose;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_locId = data.m_locId;
+    m_regOption = data.m_regOption;
+
+    m_version = data.m_version;
+
+    m_causeRsp = data.m_causeRsp;
+
+    m_grpVchNo = data.m_grpVchNo;
+
+    m_callType = data.m_callType;
+
+    m_emergency = data.m_emergency;
+    m_encrypted = data.m_encrypted;
+    m_priority = data.m_priority;
+    m_group = data.m_group;
+    m_duplex = data.m_duplex;
+
+    m_transmissionMode = data.m_transmissionMode;
 
     m_siteData = data.m_siteData;
     m_siteIdenEntry = data.m_siteIdenEntry;
@@ -478,6 +494,4 @@ void RCCH::copy(const RCCH& data)
     m_ccchPagingCnt = data.m_ccchPagingCnt;
     m_ccchMultiCnt = data.m_ccchMultiCnt;
     m_rcchIterateCnt = data.m_rcchIterateCnt;
-
-    decodeLC(m_data);
 }
