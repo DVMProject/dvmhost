@@ -131,15 +131,15 @@ DataHeader& DataHeader::operator=(const DataHeader& header)
 /// <summary>
 /// Decodes a DMR data header.
 /// </summary>
-/// <param name="bytes"></param>
+/// <param name="data"></param>
 /// <returns>True, if DMR data header was decoded, otherwise false.</returns>
-bool DataHeader::decode(const uint8_t* bytes)
+bool DataHeader::decode(const uint8_t* data)
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
     // decode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
-    bptc.decode(bytes, m_data);
+    bptc.decode(data, m_data);
 
     // make sure the CRC-CCITT 16 was actually included (the network tends to zero the CRC)
     if (m_data[10U] != 0x00U && m_data[11U] != 0x00U) {
@@ -250,10 +250,10 @@ bool DataHeader::decode(const uint8_t* bytes)
 /// <summary>
 /// Encodes a DMR data header.
 /// </summary>
-/// <param name="bytes"></param>
-void DataHeader::encode(uint8_t* bytes) const
+/// <param name="data"></param>
+void DataHeader::encode(uint8_t* data) const
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
     // perform no processing other then regenerating FEC
     if (m_DPF == DPF_PROPRIETARY) {
@@ -271,7 +271,7 @@ void DataHeader::encode(uint8_t* bytes) const
 
         // encode BPTC (196,96) FEC
         edac::BPTC19696 bptc;
-        bptc.encode(m_data, bytes);
+        bptc.encode(m_data, data);
         return;
     }
     else {
@@ -383,5 +383,5 @@ void DataHeader::encode(uint8_t* bytes) const
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
-    bptc.encode(m_data, bytes);
+    bptc.encode(m_data, data);
 }

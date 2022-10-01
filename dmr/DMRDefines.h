@@ -69,6 +69,7 @@ namespace dmr
     const uint32_t  DMR_AMBE_LENGTH_BYTES = 27U;
 
     const uint32_t  DMR_LC_HEADER_LENGTH_BYTES = 12U;
+    const uint32_t  DMR_CSBK_LENGTH_BYTES = 12U;
 
     const uint8_t   BS_SOURCED_AUDIO_SYNC[] = { 0x07U, 0x55U, 0xFDU, 0x7DU, 0xF7U, 0x5FU, 0x70U };
     const uint8_t   BS_SOURCED_DATA_SYNC[] = { 0x0DU, 0xFFU, 0x57U, 0xD7U, 0x5DU, 0xF5U, 0xD0U };
@@ -212,6 +213,30 @@ namespace dmr
     const uint8_t   SLCO_ACT = 0x01U;
     const uint8_t   SLCO_TSCC = 0x02U;
 
+    // Reason Code(s)
+    const uint8_t   TS_ACK_RSN_MSG = 0x60U;                 // TS - Message Accepted
+    const uint8_t   TS_ACK_RSN_REG = 0x62U;                 // TS - Registration Accepted
+    const uint8_t   TS_ACK_RSN_AUTH_RESP = 0x64U;           // TS - Authentication Challenge Response
+    const uint8_t   TS_ACK_RSN_REG_SUB_ATTACH = 0x65U;      // TS - Registration Response with subscription
+    const uint8_t   MS_ACK_RSN_MSG = 0x44U;                 // MS - Message Accepted
+    const uint8_t   MS_ACK_RSN_AUTH_RESP = 0x48U;           // MS - Authentication Challenge Response
+
+    const uint8_t   TS_DENY_RSN_SYS_UNSUPPORTED_SVC = 0x20U;
+    const uint8_t   TS_DENY_RSN_PERM_USER_REFUSED = 0x21U;
+    const uint8_t   TS_DENY_RSN_TEMP_USER_REFUSED = 0x22U;
+    const uint8_t   TS_DENY_RSN_TRSN_SYS_REFUSED = 0x23U;
+    const uint8_t   TS_DENY_RSN_TGT_NOT_REG = 0x24U;
+    const uint8_t   TS_DENY_RSN_TGT_UNAVAILABLE = 0x25U;
+    const uint8_t   TS_DENY_RSN_SYS_BUSY = 0x27U;
+    const uint8_t   TS_DENY_RSN_SYS_NOT_READY = 0x28U;
+    const uint8_t   TS_DENY_RSN_CALL_CNCL_REFUSED = 0x29U;
+    const uint8_t   TS_DENY_RSN_REG_REFUSED = 0x2AU;
+    const uint8_t   TS_DENY_RSN_REG_DENIED = 0x2BU;
+    const uint8_t   TS_DENY_RSN_MS_NOT_REG = 0x2DU;
+    const uint8_t   TS_DENY_RSN_TGT_GROUP_NOT_VALID = 0x2FU;
+
+    const uint8_t   MS_DENY_RSN_UNSUPPORTED_SVC = 0x00U;
+
     // Broadcast Announcement Type(s)
     const uint8_t   BCAST_ANNC_ANN_WD_TSCC = 0x00U;         // Announce-WD TSCC Channel
     const uint8_t   BCAST_ANNC_CALL_TIMER_PARMS = 0x01U;    // Specify Call Timer Parameters
@@ -238,7 +263,6 @@ namespace dmr
     const uint8_t   CSBKO_CTCSBK = 0x07U;                   // CT CSBK - Channel Timing CSBK
     const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDUs for the random access protocol
     const uint8_t   CSBKO_RAND = 0x1FU;                     // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
-    const uint8_t   CSBKO_CALL_ALRT = 0x1FU;                // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response

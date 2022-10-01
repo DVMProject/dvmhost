@@ -42,7 +42,7 @@ namespace dmr
         class HOST_SW_API PrivacyLC {
         public:
             /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
-            PrivacyLC(const uint8_t* bytes);
+            PrivacyLC(const uint8_t* data);
             /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
             PrivacyLC(const bool* bits);
             /// <summary>Initializes a new instance of the PrivacyLC class.</summary>
@@ -51,7 +51,7 @@ namespace dmr
             ~PrivacyLC();
 
             /// <summary>Gets LC data as bytes.</summary>
-            void getData(uint8_t* bytes) const;
+            void getData(uint8_t* data) const;
             /// <summary>Gets LC data as bits.</summary>
             void getData(bool* bits) const;
 

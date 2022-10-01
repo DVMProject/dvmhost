@@ -290,7 +290,7 @@ bool TDULC::decodeLC(const uint8_t* rs)
 {
     ulong64_t rsValue = 0U;
 
-    // combine bytes into rs value
+    // combine bytes into ulong64_t (8 byte) value
     rsValue = rs[1U];
     rsValue = (rsValue << 8) + rs[2U];
     rsValue = (rsValue << 8) + rs[3U];
@@ -508,7 +508,7 @@ void TDULC::encodeLC(uint8_t* rs)
         break;
     }
 
-    // split rs value into bytes
+    // split ulong64_t (8 byte) value into bytes
     rs[1U] = (uint8_t)((rsValue >> 56) & 0xFFU);
     rs[2U] = (uint8_t)((rsValue >> 48) & 0xFFU);
     rs[3U] = (uint8_t)((rsValue >> 40) & 0xFFU);

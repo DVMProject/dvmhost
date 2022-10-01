@@ -162,13 +162,15 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
                 break;
-            case CSBKO_CALL_ALRT:
-                if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
+            case CSBKO_RAND:
+                if (csbk.getFID() == FID_DMRA) {
+                    if (m_verbose) {
+                        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
+                            m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+                    }
 
-                ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                    ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                }
                 break;
             case CSBKO_ACK_RSP:
                 if (m_verbose) {
@@ -312,13 +314,15 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
                 break;
-            case CSBKO_CALL_ALRT:
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
+            case CSBKO_RAND:
+                if (csbk.getFID() == FID_DMRA) {
+                    if (m_verbose) {
+                        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
+                            m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+                    }
 
-                ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                    ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                }
                 break;
             case CSBKO_ACK_RSP:
                 if (m_verbose) {
@@ -454,7 +458,7 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
-    csbk.setCSBKO(CSBKO_CALL_ALRT);
+    csbk.setCSBKO(CSBKO_RAND);
     csbk.setFID(FID_DMRA);
 
     csbk.setGI(false);

@@ -53,9 +53,9 @@ namespace dmr
             DataHeader& operator=(const DataHeader& header);
 
             /// <summary>Decodes a DMR data header.</summary>
-            bool decode(const uint8_t* bytes);
+            bool decode(const uint8_t* data);
             /// <summary>Encodes a DMR data header.</summary>
-            void encode(uint8_t* bytes) const;
+            void encode(uint8_t* data) const;
 
         public:
             /// <summary>Flag indicating whether the CSBK is group or individual.</summary>

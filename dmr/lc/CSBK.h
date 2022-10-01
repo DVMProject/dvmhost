@@ -55,34 +55,33 @@ namespace dmr
             ~CSBK();
 
             /// <summary>Decodes a DMR CSBK.</summary>
-            bool decode(const uint8_t* bytes);
+            bool decode(const uint8_t* data);
             /// <summary>Encodes a DMR CSBK.</summary>
-            void encode(uint8_t* bytes);
+            void encode(uint8_t* data);
 
         public:
             /// <summary>Flag indicating verbose log output.</summary>
             __PROPERTY(bool, verbose, Verbose);
 
-            // Generic fields
+            /// <summary>DMR access color code.</summary>
+            __PROPERTY(uint8_t, colorCode, ColorCode);
+
+            /** Common Data */
+            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            __PROPERTY(bool, lastBlock, LastBlock);
+            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
+            __PROPERTY(bool, Cdef, Cdef);
+
             /// <summary>CSBK opcode.</summary>
             __PROPERTY(uint8_t, CSBKO, CSBKO);
             /// <summary>CSBK feature ID.</summayr>
             __PROPERTY(uint8_t, FID, FID);
 
-            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
-            __PROPERTY(bool, lastBlock, LastBlock);
-
-            // For BS Dwn Act
-            __READONLY_PROPERTY(uint32_t, bsId, BSId);
-
-            // For Pre
             /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
             __PROPERTY(bool, GI, GI);
 
-            // For Cdef blocks
-            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
-            __PROPERTY(bool, Cdef, Cdef);
-
+            /// <summary>Base Station ID.</summary>
+            __READONLY_PROPERTY(uint32_t, bsId, BSId);
             /// <summary>Source ID.</summary>
             __PROPERTY(uint32_t, srcId, SrcId);
             /// <summary>Destination ID.</summary>
@@ -91,25 +90,35 @@ namespace dmr
             /// <summary></summary>
             __READONLY_PROPERTY(bool, dataContent, DataContent);
 
-            /// <summary>Sets the number of blocks to follow.</summary>
+            /// <summary>Number of blocks to follow.</summary>
             __PROPERTY(uint8_t, CBF, CBF);
 
-            /// <summary>DMR access color code.</summary>
-            __PROPERTY(uint8_t, colorCode, ColorCode);
+            /** Service Options */
+            /// <summary>Flag indicating the emergency bits are set.</summary>
+            __PROPERTY(bool, emergency, Emergency);
+            /// <summary>Flag indicating that privacy is enabled.</summary>
+            __PROPERTY(bool, privacy, Privacy);
+            /// <summary>Flag indicating that supplementary data is required.</summary>
+            __PROPERTY(bool, supplementData, SupplementData);
+            /// <summary>Priority level for the traffic.</summary>
+            __PROPERTY(uint8_t, priority, Priority);
+            /// <summary>Flag indicating a broadcast service.</summary>
+            __PROPERTY(bool, broadcast, Broadcast);
 
-            // Tier III
+            /** Tier III */
             /// <summary>Backoff Number.</summary>
             __PROPERTY(uint8_t, backoffNo, BackoffNo);
 
             /// <summary>Service Type.</summary>
             __PROPERTY(uint8_t, serviceType, serviceType);
-            /// <summary>Service type.</summary>
-            __PROPERTY(uint8_t, serviceOptions, ServiceOptions);
+
             /// <summary>Destination/Target address type.</summary>
             __PROPERTY(uint8_t, targetAddress, TargetAddress);
 
-            /// <summary>Response type.</summary>
+            /// <summary>Response information.</summary>
             __PROPERTY(uint8_t, response, Response);
+            /// <summary>Reason type.</summary>
+            __PROPERTY(uint8_t, reason, reason);
 
             /// <summary>Broadcast Announcment Type.</summary>
             __PROPERTY(uint8_t, anncType, AnncType);
@@ -144,8 +153,6 @@ namespace dmr
         private:
             /// <summary>Initializes a new instance of the CSBK class.</summary>
             CSBK(SiteData siteData);
-
-            uint8_t* m_data;
         };
     } // namespace lc
 } // namespace dmr

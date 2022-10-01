@@ -41,8 +41,8 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the PrivacyLC class.
 /// </summary>
-/// <param name="bytes"></param>
-PrivacyLC::PrivacyLC(const uint8_t* bytes) :
+/// <param name="data"></param>
+PrivacyLC::PrivacyLC(const uint8_t* data) :
     m_FID(FID_ETSI),
     m_dstId(0U),
     m_group(false),
@@ -50,22 +50,22 @@ PrivacyLC::PrivacyLC(const uint8_t* bytes) :
     m_kId(0U),
     m_mi(NULL)
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
     m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
     
-    m_group = (bytes[0U] & 0x20U) == 0x20U;
-    m_algId = bytes[0U] & 7;                                                    // Algorithm ID
+    m_group = (data[0U] & 0x20U) == 0x20U;
+    m_algId = data[0U] & 7;                                                     // Algorithm ID
 
-    m_FID = bytes[1U];
-    m_kId = bytes[2U];
+    m_FID = data[1U];
+    m_kId = data[2U];
 
-    m_mi[0U] = bytes[3U];
-    m_mi[1U] = bytes[4U];
-    m_mi[2U] = bytes[5U];
-    m_mi[3U] = bytes[6U];
+    m_mi[0U] = data[3U];
+    m_mi[1U] = data[4U];
+    m_mi[2U] = data[5U];
+    m_mi[3U] = data[6U];
 
-    m_dstId = bytes[7U] << 16 | bytes[8U] << 8 | bytes[9U];                     // Destination Address
+    m_dstId = data[7U] << 16 | data[8U] << 8 | data[9U];                        // Destination Address
 }
 /// <summary>
 /// Initializes a new instance of the PrivacyLC class.
@@ -138,25 +138,25 @@ PrivacyLC::~PrivacyLC()
 /// <summary>
 ///
 /// </summary>
-/// <param name="bytes"></param>
-void PrivacyLC::getData(uint8_t* bytes) const
+/// <param name="data"></param>
+void PrivacyLC::getData(uint8_t* data) const
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
-    bytes[0U] = (m_group ? 0x20U : 0x00U) +
+    data[0U] = (m_group ? 0x20U : 0x00U) +
         (m_algId & 0x07U);                                                      // Algorithm ID
 
-    bytes[1U] = m_FID;
-    bytes[2U] = m_kId;
+    data[1U] = m_FID;
+    data[2U] = m_kId;
 
-    bytes[3U] = m_mi[0U];
-    bytes[4U] = m_mi[1U];
-    bytes[5U] = m_mi[2U];
-    bytes[6U] = m_mi[3U];
+    data[3U] = m_mi[0U];
+    data[4U] = m_mi[1U];
+    data[5U] = m_mi[2U];
+    data[6U] = m_mi[3U];
 
-    bytes[7U] = m_dstId >> 16;                                                  // Destination Address
-    bytes[8U] = m_dstId >> 8;                                                   // ..
-    bytes[9U] = m_dstId >> 0;                                                   // ..
+    data[7U] = m_dstId >> 16;                                                   // Destination Address
+    data[8U] = m_dstId >> 8;                                                    // ..
+    data[9U] = m_dstId >> 0;                                                    // ..
 }
 
 /// <summary>

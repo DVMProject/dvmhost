@@ -193,7 +193,7 @@ bool TSBK::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* b
 
     ulong64_t tsbkValue = 0U;
 
-    // combine bytes into rs value
+    // combine bytes into ulong64_t (8 byte) value
     tsbkValue = dataHeader.getAMBTField8();
     tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
     tsbkValue = (tsbkValue << 8) + pduUserData[0U];
@@ -544,7 +544,7 @@ bool TSBK::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = 0U;
 
-    // combine bytes into rs value
+    // combine bytes into ulong64_t (8 byte) value
     tsbkValue = tsbk[2U];
     tsbkValue = (tsbkValue << 8) + tsbk[3U];
     tsbkValue = (tsbkValue << 8) + tsbk[4U];
@@ -1324,7 +1324,7 @@ void TSBK::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         }
     }
 
-    // split rs value into bytes
+    // split ulong64_t (8 byte) value into bytes
     tsbk[2U] = (uint8_t)((tsbkValue >> 56) & 0xFFU);
     tsbk[3U] = (uint8_t)((tsbkValue >> 48) & 0xFFU);
     tsbk[4U] = (uint8_t)((tsbkValue >> 40) & 0xFFU);

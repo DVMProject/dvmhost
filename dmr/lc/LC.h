@@ -48,7 +48,7 @@ namespace dmr
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC(uint8_t flco, uint32_t srcId, uint32_t dstId);
             /// <summary>Initializes a new instance of the LC class.</summary>
-            LC(const uint8_t* bytes);
+            LC(const uint8_t* data);
             /// <summary>Initializes a new instance of the LC class.</summary>
             LC(const bool* bits);
             /// <summary>Initializes a new instance of the LC class.</summary>
@@ -57,7 +57,7 @@ namespace dmr
             ~LC();
 
             /// <summary>Gets LC data as bytes.</summary>
-            void getData(uint8_t* bytes) const;
+            void getData(uint8_t* data) const;
             /// <summary>Gets LC data as bits.</summary>
             void getData(bool* bits) const;
 

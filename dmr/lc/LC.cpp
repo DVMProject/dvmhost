@@ -66,8 +66,8 @@ LC::LC(uint8_t flco, uint32_t srcId, uint32_t dstId) :
 /// <summary>
 /// Initializes a new instance of the LC class.
 /// </summary>
-/// <param name="bytes"></param>
-LC::LC(const uint8_t* bytes) :
+/// <param name="data"></param>
+LC::LC(const uint8_t* data) :
     m_PF(false),
     m_FLCO(FLCO_GROUP),
     m_FID(FID_ETSI),
@@ -80,23 +80,23 @@ LC::LC(const uint8_t* bytes) :
     m_priority(CALL_PRIORITY_2),
     m_R(false)
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
-    m_PF = (bytes[0U] & 0x80U) == 0x80U;
-    m_R = (bytes[0U] & 0x40U) == 0x40U;
+    m_PF = (data[0U] & 0x80U) == 0x80U;
+    m_R = (data[0U] & 0x40U) == 0x40U;
 
-    m_FLCO = bytes[0U] & 0x3FU;
+    m_FLCO = data[0U] & 0x3FU;
 
-    m_FID = bytes[1U];
+    m_FID = data[1U];
 
-    m_emergency = (bytes[2U] & 0x80U) == 0x80U;                                 // Emergency Flag
-    m_encrypted = (bytes[2U] & 0x40U) == 0x40U;                                 // Encryption Flag
-    m_broadcast = (bytes[2U] & 0x08U) == 0x08U;                                 // Broadcast Flag
-    m_ovcm = (bytes[2U] & 0x04U) == 0x04U;                                      // OVCM Flag
-    m_priority = (bytes[2U] & 0x03U);                                           // Priority
+    m_emergency = (data[2U] & 0x80U) == 0x80U;                                  // Emergency Flag
+    m_encrypted = (data[2U] & 0x40U) == 0x40U;                                  // Encryption Flag
+    m_broadcast = (data[2U] & 0x08U) == 0x08U;                                  // Broadcast Flag
+    m_ovcm = (data[2U] & 0x04U) == 0x04U;                                       // OVCM Flag
+    m_priority = (data[2U] & 0x03U);                                            // Priority
 
-    m_dstId = bytes[3U] << 16 | bytes[4U] << 8 | bytes[5U];                     // Destination Address
-    m_srcId = bytes[6U] << 16 | bytes[7U] << 8 | bytes[8U];                     // Source Address
+    m_dstId = data[3U] << 16 | data[4U] << 8 | data[5U];                        // Destination Address
+    m_srcId = data[6U] << 16 | data[7U] << 8 | data[8U];                        // Source Address
 }
 /// <summary>
 /// Initializes a new instance of the LC class.
@@ -178,34 +178,34 @@ LC::~LC()
 /// <summary>
 ///
 /// </summary>
-/// <param name="bytes"></param>
-void LC::getData(uint8_t* bytes) const
+/// <param name="data"></param>
+void LC::getData(uint8_t* data) const
 {
-    assert(bytes != NULL);
+    assert(data != NULL);
 
-    bytes[0U] = (uint8_t)m_FLCO;
+    data[0U] = (uint8_t)m_FLCO;
 
     if (m_PF)
-        bytes[0U] |= 0x80U;
+        data[0U] |= 0x80U;
 
     if (m_R)
-        bytes[0U] |= 0x40U;
+        data[0U] |= 0x40U;
 
-    bytes[1U] = m_FID;
+    data[1U] = m_FID;
 
-    bytes[2U] = (m_emergency ? 0x80U : 0x00U) +                                 // Emergency Flag
+    data[2U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                         // Encrypted Flag
         (m_broadcast ? 0x08U : 0x00U) +                                         // Broadcast Flag
         (m_ovcm ? 0x04U : 0x00U) +                                              // OVCM Flag
         (m_priority & 0x03U);                                                   // Priority
 
-    bytes[3U] = m_dstId >> 16;                                                  // Destination Address
-    bytes[4U] = m_dstId >> 8;                                                   // ..
-    bytes[5U] = m_dstId >> 0;                                                   // ..
+    data[3U] = m_dstId >> 16;                                                   // Destination Address
+    data[4U] = m_dstId >> 8;                                                    // ..
+    data[5U] = m_dstId >> 0;                                                    // ..
 
-    bytes[6U] = m_srcId >> 16;                                                  // Source Address
-    bytes[7U] = m_srcId >> 8;                                                   // ..
-    bytes[8U] = m_srcId >> 0;                                                   // ..
+    data[6U] = m_srcId >> 16;                                                   // Source Address
+    data[7U] = m_srcId >> 8;                                                    // ..
+    data[8U] = m_srcId >> 0;                                                    // ..
 }
 
 /// <summary>
