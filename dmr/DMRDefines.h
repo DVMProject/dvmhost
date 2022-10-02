@@ -237,6 +237,21 @@ namespace dmr
 
     const uint8_t   MS_DENY_RSN_UNSUPPORTED_SVC = 0x00U;
 
+    // Random Access Service Kind
+    const uint8_t   SVC_KIND_IND_VOICE_CALL = 0x00U;        // Individual Voice Call
+    const uint8_t   SVC_KIND_GRP_VOICE_CALL = 0x01U;        // Group Voice Call
+    const uint8_t   SVC_KIND_IND_DATA_CALL = 0x02U;         // Individual Data Call
+    const uint8_t   SVC_KIND_GRP_DATA_CALL = 0x03U;         // Group Data Call
+    const uint8_t   SVC_KIND_IND_UDT_DATA_CALL = 0x04U;     // Individual UDT Short Data Call
+    const uint8_t   SVC_KIND_GRP_UDT_DATA_CALL = 0x05U;     // Group UDT Short Data Call
+    const uint8_t   SVC_KIND_UDT_SHORT_POLL = 0x06U;        // UDT Short Data Polling Service
+    const uint8_t   SVC_KIND_STATUS_TRANSPORT = 0x07U;      // Status Transport Service
+    const uint8_t   SVC_KIND_CALL_DIVERSION = 0x08U;        // Call Diversion Service
+    const uint8_t   SVC_KIND_CALL_ANSWER = 0x09U;           // Call Answer Service
+    const uint8_t   SVC_KIND_SUPPLEMENTARY_SVC = 0x0DU;     // Supplementary Service
+    const uint8_t   SVC_KIND_REG_SVC = 0x0EU;               // Registration Service
+    const uint8_t   SVC_KIND_CANCEL_CALL = 0x0FU;           // Cancel Call Service
+
     // Broadcast Announcement Type(s)
     const uint8_t   BCAST_ANNC_ANN_WD_TSCC = 0x00U;         // Announce-WD TSCC Channel
     const uint8_t   BCAST_ANNC_CALL_TIMER_PARMS = 0x01U;    // Specify Call Timer Parameters

@@ -153,8 +153,6 @@ bool CSBK::decode(const uint8_t* data)
         {
         case FID_DMRA:
             m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                  // Group/Individual Flag
-            m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;         //
-            m_CBF = (uint8_t)((csbkValue >> 48) & 0xFFU);                           // Blocks to Follow
             m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                      // Target Radio Address
             m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
             break;
@@ -165,13 +163,15 @@ bool CSBK::decode(const uint8_t* data)
             m_supplementData = (((csbkValue >> 56) & 0xFFU) & 0x20U) == 0x20U;      // Supplementary Data Flag
             m_broadcast = (((csbkValue >> 56) & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
             m_priority = (((csbkValue >> 56) & 0xFFU) & 0x03U);                     // Priority
+            m_serviceData = (uint8_t)((csbkValue >> 52U) & 0x0FU);                  // Service Data
+            m_serviceType = (uint8_t)((csbkValue >> 48U) & 0x0FU);                  // Service Type
             m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                      // Target Radio Address
             m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
             break;
         }
     case CSBKO_EXT_FNCT:
         m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             //
-        m_CBF = (uint8_t)((csbkValue >> 48) & 0xFFU);                               // Blocks to Follow
+        m_serviceType = (uint8_t)((csbkValue >> 48) & 0xFFU);                       // Service Type
         m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
@@ -463,6 +463,7 @@ CSBK::CSBK(SiteData siteData) :
     m_priority(0U),
     m_broadcast(false),
     m_backoffNo(1U),
+    m_serviceData(0U),
     m_serviceType(0U),
     m_targetAddress(TGT_ADRS_TGID),
     m_response(0U),

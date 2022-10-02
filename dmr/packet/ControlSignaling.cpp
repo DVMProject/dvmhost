@@ -123,99 +123,111 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             }
         }
 
-        // Regenerate the CSBK data
-        csbk.encode(data + 2U);
-
-        // Regenerate the Slot Type
-        slotType.encode(data + 2U);
-
-        // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-        m_slot->m_rfSeqNo = 0U;
-
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
-
-        if (m_slot->m_duplex)
-            m_slot->addFrame(data);
-
-        m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
-
-        if (m_verbose) {
-            switch (csbko) {
-            case CSBKO_UU_V_REQ:
+        bool handled = false;
+        switch (csbko) {
+        case CSBKO_UU_V_REQ:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_UU_V_REQ (Unit to Unit Voice Service Request), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        case CSBKO_UU_ANS_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_UU_ANS_RSP (Unit to Unit Voice Service Answer Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        case CSBKO_RAND:
+            if (csbk.getFID() == FID_DMRA) {
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_UU_V_REQ (Unit to Unit Voice Service Request), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_UU_ANS_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_UU_ANS_RSP (Unit to Unit Voice Service Answer Response), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_NACK_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_NACK_RSP (Negative Acknowledgment Response), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_RAND:
-                if (csbk.getFID() == FID_DMRA) {
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
-                            m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                    }
-
-                    ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
-                }
-                break;
-            case CSBKO_ACK_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_ACK_RSP (Acknowledge Response), src = %u, dst = %s%u",
+                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
-                break;
-            case CSBKO_EXT_FNCT:
+                ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            } else {
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
-                        m_slot->m_slotNo, csbk.getCBF(), dstId, srcId);
+                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceType = %02X, serviceData = %02X, srcId = %u, dstId = %u",
+                        m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceType(), csbk.getServiceData(), csbk.getSrcId(), csbk.getDstId());
                 }
+            }
+            break;
+        case CSBKO_ACK_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_ACK_RSP (Acknowledge Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
 
-                // generate activity log entry
-                if (csbk.getCBF() == DMR_EXT_FNCT_CHECK) {
-                    ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT) {
-                    ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT) {
-                    ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_CHECK_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT_ACK) {
-                    ::ActivityLog("DMR", true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
+            ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            break;
+        case CSBKO_EXT_FNCT:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
+                    m_slot->m_slotNo, csbk.getServiceType(), dstId, srcId);
+            }
+
+            // generate activity log entry
+            switch (csbk.getServiceType()) {
+            case DMR_EXT_FNCT_CHECK:
+                ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case CSBKO_PRECCSBK:
-                if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, src = %u, dst = %s%u",
-                        m_slot->m_slotNo, csbk.getDataContent() ? "Data" : "CSBK", csbk.getCBF(), srcId, gi ? "TG " : "", dstId);
-                }
+            case DMR_EXT_FNCT_INHIBIT:
+                ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_UNINHIBIT:
+                ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_CHECK_ACK:
+                ::ActivityLog("DMR", true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_INHIBIT_ACK:
+                ::ActivityLog("DMR", true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_UNINHIBIT_ACK:
+                ::ActivityLog("DMR", true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
-                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, unhandled CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk.getFID());
+                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), unhandled op, op = $%02X", m_slot->m_slotNo, csbk.getServiceType());
                 break;
             }
+            break;
+        case CSBKO_NACK_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_NACK_RSP (Negative Acknowledgment Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        case CSBKO_PRECCSBK:
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, src = %u, dst = %s%u",
+                    m_slot->m_slotNo, csbk.getDataContent() ? "Data" : "CSBK", csbk.getCBF(), srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        default:
+            LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, unhandled CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk.getFID());
+            // should we drop the CSBK and not repeat it?
+            break;
+        }
+
+        if (!handled) {
+            // Regenerate the CSBK data
+            csbk.encode(data + 2U);
+
+            // Regenerate the Slot Type
+            slotType.encode(data + 2U);
+
+            // Convert the Data Sync to be from the BS or MS as needed
+            Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+            m_slot->m_rfSeqNo = 0U;
+
+            data[0U] = modem::TAG_DATA;
+            data[1U] = 0x00U;
+
+            if (m_slot->m_duplex)
+                m_slot->addFrame(data);
+
+            m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
         }
 
         return true;
@@ -255,119 +267,131 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 
         CHECK_TG_HANG(dstId);
 
-        // Regenerate the CSBK data
-        csbk.encode(data + 2U);
-
-        // Regenerate the Slot Type
-        SlotType slotType;
-        slotType.decode(data + 2U);
-        slotType.setColorCode(m_slot->m_colorCode);
-        slotType.encode(data + 2U);
-
-        // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
-
-        if (csbko == CSBKO_PRECCSBK && csbk.getDataContent()) {
-            uint32_t cbf = NO_PREAMBLE_CSBK + csbk.getCBF() - 1U;
-            for (uint32_t i = 0U; i < NO_PREAMBLE_CSBK; i++, cbf--) {
-                // Change blocks to follow
-                csbk.setCBF(cbf);
-
-                // Regenerate the CSBK data
-                csbk.encode(data + 2U);
-
-                // Regenerate the Slot Type
-                SlotType slotType;
-                slotType.decode(data + 2U);
-                slotType.setColorCode(m_slot->m_colorCode);
-                slotType.encode(data + 2U);
-
-                // Convert the Data Sync to be from the BS or MS as needed
-                Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-                m_slot->addFrame(data, true);
+        bool handled = false;
+        switch (csbko) {
+        case CSBKO_UU_V_REQ:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_UU_V_REQ (Unit to Unit Voice Service Request), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
             }
-        }
-        else
-            m_slot->addFrame(data, true);
-
-        if (m_verbose) {
-            switch (csbko) {
-            case CSBKO_UU_V_REQ:
+            break;
+        case CSBKO_UU_ANS_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_UU_ANS_RSP (Unit to Unit Voice Service Answer Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        case CSBKO_RAND:
+            if (csbk.getFID() == FID_DMRA) {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_UU_V_REQ (Unit to Unit Voice Service Request), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_UU_ANS_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_UU_ANS_RSP (Unit to Unit Voice Service Answer Response), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_NACK_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_NACK_RSP (Negative Acknowledgment Response), src = %u, dst = %s%u",
-                        m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                }
-                break;
-            case CSBKO_RAND:
-                if (csbk.getFID() == FID_DMRA) {
-                    if (m_verbose) {
-                        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
-                            m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
-                    }
-
-                    ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
-                }
-                break;
-            case CSBKO_ACK_RSP:
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_ACK_RSP (Acknowledge Response), src = %u, dst = %s%u",
+                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_CALL_ALRT (Call Alert), src = %u, dst = %s%u",
                         m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
                 }
 
-                ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
-                break;
-            case CSBKO_EXT_FNCT:
+                ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            } else {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
-                        m_slot->m_slotNo, csbk.getCBF(), dstId, srcId);
+                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceType = %02X, serviceData = %02X, srcId = %u, dstId = %u",
+                        m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceType(), csbk.getServiceData(), csbk.getSrcId(), csbk.getDstId());
                 }
+            }
+            break;
+        case CSBKO_ACK_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_ACK_RSP (Acknowledge Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
 
-                // generate activity log entry
-                if (csbk.getCBF() == DMR_EXT_FNCT_CHECK) {
-                    ::ActivityLog("DMR", false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT) {
-                    ::ActivityLog("DMR", false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT) {
-                    ::ActivityLog("DMR", false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_CHECK_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_INHIBIT_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
-                else if (csbk.getCBF() == DMR_EXT_FNCT_UNINHIBIT_ACK) {
-                    ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
-                }
+            ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            break;
+        case CSBKO_EXT_FNCT:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
+                    m_slot->m_slotNo, csbk.getCBF(), dstId, srcId);
+            }
+
+            // generate activity log entry
+            switch (csbk.getServiceType()) {
+            case DMR_EXT_FNCT_CHECK:
+                ::ActivityLog("DMR", false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
-            case CSBKO_PRECCSBK:
-                if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, src = %u, dst = %s%u",
-                        m_slot->m_slotNo, csbk.getDataContent() ? "Data" : "CSBK", csbk.getCBF(), srcId, gi ? "TG " : "", dstId);
-                }
+            case DMR_EXT_FNCT_INHIBIT:
+                ::ActivityLog("DMR", false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_UNINHIBIT:
+                ::ActivityLog("DMR", false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_CHECK_ACK:
+                ::ActivityLog("DMR", false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_INHIBIT_ACK:
+                ::ActivityLog("DMR", false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                break;
+            case DMR_EXT_FNCT_UNINHIBIT_ACK:
+                ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
-                LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, unhandled network CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk.getFID());
+                LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_EXT_FNCT (Extended Function), unhandled op, op = $%02X", m_slot->m_slotNo, csbk.getServiceType());
                 break;
             }
+            break;
+        case CSBKO_NACK_RSP:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_NACK_RSP (Negative Acknowledgment Response), src = %u, dst = %s%u",
+                    m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        case CSBKO_PRECCSBK:
+            if (m_verbose) {
+                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_PRECCSBK (%s Preamble CSBK), toFollow = %u, src = %u, dst = %s%u",
+                    m_slot->m_slotNo, csbk.getDataContent() ? "Data" : "CSBK", csbk.getCBF(), srcId, gi ? "TG " : "", dstId);
+            }
+            break;
+        default:
+            LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, unhandled network CSBK, csbko = $%02X, fid = $%02X", m_slot->m_slotNo, csbko, csbk.getFID());
+            // should we drop the CSBK and not repeat it?
+            break;
+        }
+
+        if (!handled) {
+            // Regenerate the CSBK data
+            csbk.encode(data + 2U);
+
+            // Regenerate the Slot Type
+            SlotType slotType;
+            slotType.decode(data + 2U);
+            slotType.setColorCode(m_slot->m_colorCode);
+            slotType.encode(data + 2U);
+
+            // Convert the Data Sync to be from the BS or MS as needed
+            Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+            data[0U] = modem::TAG_DATA;
+            data[1U] = 0x00U;
+
+            if (csbko == CSBKO_PRECCSBK && csbk.getDataContent()) {
+                uint32_t cbf = NO_PREAMBLE_CSBK + csbk.getCBF() - 1U;
+                for (uint32_t i = 0U; i < NO_PREAMBLE_CSBK; i++, cbf--) {
+                    // Change blocks to follow
+                    csbk.setCBF(cbf);
+
+                    // Regenerate the CSBK data
+                    csbk.encode(data + 2U);
+
+                    // Regenerate the Slot Type
+                    SlotType slotType;
+                    slotType.decode(data + 2U);
+                    slotType.setColorCode(m_slot->m_colorCode);
+                    slotType.encode(data + 2U);
+
+                    // Convert the Data Sync to be from the BS or MS as needed
+                    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+                    m_slot->addFrame(data, true);
+                }
+            }
+            else
+                m_slot->addFrame(data, true);
         }
     }
     else {

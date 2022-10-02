@@ -109,8 +109,10 @@ namespace dmr
             /// <summary>Backoff Number.</summary>
             __PROPERTY(uint8_t, backoffNo, BackoffNo);
 
+            /// <summary>Service Data.</summary>
+            __PROPERTY(uint8_t, serviceData, ServiceData);
             /// <summary>Service Type.</summary>
-            __PROPERTY(uint8_t, serviceType, serviceType);
+            __PROPERTY(uint8_t, serviceType, ServiceType);
 
             /// <summary>Destination/Target address type.</summary>
             __PROPERTY(uint8_t, targetAddress, TargetAddress);

@@ -411,6 +411,11 @@ int Host::run()
         LogInfo("    TX Hang: %us", txHang);
         LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
 
+        // forcibly enable beacons when TSCC is enabled but not in dedicated mode
+        if (m_dmrTSCCData && !dmrCtrlChannel && !m_dmrBeacons) {
+            m_dmrBeacons = true;
+        }
+
         LogInfo("    Roaming Beacons: %s", m_dmrBeacons ? "yes" : "no");
         if (m_dmrBeacons) {
             uint32_t dmrBeaconInterval = dmrProtocol["beacons"]["interval"].as<uint32_t>(60U);
@@ -566,17 +571,17 @@ int Host::run()
         bool nxdnVerbose = nxdnProtocol["verbose"].as<bool>(true);
         bool nxdnDebug = nxdnProtocol["debug"].as<bool>(false);
 
-        // clamp queue size to no less then 24 and no greater the 100
-        if (queueSize <= 24U) {
-            LogWarning(LOG_HOST, "NXDN queue size must be greater then 24 frames, defaulting to 24 frames!");
-            queueSize = 24U;
+        // clamp queue size to no less then 5 and no greater the 100 frames
+        if (queueSize <= 10U) {
+            LogWarning(LOG_HOST, "NXDN queue size must be greater then 10 frames, defaulting to 10 frames!");
+            queueSize = 10U;
         }
         if (queueSize > 100U) {
             LogWarning(LOG_HOST, "NXDN queue size must be less then 100 frames, defaulting to 100 frames!");
             queueSize = 100U; 
         }
-        if (queueSize > 60U) {
-            LogWarning(LOG_HOST, "NXDN queue size is excessive, >60 frames!");
+        if (queueSize > 30U) {
+            LogWarning(LOG_HOST, "NXDN queue size is excessive, >30 frames!");
         }
 
         uint32_t queueSizeBytes = queueSize * (nxdn::NXDN_FRAME_LENGTH_BYTES * 5U);
@@ -725,21 +730,8 @@ int Host::run()
     bool killed = false;
 
     if (!g_killed) {
-        // fixed more or P25 control channel will force a state change
-        if (m_fixedMode || m_p25CtrlChannel) {
-#if defined(ENABLE_P25)
-            if (m_p25CtrlChannel) {
-                m_fixedMode = true;
-                setState(STATE_P25);
-            }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
-            if (m_nxdnCtrlChannel) {
-                m_fixedMode = true;
-                setState(STATE_NXDN);
-            }
-#endif // defined(ENABLE_NXDN)
-
+        // fixed mode will force a state change
+        if (m_fixedMode) {
 #if defined(ENABLE_DMR)
             if (dmr != NULL)
                 setState(STATE_DMR);
@@ -754,6 +746,12 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
         }
         else {
+#if defined(ENABLE_DMR)
+            if (m_dmrCtrlChannel) {
+                m_fixedMode = true;
+                setState(STATE_DMR);
+            }
+#endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             if (m_p25CtrlChannel) {
                 m_fixedMode = true;
@@ -976,9 +974,11 @@ int Host::run()
                         }
 
                         // if there is a P25 CC running; halt the CC
-                        if (p25->getCCRunning() && !p25->getCCHalted()) {
-                            p25->setCCHalted(true);
-                            INTERRUPT_P25_CONTROL;
+                        if (p25 != NULL) {
+                            if (p25->getCCRunning() && !p25->getCCHalted()) {
+                                p25->setCCHalted(true);
+                                INTERRUPT_P25_CONTROL;
+                            }
                         }
 
                         // if there is a NXDN CC running; halt the CC
