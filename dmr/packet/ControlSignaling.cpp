@@ -568,37 +568,50 @@ ControlSignaling::~ControlSignaling()
 /// <param name="clearBeforeWrite"></param>
 void ControlSignaling::writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite)
 {
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+    if (m_tscc != NULL) {
+        if (!m_tscc->m_enableTSCC)
+            return;
 
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
+        // don't add any frames if the queue is full
+        uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
+        uint32_t space = m_tscc->m_queue.freeSpace();
+        if (space < (len + 1U)) {
+            return;
+        }
 
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
+        uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
+        SlotType slotType;
+        slotType.setColorCode(m_tscc->m_colorCode);
+        slotType.setDataType(DT_CSBK);
 
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+        // Regenerate the CSBK data
+        csbk.encode(data + 2U);
 
-    m_slot->m_rfSeqNo = 0U;
+        // Regenerate the Slot Type
+        slotType.encode(data + 2U);
 
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
+        // Convert the Data Sync to be from the BS or MS as needed
+        Sync::addDMRDataSync(data + 2U, m_tscc->m_duplex);
 
-    if (clearBeforeWrite) {
-        if (m_slot->m_slotNo == 1U)
-            m_slot->m_modem->clearDMRData1();
-        if (m_slot->m_slotNo == 2U)
-            m_slot->m_modem->clearDMRData2();
-        m_slot->m_queue.clear();
+        m_tscc->m_rfSeqNo = 0U;
+
+        data[0U] = modem::TAG_DATA;
+        data[1U] = 0x00U;
+
+        if (clearBeforeWrite) {
+            if (m_tscc->m_slotNo == 1U)
+                m_tscc->m_modem->clearDMRData1();
+            if (m_tscc->m_slotNo == 2U)
+                m_tscc->m_modem->clearDMRData2();
+            m_tscc->m_queue.clear();
+        }
+
+        if (m_tscc->m_duplex)
+            m_tscc->addFrame(data);
     }
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
 }
 
 /// <summary>
@@ -624,6 +637,8 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service)
 /// <param name="srcId"></param>
 void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId)
 {
+    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_ACK_RSP);
@@ -633,14 +648,14 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId)
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
-        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), denial, RID rejection, srcId = %u", m_tscc->m_slotNo, srcId);
         ::ActivityLog("DMR", true, "unit registration request from %u denied", srcId);
         csbk.setReason(TS_DENY_RSN_REG_DENIED);
     }
 
     if (csbk.getReason() == TS_ACK_RSN_REG) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), srcId = %u", m_slot->m_slotNo, srcId);
+            LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), srcId = %u", m_tscc->m_slotNo, srcId);
         }
 
         ::ActivityLog("DMR", true, "unit registration request from %u", srcId);
@@ -651,7 +666,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId)
         }
     }
 
-    csbk.setSrcId(srcId);
+    csbk.setSrcId(DMR_WUID_REGI);
     csbk.setDstId(srcId);
 
     writeRF_CSBK(csbk);

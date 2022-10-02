@@ -135,7 +135,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfTGHang(1000U, tgHang),
     m_netTimeoutTimer(1000U, timeout),
     m_packetTimer(1000U, 0U, 50U),
-    m_ccPacketInterval(1000U, 0U, 5U),
+    m_ccPacketInterval(1000U, 0U, 60U),
     m_interval(),
     m_elapsed(),
     m_rfFrames(0U),

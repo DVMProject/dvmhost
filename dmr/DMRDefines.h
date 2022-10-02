@@ -137,6 +137,15 @@ namespace dmr
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 21U;
     const uint32_t  MAX_DMR_VOICE_ERRORS = 141U;
 
+    const uint32_t  DMR_WUID_SUPLI = 0xFFFEC4U;
+    const uint32_t  DMR_WUID_SDMI = 0xFFFEC5U;
+    const uint32_t  DMR_WUID_REGI = 0xFFFEC6U;
+    const uint32_t  DMR_WUID_STUNI = 0xFFFECCU;
+    const uint32_t  DMR_WUID_AUTHI = 0xFFFECDU;
+    const uint32_t  DMR_WUID_KILLI = 0xFFFECFU;
+    const uint32_t  DMR_WUID_TATTSI = 0xFFFED7U;
+    const uint32_t  DMR_WUID_ALL = 0xFFFFFFU;
+
     // PDU Data Formats
     const uint8_t   DPF_UDT = 0x00U;
     const uint8_t   DPF_RESPONSE = 0x01U;
