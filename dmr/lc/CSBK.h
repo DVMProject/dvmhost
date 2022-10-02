@@ -108,6 +108,8 @@ namespace dmr
             /** Tier III */
             /// <summary>Backoff Number.</summary>
             __PROPERTY(uint8_t, backoffNo, BackoffNo);
+            /// <summary>Random Access Wait Delay.</summary>
+            __PROPERTY(uint8_t, nRandWait, NRandWait);
 
             /// <summary>Service Data.</summary>
             __PROPERTY(uint8_t, serviceData, ServiceData);

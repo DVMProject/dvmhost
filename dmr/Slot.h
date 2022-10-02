@@ -109,6 +109,8 @@ namespace dmr
             lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter);
         /// <summary>Sets local configured site data.</summary>
         static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
+        /// <summary>Sets TSCC Aloha configuration.</summary>
+        static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);
 
     private:
         friend class Control;
@@ -219,6 +221,9 @@ namespace dmr
         static bool m_voice2;
 
         static uint16_t m_tsccCnt;
+
+        static uint8_t m_alohaNRandWait;
+        static uint8_t m_alohaBackOff;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
         void addFrame(const uint8_t* data, bool net = false);

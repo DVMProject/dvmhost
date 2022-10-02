@@ -91,6 +91,9 @@ bool Slot::m_voice2 = true;
 
 uint16_t Slot::m_tsccCnt = 0U;
 
+uint8_t Slot::m_alohaNRandWait = DEFAULT_NRAND_WAIT;
+uint8_t Slot::m_alohaBackOff = 1U;
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -623,6 +626,7 @@ void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
+/// <param name="nRandWait"></param>
 void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, true);
@@ -636,6 +640,17 @@ void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32
             break;
         }
     }
+}
+
+/// <summary>
+/// Sets TSCC Aloha configuration.
+/// </summary>
+/// <param name="nRandWait"></param>
+/// <param name="backOff"></param>
+void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
+{
+    m_alohaNRandWait = nRandWait;
+    m_alohaBackOff = backOff;
 }
 
 // ---------------------------------------------------------------------------

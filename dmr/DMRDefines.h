@@ -133,6 +133,7 @@ namespace dmr
     
     const uint16_t  DMR_LOGICAL_CH_ABSOLUTE = 0xFFFU;
 
+    const uint8_t   DEFAULT_NRAND_WAIT = 8U;
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 21U;
     const uint32_t  MAX_DMR_VOICE_ERRORS = 141U;
 

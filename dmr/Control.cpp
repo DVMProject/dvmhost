@@ -117,7 +117,15 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
 
+    uint8_t nRandWait = (uint8_t)dmrProtocol["nRandWait"].as<uint32_t>(dmr::DEFAULT_NRAND_WAIT);
+    if (nRandWait > 15U)
+        nRandWait = 15U;
+    uint8_t backOff = (uint8_t)dmrProtocol["backOff"].as<uint32_t>(1U);
+    if (backOff > 15U)
+        backOff = 15U;
+
     Slot::setSiteData(netId, siteId, channelId, channelNo);
+    Slot::setAlohaConfig(nRandWait, backOff);
 
     yaml::Node control = dmrProtocol["control"];
     bool enableTSCC = control["enable"].as<bool>(false);
@@ -153,6 +161,10 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
 
     if (printOptions) {
         LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
+        if (enableTSCC) {
+            LogInfo("    TSCC Aloha Random Access Wait: %u", nRandWait);
+            LogInfo("    TSCC Aloha Backoff: %u", backOff);
+        }
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
     }
 }

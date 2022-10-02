@@ -261,7 +261,7 @@ void CSBK::encode(uint8_t* data)
         csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);        // Site Networked
         csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
         csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
-        csbkValue = (csbkValue << 4) + 0U;                                          // 
+        csbkValue = (csbkValue << 4) + (m_nRandWait & 0x0FU);                       // Random Access Wait
         csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
         csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
         csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
@@ -463,6 +463,7 @@ CSBK::CSBK(SiteData siteData) :
     m_priority(0U),
     m_broadcast(false),
     m_backoffNo(1U),
+    m_nRandWait(DEFAULT_NRAND_WAIT),
     m_serviceData(0U),
     m_serviceType(0U),
     m_targetAddress(TGT_ADRS_TGID),

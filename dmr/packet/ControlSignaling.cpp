@@ -146,6 +146,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                 ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
             } else {
+                handled = true;
+                
                 if (m_verbose) {
                     LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceType = %02X, serviceData = %02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceType(), csbk.getServiceData(), csbk.getSrcId(), csbk.getDstId());
@@ -556,6 +558,9 @@ void ControlSignaling::writeRF_TSCC_Aloha()
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_ALOHA);
     csbk.setFID(FID_ETSI);
+
+    csbk.setNRandWait(m_slot->m_alohaNRandWait);
+    csbk.setBackoffNo(m_slot->m_alohaBackOff);
 
     // Regenerate the CSBK data
     csbk.encode(data + 2U);
