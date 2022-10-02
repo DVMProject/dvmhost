@@ -541,6 +541,9 @@ void Slot::setTSCC(bool enable, bool dedicated)
 {
     m_enableTSCC = enable;
     m_dedicatedTSCC = dedicated;
+    if (m_enableTSCC) {
+        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
+    }
 }
 
 /// <summary>
@@ -622,7 +625,7 @@ void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool
 /// <param name="channelNo">Channel Number.</param>
 void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
 {
-    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, false);
+    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, true);
     m_channelNo = channelNo;
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();

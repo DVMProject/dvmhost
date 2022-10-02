@@ -117,6 +117,7 @@ namespace modem
         CMD_DMR_SHORTLC = 0x1CU,
         CMD_DMR_START = 0x1DU,
         CMD_DMR_ABORT = 0x1EU,
+        CMD_DMR_CACH_AT_CTRL = 0x1FU,
 
         CMD_P25_DATA = 0x31U,
         CMD_P25_LOST = 0x32U,
@@ -328,6 +329,8 @@ namespace modem
         bool writeDMRShortLC(const uint8_t* lc);
         /// <summary>Writes a DMR abort message for the given slot to the air interface modem.</summary>
         bool writeDMRAbort(uint32_t slotNo);
+        /// <summary>Sets the ignore flags for setting the CACH Access Type bit on the air interface modem.</summary>
+        bool setDMRIgnoreCACH_AT(uint8_t slotNo);
 
         /// <summary>Writes raw data to the air interface modem.</summary>
         int write(const uint8_t* data, uint32_t length);

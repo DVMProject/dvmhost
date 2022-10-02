@@ -1652,6 +1652,36 @@ bool Modem::writeDMRAbort(uint32_t slotNo)
 }
 
 /// <summary>
+/// Sets the ignore flags for setting the CACH Access Type bit on the air interface modem.
+/// </summary>
+/// <param name="slotNo">DMR slot to set ignore CACH AT flag for.</param>
+/// <returns>True, if set flag is written, otherwise false.</returns>
+bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
+{
+#if defined(ENABLE_DMR)
+    uint8_t buffer[4U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 4U;
+    buffer[2U] = CMD_DMR_CACH_AT_CTRL;
+    buffer[3U] = slotNo;
+
+    // are we on a protocol version 3 firmware?
+    if (m_protoVer >= 3U) {
+#if DEBUG_MODEM
+        Utils::dump(1U, "Modem::setDMRIgnoreCACH_AT(), Written", buffer, 4U);
+#endif
+        return write(buffer, 4U) == 4;
+    } else {
+        LogWarning(LOG_MODEM, "Modem::setDMRIgnoreCACH_AT(), ignoring CACH AT for slot %u is not supported on this modem!", slotNo);
+        return false;
+    }
+#else
+    return false;
+#endif // defined(ENABLE_DMR)
+}
+
+/// <summary>
 /// Writes raw data to the air interface modem.
 /// </summary>
 /// <param name="data"></param>
