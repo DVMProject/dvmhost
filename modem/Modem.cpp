@@ -2161,7 +2161,7 @@ bool Modem::readFlash()
             if (resp == RTM_OK && m_buffer[2U] == CMD_FLSH_READ) {
                 uint8_t len = m_buffer[1U];
                 if (m_debug) {
-                    Utils::dump(1U, "Modem Flash Contents", m_buffer, len);
+                    Utils::dump(1U, "Modem Flash Contents", m_buffer + 3U, len - 3U);
                 }
 
                 if (len == 249U) {

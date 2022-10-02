@@ -1327,7 +1327,7 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
         {
             uint8_t len = buffer[1U];
             if (m_debug) {
-                Utils::dump(1U, "Modem Flash Contents", buffer, len);
+                Utils::dump(1U, "Modem Flash Contents", buffer + 3U, len - 3U);
             }
             if (len == 249U) {
                 bool ret = edac::CRC::checkCCITT162(buffer + 3U, DVM_CONF_AREA_LEN);
