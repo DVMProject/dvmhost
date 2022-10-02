@@ -278,6 +278,7 @@ namespace dmr
     const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit to Unit Answer Response
     const uint8_t   CSBKO_CTCSBK = 0x07U;                   // CT CSBK - Channel Timing CSBK
     const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDUs for the random access protocol
+    const uint8_t   CSBKO_AHOY = 0x1CU;                     // AHOY - Enquiry from TSCC
     const uint8_t   CSBKO_RAND = 0x1FU;                     // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function

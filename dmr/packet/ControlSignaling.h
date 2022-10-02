@@ -35,6 +35,7 @@
 #include "dmr/data/Data.h"
 #include "dmr/data/EmbeddedData.h"
 #include "dmr/lc/LC.h"
+#include "dmr/lc/CSBK.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "RingBuffer.h"
@@ -85,6 +86,14 @@ namespace dmr
             ControlSignaling(Slot* slot, network::BaseNetwork* network, bool dumpCSBKData, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the ControlSignaling class.</summary>
             ~ControlSignaling();
+
+            /// <summary>Helper to write a CSBK packet.</summary>
+            void writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite = false);
+
+            /// <summary>Helper to write a ACK RSP packet.</summary>
+            void writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service);
+            /// <summary>Helper to write a unit registration response packet.</summary>
+            void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId);
 
             /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Aloha();

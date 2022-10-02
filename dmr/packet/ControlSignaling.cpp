@@ -66,6 +66,46 @@ using namespace dmr::packet;
         }                                                                               \
     }
 
+// Make sure control data is supported.
+#define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
+    if (!m_slot->m_dmr->getTSCCSlot()->m_enableTSCC) {                                  \
+        LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, unsupported service, srcId = %u", m_slot->m_slotNo, _SRCID); \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT);                   \
+        return false;                                                                   \
+    }
+
+// Validate the source RID.
+#define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID, _RSN)                                     \
+    if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
+        LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID rejection, srcId = %u", m_slot->m_slotNo, _SRCID); \
+        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        return false;                                                                   \
+    }
+
+// Validate the target RID.
+#define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                     \
+    if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
+        LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID rejection, dstId = %u", m_slot->m_slotNo, _DSTID); \
+        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        return false;                                                                   \
+    }
+
+// Validate the talkgroup ID.
+#define VALID_TGID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                      \
+    if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
+        LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, TGID rejection, dstId = %u", m_slot->m_slotNo, _DSTID); \
+        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        return false;                                                                   \
+    }
+
+// Verify the source RID is registered.
+#define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID, _RSN)                                \
+    if (!m_slot->m_affiliations->isUnitReg(_SRCID) && m_slot->m_verifyReg) {            \
+        LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID not registered, srcId = %u", m_slot->m_slotNo, _SRCID); \
+        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        return false;                                                                   \
+    }
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -147,10 +187,37 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                 ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
             } else {
                 handled = true;
-                
+
                 if (m_verbose) {
                     LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceType = %02X, serviceData = %02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceType(), csbk.getServiceData(), csbk.getSrcId(), csbk.getDstId());
+                }
+
+                switch (csbk.getServiceType()) {
+                case SVC_KIND_IND_VOICE_CALL:
+                    // TODO TODO TODO
+                    break;
+                case SVC_KIND_GRP_VOICE_CALL:
+                    // TODO TODO TODO
+                    break;
+                case SVC_KIND_IND_DATA_CALL:
+                case SVC_KIND_IND_UDT_DATA_CALL:
+                    // TODO TODO TODO
+                    break;
+                case SVC_KIND_GRP_DATA_CALL:
+                case SVC_KIND_GRP_UDT_DATA_CALL:
+                    // TODO TODO TODO
+                    break;
+                case SVC_KIND_REG_SVC:
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service)", SVC_KIND_REG_SVC, srcId);
+
+                    writeRF_CSBK_U_Reg_Rsp(srcId);
+                    break;
+                default:
+                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), unhandled service, serviceType = %02X", m_slot->m_slotNo, csbk.getServiceType());
+                    // should we drop the CSBK and not repeat it?
+                    break;
                 }
             }
             break;
@@ -212,13 +279,13 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         }
 
         if (!handled) {
-            // Regenerate the CSBK data
+            // regenerate the CSBK data
             csbk.encode(data + 2U);
 
-            // Regenerate the Slot Type
+            // regenerate the Slot Type
             slotType.encode(data + 2U);
 
-            // Convert the Data Sync to be from the BS or MS as needed
+            // convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
             m_slot->m_rfSeqNo = 0U;
@@ -356,16 +423,16 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
         }
 
         if (!handled) {
-            // Regenerate the CSBK data
+            // regenerate the CSBK data
             csbk.encode(data + 2U);
 
-            // Regenerate the Slot Type
+            // regenerate the Slot Type
             SlotType slotType;
             slotType.decode(data + 2U);
             slotType.setColorCode(m_slot->m_colorCode);
             slotType.encode(data + 2U);
 
-            // Convert the Data Sync to be from the BS or MS as needed
+            // convert the Data Sync to be from the BS or MS as needed
             Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
             data[0U] = modem::TAG_DATA;
@@ -374,19 +441,19 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             if (csbko == CSBKO_PRECCSBK && csbk.getDataContent()) {
                 uint32_t cbf = NO_PREAMBLE_CSBK + csbk.getCBF() - 1U;
                 for (uint32_t i = 0U; i < NO_PREAMBLE_CSBK; i++, cbf--) {
-                    // Change blocks to follow
+                    // change blocks to follow
                     csbk.setCBF(cbf);
 
-                    // Regenerate the CSBK data
+                    // regenerate the CSBK data
                     csbk.encode(data + 2U);
 
-                    // Regenerate the Slot Type
+                    // regenerate the Slot Type
                     SlotType slotType;
                     slotType.decode(data + 2U);
                     slotType.setColorCode(m_slot->m_colorCode);
                     slotType.encode(data + 2U);
 
-                    // Convert the Data Sync to be from the BS or MS as needed
+                    // convert the Data Sync to be from the BS or MS as needed
                     Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
 
                     m_slot->addFrame(data, true);
@@ -397,7 +464,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
         }
     }
     else {
-        // Unhandled data type
+        // unhandled data type
         LogWarning(LOG_NET, "DMR Slot %u, unhandled network data, type = $%02X", m_slot->m_slotNo, dataType);
     }
 }
@@ -426,13 +493,6 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
         ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
 
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
-
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_EXT_FNCT);
@@ -443,22 +503,7 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
     csbk.setSrcId(arg);
     csbk.setDstId(dstId);
 
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
-
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
-
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-    m_slot->m_rfSeqNo = 0U;
-
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+    writeRF_CSBK(csbk);
 }
 
 /// <summary>
@@ -475,13 +520,6 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 
     ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
 
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
-
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_RAND);
@@ -491,22 +529,7 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     csbk.setSrcId(srcId);
     csbk.setDstId(dstId);
 
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
-
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
-
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-    m_slot->m_rfSeqNo = 0U;
-
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+    writeRF_CSBK(csbk);
 }
 
 // ---------------------------------------------------------------------------
@@ -539,28 +562,18 @@ ControlSignaling::~ControlSignaling()
 }
 
 /// <summary>
-/// Helper to write a TSCC Aloha broadcast packet on the RF interface.
+/// Helper to write a CSBK packet.
 /// </summary>
-void ControlSignaling::writeRF_TSCC_Aloha()
+/// <param name="csbk"></param>
+/// <param name="clearBeforeWrite"></param>
+void ControlSignaling::writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite)
 {
-    if (m_debug) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_ALOHA (Aloha)", m_slot->m_slotNo);
-    }
-
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
     SlotType slotType;
     slotType.setColorCode(m_slot->m_colorCode);
     slotType.setDataType(DT_CSBK);
-
-    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
-    csbk.setVerbose(m_dumpCSBKData);
-    csbk.setCSBKO(CSBKO_ALOHA);
-    csbk.setFID(FID_ETSI);
-
-    csbk.setNRandWait(m_slot->m_alohaNRandWait);
-    csbk.setBackoffNo(m_slot->m_alohaBackOff);
 
     // Regenerate the CSBK data
     csbk.encode(data + 2U);
@@ -576,8 +589,92 @@ void ControlSignaling::writeRF_TSCC_Aloha()
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
+    if (clearBeforeWrite) {
+        if (m_slot->m_slotNo == 1U)
+            m_slot->m_modem->clearDMRData1();
+        if (m_slot->m_slotNo == 2U)
+            m_slot->m_modem->clearDMRData2();
+        m_slot->m_queue.clear();
+    }
+
     if (m_slot->m_duplex)
         m_slot->addFrame(data);
+}
+
+/// <summary>
+/// Helper to write a deny packet.
+/// </summary>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+void ControlSignaling::writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service)
+{
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_ACK_RSP);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setReason(reason);
+
+    writeRF_CSBK(csbk);
+}
+
+/// <summary>
+/// Helper to write a unit registration response packet.
+/// </summary>
+/// <param name="srcId"></param>
+void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId)
+{
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_ACK_RSP);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setReason(TS_ACK_RSN_REG);
+
+    // validate the source RID
+    if (!acl::AccessControl::validateSrcId(srcId)) {
+        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
+        ::ActivityLog("DMR", true, "unit registration request from %u denied", srcId);
+        csbk.setReason(TS_DENY_RSN_REG_DENIED);
+    }
+
+    if (csbk.getReason() == TS_ACK_RSN_REG) {
+        if (m_verbose) {
+            LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service), srcId = %u", m_slot->m_slotNo, srcId);
+        }
+
+        ::ActivityLog("DMR", true, "unit registration request from %u", srcId);
+
+        // update dynamic unit registration table
+        if (!m_slot->m_affiliations->isUnitReg(srcId)) {
+            m_slot->m_affiliations->unitReg(srcId);
+        }
+    }
+
+    csbk.setSrcId(srcId);
+    csbk.setDstId(srcId);
+
+    writeRF_CSBK(csbk);
+}
+
+/// <summary>
+/// Helper to write a TSCC Aloha broadcast packet on the RF interface.
+/// </summary>
+void ControlSignaling::writeRF_TSCC_Aloha()
+{
+    if (m_debug) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_ALOHA (Aloha)", m_slot->m_slotNo);
+    }
+
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_ALOHA);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setNRandWait(m_slot->m_alohaNRandWait);
+    csbk.setBackoffNo(m_slot->m_alohaBackOff);
+
+    writeRF_CSBK(csbk);
 }
 
 /// <summary>
@@ -594,10 +691,6 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 
     m_slot->m_rfSeqNo = 0U;
 
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
-
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setCdef(false);
     csbk.setVerbose(m_dumpCSBKData);
@@ -608,23 +701,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     csbk.setLogicalCh1(channelNo);
     csbk.setAnnWdCh1(annWd);
 
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
-
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
-
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+    writeRF_CSBK(csbk);
 }
 
 /// <summary>
@@ -636,13 +713,6 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_BROADCAST (Broadcast), BCAST_ANNC_SITE_PARMS (Announce Site Parms)", m_slot->m_slotNo);
     }
 
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
-
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_BROADCAST);
@@ -650,22 +720,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 
     csbk.setAnncType(BCAST_ANNC_SITE_PARMS);
 
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
-
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
-
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-    m_slot->m_rfSeqNo = 0U;
-
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+    writeRF_CSBK(csbk);
 }
 
 /// <summary>
@@ -677,32 +732,10 @@ void ControlSignaling::writeRF_TSCC_Git_Hash()
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_DVM_GIT_HASH (DVM Git Hash)", m_slot->m_slotNo);
     }
 
-    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-    SlotType slotType;
-    slotType.setColorCode(m_slot->m_colorCode);
-    slotType.setDataType(DT_CSBK);
-
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_DVM_GIT_HASH);
     csbk.setFID(FID_DVM);
 
-    // Regenerate the CSBK data
-    csbk.encode(data + 2U);
-
-    // Regenerate the Slot Type
-    slotType.encode(data + 2U);
-
-    // Convert the Data Sync to be from the BS or MS as needed
-    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
-
-    m_slot->m_rfSeqNo = 0U;
-
-    data[0U] = modem::TAG_DATA;
-    data[1U] = 0x00U;
-
-    if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+    writeRF_CSBK(csbk);
 }

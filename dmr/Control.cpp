@@ -88,7 +88,7 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     assert(rssiMapper != NULL);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
-    Slot::init(colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter);
+    Slot::init(this, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
     
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
@@ -116,6 +116,8 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
+
+    Slot::m_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
     uint8_t nRandWait = (uint8_t)dmrProtocol["nRandWait"].as<uint32_t>(dmr::DEFAULT_NRAND_WAIT);
     if (nRandWait > 15U)
@@ -165,7 +167,10 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
             LogInfo("    TSCC Aloha Random Access Wait: %u", nRandWait);
             LogInfo("    TSCC Aloha Backoff: %u", backOff);
         }
+
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
+
+        LogInfo("    Verify Registration: %s", Slot::m_verifyReg ? "yes" : "no");
     }
 }
 
@@ -382,4 +387,27 @@ void Control::setDebugVerbose(bool debug, bool verbose)
     m_verbose = verbose;
     m_slot1->setDebugVerbose(debug, verbose);
     m_slot2->setDebugVerbose(debug, verbose);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to return the slot carrying the TSCC.
+/// </summary>
+/// <returns>Pointer to the TSCC slot instance.</returns>
+Slot* Control::getTSCCSlot() const
+{
+    switch (m_tsccSlotNo) {
+    case 1U:
+        return m_slot1;
+        break;
+    case 2U:
+        return m_slot2;
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        return NULL;
+    }
 }

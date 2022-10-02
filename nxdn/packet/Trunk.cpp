@@ -415,7 +415,7 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (clearBeforeWrite) {
-        m_nxdn->m_modem->clearP25Data();
+        m_nxdn->m_modem->clearNXDNData();
         m_nxdn->m_queue.clear();
     }
 

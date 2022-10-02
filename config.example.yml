@@ -40,6 +40,9 @@ protocols:
         dumpDataPacket: false
         repeatDataPacket: true
         dumpCsbkData: false
+        verifyReg: false
+        nRandWait: 8
+        backOff: 1
         callHang: 5
         txHang: 8
         silenceThreshold: 21

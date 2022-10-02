@@ -122,7 +122,7 @@ namespace dmr
             /// <summary>Response information.</summary>
             __PROPERTY(uint8_t, response, Response);
             /// <summary>Reason type.</summary>
-            __PROPERTY(uint8_t, reason, reason);
+            __PROPERTY(uint8_t, reason, Reason);
 
             /// <summary>Broadcast Announcment Type.</summary>
             __PROPERTY(uint8_t, anncType, AnncType);

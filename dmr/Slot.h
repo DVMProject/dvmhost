@@ -43,6 +43,7 @@
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "lookups/AffiliationLookup.h"
 #include "RingBuffer.h"
 #include "StopWatch.h"
 #include "Timer.h"
@@ -55,6 +56,7 @@ namespace dmr
     //  Class Prototypes
     // ---------------------------------------------------------------------------
     
+    class HOST_SW_API Control;
     namespace packet { class HOST_SW_API Voice; }
     namespace packet { class HOST_SW_API Data; }
     namespace packet { class HOST_SW_API ControlSignaling; }
@@ -104,9 +106,9 @@ namespace dmr
         void setSilenceThreshold(uint32_t threshold);
 
         /// <summary>Helper to initialize the slot processor.</summary>
-        static void init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+        static void init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-            lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter);
+            lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
         static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo);
         /// <summary>Sets TSCC Aloha configuration.</summary>
@@ -184,6 +186,8 @@ namespace dmr
         bool m_verbose;
         bool m_debug;
 
+        static Control* m_dmr;
+
         static uint32_t m_colorCode;
 
         static SiteData m_siteData;
@@ -200,6 +204,7 @@ namespace dmr
         static lookups::IdenTableLookup* m_idenTable;
         static lookups::RadioIdLookup* m_ridLookup;
         static lookups::TalkgroupIdLookup* m_tidLookup;
+        static lookups::AffiliationLookup* m_affiliations;
 
         static lookups::IdenTable m_idenEntry;
 
@@ -219,6 +224,8 @@ namespace dmr
         static uint8_t m_flco2;
         static uint8_t m_id2;
         static bool m_voice2;
+
+        static bool m_verifyReg;
 
         static uint16_t m_tsccCnt;
 

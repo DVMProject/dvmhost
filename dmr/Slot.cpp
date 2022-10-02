@@ -54,6 +54,8 @@ const uint16_t TSCC_MAX_CNT = 511U;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
+Control* Slot::m_dmr = NULL;
+
 uint32_t Slot::m_colorCode = 0U;
 
 SiteData Slot::m_siteData = SiteData();
@@ -70,6 +72,7 @@ bool Slot::m_duplex = true;
 lookups::IdenTableLookup* Slot::m_idenTable = NULL;
 lookups::RadioIdLookup* Slot::m_ridLookup = NULL;
 lookups::TalkgroupIdLookup* Slot::m_tidLookup = NULL;
+lookups::AffiliationLookup *Slot::m_affiliations = NULL;
 
 lookups::IdenTable Slot::m_idenEntry = lookups::IdenTable();
 
@@ -88,6 +91,8 @@ bool Slot::m_voice1 = true;
 uint8_t Slot::m_flco2;
 uint8_t Slot::m_id2 = 0U;
 bool Slot::m_voice2 = true;
+
+bool Slot::m_verifyReg = false;
 
 uint16_t Slot::m_tsccCnt = 0U;
 
@@ -561,6 +566,7 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <summary>
 /// Helper to initialize the DMR slot processor.
 /// </summary>
+/// <param name="dmr">Instance of the Control class.</param>
 /// <param name="colorCode">DMR access color code.</param>
 /// <param name="siteData">DMR site data.</param>
 /// <param name="embeddedLCOnly"></param>
@@ -574,15 +580,19 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
-void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+/// <param name="verbose"></param>
+void Slot::init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
     network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-    lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter)
+    lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
+    assert(dmr != NULL);
     assert(modem != NULL);
     assert(ridLookup != NULL);
     assert(tidLookup != NULL);
     assert(idenTable != NULL);
     assert(rssiMapper != NULL);
+
+    m_dmr = dmr;
 
     m_colorCode = colorCode;
 
@@ -599,6 +609,7 @@ void Slot::init(uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool
     m_idenTable = idenTable;
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+    m_affiliations = new lookups::AffiliationLookup("DMR Affiliations", verbose);
 
     m_hangCount = callHang * 17U;
 

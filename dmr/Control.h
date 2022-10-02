@@ -50,6 +50,7 @@ namespace dmr
     // ---------------------------------------------------------------------------
     
     class HOST_SW_API Slot;
+    namespace packet { class HOST_SW_API ControlSignaling; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -101,6 +102,9 @@ namespace dmr
         void setDebugVerbose(bool debug, bool verbose);
 
     private:
+        friend class Slot;
+        friend class packet::ControlSignaling;
+
         uint32_t m_colorCode;
 
         modem::Modem* m_modem;
@@ -120,6 +124,9 @@ namespace dmr
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
+
+        /// <summary>Helper to return the slot carrying the TSCC.</summary>
+        Slot* getTSCCSlot() const;
     };
 } // namespace dmr
 
