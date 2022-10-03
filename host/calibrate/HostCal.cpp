@@ -1035,6 +1035,7 @@ int HostCal::run()
             }
             m_dmrEnabled = true;
             m_p25Enabled = false;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -1055,6 +1056,7 @@ int HostCal::run()
             m_duplex = false;
             m_dmrEnabled = false;
             m_p25Enabled = true;
+            m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
