@@ -139,6 +139,8 @@ bool SACCH::decode(const uint8_t* data)
 
     // depuncture
     uint8_t puncture[90U];
+    ::memset(puncture, 0x00U, 90U);
+
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_SACCH_FEC_LENGTH_BITS; i++) {
         if (n == PUNCTURE_LIST[index]) {
@@ -154,6 +156,10 @@ bool SACCH::decode(const uint8_t* data)
         puncture[n++] = 0U;
     }
 
+#if DEBUG_NXDN_SACCH
+    Utils::dump(2U, "SACCH::decode(), SACCH Puncture List", puncture, 90U);
+#endif
+
     // decode convolution
     Convolution conv;
     conv.start();
@@ -163,7 +169,10 @@ bool SACCH::decode(const uint8_t* data)
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
-        conv.decode(s0, s1);
+        if (!conv.decode(s0, s1)) {
+            LogError(LOG_NXDN, "SACCH::decode(), failed to decode convolution");
+            return false;
+        }
     }
 
     conv.chainback(m_data, NXDN_SACCH_CRC_LENGTH_BITS);

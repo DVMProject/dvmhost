@@ -216,7 +216,10 @@ bool CAC::decode(const uint8_t* data)
         uint8_t s0 = buffer[n++];
         uint8_t s1 = buffer[n++];
 
-        conv.decode(s0, s1);
+        if (!conv.decode(s0, s1)) {
+            LogError(LOG_NXDN, "CAC::decode(), failed to decode convolution");
+            return false;
+        }
     }
 
     conv.chainback(m_data, NXDN_CAC_SHORT_CRC_LENGTH_BITS);
@@ -228,7 +231,7 @@ bool CAC::decode(const uint8_t* data)
     // check CRC-16
     bool ret = CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
     if (!ret) {
-        LogError(LOG_NXDN, "SACCH::decode(), failed CRC-6 check");
+        LogError(LOG_NXDN, "CAC::decode(), failed CRC-6 check");
         return false;
     }
 

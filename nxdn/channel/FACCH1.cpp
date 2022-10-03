@@ -163,7 +163,10 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
-        conv.decode(s0, s1);
+        if (!conv.decode(s0, s1)) {
+            LogError(LOG_NXDN, "FACCH1::decode(), failed to decode convolution");
+            return false;
+        }
     }
 
     conv.chainback(m_data, NXDN_FACCH1_CRC_LENGTH_BITS);

@@ -182,6 +182,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     assert(data != NULL);
 
     channel::UDCH udch;
+    udch.setVerbose(m_verbose);
     bool validUDCH = udch.decode(data + 2U);
     if (m_nxdn->m_rfState == RS_RF_LISTENING && !validUDCH)
         return false;
@@ -197,6 +198,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     udch.getData(buffer);
 
     lc::RTCH lc;
+    lc.setVerbose(m_verbose);
     lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
@@ -296,6 +298,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     }
 
     channel::UDCH udch;
+    udch.setVerbose(m_verbose);
     bool validUDCH = udch.decode(data + 2U);
     if (m_nxdn->m_netState == RS_NET_IDLE && !validUDCH)
         return false;
@@ -305,6 +308,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     udch.getData(buffer);
 
     lc::RTCH lc;
+    lc.setVerbose(m_verbose);
     lc.decode(buffer, NXDN_UDCH_LENGTH_BITS);
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();

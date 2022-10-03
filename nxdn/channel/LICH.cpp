@@ -106,11 +106,16 @@ bool LICH::decode(const uint8_t* data)
 {
     assert(data != NULL);
 
+    uint8_t lich[1U];
+    ::memset(lich, 0x00U, 1U);
+
     uint32_t offset = NXDN_FSW_LENGTH_BITS;
     for (uint32_t i = 0U; i < (NXDN_LICH_LENGTH_BITS / 2U); i++, offset += 2U) {
         bool b = READ_BIT(data, offset);
-        m_lich = (b) ? (m_lich | BIT_MASK_TABLE[(i) & 7]) : (m_lich & ~BIT_MASK_TABLE[(i) & 7]);
+        WRITE_BIT(lich, i, b);
     }
+
+    m_lich = lich[0U];
 
 #if DEBUG_NXDN_LICH
     LogDebug(LOG_NXDN, "LICH::decode(), m_lich = %02X", m_lich);
@@ -159,9 +164,14 @@ void LICH::encode(uint8_t* data)
     else
         m_lich &= 0xFEU;
 
+    uint8_t lich[1U];
+    ::memset(lich, 0x00U, 1U);
+
+    lich[0U] = m_lich;
+
     uint32_t offset = NXDN_FSW_LENGTH_BITS;
     for (uint32_t i = 0U; i < (NXDN_LICH_LENGTH_BITS / 2U); i++) {
-        bool b = (m_lich & BIT_MASK_TABLE[(i) & 7]);
+        bool b = READ_BIT(lich, i);
         WRITE_BIT(data, offset, b);
         offset++;
         WRITE_BIT(data, offset, true);

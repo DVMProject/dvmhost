@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2009-2016,2018,2021 by Jonathan Naylor G4KLX
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -28,6 +29,8 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/Convolution.h"
+#include "Log.h"
+#include "Utils.h"
 
 using namespace nxdn;
 
@@ -127,7 +130,7 @@ uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 /// </summary>
 /// <param name="s0"></param>
 /// <param name="s1"></param>
-void Convolution::decode(uint8_t s0, uint8_t s1)
+bool Convolution::decode(uint8_t s0, uint8_t s1)
 {
     *m_dp = 0U;
 
@@ -151,11 +154,15 @@ void Convolution::decode(uint8_t s0, uint8_t s1)
 
     ++m_dp;
 
-    assert((m_dp - m_decisions) <= 300);
+    if ((m_dp - m_decisions) > 300) {
+        return false;
+    }
 
     uint16_t* tmp = m_oldMetrics;
     m_oldMetrics = m_newMetrics;
     m_newMetrics = tmp;
+
+    return true;
 }
 
 /// <summary>

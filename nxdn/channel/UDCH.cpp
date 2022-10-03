@@ -189,7 +189,10 @@ bool UDCH::decode(const uint8_t* data)
         uint8_t s0 = puncture[n++];
         uint8_t s1 = puncture[n++];
 
-        conv.decode(s0, s1);
+        if (!conv.decode(s0, s1)) {
+            LogError(LOG_NXDN, "UDCH::decode(), failed to decode convolution");
+            return false;
+        }
     }
 
     conv.chainback(m_data, NXDN_UDCH_CRC_LENGTH_BITS);

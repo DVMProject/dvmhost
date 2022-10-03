@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2018,2021 by Jonathan Naylor G4KLX
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -54,7 +55,7 @@ namespace nxdn
         uint32_t chainback(uint8_t* out, uint32_t nBits);
         
         /// <summary></summary>
-        void decode(uint8_t s0, uint8_t s1);
+        bool decode(uint8_t s0, uint8_t s1);
         /// <summary></summary>
         void encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const;
 

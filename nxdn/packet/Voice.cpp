@@ -189,6 +189,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
     assert(data != NULL);
 
     channel::SACCH sacch;
+    sacch.setVerbose(m_verbose);
     bool valid = sacch.decode(data + 2U);
     if (valid) {
         uint8_t ran = sacch.getRAN();
@@ -201,9 +202,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
     if (fct == NXDN_LICH_USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
-        bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+        facch.setVerbose(m_verbose);
+        bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         if (!valid)
-            valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         if (!valid)
             return false;
 
@@ -211,7 +213,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+        lc.setVerbose(m_verbose);
+        lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
@@ -252,13 +255,14 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
         // generate the SACCH
         channel::SACCH sacch;
+        sacch.setVerbose(m_verbose);
         sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
         sacch.setStructure(NXDN_SR_SINGLE);
         sacch.encode(data + 2U);
 
-        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
-        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
 		m_nxdn->scrambler(data + 2U);
 
@@ -311,18 +315,19 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
     } else {
         if (m_nxdn->m_rfState == RS_RF_LISTENING) {
             channel::FACCH1 facch;
+            facch.setVerbose(m_verbose);
             bool valid = false;
             switch (option) {
             case NXDN_LICH_STEAL_FACCH:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 if (!valid)
-                    valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                    valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             case NXDN_LICH_STEAL_FACCH1_1:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 break;
             case NXDN_LICH_STEAL_FACCH1_2:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             default:
                 break;
@@ -334,7 +339,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+                lc.setVerbose(m_verbose);
+                lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
                 if (!hasInfo)
@@ -431,6 +437,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
             // generate the SACCH
             channel::SACCH sacch;
+            sacch.setVerbose(m_verbose);
             sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
             sacch.setStructure(NXDN_SR_SINGLE);
@@ -440,8 +447,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_nxdn->m_rfLC.encode(buffer, NXDN_RTCH_LC_LENGTH_BITS);
 
             facch.setData(buffer);
-            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
-            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
             m_nxdn->scrambler(start + 2U);
 
@@ -472,6 +479,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
         // regenerate SACCH if it's valid
         channel::SACCH sacch;
+        sacch.setVerbose(m_verbose);
         bool validSACCH = sacch.decode(data + 2U);
         if (validSACCH) {
             sacch.setRAN(m_nxdn->m_ran);
@@ -510,9 +518,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+            facch1.setVerbose(m_verbose);
+            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
 
             edac::AMBEFEC ambe;
 
@@ -565,19 +574,22 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             }
 
             channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch1.setVerbose(m_verbose);
+            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         } else {
             channel::FACCH1 facch11;
-            bool valid1 = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+            facch11.setVerbose(m_verbose);
+            bool valid1 = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid1)
-                facch11.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                facch11.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
 
             channel::FACCH1 facch12;
-            bool valid2 = facch12.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch12.setVerbose(m_verbose);
+            bool valid2 = facch12.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
             if (valid2)
-                facch12.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                facch12.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         }
 
         data[0U] = modem::TAG_DATA;
@@ -621,14 +633,16 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
     }
 
     channel::SACCH sacch;
+    sacch.setVerbose(m_verbose);
     sacch.decode(data + 2U);
 
     if (fct == NXDN_LICH_USC_SACCH_NS) {
         // the SACCH on a non-superblock frame is usually an idle and not interesting apart from the RAN.
         channel::FACCH1 facch;
-        bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+        facch.setVerbose(m_verbose);
+        bool valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         if (!valid)
-            valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         if (!valid)
             return false;
 
@@ -636,7 +650,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+        lc.setVerbose(m_verbose);
+        lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
@@ -677,13 +692,14 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
         // generate the SACCH
         channel::SACCH sacch;
+        sacch.setVerbose(m_verbose);
         sacch.setData(SACCH_IDLE);
         sacch.setRAN(m_nxdn->m_ran);
         sacch.setStructure(NXDN_SR_SINGLE);
         sacch.encode(data + 2U);
 
-        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
-        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+        facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
 		m_nxdn->scrambler(data + 2U);
 
@@ -719,18 +735,19 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
     } else {
         if (m_nxdn->m_netState == RS_NET_IDLE) {
             channel::FACCH1 facch;
+            facch.setVerbose(m_verbose);
             bool valid = false;
             switch (option) {
             case NXDN_LICH_STEAL_FACCH:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 if (!valid)
-                    valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                    valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             case NXDN_LICH_STEAL_FACCH1_1:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
                 break;
             case NXDN_LICH_STEAL_FACCH1_2:
-                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                valid = facch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
                 break;
             default:
                 break;
@@ -742,7 +759,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
+                lc.setVerbose(m_verbose);
+                lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
                 if (!hasInfo)
@@ -832,6 +850,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
             // generate the SACCH
             channel::SACCH sacch;
+            sacch.setVerbose(m_verbose);
             sacch.setData(SACCH_IDLE);
             sacch.setRAN(m_nxdn->m_ran);
             sacch.setStructure(NXDN_SR_SINGLE);
@@ -841,8 +860,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_nxdn->m_rfLC.encode(buffer, NXDN_RTCH_LC_LENGTH_BITS);
 
             facch.setData(buffer);
-            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
-            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+            facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
             m_nxdn->scrambler(start + 2U);
 
@@ -869,6 +888,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
         // regenerate SACCH if it's valid
         channel::SACCH sacch;
+        sacch.setVerbose(m_verbose);
         bool validSACCH = sacch.decode(data + 2U);
         if (validSACCH) {
             sacch.setRAN(m_nxdn->m_ran);
@@ -894,9 +914,10 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+            facch1.setVerbose(m_verbose);
+            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
 
             edac::AMBEFEC ambe;
 
@@ -926,19 +947,22 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
             }
             channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch1.setVerbose(m_verbose);
+            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         } else {
             channel::FACCH1 facch11;
-            bool valid1 = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+            facch11.setVerbose(m_verbose);
+            bool valid1 = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid1)
-                facch11.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS);
+                facch11.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
 
             channel::FACCH1 facch12;
-            bool valid2 = facch12.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+            facch12.setVerbose(m_verbose);
+            bool valid2 = facch12.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
             if (valid2)
-                facch12.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_LENGTH_BITS + NXDN_FACCH1_LENGTH_BITS);
+                facch12.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         }
 
         data[0U] = modem::TAG_DATA;

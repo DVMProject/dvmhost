@@ -53,6 +53,8 @@ using namespace nxdn::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
+const uint8_t MAX_SYNC_BYTES_ERRS = 0U;
+
 const uint8_t SCRAMBLER[] = {
 	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
 	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
@@ -290,6 +292,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     assert(data != NULL);
 
     uint8_t type = data[0U];
+    bool sync = data[1U] == 0x01U;
 
     if (type == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
@@ -346,6 +349,32 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
         m_aveRSSI += m_rssi;
         m_rssiCount++;
+    }
+
+    if (!sync && m_rfState == RS_RF_LISTENING) {
+        uint8_t syncBytes[NXDN_FSW_BYTES_LENGTH];
+        ::memcpy(syncBytes, data + 2U, NXDN_FSW_BYTES_LENGTH);
+
+        uint8_t errs = 0U;
+        for (uint8_t i = 0U; i < NXDN_FSW_BYTES_LENGTH; i++)
+            errs += Utils::countBits8(syncBytes[i] ^ NXDN_FSW_BYTES[i]);
+
+        if (errs >= MAX_SYNC_BYTES_ERRS) {
+            LogWarning(LOG_RF, "NXDN, possible sync word rejected, errs = %u, sync word = %02X %02X %02X", errs,
+                syncBytes[0U], syncBytes[1U], syncBytes[2U]);
+
+            return false;
+        }
+        else {
+            LogWarning(LOG_RF, "NXDN, possible sync word, errs = %u, sync word = %02X %02X %02X", errs,
+                syncBytes[0U], syncBytes[1U], syncBytes[2U]);
+
+            sync = true; // we found a completly valid sync with no errors...
+        }
+    }
+
+    if (sync && m_debug) {
+        Utils::symbols("!!! *Rx NXDN", data + 2U, len - 2U);
     }
 
     scrambler(data + 2U);
@@ -799,10 +828,10 @@ void Control::scrambler(uint8_t* data) const
 {
     assert(data != NULL);
 
-    if (m_debug) {
-        Utils::symbols("!!! *Tx NXDN (Unscrambled)", data, NXDN_FRAME_LENGTH_BYTES);
-    }
-
     for (uint32_t i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
         data[i] ^= SCRAMBLER[i];
+
+    if (m_debug) {
+        Utils::symbols("!!! *NXDN (Scrambled)", data, NXDN_FRAME_LENGTH_BYTES);
+    }
 }
