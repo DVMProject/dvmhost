@@ -356,12 +356,20 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     if (valid)
         m_rfLastLICH = lich;
 
+    if (!valid && m_rfState == RS_RF_LISTENING) {
+        if (m_debug) {
+            LogDebug(LOG_RF, "NXDN, invalid LICH, rfct = %u fct = %u", lich.getRFCT(), lich.getFCT());
+        }
+
+        return false;
+    }
+
     uint8_t rfct = m_rfLastLICH.getRFCT();
     uint8_t fct = m_rfLastLICH.getFCT();
     uint8_t option = m_rfLastLICH.getOption();
 
     if (m_debug) {
-        LogDebug(LOG_RF, "NXDN, rfState = %u, netState = %u, fct = %u", m_rfState, m_netState, fct);
+        LogDebug(LOG_RF, "NXDN, valid LICH, rfState = %u, netState = %u, rfct = %u, fct = %u", m_rfState, m_netState, rfct, fct);
     }
 
     // are we interrupting a running CC?
