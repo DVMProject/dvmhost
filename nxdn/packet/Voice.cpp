@@ -258,6 +258,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         sacch.setStructure(NXDN_SR_SINGLE);
         sacch.encode(data + 2U);
 
+        uint8_t lcBuffer[NXDN_RTCH_LC_LENGTH_BYTES];
+        m_nxdn->m_rfLC.encode(lcBuffer, NXDN_RTCH_LC_LENGTH_BITS);
+
+        facch.setData(lcBuffer);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
@@ -470,7 +474,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         lich.setOutbound(!m_nxdn->m_duplex ? false : true);
         lich.encode(data + 2U);
 
-        lich.setOutbound(false);
+        //lich.setOutbound(false);
 
         // regenerate SACCH if it's valid
         channel::SACCH sacch;
@@ -479,6 +483,9 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             sacch.setRAN(m_nxdn->m_ran);
             sacch.encode(data + 2U);
         }
+
+        uint8_t lcBuffer[NXDN_RTCH_LC_LENGTH_BYTES];
+        m_nxdn->m_rfLC.encode(lcBuffer, NXDN_RTCH_LC_LENGTH_BITS);
 
         // regenerate the audio and interpret the FACCH1 data
         if (option == NXDN_LICH_STEAL_NONE) {
@@ -511,10 +518,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)", errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
-            channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+            channel::FACCH1 facch11;
+            bool valid = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                facch11.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
 
             edac::AMBEFEC ambe;
 
@@ -566,10 +573,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
             }
 
-            channel::FACCH1 facch1;
-            bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+            channel::FACCH1 facch12;
+            bool valid = facch12.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
             if (valid)
-                facch1.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+                facch12.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
         } else {
             channel::FACCH1 facch11;
             bool valid1 = facch11.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
