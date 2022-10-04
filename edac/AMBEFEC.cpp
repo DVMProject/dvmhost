@@ -11,8 +11,9 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2010,2014,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2010,2014,2016,2021 by Jonathan Naylor G4KLX
 *   Copyright (C) 2016 Mathias Weyland, HB9FRV
+*   Copyright (C) 2018-2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -32,6 +33,7 @@
 #include "edac/AMBEFEC.h"
 #include "edac/Golay24128.h"
 #include "edac/Hamming.h"
+#include "Utils.h"
 
 using namespace edac;
 
@@ -72,24 +74,12 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
     uint32_t c1 = 0U, c2 = 0U, c3 = 0U;
 
     uint32_t MASK = 0x800000U;
-    for (uint32_t i = 0U; i < 24U; i++) {
-        uint32_t a1Pos = DMR_A_TABLE[i];
-        uint32_t b1Pos = DMR_B_TABLE[i];
-        uint32_t c1Pos = DMR_C_TABLE[i];
-
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t a1Pos = AMBE_A_TABLE[i];
         uint32_t a2Pos = a1Pos + 72U;
         if (a2Pos >= 108U)
             a2Pos += 48U;
-        uint32_t b2Pos = b1Pos + 72U;
-        if (b2Pos >= 108U)
-            b2Pos += 48U;
-        uint32_t c2Pos = c1Pos + 72U;
-        if (c2Pos >= 108U)
-            c2Pos += 48U;
-
         uint32_t a3Pos = a1Pos + 192U;
-        uint32_t b3Pos = b1Pos + 192U;
-        uint32_t c3Pos = c1Pos + 192U;
 
         if (READ_BIT(bytes, a1Pos))
             a1 |= MASK;
@@ -97,57 +87,81 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
             a2 |= MASK;
         if (READ_BIT(bytes, a3Pos))
             a3 |= MASK;
+    }
+
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t b1Pos = AMBE_B_TABLE[i];
+        uint32_t b2Pos = b1Pos + 72U;
+        if (b2Pos >= 108U)
+            b2Pos += 48U;
+        uint32_t b3Pos = b1Pos + 192U;
+
         if (READ_BIT(bytes, b1Pos))
             b1 |= MASK;
         if (READ_BIT(bytes, b2Pos))
             b2 |= MASK;
         if (READ_BIT(bytes, b3Pos))
-            b3 |= MASK;
-        if (READ_BIT(bytes, c1Pos))
-            c1 |= MASK;
-        if (READ_BIT(bytes, c2Pos))
-            c2 |= MASK;
-        if (READ_BIT(bytes, c3Pos))
-            c3 |= MASK;
+            b3 |= MASK;            
+    }    
 
-        MASK >>= 1;
-    }
+	MASK = 0x1000000U;
+	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+		uint32_t c1Pos = AMBE_C_TABLE[i];
+		uint32_t c2Pos = c1Pos + 72U;
+		if (c2Pos >= 108U)
+			c2Pos += 48U;
+		uint32_t c3Pos = c1Pos + 192U;
 
-    uint32_t errors = regenerate(a1, b1, c1, true);
-    errors += regenerate(a2, b2, c2, true);
-    errors += regenerate(a3, b3, c3, true);
+		if (READ_BIT(bytes, c1Pos))
+			c1 |= MASK;
+		if (READ_BIT(bytes, c2Pos))
+			c2 |= MASK;
+		if (READ_BIT(bytes, c3Pos))
+			c3 |= MASK;
+	}
+
+    uint32_t errors = regenerate(a1, b1, c1);
+    errors += regenerate(a2, b2, c2);
+    errors += regenerate(a3, b3, c3);
 
     MASK = 0x800000U;
-    for (uint32_t i = 0U; i < 24U; i++) {
-        uint32_t a1Pos = DMR_A_TABLE[i];
-        uint32_t b1Pos = DMR_B_TABLE[i];
-        uint32_t c1Pos = DMR_C_TABLE[i];
-
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t a1Pos = AMBE_A_TABLE[i];
         uint32_t a2Pos = a1Pos + 72U;
         if (a2Pos >= 108U)
             a2Pos += 48U;
-        uint32_t b2Pos = b1Pos + 72U;
-        if (b2Pos >= 108U)
-            b2Pos += 48U;
-        uint32_t c2Pos = c1Pos + 72U;
-        if (c2Pos >= 108U)
-            c2Pos += 48U;
-
         uint32_t a3Pos = a1Pos + 192U;
-        uint32_t b3Pos = b1Pos + 192U;
-        uint32_t c3Pos = c1Pos + 192U;
 
         WRITE_BIT(bytes, a1Pos, a1 & MASK);
         WRITE_BIT(bytes, a2Pos, a2 & MASK);
         WRITE_BIT(bytes, a3Pos, a3 & MASK);
+    }
+
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t b1Pos = AMBE_B_TABLE[i];
+        uint32_t b2Pos = b1Pos + 72U;
+        if (b2Pos >= 108U)
+            b2Pos += 48U;
+        uint32_t b3Pos = b1Pos + 192U;
+
         WRITE_BIT(bytes, b1Pos, b1 & MASK);
         WRITE_BIT(bytes, b2Pos, b2 & MASK);
         WRITE_BIT(bytes, b3Pos, b3 & MASK);
+    }
+
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+        uint32_t c1Pos = AMBE_C_TABLE[i];
+        uint32_t c2Pos = c1Pos + 72U;
+        if (c2Pos >= 108U)
+            c2Pos += 48U;
+        uint32_t c3Pos = c1Pos + 192U;
+
         WRITE_BIT(bytes, c1Pos, c1 & MASK);
         WRITE_BIT(bytes, c2Pos, c2 & MASK);
         WRITE_BIT(bytes, c3Pos, c3 & MASK);
-
-        MASK >>= 1;
     }
 
     return errors;
@@ -167,24 +181,12 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
     uint32_t c1 = 0U, c2 = 0U, c3 = 0U;
 
     uint32_t MASK = 0x800000U;
-    for (uint32_t i = 0U; i < 24U; i++) {
-        uint32_t a1Pos = DMR_A_TABLE[i];
-        uint32_t b1Pos = DMR_B_TABLE[i];
-        uint32_t c1Pos = DMR_C_TABLE[i];
-
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t a1Pos = AMBE_A_TABLE[i];
         uint32_t a2Pos = a1Pos + 72U;
         if (a2Pos >= 108U)
             a2Pos += 48U;
-        uint32_t b2Pos = b1Pos + 72U;
-        if (b2Pos >= 108U)
-            b2Pos += 48U;
-        uint32_t c2Pos = c1Pos + 72U;
-        if (c2Pos >= 108U)
-            c2Pos += 48U;
-
         uint32_t a3Pos = a1Pos + 192U;
-        uint32_t b3Pos = b1Pos + 192U;
-        uint32_t c3Pos = c1Pos + 192U;
 
         if (READ_BIT(bytes, a1Pos))
             a1 |= MASK;
@@ -192,25 +194,43 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
             a2 |= MASK;
         if (READ_BIT(bytes, a3Pos))
             a3 |= MASK;
+    }
+
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t b1Pos = AMBE_B_TABLE[i];
+        uint32_t b2Pos = b1Pos + 72U;
+        if (b2Pos >= 108U)
+            b2Pos += 48U;
+        uint32_t b3Pos = b1Pos + 192U;
+
         if (READ_BIT(bytes, b1Pos))
             b1 |= MASK;
         if (READ_BIT(bytes, b2Pos))
             b2 |= MASK;
         if (READ_BIT(bytes, b3Pos))
-            b3 |= MASK;
-        if (READ_BIT(bytes, c1Pos))
-            c1 |= MASK;
-        if (READ_BIT(bytes, c2Pos))
-            c2 |= MASK;
-        if (READ_BIT(bytes, c3Pos))
-            c3 |= MASK;
+            b3 |= MASK;            
+    }    
 
-        MASK >>= 1;
-    }
+	MASK = 0x1000000U;
+	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+		uint32_t c1Pos = AMBE_C_TABLE[i];
+		uint32_t c2Pos = c1Pos + 72U;
+		if (c2Pos >= 108U)
+			c2Pos += 48U;
+		uint32_t c3Pos = c1Pos + 192U;
 
-    uint32_t errors = regenerate(a1, b1, c1, true);
-    errors += regenerate(a2, b2, c2, true);
-    errors += regenerate(a3, b3, c3, true);
+		if (READ_BIT(bytes, c1Pos))
+			c1 |= MASK;
+		if (READ_BIT(bytes, c2Pos))
+			c2 |= MASK;
+		if (READ_BIT(bytes, c3Pos))
+			c3 |= MASK;
+	}
+
+    uint32_t errors = regenerate(a1, b1, c1);
+    errors += regenerate(a2, b2, c2);
+    errors += regenerate(a3, b3, c3);
 
     return errors;
 }
@@ -499,7 +519,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     uint32_t a = 0U;
     uint32_t MASK = 0x800000U;
     for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
-        uint32_t aPos = DMR_A_TABLE[i];
+        uint32_t aPos = AMBE_A_TABLE[i];
         if (READ_BIT(bytes, aPos))
             a |= MASK;
     }
@@ -507,7 +527,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     uint32_t b = 0U;
     MASK = 0x400000U;
     for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
-        uint32_t bPos = DMR_B_TABLE[i];
+        uint32_t bPos = AMBE_B_TABLE[i];
         if (READ_BIT(bytes, bPos))
             b |= MASK;
     }
@@ -515,31 +535,69 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     uint32_t c = 0U;
     MASK = 0x1000000U;
     for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
-        uint32_t cPos = DMR_C_TABLE[i];
+        uint32_t cPos = AMBE_C_TABLE[i];
         if (READ_BIT(bytes, cPos))
             c |= MASK;
     }
 
-    uint32_t errors = regenerate(a, b, c, true);
+    uint32_t errors = regenerate(a, b, c);
 
     MASK = 0x800000U;
     for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
-        uint32_t aPos = DMR_A_TABLE[i];
+        uint32_t aPos = AMBE_A_TABLE[i];
         WRITE_BIT(bytes, aPos, a & MASK);
     }
 
     MASK = 0x400000U;
     for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
-        uint32_t bPos = DMR_B_TABLE[i];
+        uint32_t bPos = AMBE_B_TABLE[i];
         WRITE_BIT(bytes, bPos, b & MASK);
     }
 
     MASK = 0x1000000U;
     for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
-        uint32_t cPos = DMR_C_TABLE[i];
+        uint32_t cPos = AMBE_C_TABLE[i];
         WRITE_BIT(bytes, cPos, c & MASK);
     }
 
+    return errors;
+}
+
+
+/// <summary>
+/// Returns the number of errors on the NXDN BER input bytes.
+/// </summary>
+/// <param name="bytes"></param>
+/// <returns>Count of errors.</returns>
+uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
+{
+    assert(bytes != NULL);
+
+    uint32_t a = 0U;
+    uint32_t MASK = 0x800000U;
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t aPos = AMBE_A_TABLE[i];
+        if (READ_BIT(bytes, aPos))
+            a |= MASK;
+    }
+
+    uint32_t b = 0U;
+    MASK = 0x400000U;
+    for (uint32_t i = 0U; i < 23U; i++, MASK >>= 1) {
+        uint32_t bPos = AMBE_B_TABLE[i];
+        if (READ_BIT(bytes, bPos))
+            b |= MASK;
+    }
+
+    uint32_t c = 0U;
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+        uint32_t cPos = AMBE_C_TABLE[i];
+        if (READ_BIT(bytes, cPos))
+            c |= MASK;
+    }
+
+    uint32_t errors = regenerate(a, b, c);
     return errors;
 }
 
@@ -553,60 +611,44 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 /// <param name="a"></param>
 /// <param name="b"></param>
 /// <param name="c"></param>
-/// <param name="b23"></param>
+/// <param name="ignoreParity"></param>
 /// <returns></returns>
-uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c, bool b23) const
+uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c, bool ignoreParity) const
 {
-    uint32_t old_a = a;
-    uint32_t old_b = b;
+	uint32_t old_a = a;
+	uint32_t old_b = b;
 
-    // For the b23 bypass
-    bool b24 = (b & 0x01U) == 0x01U;
+	uint32_t data;
+	bool valid = Golay24128::decode24128(a, data);
+	if (!valid && !ignoreParity) {
+		a = 0xF00292U;
+		b = 0x0E0B20U;
+		c = 0x000000U;
+		return 10U;		// An invalid A block gives an error count of 10
+	}
 
-    uint32_t data = Golay24128::decode24128(a);
+	a = Golay24128::encode24128(data);
 
-    uint32_t new_a = Golay24128::encode24128(data);
+	// PRNG
+	uint32_t p = PRNG_TABLE[data] >> 1;
+	b ^= p;
 
-    // The PRNG
-    uint32_t p = PRNG_TABLE[data];
+	uint32_t datb = Golay24128::decode23127(b);
+	b = Golay24128::encode23127(datb) >> 1;
 
-    b ^= p;
+	b ^= p;
 
-    uint32_t datb = Golay24128::decode24128(b);
+	uint32_t v = a ^ old_a;
+	uint32_t errsA = Utils::countBits32(v);
 
-    uint32_t new_b = Golay24128::encode24128(datb);
+	v = b ^ old_b;
+	uint32_t errsB = Utils::countBits32(v);
 
-    new_b ^= p;
+	if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
+		a = 0xF00292U;
+		b = 0x0E0B20U;
+		c = 0x000000U;
+	}
 
-    if (b23) {
-        new_b &= 0xFFFFFEU;
-        new_b |= b24 ? 0x01U : 0x00U;
-    }
-
-    uint32_t errsA = 0U, errsB = 0U;
-
-    uint32_t v = new_a ^ old_a;
-    while (v != 0U) {
-        v &= v - 1U;
-        errsA++;
-    }
-
-    v = new_b ^ old_b;
-    while (v != 0U) {
-        v &= v - 1U;
-        errsB++;
-    }
-
-    if (b23) {
-        if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
-            a = 0xF00292U;
-            b = 0x0E0B20U;
-            c = 0x000000U;
-        }
-    }
-
-    a = new_a;
-    b = new_b;
-
-    return errsA + errsB;
+	return errsA + errsB;
 }

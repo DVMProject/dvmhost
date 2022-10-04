@@ -768,7 +768,10 @@ void LC::decodeHDUGolay(const uint8_t * data, uint8_t * raw)
         uint32_t g0 = 0U;
         for (uint32_t j = 0U; j < 18U; j++)
             g0 = (g0 << 1) | (golay[j] ? 0x01U : 0x00U);
-        uint32_t c0data = edac::Golay24128::decode24128(g0);
+
+        uint32_t c0data = 0U;
+        edac::Golay24128::decode24128(g0, c0data);
+
         for (int j = 5; j >= 0; j--) {
             golay[j] = (c0data & 0x01U) == 0x01U;
             c0data >>= 1;

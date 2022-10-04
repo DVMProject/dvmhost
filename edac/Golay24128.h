@@ -11,8 +11,8 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2010,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2010,2016,2021 by Jonathan Naylor G4KLX
+*   Copyright (C) 2017,2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -46,9 +46,9 @@ namespace edac
         /// <summary>Decode Golay (23,12,7) FEC.</summary>
         static uint32_t decode23127(uint32_t code);
         /// <summary>Decode Golay (24,12,8) FEC.</summary>
-        static uint32_t decode24128(uint32_t code);
+        static bool decode24128(uint32_t code, uint32_t& out);
         /// <summary>Decode Golay (24,12,8) FEC.</summary>
-        static uint32_t decode24128(uint8_t* bytes);
+        static bool decode24128(uint8_t* bytes, uint32_t& out);
         /// <summary>Decode Golay (24,12,8) FEC.</summary>
         static void decode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen);
 
