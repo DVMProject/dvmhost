@@ -119,8 +119,7 @@ const uint32_t PUNCTURE_LIST_OUT[] = {
 /// Initializes a new instance of the CAC class.
 /// </summary>
 CAC::CAC() :
-    m_verbose(false),
-    m_ran(1U),
+    m_ran(0U),
     m_structure(NXDN_SR_RCCH_SINGLE),
     m_idleBusy(true),
     m_txContinuous(false),
@@ -137,8 +136,7 @@ CAC::CAC() :
 /// </summary>
 /// <param name="data"></param>
 CAC::CAC(const CAC& data) :
-    m_verbose(false),
-    m_ran(1U),
+    m_ran(0U),
     m_structure(NXDN_SR_RCCH_SINGLE),
     m_idleBusy(true),
     m_txContinuous(false),
@@ -166,8 +164,6 @@ CAC& CAC::operator=(const CAC& data)
 {
     if (&data != this) {
         ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
-
-        m_verbose = data.m_verbose;
 
         m_ran = m_data[0U] & 0x3FU;
         m_structure = (m_data[0U] >> 6) & 0x03U;
@@ -224,9 +220,9 @@ bool CAC::decode(const uint8_t* data)
 
     conv.chainback(m_data, NXDN_CAC_SHORT_CRC_LENGTH_BITS);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Decoded CAC", m_data, (NXDN_CAC_SHORT_CRC_LENGTH_BITS / 8U) + 1U);
-    }
+#if DEBUG_NXDN_CAC
+    Utils::dump(2U, "Decoded CAC", m_data, (NXDN_CAC_SHORT_CRC_LENGTH_BITS / 8U) + 1U);
+#endif
 
     // check CRC-16
     bool ret = CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
@@ -251,10 +247,9 @@ bool CAC::decode(const uint8_t* data)
     m_rxCRC = (crc[0U] << 8) | (crc[1U] << 0);
 
 #if DEBUG_NXDN_CAC
-    if (m_verbose) {
-        Utils::dump(2U, "Raw CAC Buffer", m_data, NXDN_CAC_FEC_LENGTH_BYTES);
-    }
+    Utils::dump(2U, "Raw CAC Buffer", m_data, NXDN_CAC_FEC_LENGTH_BYTES);
 #endif
+
     return true;
 }
 
@@ -282,9 +277,9 @@ void CAC::encode(uint8_t* data) const
 
     CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
-    }
+#if DEBUG_NXDN_CAC
+    Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
+#endif
 
     // encode convolution
     uint8_t convolution[NXDN_CAC_FEC_CONV_LENGTH_BYTES];
@@ -292,10 +287,6 @@ void CAC::encode(uint8_t* data) const
 
     Convolution conv;
     conv.encode(buffer, convolution, NXDN_CAC_CRC_LENGTH_BITS);
-
-#if DEBUG_NXDN_CAC
-    Utils::dump(2U, "CAC::encode(), CAC Convolution", convolution, NXDN_CAC_FEC_CONV_LENGTH_BYTES);
-#endif
 
     // puncture
     uint8_t puncture[NXDN_CAC_FEC_LENGTH_BYTES];

@@ -130,6 +130,7 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_dumpRCCH(dumpRCCHData),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -140,9 +141,12 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
-    m_voice = new Voice(this, network, debug, verbose);
-    m_trunk = new Trunk(this, network, debug, verbose, dumpRCCHData);
+    m_voice = new Voice(this, network, dumpRCCHData, debug, verbose);
+    m_trunk = new Trunk(this, network, dumpRCCHData, debug, verbose);
     m_data = new Data(this, network, debug, verbose);
+
+    m_rfLC.setVerbose(m_dumpRCCH);
+    m_netLC.setVerbose(m_dumpRCCH);
 }
 
 /// <summary>
@@ -182,11 +186,13 @@ void Control::reset()
     m_queue.clear();
 
     m_rfMask = 0x00U;
+    m_rfLC.setVerbose(m_dumpRCCH);
     m_rfLC.reset();
 
     m_netState = RS_NET_IDLE;
 
     m_netMask = 0x00U;
+    m_netLC.setVerbose(m_dumpRCCH);
     m_netLC.reset();
 }
 

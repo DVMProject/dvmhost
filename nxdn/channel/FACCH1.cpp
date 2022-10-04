@@ -72,7 +72,6 @@ const uint32_t PUNCTURE_LIST[] = {
 /// Initializes a new instance of the FACCH1 class.
 /// </summary>
 FACCH1::FACCH1() :
-    m_verbose(false),
     m_data(NULL)
 {
     m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
@@ -84,7 +83,6 @@ FACCH1::FACCH1() :
 /// </summary>
 /// <param name="data"></param>
 FACCH1::FACCH1(const FACCH1& data) :
-    m_verbose(false),
     m_data(NULL)
 {
     copy(data);
@@ -107,8 +105,6 @@ FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
         ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
-
-        m_verbose = data.m_verbose;
     }
 
     return *this;
@@ -171,9 +167,9 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 
     conv.chainback(m_data, NXDN_FACCH1_CRC_LENGTH_BITS);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
-    }
+#if DEBUG_NXDN_FACCH1
+    Utils::dump(2U, "Decoded FACCH1", m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
+#endif
 
     // check CRC-12
     bool ret = CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
@@ -200,9 +196,9 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 
     CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
-    }
+#if DEBUG_NXDN_FACCH1
+    Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
+#endif
 
     // encode convolution
     uint8_t convolution[NXDN_FACCH1_FEC_CONV_LENGTH_BYTES];
@@ -210,10 +206,6 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 
     Convolution conv;
     conv.encode(buffer, convolution, NXDN_FACCH1_CRC_LENGTH_BITS);
-
-#if DEBUG_NXDN_FACCH1
-    Utils::dump(2U, "FACCH1::encode(), FACCH1 Convolution", convolution, NXDN_FACCH1_FEC_CONV_LENGTH_BYTES);
-#endif
 
     // puncture
     uint8_t puncture[NXDN_FACCH1_FEC_LENGTH_BYTES];
@@ -276,6 +268,4 @@ void FACCH1::copy(const FACCH1& data)
 {
     m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
-
-    m_verbose = data.m_verbose;
 }

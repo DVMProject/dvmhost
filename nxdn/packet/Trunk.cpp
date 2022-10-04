@@ -394,11 +394,11 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
+    m_rfLC.setVerbose(m_dumpRCCH);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
     // generate the CAC
     channel::CAC cac;
-    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
     cac.setStructure(NXDN_SR_RCCH_SINGLE);
     cac.setData(buffer);
@@ -700,12 +700,12 @@ void Trunk::writeRF_CC_Message_Site_Info()
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
+    m_rfLC.setVerbose(m_dumpRCCH);
     m_rfLC.setMessageType(RCCH_MESSAGE_TYPE_SITE_INFO);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
 
     // generate the CAC
     channel::CAC cac;
-    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
     cac.setStructure(NXDN_SR_RCCH_HEAD_SINGLE);
     cac.setData(buffer);
@@ -748,13 +748,13 @@ void Trunk::writeRF_CC_Message_Service_Info()
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
+    m_rfLC.setVerbose(m_dumpRCCH);
     m_rfLC.setMessageType(MESSAGE_TYPE_SRV_INFO);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
     m_rfLC.encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);
 
     // generate the CAC
     channel::CAC cac;
-    cac.setVerbose(m_dumpRCCH);
     cac.setRAN(m_nxdn->m_ran);
     cac.setStructure(NXDN_SR_RCCH_DUAL);
     cac.setData(buffer);

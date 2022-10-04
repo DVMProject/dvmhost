@@ -172,6 +172,8 @@ namespace nxdn
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        bool m_dumpRCCH;
+
         bool m_verbose;
         bool m_debug;
 

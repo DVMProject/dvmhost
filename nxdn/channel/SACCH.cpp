@@ -65,8 +65,7 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 /// Initializes a new instance of the SACCH class.
 /// </summary>
 SACCH::SACCH() :
-    m_verbose(false),
-    m_ran(1U),
+    m_ran(0U),
     m_structure(NXDN_SR_SINGLE),
     m_data(NULL)
 {
@@ -79,8 +78,7 @@ SACCH::SACCH() :
 /// </summary>
 /// <param name="data"></param>
 SACCH::SACCH(const SACCH& data) :
-    m_verbose(false),
-    m_ran(1U),
+    m_ran(0U),
     m_structure(NXDN_SR_SINGLE),
     m_data(NULL)
 {
@@ -104,8 +102,6 @@ SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
         ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
-
-        m_verbose = data.m_verbose;
 
         m_ran = m_data[0U] & 0x3FU;
         m_structure = (m_data[0U] >> 6) & 0x03U;
@@ -156,10 +152,6 @@ bool SACCH::decode(const uint8_t* data)
         puncture[n++] = 0U;
     }
 
-#if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "SACCH::decode(), SACCH Puncture List", puncture, 90U);
-#endif
-
     // decode convolution
     Convolution conv;
     conv.start();
@@ -177,9 +169,9 @@ bool SACCH::decode(const uint8_t* data)
 
     conv.chainback(m_data, NXDN_SACCH_CRC_LENGTH_BITS);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
-    }
+#if DEBUG_NXDN_SACCH
+    Utils::dump(2U, "Decoded SACCH", m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
+#endif
 
     // check CRC-6
     bool ret = CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
@@ -218,9 +210,9 @@ void SACCH::encode(uint8_t* data) const
 
     CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
 
-    if (m_verbose) {
+#if DEBUG_NXDN_SACCH
         Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);
-    }
+#endif
 
     // encode convolution
     uint8_t convolution[NXDN_SACCH_FEC_CONV_LENGTH_BYTES];
@@ -228,10 +220,6 @@ void SACCH::encode(uint8_t* data) const
 
     Convolution conv;
     conv.encode(buffer, convolution, NXDN_SACCH_CRC_LENGTH_BITS);
-
-#if DEBUG_NXDN_SACCH
-    Utils::dump(2U, "SACCH::encode(), SACCH Convolution", convolution, NXDN_SACCH_FEC_CONV_LENGTH_BYTES);
-#endif
 
     // puncture
     uint8_t puncture[NXDN_SACCH_FEC_LENGTH_BYTES];

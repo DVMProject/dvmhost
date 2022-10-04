@@ -65,9 +65,6 @@ namespace nxdn
             void setData(const uint8_t* data);
 
         public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
-
             /** Common Data */
             /// <summary>Radio Access Number</summary>
             __PROPERTY(uint8_t, ran, RAN);

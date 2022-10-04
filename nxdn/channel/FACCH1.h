@@ -62,10 +62,6 @@ namespace nxdn
             void getData(uint8_t* data) const;
             /// <summary>Sets the raw FACCH1 data.</summary>
             void setData(const uint8_t* data);
-        
-        public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
 
         private:
             uint8_t* m_data;
