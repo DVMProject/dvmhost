@@ -126,9 +126,6 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
     if (backOff > 15U)
         backOff = 15U;
 
-    Slot::setSiteData(netId, siteId, channelId, channelNo);
-    Slot::setAlohaConfig(nRandWait, backOff);
-
     yaml::Node control = dmrProtocol["control"];
     bool enableTSCC = control["enable"].as<bool>(false);
     bool dedicatedTSCC = false;
@@ -138,6 +135,9 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
     else {
         dedicatedTSCC = false;
     }
+
+    Slot::setSiteData(netId, siteId, channelId, channelNo, dedicatedTSCC);
+    Slot::setAlohaConfig(nRandWait, backOff);
 
     m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
     switch (m_tsccSlotNo) {

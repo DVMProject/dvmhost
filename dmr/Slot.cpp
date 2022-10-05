@@ -637,10 +637,10 @@ void Slot::init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embedd
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
-/// <param name="nRandWait"></param>
-void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo)
+/// <param name="requireReg"></param>
+void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
-    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, true);
+    m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
