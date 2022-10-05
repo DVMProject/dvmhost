@@ -160,6 +160,10 @@ HostCal::HostCal(const std::string& confFile) :
     m_dmrPostBWAdj(0),
     m_p25PostBWAdj(0),
     m_adfGainMode(ADF_GAIN_AUTO),
+    m_afcEnable(false),
+    m_afcKI(11U),
+    m_afcKP(4U),
+    m_afcRange(1U),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -173,7 +177,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_fdmaPreamble(80U),
     m_dmrRxDelay(7U),
     m_p25CorrCount(5U),
-    m_debug(false),
+    m_debug(true),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
     m_rxTuning(0),
@@ -218,7 +222,7 @@ int HostCal::run()
     }
 
     // initialize system logging
-    ret = ::LogInitialise("", "", 0U, 1U);
+    ret = ::LogInitialise("", "", 0U, 1U, true);
     if (!ret) {
         ::fprintf(stderr, "unable to open the log file\n");
         return 1;
@@ -299,15 +303,6 @@ int HostCal::run()
 
     yaml::Node modemConf = systemConf["modem"];
 
-    m_debug = modemConf["debug"].as<bool>(false);
-
-    m_rxTuning = modemConf["rxTuning"].as<int>(0);
-    m_txTuning = modemConf["txTuning"].as<int>(0);
-
-    // apply the frequency tuning offsets
-    m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
-    m_txAdjustedFreq = m_txFrequency + m_txTuning;
-
     m_rxInvert = modemConf["rxInvert"].as<bool>(false);
     m_txInvert = modemConf["txInvert"].as<bool>(false);
     m_pttInvert = modemConf["pttInvert"].as<bool>(false);
@@ -328,6 +323,18 @@ int HostCal::run()
     m_nxdnPostBWAdj = hotspotParams["nxdnPostBWAdj"].as<int>(0);
 
     m_adfGainMode = (ADF_GAIN_MODE)hotspotParams["adfGainMode"].as<uint32_t>(0U);
+
+    m_afcEnable = hotspotParams["afcEnable"].as<bool>(false);
+    m_afcKI = (uint8_t)hotspotParams["afcKI"].as<uint32_t>(11U);
+    m_afcKP = (uint8_t)hotspotParams["afcKP"].as<uint32_t>(4U);
+    m_afcRange = (uint8_t)hotspotParams["afcRange"].as<uint32_t>(1U);
+
+    m_rxTuning = hotspotParams["rxTuning"].as<int>(0);
+    m_txTuning = hotspotParams["txTuning"].as<int>(0);
+
+    // apply the frequency tuning offsets
+    m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
+    m_txAdjustedFreq = m_txFrequency + m_txTuning;
 
     yaml::Node repeaterParams = modemConf["repeater"];
 
@@ -444,7 +451,8 @@ int HostCal::run()
     m_modem->setLevels(m_rxLevel, m_txLevel, m_txLevel, m_txLevel, m_txLevel);
     m_modem->setSymbolAdjust(m_dmrSymLevel3Adj, m_dmrSymLevel1Adj, m_p25SymLevel3Adj, m_p25SymLevel1Adj, m_nxdnSymLevel3Adj, m_nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(m_txDCOffset, m_rxDCOffset);
-    m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_nxdnDiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_nxdnPostBWAdj, m_adfGainMode);
+    m_modem->setRFParams(m_rxFrequency, m_txFrequency, m_rxTuning, m_txTuning, 100U, m_dmrDiscBWAdj, m_p25DiscBWAdj, m_nxdnDiscBWAdj, m_dmrPostBWAdj, m_p25PostBWAdj, m_nxdnPostBWAdj, m_adfGainMode,
+        m_afcEnable, m_afcKI, m_afcKP, m_afcRange);
     m_modem->setSoftPot(m_rxCoarsePot, m_rxFinePot, m_txCoarsePot, m_txFinePot, m_rssiCoarsePot, m_rssiFinePot);
 
     m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostCal::portModemOpen, this));
@@ -637,7 +645,7 @@ int HostCal::run()
                 sscanf(value, "%d", &rxTuning);
 
                 m_rxTuning = rxTuning;
-                m_conf["system"]["modem"]["rxTuning"] = __INT_STR(m_rxTuning);
+                m_conf["system"]["modem"]["hotspot"]["rxTuning"] = __INT_STR(m_rxTuning);
                 m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
 
                 writeRFParams();
@@ -657,7 +665,7 @@ int HostCal::run()
                 sscanf(value, "%d", &txTuning);
 
                 m_txTuning = txTuning;
-                m_conf["system"]["modem"]["txTuning"] = __INT_STR(m_txTuning);
+                m_conf["system"]["modem"]["hotspot"]["txTuning"] = __INT_STR(m_txTuning);
                 m_txAdjustedFreq = m_txFrequency + m_txTuning;
 
                 writeRFParams();
@@ -884,6 +892,68 @@ int HostCal::run()
                         writeRFParams();
                     }
                 }
+            }
+        }
+        break;
+
+        case '8':
+        {
+            if (m_isHotspot && m_modem->getVersion() >= 3U) {
+                char value[5] = { '\0' };
+                ::fprintf(stdout, "> ADF7021 AFC Enabled [%u] (Y/N) ? ", m_afcEnable);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 2, 0);
+                if (toupper(value[0]) == 'Y' || toupper(value[0]) == 'N') {
+                    m_afcEnable = value[0] == 'Y' ? true : false;
+                }
+
+                ::fprintf(stdout, "> AFC Range [%u] ? ", m_afcRange);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 4, 0);
+                if (value[0] != '\0') {
+                    uint32_t afcRange = m_afcRange;
+                    sscanf(value, "%u", &afcRange);
+
+                    if (afcRange >= 0U && afcRange < 256U)
+                        m_afcRange = (uint8_t)afcRange;
+                    else
+                        m_afcRange = 4U;
+                }
+
+                ::fprintf(stdout, "> AFC KI Parameter [%u] ? ", m_afcKI);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 3, 0);
+                if (value[0] != '\0') {
+                    uint32_t afcKI = m_afcKI;
+                    sscanf(value, "%u", &afcKI);
+
+                    if (afcKI >= 0U && afcKI < 16U)
+                        m_afcKI = (uint8_t)afcKI;
+                    else
+                        m_afcKI = 11U;
+                }
+
+                ::fprintf(stdout, "> AFC KP Parameter [%u] ? ", m_afcKP);
+                ::fflush(stdout);
+
+                m_console.getLine(value, 2, 0);
+                if (value[0] != '\0') {
+                    uint32_t afcKP = m_afcKP;
+                    sscanf(value, "%u", &afcKP);
+
+                    if (afcKP >= 0U && afcKP < 8U)
+                        m_afcKP = (uint8_t)afcKP;
+                    else
+                        m_afcKP = 1U;
+                }
+
+                writeRFParams();
+            }
+            else {
+                LogWarning(LOG_CAL, "ADF7021 AFC alignment is not supported on your firmware!");
             }
         }
         break;
@@ -1463,6 +1533,7 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    5        Set P25 Post Demod Bandwidth Offset");
         LogMessage(LOG_CAL, "    6        Set NXDN Post Demod Bandwidth Offset");
         LogMessage(LOG_CAL, "    7        Set ADF7021 Rx Auto. Gain Mode");
+        LogMessage(LOG_CAL, "    8        Set ADF7021 AFC Settings");
     }
     if (!m_modem->m_flashDisabled) {
         LogMessage(LOG_CAL, "    E        Erase modem configuration area");
@@ -2366,8 +2437,8 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 /// <returns></returns>
 bool HostCal::writeRFParams()
 {
-    uint8_t buffer[20U];
-    ::memset(buffer, 0x00U, 20U);
+    uint8_t buffer[22U];
+    ::memset(buffer, 0x00U, 22U);
     uint8_t lengthToWrite = 18U;
 
     buffer[0U] = DVM_FRAME_START;
@@ -2401,12 +2472,21 @@ bool HostCal::writeRFParams()
 
     // are we on a protocol version 3 firmware?
     if (m_modem->getVersion() >= 3U) {
-        lengthToWrite = 20U;
+        lengthToWrite = 22U;
 
         m_conf["system"]["modem"]["hotspot"]["nxdnDiscBWAdj"] = __INT_STR(m_nxdnDiscBWAdj);
         buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
         m_conf["system"]["modem"]["hotspot"]["nxdnPostBWAdj"] = __INT_STR(m_nxdnPostBWAdj);
         buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
+
+        // support optional AFC parameters
+        m_conf["system"]["modem"]["hotspot"]["afcEnable"] = __BOOL_STR(m_afcEnable);
+        m_conf["system"]["modem"]["hotspot"]["afcKI"] = __INT_STR(m_afcKI);
+        m_conf["system"]["modem"]["hotspot"]["afcKP"] = __INT_STR(m_afcKP);
+        buffer[20U] = (m_afcEnable ? 0x80 : 0x00) +
+            (m_afcKP << 4) + (m_afcKI);
+        m_conf["system"]["modem"]["hotspot"]["afcRange"] = __INT_STR(m_afcRange);
+        buffer[21U] = m_afcRange;
     }
 
     buffer[1U] = lengthToWrite;
@@ -2592,10 +2672,10 @@ void HostCal::processFlashConfig(const uint8_t *buffer)
         }
 
         m_txTuning = int(buffer[25U]) - 128;
-        m_conf["system"]["modem"]["txTuning"] = __INT_STR(m_txTuning);
+        m_conf["system"]["modem"]["hotspot"]["txTuning"] = __INT_STR(m_txTuning);
         m_txAdjustedFreq = m_txFrequency + m_txTuning;
         m_rxTuning = int(buffer[26U]) - 128;
-        m_conf["system"]["modem"]["rxTuning"] = __INT_STR(m_rxTuning);
+        m_conf["system"]["modem"]["hotspot"]["rxTuning"] = __INT_STR(m_rxTuning);
         m_rxAdjustedFreq = m_rxFrequency + m_rxTuning;
 
         // are we on a protocol version 3 firmware?
@@ -2868,6 +2948,9 @@ void HostCal::printStatus()
             if (m_modem->getVersion() >= 3U) {
                 LogMessage(LOG_CAL, " - NXDN Disc. BW: %d, NXDN Post Demod BW: %d",
                     m_nxdnDiscBWAdj, m_nxdnPostBWAdj);
+
+                LogMessage(LOG_CAL, " - AFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
+                    m_afcEnable, m_afcKI, m_afcKP, m_afcRange);
             }
 
             switch (m_adfGainMode) {

@@ -151,6 +151,10 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_p25PostBWAdj(0),
     m_nxdnPostBWAdj(0),
     m_adfGainMode(ADF_GAIN_AUTO),
+    m_afcEnable(false),
+    m_afcKI(11U),
+    m_afcKP(4U),
+    m_afcRange(1U),
     m_dmrSymLevel3Adj(0),
     m_dmrSymLevel1Adj(0),
     m_p25SymLevel3Adj(0),
@@ -317,10 +321,15 @@ void Modem::setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25Sym
 /// <param name="p25PostBWAdj"></param>
 /// <param name="nxdnPostBWAdj"></param>
 /// <param name="gainMode"></param>
+/// <param name="afcEnable"></param>
+/// <param name="afcKI"></param>
+/// <param name="afcKP"></param>
+/// <param name="afcRange"></param>
 void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower,
     int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
     int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj,
-    ADF_GAIN_MODE gainMode)
+    ADF_GAIN_MODE gainMode,
+    bool afcEnable, uint8_t afcKI, uint8_t afcKP, uint8_t afcRange)
 {
     m_adfGainMode = gainMode;
     m_rfPower = rfPower;
@@ -335,6 +344,11 @@ void Modem::setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTu
     m_dmrPostBWAdj = dmrPostBWAdj;
     m_p25PostBWAdj = p25PostBWAdj;
     m_nxdnPostBWAdj = nxdnPostBWAdj;
+
+    m_afcEnable = afcEnable;
+    m_afcKI = afcKI;
+    m_afcKP = afcKP;
+    m_afcRange = afcRange;
 }
 
 /// <summary>
@@ -2058,8 +2072,8 @@ bool Modem::writeSymbolAdjust()
 /// <returns></returns>
 bool Modem::writeRFParams()
 {
-    uint8_t buffer[20U];
-    ::memset(buffer, 0x00U, 20U);
+    uint8_t buffer[22U];
+    ::memset(buffer, 0x00U, 22U);
     uint8_t lengthToWrite = 18U;
 
     buffer[0U] = DVM_FRAME_START;
@@ -2090,10 +2104,15 @@ bool Modem::writeRFParams()
 
     // are we on a protocol version 3 firmware?
     if (m_protoVer >= 3U) {
-        lengthToWrite = 20U;
+        lengthToWrite = 22U;
 
         buffer[18U] = (uint8_t)(m_nxdnDiscBWAdj + 128);
         buffer[19U] = (uint8_t)(m_nxdnPostBWAdj + 128);
+
+        // support optional AFC parameters
+        buffer[20U] = (m_afcEnable ? 0x80 : 0x00) +
+            (m_afcKP << 4) + (m_afcKI);
+        buffer[21U] = m_afcRange;
     }
 
     buffer[1U] = lengthToWrite;

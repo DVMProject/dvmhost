@@ -1793,11 +1793,11 @@ bool Host::readParams()
     removeLockFile();
 
     LogInfo("General Parameters");
-    LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
-    LogInfo("    P25: %s", m_p25Enabled ? "enabled" : "disabled");
-    LogInfo("    NXDN: %s", m_nxdnEnabled ? "enabled" : "disabled");
-    LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
     if (!udpMasterMode) {
+        LogInfo("    DMR: %s", m_dmrEnabled ? "enabled" : "disabled");
+        LogInfo("    P25: %s", m_p25Enabled ? "enabled" : "disabled");
+        LogInfo("    NXDN: %s", m_nxdnEnabled ? "enabled" : "disabled");
+        LogInfo("    Duplex: %s", m_duplex ? "yes" : "no");
         if (!m_duplex) {
             LogInfo("    Simplex Same Frequency: %s", simplexSameFreq ? "yes" : "no");
         }
@@ -2000,9 +2000,6 @@ bool Host::createModem()
     uint8_t p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(4U);
     int rxDCOffset = modemConf["rxDCOffset"].as<int>(0);
     int txDCOffset = modemConf["txDCOffset"].as<int>(0);
-    int rxTuning = modemConf["rxTuning"].as<int>(0);
-    int txTuning = modemConf["txTuning"].as<int>(0);
-    uint8_t rfPower = (uint8_t)modemConf["rfPower"].as<uint32_t>(100U);
 
     yaml::Node hotspotParams = modemConf["hotspot"];
 
@@ -2013,6 +2010,13 @@ bool Host::createModem()
     int p25PostBWAdj = hotspotParams["p25PostBWAdj"].as<int>(0);
     int nxdnPostBWAdj = hotspotParams["nxdnPostBWAdj"].as<int>(0);
     ADF_GAIN_MODE adfGainMode = (ADF_GAIN_MODE)hotspotParams["adfGainMode"].as<uint32_t>(0U);
+    bool afcEnable = hotspotParams["afcEnable"].as<bool>(false);
+    uint8_t afcKI = (uint8_t)hotspotParams["afcKI"].as<uint32_t>(11U);
+    uint8_t afcKP = (uint8_t)hotspotParams["afcKP"].as<uint32_t>(4U);
+    uint8_t afcRange = (uint8_t)hotspotParams["afcRange"].as<uint32_t>(1U);
+    int rxTuning = hotspotParams["rxTuning"].as<int>(0);
+    int txTuning = hotspotParams["txTuning"].as<int>(0);
+    uint8_t rfPower = (uint8_t)hotspotParams["rfPower"].as<uint32_t>(100U);
 
     yaml::Node repeaterParams = modemConf["repeater"];
 
@@ -2194,7 +2198,7 @@ bool Host::createModem()
         m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
         m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
         m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
-            p25PostBWAdj, nxdnPostBWAdj, adfGainMode);
+            p25PostBWAdj, nxdnPostBWAdj, adfGainMode, afcEnable, afcKI, afcKP, afcRange);
         m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
         m_modem->setDMRColorCode(m_dmrColorCode);
         m_modem->setP25NAC(m_p25NAC);

@@ -154,6 +154,12 @@ system:
             nxdnDiscBWAdj: 0 # Valid values between -128 and 128
             nxdnPostBWAdj: 0 # Valid values between -128 and 128
             adfGainMode: 0 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
+            afcEnable: false
+            afcKI: 11
+            afcKP: 4
+            afcRange: 1
+            txTuning: 0 # Freq offset for the hotspot, in hz
+            rxTuning: 0
         repeater:
             dmrSymLvl3Adj: 0 # Valid values between -128 and 128
             dmrSymLvl1Adj: 0 # Valid values between -128 and 128
@@ -170,8 +176,6 @@ system:
             rssiFine: 127
         rxDCOffset: 0 # Valid values between -128 and 128
         txDCOffset: 0 # Valid values between -128 and 128
-        txTuning: 0 # Freq offset for the hotspot, in hz
-        rxTuning: 0
         rxLevel: 50
         txLevel: 50
 #        cwIdTxLevel: 50

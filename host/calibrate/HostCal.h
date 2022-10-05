@@ -97,6 +97,11 @@ private:
 
     modem::ADF_GAIN_MODE m_adfGainMode; // hotspot modem - ADF7021 Rx gain
 
+    bool m_afcEnable;               // hotspot modem - ADF7021 AFC enable
+    uint8_t m_afcKI;                // hotspot modem - AFC KI (affects AFC settling time)
+    uint8_t m_afcKP;                // hotspot modem - AFC KP (affects AFC settling time)
+    uint8_t m_afcRange;             // hotspot modem - AFC Maximum Range (m_afcRange * 500hz)
+
     int m_dmrSymLevel3Adj;          // dedicated modem - +3/-3 DMR symbol adjustment
     int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
     int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment

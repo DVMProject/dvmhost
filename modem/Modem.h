@@ -231,7 +231,7 @@ namespace modem
         void setSymbolAdjust(int dmrSymLevel3Adj, int dmrSymLevel1Adj, int p25SymLevel3Adj, int p25SymLevel1Adj, int nxdnSymLevel3Adj, int ndxnSymLevel1Adj);
         /// <summary>Sets the RF parameters.</summary>
         void setRFParams(uint32_t rxFreq, uint32_t txFreq, int rxTuning, int txTuning, uint8_t rfPower, int8_t dmrDiscBWAdj, int8_t p25DiscBWAdj, int8_t nxdnDiscBWAdj,
-            int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj, ADF_GAIN_MODE gainMode);
+            int8_t dmrPostBWAdj, int8_t p25PostBWAdj, int8_t nxdnPostBWAdj, ADF_GAIN_MODE gainMode, bool afcEnable, uint8_t afcKI, uint8_t afcKP, uint8_t afcRange);
         /// <summary>Sets the softpot parameters.</summary>
         void setSoftPot(uint8_t rxCoarse, uint8_t rxFine, uint8_t txCoarse, uint8_t txFine, uint8_t rssiCoarse, uint8_t rssiFine);
         /// <summary>Sets the DMR color code.</summary>
@@ -399,6 +399,11 @@ namespace modem
         int8_t m_nxdnPostBWAdj;         // hotspot modem - NXDN post demod BW adjustment
 
         ADF_GAIN_MODE m_adfGainMode;    // hotspot modem - ADF7021 Rx gain
+
+        bool m_afcEnable;               // hotspot modem - ADF7021 AFC enable
+        uint8_t m_afcKI;                // hotspot modem - AFC KI (affects AFC settling time)
+        uint8_t m_afcKP;                // hotspot modem - AFC KP (affects AFC settling time)
+        uint8_t m_afcRange;             // hotspot modem - AFC Maximum Range (m_afcRange * 500hz)
 
         int m_dmrSymLevel3Adj;          // dedicated modem - +3/-3 DMR symbol adjustment
         int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
