@@ -76,7 +76,7 @@ extern HOST_SW_API void ActivityLogFinalise();
 extern HOST_SW_API void ActivityLog(const char* mode, const bool sourceRf, const char* msg, ...);
 
 /// <summary>Initializes the diagnostics log.</summary>
-extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel);
+extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay = false);
 /// <summary>Finalizes the diagnostics log.</summary>
 extern HOST_SW_API void LogFinalise();
 /// <summary>Writes a new entry to the diagnostics log.</summary>

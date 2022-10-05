@@ -71,6 +71,7 @@ static FILE* m_fpLog = NULL;
 static FILE* m_actFpLog = NULL;
 
 static uint32_t m_displayLevel = 2U;
+static bool m_disableTimeDisplay = false;
 
 static struct tm m_tm;
 static struct tm m_actTm;
@@ -248,12 +249,14 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
 /// <param name="fileRoot">Prefix of the detailed log file name.</param>
 /// <param name="fileLevel">File logging level.</param>
 /// <param name="displayLevel">Console logging level.</param>
-bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel)
+/// <param name="disableTimeDisplay">Disable display of date/time on the console log.</param>
+bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay)
 {
     m_filePath = filePath;
     m_fileRoot = fileRoot;
     m_fileLevel = fileLevel;
     m_displayLevel = displayLevel;
+    m_disableTimeDisplay = disableTimeDisplay;
     return ::LogOpen();
 }
 
@@ -278,26 +281,46 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 
     char buffer[501U];
 #if defined(_WIN32) || defined(_WIN64)
-    SYSTEMTIME st;
-    ::GetSystemTime(&st);
+    if (!m_disableTimeDisplay) {
+        SYSTEMTIME st;
+        ::GetSystemTime(&st);
 
-    if (module != NULL) {
-        ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u (%s) ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, module);
-    }
+        if (module != NULL) {
+            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u (%s) ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, module);
+        }
+        else {
+            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+        }
+    } 
     else {
-        ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+        if (module != NULL) {
+            ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
+        }
+        else {
+            ::sprintf(buffer, "%c: ", LEVELS[level]);
+        }
     }
 #else
-    struct timeval now;
-    ::gettimeofday(&now, NULL);
+    if (!m_disableTimeDisplay) {
+        struct timeval now;
+        ::gettimeofday(&now, NULL);
 
-    struct tm* tm = ::gmtime(&now.tv_sec);
+        struct tm* tm = ::gmtime(&now.tv_sec);
 
-    if (module != NULL) {
-        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, module);
-    }
+        if (module != NULL) {
+            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, module);
+        }
+        else {
+            ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
+        }
+    } 
     else {
-        ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
+        if (module != NULL) {
+            ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
+        }
+        else {
+            ::sprintf(buffer, "%c: ", LEVELS[level]);
+        }
     }
 #endif
 
