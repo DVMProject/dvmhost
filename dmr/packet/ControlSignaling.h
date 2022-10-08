@@ -93,7 +93,7 @@ namespace dmr
             /// <summary>Helper to write a ACK RSP packet.</summary>
             void writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service);
             /// <summary>Helper to write a unit registration response packet.</summary>
-            void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId);
+            void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions);
 
             /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Aloha();

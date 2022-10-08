@@ -104,6 +104,8 @@ namespace dmr
             __PROPERTY(uint8_t, priority, Priority);
             /// <summary>Flag indicating a broadcast service.</summary>
             __PROPERTY(bool, broadcast, Broadcast);
+            /// <summary>Flag indicating a proxy.</summary>
+            __PROPERTY(bool, proxy, Proxy);
 
             /** Tier III */
             /// <summary>Backoff Number.</summary>
@@ -111,10 +113,12 @@ namespace dmr
             /// <summary>Random Access Wait Delay.</summary>
             __PROPERTY(uint8_t, nRandWait, NRandWait);
 
-            /// <summary>Service Data.</summary>
-            __PROPERTY(uint8_t, serviceData, ServiceData);
-            /// <summary>Service Type.</summary>
-            __PROPERTY(uint8_t, serviceType, ServiceType);
+            /// <summary>Service Options.</summary>
+            __PROPERTY(uint8_t, serviceOptions, ServiceOptions);
+            /// <summary>Service Extra Options.</summary>
+            __PROPERTY(uint8_t, serviceExtra, ServiceExtra);
+            /// <summary>Service Kind.</summary>
+            __PROPERTY(uint8_t, serviceKind, ServiceKind);
 
             /// <summary>Destination/Target address type.</summary>
             __PROPERTY(uint8_t, targetAddress, TargetAddress);

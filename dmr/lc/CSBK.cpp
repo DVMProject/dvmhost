@@ -134,18 +134,18 @@ bool CSBK::decode(const uint8_t* data)
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case CSBKO_UU_V_REQ:
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
+        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case CSBKO_UU_ANS_RSP:
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
+        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case CSBKO_PRECCSBK:
         m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                      // Group/Individual Flag
         m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             //
         m_CBF = (uint8_t)((csbkValue >> 48) & 0xFFU);                               // Blocks to Follow
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
+        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case CSBKO_RAND: // CSBKO_CALL_ALRT when FID == FID_DMRA
@@ -153,33 +153,30 @@ bool CSBK::decode(const uint8_t* data)
         {
         case FID_DMRA:
             m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                  // Group/Individual Flag
-            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                      // Target Radio Address
+            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                    // Target Radio Address
             m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
             break;
         case FID_ETSI:
         default:
-            m_emergency = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
-            m_privacy = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
-            m_supplementData = (((csbkValue >> 56) & 0xFFU) & 0x20U) == 0x20U;      // Supplementary Data Flag
-            m_broadcast = (((csbkValue >> 56) & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
-            m_priority = (((csbkValue >> 56) & 0xFFU) & 0x03U);                     // Priority
-            m_serviceData = (uint8_t)((csbkValue >> 52U) & 0x0FU);                  // Service Data
-            m_serviceType = (uint8_t)((csbkValue >> 48U) & 0x0FU);                  // Service Type
-            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                      // Target Radio Address
+            m_serviceOptions = (uint8_t)((csbkValue >> 57U) & 0x7FU);               // Service Options
+            m_proxy = (((csbkValue >> 56U) & 0xFF) & 0x01U) == 0x01U;               // Proxy Flag
+            m_serviceExtra = (uint8_t)((csbkValue >> 52U) & 0x0FU);                 // Service Extras (content dependant on service)
+            m_serviceKind = (uint8_t)((csbkValue >> 48U) & 0x0FU);                  // Service Kind
+            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                    // Target Radio Address
             m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
             break;
         }
     case CSBKO_EXT_FNCT:
         m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             //
-        m_serviceType = (uint8_t)((csbkValue >> 48) & 0xFFU);                       // Service Type
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
+        m_serviceKind = (uint8_t)((csbkValue >> 48) & 0xFFU);                       // Service Kind
+        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
         m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
         break;
     case CSBKO_NACK_RSP:
         m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                      // Group/Individual Flag
-        m_serviceType = (((csbkValue >> 56) & 0xFFU) & 0x3FU);                      // Service Type
+        m_serviceKind = (((csbkValue >> 56) & 0xFFU) & 0x3FU);                      // Service Kind
         m_reason = (uint8_t)((csbkValue >> 48) & 0xFFU);                            // Reason Code
-        m_srcId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Source Radio Address
+        m_srcId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Source Radio Address
         m_dstId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Target Radio Address
         break;
 
@@ -225,7 +222,7 @@ void CSBK::encode(uint8_t* data)
         csbkValue = 
             (m_GI ? 0x40U : 0x00U) +                                                // Group or Invididual
             (m_dataContent ? 0x80U : 0x00U);
-        csbkValue = (csbkValue << 8) + m_CBF;                                       // Blocks to Follow
+        csbkValue = (csbkValue << 8) + m_serviceKind;                               // Service Kind
         csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
         csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
         break;
@@ -233,7 +230,7 @@ void CSBK::encode(uint8_t* data)
     case CSBKO_NACK_RSP:
         csbkValue = 0x80U +                                                         // Additional Information Field (always 1)
             (m_GI ? 0x40U : 0x00U) +                                                // Source Type
-            (m_serviceType & 0x3FU);                                                // Service Type
+            (m_serviceKind & 0x3FU);                                                // Service Kind
         csbkValue = (csbkValue << 8) + m_reason;                                    // Reason Code
         csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
         csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
@@ -462,10 +459,12 @@ CSBK::CSBK(SiteData siteData) :
     m_supplementData(false),
     m_priority(0U),
     m_broadcast(false),
+    m_proxy(false),
     m_backoffNo(1U),
     m_nRandWait(DEFAULT_NRAND_WAIT),
-    m_serviceData(0U),
-    m_serviceType(0U),
+    m_serviceOptions(0U),
+    m_serviceExtra(0U),
+    m_serviceKind(0U),
     m_targetAddress(TGT_ADRS_TGID),
     m_response(0U),
     m_reason(0U),
