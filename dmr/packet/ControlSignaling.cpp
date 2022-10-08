@@ -70,41 +70,47 @@ using namespace dmr::packet;
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_slot->m_dmr->getTSCCSlot()->m_enableTSCC) {                                  \
         LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, unsupported service, srcId = %u", m_slot->m_slotNo, _SRCID); \
-        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT);                   \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_UNSUPPORTED_SVC, 0U);                      \
         return false;                                                                   \
     }
 
 // Validate the source RID.
-#define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID, _RSN)                                     \
+#define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID)                                           \
     if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
         LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID rejection, srcId = %u", m_slot->m_slotNo, _SRCID); \
-        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_PERM_USER_REFUSED, 0U);                        \
         return false;                                                                   \
     }
 
 // Validate the target RID.
-#define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                     \
+#define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID)                                           \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID rejection, dstId = %u", m_slot->m_slotNo, _DSTID); \
-        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TEMP_USER_REFUSED, 0U);                        \
         return false;                                                                   \
     }
 
 // Validate the talkgroup ID.
-#define VALID_TGID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                      \
-    if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
+#define VALID_TGID(_PCKT_STR, _PCKT, _DSTID)                                            \
+    if (!acl::AccessControl::validateTGId(0U, _DSTID)) {                                \
         LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, TGID rejection, dstId = %u", m_slot->m_slotNo, _DSTID); \
-        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_GROUP_NOT_VALID, 0U);                      \
         return false;                                                                   \
     }
 
 // Verify the source RID is registered.
-#define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID, _RSN)                                \
+#define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID)                                      \
     if (!m_slot->m_affiliations->isUnitReg(_SRCID) && m_slot->m_verifyReg) {            \
         LogWarning(LOG_RF, "DMR Slot %u, " _PCKT_STR " denial, RID not registered, srcId = %u", m_slot->m_slotNo, _SRCID); \
-        writeRF_CSBK_ACK_RSP(_RSN, _PCKT);                                              \
+        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_PERM_USER_REFUSED, 0U);                        \
         return false;                                                                   \
     }
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -189,24 +195,66 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                 handled = true;
 
                 if (m_verbose) {
-                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
-                        m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceKind(), csbk.getServiceOptions(), csbk.getServiceExtra(), csbk.getSrcId(), csbk.getDstId());
+                    LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                        m_slot->m_slotNo, csbk.getServiceKind(), csbk.getServiceOptions(), csbk.getServiceExtra(), csbk.getSrcId(), csbk.getDstId());
                 }
 
                 switch (csbk.getServiceKind()) {
                 case SVC_KIND_IND_VOICE_CALL:
-                    // TODO TODO TODO
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    // validate the target RID
+                    VALID_DSTID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, dstId);
+
+                    // verify the source RID is registered
+                    VERIFY_SRCID_REG("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    writeRF_CSBK_Grant(srcId, dstId, csbk.getServiceOptions(), false);
                     break;
                 case SVC_KIND_GRP_VOICE_CALL:
-                    // TODO TODO TODO
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId);
+
+                    // validate the talkgroup ID
+                    VALID_TGID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, dstId);
+
+                    writeRF_CSBK_Grant(srcId, dstId, csbk.getServiceOptions(), true);
                     break;
                 case SVC_KIND_IND_DATA_CALL:
                 case SVC_KIND_IND_UDT_DATA_CALL:
-                    // TODO TODO TODO
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    // validate the target RID
+                    VALID_DSTID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, dstId);
+
+                    // verify the source RID is registered
+                    VERIFY_SRCID_REG("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
+
+                    writeRF_CSBK_Data_Grant(srcId, dstId, csbk.getServiceOptions(), false);
                     break;
                 case SVC_KIND_GRP_DATA_CALL:
                 case SVC_KIND_GRP_UDT_DATA_CALL:
-                    // TODO TODO TODO
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId);
+
+                    // validate the talkgroup ID
+                    VALID_TGID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, dstId);
+
+                    writeRF_CSBK_Data_Grant(srcId, dstId, csbk.getServiceOptions(), true);
                     break;
                 case SVC_KIND_REG_SVC:
                     // make sure control data is supported
@@ -360,8 +408,8 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                 ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
             } else {
                 if (m_verbose) {
-                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), emerg = %u, prio = %u, serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
-                        m_slot->m_slotNo, csbk.getEmergency(), csbk.getPriority(), csbk.getServiceKind(), csbk.getServiceOptions(), csbk.getServiceExtra(), csbk.getSrcId(), csbk.getDstId());
+                    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
+                        m_slot->m_slotNo, csbk.getServiceKind(), csbk.getServiceOptions(), csbk.getServiceExtra(), csbk.getSrcId(), csbk.getDstId());
                 }
             }
             break;
@@ -618,17 +666,344 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite)
 /// Helper to write a deny packet.
 /// </summary>
 /// <param name="reason"></param>
-/// <param name="service"></param>
-void ControlSignaling::writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service)
+/// <param name="responseInfo"></param>
+void ControlSignaling::writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t responseInfo)
 {
     lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
     csbk.setVerbose(m_dumpCSBKData);
     csbk.setCSBKO(CSBKO_ACK_RSP);
     csbk.setFID(FID_ETSI);
 
+    csbk.setResponse(responseInfo);
     csbk.setReason(reason);
 
     writeRF_CSBK(csbk);
+}
+
+/// <summary>
+/// Helper to write a deny packet.
+/// </summary>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+void ControlSignaling::writeRF_CSBK_NACK_RSP(uint8_t reason, uint8_t service)
+{
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setCSBKO(CSBKO_NACK_RSP);
+    csbk.setFID(FID_ETSI);
+
+    csbk.setServiceKind(service);
+    csbk.setReason(reason);
+
+    writeRF_CSBK(csbk);
+}
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="serviceOptions"></param>
+/// <param name="grp"></param>
+/// <param name="skip"></param>
+/// <param name="net"></param>
+/// <param name="skipNetCheck"></param>
+/// <returns></returns>
+bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, bool net, bool skipNetCheck)
+{
+    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
+    bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
+
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setFID(FID_ETSI);
+
+    if (dstId == DMR_WUID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // do we have a network connection and are we handling grants at the network?
+    if (m_tscc->m_network != NULL) {
+        if (m_tscc->m_network->isHandlingChGrants() && m_tscc->m_siteData.netActive() && !skipNetCheck) {
+            return m_tscc->m_network->writeGrantReq(grp, srcId, dstId);
+        }
+    }
+
+    // are we skipping checking?
+    if (!skip) {
+        if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
+            if (!net) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+
+                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
+                m_slot->m_rfState = RS_RF_REJECTED;
+            }
+
+            return false;
+        }
+
+        if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+            if (!net) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+
+                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
+                m_slot->m_rfState = RS_RF_REJECTED;
+            }
+
+            return false;
+        }
+
+        // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
+        if (m_slot->m_rfLastDstId != 0U) {
+            if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+                if (!net) {
+                    writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                    m_slot->m_rfState = RS_RF_REJECTED;
+                }
+
+                return false;
+            }
+        }
+
+        if (!m_tscc->m_affiliations->isGranted(dstId)) {
+            if (!m_tscc->m_affiliations->isRFChAvailable()) {
+                if (grp) {
+                    if (!net) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+
+                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
+                else {
+                    if (!net) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+
+                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
+            }
+            else {
+                if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                    uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+                    csbk.setLogicalCh1(chNo);
+                    csbk.setSlotNo(0U);
+
+                    //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
+                }
+            }
+        }
+        else {
+            uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+            csbk.setLogicalCh1(chNo);
+            csbk.setSlotNo(0U);
+
+            m_tscc->m_affiliations->touchGrant(dstId);
+        }
+    }
+
+    if (grp) {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
+        }
+
+        if (m_verbose) {
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+                m_tscc->m_slotNo, emergency, privacy, broadcast, priority, csbk.getLogicalCh1(), csbk.getSlotNo(), srcId, dstId);
+        }
+
+        // transmit group grant
+        csbk.setCSBKO(CSBKO_TV_GRANT);
+        if (broadcast)
+            csbk.setCSBKO(CSBKO_BTV_GRANT);
+        csbk.setSrcId(srcId);
+        csbk.setDstId(dstId);
+        csbk.setEmergency(emergency);
+
+        writeRF_CSBK(csbk);
+    }
+    else {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
+        }
+
+        if (m_verbose) {
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+                m_tscc->m_slotNo, emergency, privacy, broadcast, priority, csbk.getLogicalCh1(), csbk.getSlotNo(), srcId, dstId);
+        }
+
+        // transmit private grant
+        csbk.setCSBKO(CSBKO_PV_GRANT);
+        csbk.setSrcId(srcId);
+        csbk.setDstId(dstId);
+        csbk.setEmergency(emergency);
+
+        writeRF_CSBK(csbk);
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to write a data grant packet.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="serviceOptions"></param>
+/// <param name="grp"></param>
+/// <param name="skip"></param>
+/// <param name="net"></param>
+/// <returns></returns>
+bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, bool net)
+{
+    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
+    bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
+
+    lc::CSBK csbk = lc::CSBK(m_slot->m_siteData, m_slot->m_idenEntry, m_slot->m_dumpCSBKData);
+    csbk.setVerbose(m_dumpCSBKData);
+    csbk.setFID(FID_ETSI);
+
+    if (dstId == DMR_WUID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // are we skipping checking?
+    if (!skip) {
+        if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
+            if (!net) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+
+                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
+                m_slot->m_rfState = RS_RF_REJECTED;
+            }
+
+            return false;
+        }
+
+        if (m_slot->m_netState != RS_NET_IDLE && dstId == m_slot->m_netLastDstId) {
+            if (!net) {
+                LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+
+                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
+                m_slot->m_rfState = RS_RF_REJECTED;
+            }
+
+            return false;
+        }
+
+        // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
+        if (m_slot->m_rfLastDstId != 0U) {
+            if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+                if (!net) {
+                    writeRF_CSBK_ACK_RSP(TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                    m_slot->m_rfState = RS_RF_REJECTED;
+                }
+
+                return false;
+            }
+        }
+
+        if (!m_tscc->m_affiliations->isGranted(dstId)) {
+            if (!m_tscc->m_affiliations->isRFChAvailable()) {
+                if (grp) {
+                    if (!net) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+
+                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
+                else {
+                    if (!net) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+
+                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
+            }
+            else {
+                if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                    uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+                    csbk.setLogicalCh1(chNo);
+                    csbk.setSlotNo(0U);
+
+                    //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
+                }
+            }
+        }
+        else {
+            uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+            csbk.setLogicalCh1(chNo);
+            csbk.setSlotNo(0U);
+
+            m_tscc->m_affiliations->touchGrant(dstId);
+        }
+    }
+
+    if (grp) {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
+        }
+
+        if (m_verbose) {
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+                m_tscc->m_slotNo, emergency, privacy, broadcast, priority, csbk.getLogicalCh1(), csbk.getSlotNo(), srcId, dstId);
+        }
+
+        // transmit group grant
+        csbk.setCSBKO(CSBKO_TD_GRANT);
+        csbk.setSrcId(srcId);
+        csbk.setDstId(dstId);
+        csbk.setEmergency(emergency);
+
+        writeRF_CSBK(csbk);
+    }
+    else {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
+        }
+
+        if (m_verbose) {
+            LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+                m_tscc->m_slotNo, emergency, privacy, broadcast, priority, csbk.getLogicalCh1(), csbk.getSlotNo(), srcId, dstId);
+        }
+
+        // transmit private grant
+        csbk.setCSBKO(CSBKO_PD_GRANT);
+        csbk.setSrcId(srcId);
+        csbk.setDstId(dstId);
+        csbk.setEmergency(emergency);
+
+        writeRF_CSBK(csbk);
+    }
+
+    return true;
 }
 
 /// <summary>

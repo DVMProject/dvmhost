@@ -244,7 +244,8 @@ void CSBK::encode(uint8_t* data)
             csbkValue = (m_GI ? 0x40U : 0x00U) +                                    // Source Type
                 (m_siteData.siteId() & 0x3FU);                                      // Net + Site LSB
         }
-        csbkValue = (csbkValue << 7) + (m_reason & 0xFFU);                          // Reason Code
+        csbkValue = (csbkValue << 7) + (m_response & 0x7FU);                        // Response Information
+        csbkValue = (csbkValue << 8) + (m_reason & 0xFFU);                          // Reason Code
         csbkValue = (csbkValue << 25) + m_dstId;                                    // Target Radio Address
         csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
         break;
@@ -270,7 +271,7 @@ void CSBK::encode(uint8_t* data)
         csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
         csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
         csbkValue = (csbkValue << 1) + 0U;                                          // Reserved
-        csbkValue = (csbkValue << 1) + 0U;                                          // Emergency
+        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
         csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
         csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
         csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
@@ -282,7 +283,29 @@ void CSBK::encode(uint8_t* data)
         csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
         csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
         csbkValue = (csbkValue << 1) + 0U;                                          // Late Entry
-        csbkValue = (csbkValue << 1) + 0U;                                          // Emergency
+        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
+        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
+        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
+        break;
+
+    case CSBKO_PD_GRANT:
+        csbkValue = 0U;
+        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
+        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
+        csbkValue = (csbkValue << 1) + 0U;                                          // High Rate Flag - Always Single Slot Data
+        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
+        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
+        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
+        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
+        break;
+
+    case CSBKO_TD_GRANT:
+        csbkValue = 0U;
+        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
+        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
+        csbkValue = (csbkValue << 1) + 0U;                                          // High Rate Flag - Always Single Slot Data
+        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
         csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
         csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
         csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address

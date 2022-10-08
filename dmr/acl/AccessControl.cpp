@@ -106,8 +106,12 @@ bool AccessControl::validateTGId(uint32_t slotNo, uint32_t id)
     if (tid.tgSlot() == 0)
         return true; // TG Slot of 0 for the talkgroup entry means both
 
-    if (tid.tgSlot() != slotNo)
-        return false;
+    if (slotNo != 0) {
+        if (tid.tgSlot() != slotNo)
+            return false;
 
-    return true;
+        return true;
+    } else {
+        return true;
+    }
 }

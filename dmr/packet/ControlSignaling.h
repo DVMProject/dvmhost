@@ -91,7 +91,13 @@ namespace dmr
             void writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite = false);
 
             /// <summary>Helper to write a ACK RSP packet.</summary>
-            void writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t service);
+            void writeRF_CSBK_ACK_RSP(uint8_t reason, uint8_t responseInfo);
+            /// <summary>Helper to write a NACK RSP packet.</summary>
+            void writeRF_CSBK_NACK_RSP(uint8_t reason, uint8_t service);
+            /// <summary>Helper to write a grant packet.</summary>
+            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, bool net = false, bool skipNetCheck = false);
+            /// <summary>Helper to write a data grant packet.</summary>
+            bool writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, bool net = false);
             /// <summary>Helper to write a unit registration response packet.</summary>
             void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions);
 

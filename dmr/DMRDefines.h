@@ -243,6 +243,7 @@ namespace dmr
     const uint8_t   TS_DENY_RSN_REG_REFUSED = 0x2AU;
     const uint8_t   TS_DENY_RSN_REG_DENIED = 0x2BU;
     const uint8_t   TS_DENY_RSN_MS_NOT_REG = 0x2DU;
+    const uint8_t   TS_DENY_RSN_TGT_BUSY = 0x2EU;
     const uint8_t   TS_DENY_RSN_TGT_GROUP_NOT_VALID = 0x2FU;
 
     const uint8_t   MS_DENY_RSN_UNSUPPORTED_SVC = 0x00U;
@@ -296,6 +297,8 @@ namespace dmr
     const uint8_t   CSBKO_PV_GRANT = 0x30U;                 // PV_GRANT - Private Voice Channel Grant
     const uint8_t   CSBKO_TV_GRANT = 0x31U;                 // TV_GRANT - Talkgroup Voice Channel Grant
     const uint8_t   CSBKO_BTV_GRANT = 0x32U;                // BTV_GRANT - Broadcast Talkgroup Voice Channel Grant
+    const uint8_t   CSBKO_PD_GRANT = 0x33U;                 // PD_GRANT - Private Data Channel Grant
+    const uint8_t   CSBKO_TD_GRANT = 0x34U;                 // TD_GRANT - Talkgroup Data Channel Grant
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
 
