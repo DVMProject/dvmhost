@@ -62,55 +62,56 @@ using namespace modem;
 
 #define RCD_GET_VERSION                 "version"
 #define RCD_GET_HELP                    "help"
+#define RCD_GET_STATUS                  "status"
 
-#define RCD_MODE_CMD                    "mdm-mode"
+#define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
 #define RCD_MODE_OPT_LCKOUT             "lockout"
 #define RCD_MODE_OPT_FDMR               "dmr"
 #define RCD_MODE_OPT_FP25               "p25"
 #define RCD_MODE_OPT_FNXDN              "nxdn"
 
-#define RCD_KILL_CMD                    "mdm-kill"
+#define RCD_KILL                        "mdm-kill"
 
-#define RCD_RID_WLIST_CMD               "rid-whitelist"
-#define RCD_RID_BLIST_CMD               "rid-blacklist"
+#define RCD_RID_WLIST                   "rid-whitelist"
+#define RCD_RID_BLIST                   "rid-blacklist"
 
-#define RCD_DMR_BEACON_CMD              "dmr-beacon"
-#define RCD_P25_CC_CMD                  "p25-cc"
+#define RCD_DMR_BEACON                  "dmr-beacon"
+#define RCD_P25_CC                      "p25-cc"
 #define RCD_P25_CC_FALLBACK             "p25-cc-fallback"
 
-#define RCD_DMR_RID_PAGE_CMD            "dmr-rid-page"
-#define RCD_DMR_RID_CHECK_CMD           "dmr-rid-check"
-#define RCD_DMR_RID_INHIBIT_CMD         "dmr-rid-inhibit"
-#define RCD_DMR_RID_UNINHIBIT_CMD       "dmr-rid-uninhibit"
+#define RCD_DMR_RID_PAGE                "dmr-rid-page"
+#define RCD_DMR_RID_CHECK               "dmr-rid-check"
+#define RCD_DMR_RID_INHIBIT             "dmr-rid-inhibit"
+#define RCD_DMR_RID_UNINHIBIT           "dmr-rid-uninhibit"
 
-#define RCD_P25_SET_MFID_CMD            "p25-set-mfid"
-#define RCD_P25_RID_PAGE_CMD            "p25-rid-page"
-#define RCD_P25_RID_CHECK_CMD           "p25-rid-check"
-#define RCD_P25_RID_INHIBIT_CMD         "p25-rid-inhibit"
-#define RCD_P25_RID_UNINHIBIT_CMD       "p25-rid-uninhibit"
-#define RCD_P25_RID_GAQ_CMD             "p25-rid-gaq"
-#define RCD_P25_RID_UREG_CMD            "p25-rid-ureg"
+#define RCD_P25_SET_MFID                "p25-set-mfid"
+#define RCD_P25_RID_PAGE                "p25-rid-page"
+#define RCD_P25_RID_CHECK               "p25-rid-check"
+#define RCD_P25_RID_INHIBIT             "p25-rid-inhibit"
+#define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
+#define RCD_P25_RID_GAQ                 "p25-rid-gaq"
+#define RCD_P25_RID_UREG                "p25-rid-ureg"
 
-#define RCD_P25_PATCH_CMD               "p25-patch"
+#define RCD_P25_PATCH                   "p25-patch"
 
-#define RCD_P25_RELEASE_GRANTS_CMD      "p25-rel-grnts"
-#define RCD_P25_RELEASE_AFFS_CMD        "p25-rel-affs"
+#define RCD_P25_RELEASE_GRANTS          "p25-rel-grnts"
+#define RCD_P25_RELEASE_AFFS            "p25-rel-affs"
 
-#define RCD_DMR_CC_DEDICATED_CMD        "dmr-cc-dedicated"
-#define RCD_DMR_CC_BCAST_CMD            "dmr-cc-bcast"
+#define RCD_DMR_CC_DEDICATED            "dmr-cc-dedicated"
+#define RCD_DMR_CC_BCAST                "dmr-cc-bcast"
 
-#define RCD_P25_CC_DEDICATED_CMD        "p25-cc-dedicated"
-#define RCD_P25_CC_BCAST_CMD            "p25-cc-bcast"
+#define RCD_P25_CC_DEDICATED            "p25-cc-dedicated"
+#define RCD_P25_CC_BCAST                "p25-cc-bcast"
 
 #define RCD_DMR_DEBUG                   "dmr-debug"
 #define RCD_P25_DEBUG                   "p25-debug"
 #define RCD_P25_DUMP_TSBK               "p25-dump-tsbk"
 #define RCD_NXDN_DEBUG                  "nxdn-debug"
 
-#define RCD_DMRD_MDM_INJ_CMD            "debug-dmrd-mdm-inj"
-#define RCD_P25D_MDM_INJ_CMD            "debug-p25d-mdm-inj"
-#define RCD_NXDD_MDM_INJ_CMD            "debug-nxdd-mdm-inj"
+#define RCD_DMRD_MDM_INJ                "debug-dmrd-mdm-inj"
+#define RCD_P25D_MDM_INJ                "debug-p25d-mdm-inj"
+#define RCD_NXDD_MDM_INJ                "debug-nxdd-mdm-inj"
 
 const uint8_t RCON_FRAME_START = 0xFEU;
 const uint8_t START_OF_TEXT = 0x02U;
@@ -277,7 +278,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             std::string rcom = args.at(0);
             uint32_t argCnt = args.size() - 1;
 
-            LogInfoEx(LOG_RCON, "RCON %s, argCnt = %u from %s", rcom.c_str(), argCnt, UDPSocket::address(address).c_str());
+            LogInfoEx(LOG_RCON, "cmd = %s, argCnt = %u from %s", rcom.c_str(), argCnt, UDPSocket::address(address).c_str());
 
             // process command
             if (rcom == RCD_GET_VERSION) {
@@ -286,7 +287,73 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             else if (rcom == RCD_GET_HELP) {
                 reply = displayHelp();
             }
-            else if (rcom == RCD_MODE_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_GET_STATUS) {
+                reply = "";
+                yaml::Node systemConf = host->m_conf["system"];
+                {
+                    yaml::Node modemConfig = host->m_conf["system"]["modem"];
+                    std::string type = modemConfig["protocol"]["type"].as<std::string>();
+
+                    yaml::Node uartConfig = modemConfig["protocol"]["uart"];
+                    std::string modemPort = uartConfig["port"].as<std::string>();
+                    uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
+
+                    reply += string_format("Host State: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
+                }
+
+                {
+                    if (!host->m_modem->isHotspot()) {
+                        reply += string_format("\r\nPTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+                            host->m_modem->m_pttInvert ? "yes" : "no", host->m_modem->m_rxInvert ? "yes" : "no", host->m_modem->m_txInvert ? "yes" : "no", host->m_modem->m_dcBlocker ? "yes" : "no");
+                    }
+                    reply += string_format("\r\nRX Level: %.1f%%, CW TX Level: %.1f%%, DMR TX Level: %.1f%%, P25 TX Level: %.1f%%, NXDN TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
+                        host->m_modem->m_rxLevel, host->m_modem->m_cwIdTXLevel, host->m_modem->m_dmrTXLevel, host->m_modem->m_p25TXLevel, host->m_modem->m_nxdnTXLevel, host->m_modem->m_txDCOffset, host->m_modem->m_rxDCOffset);
+                    if (!host->m_modem->isHotspot()) {
+                        reply += string_format("\r\nDMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+                            host->m_modem->m_dmrSymLevel3Adj, host->m_modem->m_dmrSymLevel1Adj, host->m_modem->m_p25SymLevel3Adj, host->m_modem->m_p25SymLevel1Adj);
+                        
+                        // are we on a protocol version 3 firmware?
+                        if (host->m_modem->getVersion() >= 3U) {
+                            reply += string_format("\r\nNXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
+                                host->m_modem->m_nxdnSymLevel3Adj, host->m_modem->m_nxdnSymLevel1Adj);
+                        }
+                    }
+                    if (host->m_modem->isHotspot()) {
+                        reply += string_format("\r\nDMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
+                            host->m_modem->m_dmrDiscBWAdj, host->m_modem->m_p25DiscBWAdj, host->m_modem->m_dmrPostBWAdj, host->m_modem->m_p25PostBWAdj);
+
+                        // are we on a protocol version 3 firmware?
+                        if (host->m_modem->getVersion() >= 3U) {
+                            reply += string_format("\r\nNXDN Disc. BW: %d, NXDN Post Demod BW: %d",
+                                host->m_modem->m_nxdnDiscBWAdj, host->m_modem->m_nxdnPostBWAdj);
+
+                            reply += string_format("\r\nAFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
+                                host->m_modem->m_afcEnable, host->m_modem->m_afcKI, host->m_modem->m_afcKP, host->m_modem->m_afcRange);
+                        }
+
+                        switch (host->m_modem->m_adfGainMode) {
+                            case ADF_GAIN_AUTO_LIN:
+                                reply += "\r\nADF7021 Gain Mode: Auto High Linearity";
+                                break;
+                            case ADF_GAIN_LOW:
+                                reply += "\r\nADF7021 Gain Mode: Low";
+                                break;
+                            case ADF_GAIN_HIGH:
+                                reply += "\r\nADF7021 Gain Mode: High";
+                                break;
+                            case ADF_GAIN_AUTO:
+                            default:
+                                reply += "\r\nADF7021 Gain Mode: Auto";
+                                break;
+                        }
+                    }
+                    reply += string_format("\r\nFDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", host->m_modem->m_fdmaPreamble, float(host->m_modem->m_fdmaPreamble) * 0.2222F, 
+                        host->m_modem->m_dmrRxDelay, float(host->m_modem->m_dmrRxDelay) * 0.0416666F, host->m_modem->m_p25CorrCount, float(host->m_modem->m_p25CorrCount) * 0.667F);
+                    reply += string_format("\r\nRx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", host->m_modem->m_rxFrequency, host->m_modem->m_txFrequency, host->m_modem->m_rxTuning, host->m_modem->m_txTuning);
+                    reply += string_format("\r\nRx Effective Freq: %uHz, Tx Effective Freq: %uHz", host->m_modem->m_rxFrequency + host->m_modem->m_rxTuning, host->m_modem->m_txFrequency + host->m_modem->m_txTuning);
+                }
+            }
+            else if (rcom == RCD_MODE && argCnt >= 1U) {
                 std::string mode = getArgString(args, 0U);
                 // Command is in the form of: "mode <mode>"
                 if (mode == RCD_MODE_OPT_IDLE) {
@@ -349,12 +416,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_KILL_CMD) {
+            else if (rcom == RCD_KILL) {
                 // Command is in the form of: "kill"
                 g_killed = true;
                 host->setState(HOST_STATE_QUIT);
             }
-            else if (rcom == RCD_RID_WLIST_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_RID_WLIST && argCnt >= 1U) {
                 // Command is in the form of: "rid-whitelist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
@@ -365,7 +432,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_RID_BLIST_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_RID_BLIST && argCnt >= 1U) {
                 // Command is in the form of: "rid-blacklist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
@@ -377,7 +444,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
 #if defined(ENABLE_DMR)
-            else if (rcom == RCD_DMR_BEACON_CMD) {
+            else if (rcom == RCD_DMR_BEACON) {
                 // Command is in the form of: "dmr-beacon"
                 if (dmr != NULL) {
                     if (host->m_dmrBeacons) {
@@ -395,7 +462,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-            else if (rcom == RCD_P25_CC_CMD) {
+            else if (rcom == RCD_P25_CC) {
                 // Command is in the form of: "p25-cc"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
@@ -430,7 +497,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
-            else if (rcom == RCD_DMR_RID_PAGE_CMD && argCnt >= 2U) {
+            else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-page <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -454,7 +521,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_DMR_RID_CHECK_CMD && argCnt >= 2U) {
+            else if (rcom == RCD_DMR_RID_CHECK && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-check <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -478,7 +545,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_DMR_RID_INHIBIT_CMD && argCnt >= 2U) {
+            else if (rcom == RCD_DMR_RID_INHIBIT && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-inhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -502,7 +569,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_DMR_RID_UNINHIBIT_CMD && argCnt >= 2U) {
+            else if (rcom == RCD_DMR_RID_UNINHIBIT && argCnt >= 2U) {
                 // Command is in the form of: "dmr-rid-uninhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
@@ -528,7 +595,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-            else if (rcom == RCD_P25_SET_MFID_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_SET_MFID && argCnt >= 1U) {
                 // Command is in the form of: "p25-set-mfid <Mfg. ID>
                 if (p25 != NULL) {
                     uint8_t mfId = getArgUInt8(args, 0U);
@@ -546,7 +613,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_PAGE_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-page <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -564,7 +631,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_CHECK_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-check <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -582,7 +649,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_INHIBIT_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-inhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -600,7 +667,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_UNINHIBIT_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-uninhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -618,7 +685,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_GAQ_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-gaq <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -636,7 +703,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RID_UREG_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
                 // Command is in the form of: "p25-rid-ureg <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
@@ -654,7 +721,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_PATCH_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25_PATCH && argCnt >= 1U) {
                 // Command is in the form of: "p25-patch <group 1> <group 2> <group 3>"
                 if (p25 != NULL) {
                     uint32_t group1 = getArgUInt32(args, 0U);
@@ -675,7 +742,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RELEASE_GRANTS_CMD) {
+            else if (rcom == RCD_P25_RELEASE_GRANTS) {
                 // Command is in the form of: "p25-rel-grnts"
                 if (p25 != NULL) {
                     p25->affiliations().releaseGrant(0, true);
@@ -685,7 +752,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_RELEASE_AFFS_CMD) {
+            else if (rcom == RCD_P25_RELEASE_AFFS) {
                 // Command is in the form of: "p25-rel-affs <group>"
                 if (p25 != NULL) {
                     uint32_t grp = getArgUInt32(args, 0U);
@@ -704,7 +771,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
-            else if (rcom == RCD_DMR_CC_DEDICATED_CMD) {
+            else if (rcom == RCD_DMR_CC_DEDICATED) {
                 // Command is in the form of: "dmr-cc-dedicated"
                 if (dmr != NULL) {
                     if (host->m_dmrTSCCData) {
@@ -728,7 +795,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_DMR_CC_BCAST_CMD) {
+            else if (rcom == RCD_DMR_CC_BCAST) {
                 // Command is in the form of: "dmr-cc-bcast"
                 if (dmr != NULL) {
                     host->m_dmrTSCCData = !host->m_dmrTSCCData;
@@ -742,7 +809,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-            else if (rcom == RCD_P25_CC_DEDICATED_CMD) {
+            else if (rcom == RCD_P25_CC_DEDICATED) {
                 // Command is in the form of: "p25-cc-dedicated"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
@@ -770,7 +837,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
-            else if (rcom == RCD_P25_CC_BCAST_CMD) {
+            else if (rcom == RCD_P25_CC_BCAST) {
                 // Command is in the form of: "p25-cc-bcast"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
@@ -877,7 +944,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_NXDN)
 #if defined(ENABLE_DMR)
-            else if (rcom == RCD_DMRD_MDM_INJ_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_DMRD_MDM_INJ && argCnt >= 1U) {
                 // Command is in the form of: "debug-dmrd-mdm-inj <slot> <bin file>
                 if (dmr != NULL) {
                     uint8_t slot = getArgUInt32(args, 0U);
@@ -948,7 +1015,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-            else if (rcom == RCD_P25D_MDM_INJ_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_P25D_MDM_INJ && argCnt >= 1U) {
                 // Command is in the form of: "debug-p25d-mdm-inj <bin file>
                 if (p25 != NULL) {
                     std::string argString = getArgString(args, 0U);
@@ -1010,7 +1077,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
-            else if (rcom == RCD_NXDD_MDM_INJ_CMD && argCnt >= 1U) {
+            else if (rcom == RCD_NXDD_MDM_INJ && argCnt >= 1U) {
                 // Command is in the form of: "debug-nxdd-mdm-inj <bin file>
                 if (p25 != NULL) {
                     std::string argString = getArgString(args, 0U);
@@ -1112,7 +1179,7 @@ void RemoteControl::writeResponse(std::string reply, sockaddr_storage address, u
     buffer[0U] = RCON_FRAME_START;
     buffer[1U] = START_OF_TEXT;
 
-    LogInfoEx(LOG_RCON, "RCON reply len = %u, blocks = %u to %s", reply.length(), (reply.length() / (RC_BUFFER_LENGTH - 3U)) + 1U, UDPSocket::address(address).c_str());
+    LogInfoEx(LOG_RCON, "reply len = %u, blocks = %u to %s", reply.length(), (reply.length() / (RC_BUFFER_LENGTH - 3U)) + 1U, UDPSocket::address(address).c_str());
 
     if (reply.length() > (RC_BUFFER_LENGTH - 3U)) {
         uint32_t len = reply.length(), offs = 0U;
@@ -1148,6 +1215,7 @@ void RemoteControl::writeResponse(std::string reply, sockaddr_storage address, u
 
         if (len > 0U) {
             std::string str = reply.substr(offs, std::string::npos);
+            str += " "; // pad
 
             ::memset(buffer + 2U, 0x00U, RC_BUFFER_LENGTH - 2U);
             ::memcpy(buffer + 2U, str.c_str(), str.length());
@@ -1182,6 +1250,9 @@ std::string RemoteControl::displayHelp()
 
     reply += "RCON Help\r\nGeneral Commands:\r\n";
     reply += "  version                 Display current version of host\r\n";
+    reply += "  help                    Displays RCON help\r\n";
+    reply += "  status                  Display current settings and operation mode\r\n";
+    reply += "\r\n";
     reply += "  mdm-mode <mode>         Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                Causes the host to quit\r\n";
     reply += "\r\n";
