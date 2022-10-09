@@ -1187,16 +1187,16 @@ void RemoteControl::writeResponse(std::string reply, sockaddr_storage address, u
             if (m_debug)
                 LogDebug(LOG_RCON, "RemoteControl::writeResponse() block = %u, block len = %u, offs = %u", i, len, offs);
 
-            std::string str = reply.substr(offs, RC_BUFFER_LENGTH - 2U);
+            std::string str = reply.substr(offs, RC_BUFFER_LENGTH - 3U);
 
             ::memset(buffer + 2U, 0x00U, str.length());
-            ::memcpy(buffer + 2U, str.c_str(), str.length());
+            ::memcpy(buffer + 2U, str.c_str(), str.length() + 1U);
 
             if (len - RC_BUFFER_LENGTH == 0U) {
-                buffer[str.length() + 1U] = END_OF_TEXT;
+                buffer[str.length() + 2U] = END_OF_TEXT;
             }
             else {
-                buffer[str.length() + 1U] = END_OF_BLOCK;
+                buffer[str.length() + 2U] = END_OF_BLOCK;
             }
 
             if (m_debug)
@@ -1215,26 +1215,25 @@ void RemoteControl::writeResponse(std::string reply, sockaddr_storage address, u
 
         if (len > 0U) {
             std::string str = reply.substr(offs, std::string::npos);
-            str += " "; // pad
 
-            ::memset(buffer + 2U, 0x00U, RC_BUFFER_LENGTH - 2U);
-            ::memcpy(buffer + 2U, str.c_str(), str.length());
+            ::memset(buffer + 2U, 0x00U, RC_BUFFER_LENGTH - 3U);
+            ::memcpy(buffer + 2U, str.c_str(), str.length() + 1U);
 
-            buffer[str.length() + 1U] = END_OF_TEXT;
+            buffer[str.length() + 2U] = END_OF_TEXT;
 
             if (m_debug)
-                Utils::dump(1U, "RCON (Multiblock) Sent", (uint8_t*)buffer, str.length() + 3U);
+                Utils::dump(1U, "RCON (Multiblock) Sent", (uint8_t*)buffer, str.length() + 4U);
 
-            m_socket.write(buffer, str.length() + 3U, address, addrLen);
+            m_socket.write(buffer, str.length() + 4U, address, addrLen);
         }
     }
     else {
-        ::memcpy(buffer + 2U, reply.c_str(), reply.length());
-        buffer[reply.length() + 1U] = END_OF_TEXT;
+        ::memcpy(buffer + 2U, reply.c_str(), reply.length() + 1U);
+        buffer[reply.length() + 2U] = END_OF_TEXT;
 
         if (m_debug) {
-            LogDebug(LOG_RCON, "RemoteControl::writeResponse() single block len = %u", reply.length() + 3U);
-            Utils::dump(1U, "RCON Sent", (uint8_t*)buffer, reply.length() + 3U);
+            LogDebug(LOG_RCON, "RemoteControl::writeResponse() single block len = %u", reply.length() + 4U);
+            Utils::dump(1U, "RCON Sent", (uint8_t*)buffer, reply.length() + 4U);
         }
 
         m_socket.write(buffer, reply.length() + 3U, address, addrLen);
