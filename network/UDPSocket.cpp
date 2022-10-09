@@ -169,7 +169,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
             return false;
         }
 
-        LogInfo("Opening UDP port on %u", port);
+        LogInfoEx(LOG_NET, "Opening UDP port on %u", port);
     }
 
     return true;
@@ -394,7 +394,7 @@ int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_stora
         paddr->sin_family = AF_INET;
         paddr->sin_port = htons(port);
         paddr->sin_addr.s_addr = htonl(INADDR_NONE);
-        LogError("Cannot find address for host %s", hostname.c_str());
+        LogError(LOG_NET, "Cannot find address for host %s", hostname.c_str());
         return err;
     }
 

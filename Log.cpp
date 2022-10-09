@@ -55,6 +55,9 @@
 #define EOL    "\r\n"
 #endif
 
+const uint32_t ACT_LOG_BUFFER_LEN = 501U;
+const uint32_t LOG_BUFFER_LEN = 4096U;
+
 // ---------------------------------------------------------------------------
 //  Global Variables
 // ---------------------------------------------------------------------------
@@ -194,7 +197,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     assert(mode != NULL);
     assert(msg != NULL);
 
-    char buffer[501U];
+    char buffer[ACT_LOG_BUFFER_LEN];
 #if defined(_WIN32) || defined(_WIN64)
     SYSTEMTIME st;
     ::GetSystemTime(&st);
@@ -212,7 +215,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     va_list vl;
     va_start(vl, msg);
 
-    ::vsnprintf(buffer + ::strlen(buffer), 500, msg, vl);
+    ::vsnprintf(buffer + ::strlen(buffer), ACT_LOG_BUFFER_LEN - 1U, msg, vl);
 
     va_end(vl);
 
@@ -279,7 +282,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != NULL);
 
-    char buffer[501U];
+    char buffer[LOG_BUFFER_LEN];
 #if defined(_WIN32) || defined(_WIN64)
     if (!m_disableTimeDisplay) {
         SYSTEMTIME st;
@@ -327,7 +330,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     va_list vl;
     va_start(vl, fmt);
 
-    ::vsnprintf(buffer + ::strlen(buffer), 500, fmt, vl);
+    ::vsnprintf(buffer + ::strlen(buffer), LOG_BUFFER_LEN - 1U, fmt, vl);
 
     va_end(vl);
 

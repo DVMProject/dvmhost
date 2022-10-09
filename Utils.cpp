@@ -40,22 +40,6 @@ const uint8_t BITS_TABLE[] = {
     B6(0), B6(1), B6(1), B6(2)
 };
 
-#if defined(ENABLE_DMR)
-#define DESCR_DMR        "DMR, "
-#else
-#define DESCR_DMR        ""
-#endif
-#if defined(ENABLE_P25)
-#define DESCR_P25        "P25, "
-#else
-#define DESCR_P25        ""
-#endif
-#if defined(ENABLE_NXDN)
-#define DESCR_NXDN       "NXDN, "
-#else
-#define DESCR_NXDN       ""
-#endif
-
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------

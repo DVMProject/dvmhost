@@ -317,11 +317,9 @@ int Host::run()
     m_tidLookup->read();
 
     // initialize networking
-    if (m_conf["network"]["enable"].as<bool>(false)) {
-        ret = createNetwork();
-        if (!ret)
-            return EXIT_FAILURE;
-    }
+    ret = createNetwork();
+    if (!ret)
+        return EXIT_FAILURE;
 
     // set CW parameters
     if (systemConf["cwId"]["enable"].as<bool>(false)) {
@@ -2236,7 +2234,13 @@ bool Host::createModem()
 /// </summary>
 bool Host::createNetwork()
 {
+    // dump out if both networking and RCON are disabled
+    if (m_conf["network"]["enable"].as<bool>(false) && m_conf["network"]["rconEnable"].as<bool>(false)) {
+        return true;
+    }
+
     yaml::Node networkConf = m_conf["network"];
+    bool netEnable = networkConf["enable"].as<bool>(false);
     std::string address = networkConf["address"].as<std::string>();
     uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
@@ -2266,59 +2270,65 @@ bool Host::createNetwork()
     IdenTable entry = m_idenTable->find(m_channelId);
 
     LogInfo("Network Parameters");
-    LogInfo("    Peer Id: %u", id);
-    LogInfo("    Address: %s", address.c_str());
-    LogInfo("    Port: %u", port);
-    if (local > 0U)
-        LogInfo("    Local: %u", local);
-    else
-        LogInfo("    Local: random");
+    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
+    if (netEnable) {
+        LogInfo("    Peer Id: %u", id);
+        LogInfo("    Address: %s", address.c_str());
+        LogInfo("    Port: %u", port);
+        if (local > 0U)
+            LogInfo("    Local: %u", local);
+        else
+            LogInfo("    Local: random");
+        LogInfo("    DMR Jitter: %ums", jitter);
+        LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
+        LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
+        LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
+        LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
+        LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
+        LogInfo("    Handle Channel Grants: %s", handleChGrants ? "yes" : "no");
+
+        if (debug) {
+            LogInfo("    Debug: yes");
+        }
+    }
     LogInfo("    RCON Enabled: %s", rconEnable ? "yes" : "no");
     if (rconEnable) {
         LogInfo("    RCON Address: %s", rconAddress.c_str());
         LogInfo("    RCON Port: %u", rconPort);
+
+        if (rconDebug) {
+            LogInfo("    RCON Debug: yes");
+        }
     }
 
-    if (rconDebug) {
-        LogInfo("    RCON Debug: yes");
+    // initialize networking
+    if (netEnable) {
+        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
+
+        m_network->setLookups(m_ridLookup, m_tidLookup);
+        m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
+            m_power, m_latitude, m_longitude, m_height, m_location);
+        if (rconEnable) {
+            m_network->setRconData(rconPassword, rconPort);
+        }
+
+        bool ret = m_network->open();
+        if (!ret) {
+            delete m_network;
+            m_network = NULL;
+            LogError(LOG_HOST, "failed to initialize traffic networking!");
+            return false;
+        }
+
+        m_network->enable(true);
+        ::LogSetNetwork(m_network);
     }
-    LogInfo("    DMR Jitter: %ums", jitter);
-    LogInfo("    Slot 1: %s", slot1 ? "enabled" : "disabled");
-    LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
-    LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
-    LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
-    LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
-    LogInfo("    Handle Channel Grants: %s", handleChGrants ? "yes" : "no");
-
-    if (debug) {
-        LogInfo("    Debug: yes");
-    }
-
-    m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
-
-    m_network->setLookups(m_ridLookup, m_tidLookup);
-    m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
-        m_power, m_latitude, m_longitude, m_height, m_location);
-    if (rconEnable) {
-        m_network->setRconData(rconPassword, rconPort);
-    }
-
-    bool ret = m_network->open();
-    if (!ret) {
-        delete m_network;
-        m_network = NULL;
-        LogError(LOG_HOST, "failed to initialize traffic networking!");
-        return false;
-    }
-
-    m_network->enable(true);
-    ::LogSetNetwork(m_network);
 
     // initialize network remote command
     if (rconEnable) {
         m_remoteControl = new RemoteControl(rconAddress, rconPort, rconPassword, rconDebug);
         m_remoteControl->setLookups(m_ridLookup, m_tidLookup);
-        ret = m_remoteControl->open();
+        bool ret = m_remoteControl->open();
         if (!ret) {
             delete m_remoteControl;
             m_remoteControl = NULL;

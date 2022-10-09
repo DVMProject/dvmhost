@@ -40,13 +40,13 @@
 //      This class implements the core remote command logic.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API CRemoteCommand
+class HOST_SW_API RemoteCommand
 {
 public:
-    /// <summary>Initializes a new instance of the CRemoteCommand class.</summary>
-    CRemoteCommand(const std::string& address, uint32_t port, const std::string& password);
-    /// <summary>Finalizes a instance of the CRemoteCommand class.</summary>
-    ~CRemoteCommand();
+    /// <summary>Initializes a new instance of the RemoteCommand class.</summary>
+    RemoteCommand(const std::string& address, uint32_t port, const std::string& password);
+    /// <summary>Finalizes a instance of the RemoteCommand class.</summary>
+    ~RemoteCommand();
 
     /// <summary>Sends remote control command to the specified modem.</summary>
     int send(const std::string& command);

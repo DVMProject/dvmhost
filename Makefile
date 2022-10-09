@@ -131,7 +131,9 @@ CMD_OBJECTS = \
         remote/RemoteCommand.cmd.o \
         edac/SHA256.cmd.o \
         network/UDPSocket.cmd.o \
-		Log.cmd.o
+		Thread.cmd.o \
+		Log.cmd.o \
+		Utils.cmd.o
 
 .PHONY: dvmhost dvmcmd all strip clean install dpkg tarball
 

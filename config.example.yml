@@ -10,11 +10,6 @@ network:
     id: 100000
     address: 127.0.0.1
     port: 62031
-    rconEnable: false
-    rconAddress: 127.0.0.1
-    rconPort: 9990
-    rconPassword: "PASSWORD"
-    rconDebug: false
     jitter: 360
     password: "PASSWORD"
     slot1: true
@@ -24,6 +19,11 @@ network:
     allowDiagnosticTransfer: true
     handleChGrants: false
     debug: false
+    rconEnable: false
+    rconAddress: 127.0.0.1
+    rconPort: 9990
+    rconPassword: "PASSWORD"
+    rconDebug: false
 protocols:
     dmr:
         enable: true

@@ -32,7 +32,9 @@
 #include "edac/SHA256.h"
 #include "network/UDPSocket.h"
 #include "RemoteCommand.h"
+#include "Thread.h"
 #include "Log.h"
+#include "Utils.h"
 
 using namespace network;
 
@@ -55,10 +57,14 @@ using namespace network;
 #define ERRNO_ADDR_LOOKUP 97
 #define ERRNO_FAILED_TO_SEND 96
 
-const uint32_t START_OF_TEXT = 0x02;
-const uint32_t REC_SEPARATOR = 0x1E;
+const uint8_t RCON_FRAME_START = 0xFEU;
+const uint8_t START_OF_TEXT = 0x02U;
+const uint8_t END_OF_TEXT = 0x03U;
+const uint8_t END_OF_BLOCK = 0x17U;
+const uint8_t REC_SEPARATOR = 0x1EU;
 
-const uint32_t RC_BUFFER_LENGTH = 140U;
+const uint32_t RC_BUFFER_LENGTH = 250U;
+const uint32_t RESPONSE_BUFFER_LEN = 4095U;
 
 // ---------------------------------------------------------------------------
 //	Macros
@@ -74,6 +80,7 @@ static std::string g_progExe = std::string(__EXE_NAME__);
 static std::string g_remoteAddress = std::string("127.0.0.1");
 static uint32_t g_remotePort = RCON_DEFAULT_PORT;
 static std::string g_remotePassword = std::string();
+static bool g_debug = false;
 
 // ---------------------------------------------------------------------------
 //	Global Functions
@@ -101,6 +108,7 @@ void usage(const char* message, const char* arg)
         "  -p       remote modem command port\n"
         "  -P       remote modem authentication password\n"
         "\n"
+        "  -d       enable debug\n"
         "  -v       show version information\n"
         "  -h       show this screen\n"
         "  --       stop handling options\n",
@@ -155,6 +163,10 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "remote auth password cannot be blank!");
 
             p += 2;
+        }
+        else if (IS("-d")) {
+            ++p;
+            g_debug = true;
         }
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
@@ -215,13 +227,13 @@ int main(int argc, char** argv)
     }
 
     // initialize system logging
-    bool ret = ::LogInitialise("", "", 0U, 1U);
+    bool ret = ::LogInitialise("", "", 0U, 1U, true);
     if (!ret) {
         ::fprintf(stderr, "unable to open the log file\n");
         return 1;
     }
 
-    CRemoteCommand* command = new CRemoteCommand(g_remoteAddress, g_remotePort, g_remotePassword);
+    RemoteCommand* command = new RemoteCommand(g_remoteAddress, g_remotePort, g_remotePassword);
     int retCode = command->send(cmd);
 
     ::LogFinalise();
@@ -233,12 +245,12 @@ int main(int argc, char** argv)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the CRemoteCommand class.
+/// Initializes a new instance of the RemoteCommand class.
 /// </summary>
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
-CRemoteCommand::CRemoteCommand(const std::string& address, uint32_t port, const std::string& password) :
+RemoteCommand::RemoteCommand(const std::string& address, uint32_t port, const std::string& password) :
     m_address(address),
     m_port(port),
     m_password(password)
@@ -248,9 +260,9 @@ CRemoteCommand::CRemoteCommand(const std::string& address, uint32_t port, const 
 }
 
 /// <summary>
-/// Finalizes a instance of the CRemoteCommand class.
+/// Finalizes a instance of the RemoteCommand class.
 /// </summary>
-CRemoteCommand::~CRemoteCommand()
+RemoteCommand::~RemoteCommand()
 {
     /* stub */
 }
@@ -260,7 +272,7 @@ CRemoteCommand::~CRemoteCommand()
 /// </summary>
 /// <param name="command">Command string to send to remote modem.</param>
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
-int CRemoteCommand::send(const std::string& command)
+int RemoteCommand::send(const std::string& command)
 {
     UDPSocket socket(0U);
 
@@ -279,10 +291,11 @@ int CRemoteCommand::send(const std::string& command)
         return ERRNO_ADDR_LOOKUP;
     }
 
-    ::LogInfoEx(LOG_HOST, "%s: sending command \"%s\" to %s:%u\r\n", g_progExe.c_str(), command.c_str(),
+    ::LogInfoEx(LOG_HOST, "%s: sending command \"%s\" to %s:%u", g_progExe.c_str(), command.c_str(),
         m_address.c_str(), m_port);
 
-    buffer[0U] = START_OF_TEXT;
+    buffer[0U] = RCON_FRAME_START;
+    buffer[1U] = START_OF_TEXT;
 
     if (!m_password.empty()) {
         size_t size = m_password.size();
@@ -297,18 +310,69 @@ int CRemoteCommand::send(const std::string& command)
         edac::SHA256 sha256;
         sha256.buffer(in, (uint32_t)(size), out);
 
-        ::memcpy(buffer + 1U, out, 32U);
+        ::memcpy(buffer + 2U, out, 32U);
     }
 
-    buffer[33U] = REC_SEPARATOR;
-    ::memcpy(buffer + 34U, command.c_str(), command.size());
+    buffer[34U] = REC_SEPARATOR;
+    ::memcpy(buffer + 35U, command.c_str(), command.size());
 
-    ret = socket.write((uint8_t *)buffer, 34U + command.size(), addr, addrLen);
+    buffer[35U + command.size()] = END_OF_TEXT;
+
+    if (g_debug)
+        Utils::dump(1U, "RCON Sent", (uint8_t*)buffer, 36U + command.size());
+
+    ret = socket.write((uint8_t *)buffer, 36U + command.size(), addr, addrLen);
     if (!ret) {
         socket.close();
-        ::LogError(LOG_HOST, "Failed to send command: \"%s\"\r\n", command.c_str());
+        ::LogError(LOG_HOST, "Failed to send command: \"%s\"", command.c_str());
         return ERRNO_FAILED_TO_SEND;
     }
+
+    Thread::sleep(100);
+
+    uint8_t response[RESPONSE_BUFFER_LEN];
+    ::memset(response, 0x00U, RESPONSE_BUFFER_LEN);
+
+    int len = 1;
+    uint32_t offs = 0U;
+    do
+    {
+        ::memset(buffer, 0x00U, RC_BUFFER_LENGTH);
+        int len = socket.read((uint8_t *)buffer, RC_BUFFER_LENGTH, addr, addrLen);
+        if (len <= 1)
+            break;
+
+        if (offs + len > RESPONSE_BUFFER_LEN)
+            break;
+
+        if (g_debug)
+            ::LogDebug(LOG_RCON, "RemoteCommand::send() block len = %u, offs = %u", len - 3, offs);
+
+        buffer[len] = '\0';
+
+        if (g_debug)
+            Utils::dump(1U, "RCON Received", (uint8_t*)buffer, len);
+
+        // make sure this is an RCON response
+        if (buffer[0U] != RCON_FRAME_START) {
+            ::LogError(LOG_HOST, "Invalid response from host %s:%u", m_address.c_str(), m_port);
+            socket.close();
+            return EXIT_FAILURE;
+        }
+
+        if (buffer[1U] != START_OF_TEXT) {
+            ::LogError(LOG_HOST, "Invalid response from host %s:%u", m_address.c_str(), m_port);
+            socket.close();
+            return EXIT_FAILURE;
+        }
+
+        ::memcpy(response + offs, buffer + 2U, len - 3U);
+        offs += len - 3U;
+
+        Thread::sleep(100);
+    } while (buffer[len - 1U] != END_OF_TEXT);
+
+    ::LogInfoEx(LOG_HOST, ">> %s", response);
 
     socket.close();
     return EXIT_SUCCESS;

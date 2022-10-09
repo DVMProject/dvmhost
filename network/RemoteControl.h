@@ -83,6 +83,12 @@ private:
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupIdLookup* m_tidLookup;
 
+    /// <summary>Helper to send response to client.</summary>
+    void writeResponse(std::string reply, sockaddr_storage address, uint32_t addrLen);
+
+    /// <summary>Helper to print the remote control help.</summary>
+    std::string displayHelp();
+
     /// <summary></summary>
     std::string getArgString(std::vector<std::string> args, uint32_t n) const;
 
