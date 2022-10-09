@@ -203,6 +203,14 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%", 
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
+        // release trunked grant (if necessary)
+        Slot *m_tscc = m_dmr->getTSCCSlot();
+        if (m_tscc != NULL) {
+            if (m_tscc->m_enableTSCC && m_rfLC != NULL) {
+                m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+            }
+        }
+
         if (m_rfTimeout) {
             writeEndRF();
             return false;

@@ -90,6 +90,9 @@ namespace dmr
         /// <summary>Updates the processor.</summary>
         void clock();
 
+        /// <summary>Helper to return the slot carrying the TSCC.</summary>
+        Slot* getTSCCSlot() const;
+
         /// <summary>Helper to write a DMR extended function packet on the RF interface.</summary>
         void writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uint32_t dstId);
         /// <summary>Helper to write a DMR call alert packet on the RF interface.</summary>
@@ -111,7 +114,6 @@ namespace dmr
 
     private:
         friend class Slot;
-        friend class packet::ControlSignaling;
 
         uint32_t m_colorCode;
 
@@ -132,9 +134,6 @@ namespace dmr
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
-
-        /// <summary>Helper to return the slot carrying the TSCC.</summary>
-        Slot* getTSCCSlot() const;
     };
 } // namespace dmr
 

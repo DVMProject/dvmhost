@@ -116,6 +116,14 @@ bool Data::process(uint8_t* data, uint32_t len)
             LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getDstId());
         }
 
+        // release trunked grant (if necessary)
+        Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+        if (m_tscc != NULL) {
+            if (m_tscc->m_enableTSCC) {
+                m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
+            }
+        }
+
         if (m_slot->m_rssi != 0U) {
             ::ActivityLog("DMR", true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits),

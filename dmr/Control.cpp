@@ -324,6 +324,25 @@ void Control::clock()
 }
 
 /// <summary>
+/// Helper to return the slot carrying the TSCC.
+/// </summary>
+/// <returns>Pointer to the TSCC slot instance.</returns>
+Slot* Control::getTSCCSlot() const
+{
+    switch (m_tsccSlotNo) {
+    case 1U:
+        return m_slot1;
+        break;
+    case 2U:
+        return m_slot2;
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        return NULL;
+    }
+}
+
+/// <summary>
 /// Helper to write a DMR extended function packet on the RF interface.
 /// </summary>
 /// <param name="slotNo">DMR slot number.</param>
@@ -398,27 +417,4 @@ void Control::setCSBKVerbose(bool verbose)
     m_dumpCSBKData = verbose;
     m_slot1->setCSBKVerbose(verbose);
     m_slot2->setCSBKVerbose(verbose);
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// Helper to return the slot carrying the TSCC.
-/// </summary>
-/// <returns>Pointer to the TSCC slot instance.</returns>
-Slot* Control::getTSCCSlot() const
-{
-    switch (m_tsccSlotNo) {
-    case 1U:
-        return m_slot1;
-        break;
-    case 2U:
-        return m_slot2;
-        break;
-    default:
-        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
-        return NULL;
-    }
 }
