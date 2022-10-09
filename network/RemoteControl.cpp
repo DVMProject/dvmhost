@@ -72,6 +72,7 @@ using namespace modem;
 #define RCD_MODE_OPT_FNXDN              "nxdn"
 
 #define RCD_KILL                        "mdm-kill"
+#define RCD_FORCE_KILL                  "mdm-force-kill"
 
 #define RCD_RID_WLIST                   "rid-whitelist"
 #define RCD_RID_BLIST                   "rid-blacklist"
@@ -355,7 +356,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_MODE && argCnt >= 1U) {
                 std::string mode = getArgString(args, 0U);
-                // Command is in the form of: "mode <mode>"
                 if (mode == RCD_MODE_OPT_IDLE) {
                     host->m_fixedMode = false;
                     host->setState(STATE_IDLE);
@@ -417,12 +417,13 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_KILL) {
-                // Command is in the form of: "kill"
                 g_killed = true;
-                host->setState(HOST_STATE_QUIT);
+            }
+            else if (rcom == RCD_FORCE_KILL) {
+                g_killed = true;
+                host->setState(HOST_STATE_QUIT); // ensures immediate cessation of service
             }
             else if (rcom == RCD_RID_WLIST && argCnt >= 1U) {
-                // Command is in the form of: "rid-whitelist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
                     m_ridLookup->toggleEntry(srcId, true);
@@ -433,7 +434,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_RID_BLIST && argCnt >= 1U) {
-                // Command is in the form of: "rid-blacklist <RID>"
                 uint32_t srcId = getArgUInt32(args, 0U);
                 if (srcId != 0U) {
                     m_ridLookup->toggleEntry(srcId, false);
@@ -445,7 +445,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_BEACON) {
-                // Command is in the form of: "dmr-beacon"
                 if (dmr != NULL) {
                     if (host->m_dmrBeacons) {
                         g_fireDMRBeacon = true;
@@ -463,7 +462,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC) {
-                // Command is in the form of: "p25-cc"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
                         g_fireP25Control = true;
@@ -479,7 +477,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_CC_FALLBACK) {
-                // Command is in the form of: "p25-cc-fallback 0/1"
                 uint8_t fallback = getArgUInt8(args, 0U);
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
@@ -498,7 +495,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
-                // Command is in the form of: "dmr-rid-page <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
@@ -522,7 +518,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_CHECK && argCnt >= 2U) {
-                // Command is in the form of: "dmr-rid-check <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
@@ -546,7 +541,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_INHIBIT && argCnt >= 2U) {
-                // Command is in the form of: "dmr-rid-inhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
@@ -570,7 +564,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_UNINHIBIT && argCnt >= 2U) {
-                // Command is in the form of: "dmr-rid-uninhibit <slot> <RID>"
                 if (dmr != NULL) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
@@ -596,7 +589,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_SET_MFID && argCnt >= 1U) {
-                // Command is in the form of: "p25-set-mfid <Mfg. ID>
                 if (p25 != NULL) {
                     uint8_t mfId = getArgUInt8(args, 0U);
                     if (mfId != 0U) {
@@ -614,7 +606,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-page <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -632,7 +623,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-check <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -650,7 +640,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-inhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -668,7 +657,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-uninhibit <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -686,7 +674,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-gaq <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -704,7 +691,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
-                // Command is in the form of: "p25-rid-ureg <RID>"
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
@@ -722,7 +708,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_PATCH && argCnt >= 1U) {
-                // Command is in the form of: "p25-patch <group 1> <group 2> <group 3>"
                 if (p25 != NULL) {
                     uint32_t group1 = getArgUInt32(args, 0U);
                     uint32_t group2 = getArgUInt32(args, 1U);
@@ -743,7 +728,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RELEASE_GRANTS) {
-                // Command is in the form of: "p25-rel-grnts"
                 if (p25 != NULL) {
                     p25->affiliations().releaseGrant(0, true);
                 }
@@ -753,7 +737,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RELEASE_AFFS) {
-                // Command is in the form of: "p25-rel-affs <group>"
                 if (p25 != NULL) {
                     uint32_t grp = getArgUInt32(args, 0U);
 
@@ -772,7 +755,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_CC_DEDICATED) {
-                // Command is in the form of: "dmr-cc-dedicated"
                 if (dmr != NULL) {
                     if (host->m_dmrTSCCData) {
                         if (p25 != NULL) {
@@ -796,7 +778,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_CC_BCAST) {
-                // Command is in the form of: "dmr-cc-bcast"
                 if (dmr != NULL) {
                     host->m_dmrTSCCData = !host->m_dmrTSCCData;
                     reply = string_format("DMR CC broadcast is %s", host->m_dmrTSCCData ? "enabled" : "disabled");
@@ -810,7 +791,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC_DEDICATED) {
-                // Command is in the form of: "p25-cc-dedicated"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
                         if (dmr != NULL) {
@@ -838,7 +818,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_CC_BCAST) {
-                // Command is in the form of: "p25-cc-bcast"
                 if (p25 != NULL) {
                     if (host->m_p25CCData) {
                         host->m_p25CtrlBroadcast = !host->m_p25CtrlBroadcast;
@@ -868,7 +847,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_DEBUG) {
-                // Command is in the form of: "dmr-debug <debug 0/1> <trace 0/1>"
                 if (argCnt < 2U) {
                     LogWarning(LOG_RCON, BAD_CMD_STR);
                     reply = BAD_CMD_STR;
@@ -888,7 +866,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_DEBUG) {
-                // Command is in the form of: "p25-debug <debug 0/1> <trace 0/1>"
                 if (argCnt < 2U) {
                     LogWarning(LOG_RCON, BAD_CMD_STR);
                     reply = BAD_CMD_STR;
@@ -906,7 +883,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_DUMP_TSBK) {
-                // Command is in the form of: "p25-dump-tsbk 0/1"
                 if (argCnt < 1U) {
                     LogWarning(LOG_RCON, BAD_CMD_STR);
                     reply = BAD_CMD_STR;
@@ -925,7 +901,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDN_DEBUG) {
-                // Command is in the form of: "nxdn-debug <debug 0/1> <trace 0/1>"
                 if (argCnt < 2U) {
                     LogWarning(LOG_RCON, BAD_CMD_STR);
                     reply = BAD_CMD_STR;
@@ -945,7 +920,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_NXDN)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMRD_MDM_INJ && argCnt >= 1U) {
-                // Command is in the form of: "debug-dmrd-mdm-inj <slot> <bin file>
                 if (dmr != NULL) {
                     uint8_t slot = getArgUInt32(args, 0U);
                     std::string argString = getArgString(args, 1U);
@@ -1016,7 +990,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25D_MDM_INJ && argCnt >= 1U) {
-                // Command is in the form of: "debug-p25d-mdm-inj <bin file>
                 if (p25 != NULL) {
                     std::string argString = getArgString(args, 0U);
                     const char* fileName = argString.c_str();
@@ -1078,7 +1051,6 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDD_MDM_INJ && argCnt >= 1U) {
-                // Command is in the form of: "debug-nxdd-mdm-inj <bin file>
                 if (p25 != NULL) {
                     std::string argString = getArgString(args, 0U);
                     const char* fileName = argString.c_str();
@@ -1254,6 +1226,7 @@ std::string RemoteControl::displayHelp()
     reply += "\r\n";
     reply += "  mdm-mode <mode>         Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                Causes the host to quit\r\n";
+    reply += "  mdm-force-kill          Causes the host to quit immediately\r\n";
     reply += "\r\n";
     reply += "  rid-whitelist <rid>     Whitelists the specified RID in the host ACL tables\r\n";
     reply += "  rid-blacklist <rid>     Blacklists the specified RID in the host ACL tables\r\n";
