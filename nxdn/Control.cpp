@@ -605,6 +605,15 @@ void Control::setDebugVerbose(bool debug, bool verbose)
     m_verbose = m_voice->m_verbose = m_data->m_verbose;
 }
 
+/// <summary>
+/// Helper to change the RCCH verbose state.
+/// </summary>
+/// <param name="verbose">Flag indicating whether RCCH dumping is enabled.</param>
+void Control::setRCCHVerbose(bool verbose)
+{
+    m_dumpRCCH = verbose;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

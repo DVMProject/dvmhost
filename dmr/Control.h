@@ -98,8 +98,16 @@ namespace dmr
         /// <summary>Flag indicating whether the processor or is busy or not.</summary>
         bool isBusy() const;
 
+        /// <summary>Flag indicating whether DMR debug is enabled or not.</summary>
+        bool getDebug() const { return m_debug; };
+        /// <summary>Flag indicating whether DMR verbosity is enabled or not.</summary>
+        bool getVerbose() const { return m_verbose; };
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
+        /// <summary>Flag indicating whether DMR CSBK verbosity is enabled or not.</summary>
+        bool getCSBKVerbose() const { return m_dumpCSBKData; };
+        /// <summary>Helper to change the CSBK verbose state.</summary>
+        void setCSBKVerbose(bool verbose);
 
     private:
         friend class Slot;

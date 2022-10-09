@@ -103,6 +103,8 @@ namespace p25
             /// <summary>Helper to change the conventional fallback state.</summary>
             void setConvFallback(bool fallback);
 
+            /// <summary>Flag indicating whether P25 TSBK verbosity is enabled or not.</summary>
+            bool getTSBKVerbose() const { return m_dumpTSBK; };
             /// <summary>Helper to change the TSBK verbose state.</summary>
             void setTSBKVerbose(bool verbose);
 

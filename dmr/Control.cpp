@@ -389,6 +389,17 @@ void Control::setDebugVerbose(bool debug, bool verbose)
     m_slot2->setDebugVerbose(debug, verbose);
 }
 
+/// <summary>
+/// Helper to change the CSBK verbose state.
+/// </summary>
+/// <param name="verbose">Flag indicating whether CSBK dumping is enabled.</param>
+void Control::setCSBKVerbose(bool verbose)
+{
+    m_dumpCSBKData = verbose;
+    m_slot1->setCSBKVerbose(verbose);
+    m_slot2->setCSBKVerbose(verbose);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

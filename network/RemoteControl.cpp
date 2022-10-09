@@ -106,9 +106,11 @@ using namespace modem;
 #define RCD_P25_CC_BCAST                "p25-cc-bcast"
 
 #define RCD_DMR_DEBUG                   "dmr-debug"
+#define RCD_DMR_DUMP_CSBK               "dmr-dump-csbk"
 #define RCD_P25_DEBUG                   "p25-debug"
 #define RCD_P25_DUMP_TSBK               "p25-dump-tsbk"
 #define RCD_NXDN_DEBUG                  "nxdn-debug"
+#define RCD_NXDN_DUMP_RCCH              "nxdn-dump-rcch"
 
 #define RCD_DMRD_MDM_INJ                "debug-dmrd-mdm-inj"
 #define RCD_P25D_MDM_INJ                "debug-p25d-mdm-inj"
@@ -299,7 +301,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     std::string modemPort = uartConfig["port"].as<std::string>();
                     uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
 
-                    reply += string_format("Host State: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
+                    reply += string_format("Host State: %u, DMR: %u, P25: %u, NXDN: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state,
+                        dmr != NULL, p25 != NULL, nxdn != NULL, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
                 }
 
                 {
@@ -848,8 +851,15 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_DEBUG) {
                 if (argCnt < 2U) {
-                    LogWarning(LOG_RCON, BAD_CMD_STR);
-                    reply = BAD_CMD_STR;
+                    if (dmr != NULL) {
+                        bool debug = dmr->getDebug();
+                        bool verbose = dmr->getVerbose();
+                        reply = string_format("dmr->debug = %u, dmr->verbose = %u", debug, verbose);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
                 } 
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
@@ -863,12 +873,41 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
             }
+            else if (rcom == RCD_DMR_DUMP_CSBK) {
+                if (argCnt < 1U) {
+                    if (dmr != NULL) {
+                        bool csbkDump = dmr->getCSBKVerbose();
+                        reply = string_format("dmr->dumpCsbkData = %u", csbkDump);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+                } 
+                else {
+                    uint8_t verbose = getArgUInt8(args, 0U);
+                    if (dmr != NULL) {
+                        dmr->setCSBKVerbose((verbose == 1U) ? true : false);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+                }
+            }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_DEBUG) {
                 if (argCnt < 2U) {
-                    LogWarning(LOG_RCON, BAD_CMD_STR);
-                    reply = BAD_CMD_STR;
+                    if (p25 != NULL) {
+                        bool debug = p25->getDebug();
+                        bool verbose = p25->getVerbose();
+                        reply = string_format("p25->debug = %u, p25->verbose = %u", debug, verbose);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
                 } 
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
@@ -884,8 +923,14 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_P25_DUMP_TSBK) {
                 if (argCnt < 1U) {
-                    LogWarning(LOG_RCON, BAD_CMD_STR);
-                    reply = BAD_CMD_STR;
+                    if (p25 != NULL) {
+                        bool tsbkDump = p25->trunk()->getTSBKVerbose();
+                        reply = string_format("p25->dumpTsbkData = %u", tsbkDump);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
                 } 
                 else {
                     uint8_t verbose = getArgUInt8(args, 0U);
@@ -902,14 +947,43 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDN_DEBUG) {
                 if (argCnt < 2U) {
-                    LogWarning(LOG_RCON, BAD_CMD_STR);
-                    reply = BAD_CMD_STR;
+                    if (nxdn != NULL) {
+                        bool debug = nxdn->getDebug();
+                        bool verbose = nxdn->getVerbose();
+                        reply = string_format("nxdn->debug = %u, nxdn->verbose = %u", debug, verbose);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
                 } 
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
                     uint8_t verbose = getArgUInt8(args, 1U);
                     if (nxdn != NULL) {
                         nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+                }
+            }
+            else if (rcom == RCD_NXDN_DUMP_RCCH) {
+                if (argCnt < 1U) {
+                    if (nxdn != NULL) {
+                        bool rcchDump = nxdn->getRCCHVerbose();
+                        reply = string_format("nxdn->dumpRcchData = %u", rcchDump);
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+                } 
+                else {
+                    uint8_t verbose = getArgUInt8(args, 0U);
+                    if (nxdn != NULL) {
+                        nxdn->setRCCHVerbose((verbose == 1U) ? true : false);
                     }
                     else {
                         reply = CMD_FAILED_STR "NXDN mode is not enabled!";
@@ -1231,13 +1305,27 @@ std::string RemoteControl::displayHelp()
     reply += "  rid-whitelist <rid>     Whitelists the specified RID in the host ACL tables\r\n";
     reply += "  rid-blacklist <rid>     Blacklists the specified RID in the host ACL tables\r\n";
     reply += "\r\n";
+#if defined(ENABLE_DMR)
     reply += "  dmr-beacon              Transmits a DMR beacon burst\r\n";
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     reply += "  p25-cc                  Transmits a non-continous P25 CC burst\r\n";
     reply += "  p25-cc-fallback <0/1>   Sets the P25 CC into conventional fallback mode\r\n";
+#endif // defined(ENABLE_P25)
     reply += "\r\n";
+#if defined(ENABLE_DMR)
     reply += "  dmr-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  dmr-dump-csbk <0/1>\r\n";
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     reply += "  p25-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  p25-dump-tsbk <0/1>\r\n";
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
     reply += "  nxdn-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  nxdn-dump-rcch <0/1>\r\n";
+#endif // defined(ENABLE_NXDN)
+#if defined(ENABLE_DMR)
     reply += "\r\nDMR Commands:\r\n";
     reply += "  dmr-rid-page <rid>      Pages/Calls the specified RID\r\n";
     reply += "  dmr-rid-check <rid>     Radio Checks the specified RID\r\n";
@@ -1246,6 +1334,8 @@ std::string RemoteControl::displayHelp()
     reply += "\r\n";
     reply += "  dmr-cc-dedicated <0/1>  Enables or disables dedicated control channel\r\n";
     reply += "  dmr-cc-bcast <0/1>      Enables or disables broadcast of the control channel\r\n";
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
     reply += "\r\nP25 Commands:\r\n";
     reply += "  p25-set-mfid <mfid>     Sets the P25 MFId for the next sent P25 command\r\n";
     reply += "  p25-rid-page <rid>      Pages/Calls the specified RID\r\n";
@@ -1260,6 +1350,7 @@ std::string RemoteControl::displayHelp()
     reply += "\r\n";
     reply += "  p25-cc-dedicated <0/1>  Enables or disables dedicated control channel\r\n";
     reply += "  p25-cc-bcast <0/1>      Enables or disables broadcast of the control channel\r\n";
+#endif // defined(ENABLE_P25)
     return reply;
 }
 

@@ -541,6 +541,15 @@ void Slot::setDebugVerbose(bool debug, bool verbose)
 }
 
 /// <summary>
+/// Helper to change the CSBK verbose state.
+/// </summary>
+/// <param name="verbose">Flag indicating whether CSBK dumping is enabled.</param>
+void Slot::setCSBKVerbose(bool verbose)
+{
+    m_dumpCSBKData = verbose;
+}
+
+/// <summary>
 /// Helper to enable and configure TSCC support for this slot.
 /// </summary>
 /// <param name="enable">Flag indicating whether DMR TSCC is enabled on this slot.</param>
