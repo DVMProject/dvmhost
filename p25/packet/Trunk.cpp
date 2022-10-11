@@ -731,6 +731,21 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                         ::ActivityLog("P25", false, "message update from %u", srcId);
                         break;
+                    case TSBK_ISP_RAD_MON_REQ:
+                        // validate the source RID
+                        VALID_SRCID("TSBK_ISP_RAD_MON_REQ (Radio Monitor)" , TSBK_ISP_RAD_MON_REQ , srcId);
+
+                        // validate the target RID
+                        VALID_DSTID("TSBK_ISP_RAD_MON_REQ (Radio monitor)" , TSBK_ISP_RAD_MON_REQ , dstId);
+
+                        if ( m_verbose ) {
+                            LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u" , srcId , dstId);
+                        }
+
+                        ::ActivityLog("P25" , true , "radio monitor request from %u to %u" , srcId , dstId);
+
+                        writeRF_TSDU_Radio_Mon(srcId , dstId , txMult);
+                        break;
                     case TSBK_IOSP_CALL_ALRT:
                         // validate the source RID
                         VALID_SRCID_NET("TSBK_IOSP_CALL_ALRT (Call Alert)", srcId);
@@ -776,10 +791,8 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     case TSBK_ISP_EMERG_ALRM_REQ:
                         // non-emergency mode is a TSBK_OSP_DENY_RSP
                         if (!m_netTSBK.getEmergency()) {
-                            if (m_verbose) {
-                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_DENY_RSP (Deny Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-                                    m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
-                            }
+                            // ignore a network deny command
+                            return true; // don't allow this to write to the air
                         } else {
                             if (!m_p25->m_emergDisabled) {
                                 if (m_verbose) {
@@ -802,26 +815,8 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // ignore a network location registration command
                         return true; // don't allow this to write to the air
                     case TSBK_OSP_QUE_RSP:
-                        if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_QUE_RSP (Queue Response), AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
-                                m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
-                        }
-                        break;
-                    case TSBK_ISP_RAD_MON_REQ:
-                        // validate the source RID
-                        VALID_SRCID("TSBK_ISP_RAD_MON_REQ (Radio Monitor)" , TSBK_ISP_RAD_MON_REQ , srcId);
-
-                        // validate the target RID
-                        VALID_DSTID("TSBK_ISP_RAD_MON_REQ (Radio monitor)" , TSBK_ISP_RAD_MON_REQ , dstId);
-
-                        if ( m_verbose ) {
-                            LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u" , srcId , dstId);
-                        }
-
-                        ::ActivityLog("P25" , true , "radio monitor request from %u to %u" , srcId , dstId);
-
-                        writeRF_TSDU_Radio_Mon(srcId , dstId , txMult);
-                        break;
+                        // ignore a network queue command
+                        return true; // don't allow this to write to the air
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", m_netTSBK.getMFId(), m_netTSBK.getLCO());
                         return false;
