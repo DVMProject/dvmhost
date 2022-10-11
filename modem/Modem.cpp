@@ -443,7 +443,7 @@ void Modem::setRXLevel(float rxLevel)
     Utils::dump(1U, "Modem::setRXLevel(), Response", m_buffer, m_length);
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK to the SET_RXLEVEL command from the modem");
+        LogError(LOG_MODEM, "NAK, SET_RXLEVEL, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
     }
 }
 
@@ -1999,7 +1999,31 @@ bool Modem::writeConfig()
     Utils::dump(1U, "Modem::writeConfig(), Response", m_buffer, m_length);
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK to the SET_CONFIG command from the modem, reason = %u", resp);
+        LogError(LOG_MODEM, "NAK, SET_CONFIG, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+
+        switch (m_buffer[4U]) {
+        case RSN_INVALID_FDMA_PREAMBLE:
+            LogError(LOG_MODEM, "Invalid FDMA preamble");
+            break;
+        case RSN_INVALID_DMR_CC:
+            LogError(LOG_MODEM, "Invalid DMR Color Code");
+            break;
+        case RSN_INVALID_DMR_RX_DELAY:
+            LogError(LOG_MODEM, "Invalid DMR Rx Delay");
+            break;
+        case RSN_INVALID_P25_CORR_COUNT:
+            LogError(LOG_MODEM, "Invalid P25 correlation count");
+            break;
+        case RSN_HS_NO_DUAL_MODE:
+            LogError(LOG_MODEM, "Cannot multi-mode, DMR, P25 and NXDN when using hotspot!");
+            break;
+        case RSN_INVALID_REQUEST:
+            LogError(LOG_MODEM, "Invalid SET_CONFIG request");
+            break;
+        default:
+            break;
+        }
+
         return false;
     }
 
@@ -2057,7 +2081,16 @@ bool Modem::writeSymbolAdjust()
     } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
 
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK to the SET_SYMLVLADJ command from the modem");
+        LogError(LOG_MODEM, "NAK, SET_SYMLVLADJ, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+
+        switch (m_buffer[4U]) {
+        case RSN_INVALID_REQUEST:
+            LogError(LOG_MODEM, "Invalid SET_SYMLVLADJ request");
+            break;
+        default:
+            break;
+        }
+
         return false;
     }
 
@@ -2130,7 +2163,7 @@ bool Modem::writeRFParams()
         if (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "The DVM is not responding to the SET_RFPARAMS command");
+                LogError(LOG_MODEM, "No response, SET_RFPARAMS command");
                 return false;
             }
         }
@@ -2139,7 +2172,16 @@ bool Modem::writeRFParams()
     // CUtils::dump(1U, "Response", m_buffer, m_length);
 
     if (resp == RTM_OK && m_buffer[2U] == RSN_NAK) {
-        LogError(LOG_MODEM, "Received a NAK to the SET_RFPARAMS command from the modem");
+        LogError(LOG_MODEM, "NAK, SET_RFPARAMS, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+
+        switch (m_buffer[4U]) {
+        case RSN_INVALID_REQUEST:
+            LogError(LOG_MODEM, "Invalid SET_RFPARAMS request");
+            break;
+        default:
+            break;
+        }
+
         return false;
     }
 
