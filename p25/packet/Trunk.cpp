@@ -425,18 +425,22 @@ bool Trunk::process(uint8_t* data, uint32_t len, bool preDecoded)
                 writeRF_TSDU_SBF(true);
                 break;
             case TSBK_ISP_EMERG_ALRM_REQ:
-                if (m_rfTSBK.getEmergency()) {
-                    if (m_verbose) {
-                        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
-                            srcId, dstId);
-                    }
+                if (!m_p25->m_emergDisabled) {
+                    if (m_rfTSBK.getEmergency()) {
+                        if (m_verbose) {
+                            LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                                srcId, dstId);
+                        }
 
-                    ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
+                        ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
 
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
-                    if (m_localEmergAlarm) {
-                        writeRF_TSDU_Emerg_Alrm(srcId, dstId);
+                        writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
+                        if (m_localEmergAlarm) {
+                            writeRF_TSDU_Emerg_Alrm(srcId, dstId);
+                        }
                     }
+                } else {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request) denial, emergency while emergency disabled, srcId = %u", srcId);
                 }
                 break;
             case TSBK_IOSP_GRP_AFF:
@@ -777,9 +781,14 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                                     m_netTSBK.getAIV(), m_netTSBK.getResponse(), m_netTSBK.getSrcId(), m_netTSBK.getDstId());
                             }
                         } else {
-                            if (m_verbose) {
-                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
-                                    srcId, dstId);
+                            if (!m_p25->m_emergDisabled) {
+                                if (m_verbose) {
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                                        srcId, dstId);
+                                }
+                            } else {
+                                LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request) denial, emergency while emergency disabled, srcId = %u", srcId);
+                                return true; // don't allow this to write to the air
                             }
                         }
                         break;
@@ -1079,6 +1088,10 @@ void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 /// <param name="dstId"></param>
 void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 {
+    if (m_p25->m_emergDisabled) {
+        return;
+    }
+
     uint8_t lco = m_rfTSBK.getLCO();
     uint32_t _srcId = m_rfTSBK.getSrcId();
 
