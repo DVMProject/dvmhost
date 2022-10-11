@@ -2234,17 +2234,18 @@ bool Host::createModem()
 /// </summary>
 bool Host::createNetwork()
 {
+    yaml::Node networkConf = m_conf["network"];
+    bool netEnable = networkConf["enable"].as<bool>(false);
+    bool rconEnable = networkConf["rconEnable"].as<bool>(false);
+
     // dump out if both networking and RCON are disabled
-    if (m_conf["network"]["enable"].as<bool>(false) && m_conf["network"]["rconEnable"].as<bool>(false)) {
+    if (!netEnable && !rconEnable) {
         return true;
     }
 
-    yaml::Node networkConf = m_conf["network"];
-    bool netEnable = networkConf["enable"].as<bool>(false);
     std::string address = networkConf["address"].as<std::string>();
     uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
-    bool rconEnable = networkConf["rconEnable"].as<bool>(false);
     std::string rconAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
     uint16_t rconPort = (uint16_t)networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
     std::string rconPassword = networkConf["rconPassword"].as<std::string>();
