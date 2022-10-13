@@ -35,7 +35,7 @@
 #include "Defines.h"
 #include "edac/AMBEFEC.h"
 #include "modem/Modem.h"
-#include "host/calibrate/Console.h"
+#include "host/Console.h"
 #include "host/Host.h"
 #include "lookups/IdenTableLookup.h"
 #include "yaml/Yaml.h"
@@ -69,64 +69,18 @@ private:
 
     bool m_duplex;
 
-    bool m_rxInvert;                // dedicated modem - Rx signal inversion
-    bool m_txInvert;                // dedicated modem - Tx signal inversion
-    bool m_pttInvert;               // dedicated modem - PTT signal inversion
-
-    bool m_dcBlocker;               // dedicated modem - DC blocker
-
-    float m_rxLevel;                // dedicated/hotspot modem - Rx modulation level
-    float m_txLevel;                // dedicated/hotspot modem - Tx modulation level
-
     bool m_dmrEnabled;
     bool m_dmrRx1K;
     bool m_p25Enabled;
     bool m_p25Rx1K;
     bool m_nxdnEnabled;
-    int m_rxDCOffset;               // dedicated modem - Rx signal DC offset
-    int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
     bool m_isHotspot;
-
-    int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
-    int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
-    int8_t m_nxdnDiscBWAdj;         // hotspot modem - NXDN discriminator BW adjustment
-    int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment
-    int8_t m_p25PostBWAdj;          // hotspot modem - P25 post demod BW adjustment
-    int8_t m_nxdnPostBWAdj;         // hotspot modem - NXDN post demod BW adjustment
-
-    modem::ADF_GAIN_MODE m_adfGainMode; // hotspot modem - ADF7021 Rx gain
-
-    bool m_afcEnable;               // hotspot modem - ADF7021 AFC enable
-    uint8_t m_afcKI;                // hotspot modem - AFC KI (affects AFC settling time)
-    uint8_t m_afcKP;                // hotspot modem - AFC KP (affects AFC settling time)
-    uint8_t m_afcRange;             // hotspot modem - AFC Maximum Range (m_afcRange * 500hz)
-
-    int m_dmrSymLevel3Adj;          // dedicated modem - +3/-3 DMR symbol adjustment
-    int m_dmrSymLevel1Adj;          // dedicated modem - +1/-1 DMR symbol adjustment
-    int m_p25SymLevel3Adj;          // dedicated modem - +3/-3 P25 symbol adjustment
-    int m_p25SymLevel1Adj;          // dedicated modem - +1/-1 P25 symbol adjustment
-    int m_nxdnSymLevel3Adj;         // dedicated modem - +3/-3 NXDN symbol adjustment
-    int m_nxdnSymLevel1Adj;         // dedicated modem - +1/-1 NXDN symbol adjustment
-
-    uint8_t m_rxCoarsePot;          // dedicated modem - with softpot
-    uint8_t m_rxFinePot;            // dedicated modem - with softpot
-    uint8_t m_txCoarsePot;          // dedicated modem - with softpot
-    uint8_t m_txFinePot;            // dedicated modem - with softpot
-    uint8_t m_rssiCoarsePot;        // dedicated modem - with softpot
-    uint8_t m_rssiFinePot;          // dedicated modem - with softpot
-
-    uint8_t m_fdmaPreamble;
-    uint8_t m_dmrRxDelay;
-    uint8_t m_p25CorrCount;
 
     bool m_debug;
 
     uint8_t m_mode;
     std::string m_modeStr;
-
-    int m_rxTuning;
-    int m_txTuning;
 
     uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
     uint32_t m_rxAdjustedFreq;
@@ -225,9 +179,6 @@ private:
     void getStatus();
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
-
-    /// <summary></summary>
-    void nxdnScrambler(uint8_t* data) const;
 
     /// <summary>Counts the total number of bit errors between bytes.</summary>
     uint8_t countErrs(uint8_t a, uint8_t b);

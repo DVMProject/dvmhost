@@ -34,6 +34,7 @@
 #include "nxdn/packet/Data.h"
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -255,7 +256,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
         data[1U] = 0x00U;
     }
 
-    m_nxdn->scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -362,7 +363,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
         data[1U] = 0x00U;
     }
 
-    m_nxdn->scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);

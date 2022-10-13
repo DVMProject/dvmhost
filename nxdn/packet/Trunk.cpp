@@ -33,6 +33,7 @@
 #include "nxdn/packet/Trunk.h"
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -407,7 +408,7 @@ void Trunk::writeRF_Message(bool noNetwork, bool clearBeforeWrite)
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    m_nxdn->scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     addPostBits(data + 2U);
 
@@ -714,7 +715,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    m_nxdn->scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     addPostBits(data + 2U);
 
@@ -763,7 +764,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    m_nxdn->scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     addPostBits(data + 2U);
 

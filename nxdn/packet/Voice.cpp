@@ -36,6 +36,7 @@
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/Audio.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -265,7 +266,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-		m_nxdn->scrambler(data + 2U);
+		NXDNUtils::scrambler(data + 2U);
 
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -449,7 +450,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-            m_nxdn->scrambler(start + 2U);
+            NXDNUtils::scrambler(start + 2U);
 
             writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -592,7 +593,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_nxdn->scrambler(data + 2U);
+        NXDNUtils::scrambler(data + 2U);
 
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -695,7 +696,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-		m_nxdn->scrambler(data + 2U);
+		NXDNUtils::scrambler(data + 2U);
 
         if (m_nxdn->m_duplex) {
             data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
@@ -855,7 +856,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
             facch.encode(start + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-            m_nxdn->scrambler(start + 2U);
+            NXDNUtils::scrambler(start + 2U);
 
             if (m_nxdn->m_duplex) {
                 start[0U] = modem::TAG_DATA;
@@ -955,7 +956,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_nxdn->scrambler(data + 2U);
+        NXDNUtils::scrambler(data + 2U);
 
         if (m_nxdn->m_duplex) {
             data[0U] = modem::TAG_DATA;

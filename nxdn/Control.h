@@ -197,9 +197,6 @@ namespace nxdn
         /// <summary>Helper to write a Tx release packet.</summary>
         void writeRF_Message_Tx_Rel(bool noNetwork);
 
-        /// <summary></summary>
-        void scrambler(uint8_t* data) const;
-
         /// <summary>Helper to write RF end of frame data.</summary>
         void writeEndRF();
         /// <summary>Helper to write network end of frame data.</summary>

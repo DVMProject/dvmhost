@@ -36,6 +36,7 @@
 #include "nxdn/channel/FACCH1.h"
 #include "nxdn/lc/RTCH.h"
 #include "nxdn/Sync.h"
+#include "nxdn/NXDNUtils.h"
 #include "edac/AMBEFEC.h"
 #include "HostMain.h"
 #include "Log.h"
@@ -383,7 +384,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         Utils::symbols("!!! *Rx NXDN", data + 2U, len - 2U);
     }
 
-    scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     channel::LICH lich;
     bool valid = lich.decode(data + 2U);
@@ -687,7 +688,7 @@ void Control::processNetwork()
         Utils::dump(2U, "!!! *NXDN Network Frame", data, length);
     }
 
-    scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     channel::LICH lich;
     bool valid = lich.decode(data + 2U);
@@ -791,7 +792,7 @@ void Control::writeRF_Message_Tx_Rel(bool noNetwork)
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
 
-    scrambler(data + 2U);
+    NXDNUtils::scrambler(data + 2U);
 
     if (!noNetwork)
         m_data->writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -833,20 +834,4 @@ void Control::writeEndNet()
 
     if (m_network != NULL)
         m_network->resetP25();
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="data"></param>
-void Control::scrambler(uint8_t* data) const
-{
-    assert(data != NULL);
-
-    for (uint32_t i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
-        data[i] ^= SCRAMBLER[i];
-
-    if (m_debug) {
-        Utils::symbols("!!! *NXDN (Scrambled)", data, NXDN_FRAME_LENGTH_BYTES);
-    }
 }

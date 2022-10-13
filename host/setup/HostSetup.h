@@ -27,7 +27,7 @@
 #define __HOST_SETUP_H__
 
 #include "Defines.h"
-#include "host/calibrate/Console.h"
+#include "host/Console.h"
 #include "host/Host.h"
 #include "lookups/IdenTableLookup.h"
 #include "yaml/Yaml.h"

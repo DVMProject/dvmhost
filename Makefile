@@ -83,6 +83,7 @@ HOST_OBJECTS = \
 		nxdn/Control.o \
 		nxdn/Convolution.o \
 		nxdn/Sync.o \
+		nxdn/NXDNUtils.o \
 		p25/acl/AccessControl.o \
 		p25/data/DataBlock.o \
 		p25/data/DataHeader.o \
@@ -115,7 +116,7 @@ HOST_OBJECTS = \
 		network/BaseNetwork.o \
 		network/Network.o \
 		yaml/Yaml.o \
-		host/calibrate/Console.o \
+		host/Console.o \
 		host/calibrate/HostCal.o \
 		host/setup/HostSetup.o \
 		host/Host.o \
