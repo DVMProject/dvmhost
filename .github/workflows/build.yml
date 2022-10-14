@@ -1,4 +1,4 @@
-name: dvmhost-build-tarball
+name: dvmhost-build
 
 # Controls when the workflow will run
 on:
