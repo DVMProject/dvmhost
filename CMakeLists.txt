@@ -89,6 +89,11 @@ file(GLOB dvmcmd_SRC
     "Utils.cpp"
 )
 
+# dvmcmd
+file(GLOB dvmtests_SRC
+    "tests/nulltest.cpp"
+)
+
 # digital mode options
 option(ENABLE_DMR "Enable DMR Digtial Mode" on)
 option(ENABLE_P25 "Enable P25 Digital Mode" on)
@@ -255,3 +260,18 @@ find_package(Threads REQUIRED)
 add_executable(dvmcmd ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE Threads::Threads)
 target_include_directories(dvmcmd PRIVATE .)
+
+project(dvmtest)
+Include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.0.1 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
+find_package(Threads REQUIRED)
+add_executable(dvmtests ${dvmtests_SRC})
+target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain Threads::Threads util)
+target_include_directories(dvmtests PRIVATE .)
