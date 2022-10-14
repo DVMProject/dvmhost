@@ -29,7 +29,7 @@ jobs:
         
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         
       - name: Install Dependencies
         run: sudo apt-get install -y gcc-arm-none-eabi cmake build-essential devscripts debhelper
@@ -40,11 +40,8 @@ jobs:
       - name: Change /opt Permissions
         run: sudo chmod 777 /opt
 
-      - name: Change to build directory
-        run: mkdir build && cd build
-
       - name: Generate build files with CMake
-        run: cmake ..
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
         
       - name: Build binaries
         run: make
