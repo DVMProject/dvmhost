@@ -1,0 +1,47 @@
+name: dvmhost-build-tarball
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  #run on push/PR
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v5.1
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Install Dependencies
+        run: sudo apt-get install -y gcc-arm-none-eabi cmake build-essential devscripts debhelper
+        
+      - name: Sync Git Submodules
+        run: git submodule init && git submodule update
+        
+      - name: Change /opt Permissions
+        run: sudo chmod 777 /opt
+
+      - name: Generate build files with CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        
+      - name: Build binaries
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

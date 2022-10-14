@@ -54,10 +54,10 @@ jobs:
           echo '```' >> release.txt
           cat << EOF >> release.txt
           dvmhost
-          size  : $(wc -c     dvmhost)
-          md5   : $(md5sum    dvmhost)
-          sha1  : $(sha1sum   dvmhost)
-          sha256: $(sha256sum dvmhost)
+          size  : $(wc -c     ${{github.workspace}}/build/dvmhost)
+          md5   : $(md5sum    ${{github.workspace}}/build/dvmhost)
+          sha1  : $(sha1sum   ${{github.workspace}}/build/dvmhost)
+          sha256: $(sha256sum ${{github.workspace}}/build/dvmhost)
           EOF
           echo '```' >> release.txt
           
@@ -66,5 +66,6 @@ jobs:
         with:
           tag_name: ${{steps.date.outputs.date}}
           body_path: release.txt
+          prerelease: true
           files: |
-            dvmhost
+            ${{github.workspace}}/build/dvmhost
