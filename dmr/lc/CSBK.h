@@ -47,120 +47,111 @@ namespace dmr
 
         class HOST_SW_API CSBK {
         public:
+            /// <summary>Initializes a copy instance of the CSBK class.</summary>
+            CSBK(const CSBK& data);
             /// <summary>Initializes a new instance of the CSBK class.</summary>
-            CSBK(SiteData siteData, lookups::IdenTable entry);
-            /// <summary>Initializes a new instance of the CSBK class.</summary>
-            CSBK(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            CSBK();
             /// <summary>Finalizes a instance of the CSBK class.</summary>
-            ~CSBK();
+            virtual ~CSBK();
 
             /// <summary>Decodes a DMR CSBK.</summary>
-            bool decode(const uint8_t* data);
+            virtual bool decode(const uint8_t* data) = 0;
             /// <summary>Encodes a DMR CSBK.</summary>
-            void encode(uint8_t* data);
+            virtual void encode(uint8_t* data) = 0;
 
-        public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
+            /// <summary>Regenerate a DMR CSBK without decoding.</summary>
+            /// <remarks>This is because the DMR archeticture allows fall-thru of unsupported CSBKs.</remarks>
+            static bool regenerate(uint8_t* data);
 
-            /// <summary>DMR access color code.</summary>
-            __PROPERTY(uint8_t, colorCode, ColorCode);
-
-            /** Common Data */
-            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
-            __PROPERTY(bool, lastBlock, LastBlock);
-            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
-            __PROPERTY(bool, Cdef, Cdef);
-
-            /// <summary>CSBK opcode.</summary>
-            __PROPERTY(uint8_t, CSBKO, CSBKO);
-            /// <summary>CSBK feature ID.</summayr>
-            __PROPERTY(uint8_t, FID, FID);
-
-            /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
-            __PROPERTY(bool, GI, GI);
-
-            /// <summary>Base Station ID.</summary>
-            __READONLY_PROPERTY(uint32_t, bsId, BSId);
-            /// <summary>Source ID.</summary>
-            __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
-            __PROPERTY(uint32_t, dstId, DstId);
-
-            /// <summary></summary>
-            __READONLY_PROPERTY(bool, dataContent, DataContent);
-
-            /// <summary>Number of blocks to follow.</summary>
-            __PROPERTY(uint8_t, CBF, CBF);
-
-            /** Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
-            __PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that privacy is enabled.</summary>
-            __PROPERTY(bool, privacy, Privacy);
-            /// <summary>Flag indicating that supplementary data is required.</summary>
-            __PROPERTY(bool, supplementData, SupplementData);
-            /// <summary>Priority level for the traffic.</summary>
-            __PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a broadcast service.</summary>
-            __PROPERTY(bool, broadcast, Broadcast);
-            /// <summary>Flag indicating a proxy.</summary>
-            __PROPERTY(bool, proxy, Proxy);
-
-            /** Tier III */
-            /// <summary>Backoff Number.</summary>
-            __PROPERTY(uint8_t, backoffNo, BackoffNo);
-            /// <summary>Random Access Wait Delay.</summary>
-            __PROPERTY(uint8_t, nRandWait, NRandWait);
-
-            /// <summary>Service Options.</summary>
-            __PROPERTY(uint8_t, serviceOptions, ServiceOptions);
-            /// <summary>Service Extra Options.</summary>
-            __PROPERTY(uint8_t, serviceExtra, ServiceExtra);
-            /// <summary>Service Kind.</summary>
-            __PROPERTY(uint8_t, serviceKind, ServiceKind);
-
-            /// <summary>Destination/Target address type.</summary>
-            __PROPERTY(uint8_t, targetAddress, TargetAddress);
-
-            /// <summary>Response information.</summary>
-            __PROPERTY(uint8_t, response, Response);
-            /// <summary>Reason type.</summary>
-            __PROPERTY(uint8_t, reason, Reason);
-
-            /// <summary>Broadcast Announcment Type.</summary>
-            __PROPERTY(uint8_t, anncType, AnncType);
-            /// <summary>Broadcast Hibernation Flag.</summary>
-            __PROPERTY(bool, hibernating, Hibernating);
-
-            /// <summary>Broadcast Announce/Withdraw Channel 1 Flag.</summary>
-            __PROPERTY(bool, annWdCh1, AnnWdCh1);
-            /// <summary>Broadcast Logical Channel ID 1.</summary>
-            __PROPERTY(uint16_t, logicalCh1, LogicalCh1);
-            /// <summary>Broadcast Announce/Withdraw Channel 2 Flag.</summary>
-            __PROPERTY(bool, annWdCh2, AnnWdCh2);
-            /// <summary>Broadcast Logical Channel ID 2.</summary>
-            __PROPERTY(uint16_t, logicalCh2, LogicalCh2);
-
-            /// <summary>Logical Channel Slot Number.</summary>
-            __PROPERTY(uint8_t, slotNo, SlotNo);
-
-            /// <summary>Aloha Site Time Slot Synchronization.</summary>
-            __PROPERTY(bool, siteTSSync, SiteTSSync);
-            /// <summary>Aloha site users offset timing.</summary>
-            __PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
-            /// <summary>Aloha MS mask.</summary>
-            __PROPERTY(uint8_t, alohaMask, AlohaMask);
+            /// <summary>Sets the flag indicating verbose log output.</summary>
+            static void setVerbose(bool verbose) { m_verbose = verbose; }
 
             /** Local Site data */
-            /// <summary>Local Site Data.</summary>
-            __PROPERTY_PLAIN(SiteData, siteData, siteData);
-            /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+            /// <summary>Gets the local site data.</summary>
+            static SiteData getSiteData() { return m_siteData; }
+            /// <summary>Sets the local site data.</summary>
+            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
 
-        private:
-            /// <summary>Initializes a new instance of the CSBK class.</summary>
-            CSBK(SiteData siteData);
+        public:
+            /** Common Data */
+            /// <summary>DMR access color code.</summary>
+            __PROTECTED_PROPERTY(uint8_t, colorCode, ColorCode);
+
+            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
+            /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
+            __PROTECTED_PROPERTY(bool, Cdef, Cdef);
+
+            /// <summary>CSBK opcode.</summary>
+            __PROTECTED_PROPERTY(uint8_t, CSBKO, CSBKO);
+            /// <summary>CSBK feature ID.</summayr>
+            __PROTECTED_PROPERTY(uint8_t, FID, FID);
+
+            /// <summary>Flag indicating whether the CSBK is group or individual.</summary>
+            __PROTECTED_PROPERTY(bool, GI, GI);
+
+            /// <summary>Source ID.</summary>
+            __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
+            /// <summary>Destination ID.</summary>
+            __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
+
+            /// <summary></summary>
+            __PROTECTED_READONLY_PROPERTY(bool, dataContent, DataContent);
+
+            /// <summary>Number of blocks to follow.</summary>
+            __PROTECTED_PROPERTY(uint8_t, CBF, CBF);
+
+            /** Common Service Options */
+            /// <summary>Flag indicating the emergency bits are set.</summary>
+            __PROTECTED_PROPERTY(bool, emergency, Emergency);
+            /// <summary>Flag indicating that privacy is enabled.</summary>
+            __PROTECTED_PROPERTY(bool, privacy, Privacy);
+            /// <summary>Flag indicating that supplementary data is required.</summary>
+            __PROTECTED_PROPERTY(bool, supplementData, SupplementData);
+            /// <summary>Priority level for the traffic.</summary>
+            __PROTECTED_PROPERTY(uint8_t, priority, Priority);
+            /// <summary>Flag indicating a broadcast service.</summary>
+            __PROTECTED_PROPERTY(bool, broadcast, Broadcast);
+            /// <summary>Flag indicating a proxy.</summary>
+            __PROTECTED_PROPERTY(bool, proxy, Proxy);
+
+            /// <summary>Response information.</summary>
+            __PROTECTED_PROPERTY(uint8_t, response, Response);
+            /// <summary>Reason type.</summary>
+            __PROTECTED_PROPERTY(uint8_t, reason, Reason);
+
+            /** Tier 3 */
+            /// <summary>Site offset timing.</summary>
+            __PROTECTED_PROPERTY(bool, siteOffsetTiming, SiteOffsetTiming);
+
+            /// <summary>Broadcast Logical Channel ID 1.</summary>
+            __PROTECTED_PROPERTY(uint16_t, logicalCh1, LogicalCh1);
+            /// <summary>Broadcast Logical Channel ID 2.</summary>
+            __PROTECTED_PROPERTY(uint16_t, logicalCh2, LogicalCh2);
+            /// <summary>Logical Channel Slot Number.</summary>
+            __PROTECTED_PROPERTY(uint8_t, slotNo, SlotNo);
+
+            /** Local Site data */
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROTECTED_PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
+        protected:
+            static bool m_verbose;
+
+            /** Local Site data */
+            static SiteData m_siteData;
+
+            /// <summary>Internal helper to convert CSBK bytes to a 64-bit long value.</summary>
+            static ulong64_t toValue(const uint8_t* Csbk);
+            /// <summary>Internal helper to convert a 64-bit long value to CSBK bytes.</summary>
+            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t csbkValue);
+
+            /// <summary>Internal helper to decode a control signalling block.</summary>
+            bool decode(const uint8_t* data, uint8_t* csbk);
+            /// <summary>Internal helper to encode a control signalling block.</summary>
+            void encode(uint8_t* data, const uint8_t* csbk);
+
+            __PROTECTED_COPY(CSBK);
         };
     } // namespace lc
 } // namespace dmr

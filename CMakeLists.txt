@@ -13,6 +13,8 @@ file(GLOB dvmhost_SRC
     "dmr/edac/*.cpp"
     "dmr/lc/*.h"
     "dmr/lc/*.cpp"
+    "dmr/lc/csbk/*.h"
+    "dmr/lc/csbk/*.cpp"
     "dmr/packet*.h"
     "dmr/packet/*.cpp"
 

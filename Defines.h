@@ -241,7 +241,7 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
 /// <summary>Creates a private copy implementation.</summary>
 /// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
 #define __COPY(type)                                                                    \
-        private: void copy(const type& data);                                           \
+        private: virtual void copy(const type& data);                                   \
         public: __forceinline type& operator=(const type& data) {                       \
             if (this != &data) {                                                        \
                 copy(data);                                                             \
@@ -251,7 +251,7 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
 /// <summary>Creates a protected copy implementation.</summary>
 /// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
 #define __PROTECTED_COPY(type)                                                          \
-        protected: void copy(const type& data);                                         \
+        protected: virtual void copy(const type& data);                                 \
         public: __forceinline type& operator=(const type& data) {                       \
             if (this != &data) {                                                        \
                 copy(data);                                                             \

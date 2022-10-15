@@ -159,7 +159,6 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_ccPrevRunning(false),
     m_ccHalted(false),
     m_enableTSCC(false),
-    m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -546,15 +545,6 @@ void Slot::setDebugVerbose(bool debug, bool verbose)
 {
     m_debug = m_voice->m_debug = m_data->m_debug = debug = m_control->m_debug;
     m_verbose = m_voice->m_verbose = m_data->m_verbose = verbose = m_control->m_verbose;
-}
-
-/// <summary>
-/// Helper to change the CSBK verbose state.
-/// </summary>
-/// <param name="verbose">Flag indicating whether CSBK dumping is enabled.</param>
-void Slot::setCSBKVerbose(bool verbose)
-{
-    m_dumpCSBKData = verbose;
 }
 
 /// <summary>

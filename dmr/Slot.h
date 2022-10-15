@@ -99,8 +99,6 @@ namespace dmr
 
         /// <summary>Helper to change the debug and verbose state.</summary>
         void setDebugVerbose(bool debug, bool verbose);
-        /// <summary>Helper to change the CSBK verbose state.</summary>
-        void setCSBKVerbose(bool verbose);
 
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
@@ -184,7 +182,6 @@ namespace dmr
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
 
-        bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
 

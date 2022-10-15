@@ -27,6 +27,7 @@
 #include "dmr/Control.h"
 #include "dmr/acl/AccessControl.h"
 #include "dmr/lc/CSBK.h"
+#include "dmr/lc/csbk/CSBKFactory.h"
 #include "Log.h"
 
 using namespace dmr;
@@ -228,17 +229,15 @@ bool Control::processWakeup(const uint8_t* data)
         return false;
 
     // generate a new CSBK and check validity
-    lc::CSBK csbk = lc::CSBK(SiteData(), lookups::IdenTable(), m_dumpCSBKData);
-
-    bool valid = csbk.decode(data + 2U);
-    if (!valid)
+    std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U);
+    if (csbk == nullptr)
         return false;
 
-    uint8_t csbko = csbk.getCSBKO();
+    uint8_t csbko = csbk->getCSBKO();
     if (csbko != CSBKO_BSDWNACT)
         return false;
 
-    uint32_t srcId = csbk.getSrcId();
+    uint32_t srcId = csbk->getSrcId();
 
     // check the srcId against the ACL control
     bool ret = acl::AccessControl::validateSrcId(srcId);
@@ -415,6 +414,5 @@ void Control::setDebugVerbose(bool debug, bool verbose)
 void Control::setCSBKVerbose(bool verbose)
 {
     m_dumpCSBKData = verbose;
-    m_slot1->setCSBKVerbose(verbose);
-    m_slot2->setCSBKVerbose(verbose);
+    lc::CSBK::setVerbose(verbose);
 }

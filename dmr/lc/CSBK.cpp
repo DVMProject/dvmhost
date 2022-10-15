@@ -32,7 +32,6 @@
 #include "dmr/lc/CSBK.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
-#include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -43,29 +42,55 @@ using namespace dmr;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+bool CSBK::m_verbose = false;
+
+SiteData CSBK::m_siteData = SiteData();
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the CSBK class.
+/// Initializes a copy instance of the CSBK class.
 /// </summary>
-/// <param name="siteData"></param>
-/// <param name="entry"></param>
-CSBK::CSBK(SiteData siteData, lookups::IdenTable entry) : CSBK(siteData)
+/// <param name="data"></param>
+CSBK::CSBK(const CSBK& data) : CSBK()
 {
-    m_siteIdenEntry = entry;
+    copy(data);
 }
 
 /// <summary>
 /// Initializes a new instance of the CSBK class.
 /// </summary>
-/// <param name="siteData"></param>
-/// <param name="entry"></param>
-/// <param name="verbose"></param>
-CSBK::CSBK(SiteData siteData, lookups::IdenTable entry, bool verbose) : CSBK(siteData)
+CSBK::CSBK() :
+    m_colorCode(0U),
+    m_lastBlock(true),
+    m_Cdef(false),
+    m_CSBKO(CSBKO_NONE),
+    m_FID(0x00U),
+    m_GI(false),
+    m_srcId(0U),
+    m_dstId(0U),
+    m_dataContent(false),
+    m_CBF(0U),
+    m_emergency(false),
+    m_privacy(false),
+    m_supplementData(false),
+    m_priority(0U),
+    m_broadcast(false),
+    m_proxy(false),
+    m_response(0U),
+    m_reason(0U),
+    m_siteOffsetTiming(false),
+    m_logicalCh1(DMR_CHNULL),
+    m_logicalCh2(DMR_CHNULL),
+    m_slotNo(0U),
+    m_siteIdenEntry(lookups::IdenTable())
 {
-    m_verbose = verbose;
-    m_siteIdenEntry = entry;
+    /* stub */
 }
 
 /// <summary>
@@ -77,15 +102,106 @@ CSBK::~CSBK()
 }
 
 /// <summary>
-/// Decodes a DMR CSBK.
+/// Regenerate a DMR CSBK without decoding.
 /// </summary>
 /// <param name="data"></param>
-/// <returns>True, if DMR CSBK was decoded, otherwise false.</returns>
-bool CSBK::decode(const uint8_t* data)
+/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+bool CSBK::regenerate(uint8_t* data)
+{
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+
+    // decode BPTC (196,96) FEC
+    edac::BPTC19696 bptc;
+    bptc.decode(data, csbk);
+
+    // validate the CRC-CCITT 16
+    csbk[10U] ^= CSBK_CRC_MASK[0U];
+    csbk[11U] ^= CSBK_CRC_MASK[1U];
+
+    bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
+    if (!valid) {
+        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+        return false;
+    }
+
+    // restore the checksum
+    csbk[10U] ^= CSBK_CRC_MASK[0U];
+    csbk[11U] ^= CSBK_CRC_MASK[1U];
+
+    // calculate checksum
+    csbk[10U] ^= CSBK_CRC_MASK[0U];
+    csbk[11U] ^= CSBK_CRC_MASK[1U];
+
+    edac::CRC::addCCITT162(csbk, 12U);
+
+    csbk[10U] ^= CSBK_CRC_MASK[0U];
+    csbk[11U] ^= CSBK_CRC_MASK[1U];
+
+    // encode BPTC (196,96) FEC
+    bptc.encode(csbk, data);
+
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+//  Protected Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to convert CSBK bytes to a 64-bit long value.
+/// </summary>
+/// <param name="tsbk"></param>
+/// <returns></returns>
+ulong64_t CSBK::toValue(const uint8_t* csbk)
+{
+    ulong64_t csbkValue = 0U;
+
+    // combine bytes into ulong64_t (8 byte) value
+    csbkValue = csbk[2U];
+    csbkValue = (csbkValue << 8) + csbk[3U];
+    csbkValue = (csbkValue << 8) + csbk[4U];
+    csbkValue = (csbkValue << 8) + csbk[5U];
+    csbkValue = (csbkValue << 8) + csbk[6U];
+    csbkValue = (csbkValue << 8) + csbk[7U];
+    csbkValue = (csbkValue << 8) + csbk[8U];
+    csbkValue = (csbkValue << 8) + csbk[9U];
+
+    return csbkValue;
+}
+
+/// <summary>
+/// Internal helper to convert a 64-bit long value to CSBK bytes.
+/// </summary>
+/// <param name="csbkValue"></param>
+/// <returns></returns>
+std::unique_ptr<uint8_t[]> CSBK::fromValue(const ulong64_t csbkValue)
+{
+    __UNIQUE_BUFFER(csbk, uint8_t, DMR_CSBK_LENGTH_BYTES);
+
+    // split ulong64_t (8 byte) value into bytes
+    csbk[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
+    csbk[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
+    csbk[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
+    csbk[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
+    csbk[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
+    csbk[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
+    csbk[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
+    csbk[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+
+    return csbk;
+}
+
+/// <summary>
+/// Internal helper to decode a control signalling block.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="tsbk"></param>
+/// <returns>True, if TSBK was decoded, otherwise false.</returns>
+bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
 {
     assert(data != nullptr);
-
-    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    assert(csbk != nullptr);
 
     // decode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
@@ -116,393 +232,89 @@ bool CSBK::decode(const uint8_t* data)
     m_dataContent = false;
     m_CBF = 0U;
 
-    ulong64_t csbkValue = 0U;
-
-    // combine bytes into ulong64_t (8 byte) value
-    csbkValue = csbk[2U];
-    csbkValue = (csbkValue << 8) + csbk[3U];
-    csbkValue = (csbkValue << 8) + csbk[4U];
-    csbkValue = (csbkValue << 8) + csbk[5U];
-    csbkValue = (csbkValue << 8) + csbk[6U];
-    csbkValue = (csbkValue << 8) + csbk[7U];
-    csbkValue = (csbkValue << 8) + csbk[8U];
-    csbkValue = (csbkValue << 8) + csbk[9U];
-
-    switch (m_CSBKO) {
-    case CSBKO_BSDWNACT:
-        m_bsId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                         // Base Station Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-    case CSBKO_UU_V_REQ:
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-    case CSBKO_UU_ANS_RSP:
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-    case CSBKO_PRECCSBK:
-        m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                      // Group/Individual Flag
-        m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             //
-        m_CBF = (uint8_t)((csbkValue >> 48) & 0xFFU);                               // Blocks to Follow
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-    case CSBKO_RAND: // CSBKO_CALL_ALRT when FID == FID_DMRA
-        switch (m_FID)
-        {
-        case FID_DMRA:
-            m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                  // Group/Individual Flag
-            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                    // Target Radio Address
-            m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
-            break;
-        case FID_ETSI:
-        default:
-            m_serviceOptions = (uint8_t)((csbkValue >> 57U) & 0x7FU);               // Service Options
-            m_proxy = (((csbkValue >> 56U) & 0xFF) & 0x01U) == 0x01U;               // Proxy Flag
-            m_serviceExtra = (uint8_t)((csbkValue >> 52U) & 0x0FU);                 // Service Extras (content dependant on service)
-            m_serviceKind = (uint8_t)((csbkValue >> 48U) & 0x0FU);                  // Service Kind
-            m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                    // Target Radio Address
-            m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                            // Source Radio Address
-            break;
-        }
-    case CSBKO_EXT_FNCT:
-        m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;             //
-        m_serviceKind = (uint8_t)((csbkValue >> 48) & 0xFFU);                       // Service Kind
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Target Radio Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-    case CSBKO_NACK_RSP:
-        m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                      // Group/Individual Flag
-        m_serviceKind = (((csbkValue >> 56) & 0xFFU) & 0x3FU);                      // Service Kind
-        m_reason = (uint8_t)((csbkValue >> 48) & 0xFFU);                            // Reason Code
-        m_srcId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                        // Source Radio Address
-        m_dstId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Target Radio Address
-        break;
-
-    /** Tier 3 */
-    case CSBKO_ACK_RSP:
-        m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                      // Group/Individual Flag
-        m_reason = (uint8_t)((csbkValue >> 33) & 0xFFU);                            // Reason Code
-        m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                          // Target Radio Address
-        m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                // Source Radio Address
-        break;
-
-    default:
-        LogError(LOG_DMR, "CSBK::decode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
-        return true;
-    }
-
     return true;
 }
 
 /// <summary>
-/// Encodes a DMR CSBK.
+/// Internal helper to encode a control signalling block.
 /// </summary>
 /// <param name="data"></param>
-void CSBK::encode(uint8_t* data)
+/// <param name="tsbk"></param>
+/// <param name="rawTSBK"></param>
+/// <param name="noTrellis"></param>
+void CSBK::encode(uint8_t* data, const uint8_t* csbk)
 {
     assert(data != nullptr);
+    assert(csbk != nullptr);
 
-    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
-    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+    uint8_t outCsbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(outCsbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+    ::memcpy(outCsbk, csbk, DMR_CSBK_LENGTH_BYTES);
 
-    ulong64_t csbkValue = 0U;
-    csbk[0U] = m_CSBKO;                                                             // CSBKO
-    csbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                      // Last Block Marker
+    outCsbk[0U] = m_CSBKO;                                                          // CSBKO
+    outCsbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                   // Last Block Marker
     if (!m_Cdef) {
-        csbk[1U] = m_FID;                                                           // Feature ID
+        outCsbk[1U] = m_FID;                                                        // Feature ID
     }
     else {
-        csbk[1U] = m_colorCode & 0x0FU;                                             // Cdef uses Color Code
+        outCsbk[1U] = m_colorCode & 0x0FU;                                          // Cdef uses Color Code
     }
 
-    switch (m_CSBKO) {
-    case CSBKO_EXT_FNCT:
-        csbkValue = 
-            (m_GI ? 0x40U : 0x00U) +                                                // Group or Invididual
-            (m_dataContent ? 0x80U : 0x00U);
-        csbkValue = (csbkValue << 8) + m_serviceKind;                               // Service Kind
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
-        break;
+    outCsbk[10U] ^= CSBK_CRC_MASK[0U];
+    outCsbk[11U] ^= CSBK_CRC_MASK[1U];
 
-    case CSBKO_NACK_RSP:
-        csbkValue = 0x80U +                                                         // Additional Information Field (always 1)
-            (m_GI ? 0x40U : 0x00U) +                                                // Source Type
-            (m_serviceKind & 0x3FU);                                                // Service Kind
-        csbkValue = (csbkValue << 8) + m_reason;                                    // Reason Code
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
-        break;
+    edac::CRC::addCCITT162(outCsbk, 12U);
 
-    /* Tier III */
-    case CSBKO_ACK_RSP:
-        if (m_reason == TS_ACK_RSN_REG) {
-            csbkValue = 0U;
-        } else {
-            csbkValue = (m_GI ? 0x40U : 0x00U) +                                    // Source Type
-                (m_siteData.siteId() & 0x3FU);                                      // Net + Site LSB
-        }
-        csbkValue = (csbkValue << 7) + (m_response & 0x7FU);                        // Response Information
-        csbkValue = (csbkValue << 8) + (m_reason & 0xFFU);                          // Reason Code
-        csbkValue = (csbkValue << 25) + m_dstId;                                    // Target Radio Address
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_ALOHA:
-        csbkValue = 0U;
-        csbkValue = (csbkValue << 2) + 0U;                                          // Reserved
-        csbkValue = (csbkValue << 1) + ((m_siteTSSync) ? 1U : 0U);                  // Site Time Slot Synchronization
-        csbkValue = (csbkValue << 3) + DMR_ALOHA_VER_151;                           // DMR Spec. Version (1.5.1)
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 1) + ((m_siteData.netActive()) ? 1U : 0U);        // Site Networked
-        csbkValue = (csbkValue << 5) + (m_alohaMask & 0x1FU);                       // MS Mask
-        csbkValue = (csbkValue << 2) + 0U;                                          // Service Function
-        csbkValue = (csbkValue << 4) + (m_nRandWait & 0x0FU);                       // Random Access Wait
-        csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
-        csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
-        csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_PV_GRANT:
-        csbkValue = 0U;
-        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
-        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
-        csbkValue = (csbkValue << 1) + 0U;                                          // Reserved
-        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_TV_GRANT:
-    case CSBKO_BTV_GRANT:
-        csbkValue = 0U;
-        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
-        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
-        csbkValue = (csbkValue << 1) + 0U;                                          // Late Entry
-        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_PD_GRANT:
-        csbkValue = 0U;
-        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
-        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
-        csbkValue = (csbkValue << 1) + 0U;                                          // High Rate Flag - Always Single Slot Data
-        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_TD_GRANT:
-        csbkValue = 0U;
-        csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Physical Channel 1
-        csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                           // Logical Slot Number
-        csbkValue = (csbkValue << 1) + 0U;                                          // High Rate Flag - Always Single Slot Data
-        csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                   // Emergency
-        csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);            // Site Timing: Aligned or Offset
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Talkgroup ID
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        break;
-
-    case CSBKO_BROADCAST:
-    {
-        csbkValue = 0U;
-        if (!m_Cdef) {
-            csbkValue = m_anncType;                                                 // Announcement Type
-        }
-
-        switch (m_anncType)
-        {
-        case BCAST_ANNC_ANN_WD_TSCC:
-            // Broadcast Parms 1
-            csbkValue = (csbkValue << 4) + 0U;                                      // Reserved
-            csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);                   // Color Code 1
-            csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);                   // Color Code 2
-            csbkValue = (csbkValue << 1) + ((m_annWdCh1) ? 1U : 0U);                // Announce/Withdraw Channel 1
-            csbkValue = (csbkValue << 1) + ((m_annWdCh2) ? 1U : 0U);                // Announce/Withdraw Channel 2
-
-            csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);   // Require Registration
-            csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
-            csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
-
-            // Broadcast Parms 2
-            csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                // Logical Channel 1
-            csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);                // Logical Channel 2
-            break;
-        case BCAST_ANNC_CHAN_FREQ:
-        {
-            uint32_t calcSpace = (uint32_t)(m_siteIdenEntry.chSpaceKhz() / 0.125);
-            float calcTxOffset = m_siteIdenEntry.txOffsetMhz() * 1000000;
-            const uint32_t multiple = 100000;
-
-            // calculate Rx frequency
-            uint32_t rxFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)) + calcTxOffset);
-
-            // generate frequency in mhz
-            uint32_t rxFreqMhz = rxFrequency + multiple / 2;
-            rxFreqMhz -= rxFreqMhz % multiple;
-            rxFreqMhz /= multiple * 10;
-
-            // generate khz offset
-            uint32_t rxFreqKhz = rxFrequency - (rxFreqMhz * 1000000);
-
-            // calculate Tx Frequency
-            uint32_t txFrequency = (uint32_t)((m_siteIdenEntry.baseFrequency() + ((calcSpace * 125) * m_logicalCh1)));
-
-            // generate frequency in mhz
-            uint32_t txFreqMhz = txFrequency + multiple / 2;
-            txFreqMhz -= txFreqMhz % multiple;
-            txFreqMhz /= multiple * 10;
-
-            // generate khz offset
-            uint32_t txFreqKhz = txFrequency - (txFreqMhz * 1000000);
-
-            csbkValue = 0U;                                                         // Cdef Type (always 0 for ANN_WD_TSCC)
-            csbkValue = (csbkValue << 2) + 0U;                                      // Reserved
-            csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                // Logical Channel
-            csbkValue = (csbkValue << 10) + (txFreqMhz & 0x7FFU);                   // Transmit Freq Mhz
-            csbkValue = (csbkValue << 13) + (txFreqKhz & 0x3FFFU);                  // Transmit Freq Offset Khz
-            csbkValue = (csbkValue << 10) + (rxFreqMhz & 0x7FFU);                   // Receive Freq Mhz
-            csbkValue = (csbkValue << 13) + (rxFreqKhz & 0x3FFFU);                  // Receive Freq Khz
-        }
-        break;
-        case BCAST_ANNC_SITE_PARMS:
-            // Broadcast Parms 1
-            csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);        // Site Identity (Broadcast Parms 1)
-
-            csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);   // Require Registration
-            csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                   // Backoff Number
-            csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();            // Site Identity
-
-            // Broadcast Parms 2
-            csbkValue = (csbkValue << 1) + 0U;                                      // Roaming TG Subscription/Attach
-            csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);             // TSCC Hibernating
-            csbkValue = (csbkValue << 22) + 0U;                                     // Broadcast Parms 2 (Reserved)
-            break;
-        }
-    }
-    break;
-
-    default:
-        csbkValue = 
-            (m_GI ? 0x40U : 0x00U) +                                                // Group or Invididual
-            (m_dataContent ? 0x80U : 0x00U);
-        csbkValue = (csbkValue << 8) + m_CBF;                                       // Blocks to Follow
-        csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-        csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
-
-        if ((m_FID == FID_ETSI) || (m_FID == FID_DMRA)) {
-            LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
-        }
-        break;
-    }
-
-    // internal DMR vendor opcodes
-    if (m_FID == FID_DVM) {
-        switch (m_CSBKO) {
-        case CSBKO_DVM_GIT_HASH:
-            csbkValue = 0U;
-            csbkValue = g_gitHashBytes[0];                                          // ...
-            csbkValue = (csbkValue << 8) + (g_gitHashBytes[1U]);                    // ...
-            csbkValue = (csbkValue << 8) + (g_gitHashBytes[2U]);                    // ...
-            csbkValue = (csbkValue << 8) + (g_gitHashBytes[3U]);                    // ...
-            csbkValue = (csbkValue << 16) + 0U;
-            csbkValue = (csbkValue << 4) + m_siteIdenEntry.channelId();             // Channel ID
-            csbkValue = (csbkValue << 12) + m_logicalCh1;                           // Channel Number
-            break;
-        default:
-            csbkValue = 
-                (m_GI ? 0x40U : 0x00U) +                                                // Group or Invididual
-                (m_dataContent ? 0x80U : 0x00U);
-            csbkValue = (csbkValue << 8) + m_CBF;                                       // Blocks to Follow
-            csbkValue = (csbkValue << 24) + m_srcId;                                    // Source Radio Address
-            csbkValue = (csbkValue << 24) + m_dstId;                                    // Target Radio Address
-            LogError(LOG_DMR, "CSBK::encode(), unknown CSBK type, csbko = $%02X", m_CSBKO);
-            break;
-        }
-    }
-
-    // split ulong64_t (8 byte) value into bytes
-    csbk[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
-    csbk[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
-    csbk[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
-    csbk[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
-    csbk[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
-    csbk[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
-    csbk[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
-    csbk[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
-
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
-
-    edac::CRC::addCCITT162(csbk, 12U);
-
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    outCsbk[10U] ^= CSBK_CRC_MASK[0U];
+    outCsbk[11U] ^= CSBK_CRC_MASK[1U];
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
+        Utils::dump(2U, "Encoded CSBK", outCsbk, DMR_CSBK_LENGTH_BYTES);
     }
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
-    bptc.encode(csbk, data);
+    bptc.encode(outCsbk, data);
 }
 
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
 /// <summary>
-/// Initializes a new instance of the CSBK class.
+/// Internal helper to copy the the class.
 /// </summary>
-/// <param name="siteData"></param>
-CSBK::CSBK(SiteData siteData) :
-    m_verbose(false),
-    m_colorCode(0U),
-    m_lastBlock(true),
-    m_Cdef(false),
-    m_CSBKO(CSBKO_NONE),
-    m_FID(0x00U),
-    m_GI(false),
-    m_bsId(0U),
-    m_srcId(0U),
-    m_dstId(0U),
-    m_dataContent(false),
-    m_CBF(0U),
-    m_emergency(false),
-    m_privacy(false),
-    m_supplementData(false),
-    m_priority(0U),
-    m_broadcast(false),
-    m_proxy(false),
-    m_backoffNo(1U),
-    m_nRandWait(DEFAULT_NRAND_WAIT),
-    m_serviceOptions(0U),
-    m_serviceExtra(0U),
-    m_serviceKind(0U),
-    m_targetAddress(TGT_ADRS_TGID),
-    m_response(0U),
-    m_reason(0U),
-    m_anncType(BCAST_ANNC_SITE_PARMS),
-    m_hibernating(false),
-    m_annWdCh1(false),
-    m_logicalCh1(DMR_CHNULL),
-    m_annWdCh2(false),
-    m_logicalCh2(DMR_CHNULL),
-    m_slotNo(0U),
-    m_siteTSSync(false),
-    m_siteOffsetTiming(false),
-    m_alohaMask(0U),
-    m_siteData(siteData),
-    m_siteIdenEntry(lookups::IdenTable())
+/// <param name="data"></param>
+void CSBK::copy(const CSBK& data)
 {
-    /* stub */
+    m_colorCode = data.m_colorCode;
+
+    m_lastBlock = data.m_lastBlock;
+    m_Cdef = data.m_Cdef;
+
+    m_CSBKO = data.m_CSBKO;
+    m_FID = data.m_FID;
+
+    m_GI = data.m_GI;
+
+    m_srcId = data.m_srcId;
+    m_dstId = data.m_dstId;
+
+    m_dataContent = data.m_dataContent;
+
+    m_CBF = data.m_CBF;
+
+    m_emergency = data.m_emergency;
+    m_privacy = data.m_privacy;
+    m_supplementData = data.m_supplementData;
+    m_priority = data.m_priority;
+    m_broadcast = data.m_broadcast;
+    m_proxy = data.m_proxy;
+
+    m_response = data.m_response;
+    m_response = data.m_reason;
+
+    m_siteOffsetTiming = data.m_siteOffsetTiming;
+
+    m_logicalCh1 = data.m_logicalCh1;
+    m_logicalCh2 = data.m_logicalCh2;
+    m_slotNo = data.m_slotNo;
+
+    m_siteIdenEntry = data.m_siteIdenEntry;
 }

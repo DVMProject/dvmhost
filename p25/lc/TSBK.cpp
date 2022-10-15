@@ -104,6 +104,7 @@ TSBK::TSBK() :
     m_encrypted(false),
     m_priority(4U),
     m_group(true),
+    m_siteIdenEntry(lookups::IdenTable()),
     m_rs(),
     m_trellis()
 {
@@ -148,7 +149,7 @@ void TSBK::setCallsign(std::string callsign)
 }
 
 // ---------------------------------------------------------------------------
-//  Private Class Members
+//  Protected Class Members
 // ---------------------------------------------------------------------------
 
 /// <summary>
@@ -267,7 +268,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
 }
 
 /// <summary>
-/// Encode a trunking signalling block.
+/// Internal helper to eecode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
 /// <param name="tsbk"></param>
@@ -325,8 +326,6 @@ void TSBK::encode(uint8_t* data, const uint8_t* tsbk, bool rawTSBK, bool noTrell
 /// <param name="data"></param>
 void TSBK::copy(const TSBK& data)
 {
-    m_verbose = data.m_verbose;
-    m_warnCRC = data.m_warnCRC;
     m_protect = data.m_protect;
     m_lco = data.m_lco;
     m_mfId = data.m_mfId;
@@ -351,4 +350,6 @@ void TSBK::copy(const TSBK& data)
     m_priority = data.m_priority;
 
     m_group = data.m_group;
+
+    m_siteIdenEntry = data.m_siteIdenEntry;
 }
