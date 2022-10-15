@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -27,8 +27,6 @@
 #define  __P25_LC__TSBK_H__
 
 #include "Defines.h"
-#include "p25/data/DataHeader.h"
-#include "p25/data/DataBlock.h"
 #include "p25/edac/Trellis.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/TDULC.h"
@@ -68,201 +66,106 @@ namespace p25
             /// <summary>Initializes a copy instance of the TSBK class.</summary>
             TSBK(const TSBK& data);
             /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, ::lookups::IdenTable entry);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData, ::lookups::IdenTable entry, bool verbose, bool warnCRC);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK(LC* lc);
-            /// <summary>Finalizes a instance of the TSBK class.</summary>
-            ~TSBK();
-
-            /// <summary>Equals operator.</summary>
-            TSBK& operator=(const TSBK& data);
-
-            /// <summary>Decode a alternate trunking signalling block.</summary>
-            bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
-            /// <summary>Encode a alternate trunking signalling block.</summary>
-            void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
-
-            /// <summary>Decode a trunking signalling block.</summary>
-            bool decode(const uint8_t* data, bool rawTSBK = false);
-            /// <summary>Encode a trunking signalling block.</summary>
-            void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
-
-            /// <summary>Sets the flag to skip vendor opcode processing.</summary>
-            void setVendorSkip(bool skip);
-
-            /// <summary>Sets the callsign.</summary>
-            void setCallsign(std::string callsign);
-
-            /** Authentication data */
-            /// <summary>Gets the authentication result.</summary>
-            void getAuthRes(uint8_t* res) const;
-
-            /// <summary>Sets the authentication random seed.</summary>
-            void setAuthRS(const uint8_t* rs);
-            /// <summary>Gets the authentication random seed.</summary>
-            void getAuthRS(uint8_t* rs) const;
-
-            /// <summary>Sets the authentication random challenge.</summary>
-            void setAuthRC(const uint8_t* rc);
-            /// <summary>Gets the authentication random challenge.</summary>
-            void getAuthRC(uint8_t* rc) const;
-
-        public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
-            /// <summary>Flag indicating CRC-errors should be warnings and not errors.</summary>
-            __PROPERTY(bool, warnCRC, WarnCRC);
-
-            /** Common Data */
-            /// <summary>Flag indicating the link control data is protected.</summary>
-            __PROPERTY(bool, protect, Protect);
-            /// <summary>Link control opcode.</summary>
-            __PROPERTY(uint8_t, lco, LCO);
-            /// <summary>Manufacturer ID.</summary>
-            __PROPERTY(uint8_t, mfId, MFId);
-
-            /// <summary>Source ID.</summary>
-            __PROPERTY(uint32_t, srcId, SrcId);
-            /// <summary>Destination ID.</summary>
-            __PROPERTY(uint32_t, dstId, DstId);
-
-            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
-            __PROPERTY(bool, lastBlock, LastBlock);
-            /// <summary>Flag indicating this TSBK contains additional information.</summary>
-            __PROPERTY(bool, aivFlag, AIV);
-            /// <summary>Flag indicating this TSBK contains extended addressing.</summary>
-            __PROPERTY(bool, extendedAddrFlag, EX);
-
-            /// <summary>Service type.</summary>
-            __PROPERTY(uint8_t, service, Service);
-            /// <summary>Response type.</summary>
-            __PROPERTY(uint8_t, response, Response);
-
-            /// <summary>Configured network ID.</summary>
-            __READONLY_PROPERTY(uint32_t, netId, NetId);
-            /// <summary>Configured system ID.</summary>
-            __READONLY_PROPERTY(uint32_t, sysId, SysId);
-
-            /// <summary>Voice channel ID.</summary>
-            __PROPERTY(uint32_t, grpVchId, GrpVchId);
-            /// <summary>Voice channel number.</summary>
-            __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
-
-            /// <summary>Message value.</summary>
-            __PROPERTY(uint32_t, messageValue, Message);
-            /// <summary>Status value.</summary>
-            __PROPERTY(uint8_t, statusValue, Status);
-
-            /// <summary>Extended function opcode.</summary>
-            __PROPERTY(uint32_t, extendedFunction, ExtendedFunction);
-
-            /// <summary>Microslot count.</summary>
-            __PROPERTY(uint16_t, microslotCount, MicroslotCount);
-
-            /** SNDCP Channel Request */
-            /// <summary>SNDCP Data Service Options</summary>
-            __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
-            /// <summary>SNDCP Data Access Control</summary>
-            __PROPERTY(uint32_t, dataAccessControl, DataAccessControl);
-
-            /// <summary>SNDCP grant channel number.</summary>
-            __PROPERTY(uint32_t, dataChannelNo, DataChnNo);
-
-            /** Adjacent Site Data */
-            /// <summary>Adjacent site CFVA flags.</summary>
-            __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
-            /// <summary>Adjacent site system ID.</summary>
-            __PROPERTY(uint32_t, adjSysId, AdjSiteSysId);
-            /// <summary>Adjacent site RFSS ID.</summary>
-            __PROPERTY(uint8_t, adjRfssId, AdjSiteRFSSId);
-            /// <summary>Adjacent site ID.</summary>
-            __PROPERTY(uint8_t, adjSiteId, AdjSiteId);
-            /// <summary>Adjacent site channel ID.</summary>
-            __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
-            /// <summary>Adjacent site channel number.</summary>
-            __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
-            /// <summary>Adjacent site service class.</summary>
-            __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
-
-            /** SCCB Data */
-            /// <summary>SCCB channel ID 1.</summary>
-            __PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
-            /// <summary>SCCB channel ID 2.</summary>
-            __PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
-            /// <summary>Explicit SCCB channel number.</summary>
-            __PROPERTY(uint32_t, sccbChannelNo, SCCBChnNo);
-
-            /** Location Data */
-            /// <summary>Location registration area.</summary>
-            __PROPERTY(uint8_t, lra, LRA);
-
-            /** Patch Group data */
-            /// <summary>Patch super group ID.</summary>
-            __PROPERTY(uint32_t, patchSuperGroupId, PatchSuperGroupId);
-            /// <summary>1st patch group ID.</summary>
-            __PROPERTY(uint32_t, patchGroup1Id, PatchGroup1Id);
-            /// <summary>2nd patch group ID.</summary>
-            __PROPERTY(uint32_t, patchGroup2Id, PatchGroup2Id);
-            /// <summary>3rd patch group ID.</summary>
-            __PROPERTY(uint32_t, patchGroup3Id, PatchGroup3Id);
-
-            /** Service Options */
-            /// <summary>Flag indicating the emergency bits are set.</summary>
-            __PROPERTY(bool, emergency, Emergency);
-            /// <summary>Flag indicating that encryption is enabled.</summary>
-            __PROPERTY(bool, encrypted, Encrypted);
-            /// <summary>Priority level for the traffic.</summary>
-            __PROPERTY(uint8_t, priority, Priority);
-            /// <summary>Flag indicating a group/talkgroup operation.</summary>
-            __PROPERTY(bool, group, Group);
-
-            /** Radio Unit Monitor */
-            /// <summary>Radio Unit Monitor.</summary>
-            __PROPERTY(uint8_t, txMult, TxMult);
-
-            /** Authentication Handshake */
-            /// <summary>Flag indicating authentication was successful.</summary>
-            __PROPERTY(bool, authSuccess, AuthSuccess);
-            /// <summary>Flag indicating authentication is standalone.</summary>
-            __PROPERTY(bool, authStandalone, AuthStandalone);
-
-            /** Local Site data */
-            /// <summary>Local Site Data.</summary>
-            __PROPERTY_PLAIN(SiteData, siteData, siteData);
-            /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
-
-        private:
             /// <summary>Initializes a new instance of the TSBK class.</summary>
             TSBK();
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
-            TSBK(SiteData siteData);
+            /// <summary>Finalizes a instance of the TSBK class.</summary>
+            virtual ~TSBK();
+            
+            /// <summary>Decode a trunking signalling block.</summary>
+            virtual bool decode(const uint8_t* data, bool rawTSBK = false) = 0;
+            /// <summary>Encode a trunking signalling block.</summary>
+            virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) = 0;
 
+            /// <summary>Sets the flag indicating verbose log output.</summary>
+            static void setVerbose(bool verbose) { m_verbose = verbose; }
+            /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
+            static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+
+            /** Local Site data */
+            /// <summary>Sets the callsign.</summary>
+            static void setCallsign(std::string callsign);
+
+            /// <summary>Gets the local site data.</summary>
+            static SiteData getSiteData() { return m_siteData; }
+            /// <summary>Sets the local site data.</summary>
+            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+
+        public:
+            /** Common Data */
+            /// <summary>Flag indicating the link control data is protected.</summary>
+            __PROTECTED_PROPERTY(bool, protect, Protect);
+            /// <summary>Link control opcode.</summary>
+            __PROTECTED_PROPERTY(uint8_t, lco, LCO);
+            /// <summary>Manufacturer ID.</summary>
+            __PROTECTED_PROPERTY(uint8_t, mfId, MFId);
+
+            /// <summary>Source ID.</summary>
+            __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
+            /// <summary>Destination ID.</summary>
+            __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
+
+            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
+            /// <summary>Flag indicating this TSBK contains additional information.</summary>
+            __PROTECTED_PROPERTY(bool, aivFlag, AIV);
+            /// <summary>Flag indicating this TSBK contains extended addressing.</summary>
+            __PROTECTED_PROPERTY(bool, extendedAddrFlag, EX);
+
+            /// <summary>Service type.</summary>
+            __PROTECTED_PROPERTY(uint8_t, service, Service);
+            /// <summary>Response type.</summary>
+            __PROTECTED_PROPERTY(uint8_t, response, Response);
+
+            /// <summary>Configured network ID.</summary>
+            __PROTECTED_READONLY_PROPERTY(uint32_t, netId, NetId);
+            /// <summary>Configured system ID.</summary>
+            __PROTECTED_READONLY_PROPERTY(uint32_t, sysId, SysId);
+
+            /// <summary>Voice channel ID.</summary>
+            __PROTECTED_PROPERTY(uint32_t, grpVchId, GrpVchId);
+            /// <summary>Voice channel number.</summary>
+            __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+
+            /** Common Service Options */
+            /// <summary>Flag indicating the emergency bits are set.</summary>
+            __PROTECTED_PROPERTY(bool, emergency, Emergency);
+            /// <summary>Flag indicating that encryption is enabled.</summary>
+            __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
+            /// <summary>Priority level for the traffic.</summary>
+            __PROTECTED_PROPERTY(uint8_t, priority, Priority);
+            /// <summary>Flag indicating a group/talkgroup operation.</summary>
+            __PROTECTED_PROPERTY(bool, group, Group);
+
+            /** Local Site data */
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+
+        protected:
             friend class dfsi::LC;
             friend class LC;
             friend class TDULC;
             edac::RS634717 m_rs;
             edac::Trellis m_trellis;
-            bool m_vendorSkip;
 
-            bool m_sndcpAutoAccess;
-            bool m_sndcpReqAccess;
-            uint16_t m_sndcpDAC;
-
-            /** Authentication data */
-            uint8_t* m_authRes;
-            uint8_t* m_authRS;
-            uint8_t* m_authRC;
+            static bool m_verbose;
+            static bool m_warnCRC;
 
             /** Local Site data */
-            uint8_t* m_siteCallsign;
+            static uint8_t* m_siteCallsign;
+            static SiteData m_siteData;
 
-            /// <summary>Internal helper to copy the class.</summary>
-            void copy(const TSBK& data);
+            /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
+            static ulong64_t tsbkValue(const uint8_t* tsbk);
+            /// <summary>Internal helper to convert a 64-bit long value to TSBK bytes.</summary>
+            static uint8_t* tsbkValue(const ulong64_t tsbkValue);
+
+            /// <summary>Internal helper to decode a trunking signalling block.</summary>
+            bool decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK = false);
+            /// <summary>Internal helper to encode a trunking signalling block.</summary>
+            void encode(uint8_t* data, const uint8_t* tsbk, bool rawTSBK = false, bool noTrellis = false);
+
+            __PROTECTED_COPY(TSBK);
         };
     } // namespace lc
 } // namespace p25

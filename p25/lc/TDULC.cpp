@@ -41,6 +41,15 @@ using namespace p25;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+bool TDULC::m_verbose = false;
+
+SiteData TDULC::m_siteData = SiteData();
+::lookups::IdenTable TDULC::m_siteIdenEntry = ::lookups::IdenTable();
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -56,32 +65,8 @@ TDULC::TDULC(const TDULC& data) : TDULC()
 /// <summary>
 /// Initializes a new instance of the TDULC class.
 /// </summary>
-/// <param name="siteData"></param>
-/// <param name="entry"></param>
-TDULC::TDULC(SiteData siteData, ::lookups::IdenTable entry) : TDULC(siteData)
-{
-    m_siteIdenEntry = entry;
-    m_grpVchNo = m_siteData.channelNo();
-}
-
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
-/// <param name="siteData"></param>
-/// <param name="entry"></param>
-/// <param name="verbose"></param>
-TDULC::TDULC(SiteData siteData, ::lookups::IdenTable entry, bool verbose) : TDULC(siteData)
-{
-    m_verbose = verbose;
-    m_siteIdenEntry = entry;
-    m_grpVchNo = m_siteData.channelNo();
-}
-
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
 /// <param name="lc"></param>
-TDULC::TDULC(LC* lc) : TDULC(lc->siteData())
+TDULC::TDULC(LC* lc) : TDULC()
 {
     m_protect = lc->m_protect;
     m_lco = lc->m_lco;
@@ -99,6 +84,32 @@ TDULC::TDULC(LC* lc) : TDULC(lc->siteData())
     m_group = lc->m_group;
 
     m_callTimer = lc->m_callTimer;
+}
+
+/// <summary>
+/// Initializes a new instance of the TDULC class.
+/// </summary>
+TDULC::TDULC() :
+    m_protect(false),
+    m_lco(LC_GROUP),
+    m_mfId(P25_MFG_STANDARD),
+    m_srcId(0U),
+    m_dstId(0U),
+    m_grpVchNo(0U),
+    m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjRfssId(0U),
+    m_adjSiteId(0U),
+    m_adjChannelId(0U),
+    m_adjChannelNo(0U),
+    m_adjServiceClass(P25_SVC_CLS_INVALID),
+    m_emergency(false),
+    m_encrypted(false),
+    m_priority(4U),
+    m_group(true),
+    m_rs(),
+    m_callTimer(0U)
+{
+    m_grpVchNo = m_siteData.channelNo();
 }
 
 /// <summary>
@@ -206,45 +217,6 @@ void TDULC::encode(uint8_t * data)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
-
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
-/// <remarks>This should never be used.</remarks>
-TDULC::TDULC() : TDULC(SiteData())
-{
-    /* stub */
-}
-
-/// <summary>
-/// Initializes a new instance of the TDULC class.
-/// </summary>
-/// <param name="siteData"></param>
-TDULC::TDULC(SiteData siteData) :
-    m_verbose(false),
-    m_protect(false),
-    m_lco(LC_GROUP),
-    m_mfId(P25_MFG_STANDARD),
-    m_srcId(0U),
-    m_dstId(0U),
-    m_grpVchNo(0U),
-    m_adjCFVA(P25_CFVA_FAILURE),
-    m_adjRfssId(0U),
-    m_adjSiteId(0U),
-    m_adjChannelId(0U),
-    m_adjChannelNo(0U),
-    m_adjServiceClass(P25_SVC_CLS_INVALID),
-    m_emergency(false),
-    m_encrypted(false),
-    m_priority(4U),
-    m_group(true),
-    m_siteData(siteData),
-    m_siteIdenEntry(),
-    m_rs(),
-    m_callTimer(0U)
-{
-    m_grpVchNo = m_siteData.channelNo();
-}
 
 /// <summary>
 /// Internal helper to copy the the class.

@@ -27,6 +27,7 @@
 #include "p25/P25Defines.h"
 #include "p25/dfsi/DFSIDefines.h"
 #include "p25/dfsi/LC.h"
+#include "p25/lc/tsbk/TSBKFactory.h"
 #include "p25/P25Utils.h"
 #include "Log.h"
 #include "Utils.h"
@@ -53,7 +54,7 @@ LC::LC() :
     m_rssi(0U),
     m_source(P25_DFSI_DEF_SOURCE),
     m_control(),
-    m_tsbk(),
+    m_tsbk(NULL),
     m_lsd(),
     m_mi(NULL)
 {
@@ -717,7 +718,10 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 bool LC::decodeTSBK(const uint8_t* data)
 {
     assert(data != NULL);
-    m_tsbk = lc::TSBK();
+    if (m_tsbk != NULL) {
+        delete m_tsbk;
+        m_tsbk = NULL;
+    }
 
     m_frameType = data[0U];                                                         // Frame Type
     if (m_frameType != P25_DFSI_TSBK) {
@@ -729,7 +733,13 @@ bool LC::decodeTSBK(const uint8_t* data)
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memcpy(tsbk, data + 9U, P25_TSBK_LENGTH_BYTES);                               // Raw TSBK + CRC
-    return m_tsbk.decode(tsbk, true);
+
+    m_tsbk = lc::tsbk::TSBKFactory::createTSBK(tsbk, true);
+    if (m_tsbk != NULL) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 /// <summary>
@@ -738,10 +748,11 @@ bool LC::decodeTSBK(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeTSBK(uint8_t* data)
 {
+    assert(m_tsbk != NULL);
     assert(data != NULL);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
-    m_tsbk.encode(tsbk, true, true);
+    m_tsbk->encode(tsbk, true, true);
 
     uint8_t dfsiFrame[P25_DFSI_TSBK_FRAME_LENGTH_BYTES];
     ::memset(dfsiFrame, 0x00U, P25_DFSI_TSBK_FRAME_LENGTH_BYTES);
@@ -777,7 +788,7 @@ void LC::copy(const LC& data)
     m_source = data.m_source;
 
     m_control = lc::LC(data.m_control);
-    m_tsbk = lc::TSBK(data.m_tsbk);
+    //m_tsbk = lc::TSBK(data.m_tsbk);
     m_lsd = data.m_lsd;
 
     delete[] m_mi;

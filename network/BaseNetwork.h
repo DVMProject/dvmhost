@@ -36,6 +36,7 @@
 #include "p25/P25Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "dmr/data/Data.h"
+#include "p25/data/DataHeader.h"
 #include "p25/data/LowSpeedData.h"
 #include "p25/dfsi/DFSIDefines.h"
 #include "p25/dfsi/LC.h"
@@ -155,7 +156,7 @@ namespace network
         /// <summary>Writes P25 TDU frame data to the network.</summary>
         virtual bool writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
-        virtual bool writeP25TSDU(const p25::lc::TSBK& control, const uint8_t* data);
+        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
@@ -235,7 +236,7 @@ namespace network
         /// <summary>Writes P25 TDU frame data to the network.</summary>
         bool writeP25TDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
-        bool writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::TSBK& control, const uint8_t* data);
+        bool writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         bool writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);

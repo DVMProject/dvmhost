@@ -108,7 +108,7 @@ namespace p25
             /// <summary>Link control data.</summary>
             __PROPERTY_PLAIN(p25::lc::LC, control, control);
             /// <summary>TSBK.</summary>
-            __PROPERTY_PLAIN(p25::lc::TSBK, tsbk, tsbk);
+            __PROPERTY_PLAIN(p25::lc::TSBK*, tsbk, tsbk);
             /// <summary>Low speed data.</summary>
             __PROPERTY_PLAIN(p25::data::LowSpeedData, lsd, lsd);
 

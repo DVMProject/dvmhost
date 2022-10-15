@@ -31,6 +31,8 @@ file(GLOB dvmhost_SRC
     "p25/edac/*.cpp"
     "p25/lc/*.h"
     "p25/lc/*.cpp"
+    "p25/lc/tsbk/*.h"
+    "p25/lc/tsbk/*.cpp"
     "p25/lookups/*.h"
     "p25/lookups/*.cpp"
     "p25/packet/*.h"
@@ -109,7 +111,7 @@ else ()
 endif (ENABLE_DMR)
 message(CHECK_START "P25 Digital Mode")
 if (ENABLE_P25)
-    add_definitions(-DEANBLE_P25)
+    add_definitions(-DENABLE_P25)
     message(CHECK_PASS "enabled")
 else ()
     message(CHECK_PASS "disabled")

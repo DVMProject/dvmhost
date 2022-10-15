@@ -57,11 +57,9 @@ namespace p25
             /// <summary>Initializes a copy instance of the TDULC class.</summary>
             TDULC(const TDULC& data);
             /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC(SiteData siteData, ::lookups::IdenTable entry);
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC(SiteData siteData, ::lookups::IdenTable entry, bool verbose);
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
             TDULC(LC* lc);
+            /// <summary>Initializes a new instance of the TDULC class.</summary>
+            TDULC();
             /// <summary>Finalizes a instance of the TDULC class.</summary>
             ~TDULC();
 
@@ -73,10 +71,20 @@ namespace p25
             /// <summary>Encode a terminator data unit w/ link control.</summary>
             void encode(uint8_t* data);
 
-        public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
+            /// <summary>Sets the flag indicating verbose log output.</summary>
+            static void setVerbose(bool verbose) { m_verbose = verbose; }
 
+            /** Local Site data */
+            /// <summary>Gets the local site data.</summary>
+            static SiteData getSiteData() { return m_siteData; }
+            /// <summary>Sets the local site data.</summary>
+            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
+            /// <summary>Gets the local site identity entry.</summary>
+            static ::lookups::IdenTable getIdenEntry() { return m_siteIdenEntry; }
+            /// <summary>Sets the local site identity entry.</summary>
+            static void setIdenEntry(::lookups::IdenTable entry) { m_siteIdenEntry = entry; }
+
+        public:
             /** Common Data */
             /// <summary>Flag indicating the link control data is protected.</summary>
             __PROPERTY(bool, protect, Protect);
@@ -119,23 +127,18 @@ namespace p25
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
             __PROPERTY(bool, group, Group);
 
-            /** Local Site data */
-            /// <summary>Local Site Data.</summary>
-            __PROPERTY_PLAIN(SiteData, siteData, siteData);
-            /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
-
-        private:
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC();
-            /// <summary>Initializes a new instance of the TDULC class.</summary>
-            TDULC(SiteData siteData);
-
+        protected:
             friend class LC;
             friend class TSBK;
             edac::RS634717 m_rs;
 
             uint32_t m_callTimer;
+
+            static bool m_verbose;
+
+            /** Local Site data */
+            static SiteData m_siteData;
+            static ::lookups::IdenTable m_siteIdenEntry;
 
             /// <summary>Internal helper to copy the class.</summary>
             void copy(const TDULC& data);

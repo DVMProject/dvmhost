@@ -42,33 +42,13 @@ using namespace p25::dfsi::packet;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Resets the data states for the RF interface.
-/// </summary>
-void DFSITrunk::resetRF()
-{
-    Trunk::resetRF();
-    LC lc = LC();
-    m_rfDFSILC = lc;
-}
-
-/// <summary>
-/// Resets the data states for the network.
-/// </summary>
-void DFSITrunk::resetNet()
-{
-    Trunk::resetNet();
-    LC lc = LC();
-    m_netDFSILC = lc;
-}
-
-/// <summary>
 /// Process a data frame from the RF interface.
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="preDecoded">Flag indicating the TSBK data is pre-decoded TSBK data.</param>
+/// <param name="preDecodedTSBK">Pre-decoded TSBK.</param>
 /// <returns></returns>
-bool DFSITrunk::process(uint8_t* data, uint32_t len, bool preDecoded)
+bool DFSITrunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
 {
     assert(data != NULL);
 
@@ -78,16 +58,12 @@ bool DFSITrunk::process(uint8_t* data, uint32_t len, bool preDecoded)
     if (!m_p25->m_control)
         return false;
 
-    if (preDecoded) {
-        return Trunk::process(data + 2U, len, preDecoded);
+    if (preDecodedTSBK != NULL) {
+        return Trunk::process(data + 2U, len, preDecodedTSBK);
     }
     else {
-        resetRF();
-        resetNet();
-
         if (m_rfDFSILC.decodeTSBK(data + 2U)) {
-            m_rfTSBK = m_rfDFSILC.tsbk();
-            return Trunk::process(tsbk, P25_TSBK_LENGTH_BYTES, true);
+            return Trunk::process(tsbk, P25_TSBK_LENGTH_BYTES, m_rfDFSILC.tsbk());
         }
     }
 
@@ -133,13 +109,16 @@ void DFSITrunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 /// <summary>
 /// Helper to write a single-block P25 TSDU packet.
 /// </summary>
+/// <param name="tsbk"></param>
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="force"></param>
-void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool force)
+void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force)
 {
     if (!m_p25->m_control)
         return;
+
+    assert(tsbk != NULL);
 
     writeRF_DFSI_Start(P25_DFSI_TYPE_TSBK);
 
@@ -149,7 +128,7 @@ void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool for
     m_rfDFSILC.setFrameType(P25_DFSI_TSBK);
     m_rfDFSILC.setStartStop(P25_DFSI_START_FLAG);
     m_rfDFSILC.setType(P25_DFSI_TYPE_TSBK);
-    m_rfDFSILC.tsbk(m_rfTSBK);
+    m_rfDFSILC.tsbk(tsbk);
 
     // Generate Sync
     Sync::addP25Sync(data + 2U);
@@ -158,13 +137,13 @@ void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool for
     m_p25->m_nid.encode(data + 2U, P25_DUID_TSDU);
 
     // Generate TSBK block
-    m_rfTSBK.setLastBlock(true); // always set last block -- this a Single Block TSDU
-    m_rfTSBK.encode(data + 2U);
+    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
+    tsbk->encode(data + 2U);
 
     if (m_debug) {
         LogDebug(LOG_RF, P25_TSDU_STR " DFSI, lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-            m_rfTSBK.getLCO(), m_rfTSBK.getMFId(), m_rfTSBK.getLastBlock(), m_rfTSBK.getAIV(), m_rfTSBK.getEX(), m_rfTSBK.getSrcId(), m_rfTSBK.getDstId(),
-            m_rfTSBK.getSysId(), m_rfTSBK.getNetId());
+            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+            tsbk->getSysId(), tsbk->getNetId());
 
         Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
     }
@@ -176,7 +155,7 @@ void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool for
     m_p25->setBusyBits(data + 2U, P25_SS0_START, true, true);
 
     if (!noNetwork)
-        writeNetworkRF(data + 2U, true);
+        writeNetworkRF(tsbk, data + 2U, true);
 
     if (!force) {
         if (clearBeforeWrite) {
@@ -201,11 +180,14 @@ void DFSITrunk::writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite, bool for
 /// <summary>
 /// Helper to write a alternate multi-block trunking PDU packet.
 /// </summary>
+/// <param name="ambt"></param>
 /// <param name="clearBeforeWrite"></param>
-void DFSITrunk::writeRF_TSDU_AMBT(bool clearBeforeWrite)
+void DFSITrunk::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
 {
     if (!m_p25->m_control)
         return;
+
+    assert(ambt != NULL);
 
     // for now this is ignored...
 }
@@ -213,8 +195,11 @@ void DFSITrunk::writeRF_TSDU_AMBT(bool clearBeforeWrite)
 /// <summary>
 /// Helper to write a network single-block P25 TSDU packet.
 /// </summary>
-void DFSITrunk::writeNet_TSDU()
+/// <param name="tsbk"></param>
+void DFSITrunk::writeNet_TSDU(lc::TSBK* tsbk)
 {
+    assert(tsbk != NULL);
+
     uint8_t buffer[P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
 
@@ -222,7 +207,7 @@ void DFSITrunk::writeNet_TSDU()
     buffer[1U] = 0x00U;
 
     // Regenerate TSDU Data
-    m_netDFSILC.tsbk(m_netTSBK);
+    m_netDFSILC.tsbk(tsbk);
     m_netDFSILC.encodeTSBK(buffer + 2U);
 
     m_p25->addFrame(buffer, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U, true);

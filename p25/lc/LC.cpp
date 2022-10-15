@@ -46,6 +46,12 @@ using namespace p25;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+SiteData LC::m_siteData = SiteData();
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -66,7 +72,6 @@ LC::LC() :
     m_group(true),
     m_algId(P25_ALGO_UNENCRYPT),
     m_kId(0U),
-    m_siteData(SiteData()),
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
@@ -84,16 +89,6 @@ LC::LC() :
 LC::LC(const LC& data) : LC()
 {
     copy(data);
-}
-
-/// <summary>
-/// Initializes a new instance of the LC class.
-/// </summary>
-/// <param name="siteData"></param>
-LC::LC(SiteData siteData) : LC()
-{
-    m_siteData = siteData;
-    m_grpVchNo = m_siteData.channelNo();
 }
 
 /// <summary>

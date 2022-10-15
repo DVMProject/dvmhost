@@ -285,6 +285,12 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     m_siteData.setCallsign(cwCallsign);
 
+    lc::LC::setSiteData(m_siteData);
+    lc::TDULC::setSiteData(m_siteData);
+
+    lc::TSBK::setCallsign(cwCallsign);
+    lc::TSBK::setSiteData(m_siteData);
+
     std::vector<::lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
         ::lookups::IdenTable entry = *it;
@@ -293,6 +299,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
             break;
         }
     }
+
+    lc::TDULC::setIdenEntry(m_idenEntry);
 
     std::vector<uint32_t> availCh = voiceChNo;
     m_siteData.setChCnt((uint8_t)availCh.size());
@@ -348,11 +356,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     if (m_data != NULL) {
         m_data->resetRF();
-    }
-
-    if (m_trunk != NULL) {
-        m_trunk->resetRF();
-        m_trunk->resetNet();
     }
 }
 
@@ -430,8 +433,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
         m_voice->resetRF();
         m_data->resetRF();
-
-        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
 
         return false;
     }
@@ -705,8 +706,6 @@ void Control::clock(uint32_t ms)
 
             m_voice->resetNet();
 
-            m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
-
             m_netTimeout.stop();
         }
     }
@@ -719,9 +718,6 @@ void Control::clock(uint32_t ms)
         m_voice->resetNet();
 
         m_data->resetRF();
-
-        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
-        m_trunk->m_netTSBK = lc::TSBK(m_siteData, m_idenEntry);
 
         if (m_network != NULL)
             m_network->resetP25();

@@ -30,6 +30,7 @@
 #include "p25/data/DataHeader.h"
 #include "p25/data/DataBlock.h"
 #include "p25/lc/TSBK.h"
+#include "p25/lc/AMBT.h"
 #include "p25/lc/TDULC.h"
 #include "p25/Control.h"
 #include "network/BaseNetwork.h"
@@ -62,13 +63,8 @@ namespace p25
 
         class HOST_SW_API Trunk {
         public:
-            /// <summary>Resets the data states for the RF interface.</summary>
-            virtual void resetRF();
-            /// <summary>Resets the data states for the network.</summary>
-            virtual void resetNet();
-
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t* data, uint32_t len, bool preDecoded = false);
+            virtual bool process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK = NULL);
             /// <summary>Process a data frame from the network.</summary>
             virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
@@ -81,13 +77,10 @@ namespace p25
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
 
-            /// <summary>Helper to set the TSBK manufacturer ID.</summary>
-            void setMFId(uint8_t val) { m_rfTSBK.setMFId(val); }
-
             /// <summary>Helper to write a call alert packet.</summary>
             void writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId);
-            /// <summary>Helper to write a call alert packet.</summary>
-            void writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txmult);
+            /// <summary>Helper to write a radio monitor packet.</summary>
+            void writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMult);
             /// <summary>Helper to write a extended function packet.</summary>
             void writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
             /// <summary>Helper to write a group affiliation query packet.</summary>
@@ -96,9 +89,6 @@ namespace p25
             void writeRF_TSDU_U_Reg_Cmd(uint32_t dstId);
             /// <summary>Helper to write a emergency alarm packet.</summary>
             void writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId);
-
-            /// <summary>Helper to write a Motorola patch packet.</summary>
-            void writeRF_TSDU_Mot_Patch(uint32_t group1, uint32_t group2, uint32_t group3);
 
             /// <summary>Helper to change the conventional fallback state.</summary>
             void setConvFallback(bool fallback);
@@ -123,8 +113,6 @@ namespace p25
             bool m_verifyAff;
             bool m_verifyReg;
 
-            lc::TSBK m_rfTSBK;
-            lc::TSBK m_netTSBK;
             uint8_t* m_rfMBF;
             uint8_t m_mbfCnt;
 
@@ -167,57 +155,58 @@ namespace p25
             virtual ~Trunk();
 
             /// <summary>Write data processed from RF to the network.</summary>
-            void writeNetworkRF(const uint8_t* data, bool autoReset);
+            void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset);
+            /// <summary>Write data processed from RF to the network.</summary>
+            void writeNetworkRF(lc::TDULC& tduLc, const uint8_t* data, bool autoReset);
 
             /// <summary>Helper to write control channel packet data.</summary>
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
             void writeRF_TDULC(lc::TDULC lc, bool noNetwork);
+            /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
+            virtual void writeNet_TDULC(lc::TDULC lc);
             /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
             void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
             /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-            virtual void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+            virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+            /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
+            virtual void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
-            void writeRF_TSDU_MBF(bool clearBeforeWrite = false);
+            void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
             /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
-            virtual void writeRF_TSDU_AMBT(bool clearBeforeWrite = false);
+            virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
 
             /// <summary>Helper to generate the given control TSBK into the TSDU frame queue.</summary>
             void queueRF_TSBK_Ctrl(uint8_t lco);
 
             /// <summary>Helper to write a grant packet.</summary>
-            bool writeRF_TSDU_Grant(bool grp, bool skip = false, bool net = false, bool skipNetCheck = false);
+            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, uint32_t chNo = 0U, bool net = false, bool skipNetCheck = false);
             /// <summary>Helper to write a SNDCP grant packet.</summary>
-            bool writeRF_TSDU_SNDCP_Grant(bool skip = false, bool net = false);
+            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip = false, bool net = false);
             /// <summary>Helper to write a unit to unit answer request packet.</summary>
             void writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId);
             /// <summary>Helper to write a acknowledge packet.</summary>
             void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noActivityLog);
             /// <summary>Helper to write a deny packet.</summary>
-            void writeRF_TSDU_Deny(uint8_t reason, uint8_t service);
+            void writeRF_TSDU_Deny(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false);
             /// <summary>Helper to write a group affiliation response packet.</summary>
             bool writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId);
             /// <summary>Helper to write a unit registration response packet.</summary>
-            void writeRF_TSDU_U_Reg_Rsp(uint32_t srcId);
+            void writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId);
             /// <summary>Helper to write a unit de-registration acknowledge packet.</summary>
             void writeRF_TSDU_U_Dereg_Ack(uint32_t srcId);
             /// <summary>Helper to write a queue packet.</summary>
-            void writeRF_TSDU_Queue(uint8_t reason, uint8_t service);
+            void writeRF_TSDU_Queue(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false);
             /// <summary>Helper to write a location registration response packet.</summary>
-            bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId);
+            bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp);
 
             /// <summary>Helper to write a call termination packet.</summary>
             bool writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId);
 
             /// <summary>Helper to write a network TSDU from the RF data queue.</summary>
-            void writeNet_TSDU_From_RF(uint8_t* data);
-
-            /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
-            virtual void writeNet_TDULC(lc::TDULC lc);
-            /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
-            virtual void writeNet_TSDU();
+            void writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t * data);
 
             /// <summary>Helper to automatically inhibit a source ID on a denial.</summary>
             void denialInhibit(uint32_t srcId);

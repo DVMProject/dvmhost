@@ -228,12 +228,40 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
                 (buffer[offset + 2U] << 0);
 
 /**
+ * Class Copy Code Pattern
+ */
+/// <summary>Creates a private copy implementation.</summary>
+/// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
+#define __COPY(type)                                                                    \
+        private: void copy(const type& data);                                           \
+        public: __forceinline type& operator=(const type& data) {                       \
+            if (this != &data) {                                                        \
+                copy(data);                                                             \
+            }                                                                           \
+            return *this;                                                               \
+        }
+/// <summary>Creates a protected copy implementation.</summary>
+/// <remarks>This requires the copy(const type& data) to be declared in the class definition.</remarks>
+#define __PROTECTED_COPY(type)                                                          \
+        protected: void copy(const type& data);                                         \
+        public: __forceinline type& operator=(const type& data) {                       \
+            if (this != &data) {                                                        \
+                copy(data);                                                             \
+            }                                                                           \
+            return *this;                                                               \
+        }
+
+/**
  * Property Creation
  *  These macros should always be used LAST in the "public" section of a class definition.
  */
 /// <summary>Creates a read-only get property.</summary>
 #define __READONLY_PROPERTY(type, variableName, propName)                               \
         private: type m_##variableName;                                                 \
+        public: __forceinline type get##propName(void) const { return m_##variableName; }
+/// <summary>Creates a read-only get property.</summary>
+#define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
+        protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
 /// <summary>Creates a read-only get property, does not use "get".</summary>
 #define __READONLY_PROPERTY_PLAIN(type, variableName, propName)                         \
@@ -244,14 +272,24 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
         private: type m_##variableName;                                                 \
         public: __forceinline type& get##propName(void) const { return m_##variableName; }
 
-/// <summary>Creates a get and set property.</summary>
+/// <summary>Creates a get and set private property.</summary>
 #define __PROPERTY(type, variableName, propName)                                        \
         private: type m_##variableName;                                                 \
         public: __forceinline type get##propName(void) const { return m_##variableName; } \
                 __forceinline void set##propName(type val) { m_##variableName = val; }
-/// <summary>Creates a get and set property, does not use "get"/"set".</summary>
+/// <summary>Creates a get and set protected property.</summary>
+#define __PROTECTED_PROPERTY(type, variableName, propName)                              \
+        protected: type m_##variableName;                                               \
+        public: __forceinline type get##propName(void) const { return m_##variableName; } \
+                __forceinline void set##propName(type val) { m_##variableName = val; }
+/// <summary>Creates a get and set private property, does not use "get"/"set".</summary>
 #define __PROPERTY_PLAIN(type, variableName, propName)                                  \
         private: type m_##variableName;                                                 \
+        public: __forceinline type propName(void) const { return m_##variableName; }    \
+                __forceinline void propName(type val) { m_##variableName = val; }
+/// <summary>Creates a get and set protected property, does not use "get"/"set".</summary>
+#define __PROTECTED_PROPERTY_PLAIN(type, variableName, propName)                        \
+        protected: type m_##variableName;                                               \
         public: __forceinline type propName(void) const { return m_##variableName; }    \
                 __forceinline void propName(type val) { m_##variableName = val; }
 /// <summary>Creates a get and set property by reference.</summary>

@@ -293,6 +293,8 @@ namespace p25
     const uint8_t   TSBK_IOSP_STS_UPDT = 0x18U;         // STS UPDT REQ - Status Update Request (ISP), STS UPDT - Status Update (OSP)
     const uint8_t   TSBK_IOSP_STS_Q = 0x1AU;            // STS Q REQ - Status Query Request (ISP), STS Q - Status Query (OSP)
     const uint8_t   TSBK_IOSP_MSG_UPDT = 0x1CU;         // MSG UPDT REQ - Message Update Request (ISP), MSG UPDT - Message Update (OSP)
+    const uint8_t   TSBK_IOSP_RAD_MON = 0x1DU;          // RAD MON REQ - Radio Unit Monitor Request (ISP), RAD MON CMD - Radio Monitor Command (OSP)
+    const uint8_t   TSBK_IOSP_RAD_MON_ENH = 0x1EU;      // RAD MON ENH REQ - Radio Unit Monitor Enhanced Request (ISP), RAD MON ENH CMD - Radio Unit Monitor Enhanced Command (OSP)
     const uint8_t   TSBK_IOSP_CALL_ALRT = 0x1FU;        // CALL ALRT REQ - Call Alert Request (ISP), CALL ALRT - Call Alert (OSP)
     const uint8_t   TSBK_IOSP_ACK_RSP = 0x20U;          // ACK RSP U - Acknowledge Response - Unit (ISP), ACK RSP FNE - Acknowledge Response - FNE (OSP)
     const uint8_t   TSBK_IOSP_EXT_FNCT = 0x24U;         // EXT FNCT RSP - Extended Function Response (ISP), EXT FNCT CMD - Extended Function Command (OSP)
@@ -303,27 +305,23 @@ namespace p25
     const uint8_t   TSBK_ISP_TELE_INT_PSTN_REQ = 0x09U; // TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
     const uint8_t   TSBK_ISP_SNDCP_CH_REQ = 0x12U;      // SNDCP CH REQ - SNDCP Data Channel Request
     const uint8_t   TSBK_ISP_STS_Q_RSP = 0x19U;         // STS Q RSP - Status Query Response
-    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS_Q_REQ - Status Query Request
-    const uint8_t   TSBK_ISP_RAD_MON_REQ = 0x1DU;       // RAD_MON_REQ - Radio Unit Monitor Request
-    const uint8_t   TSBK_ISP_RAD_MON_ENH_REQ = 0x1EU;   // RAD_MON_ENH_REQ - Radio Unit Monitor Enhanced Request
+    const uint8_t   TSBK_ISP_STS_Q_REQ = 0x1CU;         // STS Q REQ - Status Query Request
     const uint8_t   TSBK_ISP_CAN_SRV_REQ = 0x23U;       // CAN SRV REQ - Cancel Service Request
     const uint8_t   TSBK_ISP_EMERG_ALRM_REQ = 0x27U;    // EMERG ALRM REQ - Emergency Alarm Request
     const uint8_t   TSBK_ISP_GRP_AFF_Q_RSP = 0x29U;     // GRP AFF Q RSP - Group Affiliation Query Response
     const uint8_t   TSBK_ISP_U_DEREG_REQ = 0x2BU;       // U DE REG REQ - Unit De-Registration Request
     const uint8_t   TSBK_ISP_LOC_REG_REQ = 0x2DU;       // LOC REG REQ - Location Registration Request
-    const uint8_t   TSBK_ISP_AUTH_RESP = 0x38U;         // AUTH_RESP - Authentication Response
-    const uint8_t   TSBK_ISP_AUTH_RESP_M = 0x39U;       // AUTH_RESP_M - Authentication Response Mutual
-    const uint8_t   TSBK_ISP_AUTH_FNE_RST = 0x3AU;      // AUTH_FNE_RST - Authentication FNE Result
-    const uint8_t   TSBK_ISP_AUTH_SU_DMD = 0x3BU;       // AUTH_SU_DMD - Authentication SU Demand
+    const uint8_t   TSBK_ISP_AUTH_RESP = 0x38U;         // AUTH RESP - Authentication Response
+    const uint8_t   TSBK_ISP_AUTH_RESP_M = 0x39U;       // AUTH RESP M - Authentication Response Mutual
+    const uint8_t   TSBK_ISP_AUTH_FNE_RST = 0x3AU;      // AUTH FNE RST - Authentication FNE Result
+    const uint8_t   TSBK_ISP_AUTH_SU_DMD = 0x3BU;       // AUTH SU DMD - Authentication SU Demand
 
     // TSBK Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_GRP_VCH_GRANT_UPD = 0x02U; // GRP VCH GRANT UPD - Group Voice Channel Grant Update
     const uint8_t   TSBK_OSP_UU_VCH_GRANT_UPD = 0x06U;  // UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
     const uint8_t   TSBK_OSP_SNDCP_CH_GNT = 0x14U;      // SNDCP CH GNT - SNDCP Data Channel Grant
     const uint8_t   TSBK_OSP_SNDCP_CH_ANN = 0x16U;      // SNDCP CH ANN - SNDCP Data Channel Announcement
-    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS_Q - Status Query
-    const uint8_t   TSBK_OSP_RAD_MON_CMD = 0x1DU;       // RAD_MON_CMD - Radio Monitor Command
-    const uint8_t   TSBK_OSP_RAD_MON_ENH_CMD = 0x1EU;   // RAD_MON_ENH_CMD - Radio Unit Monitor Enhanced Command
+    const uint8_t   TSBK_OSP_STS_Q = 0x1AU;             // STS Q - Status Query
     const uint8_t   TSBK_OSP_DENY_RSP = 0x27U;          // DENY RSP - Deny Response
     const uint8_t   TSBK_OSP_SCCB_EXP = 0x29U;          // SCCB - Secondary Control Channel Broadcast - Explicit
     const uint8_t   TSBK_OSP_GRP_AFF_Q = 0x2AU;         // GRP AFF Q - Group Affiliation Query
@@ -331,8 +329,8 @@ namespace p25
     const uint8_t   TSBK_OSP_U_REG_CMD = 0x2DU;         // U REG CMD - Unit Registration Command
     const uint8_t   TSBK_OSP_U_DEREG_ACK = 0x2FU;       // U DE REG ACK - Unit De-Registration Acknowledge
     const uint8_t   TSBK_OSP_SYNC_BCAST = 0x30U;        // SYNC BCAST - Synchronization Broadcast
-    const uint8_t   TSBK_OSP_AUTH_DMD = 0x31U;          // AUTH_DMD - Authentication Demand
-    const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH_FNE_RESP - Authentication FNE Response
+    const uint8_t   TSBK_OSP_AUTH_DMD = 0x31U;          // AUTH DMD - Authentication Demand
+    const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH FNE RESP - Authentication FNE Response
     const uint8_t   TSBK_OSP_QUE_RSP = 0x33U;           // QUE RSP - Queued Response
     const uint8_t   TSBK_OSP_IDEN_UP_VU = 0x34U;        // IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
     const uint8_t   TSBK_OSP_SYS_SRV_BCAST = 0x38U;     // SYS SRV BCAST - System Service Broadcast

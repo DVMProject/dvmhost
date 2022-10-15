@@ -35,6 +35,7 @@
 #include "p25/P25Defines.h"
 #include "p25/data/DataHeader.h"
 #include "p25/lc/LC.h"
+#include "p25/lc/tsbk/TSBKFactory.h"
 #include "p25/P25Utils.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
@@ -410,6 +411,10 @@ int HostCal::run()
         ::LogError(LOG_HOST, "Invalid modem port type, %s!", portType.c_str());
         return 2;
     }
+
+    p25::lc::TSBK::setVerbose(true);
+    p25::lc::TSBK::setWarnCRC(true);
+    p25::lc::tsbk::TSBKFactory::setWarnCRC(true);
 
     m_modem = new Modem(modemPort, false, rxInvert, txInvert, pttInvert, dcBlocker, false, fdmaPreamble, dmrRxDelay, p25CorrCount, 10U, false, ignoreModemConfigArea, false, false, false);
     m_modem->setLevels(rxLevel, txLevel, txLevel, txLevel, txLevel);
@@ -2100,21 +2105,18 @@ void HostCal::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_TSDU) {
         timerStop();
 
-        lc::TSBK tsbk = lc::TSBK(SiteData(), lookups::IdenTable());
-        tsbk.setVerbose(true); // always verbose in CAL
-        tsbk.setWarnCRC(true);
+        lc::TSBK *tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer + 1U);
 
         Utils::dump(1U, "Raw TSBK Dump", buffer + 1U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-        bool ret = tsbk.decode(buffer + 1U);
-        if (!ret) {
+        if (tsbk == NULL) {
             LogWarning(LOG_CAL, P25_TSDU_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, status = %u, message = %u, extFunc = %u, netId = %u, sysId = %u",
-                tsbk.getMFId(), tsbk.getLCO(), tsbk.getSrcId(), tsbk.getDstId(), tsbk.getService(), tsbk.getStatus(), tsbk.getMessage(), tsbk.getExtendedFunction(),
-                tsbk.getNetId(), tsbk.getSysId());
+            LogMessage(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
+                tsbk->getMFId(), tsbk->getLCO(), tsbk->getSrcId(), tsbk->getDstId(), tsbk->getService(), tsbk->getNetId(), tsbk->getSysId());
+            delete tsbk;
         }
     }
 }

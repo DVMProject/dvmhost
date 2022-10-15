@@ -94,8 +94,6 @@ using namespace modem;
 #define RCD_P25_RID_GAQ                 "p25-rid-gaq"
 #define RCD_P25_RID_UREG                "p25-rid-ureg"
 
-#define RCD_P25_PATCH                   "p25-patch"
-
 #define RCD_P25_RELEASE_GRANTS          "p25-rel-grnts"
 #define RCD_P25_RELEASE_AFFS            "p25-rel-affs"
 
@@ -612,7 +610,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
                     }
                     else {
@@ -629,7 +628,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
                     }
                     else {
@@ -646,7 +646,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
                     }
                     else {
@@ -663,7 +664,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
                     }
                     else {
@@ -680,7 +682,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_Grp_Aff_Q(dstId);
                     }
                     else {
@@ -697,31 +700,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != NULL) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
+                        // FIXME
+                        //p25->trunk()->setMFId(m_p25MFId);
                         p25->trunk()->writeRF_TSDU_U_Reg_Cmd(dstId);
                     }
                     else {
                         reply = INVALID_OPT_STR "tried to P25 unit reg. command RID 0!";
-                        LogError(LOG_RCON, reply.c_str());
-                    }
-                }
-                else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
-            }
-            else if (rcom == RCD_P25_PATCH && argCnt >= 1U) {
-                if (p25 != NULL) {
-                    uint32_t group1 = getArgUInt32(args, 0U);
-                    uint32_t group2 = getArgUInt32(args, 1U);
-                    uint32_t group3 = getArgUInt32(args, 2U);
-
-                    if (group1 != 0U) {
-                        p25->trunk()->setMFId(m_p25MFId);
-                        p25->trunk()->writeRF_TSDU_Mot_Patch(group1, group2, group3);
-                    }
-                    else {
-                        reply = INVALID_OPT_STR "tried to add P25 group patch with no TGID?";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }

@@ -52,13 +52,8 @@ namespace p25
 
             class HOST_SW_API DFSITrunk : public p25::packet::Trunk {
             public:
-                /// <summary>Resets the data states for the RF interface.</summary>
-                virtual void resetRF();
-                /// <summary>Resets the data states for the network.</summary>
-                virtual void resetNet();
-
                 /// <summary>Process a data frame from the RF interface.</summary>
-                virtual bool process(uint8_t* data, uint32_t len, bool preDecoded = false);
+                virtual bool process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK = NULL);
 
             protected:
                 LC m_rfDFSILC;
@@ -73,14 +68,14 @@ namespace p25
                 virtual void writeRF_TDULC(lc::TDULC lc, bool noNetwork);
 
                 /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-                virtual void writeRF_TSDU_SBF(bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+                virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false);
                 /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
-                virtual void writeRF_TSDU_AMBT(bool clearBeforeWrite = false);
+                virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
 
                 /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
                 //virtual void writeNet_TDULC(lc::TDULC lc);
                 /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
-                virtual void writeNet_TSDU();
+                virtual void writeNet_TSDU(lc::TSBK* tsbk);
 
                 /// <suimmary>Helper to write start DFSI data.</summary>
                 void writeRF_DFSI_Start(uint8_t type);

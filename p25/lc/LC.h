@@ -61,8 +61,6 @@ namespace p25
             LC();
             /// <summary>Initializes a copy instance of the LC class.</summary>
             LC(const LC& data);
-            /// <summary>Initializes a new instance of the LC class.</summary>
-            LC(SiteData siteData);
             /// <summary>Finalizes a instance of the LC class.</summary>
             ~LC();
 
@@ -89,6 +87,12 @@ namespace p25
             void setMI(const uint8_t* mi);
             /// <summary>Gets the encryption message indicator.</summary>
             void getMI(uint8_t* mi) const;
+
+            /** Local Site data */
+            /// <summary>Gets the local site data.</summary>
+            static SiteData getSiteData() { return m_siteData; }
+            /// <summary>Sets the local site data.</summary>
+            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
 
         public:
             /** Common Data */
@@ -123,10 +127,6 @@ namespace p25
             /// <summary>Encryption key ID.</summary>
             __PROPERTY(uint32_t, kId, KId);
 
-            /** Local Site data */
-            /// <summary>Local Site Data.</summary>
-            __PROPERTY_PLAIN(SiteData, siteData, siteData);
-
         private:
             friend class TSBK;
             friend class TDULC;
@@ -138,6 +138,9 @@ namespace p25
 
             /** Encryption data */
             uint8_t* m_mi;
+
+            /** Local Site data */
+            static SiteData m_siteData;
 
             /// <summary>Internal helper to copy the class.</summary>
             void copy(const LC& data);

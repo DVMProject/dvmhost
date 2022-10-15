@@ -439,10 +439,10 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
 /// <summary>
 /// Writes P25 TSDU frame data to the network.
 /// </summary>
-/// <param name="tsbk"></param>
+/// <param name="control"></param>
 /// <param name="data"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25TSDU(const p25::lc::TSBK& tsbk, const uint8_t* data)
+bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -453,7 +453,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::TSBK& tsbk, const uint8_t* data)
 
     m_streamId[0] = m_p25StreamId;
 
-    return writeP25TSDU(m_id, m_p25StreamId, tsbk, data);
+    return writeP25TSDU(m_id, m_p25StreamId, control, data);
 }
 
 /// <summary>
@@ -962,30 +962,32 @@ bool BaseNetwork::writeP25TDU(const uint32_t id, const uint32_t streamId, const 
 /// </summary>
 /// <param name="id"></param>
 /// <param name="streamId"></param>
-/// <param name="tsbk"></param>
+/// <param name="control"></param>
 /// <param name="data"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::TSBK& tsbk, const uint8_t* data)
+bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const uint8_t* data)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
+
+    assert(data != NULL);
 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
-    buffer[4U] = tsbk.getLCO();                                                     // LCO
+    buffer[4U] = control.getLCO();                                                  // LCO
 
-    uint32_t srcId = tsbk.getSrcId();                                               // Source Address
+    uint32_t srcId = control.getSrcId();                                            // Source Address
     __SET_UINT16(srcId, buffer, 5U);
 
-    uint32_t dstId = tsbk.getDstId();                                               // Target Address
+    uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
     __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
 
-    buffer[15U] = tsbk.getMFId();                                                   // MFId
+    buffer[15U] = control.getMFId();                                                // MFId
 
     __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
