@@ -65,7 +65,7 @@ bool IOSP_GRP_AFF::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_sysId = (uint32_t)((tsbkValue >> 40) & 0xFFFU);                               // System ID
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Talkgroup Address
@@ -92,9 +92,8 @@ void IOSP_GRP_AFF::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 16) + (m_dstId & 0xFFFFU);                            // Talkgroup Address
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

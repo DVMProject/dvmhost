@@ -65,7 +65,7 @@ bool ISP_GRP_AFF_Q_RSP::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_announceGroup = (uint32_t)((tsbkValue >> 40) & 0xFFFFU);                      // Announcement Group Address
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Talkgroup Address

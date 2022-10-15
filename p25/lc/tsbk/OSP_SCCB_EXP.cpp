@@ -91,9 +91,8 @@ void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 8) + (P25_SVC_CLS_INVALID);                       // System Service Class
     }
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

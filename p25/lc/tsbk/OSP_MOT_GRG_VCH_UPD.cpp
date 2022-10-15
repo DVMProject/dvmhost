@@ -83,9 +83,8 @@ void OSP_MOT_GRG_VCH_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 4) + m_siteData.channelNo();                          // Channel Number
     tsbkValue = (tsbkValue << 12) + m_patchGroup2Id;                                // Patch Group 2
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

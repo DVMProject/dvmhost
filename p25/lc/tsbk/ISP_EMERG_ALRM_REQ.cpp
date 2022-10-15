@@ -64,7 +64,7 @@ bool ISP_EMERG_ALRM_REQ::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
     /*
     ** bryanb: this is a bit of a hack -- because the EMERG ALRM and DENY have the same

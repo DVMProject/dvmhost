@@ -47,7 +47,7 @@ using namespace p25;
 /// <param name="data"></param>
 void Sync::addP25Sync(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memcpy(data, P25_SYNC_BYTES, P25_SYNC_LENGTH_BYTES);
 }

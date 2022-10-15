@@ -84,7 +84,6 @@ void OSP_DVM_GIT_HASH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
     tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                         // Channel Number
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }

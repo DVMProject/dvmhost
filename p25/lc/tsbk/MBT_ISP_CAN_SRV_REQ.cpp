@@ -64,7 +64,7 @@ bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader dataHeader, const dat
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = AMBT::tsbkValue(dataHeader, pduUserData);
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
     m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type

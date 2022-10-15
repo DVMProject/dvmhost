@@ -142,8 +142,8 @@ namespace p25
         uint32_t m_txNAC;
         uint32_t m_timeout;
 
-        modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        std::unique_ptr<modem::Modem> m_modem;
+        std::unique_ptr<network::BaseNetwork> m_network;
 
         bool m_inhibitIllegal;
         bool m_legacyGroupGrnt;

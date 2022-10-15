@@ -64,7 +64,7 @@ bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader dataHeader, const dat
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = AMBT::tsbkValue(dataHeader, pduUserData);
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID

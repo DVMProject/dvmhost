@@ -65,7 +65,7 @@ bool IOSP_EXT_FNCT::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
     m_extendedFunction = (uint32_t)((tsbkValue >> 48) & 0xFFFFU);                   // Extended Function
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Argument
@@ -90,9 +90,8 @@ void IOSP_EXT_FNCT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Argument
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

@@ -85,9 +85,9 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
     ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
-    m_voice(NULL),
-    m_data(NULL),
-    m_trunk(NULL),
+    m_voice(nullptr),
+    m_data(nullptr),
+    m_trunk(nullptr),
     m_nac(nac),
     m_txNAC(nac),
     m_timeout(timeout),
@@ -138,10 +138,10 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
     m_verbose(verbose),
     m_debug(debug)
 {
-    assert(ridLookup != NULL);
-    assert(tidLookup != NULL);
-    assert(idenTable != NULL);
-    assert(rssiMapper != NULL);
+    assert(ridLookup != nullptr);
+    assert(tidLookup != nullptr);
+    assert(idenTable != nullptr);
+    assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
@@ -170,15 +170,15 @@ Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Mod
 /// </summary>
 Control::~Control()
 {
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         delete m_voice;
     }
 
-    if (m_trunk != NULL) {
+    if (m_trunk != nullptr) {
         delete m_trunk;
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         delete m_data;
     }
 }
@@ -191,11 +191,11 @@ void Control::reset()
     m_rfState = RS_RF_LISTENING;
     m_ccHalted = false;
 
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         m_voice->resetRF();
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         m_data->resetRF();
     }
 
@@ -349,12 +349,12 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         m_nid.setTxNAC(m_txNAC);
     }
 
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         m_voice->resetRF();
         m_voice->resetNet();
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         m_data->resetRF();
     }
 }
@@ -367,7 +367,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 /// <returns></returns>
 bool Control::processFrame(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
 #if ENABLE_DFSI_SUPPORT
     if (m_modem->isP25DFSI()) {
@@ -407,7 +407,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_rfTimeout.stop();
         m_queue.clear();
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->resetP25();
 
         return false;
@@ -556,7 +556,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::getFrame(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_queue.isEmpty())
         return 0U;
@@ -595,7 +595,7 @@ bool Control::writeRF_VoiceEnd()
                 }
 
                 m_tailOnIdle = false;
-                if (m_network != NULL)
+                if (m_network != nullptr)
                     m_network->resetP25();
 
                 ret = true;
@@ -618,7 +618,7 @@ bool Control::writeRF_VoiceEnd()
 /// <param name="ms"></param>
 void Control::clock(uint32_t ms)
 {
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         processNetwork();
 
         if (m_network->getStatus() == network::NET_STAT_RUNNING) {
@@ -697,7 +697,7 @@ void Control::clock(uint32_t ms)
             }
 
             if (m_dedicatedControl) {
-                if (m_network != NULL)
+                if (m_network != nullptr)
                     m_network->resetP25();
             }
 
@@ -719,18 +719,18 @@ void Control::clock(uint32_t ms)
 
         m_data->resetRF();
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->resetP25();
 
         m_rfState = RS_RF_LISTENING;
     }
 
     // clock data and trunking
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         m_data->clock(ms);
     }
 
-    if (m_trunk != NULL) {
+    if (m_trunk != nullptr) {
         m_trunk->clock(ms);
     }
 }
@@ -767,7 +767,7 @@ void Control::setDebugVerbose(bool debug, bool verbose)
 /// <param name="net"></param>
 void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (!net) {
         if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
@@ -815,7 +815,7 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
 /// <returns></returns>
 bool Control::processDFSI(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     dfsi::LC dfsiLC = dfsi::LC();
 
@@ -849,7 +849,7 @@ bool Control::processDFSI(uint8_t* data, uint32_t len)
         m_rfTimeout.stop();
         m_queue.clear();
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->resetP25();
 
         return false;
@@ -979,7 +979,7 @@ void Control::processNetwork()
         return;
     if (length == 0U)
         return;
-    if (data == NULL) {
+    if (data == nullptr) {
         m_network->resetP25();
         return;
     }
@@ -1188,7 +1188,7 @@ void Control::writeRF_TDU(bool noNetwork)
 /// <param name="b2"></param>
 void Control::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     WRITE_BIT(data, ssOffset, b1);
     WRITE_BIT(data, ssOffset + 1U, b2);
@@ -1203,7 +1203,7 @@ void Control::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
 /// <param name="b2"></param>
 void Control::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // insert the "10" (Unknown, use for inbound or outbound) status bits
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {

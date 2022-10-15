@@ -64,7 +64,7 @@ bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_emergency = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                   // Emergency Flag
     m_encrypted = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                   // Encryption Flag
@@ -98,7 +98,6 @@ void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target Radio Address
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }

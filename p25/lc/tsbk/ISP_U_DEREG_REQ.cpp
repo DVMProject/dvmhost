@@ -64,7 +64,7 @@ bool ISP_U_DEREG_REQ::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_netId = (uint32_t)((tsbkValue >> 36) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 24) & 0xFFFU);                               // System ID

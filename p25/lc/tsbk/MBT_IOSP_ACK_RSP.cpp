@@ -64,7 +64,7 @@ bool MBT_IOSP_ACK_RSP::decodeMBT(const data::DataHeader dataHeader, const data::
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = AMBT::tsbkValue(dataHeader, pduUserData);
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     m_aivFlag = false;
     m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type

@@ -95,9 +95,8 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 8) + m_authRes[0U];                                   // Result b0
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 /// <summary>Sets the authentication result.</summary>

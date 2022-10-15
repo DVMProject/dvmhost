@@ -64,7 +64,7 @@ bool IOSP_CALL_ALRT::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
@@ -87,7 +87,6 @@ void IOSP_CALL_ALRT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 40) + m_dstId;                                        // Target Radio Address
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }

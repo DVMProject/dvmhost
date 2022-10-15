@@ -85,7 +85,7 @@ bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader dataHeader, const dat
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = AMBT::tsbkValue(dataHeader, pduUserData);
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     if (dataHeader.getBlocksToFollow() != 2) {
         LogError(LOG_P25, "TSBK::decodeMBT(), PDU does not contain the appropriate amount of data blocks");

@@ -70,7 +70,7 @@ bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
     m_adjSysId = (uint32_t)((tsbkValue >> 40) & 0xFFFU);                            // Site System ID
     m_adjRfssId = (uint8_t)((tsbkValue >> 32) & 0xFFU);                             // Site RFSS ID
@@ -104,9 +104,8 @@ void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                         // Channel Number
     tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                       // System Service Class
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

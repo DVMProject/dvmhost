@@ -71,7 +71,7 @@ TSBKFactory::~TSBKFactory()
 /// <param name="data"></param>
 /// <param name="rawTSBK"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-TSBK* TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
+std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 {
     assert(data != NULL);
 
@@ -247,7 +247,7 @@ TSBK* TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns></returns>
-AMBT* TSBKFactory::createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
@@ -339,7 +339,7 @@ AMBT* TSBKFactory::createAMBT(const data::DataHeader dataHeader, const data::Dat
 /// <param name="data"></param>
 /// <param name="rawTSBK"></param>
 /// <returns></returns>
-TSBK* TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
+std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
 {
     assert(tsbk != NULL);
     assert(data != NULL);
@@ -348,7 +348,7 @@ TSBK* TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
         return NULL;
     }
 
-    return tsbk;
+    return std::unique_ptr<TSBK>(tsbk);
 }
 
 /// <summary>
@@ -358,7 +358,7 @@ TSBK* TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns></returns>
-AMBT* TSBKFactory::decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks)
+std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks)
 {
     assert(ambt != NULL);
     assert(blocks != NULL);
@@ -367,5 +367,5 @@ AMBT* TSBKFactory::decode(AMBT* ambt, const data::DataHeader dataHeader, const d
         return NULL;
     }
 
-    return ambt;
+    return std::unique_ptr<AMBT>(ambt);
 }

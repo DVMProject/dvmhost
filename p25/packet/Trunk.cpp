@@ -39,6 +39,7 @@
 
 using namespace p25;
 using namespace p25::data;
+using namespace p25::lc::tsbk;
 using namespace p25::packet;
 
 #include <cassert>
@@ -158,7 +159,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
         return false;
 
     uint8_t duid = 0U;
-    if (preDecodedTSBK == NULL) {
+    if (preDecodedTSBK == nullptr) {
         // Decode the NID
         bool valid = m_p25->m_nid.decode(data + 2U);
 
@@ -171,7 +172,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
     }
 
     RPT_RF_STATE prevRfState = m_p25->m_rfState;
-    lc::TSBK *tsbk = NULL;
+    std::unique_ptr<lc::TSBK> tsbk;
 
     // handle individual DUIDs
     if (duid == P25_DUID_TSDU) {
@@ -181,15 +182,15 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
 
         m_p25->m_queue.clear();
 
-        if (preDecodedTSBK == NULL) {
-            tsbk = lc::tsbk::TSBKFactory::createTSBK(data + 2U);
-            if (tsbk == NULL) {
+        if (preDecodedTSBK == nullptr) {
+            tsbk = TSBKFactory::createTSBK(data + 2U);
+            if (tsbk == nullptr) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", undecodable LC");
                 m_p25->m_rfState = prevRfState;
                 return false;
             }
         } else {
-            tsbk = preDecodedTSBK;
+            tsbk = std::unique_ptr<lc::TSBK>(preDecodedTSBK);
         }
 
         uint32_t srcId = tsbk->getSrcId();
@@ -263,7 +264,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the target RID
                 VALID_DSTID("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response)", TSBK_IOSP_UU_ANS, srcId, dstId);
 
-                lc::tsbk::IOSP_UU_ANS* iosp = (lc::tsbk::IOSP_UU_ANS*)tsbk; 
+                IOSP_UU_ANS* iosp = static_cast<IOSP_UU_ANS*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u",
                         iosp->getResponse(), srcId, dstId);
@@ -307,7 +308,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the source RID
                 VALID_SRCID("TSBK_ISP_SNDCP_CH_REQ (SNDCP Channel Request)", TSBK_ISP_SNDCP_CH_REQ, srcId);
 
-                lc::tsbk::ISP_SNDCP_CH_REQ* isp = (lc::tsbk::ISP_SNDCP_CH_REQ*)data;
+                ISP_SNDCP_CH_REQ* isp = static_cast<ISP_SNDCP_CH_REQ*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Channel Request), dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
                         isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
@@ -326,7 +327,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_STS_UPDT (Status Update)", TSBK_IOSP_STS_UPDT, srcId);
 
-                lc::tsbk::IOSP_STS_UPDT* iosp = (lc::tsbk::IOSP_STS_UPDT*)data;
+                IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u", iosp->getStatus(), srcId);
                 }
@@ -345,7 +346,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_MSG_UPDT (Message Update)", TSBK_IOSP_MSG_UPDT, srcId);
 
-                lc::tsbk::IOSP_MSG_UPDT* iosp = (lc::tsbk::IOSP_MSG_UPDT*)data;
+                IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u",
                         iosp->getMessage(), srcId, dstId);
@@ -368,7 +369,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the target RID
                 VALID_DSTID("TSBK_IOSP_RAD_MON (Radio Monitor)", TSBK_IOSP_RAD_MON, srcId, dstId);
 
-                lc::tsbk::IOSP_RAD_MON* iosp = (lc::tsbk::IOSP_RAD_MON*)tsbk;
+                IOSP_RAD_MON* iosp = static_cast<IOSP_RAD_MON*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u", srcId, dstId);
                 }
@@ -403,7 +404,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the target RID
                 VALID_DSTID("TSBK_IOSP_ACK_RSP (Acknowledge Response)", TSBK_IOSP_ACK_RSP, srcId, dstId);
 
-                lc::tsbk::IOSP_ACK_RSP* iosp = (lc::tsbk::IOSP_ACK_RSP*)tsbk;
+                IOSP_ACK_RSP* iosp = static_cast<IOSP_ACK_RSP*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                         iosp->getAIV(), iosp->getService(), srcId, dstId);
@@ -424,7 +425,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
             break;
             case TSBK_ISP_CAN_SRV_REQ:
             {
-                lc::tsbk::ISP_CAN_SRV_REQ* isp = (lc::tsbk::ISP_CAN_SRV_REQ*)tsbk;
+                ISP_CAN_SRV_REQ* isp = static_cast<ISP_CAN_SRV_REQ*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_CAN_SRV_REQ (Cancel Service Request), AIV = %u, serviceType = $%02X, reason = $%02X, srcId = %u, dstId = %u",
                         isp->getAIV(), isp->getService(), isp->getResponse(), srcId, dstId);
@@ -437,7 +438,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
             break;
             case TSBK_IOSP_EXT_FNCT:
             {
-                lc::tsbk::IOSP_EXT_FNCT* iosp = (lc::tsbk::IOSP_EXT_FNCT*)tsbk;
+                IOSP_EXT_FNCT* iosp = static_cast<IOSP_EXT_FNCT*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), op = $%02X, arg = %u, tgt = %u",
                         iosp->getExtendedFunction(), dstId, srcId);
@@ -460,7 +461,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
             case TSBK_ISP_EMERG_ALRM_REQ:
             {
                 if (!m_p25->m_emergDisabled) {
-                    lc::tsbk::ISP_EMERG_ALRM_REQ* isp = (lc::tsbk::ISP_EMERG_ALRM_REQ*)tsbk;
+                    ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
                     if (isp->getEmergency()) {
                         if (m_verbose) {
                             LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
@@ -500,7 +501,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // make sure control data is supported
                 IS_SUPPORT_CONTROL_CHECK("TSBK_IOSP_GRP_AFF (Group Affiliation Query Response)", TSBK_ISP_GRP_AFF_Q_RSP, srcId);
 
-                lc::tsbk::ISP_GRP_AFF_Q_RSP* isp = (lc::tsbk::ISP_GRP_AFF_Q_RSP*)tsbk;
+                ISP_GRP_AFF_Q_RSP* isp = static_cast<ISP_GRP_AFF_Q_RSP*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_AFF (Group Affiliation Query Response), srcId = %u, dstId = %u, anncId = %u", srcId, dstId,
                         isp->getAnnounceGroup());
@@ -569,7 +570,6 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
         }
 
         m_p25->m_rfState = prevRfState;
-        delete tsbk;
         return true;
     }
     else {
@@ -598,19 +598,18 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
     switch (duid) {
         case P25_DUID_TSDU:
             if (m_p25->m_netState == RS_NET_IDLE) {
-                lc::TSBK *tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
-                if (tsbk == NULL) {
+                std::unique_ptr<lc::TSBK> tsbk = TSBKFactory::createTSBK(data);
+                if (tsbk == nullptr) {
                     return false;
                 }
 
                 // handle updating internal adjacent site information
                 if (tsbk->getLCO() == TSBK_OSP_ADJ_STS_BCAST) {
                     if (!m_p25->m_control) {
-                        delete tsbk;
                         return false;
                     }
 
-                    lc::tsbk::OSP_ADJ_STS_BCAST* osp = (lc::tsbk::OSP_ADJ_STS_BCAST*)tsbk;
+                    OSP_ADJ_STS_BCAST* osp = static_cast<OSP_ADJ_STS_BCAST*>(tsbk.get());
                     if (osp->getAdjSiteId() != m_p25->m_siteData.siteId()) {
                         // update site table data
                         SiteData site;
@@ -653,7 +652,6 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         m_sccbUpdateCnt[site.rfssId()] = ADJ_SITE_UPDATE_CNT;
                     }
 
-                    delete tsbk;
                     return true;
                 }
 
@@ -681,13 +679,10 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         break;
                         default:
                             LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
-                            delete tsbk;
                             return false;
                     }
 
-                    writeNet_TSDU(tsbk);
-                    
-                    delete tsbk;
+                    writeNet_TSDU(tsbk.get());
                     return true;
                 }
 
@@ -708,8 +703,6 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
                             writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                         }
-
-                        delete tsbk;
                     }
                     return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
@@ -727,13 +720,11 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
                             writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                         }
-
-                        delete tsbk;
                     }
                     return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_ANS:
                     {
-                        lc::tsbk::IOSP_UU_ANS* iosp = (lc::tsbk::IOSP_UU_ANS*)tsbk;
+                        IOSP_UU_ANS* iosp = static_cast<IOSP_UU_ANS*>(tsbk.get());
                         if (iosp->getResponse() > 0U) {
                             if (m_verbose) {
                                 LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response), response = $%02X, srcId = %u, dstId = %u",
@@ -752,7 +743,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // validate the source RID
                         VALID_SRCID_NET("TSBK_IOSP_STS_UPDT (Status Update)", srcId);
 
-                        lc::tsbk::IOSP_STS_UPDT* iosp = (lc::tsbk::IOSP_STS_UPDT*)tsbk;
+                        IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_STS_UPDT (Status Update), status = $%02X, srcId = %u",
                                 iosp->getStatus(), srcId);
@@ -766,7 +757,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // validate the source RID
                         VALID_SRCID_NET("TSBK_IOSP_MSG_UPDT (Message Update)", srcId);
 
-                        lc::tsbk::IOSP_MSG_UPDT* iosp = (lc::tsbk::IOSP_MSG_UPDT*)tsbk;
+                        IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_MSG_UPDT (Message Update), message = $%02X, srcId = %u, dstId = %u",
                                 iosp->getMessage(), srcId, dstId);
@@ -783,7 +774,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // validate the target RID
                         VALID_DSTID("TSBK_ISP_RAD_MON_REQ (Radio monitor)", TSBK_IOSP_RAD_MON, srcId, dstId);
 
-                        lc::tsbk::IOSP_RAD_MON* iosp = (lc::tsbk::IOSP_RAD_MON*)tsbk;
+                        IOSP_RAD_MON* iosp = static_cast<IOSP_RAD_MON*>(tsbk.get());
                         if (m_verbose) {
                             LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_ISP_RAD_MON_REQ (Radio Monitor), srcId = %u, dstId = %u" , srcId , dstId);
                         }
@@ -822,7 +813,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // validate the target RID
                         VALID_DSTID_NET("TSBK_IOSP_ACK_RSP (Acknowledge Response)", dstId);
 
-                        lc::tsbk::IOSP_ACK_RSP* iosp = (lc::tsbk::IOSP_ACK_RSP*)tsbk;
+                        IOSP_ACK_RSP* iosp = static_cast<IOSP_ACK_RSP*>(tsbk.get());
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_ACK_RSP (Acknowledge Response), AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
                                 iosp->getAIV(), iosp->getService(), dstId, srcId);
@@ -836,7 +827,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                         // validate the target RID
                         VALID_DSTID_NET("TSBK_IOSP_EXT_FNCT (Extended Function)", dstId);
 
-                        lc::tsbk::IOSP_EXT_FNCT* iosp = (lc::tsbk::IOSP_EXT_FNCT*)tsbk;
+                        IOSP_EXT_FNCT* iosp = static_cast<IOSP_EXT_FNCT*>(tsbk.get());
                         if (m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_EXT_FNCT (Extended Function), serviceType = $%02X, arg = %u, tgt = %u",
                                 iosp->getService(), srcId, dstId);
@@ -845,7 +836,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     break;
                     case TSBK_ISP_EMERG_ALRM_REQ:
                     {
-                        lc::tsbk::ISP_EMERG_ALRM_REQ* isp = (lc::tsbk::ISP_EMERG_ALRM_REQ*)tsbk;
+                        ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
 
                         // non-emergency mode is a TSBK_OSP_DENY_RSP
                         if (!isp->getEmergency()) {
@@ -866,28 +857,22 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     break;
                     case TSBK_IOSP_GRP_AFF:
                         // ignore a network group affiliation command
-                        delete tsbk;
                         return true; // don't allow this to write to the air
                     case TSBK_OSP_U_DEREG_ACK:
                         // ignore a network user deregistration command
-                        delete tsbk;
                         return true; // don't allow this to write to the air
                     case TSBK_OSP_LOC_REG_RSP:
                         // ignore a network location registration command
-                        delete tsbk;
                         return true; // don't allow this to write to the air
                     case TSBK_OSP_QUE_RSP:
                         // ignore a network queue command
-                        delete tsbk;
                         return true; // don't allow this to write to the air
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
-                        delete tsbk;
                         return false;
                 } // switch (tsbk->getLCO())
 
-                writeNet_TSDU(tsbk);
-                delete tsbk;
+                writeNet_TSDU(tsbk.get());
             }
             break;
         default:
@@ -907,9 +892,9 @@ bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
     uint8_t data[1U];
     ::memset(data, 0x00U, 1U);
 
-    lc::AMBT* ambt = lc::tsbk::TSBKFactory::createAMBT(dataHeader, blocks);
-    if (ambt != NULL) {
-        return process(data, 1U, ambt);
+    std::unique_ptr<lc::AMBT> ambt = TSBKFactory::createAMBT(dataHeader, blocks);
+    if (ambt != nullptr) {
+        return process(data, 1U, ambt.get());
     } else {
         return false;
     }
@@ -936,7 +921,7 @@ void Trunk::writeAdjSSNetwork()
         }
 
         // transmit adjacent site broadcast
-        lc::tsbk::OSP_ADJ_STS_BCAST *osp = new lc::tsbk::OSP_ADJ_STS_BCAST();
+        std::unique_ptr<OSP_ADJ_STS_BCAST> osp = new_unique(OSP_ADJ_STS_BCAST);
         osp->setSrcId(P25_WUID_FNE);
         osp->setAdjSiteCFVA(cfva);
         osp->setAdjSiteSysId(m_p25->m_siteData.sysId());
@@ -946,8 +931,7 @@ void Trunk::writeAdjSSNetwork()
         osp->setAdjSiteChnNo(m_p25->m_siteData.channelNo());
         osp->setAdjSiteSvcClass(m_p25->m_siteData.serviceClass());
 
-        RF_TO_WRITE_NET(osp);
-        delete osp;
+        RF_TO_WRITE_NET(osp.get());
     }
 }
 
@@ -1033,12 +1017,11 @@ void Trunk::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 
     ::ActivityLog("P25", true, "call alert request from %u to %u", srcId, dstId);
 
-    lc::tsbk::IOSP_CALL_ALRT *iosp = new lc::tsbk::IOSP_CALL_ALRT();
+    std::unique_ptr<IOSP_CALL_ALRT> iosp = new_unique(IOSP_CALL_ALRT);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
-    writeRF_TSDU_SBF(iosp, false);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), false);
 }
 
 /// <summary>
@@ -1055,13 +1038,12 @@ void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMul
 
     ::ActivityLog("P25" , true , "Radio Unit Monitor request from %u to %u" , srcId , dstId);
 
-    lc::tsbk::IOSP_RAD_MON *iosp = new lc::tsbk::IOSP_RAD_MON();
+    std::unique_ptr<IOSP_RAD_MON> iosp = new_unique(IOSP_RAD_MON);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
     iosp->setTxMult(txMult);
 
-    writeRF_TSDU_SBF(iosp, false);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), false);
 }
 
 /// <summary>
@@ -1072,7 +1054,7 @@ void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMul
 /// <param name="dstId"></param>
 void Trunk::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
-    lc::tsbk::IOSP_EXT_FNCT *iosp = new lc::tsbk::IOSP_EXT_FNCT();
+    std::unique_ptr<IOSP_EXT_FNCT> iosp = new_unique(IOSP_EXT_FNCT);
     iosp->setExtendedFunction(func);
     iosp->setSrcId(arg);
     iosp->setDstId(dstId);
@@ -1093,8 +1075,7 @@ void Trunk::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
         ::ActivityLog("P25", true, "radio uninhibit request from %u to %u", arg, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp, false);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), false);
 }
 
 /// <summary>
@@ -1109,12 +1090,11 @@ void Trunk::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 
     ::ActivityLog("P25", true, "group affiliation query command from %u to %u", P25_WUID_FNE, dstId);
 
-    lc::tsbk::OSP_GRP_AFF_Q *osp = new lc::tsbk::OSP_GRP_AFF_Q();
+    std::unique_ptr<OSP_GRP_AFF_Q> osp = new_unique(OSP_GRP_AFF_Q);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
 
-    writeRF_TSDU_SBF(osp, true);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), true);
 }
 
 /// <summary>
@@ -1129,12 +1109,11 @@ void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 
     ::ActivityLog("P25", true, "unit registration command from %u to %u", P25_WUID_FNE, dstId);
 
-    lc::tsbk::OSP_U_REG_CMD *osp = new lc::tsbk::OSP_U_REG_CMD();
+    std::unique_ptr<OSP_U_REG_CMD> osp = new_unique(OSP_U_REG_CMD);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
 
-    writeRF_TSDU_SBF(osp, true);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), true);
 }
 
 /// <summary>
@@ -1148,7 +1127,7 @@ void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
         return;
     }
 
-    lc::tsbk::ISP_EMERG_ALRM_REQ *isp = new lc::tsbk::ISP_EMERG_ALRM_REQ();
+    std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = new_unique(ISP_EMERG_ALRM_REQ);
     isp->setSrcId(srcId);
     isp->setDstId(dstId);
 
@@ -1157,8 +1136,7 @@ void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
             srcId, dstId);
     }
 
-    writeRF_TSDU_SBF(isp, true);
-    delete isp;
+    writeRF_TSDU_SBF(isp.get(), true);
 }
 
 /// <summary>
@@ -1171,13 +1149,10 @@ void Trunk::setConvFallback(bool fallback)
     if (m_convFallback && m_p25->m_control) {
         m_convFallbackPacketDelay = 0U;
 
-        lc::tsbk::OSP_MOT_PSH_CCH *osp = new lc::tsbk::OSP_MOT_PSH_CCH();
-
+        std::unique_ptr<OSP_MOT_PSH_CCH> osp = new_unique(OSP_MOT_PSH_CCH);
         for (uint8_t i = 0U; i < 3U; i++) {
-            writeRF_TSDU_SBF(osp, true);
+            writeRF_TSDU_SBF(osp.get(), true);
         }
-
-        delete osp;
     }
 }
 
@@ -1264,7 +1239,7 @@ Trunk::~Trunk()
 /// <param name="autoReset"></param>
 void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 {
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
     assert(data != NULL);
 
     if (m_network == NULL)
@@ -1603,7 +1578,7 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
     if (!m_p25->m_control)
         return;
 
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
@@ -1667,7 +1642,7 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
 /// <param name="tsbk"></param>
 void Trunk::writeNet_TSDU(lc::TSBK* tsbk)
 {
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
@@ -1710,7 +1685,7 @@ void Trunk::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
         return;
     }
 
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     uint8_t frame[P25_TSBK_FEC_LENGTH_BYTES];
     ::memset(frame, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
@@ -1828,7 +1803,7 @@ void Trunk::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
     if (!m_p25->m_control)
         return;
 
-    assert(ambt != NULL);
+    assert(ambt != nullptr);
 
     DataHeader header = DataHeader();
     uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
@@ -1862,7 +1837,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
     if (!m_p25->m_control)
         return;
 
-    lc::TSBK* tsbk = NULL;
+    std::unique_ptr<lc::TSBK> tsbk;
 
     switch (lco) {
         case TSBK_OSP_GRP_VCH_GRANT_UPD:
@@ -1875,7 +1850,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_GRP_VCH_GRANT_UPD (Group Voice Channel Grant Update)");
                 }
 
-                lc::tsbk::OSP_GRP_VCH_GRANT_UPD* osp = new lc::tsbk::OSP_GRP_VCH_GRANT_UPD();
+                std::unique_ptr<OSP_GRP_VCH_GRANT_UPD> osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
 
                 bool noData = false;
                 uint8_t i = 0U;
@@ -1908,10 +1883,9 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                 }
 
                 if (noData) {
-                    delete osp;
                     return; // don't create anything
                 } else {
-                    tsbk = osp;
+                    tsbk = std::move(osp);
                 }
             }
             else {
@@ -1943,18 +1917,18 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 
                         // handle 700/800/900 identities
                         if (entry.baseFrequency() >= 762000000U) {
-                            lc::tsbk::OSP_IDEN_UP* osp = new lc::tsbk::OSP_IDEN_UP();
+                            std::unique_ptr<OSP_IDEN_UP> osp = new_unique(OSP_IDEN_UP);
                             osp->siteIdenEntry(entry);
 
                             // transmit channel ident broadcast
-                            tsbk = osp;
+                            tsbk = std::move(osp);
                         }
                         else {
-                            lc::tsbk::OSP_IDEN_UP_VU* osp = new lc::tsbk::OSP_IDEN_UP_VU();
+                            std::unique_ptr<OSP_IDEN_UP_VU> osp = new_unique(OSP_IDEN_UP_VU);
                             osp->siteIdenEntry(entry);
 
                             // transmit channel ident broadcast
-                            tsbk = osp;
+                            tsbk = std::move(osp);
                         }
 
                         m_mbfIdenCnt++;
@@ -1969,7 +1943,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit net status burst
-            tsbk = new lc::tsbk::OSP_NET_STS_BCAST();
+            tsbk = new_unique(OSP_NET_STS_BCAST);
             break;
         case TSBK_OSP_RFSS_STS_BCAST:
             if (m_debug) {
@@ -1977,7 +1951,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit rfss status burst
-            tsbk = new lc::tsbk::OSP_RFSS_STS_BCAST();
+            tsbk = new_unique(OSP_RFSS_STS_BCAST);
             break;
         case TSBK_OSP_ADJ_STS_BCAST:
             // write ADJSS
@@ -1989,7 +1963,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Broadcast)");
                 }
 
-                lc::tsbk::OSP_ADJ_STS_BCAST* osp = new lc::tsbk::OSP_ADJ_STS_BCAST();
+                std::unique_ptr<OSP_ADJ_STS_BCAST> osp = new_unique(OSP_ADJ_STS_BCAST);
 
                 uint8_t i = 0U;
                 for (auto it = m_adjSiteTable.begin(); it != m_adjSiteTable.end(); ++it) {
@@ -2018,7 +1992,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                         osp->setAdjSiteChnNo(site.channelNo());
                         osp->setAdjSiteSvcClass(site.serviceClass());
 
-                        tsbk = osp;
+                        tsbk = std::move(osp);
                         m_mbfAdjSSCnt++;
                         break;
                     }
@@ -2038,7 +2012,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast)");
                 }
 
-                lc::tsbk::OSP_SCCB_EXP* osp = new lc::tsbk::OSP_SCCB_EXP();
+                std::unique_ptr<OSP_SCCB_EXP> osp = new_unique(OSP_SCCB_EXP);
 
                 uint8_t i = 0U;
                 for (auto it = m_sccbTable.begin(); it != m_sccbTable.end(); ++it) {
@@ -2055,7 +2029,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                         osp->setSCCBChnId1(site.channelId());
                         osp->setSCCBChnNo(site.channelNo());
 
-                        tsbk = osp;
+                        tsbk = std::move(osp);
                         m_mbfSCCBCnt++;
                         break;
                     }
@@ -2071,7 +2045,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit SNDCP announcement
-            tsbk = new lc::tsbk::OSP_SNDCP_CH_ANN();
+            tsbk = new_unique(OSP_SNDCP_CH_ANN);
             break;
         case TSBK_OSP_SYNC_BCAST:
         {
@@ -2080,8 +2054,9 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
             
             // transmit sync broadcast
-            lc::tsbk::OSP_SYNC_BCAST* osp = new lc::tsbk::OSP_SYNC_BCAST();
+            std::unique_ptr<OSP_SYNC_BCAST> osp = new_unique(OSP_SYNC_BCAST);
             osp->setMicroslotCount(m_microslotCount);
+            tsbk = std::move(osp);
         }
         break;
 
@@ -2092,7 +2067,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit motorola PSH CCH burst
-            tsbk = new lc::tsbk::OSP_MOT_PSH_CCH();
+            tsbk = new_unique(OSP_MOT_PSH_CCH);
             break;
 
         case TSBK_OSP_MOT_CC_BSI:
@@ -2101,7 +2076,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit motorola CC BSI burst
-            tsbk = new lc::tsbk::OSP_MOT_CC_BSI();
+            tsbk = new_unique(OSP_MOT_CC_BSI);
             break;
 
         /** DVM CC data */
@@ -2111,7 +2086,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             }
 
             // transmit git hash burst
-            tsbk = new lc::tsbk::OSP_DVM_GIT_HASH();
+            tsbk = new_unique(OSP_DVM_GIT_HASH);
             break;
     }
 
@@ -2120,13 +2095,11 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 
         // are we transmitting CC as a multi-block?
         if (m_ctrlTSDUMBF) {
-            writeRF_TSDU_MBF(tsbk);
+            writeRF_TSDU_MBF(tsbk.get());
         }
         else {
-            writeRF_TSDU_SBF(tsbk, true);
+            writeRF_TSDU_SBF(tsbk.get(), true);
         }
-
-        delete tsbk;
     }
 }
 
@@ -2240,7 +2213,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
-            lc::tsbk::IOSP_GRP_VCH *iosp = new lc::tsbk::IOSP_GRP_VCH();
+            std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchNo(chNo);
@@ -2255,15 +2228,14 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit group grant
 //            m_p25->m_writeImmediate = true;
-            writeRF_TSDU_SBF(iosp, false, true, net);
-            delete iosp;
+            writeRF_TSDU_SBF(iosp.get(), false, true, net);
         }
         else {
             if (!net) {
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
 
-            lc::tsbk::IOSP_UU_VCH *iosp = new lc::tsbk::IOSP_UU_VCH();
+            std::unique_ptr<IOSP_UU_VCH> iosp = new_unique(IOSP_UU_VCH);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchNo(chNo);
@@ -2278,8 +2250,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit private grant
 //            m_p25->m_writeImmediate = true;
-            writeRF_TSDU_SBF(iosp, false, true, net);
-            delete iosp;
+            writeRF_TSDU_SBF(iosp.get(), false, true, net);
         }
     }
 
@@ -2296,7 +2267,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 /// <returns></returns>
 bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
 {
-    lc::tsbk::OSP_SNDCP_CH_GNT *osp = new lc::tsbk::OSP_SNDCP_CH_GNT();
+    std::unique_ptr<OSP_SNDCP_CH_GNT> osp = new_unique(OSP_SNDCP_CH_GNT);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
 
@@ -2315,7 +2286,6 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
                 m_p25->m_rfState = RS_RF_REJECTED;
             }
 
-            delete osp;
             return false;
         }
 
@@ -2329,7 +2299,6 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
                     m_p25->m_rfState = RS_RF_REJECTED;
                 }
 
-                delete osp;
                 return false;
             }
             else {
@@ -2360,8 +2329,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
     }
 
     // transmit SNDCP grant
-    writeRF_TSDU_SBF(osp, false, true, net);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), false, true, net);
     return true;
 }
 
@@ -2372,7 +2340,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
 /// <param name="dstId"></param>
 void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
-    lc::tsbk::IOSP_UU_ANS *iosp = new lc::tsbk::IOSP_UU_ANS();
+    std::unique_ptr<IOSP_UU_ANS> iosp = new_unique(IOSP_UU_ANS);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
@@ -2380,8 +2348,7 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Request), srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp, false);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), false);
 }
 
 /// <summary>
@@ -2392,7 +2359,7 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 /// <param name="noNetwork"></param>
 void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
-    lc::tsbk::IOSP_ACK_RSP *iosp = new lc::tsbk::IOSP_ACK_RSP();
+    std::unique_ptr<IOSP_ACK_RSP> iosp = new_unique(IOSP_ACK_RSP);
     iosp->setSrcId(srcId);
     iosp->setService(service);
 
@@ -2406,8 +2373,7 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
             iosp->getAIV(), iosp->getEX(), iosp->getService(), srcId);
     }
 
-    writeRF_TSDU_SBF(iosp, noNetwork);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), noNetwork);
 }
 
 /// <summary>
@@ -2419,7 +2385,7 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
 /// <param name="aiv"></param>
 void Trunk::writeRF_TSDU_Deny(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
-    lc::tsbk::OSP_DENY_RSP* osp = new lc::tsbk::OSP_DENY_RSP();
+    std::unique_ptr<OSP_DENY_RSP> osp = new_unique(OSP_DENY_RSP);
     osp->setAIV(aiv);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
@@ -2431,8 +2397,7 @@ void Trunk::writeRF_TSDU_Deny(uint32_t dstId, uint8_t reason, uint8_t service, b
             osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
     }
 
-    writeRF_TSDU_SBF(osp, false);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), false);
 }
 
 /// <summary>
@@ -2444,7 +2409,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
-    lc::tsbk::IOSP_GRP_AFF *iosp = new lc::tsbk::IOSP_GRP_AFF();
+    std::unique_ptr<IOSP_GRP_AFF> iosp = new_unique(IOSP_GRP_AFF);
     iosp->setAnnounceGroup(m_patchSuperGroup); // this isn't right...
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
@@ -2489,8 +2454,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         m_p25->m_affiliations.groupAff(srcId, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp, false);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), false);
     return ret;
 }
 
@@ -2501,7 +2465,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 /// <param name="sysId"></param>
 void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
-    lc::tsbk::IOSP_U_REG *iosp = new lc::tsbk::IOSP_U_REG();
+    std::unique_ptr<IOSP_U_REG> iosp = new_unique(IOSP_U_REG);
     iosp->setResponse(P25_RSP_ACCEPT);
     iosp->setSrcId(srcId);
     iosp->setDstId(srcId);
@@ -2533,8 +2497,7 @@ void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
         }
     }
 
-    writeRF_TSDU_SBF(iosp, true);
-    delete iosp;
+    writeRF_TSDU_SBF(iosp.get(), true);
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -2560,12 +2523,11 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
-        lc::tsbk::OSP_U_DEREG_ACK *osp = new lc::tsbk::OSP_U_DEREG_ACK();
+        std::unique_ptr<OSP_U_DEREG_ACK> osp = new_unique(OSP_U_DEREG_ACK);
         osp->setSrcId(P25_WUID_FNE);
         osp->setDstId(srcId);
 
-        writeRF_TSDU_SBF(osp, false);
-        delete osp;
+        writeRF_TSDU_SBF(osp.get(), false);
     }
     else {
         ::ActivityLog("P25", true, "unit deregistration request from %u denied", srcId);
@@ -2581,7 +2543,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// <param name="aiv"></param>
 void Trunk::writeRF_TSDU_Queue(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
-    lc::tsbk::OSP_QUE_RSP *osp = new lc::tsbk::OSP_QUE_RSP();
+    std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
     osp->setAIV(aiv);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
@@ -2593,8 +2555,7 @@ void Trunk::writeRF_TSDU_Queue(uint32_t dstId, uint8_t reason, uint8_t service, 
             osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
     }
 
-    writeRF_TSDU_SBF(osp, false);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), false);
 }
 
 /// <summary>
@@ -2607,7 +2568,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 {
     bool ret = false;
 
-    lc::tsbk::OSP_LOC_REG_RSP *osp = new lc::tsbk::OSP_LOC_REG_RSP();
+    std::unique_ptr<OSP_LOC_REG_RSP> osp = new_unique(OSP_LOC_REG_RSP);
     osp->setResponse(P25_RSP_ACCEPT);
     osp->setDstId(dstId);
     osp->setSrcId(srcId);
@@ -2650,8 +2611,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
         ret = true;
     }
 
-    writeRF_TSDU_SBF(osp, false);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), false);
     return ret;
 }
 
@@ -2662,14 +2622,13 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 /// <param name="dstId"></param>
 bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
-    lc::tsbk::OSP_DVM_LC_CALL_TERM* osp = new lc::tsbk::OSP_DVM_LC_CALL_TERM();
+    std::unique_ptr<OSP_DVM_LC_CALL_TERM> osp = new_unique(OSP_DVM_LC_CALL_TERM);
     osp->setGrpVchId(m_p25->m_siteData.channelId());
     osp->setGrpVchNo(m_p25->m_siteData.channelNo());
     osp->setDstId(dstId);
     osp->setSrcId(srcId);
 
-    writeRF_TSDU_SBF(osp, false);
-    delete osp;
+    writeRF_TSDU_SBF(osp.get(), false);
     return true;
 }
 

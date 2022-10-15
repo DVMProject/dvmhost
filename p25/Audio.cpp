@@ -66,7 +66,7 @@ Audio::~Audio()
 /// <returns>Number of errors corrected.</returns>
 uint32_t Audio::process(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t errs = 0U;
 
@@ -119,8 +119,8 @@ uint32_t Audio::process(uint8_t* data)
 /// <param name="n"></param>
 void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     uint8_t temp[18U];
 
@@ -236,8 +236,8 @@ void Audio::decode(const uint8_t* data, uint8_t* imbe, uint32_t n)
 /// <param name="n"></param>
 void Audio::encode(uint8_t* data, const uint8_t* imbe, uint32_t n)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     bool bTemp[144U];
     bool* bit = bTemp;

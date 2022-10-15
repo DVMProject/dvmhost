@@ -100,9 +100,8 @@ void OSP_MOT_GRG_DEL::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         return; // blatently ignore creating this TSBK
     }
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 // ---------------------------------------------------------------------------

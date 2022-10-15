@@ -64,7 +64,7 @@ bool ISP_CAN_SRV_REQ::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
     m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type

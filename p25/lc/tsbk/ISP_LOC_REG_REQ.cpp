@@ -65,7 +65,7 @@ bool ISP_LOC_REG_REQ::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_lra = (uint8_t)((tsbkValue >> 40) & 0xFFU);                                   // LRA
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Talkgroup Address

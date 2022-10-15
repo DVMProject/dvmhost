@@ -50,8 +50,8 @@ using namespace p25;
 /// <returns></returns>
 uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     // Move the SSx positions to the range needed
     uint32_t ss0Pos = P25_SS0_START;
@@ -90,8 +90,8 @@ uint32_t P25Utils::decode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
 /// <returns></returns>
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     // Move the SSx positions to the range needed
     uint32_t ss0Pos = P25_SS0_START;
@@ -129,8 +129,8 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t start, uint3
 /// <returns></returns>
 uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     // Move the SSx positions to the range needed
     uint32_t ss0Pos = P25_SS0_START;
@@ -169,8 +169,8 @@ uint32_t P25Utils::encode(const uint8_t* in, uint8_t* out, uint32_t length)
 /// <returns></returns>
 uint32_t P25Utils::compare(const uint8_t* data1, const uint8_t* data2, uint32_t length)
 {
-    assert(data1 != NULL);
-    assert(data2 != NULL);
+    assert(data1 != nullptr);
+    assert(data2 != nullptr);
 
     uint32_t errs = 0U;
     for (uint32_t i = 0U; i < length; i++) {

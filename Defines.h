@@ -33,9 +33,10 @@
 
 #include <stdint.h>
 
-#include <string>
+#include <memory>
 #include <sstream>
 #include <ios>
+#include <string>
 
 #if !defined(ENABLE_DMR) && !defined(ENABLE_P25) && !defined(ENABLE_NXDN)
 #error "No protocol support compiled in? Must enable at least one: ENABLE_DMR, ENABLE_P25 and/or ENABLE_NXDN."
@@ -226,6 +227,13 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
             (buffer[offset + 0U] << 16)     |           \
                 (buffer[offset + 1U] << 8)  |           \
                 (buffer[offset + 2U] << 0);
+
+#define new_unique(type) std::unique_ptr<type>(new type())
+
+/// <summary>Creates a named unique buffer.</summary>
+#define __UNIQUE_BUFFER(name, type, length)                                             \
+        std::unique_ptr<type[]> name = std::unique_ptr<type[]>(new type[length]);       \
+        ::memset(name.get(), 0x00U, length);
 
 /**
  * Class Copy Code Pattern

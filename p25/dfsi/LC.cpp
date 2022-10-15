@@ -54,9 +54,9 @@ LC::LC() :
     m_rssi(0U),
     m_source(P25_DFSI_DEF_SOURCE),
     m_control(),
-    m_tsbk(NULL),
+    m_tsbk(nullptr),
     m_lsd(),
-    m_mi(NULL)
+    m_mi(nullptr)
 {
     m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
@@ -109,7 +109,7 @@ LC& LC::operator=(const LC& data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeNID(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_frameType = data[0U];                                                         // Frame Type
 
@@ -122,7 +122,7 @@ bool LC::decodeNID(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeNID(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t dfsiFrame[P25_DFSI_SS_FRAME_LENGTH_BYTES];
     ::memset(dfsiFrame, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES);
@@ -146,7 +146,7 @@ void LC::encodeNID(uint8_t* data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeVHDR1(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_frameType = data[0U];                                                         // Frame Type
     if (m_frameType != P25_DFSI_VHDR1) {
@@ -171,7 +171,7 @@ bool LC::decodeVHDR1(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeVHDR1(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t dfsiFrame[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES];
     ::memset(dfsiFrame, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
@@ -198,7 +198,7 @@ void LC::encodeVHDR1(uint8_t* data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeVHDR2(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
     m_control = lc::LC();
 
     m_frameType = data[0U];                                                         // Frame Type
@@ -219,7 +219,7 @@ bool LC::decodeVHDR2(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeVHDR2(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t dfsiFrame[P25_DFSI_VHDR2_FRAME_LENGTH_BYTES];
     ::memset(dfsiFrame, 0x00U, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
@@ -246,8 +246,8 @@ void LC::encodeVHDR2(uint8_t* data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     m_frameType = data[0U];                                                         // Frame Type
 
@@ -337,8 +337,8 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
 /// <param name="imbe"></param>
 void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     uint8_t serviceOptions =
         (m_control.getEmergency() ? 0x80U : 0x00U) +
@@ -480,8 +480,8 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     m_frameType = data[0U];                                                         // Frame Type
 
@@ -573,8 +573,8 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
 /// <param name="imbe"></param>
 void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 {
-    assert(data != NULL);
-    assert(imbe != NULL);
+    assert(data != nullptr);
+    assert(imbe != nullptr);
 
     // generate MI data
     uint8_t mi[P25_MI_LENGTH_BYTES];
@@ -717,10 +717,10 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeTSBK(const uint8_t* data)
 {
-    assert(data != NULL);
-    if (m_tsbk != NULL) {
+    assert(data != nullptr);
+    if (m_tsbk != nullptr) {
         delete m_tsbk;
-        m_tsbk = NULL;
+        m_tsbk = nullptr;
     }
 
     m_frameType = data[0U];                                                         // Frame Type
@@ -731,11 +731,12 @@ bool LC::decodeTSBK(const uint8_t* data)
 
     decodeStart(data + 1U);                                                         // Start Record
 
-    uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
-    ::memcpy(tsbk, data + 9U, P25_TSBK_LENGTH_BYTES);                               // Raw TSBK + CRC
+    uint8_t buffer[P25_TSBK_LENGTH_BYTES];
+    ::memcpy(buffer, data + 9U, P25_TSBK_LENGTH_BYTES);                             // Raw TSBK + CRC
 
-    m_tsbk = lc::tsbk::TSBKFactory::createTSBK(tsbk, true);
-    if (m_tsbk != NULL) {
+    std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer, true);
+    m_tsbk = tsbk.release();
+    if (m_tsbk != nullptr) {
         return true;
     } else {
         return false;

@@ -65,7 +65,7 @@ bool OSP_DVM_LC_CALL_TERM::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                                       // Channel ID
     m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                                      // Channel Number
@@ -92,7 +92,6 @@ void OSP_DVM_LC_CALL_TERM::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }

@@ -85,7 +85,7 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// </summary>
 /// <param name="tsbk"></param>
 /// <returns></returns>
-ulong64_t AMBT::tsbkValue(const data::DataHeader dataHeader, const uint8_t* pduUserData)
+ulong64_t AMBT::toValue(const data::DataHeader dataHeader, const uint8_t* pduUserData)
 {
     ulong64_t tsbkValue = 0U;
 

@@ -66,7 +66,7 @@ bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_authSuccess = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Authentication Success Flag
     m_authStandalone = (((tsbkValue >> 56) & 0xFFU) & 0x01U) == 0x01U;              // Authentication Standalone Flag

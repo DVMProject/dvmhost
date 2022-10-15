@@ -56,7 +56,7 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_txFrequency(0U),
     m_channelId(0U),
     m_channelNo(0U),
-    m_idenTable(NULL)
+    m_idenTable(nullptr)
 {
     /* stub */
 }

@@ -64,7 +64,7 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader dataHeader, const data::
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = AMBT::tsbkValue(dataHeader, pduUserData);
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID

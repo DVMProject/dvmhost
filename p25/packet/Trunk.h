@@ -64,7 +64,7 @@ namespace p25
         class HOST_SW_API Trunk {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK = NULL);
+            virtual bool process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK = nullptr);
             /// <summary>Process a data frame from the network.</summary>
             virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 

@@ -64,7 +64,7 @@ bool IOSP_U_REG::decode(const uint8_t* data, bool rawTSBK)
     if (!ret)
         return false;
 
-    ulong64_t tsbkValue = TSBK::tsbkValue(tsbk);
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
     
     m_netId = (uint32_t)((tsbkValue >> 36) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 24) & 0xFFFU);                               // System ID
@@ -90,7 +90,6 @@ void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Source ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
-    uint8_t* tsbk = TSBK::tsbkValue(tsbkValue);
-    TSBK::encode(data, tsbk, rawTSBK, noTrellis);
-    delete[] tsbk;
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }

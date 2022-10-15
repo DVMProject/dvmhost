@@ -57,7 +57,7 @@ namespace p25
         
         protected:
             /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
-            static ulong64_t tsbkValue(const data::DataHeader dataHeader, const uint8_t* pduUserData);
+            static ulong64_t toValue(const data::DataHeader dataHeader, const uint8_t* pduUserData);
 
             /// <summary>Internal helper to decode a trunking signalling block.</summary>
             bool decode(const data::DataHeader dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData);

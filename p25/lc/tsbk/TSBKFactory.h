@@ -112,9 +112,9 @@ namespace p25
                 ~TSBKFactory();
 
                 /// <summary>Create an instance of a TSBK.</summary>
-                static TSBK* createTSBK(const uint8_t* data, bool rawTSBK = false);
+                static std::unique_ptr<TSBK> createTSBK(const uint8_t* data, bool rawTSBK = false);
                 /// <summary>Create an instance of a AMBT.</summary>
-                static AMBT* createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
+                static std::unique_ptr<AMBT> createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
 
                 /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
                 static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
@@ -123,9 +123,9 @@ namespace p25
                 static bool m_warnCRC;
 
                 /// <summary></summary>
-                static TSBK* decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK = false);
+                static std::unique_ptr<TSBK> decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK = false);
                 /// <summary></summary>
-                static AMBT* decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks);
+                static std::unique_ptr<AMBT> decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks);
             };
         } // namespace tsbk
     } // namespace lc

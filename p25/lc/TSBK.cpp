@@ -131,6 +131,11 @@ TSBK::~TSBK()
 /// <param name="callsign">Callsign.</param>
 void TSBK::setCallsign(std::string callsign)
 {
+    if (m_siteCallsign == NULL) {
+        m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
+        ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
+    }
+
     uint32_t idLength = callsign.length();
     if (idLength > 0) {
         ::memset(m_siteCallsign, 0x20U, P25_MOT_CALLSIGN_LENGTH_BYTES);
@@ -151,7 +156,7 @@ void TSBK::setCallsign(std::string callsign)
 /// </summary>
 /// <param name="tsbk"></param>
 /// <returns></returns>
-ulong64_t TSBK::tsbkValue(const uint8_t* tsbk)
+ulong64_t TSBK::toValue(const uint8_t* tsbk)
 {
     ulong64_t tsbkValue = 0U;
 
@@ -173,10 +178,9 @@ ulong64_t TSBK::tsbkValue(const uint8_t* tsbk)
 /// </summary>
 /// <param name="tsbkValue"></param>
 /// <returns></returns>
-uint8_t* TSBK::tsbkValue(const ulong64_t tsbkValue)
+std::unique_ptr<uint8_t[]> TSBK::fromValue(const ulong64_t tsbkValue)
 {
-    uint8_t* tsbk = new uint8_t[P25_TSBK_LENGTH_BYTES];
-    ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
+    __UNIQUE_BUFFER(tsbk, uint8_t, P25_TSBK_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
     tsbk[2U] = (uint8_t)((tsbkValue >> 56) & 0xFFU);

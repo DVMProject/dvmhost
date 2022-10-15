@@ -133,7 +133,7 @@ const uint8_t LDU2_1K[] = {
 HostCal::HostCal(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
-    m_modem(NULL),
+    m_modem(nullptr),
     m_console(),
     m_fec(),
     m_transmit(false),
@@ -153,7 +153,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_txAdjustedFreq(0U),
     m_channelId(0U),
     m_channelNo(0U),
-    m_idenTable(NULL),
+    m_idenTable(nullptr),
     m_berFrames(0U),
     m_berBits(0U),
     m_berErrs(0U),
@@ -332,7 +332,7 @@ int HostCal::run()
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
 
-    port::IModemPort* modemPort = NULL;
+    port::IModemPort* modemPort = nullptr;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
     if (portType == NULL_PORT) {
         ::LogError(LOG_HOST, "Calibration mode is unsupported with the null modem!");
@@ -407,7 +407,7 @@ int HostCal::run()
         return 2;
     }
 
-    if (modemPort == NULL) {
+    if (modemPort == nullptr) {
         ::LogError(LOG_HOST, "Invalid modem port type, %s!", portType.c_str());
         return 2;
     }
@@ -2105,18 +2105,17 @@ void HostCal::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_TSDU) {
         timerStop();
 
-        lc::TSBK *tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer + 1U);
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer + 1U);
 
         Utils::dump(1U, "Raw TSBK Dump", buffer + 1U, P25_TSDU_FRAME_LENGTH_BYTES);
 
-        if (tsbk == NULL) {
+        if (tsbk == nullptr) {
             LogWarning(LOG_CAL, P25_TSDU_STR ", undecodable LC");
             m_berUndecodableLC++;
         }
         else {
             LogMessage(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
                 tsbk->getMFId(), tsbk->getLCO(), tsbk->getSrcId(), tsbk->getDstId(), tsbk->getService(), tsbk->getNetId(), tsbk->getSysId());
-            delete tsbk;
         }
     }
 }
