@@ -1105,6 +1105,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     m_slot->m_rfSeqNo = 0U;
 
     std::unique_ptr<CSBK_BROADCAST> csbk = new_unique(CSBK_BROADCAST);
+    csbk->siteIdenEntry(m_slot->m_idenEntry);
     csbk->setCdef(false);
     csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
     csbk->setLogicalCh1(channelNo);

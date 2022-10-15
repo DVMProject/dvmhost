@@ -658,6 +658,8 @@ void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32
             break;
         }
     }
+
+    lc::CSBK::setSiteData(m_siteData);
 }
 
 /// <summary>
