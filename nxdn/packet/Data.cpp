@@ -180,7 +180,7 @@ void Data::resetNet()
 /// <returns></returns>
 bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     channel::UDCH udch;
     bool validUDCH = udch.decode(data + 2U);
@@ -288,7 +288,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
@@ -419,9 +419,9 @@ Data::~Data()
 /// <param name="len"></param>
 void Data::writeNetwork(const uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())

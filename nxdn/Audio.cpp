@@ -65,8 +65,8 @@ Audio::~Audio()
 /// <param name="out"></param>
 void Audio::decode(const uint8_t* in, uint8_t* out) const
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     decode(in + 0U, out, 0U);
     decode(in + 9U, out, 49U);
@@ -79,8 +79,8 @@ void Audio::decode(const uint8_t* in, uint8_t* out) const
 /// <param name="out"></param>
 void Audio::encode(const uint8_t* in, uint8_t* out) const
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     encode(in, out + 0U, 0U);
     encode(in, out + 9U, 49U);
@@ -98,8 +98,8 @@ void Audio::encode(const uint8_t* in, uint8_t* out) const
 /// <param name="offset"></param>
 void Audio::decode(const uint8_t* in, uint8_t* out, uint32_t offset) const
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     uint32_t a = 0U;
     uint32_t MASK = 0x800000U;
@@ -154,8 +154,8 @@ void Audio::decode(const uint8_t* in, uint8_t* out, uint32_t offset) const
 /// <param name="offset"></param>
 void Audio::encode(const uint8_t* in, uint8_t* out, uint32_t offset) const
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     uint32_t aOrig = 0U;
     uint32_t bOrig = 0U;

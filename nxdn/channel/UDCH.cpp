@@ -95,7 +95,7 @@ const uint32_t PUNCTURE_LIST[] = {
 /// </summary>
 UDCH::UDCH() :
     m_ran(0U),
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];
     ::memset(m_data, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
@@ -107,7 +107,7 @@ UDCH::UDCH() :
 /// <param name="data"></param>
 UDCH::UDCH(const UDCH& data) :
     m_ran(0U),
-    m_data(NULL)
+    m_data(nullptr)
 {
     copy(data);
 }
@@ -143,7 +143,7 @@ UDCH& UDCH::operator=(const UDCH& data)
 /// <returns>True, if UDCH was decoded, otherwise false.</returns>
 bool UDCH::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t buffer[NXDN_UDCH_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_UDCH_FEC_LENGTH_BYTES);
@@ -215,7 +215,7 @@ bool UDCH::decode(const uint8_t* data)
 /// <param name="data"></param>
 void UDCH::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_data[0U] = m_ran;
 
@@ -269,7 +269,7 @@ void UDCH::encode(uint8_t* data) const
 /// <param name="data"></param>
 void UDCH::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memcpy(data, m_data + 1U, NXDN_RTCH_LC_LENGTH_BYTES);
 }
@@ -280,7 +280,7 @@ void UDCH::getData(uint8_t* data) const
 /// <param name="data"></param>
 void UDCH::setData(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memcpy(m_data + 1U, data, NXDN_RTCH_LC_LENGTH_BYTES);
 }

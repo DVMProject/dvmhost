@@ -124,7 +124,7 @@ CAC::CAC() :
     m_idleBusy(true),
     m_txContinuous(false),
     m_receive(true),
-    m_data(NULL),
+    m_data(nullptr),
     m_rxCRC(0U)
 {
     m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];
@@ -141,7 +141,7 @@ CAC::CAC(const CAC& data) :
     m_idleBusy(true),
     m_txContinuous(false),
     m_receive(true),
-    m_data(NULL),
+    m_data(nullptr),
     m_rxCRC(0U)
 {
     copy(data);
@@ -185,7 +185,7 @@ CAC& CAC::operator=(const CAC& data)
 /// <returns>True, if CAC was decoded, otherwise false.</returns>
 bool CAC::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t buffer[NXDN_CAC_IN_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_CAC_IN_FEC_LENGTH_BYTES);
@@ -259,7 +259,7 @@ bool CAC::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CAC::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_data[0U] &= 0xC0U;
     m_data[0U] |= m_ran;
@@ -344,7 +344,7 @@ void CAC::encode(uint8_t* data) const
 /// <param name="data"></param>
 void CAC::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t offset = 8U;
     for (uint32_t i = 0U; i < (NXDN_CAC_SHORT_LENGTH_BITS - 10); i++, offset++) {
@@ -359,7 +359,7 @@ void CAC::getData(uint8_t* data) const
 /// <param name="data"></param>
 void CAC::setData(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memset(m_data, 0x00U, NXDN_CAC_CRC_LENGTH_BYTES);
 

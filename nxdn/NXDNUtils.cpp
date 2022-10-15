@@ -57,7 +57,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="data"></param>
 void NXDNUtils::scrambler(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     for (uint32_t i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
         data[i] ^= SCRAMBLER[i];

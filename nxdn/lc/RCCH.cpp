@@ -105,7 +105,7 @@ RCCH& RCCH::operator=(const RCCH& data)
 /// <returns>True, if RCCH was decoded, otherwise false.</returns>
 void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rcch[22U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
@@ -130,7 +130,7 @@ void RCCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 /// <param name="offset"></param>
 void RCCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rcch[22U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
@@ -244,7 +244,7 @@ RCCH::RCCH(SiteData siteData) :
 /// <returns></returns>
 bool RCCH::decodeLC(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
@@ -303,7 +303,7 @@ bool RCCH::decodeLC(const uint8_t* data)
 /// <param name="rs"></param>
 void RCCH::encodeLC(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     data[0U] = m_messageType & 0x3FU;                                               // Message Type
 

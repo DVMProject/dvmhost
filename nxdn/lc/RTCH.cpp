@@ -129,7 +129,7 @@ RTCH& RTCH::operator=(const RTCH& data)
 /// <returns>True, if RTCH was decoded, otherwise false.</returns>
 void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rtch[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(rtch, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
@@ -154,7 +154,7 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 /// <param name="offset"></param>
 void RTCH::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rtch[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(rtch, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
@@ -213,7 +213,7 @@ void RTCH::reset()
 /// <returns></returns>
 bool RTCH::decodeLC(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 
@@ -329,7 +329,7 @@ bool RTCH::decodeLC(const uint8_t* data)
 /// <param name="rs"></param>
 void RTCH::encodeLC(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     data[0U] = m_messageType & 0x3FU;                                               // Message Type
 

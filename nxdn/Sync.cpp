@@ -47,7 +47,7 @@ using namespace nxdn;
 /// <param name="data"></param>
 void Sync::addNXDNSync(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     for (uint32_t i = 0U; i < NXDN_FSW_BYTES_LENGTH; i++)
         data[i] = (data[i] & ~NXDN_FSW_BYTES_MASK[i]) | NXDN_FSW_BYTES[i];

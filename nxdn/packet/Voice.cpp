@@ -187,7 +187,7 @@ void Voice::resetNet()
 /// <returns></returns>
 bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     channel::SACCH sacch;
     bool valid = sacch.decode(data + 2U);
@@ -621,7 +621,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
@@ -1016,9 +1016,9 @@ Voice::~Voice()
 /// <param name="len"></param>
 void Voice::writeNetwork(const uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())

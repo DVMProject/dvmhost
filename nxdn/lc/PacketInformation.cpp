@@ -74,7 +74,7 @@ PacketInformation::~PacketInformation()
 /// <returns>True, if packet information was decoded, otherwise false.</returns>
 bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     switch (messageType)
     {
@@ -118,7 +118,7 @@ bool PacketInformation::decode(const uint8_t messageType, const uint8_t* data)
 /// <param name="data"></param>
 void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     switch (messageType)
     {

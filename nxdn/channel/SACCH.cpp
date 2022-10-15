@@ -67,7 +67,7 @@ const uint32_t PUNCTURE_LIST[] = { 5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 5
 SACCH::SACCH() :
     m_ran(0U),
     m_structure(NXDN_SR_SINGLE),
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
     ::memset(m_data, 0x00U, NXDN_SACCH_CRC_LENGTH_BYTES);
@@ -80,7 +80,7 @@ SACCH::SACCH() :
 SACCH::SACCH(const SACCH& data) :
     m_ran(0U),
     m_structure(NXDN_SR_SINGLE),
-    m_data(NULL)
+    m_data(nullptr)
 {
     copy(data);
 }
@@ -117,7 +117,7 @@ SACCH& SACCH::operator=(const SACCH& data)
 /// <returns>True, if SACCH was decoded, otherwise false.</returns>
 bool SACCH::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t buffer[NXDN_SACCH_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_SACCH_FEC_LENGTH_BYTES);
@@ -192,7 +192,7 @@ bool SACCH::decode(const uint8_t* data)
 /// <param name="data"></param>
 void SACCH::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_data[0U] &= 0xC0U;
     m_data[0U] |= m_ran;
@@ -254,7 +254,7 @@ void SACCH::encode(uint8_t* data) const
 /// <param name="data"></param>
 void SACCH::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t offset = 8U;
     for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS - 8); i++, offset++) {
@@ -269,7 +269,7 @@ void SACCH::getData(uint8_t* data) const
 /// <param name="data"></param>
 void SACCH::setData(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t offset = 8U;
     for (uint32_t i = 0U; i < (NXDN_SACCH_LENGTH_BITS - 8); i++, offset++) {

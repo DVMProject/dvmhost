@@ -104,7 +104,7 @@ LICH& LICH::operator=(const LICH& data)
 /// <returns>True, if LICH was decoded, otherwise false.</returns>
 bool LICH::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t lich[1U];
     ::memset(lich, 0x00U, 1U);
@@ -138,7 +138,7 @@ bool LICH::decode(const uint8_t* data)
 /// <param name="data"></param>
 void LICH::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_lich = 0U;
 

@@ -143,7 +143,7 @@ void Trunk::resetNet()
 /// <returns></returns>
 bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     channel::CAC cac;
     bool validCAC = cac.decode(data + 2U);
@@ -232,7 +232,7 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
@@ -251,7 +251,7 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 void Trunk::clock(uint32_t ms)
 {
     if (m_nxdn->m_control) {
-        if (m_nxdn->m_network != NULL) {
+        if (m_nxdn->m_network != nullptr) {
             if (m_nxdn->m_network->isHandlingChGrants() && m_nxdn->m_siteData.netActive()) {
                 bool grp = true;
                 uint32_t srcId = 0U;
@@ -316,9 +316,9 @@ Trunk::~Trunk()
 /// <param name="len"></param>
 void Trunk::writeNetwork(const uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
@@ -438,7 +438,7 @@ bool Trunk::writeRF_Message_Grant(bool grp, bool skip, bool net, bool skipNetChe
     uint8_t messageType = m_rfLC.getMessageType();
 
     // do we have a network connection and are we handling grants at the network?
-    if (m_nxdn->m_network != NULL) {
+    if (m_nxdn->m_network != nullptr) {
         if (m_nxdn->m_network->isHandlingChGrants() && m_nxdn->m_siteData.netActive() && !skipNetCheck) {
             return m_nxdn->m_network->writeGrantReq(grp, m_rfLC.getSrcId(), m_rfLC.getDstId());
         }
@@ -779,7 +779,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
 /// <param name="data"></param>
 void Trunk::addPostBits(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // post field
     for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {

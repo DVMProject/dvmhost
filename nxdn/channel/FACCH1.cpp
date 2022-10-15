@@ -72,7 +72,7 @@ const uint32_t PUNCTURE_LIST[] = {
 /// Initializes a new instance of the FACCH1 class.
 /// </summary>
 FACCH1::FACCH1() :
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
     ::memset(m_data, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
@@ -83,7 +83,7 @@ FACCH1::FACCH1() :
 /// </summary>
 /// <param name="data"></param>
 FACCH1::FACCH1(const FACCH1& data) :
-    m_data(NULL)
+    m_data(nullptr)
 {
     copy(data);
 }
@@ -117,7 +117,7 @@ FACCH1& FACCH1::operator=(const FACCH1& data)
 /// <returns>True, if FACCH1 was decoded, otherwise false.</returns>
 bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t buffer[NXDN_FACCH1_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_FACCH1_FEC_LENGTH_BYTES);
@@ -188,7 +188,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 /// <returns>True, if LICH was decoded, otherwise false.</returns>
 void FACCH1::encode(uint8_t* data, uint32_t offset) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t buffer[NXDN_FACCH1_CRC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
@@ -240,7 +240,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 /// <param name="data"></param>
 void FACCH1::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memcpy(data, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 }
@@ -251,7 +251,7 @@ void FACCH1::getData(uint8_t* data) const
 /// <param name="data"></param>
 void FACCH1::setData(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::memcpy(m_data, data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 }

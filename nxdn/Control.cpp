@@ -89,8 +89,8 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     bool dumpRCCHData, bool debug, bool verbose) :
-    m_voice(NULL),
-    m_data(NULL),
+    m_voice(nullptr),
+    m_data(nullptr),
     m_ran(ran),
     m_timeout(timeout),
     m_modem(modem),
@@ -135,10 +135,10 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
     m_verbose(verbose),
     m_debug(debug)
 {
-    assert(ridLookup != NULL);
-    assert(tidLookup != NULL);
-    assert(idenTable != NULL);
-    assert(rssiMapper != NULL);
+    assert(ridLookup != nullptr);
+    assert(tidLookup != nullptr);
+    assert(idenTable != nullptr);
+    assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
@@ -155,15 +155,15 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
 /// </summary>
 Control::~Control()
 {
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         delete m_voice;
     }
 
-    if (m_trunk != NULL) {
+    if (m_trunk != nullptr) {
         delete m_trunk;
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         delete m_data;
     }
 }
@@ -176,11 +176,11 @@ void Control::reset()
     m_rfState = RS_RF_LISTENING;
     m_ccHalted = false;
 
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         m_voice->resetRF();
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         m_data->resetRF();
     }
 
@@ -273,16 +273,16 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
     }
 
-    if (m_voice != NULL) {
+    if (m_voice != nullptr) {
         m_voice->resetRF();
         m_voice->resetNet();
     }
 
-    if (m_data != NULL) {
+    if (m_data != nullptr) {
         m_data->resetRF();
     }
 
-    if (m_trunk != NULL) {
+    if (m_trunk != nullptr) {
         m_trunk->resetRF();
         m_trunk->resetNet();
     }
@@ -296,7 +296,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 /// <returns></returns>
 bool Control::processFrame(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t type = data[0U];
     bool sync = data[1U] == 0x01U;
@@ -455,7 +455,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::getFrame(uint8_t* data)
 {
-	assert(data != NULL);
+	assert(data != nullptr);
 
 	if (m_queue.isEmpty())
 		return 0U;
@@ -473,7 +473,7 @@ uint32_t Control::getFrame(uint8_t* data)
 /// <param name="ms"></param>
 void Control::clock(uint32_t ms)
 {
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         processNetwork();
 
         if (m_network->getStatus() == network::NET_STAT_RUNNING) {
@@ -553,7 +553,7 @@ void Control::clock(uint32_t ms)
             }
 
             if (m_dedicatedControl) {
-                if (m_network != NULL)
+                if (m_network != nullptr)
                     m_network->resetNXDN();
             }
 
@@ -574,14 +574,14 @@ void Control::clock(uint32_t ms)
 
         m_data->resetRF();
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->resetNXDN();
 
         m_rfState = RS_RF_LISTENING;
     }
 
     // clock data and trunking
-    if (m_trunk != NULL) {
+    if (m_trunk != nullptr) {
         m_trunk->clock(ms);
     }
 }
@@ -627,7 +627,7 @@ void Control::setRCCHVerbose(bool verbose)
 /// <param name="net"></param>
 void Control::addFrame(const uint8_t *data, uint32_t length, bool net)
 {
-	assert(data != NULL);
+	assert(data != nullptr);
 
     if (!net) {
         if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
@@ -677,7 +677,7 @@ void Control::processNetwork()
         return;
     if (length == 0U)
         return;
-    if (data == NULL) {
+    if (data == nullptr) {
         m_network->resetNXDN();
         return;
     }
@@ -815,7 +815,7 @@ void Control::writeEndRF()
     m_rfTimeout.stop();
     //m_queue.clear();
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetNXDN();
 }
 
@@ -832,6 +832,6 @@ void Control::writeEndNet()
     m_netTimeout.stop();
     m_networkWatchdog.stop();
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 }

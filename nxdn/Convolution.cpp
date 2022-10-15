@@ -59,12 +59,12 @@ const uint32_t K = 5U;
 /// Initializes a new instance of the Convolution class.
 /// </summary>
 Convolution::Convolution() :
-    m_metrics1(NULL),
-    m_metrics2(NULL),
-    m_oldMetrics(NULL),
-    m_newMetrics(NULL),
-    m_decisions(NULL),
-    m_dp(NULL)
+    m_metrics1(nullptr),
+    m_metrics2(nullptr),
+    m_oldMetrics(nullptr),
+    m_newMetrics(nullptr),
+    m_decisions(nullptr),
+    m_dp(nullptr)
 {
     m_metrics1  = new uint16_t[20U];
     m_metrics2  = new uint16_t[20U];
@@ -101,7 +101,7 @@ void Convolution::start()
 /// <param name="nBits"></param>
 uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 {
-    assert(out != NULL);
+    assert(out != nullptr);
 
     uint32_t state = 0U;
 
@@ -173,8 +173,8 @@ bool Convolution::decode(uint8_t s0, uint8_t s1)
 /// <param name="nBits"></param>
 void Convolution::encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
     assert(nBits > 0U);
 
     uint8_t d1 = 0U, d2 = 0U, d3 = 0U, d4 = 0U;
