@@ -54,7 +54,7 @@ const uint16_t TSCC_MAX_CNT = 511U;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-Control* Slot::m_dmr = NULL;
+Control* Slot::m_dmr = nullptr;
 
 uint32_t Slot::m_colorCode = 0U;
 
@@ -64,26 +64,26 @@ uint32_t Slot::m_channelNo = 0U;
 bool Slot::m_embeddedLCOnly = false;
 bool Slot::m_dumpTAData = true;
 
-modem::Modem* Slot::m_modem = NULL;
-network::BaseNetwork* Slot::m_network = NULL;
+modem::Modem* Slot::m_modem = nullptr;
+network::BaseNetwork* Slot::m_network = nullptr;
 
 bool Slot::m_duplex = true;
 
-lookups::IdenTableLookup* Slot::m_idenTable = NULL;
-lookups::RadioIdLookup* Slot::m_ridLookup = NULL;
-lookups::TalkgroupIdLookup* Slot::m_tidLookup = NULL;
-lookups::AffiliationLookup *Slot::m_affiliations = NULL;
+lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
+lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
+lookups::TalkgroupIdLookup* Slot::m_tidLookup = nullptr;
+lookups::AffiliationLookup *Slot::m_affiliations = nullptr;
 
 lookups::IdenTable Slot::m_idenEntry = lookups::IdenTable();
 
 uint32_t Slot::m_hangCount = 3U * 17U;
 
-lookups::RSSIInterpolator* Slot::m_rssiMapper = NULL;
+lookups::RSSIInterpolator* Slot::m_rssiMapper = nullptr;
 
 uint32_t Slot::m_jitterTime = 360U;
 uint32_t Slot::m_jitterSlots = 6U;
 
-uint8_t* Slot::m_idle = NULL;
+uint8_t* Slot::m_idle = nullptr;
 
 uint8_t Slot::m_flco1;
 uint8_t Slot::m_id1 = 0U;
@@ -123,13 +123,13 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
-    m_rfLC(NULL),
-    m_rfPrivacyLC(NULL),
-    m_rfDataHeader(NULL),
+    m_rfLC(nullptr),
+    m_rfPrivacyLC(nullptr),
+    m_rfDataHeader(nullptr),
     m_rfSeqNo(0U),
-    m_netLC(NULL),
-    m_netPrivacyLC(NULL),
-    m_netDataHeader(NULL),
+    m_netLC(nullptr),
+    m_netPrivacyLC(nullptr),
+    m_netDataHeader(nullptr),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
@@ -188,7 +188,7 @@ Slot::~Slot()
 /// <returns></returns>
 bool Slot::processFrame(uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
@@ -205,8 +205,8 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
         // release trunked grant (if necessary)
         Slot *m_tscc = m_dmr->getTSCCSlot();
-        if (m_tscc != NULL) {
-            if (m_tscc->m_enableTSCC && m_rfLC != NULL) {
+        if (m_tscc != nullptr) {
+            if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
                 m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
         }
@@ -334,7 +334,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Slot::getFrame(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_queue.isEmpty())
         return 0U;
@@ -403,7 +403,7 @@ void Slot::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         if (m_network->getStatus() == network::NET_STAT_RUNNING) {
             m_siteData.setNetActive(true);
         }
@@ -530,7 +530,7 @@ void Slot::clock()
         m_netFrames = 0U;
         m_netLost = 0U;
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->resetDMR(m_slotNo);
 
         m_rfState = RS_RF_LISTENING;
@@ -602,12 +602,12 @@ void Slot::init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embedd
     network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
     lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
-    assert(dmr != NULL);
-    assert(modem != NULL);
-    assert(ridLookup != NULL);
-    assert(tidLookup != NULL);
-    assert(idenTable != NULL);
-    assert(rssiMapper != NULL);
+    assert(dmr != nullptr);
+    assert(modem != nullptr);
+    assert(ridLookup != nullptr);
+    assert(tidLookup != nullptr);
+    assert(idenTable != nullptr);
+    assert(rssiMapper != nullptr);
 
     m_dmr = dmr;
 
@@ -692,7 +692,7 @@ void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 /// <param name="net"></param>
 void Slot::addFrame(const uint8_t *data, bool net)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (!net) {
         if (m_netState != RS_NET_IDLE)
@@ -730,8 +730,8 @@ void Slot::addFrame(const uint8_t *data, bool net)
 /// <param name="errors"></param>
 void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors)
 {
-    assert(data != NULL);
-    assert(m_rfLC != NULL);
+    assert(data != nullptr);
+    assert(m_rfLC != nullptr);
 
     writeNetwork(data, dataType, m_rfLC->getFLCO(), m_rfLC->getSrcId(), m_rfLC->getDstId(), errors);
 }
@@ -748,12 +748,12 @@ void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors)
 void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
     uint32_t dstId, uint8_t errors)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_netState != RS_NET_IDLE)
         return;
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     data::Data dmrData;
@@ -814,7 +814,7 @@ void Slot::writeEndRF(bool writeEnd)
 
     m_data->m_pduDataOffset = 0U;
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetDMR(m_slotNo);
 
     m_rfTimeoutTimer.stop();
@@ -824,15 +824,9 @@ void Slot::writeEndRF(bool writeEnd)
     m_rfErrs = 0U;
     m_rfBits = 1U;
 
-    delete m_rfLC;
-    if (m_rfPrivacyLC != NULL)
-        delete m_rfPrivacyLC;
-    if (m_rfDataHeader != NULL)
-        delete m_rfDataHeader;
-
-    m_rfLC = NULL;
-    m_rfPrivacyLC = NULL;
-    m_rfDataHeader = NULL;
+    m_rfLC = nullptr;
+    m_rfPrivacyLC = nullptr;
+    m_rfDataHeader = nullptr;
 }
 
 /// <summary>
@@ -876,7 +870,7 @@ void Slot::writeEndNet(bool writeEnd)
 
     m_data->m_pduDataOffset = 0U;
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetDMR(m_slotNo);
 
     m_networkWatchdog.stop();
@@ -890,15 +884,9 @@ void Slot::writeEndNet(bool writeEnd)
     m_netErrs = 0U;
     m_netBits = 1U;
 
-    delete m_netLC;
-    if (m_netPrivacyLC != NULL)
-        delete m_netPrivacyLC;
-    if (m_netDataHeader != NULL)
-        delete m_netDataHeader;
-
-    m_netLC = NULL;
-    m_netPrivacyLC = NULL;
-    m_netDataHeader = NULL;
+    m_netLC = nullptr;
+    m_netPrivacyLC = nullptr;
+    m_netDataHeader = nullptr;
 }
 
 /// <summary>
@@ -974,7 +962,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 /// <param name="voice"></param>
 void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
 {
-    assert(m_modem != NULL);
+    assert(m_modem != nullptr);
 
     switch (slotNo) {
         case 1U:
@@ -1066,7 +1054,7 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
 /// <param name="counter"></param>
 void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 {
-    assert(m_modem != NULL);
+    assert(m_modem != nullptr);
 
     uint8_t lc[5U];
     uint32_t lcValue = 0U;

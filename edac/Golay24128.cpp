@@ -1124,7 +1124,7 @@ bool Golay24128::decode24128(uint32_t code, uint32_t& out)
 /// <returns></returns>
 bool Golay24128::decode24128(uint8_t* bytes, uint32_t& out)
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
 	uint32_t code = (bytes[0U] << 16) | (bytes[1U] << 8) | (bytes[2U] << 0);
     return decode24128(code, out);

@@ -45,7 +45,7 @@ using namespace edac;
 /// <returns>True, if bit errors are detected, otherwise false.</returns>
 bool Hamming::decode15113_1(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the parity it should have
     bool c0 = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6];
@@ -90,7 +90,7 @@ bool Hamming::decode15113_1(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode15113_1(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this row should have
     d[11] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6];
@@ -106,7 +106,7 @@ void Hamming::encode15113_1(bool* d)
 /// <returns>True, if bit errors are detected, otherwise false.</returns>
 bool Hamming::decode15113_2(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this row should have
     bool c0 = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[5] ^ d[7] ^ d[8];
@@ -151,7 +151,7 @@ bool Hamming::decode15113_2(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode15113_2(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this row should have
     d[11] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[5] ^ d[7] ^ d[8];
@@ -167,7 +167,7 @@ void Hamming::encode15113_2(bool* d)
 /// <returns>True, if bit errors are detected, otherwise false.</returns>
 bool Hamming::decode1393(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     bool c0 = d[0] ^ d[1] ^ d[3] ^ d[5] ^ d[6];
@@ -210,7 +210,7 @@ bool Hamming::decode1393(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode1393(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     d[9] = d[0] ^ d[1] ^ d[3] ^ d[5] ^ d[6];
@@ -226,7 +226,7 @@ void Hamming::encode1393(bool* d)
 /// <returns>True, if bit errors are detected, otherwise false.</returns>
 bool Hamming::decode1063(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     bool c0 = d[0] ^ d[1] ^ d[2] ^ d[5];
@@ -266,7 +266,7 @@ bool Hamming::decode1063(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode1063(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     d[6] = d[0] ^ d[1] ^ d[2] ^ d[5];
@@ -282,7 +282,7 @@ void Hamming::encode1063(bool* d)
 /// <returns>True, if bit errors are detected or no bit errors, otherwise false if unrecoverable errors are detected.</returns>
 bool Hamming::decode16114(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     bool c0 = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[5] ^ d[7] ^ d[8];
@@ -334,7 +334,7 @@ bool Hamming::decode16114(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode16114(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     d[11] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[5] ^ d[7] ^ d[8];
     d[12] = d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[6] ^ d[8] ^ d[9];
@@ -350,7 +350,7 @@ void Hamming::encode16114(bool* d)
 /// <returns>True, if bit errors are detected or no bit errors, otherwise false if unrecoverable errors are detected.</returns>
 bool Hamming::decode17123(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     // Calculate the checksum this column should have
     bool c0 = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[6] ^ d[7] ^ d[9];
@@ -403,7 +403,7 @@ bool Hamming::decode17123(bool* d)
 /// <param name="d">Boolean bit array.</param>
 void Hamming::encode17123(bool* d)
 {
-    assert(d != NULL);
+    assert(d != nullptr);
 
     d[12] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[6] ^ d[7] ^ d[9];
     d[13] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[7] ^ d[8] ^ d[10];

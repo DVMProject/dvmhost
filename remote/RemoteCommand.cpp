@@ -97,7 +97,7 @@ void usage(const char* message, const char* arg)
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
     ::fprintf(stdout, "Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
-    if (message != NULL) {
+    if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
         ::fprintf(stderr, message, arg);
         ::fprintf(stderr, "\n\n");
@@ -123,7 +123,7 @@ int checkArgs(int argc, char* argv[])
     // iterate through arguments
     for (i = 1; i <= argc; i++)
     {
-        if (argv[i] == NULL) {
+        if (argv[i] == nullptr) {
             break;
         }
 
@@ -176,7 +176,7 @@ int checkArgs(int argc, char* argv[])
                 exit(EXIT_SUCCESS);
         }
         else if (IS("-h")) {
-            usage(NULL, NULL);
+            usage(nullptr, nullptr);
             if (argc == 2)
                 exit(EXIT_SUCCESS);
         }
@@ -198,7 +198,7 @@ int checkArgs(int argc, char* argv[])
 
 int main(int argc, char** argv)
 {
-    if (argv[0] != NULL && *argv[0] != 0)
+    if (argv[0] != nullptr && *argv[0] != 0)
         g_progExe = std::string(argv[0]);
 
     if (argc < 2) {

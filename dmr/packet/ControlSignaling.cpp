@@ -124,7 +124,7 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 /// <returns></returns>
 bool ControlSignaling::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // Get the type from the packet metadata
     uint8_t dataType = data[1U] & 0x0FU;
@@ -617,7 +617,7 @@ ControlSignaling::~ControlSignaling()
 void ControlSignaling::writeRF_CSBK(lc::CSBK csbk, bool clearBeforeWrite)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
-    if (m_tscc != NULL) {
+    if (m_tscc != nullptr) {
         if (!m_tscc->m_enableTSCC)
             return;
 
@@ -727,7 +727,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
 
     // do we have a network connection and are we handling grants at the network?
-    if (m_tscc->m_network != NULL) {
+    if (m_tscc->m_network != nullptr) {
         if (m_tscc->m_network->isHandlingChGrants() && m_tscc->m_siteData.netActive() && !skipNetCheck) {
             return m_tscc->m_network->writeGrantReq(grp, srcId, dstId);
         }

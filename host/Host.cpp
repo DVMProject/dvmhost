@@ -84,10 +84,10 @@ using namespace lookups;
 Host::Host(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
-    m_modem(NULL),
+    m_modem(nullptr),
     m_modemRemote(false),
-    m_network(NULL),
-    m_modemRemotePort(NULL),
+    m_network(nullptr),
+    m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
     m_modeTimer(1000U),
     m_dmrTXTimer(1000U),
@@ -113,9 +113,9 @@ Host::Host(const std::string& confFile) :
     m_txFrequency(0U),
     m_channelId(0U),
     m_channelNo(0U),
-    m_idenTable(NULL),
-    m_ridLookup(NULL),
-    m_tidLookup(NULL),
+    m_idenTable(nullptr),
+    m_ridLookup(nullptr),
+    m_tidLookup(nullptr),
     m_dmrBeacons(false),
     m_dmrTSCCData(false),
     m_dmrCtrlChannel(false),
@@ -136,7 +136,7 @@ Host::Host(const std::string& confFile) :
     m_nxdnRAN(1U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
-    m_remoteControl(NULL)
+    m_remoteControl(nullptr)
 {
     UDPSocket::startup();
 }
@@ -355,7 +355,7 @@ int Host::run()
     Timer dmrBeaconIntervalTimer(1000U);
     Timer dmrBeaconDurationTimer(1000U);
 
-    dmr::Control* dmr = NULL;
+    std::unique_ptr<dmr::Control> dmr = nullptr;
 #if defined(ENABLE_DMR)
     LogInfo("DMR Parameters");
     LogInfo("    Enabled: %s", m_dmrEnabled ? "yes" : "no");
@@ -441,9 +441,9 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = new dmr::Control(m_dmrColorCode, callHang, queueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
+        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_dmrColorCode, callHang, queueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
-            dmrDumpCsbkData, dmrDebug, dmrVerbose);
+            dmrDumpCsbkData, dmrDebug, dmrVerbose));
         dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
 
         if (dmrCtrlChannel) {
@@ -465,7 +465,7 @@ int Host::run()
     Timer p25BcastIntervalTimer(1000U);
     Timer p25BcastDurationTimer(1000U);
 
-    p25::Control* p25 = NULL;
+    std::unique_ptr<p25::Control> p25 = nullptr;
 #if defined(ENABLE_P25)
     LogInfo("P25 Parameters");
     LogInfo("    Enabled: %s", m_p25Enabled ? "yes" : "no");
@@ -531,9 +531,9 @@ int Host::run()
             }
         }
 
-        p25 = new p25::Control(m_p25NAC, callHang, queueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
+        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_p25NAC, callHang, queueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
-            p25DumpTsbkData, p25Debug, p25Verbose);
+            p25DumpTsbkData, p25Debug, p25Verbose));
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
             m_siteId, m_channelId, m_channelNo, true);
 
@@ -554,7 +554,7 @@ int Host::run()
     Timer nxdnBcastIntervalTimer(1000U);
     Timer nxdnBcastDurationTimer(1000U);
 
-    nxdn::Control* nxdn = NULL;
+    std::unique_ptr<nxdn::Control> nxdn = nullptr;
 #if defined(ENABLE_NXDN)
     LogInfo("NXDN Parameters");
     LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
@@ -613,9 +613,9 @@ int Host::run()
             }
         }
 
-        nxdn = new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
+        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
-            nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
+            nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
         nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
@@ -731,15 +731,15 @@ int Host::run()
         // fixed mode will force a state change
         if (m_fixedMode) {
 #if defined(ENABLE_DMR)
-            if (dmr != NULL)
+            if (dmr != nullptr)
                 setState(STATE_DMR);
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-            if (p25 != NULL)
+            if (p25 != nullptr)
                 setState(STATE_P25);
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
-            if (nxdn != NULL)
+            if (nxdn != nullptr)
                 setState(STATE_NXDN);
 #endif // defined(ENABLE_NXDN)
         }
@@ -778,7 +778,7 @@ int Host::run()
             elapsedMs += ms;
             m_modem->clock(ms);
 
-            if (m_network != NULL)
+            if (m_network != nullptr)
                 m_network->clock(ms);
 
             Thread::sleep(IDLE_WARMUP_MS);
@@ -813,7 +813,7 @@ int Host::run()
 
     // Macro to interrupt a running P25 control channel transmission
     #define INTERRUPT_P25_CONTROL                                                                                       \
-        if (p25 != NULL) {                                                                                              \
+        if (p25 != nullptr) {                                                                                           \
             p25->setCCHalted(true);                                                                                     \
             if (p25BcastDurationTimer.isRunning() && !p25BcastDurationTimer.isPaused()) {                               \
                 p25BcastDurationTimer.pause();                                                                          \
@@ -822,7 +822,7 @@ int Host::run()
 
     // Macro to interrupt a running DMR roaming beacon
     #define INTERRUPT_DMR_BEACON                                                                                        \
-        if (dmr != NULL) {                                                                                              \
+        if (dmr != nullptr) {                                                                                           \
             if (dmrBeaconDurationTimer.isRunning() && !dmrBeaconDurationTimer.hasExpired()) {                           \
                 if (m_dmrTSCCData && !m_dmrCtrlChannel) {                                                               \
                     dmr->setCCHalted(true);                                                                             \
@@ -834,7 +834,7 @@ int Host::run()
 
     // Macro to interrupt a running NXDN control channel transmission
     #define INTERRUPT_NXDN_CONTROL                                                                                      \
-        if (nxdn != NULL) {                                                                                             \
+        if (nxdn != nullptr) {                                                                                          \
             nxdn->setCCHalted(true);                                                                                    \
             if (nxdnBcastDurationTimer.isRunning() && !nxdnBcastDurationTimer.isPaused()) {                             \
                 nxdnBcastDurationTimer.pause();                                                                         \
@@ -843,7 +843,7 @@ int Host::run()
 
     // Macro to start DMR duplex idle transmission (or beacon)
     #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
-        if (dmr != NULL) {                                                                                              \
+        if (dmr != nullptr) {                                                                                           \
             if (m_duplex) {                                                                                             \
                 m_modem->writeDMRStart(x);                                                                              \
                 m_dmrTXTimer.start();                                                                                   \
@@ -877,15 +877,15 @@ int Host::run()
         }
         else {
             m_modeTimer.stop();
-            if (dmr != NULL && m_state != STATE_DMR && !m_modem->hasTX()) {
+            if (dmr != nullptr && m_state != STATE_DMR && !m_modem->hasTX()) {
                 LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_DMR);
                 setState(STATE_DMR);
             }
-            if (p25 != NULL && m_state != STATE_P25 && !m_modem->hasTX()) {
+            if (p25 != nullptr && m_state != STATE_P25 && !m_modem->hasTX()) {
                 LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_P25);
                 setState(STATE_P25);
             }
-            if (nxdn != NULL && m_state != STATE_NXDN && !m_modem->hasTX()) {
+            if (nxdn != nullptr && m_state != STATE_NXDN && !m_modem->hasTX()) {
                 LogDebug(LOG_HOST, "fixed mode state abnormal, m_state = %u, state = %u", m_state, STATE_NXDN);
                 setState(STATE_NXDN);
             }
@@ -897,7 +897,7 @@ int Host::run()
 
         /** Digital Mobile Radio */
 #if defined(ENABLE_DMR)
-        if (dmr != NULL) {
+        if (dmr != nullptr) {
             // check if there is space on the modem for DMR slot 1 frames,
             // if there is read frames from the DMR controller and write it
             // to the modem
@@ -925,7 +925,7 @@ int Host::run()
                         }
 
                         // if there is a P25 CC running; halt the CC
-                        if (p25 != NULL) {
+                        if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
                                 p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
@@ -933,7 +933,7 @@ int Host::run()
                         }
 
                         // if there is a NXDN CC running; halt the CC
-                        if (nxdn != NULL) {
+                        if (nxdn != nullptr) {
                             if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
                                 nxdn->setCCHalted(true);
                                 INTERRUPT_NXDN_CONTROL;
@@ -972,7 +972,7 @@ int Host::run()
                         }
 
                         // if there is a P25 CC running; halt the CC
-                        if (p25 != NULL) {
+                        if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
                                 p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
@@ -980,7 +980,7 @@ int Host::run()
                         }
 
                         // if there is a NXDN CC running; halt the CC
-                        if (nxdn != NULL) {
+                        if (nxdn != nullptr) {
                             if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
                                 nxdn->setCCHalted(true);
                                 INTERRUPT_NXDN_CONTROL;
@@ -999,7 +999,7 @@ int Host::run()
         // check if there is space on the modem for P25 frames,
         // if there is read frames from the P25 controller and write it
         // to the modem
-        if (p25 != NULL) {
+        if (p25 != nullptr) {
             ret = m_modem->hasP25Space();
             if (ret) {
                 len = p25->getFrame(data);
@@ -1017,7 +1017,7 @@ int Host::run()
                         INTERRUPT_DMR_BEACON;
 
                         // if there is a NXDN CC running; halt the CC
-                        if (nxdn != NULL) {
+                        if (nxdn != nullptr) {
                             if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
                                 nxdn->setCCHalted(true);
                                 INTERRUPT_NXDN_CONTROL;
@@ -1073,7 +1073,7 @@ int Host::run()
         // check if there is space on the modem for NXDN frames,
         // if there is read frames from the NXDN controller and write it
         // to the modem
-        if (nxdn != NULL) {
+        if (nxdn != nullptr) {
             ret = m_modem->hasNXDNSpace();
             if (ret) {
                 len = nxdn->getFrame(data);
@@ -1091,7 +1091,7 @@ int Host::run()
                         INTERRUPT_DMR_BEACON;
                         
                         // if there is a P25 CC running; halt the CC
-                        if (p25 != NULL) {
+                        if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
                                 p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
@@ -1120,7 +1120,7 @@ int Host::run()
 
         /** Digital Mobile Radio */
 #if defined(ENABLE_DMR)
-        if (dmr != NULL) {
+        if (dmr != nullptr) {
             // read DMR slot 1 frames from the modem, and if there is any
             // write those frames to the DMR controller
             len = m_modem->readDMRData1(data);
@@ -1248,7 +1248,7 @@ int Host::run()
 #if defined(ENABLE_P25)
         // read P25 frames from modem, and if there are frames
         // write those frames to the P25 controller
-        if (p25 != NULL) {
+        if (p25 != nullptr) {
             len = m_modem->readP25Data(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
@@ -1322,7 +1322,7 @@ int Host::run()
         // read NXDN frames from modem, and if there are frames
         // write those frames to the NXDN controller
 #if defined(ENABLE_NXDN)
-        if (nxdn != NULL) {
+        if (nxdn != nullptr) {
             len = m_modem->readNXDNData(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
@@ -1355,19 +1355,19 @@ int Host::run()
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
 
-        if (m_network != NULL)
+        if (m_network != nullptr)
             m_network->clock(ms);
 
 #if defined(ENABLE_DMR)
-        if (dmr != NULL)
+        if (dmr != nullptr)
             dmr->clock();
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
-        if (p25 != NULL)
+        if (p25 != nullptr)
             p25->clock(ms);
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
-        if (nxdn != NULL)
+        if (nxdn != nullptr)
             nxdn->clock(ms);
 #endif // defined(ENABLE_NXDN)
 
@@ -1375,8 +1375,8 @@ int Host::run()
         //  -- Remote Control Processing                      --
         // ------------------------------------------------------
 
-        if (m_remoteControl != NULL) {
-            m_remoteControl->process(this, dmr, p25, nxdn);
+        if (m_remoteControl != nullptr) {
+            m_remoteControl->process(this, dmr.get(), p25.get(), nxdn.get());
         }
 
         // ------------------------------------------------------
@@ -1432,7 +1432,7 @@ int Host::run()
 
         /** Digial Mobile Radio */
 #if defined(ENABLE_DMR)
-        if (dmr != NULL) {
+        if (dmr != nullptr) {
             if (m_dmrTSCCData && m_dmrCtrlChannel) {
                 if (m_state != STATE_DMR)
                     setState(STATE_DMR);
@@ -1501,7 +1501,7 @@ int Host::run()
 
         /** Project 25 */
 #if defined(ENABLE_P25)
-        if (p25 != NULL) {
+        if (p25 != nullptr) {
             if (m_p25CCData) {
                 p25BcastIntervalTimer.clock(ms);
 
@@ -1568,7 +1568,7 @@ int Host::run()
 
         /** Next Generation Digital Narrowband */
 #if defined(ENABLE_NXDN)
-        if (nxdn != NULL) {
+        if (nxdn != nullptr) {
             if (m_nxdnCCData) {
                 nxdnBcastIntervalTimer.clock(ms);
 
@@ -1635,7 +1635,7 @@ int Host::run()
 
         if (g_killed) {
 #if defined(ENABLE_DMR)
-            if (dmr != NULL) {
+            if (dmr != nullptr) {
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearDMRData1();
@@ -1652,7 +1652,7 @@ int Host::run()
 #endif // defined(ENABLE_DMR)
 
 #if defined(ENABLE_P25)
-            if (p25 != NULL) {
+            if (p25 != nullptr) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearP25Data();
@@ -1668,7 +1668,7 @@ int Host::run()
 #endif // defined(ENABLE_P25)
 
 #if defined(ENABLE_NXDN)
-            if (nxdn != NULL) {
+            if (nxdn != nullptr) {
                 if (m_nxdnCtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearNXDNData();
@@ -1698,22 +1698,6 @@ int Host::run()
     }
 
     setState(HOST_STATE_QUIT);
-
-#if defined(ENABLE_DMR)
-    if (dmr != NULL) {
-        delete dmr;
-    }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
-    if (p25 != NULL) {
-        delete p25;
-    }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
-    if (nxdn != NULL) {
-        delete nxdn;
-    }
-#endif // defined(ENABLE_NXDN)
     return EXIT_SUCCESS;
 }
 
@@ -2063,7 +2047,7 @@ bool Host::createModem()
     LogInfo("Modem Parameters");
     LogInfo("    Port Type: %s", portType.c_str());
 
-    port::IModemPort* modemPort = NULL;
+    port::IModemPort* modemPort = nullptr;
     std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
     if (portType == NULL_PORT) {
         modemPort = new port::ModemNullPort();
@@ -2214,7 +2198,7 @@ bool Host::createModem()
     bool ret = m_modem->open();
     if (!ret) {
         delete m_modem;
-        m_modem = NULL;
+        m_modem = nullptr;
         return false;
     }
 
@@ -2316,7 +2300,7 @@ bool Host::createNetwork()
         bool ret = m_network->open();
         if (!ret) {
             delete m_network;
-            m_network = NULL;
+            m_network = nullptr;
             LogError(LOG_HOST, "failed to initialize traffic networking!");
             return false;
         }
@@ -2332,13 +2316,13 @@ bool Host::createNetwork()
         bool ret = m_remoteControl->open();
         if (!ret) {
             delete m_remoteControl;
-            m_remoteControl = NULL;
+            m_remoteControl = nullptr;
             LogError(LOG_HOST, "failed to initialize remote command networking! remote command control will be unavailable!");
             // remote command control failing isn't fatal -- we'll allow this to return normally
         }
     }
     else {
-        m_remoteControl = NULL;
+        m_remoteControl = nullptr;
     }
 
     return true;
@@ -2350,7 +2334,7 @@ bool Host::createNetwork()
 /// <param name="modem"></param>
 bool Host::rmtPortModemOpen(Modem* modem)
 {
-    assert(m_modemRemotePort != NULL);
+    assert(m_modemRemotePort != nullptr);
 
     bool ret = m_modemRemotePort->open();
     if (!ret)
@@ -2368,7 +2352,7 @@ bool Host::rmtPortModemOpen(Modem* modem)
 /// <param name="modem"></param>
 bool Host::rmtPortModemClose(Modem* modem)
 {
-    assert(m_modemRemotePort != NULL);
+    assert(m_modemRemotePort != nullptr);
 
     m_modemRemotePort->close();
 
@@ -2388,7 +2372,7 @@ bool Host::rmtPortModemClose(Modem* modem)
 /// <returns></returns>
 bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
 {
-    assert(m_modemRemotePort != NULL);
+    assert(m_modemRemotePort != nullptr);
 
     if (rspType == RTM_OK && len > 0U) {
         if (modem->getTrace())
@@ -2440,7 +2424,7 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
 /// <param name="state">Mode enumeration to switch the host/modem state to.</param>
 void Host::setState(uint8_t state)
 {
-    assert(m_modem != NULL);
+    assert(m_modem != nullptr);
 
     //if (m_state != state) {
     //    LogDebug(LOG_HOST, "setState, m_state = %u, state = %u", m_state, state);
@@ -2473,7 +2457,7 @@ void Host::setState(uint8_t state)
 
         case HOST_STATE_LOCKOUT:
             LogWarning(LOG_HOST, "Mode change, HOST_STATE_LOCKOUT");
-            if (m_network != NULL)
+            if (m_network != nullptr)
                 m_network->enable(false);
 
             if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
@@ -2490,7 +2474,7 @@ void Host::setState(uint8_t state)
 
         case HOST_STATE_ERROR:
             LogWarning(LOG_HOST, "Mode change, HOST_STATE_ERROR");
-            if (m_network != NULL)
+            if (m_network != nullptr)
                 m_network->enable(false);
 
             if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
@@ -2505,7 +2489,7 @@ void Host::setState(uint8_t state)
             break;
 
         default:
-            if (m_network != NULL)
+            if (m_network != nullptr)
                 m_network->enable(true);
 
             if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
@@ -2532,26 +2516,26 @@ void Host::setState(uint8_t state)
             if (m_state == HOST_STATE_QUIT) {
                 ::LogInfoEx(LOG_HOST, "Host is shutting down");
 
-                if (m_modem != NULL) {
+                if (m_modem != nullptr) {
                     m_modem->close();
                     delete m_modem;
                 }
 
-                if (m_tidLookup != NULL) {
+                if (m_tidLookup != nullptr) {
                     m_tidLookup->stop();
                     delete m_tidLookup;
                 }
-                if (m_ridLookup != NULL) {
+                if (m_ridLookup != nullptr) {
                     m_ridLookup->stop();
                     delete m_ridLookup;
                 }
 
-                if (m_network != NULL) {
+                if (m_network != nullptr) {
                     m_network->close();
                     delete m_network;
                 }
 
-                if (m_remoteControl != NULL) {
+                if (m_remoteControl != nullptr) {
                     m_remoteControl->close();
                     delete m_remoteControl;
                 }
@@ -2570,7 +2554,7 @@ void Host::setState(uint8_t state)
 void Host::createLockFile(const char* mode) const
 {
     FILE* fp = ::fopen(g_lockFile.c_str(), "wt");
-    if (fp != NULL) {
+    if (fp != nullptr) {
         ::fprintf(fp, "%s\n", mode);
         ::fclose(fp);
     }

@@ -134,15 +134,15 @@ namespace dmr
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
 
-        lc::LC* m_rfLC;
-        lc::PrivacyLC* m_rfPrivacyLC;
-        data::DataHeader* m_rfDataHeader;
+        std::unique_ptr<lc::LC> m_rfLC;
+        std::unique_ptr<lc::PrivacyLC> m_rfPrivacyLC;
+        std::unique_ptr<data::DataHeader> m_rfDataHeader;
 
         uint8_t m_rfSeqNo;
 
-        lc::LC* m_netLC;
-        lc::PrivacyLC* m_netPrivacyLC;
-        data::DataHeader* m_netDataHeader;
+        std::unique_ptr<lc::LC> m_netLC;
+        std::unique_ptr<lc::PrivacyLC> m_netPrivacyLC;
+        std::unique_ptr<data::DataHeader> m_netDataHeader;
 
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;

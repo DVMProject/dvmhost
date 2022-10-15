@@ -69,7 +69,7 @@ namespace dmr
             /// <summary>Sets link control data.</summary>
             void setLC(const lc::LC& lc);
             /// <summary>Gets link control data.</summary>
-            lc::LC* getLC() const;
+            std::unique_ptr<lc::LC> getLC() const;
 
             /// <summary>Get raw embeded data buffer.</summary>
             bool getRawData(uint8_t* data) const;

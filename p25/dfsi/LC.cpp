@@ -749,8 +749,8 @@ bool LC::decodeTSBK(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeTSBK(uint8_t* data)
 {
-    assert(m_tsbk != NULL);
-    assert(data != NULL);
+    assert(m_tsbk != nullptr);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     m_tsbk->encode(tsbk, true, true);
@@ -807,7 +807,7 @@ void LC::copy(const LC& data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool LC::decodeStart(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_rtModeFlag = data[0U];                                                        // RT Mode Flag
     m_startStopFlag = data[1U];                                                     // Start/Stop Flag
@@ -822,7 +822,7 @@ bool LC::decodeStart(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeStart(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rawFrame[P25_DFSI_START_LENGTH_BYTES];
     ::memset(rawFrame, 0x00U, P25_DFSI_START_LENGTH_BYTES);

@@ -63,7 +63,7 @@ bool Thread::run()
 {
     m_handle = ::CreateThread(NULL, 0, &helper, this, 0, NULL);
 
-    return m_handle != NULL;
+    return m_handle != nullptr;
 }
 
 /// <summary>
@@ -159,6 +159,6 @@ void* Thread::helper(void* arg)
 
     p->entry();
 
-    return NULL;
+    return nullptr;
 }
 #endif

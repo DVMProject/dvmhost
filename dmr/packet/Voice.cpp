@@ -53,17 +53,15 @@ using namespace dmr::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
-#define CHECK_TRAFFIC_COLLISION_DELLC(_DST_ID)                                          \
+#define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
     if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
         LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
-        delete lc;                                                                      \
         return false;                                                                   \
     }
 
-#define CHECK_TG_HANG_DELLC(_DST_ID)                                                    \
+#define CHECK_TG_HANG(_DST_ID)                                                          \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
         if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
-            delete lc;                                                                  \
             return;                                                                     \
         }                                                                               \
     }
@@ -80,7 +78,7 @@ using namespace dmr::packet;
 /// <returns></returns>
 bool Voice::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     bool dataSync = (data[1U] & DMR_SYNC_DATA) == DMR_SYNC_DATA;
     bool voiceSync = (data[1U] & DMR_SYNC_VOICE) == DMR_SYNC_VOICE;
@@ -97,15 +95,15 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return true;
 
             lc::FullLC fullLC;
-            lc::LC* lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
-            if (lc == NULL)
+            std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+            if (lc == nullptr)
                 return false;
 
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
             uint8_t flco = lc->getFLCO();
 
-            CHECK_TRAFFIC_COLLISION_DELLC(dstId);
+            CHECK_TRAFFIC_COLLISION(dstId);
 
             // validate source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -117,7 +115,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfLastDstId = 0U;
                 m_slot->m_rfTGHang.stop();
 
-                delete lc;
                 m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
@@ -133,7 +130,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfLastDstId = 0U;
                     m_slot->m_rfTGHang.stop();
 
-                    delete lc;
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
@@ -147,7 +143,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // and is not exact science!
             bool encrypted = (fid & 0x10U) == 0x10U;
 
-            m_slot->m_rfLC = lc;
+            m_slot->m_rfLC = std::move(lc);
 
             // The standby LC data
             m_slot->m_voice->m_rfEmbeddedLC.setLC(*m_slot->m_rfLC);
@@ -212,14 +208,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
 
             lc::FullLC fullLC;
-            lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
-            if (lc == NULL) {
+            std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
+            if (lc == nullptr) {
                 LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
-                lc = new lc::PrivacyLC();
+                lc = new_unique(lc::PrivacyLC);
                 lc->setDstId(m_slot->m_rfLC->getDstId());
             }
 
-            m_slot->m_rfPrivacyLC = lc;
+            m_slot->m_rfPrivacyLC = std::move(lc);
 
             // Regenerate the LC data
             fullLC.encodePI(*m_slot->m_rfPrivacyLC, data + 2U);
@@ -473,18 +469,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
 
             m_rfEmbeddedLC.addData(data + 2U, emb.getLCSS());
-            lc::LC* lc = m_rfEmbeddedLC.getLC();
-            if (lc != NULL) {
+            std::unique_ptr<lc::LC> lc = m_rfEmbeddedLC.getLC();
+            if (lc != nullptr) {
                 uint32_t srcId = lc->getSrcId();
                 uint32_t dstId = lc->getDstId();
                 uint8_t flco = lc->getFLCO();
 
-                CHECK_TRAFFIC_COLLISION_DELLC(dstId);
+                CHECK_TRAFFIC_COLLISION(dstId);
 
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
                     LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
-                    delete lc;
                     m_slot->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
@@ -493,13 +488,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (flco == FLCO_GROUP) {
                     if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
-                        delete lc;
                         m_slot->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
                 }
 
-                m_slot->m_rfLC = lc;
+                m_slot->m_rfLC = std::move(lc);
 
                 // The standby LC data
                 m_rfEmbeddedLC.setLC(*m_slot->m_rfLC);
@@ -632,17 +626,17 @@ void Voice::processNetwork(const data::Data& dmrData)
             return;
 
         lc::FullLC fullLC;
-        lc::LC* lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
-        if (lc == NULL) {
+        std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
+        if (lc == nullptr) {
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
-            lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
         }
 
         uint32_t srcId = lc->getSrcId();
         uint32_t dstId = lc->getDstId();
         uint8_t flco = lc->getFLCO();
 
-        CHECK_TG_HANG_DELLC(dstId);
+        CHECK_TG_HANG(dstId);
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
@@ -653,7 +647,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             LogMessage(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
         }
 
-        m_slot->m_netLC = lc;
+        m_slot->m_netLC = std::move(lc);
 
         // The standby LC data
         m_slot->m_voice->m_netEmbeddedLC.setLC(*m_slot->m_netLC);
@@ -719,14 +713,14 @@ void Voice::processNetwork(const data::Data& dmrData)
     }
     else if (dataType == DT_VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
-            lc::LC* lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            std::unique_ptr<lc::LC> lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
 
-            CHECK_TG_HANG_DELLC(dstId);
+            CHECK_TG_HANG(dstId);
 
-            m_slot->m_netLC = lc;
+            m_slot->m_netLC = std::move(lc);
 
             m_slot->m_voice->m_lastFrameValid = false;
 
@@ -781,14 +775,14 @@ void Voice::processNetwork(const data::Data& dmrData)
         }
 
         lc::FullLC fullLC;
-        lc::PrivacyLC* lc = fullLC.decodePI(data + 2U);
-        if (lc == NULL) {
+        std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
+        if (lc == nullptr) {
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
-            lc = new lc::PrivacyLC();
+            lc = new_unique(lc::PrivacyLC);
             lc->setDstId(dmrData.getDstId());
         }
 
-        m_slot->m_netPrivacyLC = lc;
+        m_slot->m_netPrivacyLC = std::move(lc);
 
         // Regenerate the LC data
         fullLC.encodePI(*m_slot->m_netPrivacyLC, data + 2U);
@@ -813,12 +807,12 @@ void Voice::processNetwork(const data::Data& dmrData)
     }
     else if (dataType == DT_VOICE_SYNC) {
         if (m_slot->m_netState == RS_NET_IDLE) {
-            lc::LC* lc = new lc::LC(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            std::unique_ptr<lc::LC> lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
             uint32_t dstId = lc->getDstId();
             uint32_t srcId = lc->getSrcId();
 
-            m_slot->m_netLC = lc;
+            m_slot->m_netLC = std::move(lc);
 
             // The standby LC data
             m_netEmbeddedLC.setLC(*m_slot->m_netLC);
@@ -1072,17 +1066,17 @@ void Voice::processNetwork(const data::Data& dmrData)
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Voice::Voice(Slot* slot, network::BaseNetwork* network, bool embeddedLCOnly, bool dumpTAData, bool debug, bool verbose) :
     m_slot(slot),
-    m_lastFrame(NULL),
+    m_lastFrame(nullptr),
     m_lastFrameValid(false),
     m_rfN(0U),
     m_lastRfN(0U),
     m_netN(0U),
     m_rfEmbeddedLC(),
-    m_rfEmbeddedData(NULL),
+    m_rfEmbeddedData(nullptr),
     m_rfEmbeddedReadN(0U),
     m_rfEmbeddedWriteN(1U),
     m_netEmbeddedLC(),
-    m_netEmbeddedData(NULL),
+    m_netEmbeddedData(nullptr),
     m_netEmbeddedReadN(0U),
     m_netEmbeddedWriteN(1U),
     m_rfTalkerId(TALKER_ID_NONE),
@@ -1191,7 +1185,7 @@ void Voice::insertNullAudio(uint8_t* data)
 /// <returns></returns>
 bool Voice::insertSilence(const uint8_t* data, uint8_t seqNo)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // Do not send duplicate
     if (seqNo == m_netN)

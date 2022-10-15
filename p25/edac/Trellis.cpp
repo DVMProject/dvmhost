@@ -84,8 +84,8 @@ Trellis::~Trellis()
 /// <returns>True, if decoded, otherwise false.</returns>
 bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
 {
-    assert(data != NULL);
-    assert(payload != NULL);
+    assert(data != nullptr);
+    assert(payload != nullptr);
 
     int8_t dibits[98U];
     deinterleave(data, dibits);
@@ -123,8 +123,8 @@ bool Trellis::decode34(const uint8_t* data, uint8_t* payload)
 /// <param name="data">Trellis symbol bytes.</param>
 void Trellis::encode34(const uint8_t* payload, uint8_t* data)
 {
-    assert(payload != NULL);
-    assert(data != NULL);
+    assert(payload != nullptr);
+    assert(data != nullptr);
 
     uint8_t tribits[49U];
     bitsToTribits(payload, tribits);
@@ -154,8 +154,8 @@ void Trellis::encode34(const uint8_t* payload, uint8_t* data)
 /// <returns>True, if decoded, otherwise false.</returns>
 bool Trellis::decode12(const uint8_t* data, uint8_t* payload)
 {
-    assert(data != NULL);
-    assert(payload != NULL);
+    assert(data != nullptr);
+    assert(payload != nullptr);
 
     int8_t dibits[98U];
     deinterleave(data, dibits);
@@ -193,8 +193,8 @@ bool Trellis::decode12(const uint8_t* data, uint8_t* payload)
 /// <param name="data">Trellis symbol bytes.</param>
 void Trellis::encode12(const uint8_t* payload, uint8_t* data)
 {
-    assert(payload != NULL);
-    assert(data != NULL);
+    assert(payload != nullptr);
+    assert(data != nullptr);
 
     uint8_t bits[49U];
     bitsToDibits(payload, bits);

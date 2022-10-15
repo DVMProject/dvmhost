@@ -70,8 +70,8 @@ static std::string m_actFileRoot;
 
 static network::Network* m_network;
 
-static FILE* m_fpLog = NULL;
-static FILE* m_actFpLog = NULL;
+static FILE* m_fpLog = nullptr;
+static FILE* m_actFpLog = nullptr;
 
 static uint32_t m_displayLevel = 2U;
 static bool m_disableTimeDisplay = false;
@@ -100,11 +100,11 @@ static bool LogOpen()
     struct tm* tm = ::gmtime(&now);
 
     if (tm->tm_mday == m_tm.tm_mday && tm->tm_mon == m_tm.tm_mon && tm->tm_year == m_tm.tm_year) {
-        if (m_fpLog != NULL)
+        if (m_fpLog != nullptr)
             return true;
     }
     else {
-        if (m_fpLog != NULL)
+        if (m_fpLog != nullptr)
             ::fclose(m_fpLog);
     }
 
@@ -117,7 +117,7 @@ static bool LogOpen()
     m_fpLog = ::fopen(filename, "a+t");
     m_tm = *tm;
 
-    return m_fpLog != NULL;
+    return m_fpLog != nullptr;
 }
 
 /// <summary>
@@ -132,11 +132,11 @@ static bool ActivityLogOpen()
     struct tm* tm = ::gmtime(&now);
 
     if (tm->tm_mday == m_actTm.tm_mday && tm->tm_mon == m_actTm.tm_mon && tm->tm_year == m_actTm.tm_year) {
-        if (m_actFpLog != NULL)
+        if (m_actFpLog != nullptr)
             return true;
     }
     else {
-        if (m_actFpLog != NULL)
+        if (m_actFpLog != nullptr)
             ::fclose(m_actFpLog);
     }
 
@@ -149,7 +149,7 @@ static bool ActivityLogOpen()
     m_actFpLog = ::fopen(filename, "a+t");
     m_actTm = *tm;
 
-    return m_actFpLog != NULL;
+    return m_actFpLog != nullptr;
 }
 
 /// <summary>
@@ -172,7 +172,7 @@ bool ActivityLogInitialise(const std::string& filePath, const std::string& fileR
 {
     m_actFilePath = filePath;
     m_actFileRoot = fileRoot;
-    m_network = NULL;
+    m_network = nullptr;
 
     return ::ActivityLogOpen();
 }
@@ -182,7 +182,7 @@ bool ActivityLogInitialise(const std::string& filePath, const std::string& fileR
 /// </summary>
 void ActivityLogFinalise()
 {
-    if (m_actFpLog != NULL)
+    if (m_actFpLog != nullptr)
         ::fclose(m_actFpLog);
 }
 
@@ -194,8 +194,8 @@ void ActivityLogFinalise()
 /// <param name="msg">Formatted string to write to activity log.</param>
 void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
 {
-    assert(mode != NULL);
-    assert(msg != NULL);
+    assert(mode != nullptr);
+    assert(msg != nullptr);
 
     char buffer[ACT_LOG_BUFFER_LEN];
 #if defined(_WIN32) || defined(_WIN64)
@@ -226,7 +226,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     ::fprintf(m_actFpLog, "%s\n", buffer);
     ::fflush(m_actFpLog);
 
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         m_network->writeActLog(buffer);
     }
 
@@ -268,7 +268,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
 /// </summary>
 void LogFinalise()
 {
-    if (m_fpLog != NULL)
+    if (m_fpLog != nullptr)
         ::fclose(m_fpLog);
 }
 
@@ -280,7 +280,7 @@ void LogFinalise()
 /// <param name="msg">Formatted string to write to activity log.</param>
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
-    assert(fmt != NULL);
+    assert(fmt != nullptr);
 
     char buffer[LOG_BUFFER_LEN];
 #if defined(_WIN32) || defined(_WIN64)
@@ -288,7 +288,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         SYSTEMTIME st;
         ::GetSystemTime(&st);
 
-        if (module != NULL) {
+        if (module != nullptr) {
             ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u (%s) ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, module);
         }
         else {
@@ -296,7 +296,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         }
     } 
     else {
-        if (module != NULL) {
+        if (module != nullptr) {
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
         }
         else {
@@ -310,7 +310,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 
         struct tm* tm = ::gmtime(&now.tv_sec);
 
-        if (module != NULL) {
+        if (module != nullptr) {
             ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, module);
         }
         else {
@@ -318,7 +318,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         }
     } 
     else {
-        if (module != NULL) {
+        if (module != nullptr) {
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
         }
         else {
@@ -334,7 +334,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 
     va_end(vl);
 
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         // don't transfer debug data...
         if (level > 1U) {
             m_network->writeDiagLog(buffer);

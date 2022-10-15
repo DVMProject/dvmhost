@@ -83,7 +83,7 @@ CSBK::~CSBK()
 /// <returns>True, if DMR CSBK was decoded, otherwise false.</returns>
 bool CSBK::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
 
@@ -202,7 +202,7 @@ bool CSBK::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CSBK::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
     ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);

@@ -170,15 +170,15 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
     m_modemState(STATE_IDLE),
-    m_buffer(NULL),
+    m_buffer(nullptr),
     m_length(0U),
     m_rspOffset(0U),
     m_rspState(RESP_START),
     m_rspDoubleLength(false),
     m_rspType(CMD_GET_STATUS),
-    m_openPortHandler(NULL),
-    m_closePortHandler(NULL),
-    m_rspHandler(NULL),
+    m_openPortHandler(nullptr),
+    m_closePortHandler(nullptr),
+    m_rspHandler(nullptr),
     m_rxDMRData1(1000U, "Modem RX DMR1"),
     m_rxDMRData2(1000U, "Modem RX DMR2"),
     m_txDMRData1(1000U, "Modem TX DMR1"),
@@ -205,7 +205,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_debug(debug),
     m_playoutTimer(1000U, 0U, packetPlayoutTime)
 {
-    assert(port != NULL);
+    assert(port != nullptr);
 
     m_buffer = new uint8_t[BUFFER_LENGTH];
 }
@@ -456,7 +456,7 @@ void Modem::setRXLevel(float rxLevel)
 /// <param name="handler"></param>
 void Modem::setResponseHandler(std::function<MODEM_RESP_HANDLER> handler)
 {
-    assert(handler != NULL);
+    assert(handler != nullptr);
 
     m_rspHandler = handler;
 }
@@ -471,7 +471,7 @@ void Modem::setResponseHandler(std::function<MODEM_RESP_HANDLER> handler)
 /// <param name="handler"></param>
 void Modem::setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 {
-    assert(handler != NULL);
+    assert(handler != nullptr);
 
     m_openPortHandler = handler;
 }
@@ -482,7 +482,7 @@ void Modem::setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 /// <param name="handler"></param>
 void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 {
-    assert(handler != NULL);
+    assert(handler != nullptr);
 
     m_closePortHandler = handler;
 }
@@ -584,7 +584,7 @@ void Modem::clock(uint32_t ms)
     RESP_TYPE_DVM type = getResponse();
 
     // do we have a custom response handler?
-    if (m_rspHandler != NULL) {
+    if (m_rspHandler != nullptr) {
         // execute custom response handler
         if (m_rspHandler(this, ms, type, m_rspDoubleLength, m_buffer, m_length)) {
             // all logic handled by handler -- return
@@ -1002,7 +1002,7 @@ void Modem::close()
     m_port->close();
 
     // do we have a close port handler?
-    if (m_closePortHandler != NULL) {
+    if (m_closePortHandler != nullptr) {
         m_closePortHandler(this);
     }
 }
@@ -1014,7 +1014,7 @@ void Modem::close()
 /// <returns>Length of data read from ring buffer.</returns>
 uint32_t Modem::readDMRData1(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_rxDMRData1.isEmpty())
         return 0U;
@@ -1033,7 +1033,7 @@ uint32_t Modem::readDMRData1(uint8_t* data)
 /// <returns>Length of data read from ring buffer.</returns>
 uint32_t Modem::readDMRData2(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_rxDMRData2.isEmpty())
         return 0U;
@@ -1052,7 +1052,7 @@ uint32_t Modem::readDMRData2(uint8_t* data)
 /// <returns>Length of data read from ring buffer.</returns>
 uint32_t Modem::readP25Data(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_rxP25Data.isEmpty())
         return 0U;
@@ -1071,7 +1071,7 @@ uint32_t Modem::readP25Data(uint8_t* data)
 /// <returns>Length of data read from ring buffer.</returns>
 uint32_t Modem::readNXDNData(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (m_rxNXDNData.isEmpty())
         return 0U;
@@ -1235,7 +1235,7 @@ void Modem::clearNXDNData()
 void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     if (m_useDFSI) {
@@ -1266,7 +1266,7 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
 void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     if (m_useDFSI) {
@@ -1297,7 +1297,7 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_P25)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     if (m_trace)
@@ -1323,7 +1323,7 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_NXDN)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     if (m_trace)
@@ -1350,7 +1350,7 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 {
 #if defined(ENABLE_DMR)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     const uint8_t MAX_LENGTH = 40U;
@@ -1409,7 +1409,7 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 {
 #if defined(ENABLE_DMR)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     const uint8_t MAX_LENGTH = 40U;
@@ -1468,7 +1468,7 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 {
 #if defined(ENABLE_P25)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     const uint8_t MAX_LENGTH = 250U;
@@ -1527,7 +1527,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
 {
 #if defined(ENABLE_NXDN)
-    assert(data != NULL);
+    assert(data != nullptr);
     assert(length > 0U);
 
     const uint8_t MAX_LENGTH = 250U;
@@ -1612,7 +1612,7 @@ bool Modem::writeDMRStart(bool tx)
 bool Modem::writeDMRShortLC(const uint8_t* lc)
 {
 #if defined(ENABLE_DMR)
-    assert(lc != NULL);
+    assert(lc != nullptr);
 
     uint8_t buffer[12U];
 

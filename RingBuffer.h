@@ -51,12 +51,12 @@ public:
     RingBuffer(uint32_t length, const char* name) :
         m_length(length),
         m_name(name),
-        m_buffer(NULL),
+        m_buffer(nullptr),
         m_iPtr(0U),
         m_oPtr(0U)
     {
         assert(length > 0U);
-        assert(name != NULL);
+        assert(name != nullptr);
 
         m_buffer = new T[length];
 

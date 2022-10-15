@@ -47,8 +47,8 @@ using namespace dmr;
 /// Initializes a new instance of the ShortLC class.
 /// </summary>
 ShortLC::ShortLC() :
-    m_rawData(NULL),
-    m_deInterData(NULL)
+    m_rawData(nullptr),
+    m_deInterData(nullptr)
 {
     m_rawData = new bool[72U];
     m_deInterData = new bool[68U];
@@ -71,8 +71,8 @@ ShortLC::~ShortLC()
 /// <returns></returns>
 bool ShortLC::decode(const uint8_t* in, uint8_t* out)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     //  Get the raw binary
     decodeExtractBinary(in);
@@ -98,8 +98,8 @@ bool ShortLC::decode(const uint8_t* in, uint8_t* out)
 /// <param name="out"></param>
 void ShortLC::encode(const uint8_t* in, uint8_t* out)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     // Extract Data
     encodeExtractData(in);
@@ -124,7 +124,7 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
 /// <param name="in"></param>
 void ShortLC::decodeExtractBinary(const uint8_t* in)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     Utils::byteToBitsBE(in[0U], m_rawData + 0U);
     Utils::byteToBitsBE(in[1U], m_rawData + 8U);
@@ -182,7 +182,7 @@ bool ShortLC::decodeErrorCheck()
 /// <param name="data"></param>
 void ShortLC::decodeExtractData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     bool bData[40U];
 
@@ -212,7 +212,7 @@ void ShortLC::decodeExtractData(uint8_t* data) const
 /// <param name="in"></param>
 void ShortLC::encodeExtractData(const uint8_t* in) const
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     bool bData[40U];
     Utils::byteToBitsBE(in[0U], bData + 0U);
@@ -275,7 +275,7 @@ void ShortLC::encodeInterleave()
 /// <param name="data"></param>
 void ShortLC::encodeExtractBinary(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     Utils::bitsToByteBE(m_rawData + 0U, data[0U]);
     Utils::bitsToByteBE(m_rawData + 8U, data[1U]);

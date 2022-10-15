@@ -101,7 +101,7 @@ void Voice::resetNet()
 /// <returns></returns>
 bool Voice::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // Decode the NID
     bool valid = m_p25->m_nid.decode(data + 2U);
@@ -873,10 +873,10 @@ Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbo
     m_rfLSD(),
     m_netLSD(),
     m_dfsiLC(),
-    m_netLDU1(NULL),
-    m_netLDU2(NULL),
+    m_netLDU1(nullptr),
+    m_netLDU2(nullptr),
     m_lastDUID(P25_DUID_TDU),
-    m_lastIMBE(NULL),
+    m_lastIMBE(nullptr),
     m_hadVoice(false),
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
@@ -911,9 +911,9 @@ Voice::~Voice()
 /// <param name="duid"></param>
 void Voice::writeNetwork(const uint8_t *data, uint8_t duid)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -998,7 +998,7 @@ void Voice::writeNet_TDU()
         ::ActivityLog("P25", false, "network end of transmission, %u frames", m_netFrames);
     }
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
@@ -1168,7 +1168,7 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
             if (!m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true)) {
-                if (m_network != NULL)
+                if (m_network != nullptr)
                     m_network->resetP25();
 
                 ::memset(m_netLDU1, 0x00U, 9U * 25U);

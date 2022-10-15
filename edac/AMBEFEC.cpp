@@ -67,7 +67,7 @@ AMBEFEC::~AMBEFEC()
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     uint32_t a1 = 0U, a2 = 0U, a3 = 0U;
     uint32_t b1 = 0U, b2 = 0U, b3 = 0U;
@@ -174,7 +174,7 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     uint32_t a1 = 0U, a2 = 0U, a3 = 0U;
     uint32_t b1 = 0U, b2 = 0U, b3 = 0U;
@@ -242,7 +242,7 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     bool orig[144U];
     bool temp[144U];
@@ -381,7 +381,7 @@ uint32_t AMBEFEC::regenerateIMBE(uint8_t* bytes) const
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     bool orig[144U];
     bool temp[144U];
@@ -514,7 +514,7 @@ uint32_t AMBEFEC::measureP25BER(const uint8_t* bytes) const
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     uint32_t a = 0U;
     uint32_t MASK = 0x800000U;
@@ -571,7 +571,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 /// <returns>Count of errors.</returns>
 uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 {
-    assert(bytes != NULL);
+    assert(bytes != nullptr);
 
     uint32_t a = 0U;
     uint32_t MASK = 0x800000U;

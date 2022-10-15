@@ -48,9 +48,9 @@ PrivacyLC::PrivacyLC(const uint8_t* data) :
     m_group(false),
     m_algId(0U),
     m_kId(0U),
-    m_mi(NULL)
+    m_mi(nullptr)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
     
@@ -77,9 +77,9 @@ PrivacyLC::PrivacyLC(const bool* bits) :
     m_group(false),
     m_algId(0U),
     m_kId(0U),
-    m_mi(NULL)
+    m_mi(nullptr)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
 
@@ -122,7 +122,7 @@ PrivacyLC::PrivacyLC() :
     m_group(false),
     m_algId(0U),
     m_kId(0U),
-    m_mi(NULL)
+    m_mi(nullptr)
 {
     m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
 }
@@ -141,7 +141,7 @@ PrivacyLC::~PrivacyLC()
 /// <param name="data"></param>
 void PrivacyLC::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     data[0U] = (m_group ? 0x20U : 0x00U) +
         (m_algId & 0x07U);                                                      // Algorithm ID
@@ -165,7 +165,7 @@ void PrivacyLC::getData(uint8_t* data) const
 /// <param name="bits"></param>
 void PrivacyLC::getData(bool* bits) const
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     uint8_t bytes[10U];
     getData(bytes);

@@ -73,7 +73,7 @@ TSBKFactory::~TSBKFactory()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -120,11 +120,11 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
             }
 
             if (!ret)
-                return NULL;
+                return nullptr;
         }
         catch (...) {
             Utils::dump(2U, "P25, decoding excepted with input data", tsbk, P25_TSBK_LENGTH_BYTES);
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -160,7 +160,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         }
 
         if (mfId == P25_MFG_MOT) {
-            return NULL;
+            return nullptr;
         }
         else {
             mfId = tsbk[1U];
@@ -178,7 +178,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         }
 
         if (mfId == P25_MFG_DVM) {
-            return NULL;
+            return nullptr;
         }
         else {
             mfId = tsbk[1U];
@@ -238,7 +238,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         break;
     }
 
-    return NULL;    
+    return nullptr;    
 }
 
 /// <summary>
@@ -249,16 +249,16 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 /// <returns></returns>
 std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     if (dataHeader.getFormat() != PDU_FMT_AMBT) {
         LogError(LOG_P25, "TSBKFactory::createAMBT(), PDU is not a AMBT PDU");
-        return NULL;
+        return nullptr;
     }
 
     if (dataHeader.getBlocksToFollow() == 0U) {
         LogError(LOG_P25, "TSBKFactory::createAMBT(), PDU contains no data blocks");
-        return NULL;
+        return nullptr;
     }
 
     uint8_t lco = dataHeader.getAMBTOpcode();                                       // LCO
@@ -293,7 +293,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader,
         }
 
         if (mfId == P25_MFG_MOT) {
-            return NULL;
+            return nullptr;
         }
         else {
             mfId = dataHeader.getMFId();
@@ -325,7 +325,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader,
         break;
     }    
 
-    return NULL;    
+    return nullptr;    
 }
 
 // ---------------------------------------------------------------------------
@@ -341,11 +341,11 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader,
 /// <returns></returns>
 std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool rawTSBK)
 {
-    assert(tsbk != NULL);
-    assert(data != NULL);
+    assert(tsbk != nullptr);
+    assert(data != nullptr);
 
     if (!tsbk->decode(data, rawTSBK)) {
-        return NULL;
+        return nullptr;
     }
 
     return std::unique_ptr<TSBK>(tsbk);
@@ -360,11 +360,11 @@ std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool 
 /// <returns></returns>
 std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks)
 {
-    assert(ambt != NULL);
-    assert(blocks != NULL);
+    assert(ambt != nullptr);
+    assert(blocks != nullptr);
 
     if (!ambt->decodeMBT(dataHeader, blocks)) {
-        return NULL;
+        return nullptr;
     }
 
     return std::unique_ptr<AMBT>(ambt);

@@ -75,7 +75,7 @@ DataHeader::DataHeader() :
     m_rspStatus(0U),
     m_srcPort(0U),
     m_dstPort(0U),
-    m_data(NULL),
+    m_data(nullptr),
     m_A(false),
     m_SF(false),
     m_PF(false),
@@ -135,7 +135,7 @@ DataHeader& DataHeader::operator=(const DataHeader& header)
 /// <returns>True, if DMR data header was decoded, otherwise false.</returns>
 bool DataHeader::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // decode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
@@ -253,7 +253,7 @@ bool DataHeader::decode(const uint8_t* data)
 /// <param name="data"></param>
 void DataHeader::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // perform no processing other then regenerating FEC
     if (m_DPF == DPF_PROPRIETARY) {

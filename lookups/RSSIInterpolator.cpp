@@ -66,13 +66,13 @@ RSSIInterpolator::~RSSIInterpolator()
 bool RSSIInterpolator::load(const std::string& filename)
 {
     FILE* fp = ::fopen(filename.c_str(), "rt");
-    if (fp == NULL) {
+    if (fp == nullptr) {
         LogError(LOG_HOST, "Cannot open the RSSI data file - %s", filename.c_str());
         return false;
     }
 
     char buffer[100U];
-    while (::fgets(buffer, 100, fp) != NULL) {
+    while (::fgets(buffer, 100, fp) != nullptr) {
         if (buffer[0U] == '#')
             continue;
 

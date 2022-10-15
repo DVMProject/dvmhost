@@ -101,7 +101,7 @@ static const uint32_t roundConstants[64] = {
  */
 static inline void set_uint32(uint8_t* cp, uint32_t v)
 {
-    assert(cp != NULL);
+    assert(cp != nullptr);
     ::memcpy(cp, &v, sizeof v);
 }
 
@@ -118,10 +118,10 @@ static inline void set_uint32(uint8_t* cp, uint32_t v)
 /// must be called before using hash in the call to sha256_hash
 /// </remarks>
 SHA256::SHA256() :
-    m_state(NULL),
-    m_total(NULL),
+    m_state(nullptr),
+    m_total(nullptr),
     m_buflen(0U),
-    m_buffer(NULL)
+    m_buffer(nullptr)
 {
     m_state = new uint32_t[8U];
     m_total = new uint32_t[2U];
@@ -154,7 +154,7 @@ SHA256::~SHA256()
 /// <param name="len"></param>
 void SHA256::processBlock(const uint8_t* buffer, uint32_t len)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     const uint32_t *words = (uint32_t *)buffer;
     uint32_t nwords = len / sizeof(uint32_t);
@@ -283,7 +283,7 @@ void SHA256::processBlock(const uint8_t* buffer, uint32_t len)
 /// <param name="len"></param>
 void SHA256::processBytes(const uint8_t* buffer, uint32_t len)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     // When we already have some bits in our internal buffer concatenate
     // both inputs first.
@@ -341,7 +341,7 @@ void SHA256::processBytes(const uint8_t* buffer, uint32_t len)
 /// <returns></returns>
 uint8_t* SHA256::finish(uint8_t* buffer)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     conclude();
 
@@ -357,7 +357,7 @@ uint8_t* SHA256::finish(uint8_t* buffer)
 /// <returns></returns>
 uint8_t* SHA256::read(uint8_t* buffer)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     for (uint32_t i = 0U; i < 8U; i++)
         set_uint32(buffer + i * sizeof(m_state[0]), SWAP(m_state[i]));
@@ -377,8 +377,8 @@ uint8_t* SHA256::read(uint8_t* buffer)
 /// <returns></returns>
 uint8_t* SHA256::buffer(const uint8_t* buffer, uint32_t len, uint8_t* resblock)
 {
-    assert(buffer != NULL);
-    assert(resblock != NULL);
+    assert(buffer != nullptr);
+    assert(resblock != nullptr);
 
     // Initialize the computation context.
     init();

@@ -123,7 +123,7 @@ using namespace p25::packet;
     }
 
 #define RF_TO_WRITE_NET(OSP)                                                            \
-    if (m_network != NULL) {                                                            \
+    if (m_network != nullptr) {                                                         \
         uint8_t _buf[P25_TSDU_FRAME_LENGTH_BYTES];                                      \
         writeNet_TSDU_From_RF(OSP, _buf);                                               \
         writeNetworkRF(OSP, _buf, true);                                                \
@@ -153,7 +153,7 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 /// <returns></returns>
 bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (!m_p25->m_control)
         return false;
@@ -909,7 +909,7 @@ void Trunk::writeAdjSSNetwork()
         return;
     }
 
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         if (m_verbose) {
             LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast), network announce, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
                 m_p25->m_siteData.sysId(), m_p25->m_siteData.rfssId(), m_p25->m_siteData.siteId(), m_p25->m_siteData.channelId(), m_p25->m_siteData.channelNo(), m_p25->m_siteData.serviceClass());
@@ -942,7 +942,7 @@ void Trunk::writeAdjSSNetwork()
 void Trunk::clock(uint32_t ms)
 {
     if (m_p25->m_control) {
-        if (m_p25->m_network != NULL) {
+        if (m_p25->m_network != nullptr) {
             if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive()) {
                 bool grp = true;
                 uint32_t srcId = 0U;
@@ -1184,7 +1184,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_patchSuperGroup(0xFFFFU),
     m_verifyAff(false),
     m_verifyReg(false),
-    m_rfMBF(NULL),
+    m_rfMBF(nullptr),
     m_mbfCnt(0U),
     m_mbfIdenCnt(0U),
     m_mbfAdjSSCnt(0U),
@@ -1240,9 +1240,9 @@ Trunk::~Trunk()
 void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 {
     assert(tsbk != nullptr);
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -1267,9 +1267,9 @@ void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 /// <param name="autoReset"></param>
 void Trunk::writeNetworkRF(lc::TDULC& tduLc, const uint8_t* data, bool autoReset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -1506,7 +1506,7 @@ void Trunk::writeNet_TDULC(lc::TDULC lc)
         ::ActivityLog("P25", false, "network end of transmission, %u frames", m_p25->m_voice->m_netFrames);
     }
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 
     m_p25->m_netTimeout.stop();
@@ -1668,7 +1668,7 @@ void Trunk::writeNet_TSDU(lc::TSBK* tsbk)
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 }
 
@@ -2090,7 +2090,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             break;
     }
 
-    if (tsbk != NULL) {
+    if (tsbk != nullptr) {
         tsbk->setLastBlock(true); // always set last block
 
         // are we transmitting CC as a multi-block?
@@ -2125,7 +2125,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
     }
 
     // do we have a network connection and are we handling grants at the network?
-    if (m_p25->m_network != NULL) {
+    if (m_p25->m_network != nullptr) {
         if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive() && !skipNetCheck) {
             return m_p25->m_network->writeGrantReq(grp, srcId, dstId);
         }
@@ -2639,8 +2639,8 @@ bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 /// <param name="data"></param>
 void Trunk::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 {
-    assert(tsbk != NULL);
-    assert(data != NULL);
+    assert(tsbk != nullptr);
+    assert(data != nullptr);
 
     ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
@@ -2687,7 +2687,7 @@ void Trunk::denialInhibit(uint32_t srcId)
 /// <param name="b2"></param>
 void Trunk::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
         uint32_t ss1Pos = ss0Pos + 1U;

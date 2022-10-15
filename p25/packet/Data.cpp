@@ -79,7 +79,7 @@ void Data::resetRF()
 /// <returns></returns>
 bool Data::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // decode the NID
     bool valid = m_p25->m_nid.decode(data + 2U);
@@ -513,7 +513,7 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
 /// <param name="clearBeforeWrite"></param>
 void Data::writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
@@ -612,23 +612,23 @@ Data::Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool r
     m_p25(p25),
     m_network(network),
     m_prevRfState(RS_RF_LISTENING),
-    m_rfData(NULL),
+    m_rfData(nullptr),
     m_rfDataHeader(),
     m_rfSecondHeader(),
     m_rfUseSecondHeader(false),
     m_rfDataBlockCnt(0U),
-    m_rfPDU(NULL),
+    m_rfPDU(nullptr),
     m_rfPDUCount(0U),
     m_rfPDUBits(0U),
-    m_netData(NULL),
+    m_netData(nullptr),
     m_netDataHeader(),
     m_netSecondHeader(),
     m_netUseSecondHeader(false),
     m_netDataOffset(0U),
     m_netDataBlockCnt(0U),
-    m_netPDU(NULL),
+    m_netPDU(nullptr),
     m_netPDUCount(0U),
-    m_pduUserData(NULL),
+    m_pduUserData(nullptr),
     m_pduUserDataLength(0U),
     m_fneRegTable(),
     m_connQueueTable(),
@@ -674,9 +674,9 @@ Data::~Data()
 /// <param name="len"></param>
 void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
-    if (m_network == NULL)
+    if (m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -694,7 +694,7 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 /// <remarks>This simply takes data packed into m_rfPDU and transmits it.</remarks>
 void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 {
-    assert(pdu != NULL);
+    assert(pdu != nullptr);
     assert(bitLength > 0U);
 
     uint8_t data[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];

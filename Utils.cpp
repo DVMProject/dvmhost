@@ -66,7 +66,7 @@ void getHostVersion()
 /// <param name="length"></param>
 void Utils::dump(const std::string& title, const uint8_t* data, uint32_t length)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     dump(2U, title, data, length);
 }
@@ -80,7 +80,7 @@ void Utils::dump(const std::string& title, const uint8_t* data, uint32_t length)
 /// <param name="length"></param>
 void Utils::dump(int level, const std::string& title, const uint8_t* data, uint32_t length)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::Log(level, "DUMP", "%s (len %u)", title.c_str(), length);
 
@@ -132,7 +132,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
 /// <param name="length"></param>
 void Utils::dump(const std::string& title, const bool* bits, uint32_t length)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     dump(2U, title, bits, length);
 }
@@ -146,7 +146,7 @@ void Utils::dump(const std::string& title, const bool* bits, uint32_t length)
 /// <param name="length"></param>
 void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t length)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     uint8_t bytes[100U];
     uint32_t nBytes = 0U;
@@ -164,7 +164,7 @@ void Utils::dump(int level, const std::string& title, const bool* bits, uint32_t
 /// <param name="length"></param>
 void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t length)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ::Log(2U, "SYMBOLS", "%s (len %u)", title.c_str(), length);
 
@@ -230,7 +230,7 @@ void Utils::symbols(const std::string& title, const uint8_t* data, uint32_t leng
 /// <param name="bits"></param>
 void Utils::byteToBitsBE(uint8_t byte, bool* bits)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     bits[0U] = (byte & 0x80U) == 0x80U;
     bits[1U] = (byte & 0x40U) == 0x40U;
@@ -249,7 +249,7 @@ void Utils::byteToBitsBE(uint8_t byte, bool* bits)
 /// <param name="bits"></param>
 void Utils::byteToBitsLE(uint8_t byte, bool* bits)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     bits[0U] = (byte & 0x01U) == 0x01U;
     bits[1U] = (byte & 0x02U) == 0x02U;
@@ -268,7 +268,7 @@ void Utils::byteToBitsLE(uint8_t byte, bool* bits)
 /// <param name="byte"></param>
 void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     byte = bits[0U] ? 0x80U : 0x00U;
     byte |= bits[1U] ? 0x40U : 0x00U;
@@ -287,7 +287,7 @@ void Utils::bitsToByteBE(const bool* bits, uint8_t& byte)
 /// <param name="byte"></param>
 void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     byte = bits[0U] ? 0x01U : 0x00U;
     byte |= bits[1U] ? 0x02U : 0x00U;
@@ -308,8 +308,8 @@ void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
 /// <param name="stop"></param>
 uint32_t Utils::getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     uint32_t n = 0U;
     for (uint32_t i = start; i < stop; i++, n++) {
@@ -341,8 +341,8 @@ uint32_t Utils::getBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uin
 /// <param name="stop"></param>
 uint32_t Utils::setBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     uint32_t n = 0U;
     for (uint32_t i = start; i < stop; i++, n++) {

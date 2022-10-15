@@ -66,7 +66,7 @@ EMB::~EMB()
 /// <param name="data"></param>
 void EMB::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t DMREMB[2U];
     DMREMB[0U] = (data[13U] << 4) & 0xF0U;
@@ -88,7 +88,7 @@ void EMB::decode(const uint8_t* data)
 /// <param name="data"></param>
 void EMB::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t DMREMB[2U];
     DMREMB[0U] = (m_colorCode << 4) & 0xF0U;

@@ -180,7 +180,7 @@ bool UARTPort::open()
 int UARTPort::read(uint8_t* buffer, uint32_t length)
 {
     assert(m_handle != INVALID_HANDLE_VALUE);
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     uint32_t ptr = 0U;
 
@@ -209,7 +209,7 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
 /// <returns>Actual length of data written to the serial port.</returns>
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     if (m_isOpen && m_handle == INVALID_HANDLE_VALUE)
         return 0;
@@ -313,7 +313,7 @@ bool UARTPort::open()
 /// <returns>Actual length of data read from serial port.</returns>
 int UARTPort::read(uint8_t* buffer, uint32_t length)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
     assert(m_fd != -1);
 
     if (length == 0U)
@@ -370,7 +370,7 @@ int UARTPort::read(uint8_t* buffer, uint32_t length)
 /// <returns>Actual length of data written to the serial port.</returns>
 int UARTPort::write(const uint8_t* buffer, uint32_t length)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     if (m_isOpen && m_fd == -1)
         return 0;
@@ -465,7 +465,7 @@ UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
 int UARTPort::readNonblock(uint8_t* buffer, uint32_t length)
 {
     assert(m_handle != INVALID_HANDLE_VALUE);
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     if (length == 0U)
         return 0;

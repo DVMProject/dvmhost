@@ -77,7 +77,7 @@ using namespace dmr::packet;
 /// <returns></returns>
 bool Data::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // Get the type from the packet metadata
     uint8_t dataType = data[1U] & 0x0FU;
@@ -118,7 +118,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         // release trunked grant (if necessary)
         Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
-        if (m_tscc != NULL) {
+        if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
             }
@@ -155,7 +155,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (!valid)
             return false;
 
-        m_slot->m_rfDataHeader = dataHeader;
+        m_slot->m_rfDataHeader = std::unique_ptr<data::DataHeader>(dataHeader);
 
         bool gi = dataHeader->getGI();
         uint32_t srcId = dataHeader->getSrcId();
@@ -181,7 +181,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfFrames = dataHeader->getBlocks();
         m_slot->m_rfSeqNo = 0U;
-        m_slot->m_rfLC = new lc::LC(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_rfLC = new_unique(lc::LC, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
@@ -372,7 +372,7 @@ void Data::processNetwork(const data::Data& dmrData)
             return;
         }
 
-        m_slot->m_netDataHeader = dataHeader;
+        m_slot->m_netDataHeader = std::unique_ptr<data::DataHeader>(dataHeader);
 
         bool gi = dataHeader->getGI();
         uint32_t srcId = dataHeader->getSrcId();
@@ -381,7 +381,7 @@ void Data::processNetwork(const data::Data& dmrData)
         CHECK_TG_HANG(dstId);
 
         m_slot->m_netFrames = dataHeader->getBlocks();
-        m_slot->m_netLC = new lc::LC(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_netLC = new_unique(lc::LC, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
@@ -526,7 +526,7 @@ void Data::processNetwork(const data::Data& dmrData)
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool repeatDataPacket, bool debug, bool verbose) :
     m_slot(slot),
-    m_pduUserData(NULL),
+    m_pduUserData(nullptr),
     m_pduDataOffset(0U),
     m_lastRejectId(0U),
     m_dumpDataPacket(dumpDataPacket),

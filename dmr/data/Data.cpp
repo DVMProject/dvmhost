@@ -52,7 +52,7 @@ Data::Data(const Data& data) :
     m_dataType(data.m_dataType),
     m_ber(data.m_ber),
     m_rssi(data.m_rssi),
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, 2U * DMR_FRAME_LENGTH_BYTES);
@@ -71,7 +71,7 @@ Data::Data() :
     m_dataType(0U),
     m_ber(0U),
     m_rssi(0U),
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
 }
@@ -114,7 +114,7 @@ Data& Data::operator=(const Data& data)
 /// <param name="buffer">Data buffer.</param>
 void Data::setData(const uint8_t* buffer)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     ::memcpy(m_data, buffer, DMR_FRAME_LENGTH_BYTES);
 }
@@ -125,7 +125,7 @@ void Data::setData(const uint8_t* buffer)
 /// <param name="buffer">Data buffer.</param>
 uint32_t Data::getData(uint8_t* buffer) const
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
 
     ::memcpy(buffer, m_data, DMR_FRAME_LENGTH_BYTES);
 

@@ -52,7 +52,7 @@ DataBlock::DataBlock() :
     m_trellis(),
     m_fmt(PDU_FMT_CONFIRMED),
     m_headerSap(0U),
-    m_data(NULL)
+    m_data(nullptr)
 {
     m_data = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
 }
@@ -73,8 +73,8 @@ DataBlock::~DataBlock()
 /// <returns>True, if data block was decoded, otherwise false.</returns>
 bool DataBlock::decode(const uint8_t* data, const DataHeader header)
 {
-    assert(data != NULL);
-    assert(m_data != NULL);
+    assert(data != nullptr);
+    assert(m_data != nullptr);
 
     uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
     ::memset(buffer, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
@@ -178,8 +178,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
 /// <param name="data">Buffer to encode data block to.</param>
 void DataBlock::encode(uint8_t* data)
 {
-    assert(data != NULL);
-    assert(m_data != NULL);
+    assert(data != nullptr);
+    assert(m_data != nullptr);
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
         uint8_t buffer[P25_PDU_CONFIRMED_LENGTH_BYTES];
@@ -254,8 +254,8 @@ uint8_t DataBlock::getFormat() const
 /// <param name="buffer"></param>
 void DataBlock::setData(const uint8_t* buffer)
 {
-    assert(buffer != NULL);
-    assert(m_data != NULL);
+    assert(buffer != nullptr);
+    assert(m_data != nullptr);
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
         ::memcpy(m_data, buffer, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
@@ -272,8 +272,8 @@ void DataBlock::setData(const uint8_t* buffer)
 /// <returns></returns>
 uint32_t DataBlock::getData(uint8_t* buffer) const
 {
-    assert(buffer != NULL);
-    assert(m_data != NULL);
+    assert(buffer != nullptr);
+    assert(m_data != nullptr);
 
     if (m_fmt == PDU_FMT_CONFIRMED) {
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);

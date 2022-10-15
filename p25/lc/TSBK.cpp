@@ -47,7 +47,7 @@ bool TSBK::m_warnCRC = true;
 bool TSBK::m_warnCRC = false;
 #endif
 
-uint8_t *TSBK::m_siteCallsign = NULL;
+uint8_t *TSBK::m_siteCallsign = nullptr;
 SiteData TSBK::m_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ TSBK::TSBK() :
     m_rs(),
     m_trellis()
 {
-    if (m_siteCallsign == NULL) {
+    if (m_siteCallsign == nullptr) {
         m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
         ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
     }
@@ -131,7 +131,7 @@ TSBK::~TSBK()
 /// <param name="callsign">Callsign.</param>
 void TSBK::setCallsign(std::string callsign)
 {
-    if (m_siteCallsign == NULL) {
+    if (m_siteCallsign == nullptr) {
         m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
         ::memset(m_siteCallsign, 0x00U, P25_MOT_CALLSIGN_LENGTH_BYTES);
     }
@@ -204,8 +204,8 @@ std::unique_ptr<uint8_t[]> TSBK::fromValue(const ulong64_t tsbkValue)
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
 {
-    assert(data != NULL);
-    assert(tsbk != NULL);
+    assert(data != nullptr);
+    assert(tsbk != nullptr);
 
     if (rawTSBK) {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
@@ -275,8 +275,8 @@ bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void TSBK::encode(uint8_t* data, const uint8_t* tsbk, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
-    assert(tsbk != NULL);
+    assert(data != nullptr);
+    assert(tsbk != nullptr);
 
     uint8_t outTsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(outTsbk, 0x00U, P25_TSBK_LENGTH_BYTES);

@@ -54,12 +54,12 @@ namespace dmr
             ~FullLC();
 
             /// <summary>Decode DMR full-link control data.</summary>
-            LC* decode(const uint8_t* data, uint8_t type);
+            std::unique_ptr<LC> decode(const uint8_t* data, uint8_t type);
             /// <summary>Encode DMR full-link control data.</summary>
             void encode(const LC& lc, uint8_t* data, uint8_t type);
 
             /// <summary>Decode DMR privacy control data.</summary>
-            PrivacyLC* decodePI(const uint8_t* data);
+            std::unique_ptr<PrivacyLC> decodePI(const uint8_t* data);
             /// <summary>Encode DMR privacy control data.</summary>
             void encodePI(const PrivacyLC& lc, uint8_t* data);
 

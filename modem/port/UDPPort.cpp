@@ -103,7 +103,7 @@ bool UDPPort::open()
 /// <returns>Actual length of data read from serial port.</returns>
 int UDPPort::read(uint8_t* buffer, uint32_t length)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
     assert(length > 0U);
 
     uint8_t data[BUFFER_LENGTH];
@@ -147,7 +147,7 @@ int UDPPort::read(uint8_t* buffer, uint32_t length)
 /// <returns>Actual length of data written to the port.</returns>
 int UDPPort::write(const uint8_t* buffer, uint32_t length)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
     assert(length > 0U);
 
     return m_socket.write(buffer, length, m_addr, m_addrLen) ? int(length) : -1;

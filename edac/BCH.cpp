@@ -127,7 +127,7 @@ BCH::~BCH()
 /// <param name="nid">P25 NID data to encode with BCH.</param>
 void BCH::encode(uint8_t* nid)
 {
-    assert(nid != NULL);
+    assert(nid != nullptr);
 
     int data[16];
     for (int i = 0; i < 16; i++)

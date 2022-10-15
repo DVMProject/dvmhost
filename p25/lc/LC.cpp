@@ -76,7 +76,7 @@ LC::LC() :
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
     m_callTimer(0U),
-    m_mi(NULL)
+    m_mi(nullptr)
 {
     m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, P25_MI_LENGTH_BYTES);
@@ -96,9 +96,9 @@ LC::LC(const LC& data) : LC()
 /// </summary>
 LC::~LC()
 {
-    if (m_mi != NULL) {
+    if (m_mi != nullptr) {
         delete[] m_mi;
-        m_mi = NULL;
+        m_mi = nullptr;
     }
 }
 
@@ -123,7 +123,7 @@ LC& LC::operator=(const LC& data)
 /// <returns>True, if HDU was decoded, otherwise false.</returns>
 bool LC::decodeHDU(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // deinterleave
     uint8_t rs[P25_HDU_LENGTH_BYTES + 1U];
@@ -196,8 +196,8 @@ bool LC::decodeHDU(const uint8_t* data)
 /// <param name="data"></param>
 void LC::encodeHDU(uint8_t * data)
 {
-    assert(data != NULL);
-    assert(m_mi != NULL);
+    assert(data != nullptr);
+    assert(m_mi != nullptr);
 
     uint8_t rs[P25_HDU_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_HDU_LENGTH_BYTES);
@@ -244,7 +244,7 @@ void LC::encodeHDU(uint8_t * data)
 /// <returns>True, if LDU1 was decoded, otherwise false.</returns>
 bool LC::decodeLDU1(const uint8_t * data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rs[P25_LDU_LC_LENGTH_BYTES + 1U];
 
@@ -298,7 +298,7 @@ bool LC::decodeLDU1(const uint8_t * data)
 /// <param name="data"></param>
 void LC::encodeLDU1(uint8_t * data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
@@ -348,7 +348,7 @@ void LC::encodeLDU1(uint8_t * data)
 /// <returns>True, if LDU2 was decoded, otherwise false.</returns>
 bool LC::decodeLDU2(const uint8_t * data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rs[P25_LDU_LC_LENGTH_BYTES + 1U];
 
@@ -425,8 +425,8 @@ bool LC::decodeLDU2(const uint8_t * data)
 /// <param name="data"></param>
 void LC::encodeLDU2(uint8_t * data)
 {
-    assert(data != NULL);
-    assert(m_mi != NULL);
+    assert(data != nullptr);
+    assert(m_mi != nullptr);
 
     uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
@@ -479,7 +479,7 @@ void LC::encodeLDU2(uint8_t * data)
 /// <param name="mi"></param>
 void LC::setMI(const uint8_t* mi)
 {
-    assert(mi != NULL);
+    assert(mi != nullptr);
 
     ::memcpy(m_mi, mi, P25_MI_LENGTH_BYTES);
 }
@@ -488,7 +488,7 @@ void LC::setMI(const uint8_t* mi)
 /// <returns></returns>
 void LC::getMI(uint8_t* mi) const
 {
-    assert(mi != NULL);
+    assert(mi != nullptr);
 
     ::memcpy(mi, m_mi, P25_MI_LENGTH_BYTES);
 }

@@ -51,8 +51,8 @@ EmbeddedData::EmbeddedData() :
     m_valid(false),
     m_FLCO(FLCO_GROUP),
     m_state(LCS_NONE),
-    m_data(NULL),
-    m_raw(NULL)
+    m_data(nullptr),
+    m_raw(nullptr)
 {
     m_raw = new bool[128U];
     m_data = new bool[72U];
@@ -75,7 +75,7 @@ EmbeddedData::~EmbeddedData()
 /// <returns></returns>
 bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     bool rawData[40U];
     Utils::byteToBitsBE(data[14U], rawData + 0U);
@@ -145,7 +145,7 @@ bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
 /// <returns></returns>
 uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (n >= 1U && n < 5U) {
         n--;
@@ -201,15 +201,15 @@ void EmbeddedData::setLC(const lc::LC& lc)
 
 /// <summary>Gets link control data.</summary>
 /// <returns></returns>
-lc::LC* EmbeddedData::getLC() const
+std::unique_ptr<lc::LC> EmbeddedData::getLC() const
 {
     if (!m_valid)
-        return NULL;
+        return nullptr;
 
     if (m_FLCO != FLCO_GROUP && m_FLCO != FLCO_PRIVATE)
-        return NULL;
+        return nullptr;
 
-    return new lc::LC(m_data);
+    return std::unique_ptr<lc::LC>(new lc::LC(m_data));
 }
 
 /// <summary>
@@ -219,7 +219,7 @@ lc::LC* EmbeddedData::getLC() const
 /// <returns></returns>
 bool EmbeddedData::getRawData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (!m_valid)
         return false;

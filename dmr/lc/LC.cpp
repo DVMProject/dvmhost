@@ -80,7 +80,7 @@ LC::LC(const uint8_t* data) :
     m_priority(CALL_PRIORITY_2),
     m_R(false)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     m_PF = (data[0U] & 0x80U) == 0x80U;
     m_R = (data[0U] & 0x40U) == 0x40U;
@@ -115,7 +115,7 @@ LC::LC(const bool* bits) :
     m_priority(CALL_PRIORITY_2),
     m_R(false)
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     m_PF = bits[0U];
     m_R = bits[1U];
@@ -181,7 +181,7 @@ LC::~LC()
 /// <param name="data"></param>
 void LC::getData(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     data[0U] = (uint8_t)m_FLCO;
 
@@ -214,7 +214,7 @@ void LC::getData(uint8_t* data) const
 /// <param name="bits"></param>
 void LC::getData(bool* bits) const
 {
-    assert(bits != NULL);
+    assert(bits != nullptr);
 
     uint8_t bytes[9U];
     getData(bytes);

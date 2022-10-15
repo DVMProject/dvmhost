@@ -185,7 +185,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 /// <returns>Actual length of data read from remote UDP socket.</returns>
 int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
     assert(length > 0U);
 
     // Check that the readfrom() won't block
@@ -269,7 +269,7 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
 /// <returns>Actual length of data written to remote UDP socket.</returns>
 bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen)
 {
-    assert(buffer != NULL);
+    assert(buffer != nullptr);
     assert(length > 0U);
 
     bool result = false;

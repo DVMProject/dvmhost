@@ -228,7 +228,7 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
                 (buffer[offset + 1U] << 8)  |           \
                 (buffer[offset + 2U] << 0);
 
-#define new_unique(type) std::unique_ptr<type>(new type())
+#define new_unique(type, ...) std::unique_ptr<type>(new type(__VA_ARGS__))
 
 /// <summary>Creates a named unique buffer.</summary>
 #define __UNIQUE_BUFFER(name, type, length)                                             \

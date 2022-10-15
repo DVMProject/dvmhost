@@ -87,7 +87,7 @@ DataHeader::~DataHeader()
 /// <returns>True, if PDU data header was decoded, otherwise false.</returns>
 bool DataHeader::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
@@ -174,7 +174,7 @@ bool DataHeader::decode(const uint8_t* data)
 /// <param name="data"></param>
 void DataHeader::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
     ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);

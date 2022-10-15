@@ -155,7 +155,7 @@ RemoteControl::RemoteControl(const std::string& address, uint16_t port, const st
     m_socket(address, port),
     m_p25MFId(p25::P25_MFG_STANDARD),
     m_password(password),
-    m_passwordHash(NULL),
+    m_passwordHash(nullptr),
     m_debug(debug)
 {
     assert(!address.empty());
@@ -238,7 +238,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             return;
         }
 
-        if (m_passwordHash != NULL) {
+        if (m_passwordHash != nullptr) {
             uint8_t hash[32U];
             ::memset(hash, 0x00U, 32U);
             if (::memcmp(m_passwordHash, buffer + 2U, 32U) != 0) {
@@ -300,7 +300,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
 
                     reply += string_format("Host State: %u, DMR: %u, P25: %u, NXDN: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state,
-                        dmr != NULL, p25 != NULL, nxdn != NULL, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
+                        dmr != nullptr, p25 != nullptr, nxdn != nullptr, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
                 }
 
                 {
@@ -372,7 +372,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
 #if defined(ENABLE_DMR)
                 else if (mode == RCD_MODE_OPT_FDMR) {
-                    if (dmr != NULL) {
+                    if (dmr != nullptr) {
                         host->m_fixedMode = true;
                         host->setState(STATE_DMR);
                         reply = string_format("Fixed mode, mode %u", host->m_state);
@@ -386,7 +386,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
                 else if (mode == RCD_MODE_OPT_FP25) {
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         host->m_fixedMode = true;
                         host->setState(STATE_P25);
                         reply = string_format("Fixed mode, mode %u", host->m_state);
@@ -400,7 +400,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
                 else if (mode == RCD_MODE_OPT_FNXDN) {
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         host->m_fixedMode = true;
                         host->setState(STATE_NXDN);
                         reply = string_format("Fixed mode, mode %u", host->m_state);
@@ -446,7 +446,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_BEACON) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     if (host->m_dmrBeacons) {
                         g_fireDMRBeacon = true;
                     }
@@ -463,7 +463,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     if (host->m_p25CCData) {
                         g_fireP25Control = true;
                     }
@@ -479,7 +479,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_P25_CC_FALLBACK) {
                 uint8_t fallback = getArgUInt8(args, 0U);
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     if (host->m_p25CCData) {
                         p25->trunk()->setConvFallback((fallback == 1U) ? true : false);
                     }
@@ -496,7 +496,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
@@ -519,7 +519,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_CHECK && argCnt >= 2U) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
@@ -542,7 +542,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_INHIBIT && argCnt >= 2U) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
@@ -565,7 +565,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_RID_UNINHIBIT && argCnt >= 2U) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     uint32_t slotNo = getArgUInt32(args, 0U);
                     uint32_t dstId = getArgUInt32(args, 1U);
                     if (slotNo > 0U && slotNo < 3U) {
@@ -590,7 +590,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_SET_MFID && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint8_t mfId = getArgUInt8(args, 0U);
                     if (mfId != 0U) {
                         LogMessage(LOG_RCON, "Remote P25, mfgId = $%02X", mfId);
@@ -607,7 +607,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -625,7 +625,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -643,7 +643,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -661,7 +661,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -679,7 +679,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -697,7 +697,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t dstId = getArgUInt32(args, 0U);
                     if (dstId != 0U) {
                         // FIXME
@@ -715,7 +715,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RELEASE_GRANTS) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     p25->affiliations().releaseGrant(0, true);
                 }
                 else {
@@ -724,7 +724,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_RELEASE_AFFS) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     uint32_t grp = getArgUInt32(args, 0U);
 
                     if (grp == 0) {
@@ -742,9 +742,9 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_CC_DEDICATED) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     if (host->m_dmrTSCCData) {
-                        if (p25 != NULL) {
+                        if (p25 != nullptr) {
                             reply = CMD_FAILED_STR "Can't enable DMR control channel while P25 is enabled!";
                             LogError(LOG_RCON, reply.c_str());
                         }
@@ -765,7 +765,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_DMR_CC_BCAST) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     host->m_dmrTSCCData = !host->m_dmrTSCCData;
                     reply = string_format("DMR CC broadcast is %s", host->m_dmrTSCCData ? "enabled" : "disabled");
                     LogInfoEx(LOG_RCON, reply.c_str());
@@ -778,9 +778,9 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_CC_DEDICATED) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     if (host->m_p25CCData) {
-                        if (dmr != NULL) {
+                        if (dmr != nullptr) {
                             reply = CMD_FAILED_STR "Can't enable P25 control channel while DMR is enabled!";
                             LogError(LOG_RCON, reply.c_str());
                         }
@@ -805,7 +805,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 }
             }
             else if (rcom == RCD_P25_CC_BCAST) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     if (host->m_p25CCData) {
                         host->m_p25CtrlBroadcast = !host->m_p25CtrlBroadcast;
 
@@ -835,7 +835,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMR_DEBUG) {
                 if (argCnt < 2U) {
-                    if (dmr != NULL) {
+                    if (dmr != nullptr) {
                         bool debug = dmr->getDebug();
                         bool verbose = dmr->getVerbose();
                         reply = string_format("dmr->debug = %u, dmr->verbose = %u", debug, verbose);
@@ -848,7 +848,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
                     uint8_t verbose = getArgUInt8(args, 1U);
-                    if (dmr != NULL) {
+                    if (dmr != nullptr) {
                         dmr->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
@@ -859,7 +859,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_DMR_DUMP_CSBK) {
                 if (argCnt < 1U) {
-                    if (dmr != NULL) {
+                    if (dmr != nullptr) {
                         bool csbkDump = dmr->getCSBKVerbose();
                         reply = string_format("dmr->dumpCsbkData = %u", csbkDump);
                     }
@@ -870,7 +870,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 } 
                 else {
                     uint8_t verbose = getArgUInt8(args, 0U);
-                    if (dmr != NULL) {
+                    if (dmr != nullptr) {
                         dmr->setCSBKVerbose((verbose == 1U) ? true : false);
                     }
                     else {
@@ -883,7 +883,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25_DEBUG) {
                 if (argCnt < 2U) {
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         bool debug = p25->getDebug();
                         bool verbose = p25->getVerbose();
                         reply = string_format("p25->debug = %u, p25->verbose = %u", debug, verbose);
@@ -896,7 +896,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
                     uint8_t verbose = getArgUInt8(args, 1U);
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         p25->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
@@ -907,7 +907,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_P25_DUMP_TSBK) {
                 if (argCnt < 1U) {
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         bool tsbkDump = p25->trunk()->getTSBKVerbose();
                         reply = string_format("p25->dumpTsbkData = %u", tsbkDump);
                     }
@@ -918,7 +918,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 } 
                 else {
                     uint8_t verbose = getArgUInt8(args, 0U);
-                    if (p25 != NULL) {
+                    if (p25 != nullptr) {
                         p25->trunk()->setTSBKVerbose((verbose == 1U) ? true : false);
                     }
                     else {
@@ -931,7 +931,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDN_DEBUG) {
                 if (argCnt < 2U) {
-                    if (nxdn != NULL) {
+                    if (nxdn != nullptr) {
                         bool debug = nxdn->getDebug();
                         bool verbose = nxdn->getVerbose();
                         reply = string_format("nxdn->debug = %u, nxdn->verbose = %u", debug, verbose);
@@ -944,7 +944,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 else {
                     uint8_t debug = getArgUInt8(args, 0U);
                     uint8_t verbose = getArgUInt8(args, 1U);
-                    if (nxdn != NULL) {
+                    if (nxdn != nullptr) {
                         nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
@@ -955,7 +955,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             }
             else if (rcom == RCD_NXDN_DUMP_RCCH) {
                 if (argCnt < 1U) {
-                    if (nxdn != NULL) {
+                    if (nxdn != nullptr) {
                         bool rcchDump = nxdn->getRCCHVerbose();
                         reply = string_format("nxdn->dumpRcchData = %u", rcchDump);
                     }
@@ -966,7 +966,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 } 
                 else {
                     uint8_t verbose = getArgUInt8(args, 0U);
-                    if (nxdn != NULL) {
+                    if (nxdn != nullptr) {
                         nxdn->setRCCHVerbose((verbose == 1U) ? true : false);
                     }
                     else {
@@ -978,14 +978,14 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_NXDN)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMRD_MDM_INJ && argCnt >= 1U) {
-                if (dmr != NULL) {
+                if (dmr != nullptr) {
                     uint8_t slot = getArgUInt32(args, 0U);
                     std::string argString = getArgString(args, 1U);
                     const char* fileName = argString.c_str();
-                    if (fileName != NULL) {
+                    if (fileName != nullptr) {
                         FILE* file = ::fopen(fileName, "r");
-                        if (file != NULL) {
-                            uint8_t* buffer = NULL;
+                        if (file != nullptr) {
+                            uint8_t* buffer = nullptr;
                             int32_t fileSize = 0;
 
                             // obtain file size
@@ -995,7 +995,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 
                             // allocate a buffer and read file
                             buffer = new uint8_t[fileSize];
-                            if (buffer != NULL) {
+                            if (buffer != nullptr) {
                                 int32_t bytes = ::fread(buffer, 1U, fileSize, file);
                                 if (bytes == fileSize) {
                                     uint8_t sync[dmr::DMR_SYNC_LENGTH_BYTES];
@@ -1048,13 +1048,13 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25D_MDM_INJ && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     std::string argString = getArgString(args, 0U);
                     const char* fileName = argString.c_str();
-                    if (fileName != NULL) {
+                    if (fileName != nullptr) {
                         FILE* file = ::fopen(fileName, "r");
-                        if (file != NULL) {
-                            uint8_t* buffer = NULL;
+                        if (file != nullptr) {
+                            uint8_t* buffer = nullptr;
                             int32_t fileSize = 0;
 
                             // obtain file size
@@ -1064,7 +1064,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 
                             // allocate a buffer and read file
                             buffer = new uint8_t[fileSize];
-                            if (buffer != NULL) {
+                            if (buffer != nullptr) {
                                 int32_t bytes = ::fread(buffer, 1U, fileSize, file);
                                 if (bytes == fileSize) {
                                     uint8_t sync[p25::P25_SYNC_LENGTH_BYTES];
@@ -1109,13 +1109,13 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDD_MDM_INJ && argCnt >= 1U) {
-                if (p25 != NULL) {
+                if (p25 != nullptr) {
                     std::string argString = getArgString(args, 0U);
                     const char* fileName = argString.c_str();
-                    if (fileName != NULL) {
+                    if (fileName != nullptr) {
                         FILE* file = ::fopen(fileName, "r");
-                        if (file != NULL) {
-                            uint8_t* buffer = NULL;
+                        if (file != nullptr) {
+                            uint8_t* buffer = nullptr;
                             int32_t fileSize = 0;
 
                             // obtain file size
@@ -1125,7 +1125,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 
                             // allocate a buffer and read file
                             buffer = new uint8_t[fileSize];
-                            if (buffer != NULL) {
+                            if (buffer != nullptr) {
                                 int32_t bytes = ::fread(buffer, 1U, fileSize, file);
                                 if (bytes == fileSize) {
                                     uint8_t sync[nxdn::NXDN_FSW_BYTES_LENGTH];

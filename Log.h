@@ -56,7 +56,7 @@
 
 #define LogDebug(_module, fmt, ...)     Log(1U, _module, fmt, ##__VA_ARGS__)
 #define LogMessage(_module, fmt, ...)   Log(2U, _module, fmt, ##__VA_ARGS__)
-#define LogInfo(fmt, ...)               Log(3U, NULL, fmt, ##__VA_ARGS__)
+#define LogInfo(fmt, ...)               Log(3U, nullptr, fmt, ##__VA_ARGS__)
 #define LogInfoEx(_module, fmt, ...)    Log(3U, _module, fmt, ##__VA_ARGS__)
 #define LogWarning(_module, fmt, ...)   Log(4U, _module, fmt, ##__VA_ARGS__)
 #define LogError(_module, fmt, ...)     Log(5U, _module, fmt, ##__VA_ARGS__)

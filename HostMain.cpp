@@ -99,7 +99,7 @@ bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 bool g_fireNXDNControl = false;
 
-uint8_t* g_gitHashBytes = NULL;
+uint8_t* g_gitHashBytes = nullptr;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -134,7 +134,7 @@ void usage(const char* message, const char* arg)
     ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
     ::fprintf(stdout, "Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
-    if (message != NULL) {
+    if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
         ::fprintf(stderr, message, arg);
         ::fprintf(stderr, "\n\n");
@@ -163,7 +163,7 @@ int checkArgs(int argc, char* argv[])
     // iterate through arguments
     for (i = 1; i <= argc; i++)
     {
-        if (argv[i] == NULL) {
+        if (argv[i] == nullptr) {
             break;
         }
 
@@ -224,7 +224,7 @@ int checkArgs(int argc, char* argv[])
                 exit(EXIT_SUCCESS);
         }
         else if (IS("-h")) {
-            usage(NULL, NULL);
+            usage(nullptr, nullptr);
             if (argc == 2)
                 exit(EXIT_SUCCESS);
         }
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
     uint32_t hash = ::strtoul(__GIT_VER_HASH__, 0, 16);
     __SET_UINT32(hash, g_gitHashBytes, 0U);
 
-    if (argv[0] != NULL && *argv[0] != 0)
+    if (argv[0] != nullptr && *argv[0] != 0)
         g_progExe = std::string(argv[0]);
 
     if (argc > 1) {

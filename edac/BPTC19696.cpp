@@ -47,8 +47,8 @@ using namespace edac;
 /// Initializes a new instance of the BPTC19696 class.
 /// </summary>
 BPTC19696::BPTC19696() :
-    m_rawData(NULL),
-    m_deInterData(NULL)
+    m_rawData(nullptr),
+    m_deInterData(nullptr)
 {
     m_rawData = new bool[196];
     m_deInterData = new bool[196];
@@ -70,8 +70,8 @@ BPTC19696::~BPTC19696()
 /// <param name="out">Decoded data.</param>
 void BPTC19696::decode(const uint8_t* in, uint8_t* out)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     //  Get the raw binary
     decodeExtractBinary(in);
@@ -93,8 +93,8 @@ void BPTC19696::decode(const uint8_t* in, uint8_t* out)
 /// <param name="out">Encoded data.</param>
 void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 {
-    assert(in != NULL);
-    assert(out != NULL);
+    assert(in != nullptr);
+    assert(out != nullptr);
 
     // Extract Data
     encodeExtractData(in);

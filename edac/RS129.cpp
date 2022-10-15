@@ -111,7 +111,7 @@ const uint8_t LOG_TABLE[] = {
 /// <returns></returns>
 bool RS129::check(const uint8_t* in)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint8_t parity[4U];
     encode(in, 9U, parity);
@@ -133,8 +133,8 @@ bool RS129::check(const uint8_t* in)
 /// <param name="parity"></param>
 void RS129::encode(const uint8_t* msg, uint32_t nbytes, uint8_t* parity)
 {
-    assert(msg != NULL);
-    assert(parity != NULL);
+    assert(msg != nullptr);
+    assert(parity != nullptr);
 
     for (uint32_t i = 0U; i < NPAR + 1U; i++)
         parity[i] = 0x00U;

@@ -56,7 +56,7 @@ AMBT::AMBT() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool AMBT::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     LogError(LOG_P25, "AMBT::decode(), bad call, not implemented");
 
@@ -71,7 +71,7 @@ bool AMBT::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     LogError(LOG_P25, "AMBT::encode(), bad call, not implemented");
 }
@@ -111,8 +111,8 @@ ulong64_t AMBT::toValue(const data::DataHeader dataHeader, const uint8_t* pduUse
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool AMBT::decode(const data::DataHeader dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData)
 {
-    assert(blocks != NULL);
-    assert(pduUserData != NULL);
+    assert(blocks != nullptr);
+    assert(pduUserData != nullptr);
 
     if (dataHeader.getFormat() != PDU_FMT_AMBT) {
         LogError(LOG_P25, "TSBK::decodeMBT(), PDU is not a AMBT PDU");
@@ -156,7 +156,7 @@ bool AMBT::decode(const data::DataHeader dataHeader, const data::DataBlock* bloc
 /// <param name="pduUserData"></param>
 void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     dataHeader.setFormat(PDU_FMT_AMBT);
     dataHeader.setMFId(m_mfId);

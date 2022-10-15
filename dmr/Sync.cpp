@@ -48,7 +48,7 @@ using namespace dmr;
 /// <param name="duplex">Flag indicating whether this is duplex operation.</param>
 void Sync::addDMRDataSync(uint8_t* data, bool duplex)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (duplex) {
         for (uint32_t i = 0U; i < 7U; i++)
@@ -67,7 +67,7 @@ void Sync::addDMRDataSync(uint8_t* data, bool duplex)
 /// <param name="duplex">Flag indicating whether this is duplex operation.</param>
 void Sync::addDMRAudioSync(uint8_t* data, bool duplex)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     if (duplex) {
         for (uint32_t i = 0U; i < 7U; i++)

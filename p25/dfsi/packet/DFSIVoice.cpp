@@ -84,7 +84,7 @@ void DFSIVoice::resetNet()
 /// <returns></returns>
 bool DFSIVoice::process(uint8_t* data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     bool valid = m_rfDFSILC.decodeNID(data + 2U);
 
@@ -800,11 +800,11 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 DFSIVoice::DFSIVoice(Control* p25, network::BaseNetwork* network, bool debug, bool verbose) :
     Voice(p25, network, debug, verbose),
-    m_trunk(NULL),
+    m_trunk(nullptr),
     m_rfDFSILC(),
     m_netDFSILC(),
-    m_dfsiLDU1(NULL),
-    m_dfsiLDU2(NULL)
+    m_dfsiLDU1(nullptr),
+    m_dfsiLDU2(nullptr)
 {
     m_dfsiLDU1 = new uint8_t[9U * 25U];
     m_dfsiLDU2 = new uint8_t[9U * 25U];
@@ -848,7 +848,7 @@ void DFSIVoice::writeNet_TDU()
         ::ActivityLog("P25", false, "network end of transmission, %u frames", m_netFrames);
     }
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
@@ -999,7 +999,7 @@ void DFSIVoice::writeNet_LDU1()
         // single-channel trunking or voice on control support?
         if (m_p25->m_control && m_p25->m_voiceOnControl) {
             if (!m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true)) {
-                if (m_network != NULL)
+                if (m_network != nullptr)
                     m_network->resetP25();
 
                 ::memset(m_netLDU1, 0x00U, 9U * 25U);

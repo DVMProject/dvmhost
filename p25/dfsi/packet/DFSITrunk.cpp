@@ -50,7 +50,7 @@ using namespace p25::dfsi::packet;
 /// <returns></returns>
 bool DFSITrunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -58,7 +58,7 @@ bool DFSITrunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
     if (!m_p25->m_control)
         return false;
 
-    if (preDecodedTSBK != NULL) {
+    if (preDecodedTSBK != nullptr) {
         return Trunk::process(data + 2U, len, preDecodedTSBK);
     }
     else {
@@ -118,7 +118,7 @@ void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBefor
     if (!m_p25->m_control)
         return;
 
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     writeRF_DFSI_Start(P25_DFSI_TYPE_TSBK);
 
@@ -187,7 +187,7 @@ void DFSITrunk::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
     if (!m_p25->m_control)
         return;
 
-    assert(ambt != NULL);
+    assert(ambt != nullptr);
 
     // for now this is ignored...
 }
@@ -198,7 +198,7 @@ void DFSITrunk::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
 /// <param name="tsbk"></param>
 void DFSITrunk::writeNet_TSDU(lc::TSBK* tsbk)
 {
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     uint8_t buffer[P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U);
@@ -212,7 +212,7 @@ void DFSITrunk::writeNet_TSDU(lc::TSBK* tsbk)
 
     m_p25->addFrame(buffer, P25_DFSI_TSBK_FRAME_LENGTH_BYTES + 2U, true);
 
-    if (m_network != NULL)
+    if (m_network != nullptr)
         m_network->resetP25();
 }
 

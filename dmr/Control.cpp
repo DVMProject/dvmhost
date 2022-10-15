@@ -69,8 +69,8 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
-    m_slot1(NULL),
-    m_slot2(NULL),
+    m_slot1(nullptr),
+    m_slot2(nullptr),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -81,11 +81,11 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     m_verbose(verbose),
     m_debug(debug)
 {
-    assert(modem != NULL);
-    assert(ridLookup != NULL);
-    assert(tidLookup != NULL);
-    assert(idenTable != NULL);
-    assert(rssiMapper != NULL);
+    assert(modem != nullptr);
+    assert(ridLookup != nullptr);
+    assert(tidLookup != nullptr);
+    assert(idenTable != nullptr);
+    assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
     Slot::init(this, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
@@ -221,7 +221,7 @@ void Control::setCCHalted(bool ccHalted)
 /// <returns>True, if wakeup frames were processed, otherwise false.</returns>
 bool Control::processWakeup(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // wakeups always come in on slot 1
     if (data[0U] != modem::TAG_DATA || data[1U] != (DMR_IDLE_RX | DMR_SYNC_DATA | DT_CSBK))
@@ -262,7 +262,7 @@ bool Control::processWakeup(const uint8_t* data)
 /// <returns>True, if data frame was processed, otherwise false.</returns>
 bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     switch (slotNo) {
     case 1U:
@@ -282,7 +282,7 @@ bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 /// <returns>Length of data retrieved from DMR ring buffer.</returns>
 uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     switch (slotNo) {
     case 1U:
@@ -300,7 +300,7 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 /// </summary>
 void Control::clock()
 {
-    if (m_network != NULL) {
+    if (m_network != nullptr) {
         data::Data data;
         bool ret = m_network->readDMR(data);
         if (ret) {
@@ -338,7 +338,7 @@ Slot* Control::getTSCCSlot() const
         break;
     default:
         LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
-        return NULL;
+        return nullptr;
     }
 }
 

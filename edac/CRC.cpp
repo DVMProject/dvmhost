@@ -198,7 +198,7 @@ const uint32_t CRC32_TABLE[] = {
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint32_t crc;
     encodeFiveBit(in, crc);
@@ -213,7 +213,7 @@ bool CRC::checkFiveBit(bool* in, uint32_t tcrc)
 /// <param name="tcrc">Computed CRC.</param>
 void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t total = 0U;
     for (uint32_t i = 0U; i < 72U; i += 8U) {
@@ -236,7 +236,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 2U);
 
     union {
@@ -267,7 +267,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 /// <param name="length">Length of byte array.</param>
 void CRC::addCCITT162(uint8_t* in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 2U);
 
     union {
@@ -299,7 +299,7 @@ void CRC::addCCITT162(uint8_t* in, uint32_t length)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 2U);
 
     union {
@@ -330,7 +330,7 @@ bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 /// <param name="length">Length of byte array.</param>
 void CRC::addCCITT161(uint8_t* in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 2U);
 
     union {
@@ -361,7 +361,7 @@ void CRC::addCCITT161(uint8_t* in, uint32_t length)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 4U);
 
     union {
@@ -395,7 +395,7 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
 /// <param name="length">Length of byte array.</param>
 void CRC::addCRC32(uint8_t* in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
     assert(length > 4U);
 
     union {
@@ -432,7 +432,7 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
 /// <returns>Calculated 8-bit CRC value.</returns>
 uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint8_t crc = 0U;
 
@@ -454,7 +454,7 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 /// <returns>Calculated 9-bit CRC value.</returns>
 uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = 0x00U;
 
@@ -488,7 +488,7 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint8_t crc = createCRC6(in, bitLength);
 
@@ -516,7 +516,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 void CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint8_t crc[1U];
     crc[0U] = createCRC6(in, bitLength);
@@ -540,7 +540,7 @@ void CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC12(in, bitLength);
     uint8_t temp1[2U];
@@ -572,7 +572,7 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 void CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC12(in, bitLength);
 
@@ -599,7 +599,7 @@ void CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC15(in, bitLength);
     uint8_t temp1[2U];
@@ -631,7 +631,7 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 void CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC15(in, bitLength);
 
@@ -658,7 +658,7 @@ void CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC16(in, bitLength);
     uint8_t temp1[2U];
@@ -690,7 +690,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 /// <returns>True, if CRC is valid, otherwise false.</returns>
 void CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
-    assert(in != NULL);
+    assert(in != nullptr);
 
     uint16_t crc = createCRC16(in, bitLength);
 

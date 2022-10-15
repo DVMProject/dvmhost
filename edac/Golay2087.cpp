@@ -239,7 +239,7 @@ const uint32_t DECODING_TABLE_1987[] = {
 /// <returns></returns>
 uint8_t Golay2087::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t code = (data[0U] << 11) + (data[1U] << 3) + (data[2U] >> 5);
     uint32_t syndrome = getSyndrome1987(code);
@@ -257,7 +257,7 @@ uint8_t Golay2087::decode(const uint8_t* data)
 /// <param name="data">Data to encode with Golay FEC.</param>
 void Golay2087::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t value = data[0U];
 

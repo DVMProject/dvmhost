@@ -141,7 +141,7 @@ TDULC& TDULC::operator=(const TDULC& data)
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
 bool TDULC::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // deinterleave
     uint8_t rs[P25_TDULC_LENGTH_BYTES + 1U];
@@ -182,7 +182,7 @@ bool TDULC::decode(const uint8_t* data)
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
 void TDULC::encode(uint8_t * data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rs[P25_TDULC_LENGTH_BYTES];
     ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);

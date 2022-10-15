@@ -92,7 +92,7 @@ const uint32_t DECODING_TABLE_1576[] = {
 /// <returns></returns>
 uint8_t QR1676::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t code = (data[0U] << 7) + (data[1U] >> 1);
     uint32_t syndrome = getSyndrome1576(code);
@@ -110,7 +110,7 @@ uint8_t QR1676::decode(const uint8_t* data)
 /// <param name="data"></param>
 void QR1676::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint32_t value = (data[0U] >> 1) & 0x7FU;
     uint32_t cksum = ENCODING_TABLE_1676[value];

@@ -64,7 +64,7 @@ SlotType::~SlotType()
 /// <param name="data"></param>
 void SlotType::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t DMRSlotType[3U];
     DMRSlotType[0U] = (data[12U] << 2) & 0xFCU;
@@ -88,7 +88,7 @@ void SlotType::decode(const uint8_t* data)
 /// <param name="data"></param>
 void SlotType::encode(uint8_t* data) const
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t DMRSlotType[3U];
     DMRSlotType[0U] = (m_colorCode << 4) & 0xF0U;
