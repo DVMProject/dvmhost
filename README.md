@@ -9,31 +9,43 @@ Please feel free to reach out to us for help, comments or otherwise, on our Disc
 
 ## Building
 
-Please see the various Makefile included in the project for more information. (All following information assumes familiarity with the standard Linux make system.)
+This project utilizes CMake for its build system. (All following information assumes familiarity with the standard Linux make system.)
 
-The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC install is usually all thats needed to compile.
+The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
 
-* Makefile - This makefile is used for building binaries.
-    - Use the ARCH parameter to change the architecture. (e.g. ```make ARCH=rpi-arm```)
-        - ARCH=arm - Generic ARM compilation with installed cross-compiler tools (see just below).
-        - ARCH=rpi-arm - Raspberry Pi ARM compliation using the ```https://github.com/raspberrypi/tools.git``` (see just below).
+### Build Instructions
+1. Clone the repository. ```git clone https://github.com/DVMProject/dvmhost.git```
+2. Switch into the "dvmhost" folder. Create a new folder named "build" and switch into it.
+	```
+	# cd dvmhost
+	dvmhost # mkdir build
+	dvmhost # cd build
+	```
+3. Run CMake with any specific options required. (Where [options] is any various compilation options you require.)
+	```
+	dvmhost/build # cmake [options] ..
+	...
+	-- Build files have been written to: dvmhost/build
+	dvmhost/build # make
+	```
+If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi ARM 32bit), the CMake build system has some options:
+* ```-DCROSS_COMPILE_ARM=1``` - This will cross-compile dvmhost for ARM 32bit.
+* ```-DCROSS_COMPILE_AARCH64=1``` - This will cross-compile dvmhost for ARM 64bit.
+* ```-DCROSS_COMPILE_RPI_ARM=1``` - This will cross-compile for old Raspberry Pi ARM 32 bit. (see below)
 
-Use the ```make``` command to build the software.
+Please note cross-compliation requires you to have the appropriate development packages installed for your system. For ARM 32-bit, on Debian/Ubuntu OS install the "arm-linux-gnueabihf-gcc" and "arm-linux-gnueabihf-g++" packages. For ARM 64-bit, on Debian/Ubuntu OS install the "aarch64-linux-gnu-gcc" and "aarch64-linux-gnu-g++" packages.
 
-* For RPi using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically arm-gcc-none-eabi).
+* For old RPi 1 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++").
   1. Switch to "/opt" and checkout ```https://github.com/raspberrypi/tools.git```.
 
 ### Compiled Protocol Options
 
 These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols are enabled. And, support for the NXDN protocol is disabled. What "compiled-in" support means is whether or not the host will perform *any* processing for the specified protocol (and this is regardless of whether or not the ```config.yml``` has a protocol specified for being enabled or not).
 
-There are 2 options to modify which protocol support is compiled in: Either modify the Makefile ```HSTFLAGS=``` line (multiple options are separated by a space) or specify it as a argument to ```make``` (again, multiple options are separated by a space), for example: ```make HSTFLAGS="-DENABLE_DMR -DENABLE_P25 -DENABLE_NXDN"```.
-
-These are the ```HSTFLAGS``` options:
-
-* ```-DENABLE_DMR``` - This will enable compiled-in DMR protocol support.
-* ```-DENABLE_P25``` - This will enable compiled-in P25 protocol support.
-* ```-DENABLE_NXDN``` - This will enable compiled-in NXDN protocol support.
+In order to change what protocol support is compiled into the host, these are the CMake options to supply:
+* ```-DENABLE_DMR=1``` - This will enable compiled-in DMR protocol support.
+* ```-DENABLE_P25=1``` - This will enable compiled-in P25 protocol support.
+* ```-DENABLE_NXDN=1``` - This will enable compiled-in NXDN protocol support.
 
 **NXDN Support Note**: NXDN support is currently experimental.
 
