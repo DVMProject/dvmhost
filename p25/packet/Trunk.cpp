@@ -30,6 +30,7 @@
 #include "p25/packet/Trunk.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/lc/tsbk/TSBKFactory.h"
+#include "p25/lc/tdulc/TDULCFactory.h"
 #include "p25/lookups/P25AffiliationLookup.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -1265,7 +1266,7 @@ void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 /// <param name="tduLc"></param>
 /// <param name="data"></param>
 /// <param name="autoReset"></param>
-void Trunk::writeNetworkRF(lc::TDULC& tduLc, const uint8_t* data, bool autoReset)
+void Trunk::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset)
 {
     assert(data != nullptr);
 
@@ -1276,10 +1277,10 @@ void Trunk::writeNetworkRF(lc::TDULC& tduLc, const uint8_t* data, bool autoReset
         return;
 
     lc::LC lc = lc::LC();
-    lc.setLCO(tduLc.getLCO());
-    lc.setMFId(tduLc.getMFId());
-    lc.setSrcId(tduLc.getSrcId());
-    lc.setDstId(tduLc.getDstId());
+    lc.setLCO(tduLc->getLCO());
+    lc.setMFId(tduLc->getMFId());
+    lc.setSrcId(tduLc->getSrcId());
+    lc.setDstId(tduLc->getDstId());
 
     m_network->writeP25TSDU(lc, data);
     if (autoReset)
@@ -1301,11 +1302,10 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         bool fallbackTx = (frameCnt % 253U) == 0U;
         if (fallbackTx && n == 7U) {
             if (m_convFallbackPacketDelay >= CONV_FALLBACK_PACKET_DELAY) {
-                lc::TDULC lc = lc::TDULC();
-                lc.setLCO(LC_CONV_FALLBACK);
+                std::unique_ptr<lc::tdulc::LC_CONV_FALLBACK> lc = new_unique(lc::tdulc::LC_CONV_FALLBACK);
 
                 for (uint8_t i = 0U; i < 3U; i++) {
-                    writeRF_TDULC(lc, true);
+                    writeRF_TDULC(lc.get(), true);
                 }
 
                 m_convFallbackPacketDelay = 0U;
@@ -1434,7 +1434,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// </summary>
 /// <param name="lc"></param>
 /// <param name="noNetwork"></param>
-void Trunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
+void Trunk::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
 {
     uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
@@ -1446,7 +1446,7 @@ void Trunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
     m_p25->m_nid.encode(data + 2U, P25_DUID_TDULC);
 
     // Generate TDULC Data
-    lc.encode(data + 2U);
+    lc->encode(data + 2U);
 
     // Add busy bits
     m_p25->addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
@@ -1472,7 +1472,7 @@ void Trunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
 /// Helper to write a network P25 TDU w/ link control packet.
 /// </summary>
 /// <param name="lc"></param>
-void Trunk::writeNet_TDULC(lc::TDULC lc)
+void Trunk::writeNet_TDULC(lc::TDULC* lc)
 {
     uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
@@ -1487,7 +1487,7 @@ void Trunk::writeNet_TDULC(lc::TDULC lc)
     m_p25->m_nid.encode(buffer + 2U, P25_DUID_TDULC);
 
     // Regenerate TDULC Data
-    lc.encode(buffer + 2U);
+    lc->encode(buffer + 2U);
 
     // Add busy bits
     m_p25->addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
@@ -1495,7 +1495,7 @@ void Trunk::writeNet_TDULC(lc::TDULC lc)
     m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc.getLCO(), lc.getSrcId());
+        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc->getLCO(), lc->getSrcId());
     }
 
     if (m_p25->m_voice->m_netFrames > 0) {
@@ -1528,38 +1528,37 @@ void Trunk::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
     }
 
     uint32_t count = m_p25->m_hangCount / 2;
-    lc::TDULC lc = lc::TDULC();
+    std::unique_ptr<lc::TDULC> lc = nullptr;
 
     if (m_p25->m_control) {
         for (uint32_t i = 0; i < count; i++) {
             if ((srcId != 0U) && (dstId != 0U)) {
-                lc.setSrcId(srcId);
-                lc.setDstId(dstId);
-                lc.setEmergency(false);
-
                 if (grp) {
-                    lc.setLCO(LC_GROUP);
-                    writeRF_TDULC(lc, true);
+                    lc = new_unique(lc::tdulc::LC_GROUP);
+                } else {
+                    lc = new_unique(lc::tdulc::LC_PRIVATE);
                 }
-                else {
-                    lc.setLCO(LC_PRIVATE);
-                    writeRF_TDULC(lc, true);
-                }
+
+                lc->setSrcId(srcId);
+                lc->setDstId(dstId);
+                lc->setEmergency(false);
+
+                writeRF_TDULC(lc.get(), true);
             }
 
-            lc.setLCO(LC_NET_STS_BCAST);
-            writeRF_TDULC(lc, true);
-            lc.setLCO(LC_RFSS_STS_BCAST);
-            writeRF_TDULC(lc, true);
+            lc = new_unique(lc::tdulc::LC_NET_STS_BCAST);
+            writeRF_TDULC(lc.get(), true);
+            lc = new_unique(lc::tdulc::LC_RFSS_STS_BCAST);
+            writeRF_TDULC(lc.get(), true);
         }
     }
 
     if (m_verbose) {
-        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", lc.getSrcId(), lc.getDstId());
+        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    lc.setLCO(LC_CALL_TERM);
-    writeRF_TDULC(lc, true);
+    lc = new_unique(lc::tdulc::LC_CALL_TERM);
+    writeRF_TDULC(lc.get(), true);
 
     if (m_p25->m_control) {
         writeNet_TSDU_Call_Term(srcId, dstId);

@@ -65,7 +65,7 @@ namespace p25
                 virtual ~DFSITrunk();
 
                 /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
-                virtual void writeRF_TDULC(lc::TDULC lc, bool noNetwork);
+                virtual void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
 
                 /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
                 virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false);

@@ -33,6 +33,8 @@ file(GLOB dvmhost_SRC
     "p25/edac/*.cpp"
     "p25/lc/*.h"
     "p25/lc/*.cpp"
+    "p25/lc/tdulc/*.h"
+    "p25/lc/tdulc/*.cpp"
     "p25/lc/tsbk/*.h"
     "p25/lc/tsbk/*.cpp"
     "p25/lookups/*.h"
@@ -105,6 +107,7 @@ option(ENABLE_DMR "Enable DMR Digtial Mode" on)
 option(ENABLE_P25 "Enable P25 Digital Mode" on)
 option(ENABLE_NXDN "Enable NXDN Digital Mode" off)
 option(ENABLE_DFSI_SUPPORT "Enable P25 DFSI Transport Support" off)
+option(ENABLE_TESTS "Enable compilation of test suite" off)
 
 message(CHECK_START "DMR Digital Mode")
 if (ENABLE_DMR)
@@ -134,6 +137,12 @@ if (ENABLE_DFSI_SUPPORT)
 else ()
     message(CHECK_PASS "disabled")
 endif (ENABLE_DFSI_SUPPORT)
+message(CHECK_START "Enable test suite compilation")
+if (ENABLE_TESTS)
+    message(CHECK_PASS "enabled")
+else ()
+    message(CHECK_PASS "disabled")
+endif (ENABLE_TESTS)
 
 # debug options
 option(DEBUG_DMR_PDU_DATA "" off)
@@ -267,6 +276,7 @@ add_executable(dvmcmd ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE Threads::Threads)
 target_include_directories(dvmcmd PRIVATE .)
 
+if (ENABLE_TESTS)
 project(dvmtest)
 Include(FetchContent)
 
@@ -281,3 +291,4 @@ find_package(Threads REQUIRED)
 add_executable(dvmtests ${dvmtests_SRC})
 target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain Threads::Threads util)
 target_include_directories(dvmtests PRIVATE .)
+endif (ENABLE_TESTS)

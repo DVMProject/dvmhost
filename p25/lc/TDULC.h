@@ -61,15 +61,12 @@ namespace p25
             /// <summary>Initializes a new instance of the TDULC class.</summary>
             TDULC();
             /// <summary>Finalizes a instance of the TDULC class.</summary>
-            ~TDULC();
-
-            /// <summary>Equals operator.</summary>
-            TDULC& operator=(const TDULC& data);
+            virtual ~TDULC();
 
             /// <summary>Decode a terminator data unit w/ link control.</summary>
-            bool decode(const uint8_t* data);
+            virtual bool decode(const uint8_t* data) = 0;
             /// <summary>Encode a terminator data unit w/ link control.</summary>
-            void encode(uint8_t* data);
+            virtual void encode(uint8_t* data) = 0;
 
             /// <summary>Sets the flag indicating verbose log output.</summary>
             static void setVerbose(bool verbose) { m_verbose = verbose; }
@@ -79,74 +76,62 @@ namespace p25
             static SiteData getSiteData() { return m_siteData; }
             /// <summary>Sets the local site data.</summary>
             static void setSiteData(SiteData siteData) { m_siteData = siteData; }
-            /// <summary>Gets the local site identity entry.</summary>
-            static ::lookups::IdenTable getIdenEntry() { return m_siteIdenEntry; }
-            /// <summary>Sets the local site identity entry.</summary>
-            static void setIdenEntry(::lookups::IdenTable entry) { m_siteIdenEntry = entry; }
 
         public:
             /** Common Data */
             /// <summary>Flag indicating the link control data is protected.</summary>
-            __PROPERTY(bool, protect, Protect);
+            __PROTECTED_PROPERTY(bool, protect, Protect);
             /// <summary>Link control opcode.</summary>
-            __PROPERTY(uint8_t, lco, LCO);
+            __PROTECTED_PROPERTY(uint8_t, lco, LCO);
             /// <summary>Manufacturer ID.</summary>
-            __PROPERTY(uint8_t, mfId, MFId);
+            __PROTECTED_PROPERTY(uint8_t, mfId, MFId);
 
             /// <summary>Source ID.</summary>
-            __PROPERTY(uint32_t, srcId, SrcId);
+            __PROTECTED_PROPERTY(uint32_t, srcId, SrcId);
             /// <summary>Destination ID.</summary>
-            __PROPERTY(uint32_t, dstId, DstId);
+            __PROTECTED_PROPERTY(uint32_t, dstId, DstId);
 
             /// <summary>Voice channel number.</summary>
-            __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
-
-            /** Adjacent Site Data */
-            /// <summary>Adjacent site CFVA flags.</summary>
-            __PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);
-            /// <summary>Adjacent site system ID.</summary>
-            __PROPERTY(uint32_t, adjSysId, AdjSiteSysId);
-            /// <summary>Adjacent site RFSS ID.</summary>
-            __PROPERTY(uint8_t, adjRfssId, AdjSiteRFSSId);
-            /// <summary>Adjacent site ID.</summary>
-            __PROPERTY(uint8_t, adjSiteId, AdjSiteId);
-            /// <summary>Adjacent site channel ID.</summary>
-            __PROPERTY(uint8_t, adjChannelId, AdjSiteChnId);
-            /// <summary>Adjacent site channel number.</summary>
-            __PROPERTY(uint32_t, adjChannelNo, AdjSiteChnNo);
-            /// <summary>Adjacent site service class.</summary>
-            __PROPERTY(uint8_t, adjServiceClass, AdjSiteSvcClass);
+            __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
             /** Service Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>
-            __PROPERTY(bool, emergency, Emergency);
+            __PROTECTED_PROPERTY(bool, emergency, Emergency);
             /// <summary>Flag indicating that encryption is enabled.</summary>
-            __PROPERTY(bool, encrypted, Encrypted);
+            __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
             /// <summary>Priority level for the traffic.</summary>
-            __PROPERTY(uint8_t, priority, Priority);
+            __PROTECTED_PROPERTY(uint8_t, priority, Priority);
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
-            __PROPERTY(bool, group, Group);
+            __PROTECTED_PROPERTY(bool, group, Group);
+
+            /** Local Site data */
+            /// <summary>Local Site Identity Entry.</summary>
+            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
 
         protected:
             friend class LC;
             friend class TSBK;
             edac::RS634717 m_rs;
 
+            bool m_implicit;
             uint32_t m_callTimer;
 
             static bool m_verbose;
 
             /** Local Site data */
             static SiteData m_siteData;
-            static ::lookups::IdenTable m_siteIdenEntry;
 
-            /// <summary>Internal helper to copy the class.</summary>
-            void copy(const TDULC& data);
+            /// <summary>Internal helper to convert RS bytes to a 64-bit long value.</summary>
+            static ulong64_t toValue(const uint8_t* rs);
+            /// <summary>Internal helper to convert a 64-bit long value to RS bytes.</summary>
+            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t rsValue);
 
-            /// <summary>Decode link control.</summary>
-            bool decodeLC(const uint8_t* rs);
-            /// <summary>Encode link control.</summary>
-            void encodeLC(uint8_t* rs);
+            /// <summary>Internal helper to decode terminator data unit w/ link control.</summary>
+            bool decode(const uint8_t* data, uint8_t* rs);
+            /// <summary>Internal helper to encode terminator data unit w/ link control.</summary>
+            void encode(uint8_t* data, const uint8_t* rs);
+
+            __PROTECTED_COPY(TDULC);
         };
     } // namespace lc
 } // namespace p25

@@ -300,8 +300,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         }
     }
 
-    lc::TDULC::setIdenEntry(m_idenEntry);
-
     std::vector<uint32_t> availCh = voiceChNo;
     m_siteData.setChCnt((uint8_t)availCh.size());
 

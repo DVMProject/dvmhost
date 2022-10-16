@@ -101,7 +101,7 @@ DFSITrunk::~DFSITrunk()
 /// </summary>
 /// <param name="lc"></param>
 /// <param name="noNetwork"></param>
-void DFSITrunk::writeRF_TDULC(lc::TDULC lc, bool noNetwork)
+void DFSITrunk::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
 {
     // for now this is ignored...
 }

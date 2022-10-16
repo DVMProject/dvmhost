@@ -34,6 +34,7 @@
 #include "p25/packet/Trunk.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/dfsi/DFSIDefines.h"
+#include "p25/lc/tdulc/TDULCFactory.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
@@ -640,13 +641,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_rfTimeout.stop();
         }
         else {
-            lc::TDULC tdulc = lc::TDULC();
-            bool ret = tdulc.decode(data + 2U);
-            if (!ret) {
+            std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data + 2U);
+            if (tdulc == nullptr) {
                 LogWarning(LOG_RF, P25_LDU2_STR ", undecodable TDULC");
             }
             else {
-                m_p25->m_trunk->writeRF_TDULC(tdulc, false);
+                m_p25->m_trunk->writeRF_TDULC(tdulc.get(), false);
             }
         }
 
