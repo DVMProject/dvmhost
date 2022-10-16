@@ -212,7 +212,6 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.setVerbose(m_dumpRTCH);
         lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
@@ -340,7 +339,6 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.setVerbose(m_dumpRTCH);
                 lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
@@ -646,7 +644,6 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.setVerbose(m_dumpRTCH);
         lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
@@ -753,7 +750,6 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.setVerbose(m_dumpRTCH);
                 lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == RTCH_MESSAGE_TYPE_VCALL;
@@ -980,10 +976,9 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 /// </summary>
 /// <param name="nxdn">Instance of the Control class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
-/// <param name="dumpRTCHData">Flag indicating whether RTCH data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
-Voice::Voice(Control* nxdn, network::BaseNetwork* network, bool dumpRTCHData, bool debug, bool verbose) :
+Voice::Voice(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose) :
     m_nxdn(nxdn),
     m_network(network),
     m_rfFrames(0U),
@@ -994,7 +989,6 @@ Voice::Voice(Control* nxdn, network::BaseNetwork* network, bool dumpRTCHData, bo
     m_netLost(0U),
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
-    m_dumpRTCH(dumpRTCHData),
     m_verbose(verbose),
     m_debug(debug)
 {

@@ -49,6 +49,8 @@ file(GLOB dvmhost_SRC
     "nxdn/channel/*.cpp"
     "nxdn/lc/*.h"
     "nxdn/lc/*.cpp"
+    "nxdn/lc/rcch/*.h"
+    "nxdn/lc/rcch/*.cpp"
     "nxdn/packet/*.h"
     "nxdn/packet/*.cpp"
 

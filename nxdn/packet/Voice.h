@@ -84,13 +84,11 @@ namespace nxdn
 
             uint32_t m_silenceThreshold;
 
-            bool m_dumpRTCH;
-
             bool m_verbose;
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Voice class.</summary>
-            Voice(Control* nxdn, network::BaseNetwork* network, bool dumpRTCHData, bool debug, bool verbose);
+            Voice(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Voice class.</summary>
             virtual ~Voice();
 

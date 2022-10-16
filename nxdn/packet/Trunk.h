@@ -57,11 +57,6 @@ namespace nxdn
 
         class HOST_SW_API Trunk {
         public:
-            /// <summary>Resets the data states for the RF interface.</summary>
-            virtual void resetRF();
-            /// <summary>Resets the data states for the network.</summary>
-            virtual void resetNet();
-
             /// <summary>Process a data frame from the RF interface.</summary>
             virtual bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
@@ -78,21 +73,22 @@ namespace nxdn
 
             network::BaseNetwork* m_network;
 
+            uint8_t m_bcchCnt;
+            uint8_t m_rcchGroupingCnt;
+            uint8_t m_ccchPagingCnt;
+            uint8_t m_ccchMultiCnt;
+            uint8_t m_rcchIterateCnt;
+
             bool m_verifyAff;
             bool m_verifyReg;
 
-            lc::RCCH m_rfLC;
-            lc::RCCH m_netLC;
-
             uint16_t m_lastRejectId;
-
-            bool m_dumpRCCH;
 
             bool m_verbose;
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Trunk class.</summary>
-            Trunk(Control* nxdn, network::BaseNetwork* network, bool dumpRCCHData, bool debug, bool verbose);
+            Trunk(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Trunk class.</summary>
             virtual ~Trunk();
 
@@ -103,16 +99,16 @@ namespace nxdn
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to write a single-block RCCH packet.</summary>
-            void writeRF_Message(bool noNetwork, bool clearBeforeWrite = false);
+            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false);
 
             /// <summary>Helper to write a grant packet.</summary>
-            bool writeRF_Message_Grant(bool grp, bool skip = false, bool net = false, bool skipNetCheck = false);
+            bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, uint32_t chNo = 0U, bool net = false, bool skipNetCheck = false);
             /// <summary>Helper to write a deny packet.</summary>
-            void writeRF_Message_Deny(uint8_t reason, uint8_t service);
+            void writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service);
             /// <summary>Helper to write a group registration response packet.</summary>
-            bool writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId);
+            bool writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId);
             /// <summary>Helper to write a unit registration response packet.</summary>
-            void writeRF_Message_U_Reg_Rsp(uint32_t srcId);
+            void writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId);
 
             /// <summary>Helper to write a CC SITE_INFO broadcast packet on the RF interface.</summary>
             void writeRF_CC_Message_Site_Info();

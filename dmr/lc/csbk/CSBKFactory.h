@@ -69,7 +69,7 @@ namespace dmr
 
             private:
                 /// <summary></summary>
-                static std::unique_ptr<CSBK> decode(CSBK* tsbk, const uint8_t* data);
+                static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data);
             };
         } // namespace csbk
     } // namespace lc

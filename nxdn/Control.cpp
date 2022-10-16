@@ -34,6 +34,7 @@
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/channel/SACCH.h"
 #include "nxdn/channel/FACCH1.h"
+#include "nxdn/lc/RCCH.h"
 #include "nxdn/lc/RTCH.h"
 #include "nxdn/Sync.h"
 #include "nxdn/NXDNUtils.h"
@@ -142,12 +143,12 @@ Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t t
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
-    m_voice = new Voice(this, network, dumpRCCHData, debug, verbose);
-    m_trunk = new Trunk(this, network, dumpRCCHData, debug, verbose);
+    m_voice = new Voice(this, network, debug, verbose);
+    m_trunk = new Trunk(this, network, debug, verbose);
     m_data = new Data(this, network, debug, verbose);
 
-    m_rfLC.setVerbose(m_dumpRCCH);
-    m_netLC.setVerbose(m_dumpRCCH);
+    lc::RCCH::setVerbose(dumpRCCHData);
+    lc::RTCH::setVerbose(dumpRCCHData);
 }
 
 /// <summary>
@@ -187,13 +188,11 @@ void Control::reset()
     m_queue.clear();
 
     m_rfMask = 0x00U;
-    m_rfLC.setVerbose(m_dumpRCCH);
     m_rfLC.reset();
 
     m_netState = RS_NET_IDLE;
 
     m_netMask = 0x00U;
-    m_netLC.setVerbose(m_dumpRCCH);
     m_netLC.reset();
 }
 
@@ -248,6 +247,9 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
     m_siteData.setCallsign(cwCallsign);
 
+    lc::RCCH::setSiteData(m_siteData);
+    lc::RCCH::setCallsign(cwCallsign);
+
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
         lookups::IdenTable entry = *it;
@@ -280,11 +282,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
 
     if (m_data != nullptr) {
         m_data->resetRF();
-    }
-
-    if (m_trunk != nullptr) {
-        m_trunk->resetRF();
-        m_trunk->resetNet();
     }
 }
 
@@ -613,6 +610,8 @@ void Control::setDebugVerbose(bool debug, bool verbose)
 void Control::setRCCHVerbose(bool verbose)
 {
     m_dumpRCCH = verbose;
+    lc::RCCH::setVerbose(verbose);
+    lc::RTCH::setVerbose(verbose);
 }
 
 // ---------------------------------------------------------------------------
@@ -731,8 +730,8 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = m_trunk->m_rfLC.getBcchCnt() + (m_trunk->m_rfLC.getCcchPagingCnt() + m_trunk->m_rfLC.getCcchMultiCnt()) *
-        m_trunk->m_rfLC.getRcchGroupingCnt() * m_trunk->m_rfLC.getRcchIterateCount();
+    const uint8_t maxSeq = m_trunk->m_bcchCnt + (m_trunk->m_ccchPagingCnt + m_trunk->m_ccchMultiCnt) *
+        m_trunk->m_rcchGroupingCnt * m_trunk->m_rcchIterateCnt;
     if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }

@@ -63,10 +63,10 @@ namespace nxdn
             /// <summary></summary>
             void reset();
 
-        public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
+            /// <summary>Sets the flag indicating verbose log output.</summary>
+            static void setVerbose(bool verbose) { m_verbose = verbose; }
 
+        public:
             /** Common Data */
             /// <summary>Message Type</summary>
             __PROPERTY(uint8_t, messageType, MessageType);
@@ -118,6 +118,8 @@ namespace nxdn
             __PROPERTY(uint8_t, causeRsp, CauseResponse);
 
         private:
+            static bool m_verbose;
+
             /** Encryption data */
             uint8_t* m_mi;
 

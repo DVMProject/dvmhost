@@ -48,107 +48,88 @@ namespace nxdn
         public:
             /// <summary>Initializes a copy instance of the RCCH class.</summary>
             RCCH(const RCCH& data);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
-            RCCH(SiteData siteData, lookups::IdenTable entry);
-            /// <summary>Initializes a new instance of the TSBK class.</summary>
-            RCCH(SiteData siteData, lookups::IdenTable entry, bool verbose);
+            /// <summary>Initializes a new instance of the RCCH class.</summary>
+            RCCH();
             /// <summary>Finalizes a instance of the RCCH class.</summary>
-            ~RCCH();
-
-            /// <summary>Equals operator.</summary>
-            RCCH& operator=(const RCCH& data);
+            virtual ~RCCH();
 
             /// <summary>Decode layer 3 data.</summary>
-            void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
+            virtual void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U) = 0;
             /// <summary>Encode layer 3 data.</summary>
-            void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
+            virtual void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U) = 0;
 
-            /// <summary></summary>
-            void reset();
+            /// <summary>Sets the flag indicating verbose log output.</summary>
+            static void setVerbose(bool verbose) { m_verbose = verbose; }
 
+            /** Local Site data */
             /// <summary>Sets the callsign.</summary>
-            void setCallsign(std::string callsign);
+            static void setCallsign(std::string callsign);
+
+            /// <summary>Gets the local site data.</summary>
+            static SiteData getSiteData() { return m_siteData; }
+            /// <summary>Sets the local site data.</summary>
+            static void setSiteData(SiteData siteData) { m_siteData = siteData; }
 
         public:
-            /// <summary>Flag indicating verbose log output.</summary>
-            __PROPERTY(bool, verbose, Verbose);
-
             /** Common Data */
             /// <summary>Message Type</summary>
-            __PROPERTY(uint8_t, messageType, MessageType);
+            __PROTECTED_PROPERTY(uint8_t, messageType, MessageType);
 
             /// <summary>Source ID.</summary>
-            __PROPERTY(uint16_t, srcId, SrcId);
+            __PROTECTED_PROPERTY(uint16_t, srcId, SrcId);
             /// <summary>Destination ID.</summary>
-            __PROPERTY(uint16_t, dstId, DstId);
+            __PROTECTED_PROPERTY(uint16_t, dstId, DstId);
 
             /// <summary>Location ID.</summary>
-            __PROPERTY(uint32_t, locId, LocId);
+            __PROTECTED_PROPERTY(uint32_t, locId, LocId);
             /// <summary>Registration Option.</summary>
-            __PROPERTY(uint8_t, regOption, RegOption);
+            __PROTECTED_PROPERTY(uint8_t, regOption, RegOption);
 
             /// <summary>Version Number.</summary>
-            __PROPERTY(uint8_t, version, Version);
+            __PROTECTED_PROPERTY(uint8_t, version, Version);
 
             /// <summary>Cause Response.</summary>
-            __PROPERTY(uint8_t, causeRsp, CauseResponse);
+            __PROTECTED_PROPERTY(uint8_t, causeRsp, CauseResponse);
 
             /// <summary>Voice channel number.</summary>
-            __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
             /** Call Data */
             /// <summary>Call Type</summary>
-            __PROPERTY(uint8_t, callType, CallType);
+            __PROTECTED_PROPERTY(uint8_t, callType, CallType);
 
             /** Common Call Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>
-            __PROPERTY(bool, emergency, Emergency);
+            __PROTECTED_PROPERTY(bool, emergency, Emergency);
             /// <summary>Flag indicating that encryption is enabled.</summary>
-            __PROPERTY(bool, encrypted, Encrypted);
+            __PROTECTED_PROPERTY(bool, encrypted, Encrypted);
             /// <summary>Flag indicating priority paging.</summary>
-            __PROPERTY(bool, priority, Priority);
+            __PROTECTED_PROPERTY(bool, priority, Priority);
             /// <summary>Flag indicating a group/talkgroup operation.</summary>
-            __PROPERTY(bool, group, Group);
+            __PROTECTED_PROPERTY(bool, group, Group);
             /// <summary>Flag indicating a half/full duplex operation.</summary>
-            __PROPERTY(bool, duplex, Duplex);
+            __PROTECTED_PROPERTY(bool, duplex, Duplex);
 
             /// <summary>Transmission mode.</summary>
-            __PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            __PROTECTED_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
 
             /** Local Site data */
-            /// <summary>Local Site Data.</summary>
-            __PROPERTY_PLAIN(SiteData, siteData, siteData);
             /// <summary>Local Site Identity Entry.</summary>
-            __PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+            __PROTECTED_PROPERTY_PLAIN(lookups::IdenTable, siteIdenEntry, siteIdenEntry);
 
-            /** Channel Structure Data */
-            /// <summary>Count of BCCH frames per RCCH superframe.</summary>
-            __PROPERTY(uint8_t, bcchCnt, BcchCnt);
-            /// <summary>Count of RCCH frame groupings per RCCH superframe.</summary>
-            __PROPERTY(uint8_t, rcchGroupingCnt, RcchGroupingCnt);
-            /// <summary>Count of CCCH/UPCH paging frames per RCCH superframe.</summary>
-            __PROPERTY(uint8_t, ccchPagingCnt, CcchPagingCnt);
-            /// <summary>Count of CCCH/UPCH multi-purpose frames per RCCH superframe.</summary>
-            __PROPERTY(uint8_t, ccchMultiCnt, CcchMultiCnt);
-            /// <summary>Count of group iterations per RCCH superframe.</summary>
-            __PROPERTY(uint8_t, rcchIterateCnt, RcchIterateCount);
-
-        private:
-            /// <summary>Initializes a new instance of the RCCH class.</summary>
-            RCCH();
-            /// <summary>Initializes a new instance of the RCCH class.</summary>
-            RCCH(SiteData siteData);
+        protected:
+            static bool m_verbose;
 
             /** Local Site data */
-            uint8_t* m_siteCallsign;
+            static uint8_t* m_siteCallsign;
+            static SiteData m_siteData;
 
-            /// <summary>Decode link control.</summary>
-            bool decodeLC(const uint8_t* data);
-            /// <summary>Encode link control.</summary>
-            void encodeLC(uint8_t* data);
+            /// <summary>Internal helper to decode a RCCH.</summary>
+            void decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
+            /// <summary>Internal helper to encode a RCCH.</summary>
+            void encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
 
-            /// <summary>Internal helper to copy the class.</summary>
-            void copy(const RCCH& data);
+            __PROTECTED_COPY(RCCH);
         };
     } // namespace lc
 } // namespace nxdn

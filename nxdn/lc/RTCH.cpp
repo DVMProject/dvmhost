@@ -41,6 +41,12 @@ using namespace nxdn::lc;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+bool RTCH::m_verbose = false;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -48,7 +54,6 @@ using namespace nxdn::lc;
 /// Initializes a new instance of the RTCH class.
 /// </summary>
 RTCH::RTCH() :
-    m_verbose(false),
     m_messageType(MESSAGE_TYPE_IDLE),
     m_callType(CALL_TYPE_UNSPECIFIED),
     m_srcId(0U),
@@ -77,7 +82,6 @@ RTCH::RTCH() :
 /// </summary>
 /// <param name="data"></param>
 RTCH::RTCH(const RTCH& data) :
-    m_verbose(false),
     m_messageType(MESSAGE_TYPE_IDLE),
     m_callType(CALL_TYPE_UNSPECIFIED),
     m_srcId(0U),
@@ -449,8 +453,6 @@ void RTCH::encodeLC(uint8_t* data)
 /// <param name="data"></param>
 void RTCH::copy(const RTCH& data)
 {
-    m_verbose = data.m_verbose;
-
     m_messageType = data.m_messageType;
     m_callType = data.m_callType;
 
