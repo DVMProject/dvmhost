@@ -72,7 +72,7 @@ namespace nxdn
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang, 
+        Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang, 
             modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpRCCHData, bool debug, bool verbose);
@@ -124,6 +124,8 @@ namespace nxdn
         packet::Data* m_data;
         friend class packet::Trunk;
         packet::Trunk* m_trunk;
+
+        bool m_authoritative;
 
         uint32_t m_ran;
         uint32_t m_timeout;

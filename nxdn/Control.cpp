@@ -71,6 +71,7 @@ const uint8_t SCRAMBLER[] = {
 /// <summary>
 /// Initializes a new instance of the Control class.
 /// </summary>
+/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
 /// <param name="ran">NXDN Radio Access Number.</param>
 /// <param name="callHang">Amount of hangtime for a NXDN call.</param>
 /// <param name="queueSize">Modem frame buffer queue size (bytes).</param>
@@ -86,12 +87,13 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="dumpRCCHData">Flag indicating whether RCCH data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Control::Control(uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
+Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
     modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(nullptr),
     m_data(nullptr),
+    m_authoritative(authoritative),
     m_ran(ran),
     m_timeout(timeout),
     m_modem(modem),

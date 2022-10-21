@@ -17,7 +17,6 @@ network:
     updateLookups: false
     allowActivityTransfer: true
     allowDiagnosticTransfer: true
-    handleChGrants: false
     debug: false
     rconEnable: false
     rconAddress: 127.0.0.1
@@ -119,6 +118,7 @@ system:
         power: 10
         location: "Repeater Site, Antarctica"
     config:
+        authoritative: true
         channelId: 2
         channelNo: 1
         dmrNetId: 1

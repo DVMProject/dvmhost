@@ -56,6 +56,8 @@ const uint16_t TSCC_MAX_CNT = 511U;
 
 Control* Slot::m_dmr = nullptr;
 
+bool Slot::m_authoritative = true;
+
 uint32_t Slot::m_colorCode = 0U;
 
 SiteData Slot::m_siteData = SiteData();
@@ -574,6 +576,7 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// Helper to initialize the DMR slot processor.
 /// </summary>
 /// <param name="dmr">Instance of the Control class.</param>
+/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
 /// <param name="colorCode">DMR access color code.</param>
 /// <param name="siteData">DMR site data.</param>
 /// <param name="embeddedLCOnly"></param>
@@ -588,7 +591,7 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
-void Slot::init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
     network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
     lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
@@ -600,6 +603,8 @@ void Slot::init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embedd
     assert(rssiMapper != nullptr);
 
     m_dmr = dmr;
+
+    m_authoritative = authoritative;
 
     m_colorCode = colorCode;
 

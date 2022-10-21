@@ -133,6 +133,8 @@ private:
     uint8_t m_p25RfssId;
     uint32_t m_nxdnRAN;
 
+    bool m_authoritative;
+
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;
 

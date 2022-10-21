@@ -738,13 +738,6 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
-    // do we have a network connection and are we handling grants at the network?
-    if (m_tscc->m_network != nullptr) {
-        if (m_tscc->m_network->isHandlingChGrants() && m_tscc->m_siteData.netActive() && !skipNetCheck) {
-            return m_tscc->m_network->writeGrantReq(grp, srcId, dstId);
-        }
-    }
-
     // are we skipping checking?
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {

@@ -72,7 +72,7 @@ namespace p25
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+        Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
             ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
@@ -137,6 +137,8 @@ namespace p25
         friend class dfsi::packet::DFSITrunk;
         packet::Trunk* m_trunk;
         friend class lookups::P25AffiliationLookup;
+
+        bool m_authoritative;
 
         uint32_t m_nac;
         uint32_t m_txNAC;

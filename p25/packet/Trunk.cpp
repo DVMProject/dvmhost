@@ -943,20 +943,6 @@ void Trunk::writeAdjSSNetwork()
 void Trunk::clock(uint32_t ms)
 {
     if (m_p25->m_control) {
-        if (m_p25->m_network != nullptr) {
-            if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive()) {
-                bool grp = true;
-                uint32_t srcId = 0U;
-                uint32_t dstId = 0U;
-                uint32_t grpVchNo = 0U;
-
-                // do we have a grant response?
-                if (m_p25->m_network->readGrantRsp(grp, srcId, dstId, grpVchNo)) {
-                    writeRF_TSDU_Grant(srcId, dstId, 4U, grp, true, grpVchNo, true, true);
-                }
-            }
-        }
-
         // clock all the grant timers
         m_p25->m_affiliations.clock(ms);
 
@@ -2121,13 +2107,6 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
     if (dstId == P25_TGID_ALL) {
         return true; // do not generate grant packets for $FFFF (All Call) TGID
-    }
-
-    // do we have a network connection and are we handling grants at the network?
-    if (m_p25->m_network != nullptr) {
-        if (m_p25->m_network->isHandlingChGrants() && m_p25->m_siteData.netActive() && !skipNetCheck) {
-            return m_p25->m_network->writeGrantReq(grp, srcId, dstId);
-        }
     }
 
     // are we skipping checking?

@@ -55,14 +55,12 @@ using namespace network;
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-/// <param name="handleChGrants">Flag indicating that the system will handle channel grants from the network.</param>
-BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool handleChGrants) :
+BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer) :
     m_id(id),
     m_slot1(slot1),
     m_slot2(slot2),
     m_allowActivityTransfer(allowActivityTransfer),
     m_allowDiagnosticTransfer(allowDiagnosticTransfer),
-    m_handleChGrants(handleChGrants),
     m_duplex(duplex),
     m_debug(debug),
     m_addr(),
@@ -308,39 +306,6 @@ uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len)
 }
 
 /// <summary>
-/// Reads a channel grant request from the network.
-/// </summary>
-/// <param name="grp"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="grpVchNo"></param>
-/// <returns></returns>
-bool BaseNetwork::readGrantRsp(bool& grp, uint32_t& srcId, uint32_t& dstId, uint32_t& grpVchNo)
-{
-    if (!m_handleChGrants)
-        return false;
-
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    if (m_rxGrantData.isEmpty())
-        return false;
-
-    uint8_t length = 0U;
-    m_rxGrantData.getData(&length, 1U);
-    m_rxGrantData.getData(m_buffer, length);
-
-    srcId = (m_buffer[5U] << 16) | (m_buffer[6U] << 8) | (m_buffer[7U] << 0);
-    dstId = (m_buffer[8U] << 16) | (m_buffer[9U] << 8) | (m_buffer[10U] << 0);
-
-    grp = m_buffer[11U] == 1U;
-
-    grpVchNo = (m_buffer[12U] << 16) | (m_buffer[13U] << 8) | (m_buffer[14U] << 0);
-
-    return true;
-}
-
-/// <summary>
 /// Writes DMR frame data to the network.
 /// </summary>
 /// <param name="data"></param>
@@ -499,40 +464,6 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     m_streamId[0] = m_nxdnStreamId;
 
     return writeNXDN(m_id, m_nxdnStreamId, lc, data, len);
-}
-
-/// <summary>
-/// Writes a channel grant request to the network.
-/// </summary>
-/// <param name="grp"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <returns></returns>
-bool BaseNetwork::writeGrantReq(const bool grp, const uint32_t srcId, const uint32_t dstId)
-{
-    if (!m_handleChGrants)
-        return false;
-
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
-
-    ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
-
-    __SET_UINT16(srcId, buffer, 5U);                                                // Source Address
-    __SET_UINT16(dstId, buffer, 8U);                                                // Target Address
-
-    buffer[11U] = (grp) ? 1U : 0U;                                                  // Group/Individual Grant
-
-    __SET_UINT32(m_id, buffer, 12U);                                                // Peer ID
-
-
-    if (m_debug)
-        Utils::dump(1U, "Network Transmitted, DMR", buffer, (32U + PACKET_PAD));
-
-    return write(buffer, (32U + PACKET_PAD));
 }
 
 /// <summary>

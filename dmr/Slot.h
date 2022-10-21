@@ -106,7 +106,7 @@ namespace dmr
         void setSilenceThreshold(uint32_t threshold);
 
         /// <summary>Helper to initialize the slot processor.</summary>
-        static void init(Control* dmr, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
+        static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
             lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
@@ -186,6 +186,8 @@ namespace dmr
         bool m_debug;
 
         static Control* m_dmr;
+
+        static bool m_authoritative;
 
         static uint32_t m_colorCode;
 

@@ -43,6 +43,7 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the Control class.
 /// </summary>
+/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
 /// <param name="colorCode">DMR access color code.</param>
 /// <param name="callHang">Amount of hangtime for a DMR call.</param>
 /// <param name="queueSize">Size of DMR data frame ring buffer.</param>
@@ -63,10 +64,11 @@ using namespace dmr;
 /// <param name="dumpCSBKData"></param>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
-Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
+Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
     bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
     lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
+    m_authoritative(authoritative),
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
@@ -89,7 +91,7 @@ Control::Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool
     assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
-    Slot::init(this, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
+    Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
     
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);

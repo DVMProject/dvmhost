@@ -134,6 +134,7 @@ Host::Host(const std::string& confFile) :
     m_p25SysId(1U),
     m_p25RfssId(1U),
     m_nxdnRAN(1U),
+    m_authoritative(true),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_remoteControl(nullptr)
@@ -441,7 +442,7 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_dmrColorCode, callHang, queueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
+        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, queueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose));
         dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
@@ -531,7 +532,7 @@ int Host::run()
             }
         }
 
-        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_p25NAC, callHang, queueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
+        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, queueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
@@ -613,7 +614,7 @@ int Host::run()
             }
         }
 
-        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
+        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
         nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
@@ -1920,7 +1921,10 @@ bool Host::readParams()
 
         m_nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
 
+        m_authoritative = rfssConfig["authoritative"].as<bool>(true);
+
         LogInfo("System Config Parameters");
+        LogInfo("    Authoritative: %s", m_authoritative ? "yes" : "no");
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
         LogInfo("    TX Frequency: %uHz", m_txFrequency);
         LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
@@ -2242,7 +2246,6 @@ bool Host::createNetwork()
     bool allowActivityTransfer = networkConf["allowActivityTransfer"].as<bool>(false);
     bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
-    bool handleChGrants = networkConf["handleChGrants"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
     if (rconPassword.length() > 64) {
@@ -2270,7 +2273,6 @@ bool Host::createNetwork()
         LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
         LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
-        LogInfo("    Handle Channel Grants: %s", handleChGrants ? "yes" : "no");
 
         if (debug) {
             LogInfo("    Debug: yes");
@@ -2288,7 +2290,7 @@ bool Host::createNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup, handleChGrants);
+        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,

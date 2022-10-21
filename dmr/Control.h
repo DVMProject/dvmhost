@@ -60,7 +60,7 @@ namespace dmr
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
+        Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
             bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
             lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
@@ -114,6 +114,8 @@ namespace dmr
 
     private:
         friend class Slot;
+
+        bool m_authoritative;
 
         uint32_t m_colorCode;
 

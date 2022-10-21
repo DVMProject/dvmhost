@@ -244,20 +244,6 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 void Trunk::clock(uint32_t ms)
 {
     if (m_nxdn->m_control) {
-        if (m_nxdn->m_network != nullptr) {
-            if (m_nxdn->m_network->isHandlingChGrants() && m_nxdn->m_siteData.netActive()) {
-                bool grp = true;
-                uint32_t srcId = 0U;
-                uint32_t dstId = 0U;
-                uint32_t grpVchNo = 0U;
-
-                // do we have a grant response?
-                if (m_nxdn->m_network->readGrantRsp(grp, srcId, dstId, grpVchNo)) {
-                    writeRF_Message_Grant(srcId, dstId, 0U, grp, true, grpVchNo, true, true);
-                }
-            }
-        }
-
         // clock all the grant timers
         m_nxdn->m_affiliations.clock(ms);
     }
@@ -432,13 +418,6 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
-
-    // do we have a network connection and are we handling grants at the network?
-    if (m_nxdn->m_network != nullptr) {
-        if (m_nxdn->m_network->isHandlingChGrants() && m_nxdn->m_siteData.netActive() && !skipNetCheck) {
-            return m_nxdn->m_network->writeGrantReq(grp, srcId, dstId);
-        }
-    }
 
     // are we skipping checking?
     if (!skip) {

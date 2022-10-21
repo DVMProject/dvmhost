@@ -64,6 +64,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <summary>
 /// Initializes a new instance of the Control class.
 /// </summary>
+/// <param name="authoritative">Flag indicating whether or not the DVM is grant authoritative.</param>
 /// <param name="nac">P25 Network Access Code.</param>
 /// <param name="callHang">Amount of hangtime for a P25 call.</param>
 /// <param name="queueSize">Modem frame buffer queue size (bytes).</param>
@@ -81,13 +82,14 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Control::Control(uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
     ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
     m_voice(nullptr),
     m_data(nullptr),
     m_trunk(nullptr),
+    m_authoritative(authoritative),
     m_nac(nac),
     m_txNAC(nac),
     m_timeout(timeout),
