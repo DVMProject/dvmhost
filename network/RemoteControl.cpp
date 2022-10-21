@@ -33,6 +33,7 @@
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "nxdn/Control.h"
+#include "modem/Modem.h"
 #include "host/Host.h"
 #include "network/UDPSocket.h"
 #include "RemoteControl.h"
@@ -73,6 +74,8 @@ using namespace modem;
 
 #define RCD_KILL                        "mdm-kill"
 #define RCD_FORCE_KILL                  "mdm-force-kill"
+
+#define RCD_PERMIT_TG                   "permit-tg"
 
 #define RCD_RID_WLIST                   "rid-whitelist"
 #define RCD_RID_BLIST                   "rid-blacklist"
@@ -199,9 +202,9 @@ void RemoteControl::setLookups(lookups::RadioIdLookup* ridLookup, lookups::Talkg
 /// Process remote network command data.
 /// </summary>
 /// <param name="host">Instance of the Host class.</param>
-/// <param name="dmr">Instance of the Control class.</param>
-/// <param name="p25">Instance of the Control class.</param>
-/// <param name="nxdn">Instance of the Control class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
 void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
 {
     std::vector<std::string> args = std::vector<std::string>();
@@ -289,133 +292,10 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 reply = displayHelp();
             }
             else if (rcom == RCD_GET_STATUS) {
-                reply = "";
-                yaml::Node systemConf = host->m_conf["system"];
-                {
-                    yaml::Node modemConfig = host->m_conf["system"]["modem"];
-                    std::string type = modemConfig["protocol"]["type"].as<std::string>();
-
-                    yaml::Node uartConfig = modemConfig["protocol"]["uart"];
-                    std::string modemPort = uartConfig["port"].as<std::string>();
-                    uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
-
-                    reply += string_format("Host State: %u, DMR: %u, P25: %u, NXDN: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state,
-                        dmr != nullptr, p25 != nullptr, nxdn != nullptr, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
-                }
-
-                {
-                    if (!host->m_modem->isHotspot()) {
-                        reply += string_format("\r\nPTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
-                            host->m_modem->m_pttInvert ? "yes" : "no", host->m_modem->m_rxInvert ? "yes" : "no", host->m_modem->m_txInvert ? "yes" : "no", host->m_modem->m_dcBlocker ? "yes" : "no");
-                    }
-                    reply += string_format("\r\nRX Level: %.1f%%, CW TX Level: %.1f%%, DMR TX Level: %.1f%%, P25 TX Level: %.1f%%, NXDN TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
-                        host->m_modem->m_rxLevel, host->m_modem->m_cwIdTXLevel, host->m_modem->m_dmrTXLevel, host->m_modem->m_p25TXLevel, host->m_modem->m_nxdnTXLevel, host->m_modem->m_txDCOffset, host->m_modem->m_rxDCOffset);
-                    if (!host->m_modem->isHotspot()) {
-                        reply += string_format("\r\nDMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
-                            host->m_modem->m_dmrSymLevel3Adj, host->m_modem->m_dmrSymLevel1Adj, host->m_modem->m_p25SymLevel3Adj, host->m_modem->m_p25SymLevel1Adj);
-                        
-                        // are we on a protocol version 3 firmware?
-                        if (host->m_modem->getVersion() >= 3U) {
-                            reply += string_format("\r\nNXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
-                                host->m_modem->m_nxdnSymLevel3Adj, host->m_modem->m_nxdnSymLevel1Adj);
-                        }
-                    }
-                    if (host->m_modem->isHotspot()) {
-                        reply += string_format("\r\nDMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
-                            host->m_modem->m_dmrDiscBWAdj, host->m_modem->m_p25DiscBWAdj, host->m_modem->m_dmrPostBWAdj, host->m_modem->m_p25PostBWAdj);
-
-                        // are we on a protocol version 3 firmware?
-                        if (host->m_modem->getVersion() >= 3U) {
-                            reply += string_format("\r\nNXDN Disc. BW: %d, NXDN Post Demod BW: %d",
-                                host->m_modem->m_nxdnDiscBWAdj, host->m_modem->m_nxdnPostBWAdj);
-
-                            reply += string_format("\r\nAFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
-                                host->m_modem->m_afcEnable, host->m_modem->m_afcKI, host->m_modem->m_afcKP, host->m_modem->m_afcRange);
-                        }
-
-                        switch (host->m_modem->m_adfGainMode) {
-                            case ADF_GAIN_AUTO_LIN:
-                                reply += "\r\nADF7021 Gain Mode: Auto High Linearity";
-                                break;
-                            case ADF_GAIN_LOW:
-                                reply += "\r\nADF7021 Gain Mode: Low";
-                                break;
-                            case ADF_GAIN_HIGH:
-                                reply += "\r\nADF7021 Gain Mode: High";
-                                break;
-                            case ADF_GAIN_AUTO:
-                            default:
-                                reply += "\r\nADF7021 Gain Mode: Auto";
-                                break;
-                        }
-                    }
-                    reply += string_format("\r\nFDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", host->m_modem->m_fdmaPreamble, float(host->m_modem->m_fdmaPreamble) * 0.2222F, 
-                        host->m_modem->m_dmrRxDelay, float(host->m_modem->m_dmrRxDelay) * 0.0416666F, host->m_modem->m_p25CorrCount, float(host->m_modem->m_p25CorrCount) * 0.667F);
-                    reply += string_format("\r\nRx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", host->m_modem->m_rxFrequency, host->m_modem->m_txFrequency, host->m_modem->m_rxTuning, host->m_modem->m_txTuning);
-                    reply += string_format("\r\nRx Effective Freq: %uHz, Tx Effective Freq: %uHz", host->m_modem->m_rxFrequency + host->m_modem->m_rxTuning, host->m_modem->m_txFrequency + host->m_modem->m_txTuning);
-                }
+                reply = rcdGetStatus(host, dmr, p25, nxdn);
             }
             else if (rcom == RCD_MODE && argCnt >= 1U) {
-                std::string mode = getArgString(args, 0U);
-                if (mode == RCD_MODE_OPT_IDLE) {
-                    host->m_fixedMode = false;
-                    host->setState(STATE_IDLE);
-
-                    reply = string_format("Dynamic mode, mode %u", host->m_state);
-                    LogInfoEx(LOG_RCON, reply.c_str());
-                }
-                else if (mode == RCD_MODE_OPT_LCKOUT) {
-                    host->m_fixedMode = false;
-                    host->setState(HOST_STATE_LOCKOUT);
-                    reply = string_format("Lockout mode, mode %u", host->m_state);
-                    LogInfoEx(LOG_RCON, reply.c_str());
-                }
-#if defined(ENABLE_DMR)
-                else if (mode == RCD_MODE_OPT_FDMR) {
-                    if (dmr != nullptr) {
-                        host->m_fixedMode = true;
-                        host->setState(STATE_DMR);
-                        reply = string_format("Fixed mode, mode %u", host->m_state);
-                        LogInfoEx(LOG_RCON, reply.c_str());
-                    }
-                    else {
-                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
-                        LogError(LOG_RCON, reply.c_str());
-                    }
-                }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
-                else if (mode == RCD_MODE_OPT_FP25) {
-                    if (p25 != nullptr) {
-                        host->m_fixedMode = true;
-                        host->setState(STATE_P25);
-                        reply = string_format("Fixed mode, mode %u", host->m_state);
-                        LogInfoEx(LOG_RCON, reply.c_str());
-                    }
-                    else {
-                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
-                        LogError(LOG_RCON, reply.c_str());
-                    }
-                }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
-                else if (mode == RCD_MODE_OPT_FNXDN) {
-                    if (p25 != nullptr) {
-                        host->m_fixedMode = true;
-                        host->setState(STATE_NXDN);
-                        reply = string_format("Fixed mode, mode %u", host->m_state);
-                        LogInfoEx(LOG_RCON, reply.c_str());
-                    }
-                    else {
-                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
-                        LogError(LOG_RCON, reply.c_str());
-                    }
-                }
-#endif // defined(ENABLE_NXDN)
-                else {
-                        reply = INVALID_OPT_STR "invalid mode!";
-                        LogError(LOG_RCON, reply.c_str());
-                }
+                reply = rcdMode(args, host, dmr, p25, nxdn);
             }
             else if (rcom == RCD_KILL) {
                 g_killed = true;
@@ -423,6 +303,9 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             else if (rcom == RCD_FORCE_KILL) {
                 g_killed = true;
                 host->setState(HOST_STATE_QUIT); // ensures immediate cessation of service
+            }
+            else if (rcom == RCD_PERMIT_TG && argCnt >= 1U) {
+                reply = rcdPermitTG(args, host, dmr, p25, nxdn);
             }
             else if (rcom == RCD_RID_WLIST && argCnt >= 1U) {
                 uint32_t srcId = getArgUInt32(args, 0U);
@@ -978,187 +861,17 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 #endif // defined(ENABLE_NXDN)
 #if defined(ENABLE_DMR)
             else if (rcom == RCD_DMRD_MDM_INJ && argCnt >= 1U) {
-                if (dmr != nullptr) {
-                    uint8_t slot = getArgUInt32(args, 0U);
-                    std::string argString = getArgString(args, 1U);
-                    const char* fileName = argString.c_str();
-                    if (fileName != nullptr) {
-                        FILE* file = ::fopen(fileName, "r");
-                        if (file != nullptr) {
-                            uint8_t* buffer = nullptr;
-                            int32_t fileSize = 0;
-
-                            // obtain file size
-                            ::fseek(file, 0, SEEK_END);
-                            fileSize = ::ftell(file);
-                            ::rewind(file);
-
-                            // allocate a buffer and read file
-                            buffer = new uint8_t[fileSize];
-                            if (buffer != nullptr) {
-                                int32_t bytes = ::fread(buffer, 1U, fileSize, file);
-                                if (bytes == fileSize) {
-                                    uint8_t sync[dmr::DMR_SYNC_LENGTH_BYTES];
-                                    ::memcpy(sync, buffer, dmr::DMR_SYNC_LENGTH_BYTES);
-
-                                    // count data sync errors
-                                    uint8_t dataErrs = 0U;
-                                    for (uint8_t i = 0U; i < dmr::DMR_SYNC_LENGTH_BYTES; i++)
-                                        dataErrs += Utils::countBits8(sync[i] ^ dmr::DMR_MS_DATA_SYNC_BYTES[i]);
-
-                                    // count voice sync errors
-                                    uint8_t voiceErrs = 0U;
-                                    for (uint8_t i = 0U; i < dmr::DMR_SYNC_LENGTH_BYTES; i++)
-                                        voiceErrs += Utils::countBits8(sync[i] ^ dmr::DMR_MS_VOICE_SYNC_BYTES[i]);
-
-                                    if ((dataErrs <= 4U) || (voiceErrs <= 4U)) {
-                                        if (slot == 0U) {
-                                            host->m_modem->injectDMRData1(buffer, fileSize);
-                                        }
-                                        else if (slot == 1U) {
-                                            host->m_modem->injectDMRData2(buffer, fileSize);
-                                        }
-                                        else {
-                                            reply = CMD_FAILED_STR "invalid DMR slot!";
-                                            LogError(LOG_RCON, reply.c_str());
-                                        }
-                                    }
-                                    else {
-                                        reply = CMD_FAILED_STR "DMR data has too many errors!";
-                                        LogError(LOG_RCON, reply.c_str());
-                                    }
-                                }
-                                else {
-                                    reply = CMD_FAILED_STR "DMR failed to open DMR data!";
-                                    LogError(LOG_RCON, reply.c_str());
-                                }
-
-                                delete[] buffer;
-                            }
-
-                            ::fclose(file);
-                        }
-                    }
-                }
-                else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
+                reply = rcdDMRModemInj(args, host, dmr);
             }
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
             else if (rcom == RCD_P25D_MDM_INJ && argCnt >= 1U) {
-                if (p25 != nullptr) {
-                    std::string argString = getArgString(args, 0U);
-                    const char* fileName = argString.c_str();
-                    if (fileName != nullptr) {
-                        FILE* file = ::fopen(fileName, "r");
-                        if (file != nullptr) {
-                            uint8_t* buffer = nullptr;
-                            int32_t fileSize = 0;
-
-                            // obtain file size
-                            ::fseek(file, 0, SEEK_END);
-                            fileSize = ::ftell(file);
-                            ::rewind(file);
-
-                            // allocate a buffer and read file
-                            buffer = new uint8_t[fileSize];
-                            if (buffer != nullptr) {
-                                int32_t bytes = ::fread(buffer, 1U, fileSize, file);
-                                if (bytes == fileSize) {
-                                    uint8_t sync[p25::P25_SYNC_LENGTH_BYTES];
-                                    ::memcpy(sync, buffer, p25::P25_SYNC_LENGTH_BYTES);
-
-                                    uint8_t errs = 0U;
-                                    for (uint8_t i = 0U; i < p25::P25_SYNC_LENGTH_BYTES; i++)
-                                        errs += Utils::countBits8(sync[i] ^ p25::P25_SYNC_BYTES[i]);
-
-                                    if (errs <= 4U) {
-                                        bool valid = p25->nid().decode(buffer);
-                                        if (valid) {
-                                            host->m_modem->injectP25Data(buffer, fileSize);
-                                        }
-                                        else {
-                                            reply = CMD_FAILED_STR "P25 data did not contain a valid NID!";
-                                            LogError(LOG_RCON, reply.c_str());
-                                        }
-                                    }
-                                    else {
-                                        reply = CMD_FAILED_STR "P25 data has too many errors!";
-                                        LogError(LOG_RCON, reply.c_str());
-                                    }
-                                }
-                                else {
-                                    reply = CMD_FAILED_STR "P25 failed to open P25 data!";
-                                    LogError(LOG_RCON, reply.c_str());
-                                }
-
-                                delete[] buffer;
-                            }
-
-                            ::fclose(file);
-                        }
-                    }
-                }
-                else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
+                reply = rcdP25ModemInj(args, host, p25);
             }
 #endif // defined(ENABLE_P25)
 #if defined(ENABLE_NXDN)
             else if (rcom == RCD_NXDD_MDM_INJ && argCnt >= 1U) {
-                if (p25 != nullptr) {
-                    std::string argString = getArgString(args, 0U);
-                    const char* fileName = argString.c_str();
-                    if (fileName != nullptr) {
-                        FILE* file = ::fopen(fileName, "r");
-                        if (file != nullptr) {
-                            uint8_t* buffer = nullptr;
-                            int32_t fileSize = 0;
-
-                            // obtain file size
-                            ::fseek(file, 0, SEEK_END);
-                            fileSize = ::ftell(file);
-                            ::rewind(file);
-
-                            // allocate a buffer and read file
-                            buffer = new uint8_t[fileSize];
-                            if (buffer != nullptr) {
-                                int32_t bytes = ::fread(buffer, 1U, fileSize, file);
-                                if (bytes == fileSize) {
-                                    uint8_t sync[nxdn::NXDN_FSW_BYTES_LENGTH];
-                                    ::memcpy(sync, buffer, nxdn::NXDN_FSW_BYTES_LENGTH);
-
-                                    uint8_t errs = 0U;
-                                    for (uint8_t i = 0U; i < nxdn::NXDN_FSW_BYTES_LENGTH; i++)
-                                        errs += Utils::countBits8(sync[i] ^ nxdn::NXDN_FSW_BYTES[i]);
-
-                                    if (errs <= 4U) {
-                                        host->m_modem->injectNXDNData(buffer, fileSize);
-                                    }
-                                    else {
-                                        reply = CMD_FAILED_STR "NXDN data has too many errors!";
-                                        LogError(LOG_RCON, reply.c_str());
-                                    }
-                                }
-                                else {
-                                    reply = CMD_FAILED_STR "NXDN failed to open NXDN data!";
-                                    LogError(LOG_RCON, reply.c_str());
-                                }
-
-                                delete[] buffer;
-                            }
-
-                            ::fclose(file);
-                        }
-                    }
-                }
-                else {
-                    reply = CMD_FAILED_STR "NXDN mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
+                reply = rcdNXDNModemInj(args, host, nxdn);
             }
 #endif // defined(ENABLE_NXDN)
             else {
@@ -1273,6 +986,7 @@ void RemoteControl::writeResponse(std::string reply, sockaddr_storage address, u
 /// <summary>
 /// Helper to print the remote control help.
 /// </summary>
+/// <returns></returns>
 std::string RemoteControl::displayHelp()
 {
     std::string reply = "";
@@ -1285,6 +999,8 @@ std::string RemoteControl::displayHelp()
     reply += "  mdm-mode <mode>         Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                Causes the host to quit\r\n";
     reply += "  mdm-force-kill          Causes the host to quit immediately\r\n";
+    reply += "\r\n";
+    reply += "  permit-tg <state> <dstid> Causes the host to permit the specified destination ID if non-authoritative\r\n";
     reply += "\r\n";
     reply += "  rid-whitelist <rid>     Whitelists the specified RID in the host ACL tables\r\n";
     reply += "  rid-blacklist <rid>     Blacklists the specified RID in the host ACL tables\r\n";
@@ -1339,6 +1055,471 @@ std::string RemoteControl::displayHelp()
 }
 
 /// <summary>
+/// 
+/// </summary>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdGetStatus(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+    yaml::Node systemConf = host->m_conf["system"];
+    {
+        yaml::Node modemConfig = host->m_conf["system"]["modem"];
+        std::string type = modemConfig["protocol"]["type"].as<std::string>();
+
+        yaml::Node uartConfig = modemConfig["protocol"]["uart"];
+        std::string modemPort = uartConfig["port"].as<std::string>();
+        uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
+
+        reply += string_format("Host State: %u, DMR: %u, P25: %u, NXDN: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state,
+            dmr != nullptr, p25 != nullptr, nxdn != nullptr, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
+    }
+
+    {
+        if (!host->m_modem->isHotspot()) {
+            reply += string_format("\r\nPTT Invert: %s, RX Invert: %s, TX Invert: %s, DC Blocker: %s",
+                host->m_modem->m_pttInvert ? "yes" : "no", host->m_modem->m_rxInvert ? "yes" : "no", host->m_modem->m_txInvert ? "yes" : "no", host->m_modem->m_dcBlocker ? "yes" : "no");
+        }
+        reply += string_format("\r\nRX Level: %.1f%%, CW TX Level: %.1f%%, DMR TX Level: %.1f%%, P25 TX Level: %.1f%%, NXDN TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
+            host->m_modem->m_rxLevel, host->m_modem->m_cwIdTXLevel, host->m_modem->m_dmrTXLevel, host->m_modem->m_p25TXLevel, host->m_modem->m_nxdnTXLevel, host->m_modem->m_txDCOffset, host->m_modem->m_rxDCOffset);
+        if (!host->m_modem->isHotspot()) {
+            reply += string_format("\r\nDMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
+                host->m_modem->m_dmrSymLevel3Adj, host->m_modem->m_dmrSymLevel1Adj, host->m_modem->m_p25SymLevel3Adj, host->m_modem->m_p25SymLevel1Adj);
+            
+            // are we on a protocol version 3 firmware?
+            if (host->m_modem->getVersion() >= 3U) {
+                reply += string_format("\r\nNXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",
+                    host->m_modem->m_nxdnSymLevel3Adj, host->m_modem->m_nxdnSymLevel1Adj);
+            }
+        }
+        if (host->m_modem->isHotspot()) {
+            reply += string_format("\r\nDMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
+                host->m_modem->m_dmrDiscBWAdj, host->m_modem->m_p25DiscBWAdj, host->m_modem->m_dmrPostBWAdj, host->m_modem->m_p25PostBWAdj);
+
+            // are we on a protocol version 3 firmware?
+            if (host->m_modem->getVersion() >= 3U) {
+                reply += string_format("\r\nNXDN Disc. BW: %d, NXDN Post Demod BW: %d",
+                    host->m_modem->m_nxdnDiscBWAdj, host->m_modem->m_nxdnPostBWAdj);
+
+                reply += string_format("\r\nAFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
+                    host->m_modem->m_afcEnable, host->m_modem->m_afcKI, host->m_modem->m_afcKP, host->m_modem->m_afcRange);
+            }
+
+            switch (host->m_modem->m_adfGainMode) {
+                case ADF_GAIN_AUTO_LIN:
+                    reply += "\r\nADF7021 Gain Mode: Auto High Linearity";
+                    break;
+                case ADF_GAIN_LOW:
+                    reply += "\r\nADF7021 Gain Mode: Low";
+                    break;
+                case ADF_GAIN_HIGH:
+                    reply += "\r\nADF7021 Gain Mode: High";
+                    break;
+                case ADF_GAIN_AUTO:
+                default:
+                    reply += "\r\nADF7021 Gain Mode: Auto";
+                    break;
+            }
+        }
+        reply += string_format("\r\nFDMA Preambles: %u (%.1fms), DMR Rx Delay: %u (%.1fms), P25 Corr. Count: %u (%.1fms)", host->m_modem->m_fdmaPreamble, float(host->m_modem->m_fdmaPreamble) * 0.2222F, 
+            host->m_modem->m_dmrRxDelay, float(host->m_modem->m_dmrRxDelay) * 0.0416666F, host->m_modem->m_p25CorrCount, float(host->m_modem->m_p25CorrCount) * 0.667F);
+        reply += string_format("\r\nRx Freq: %uHz, Tx Freq: %uHz, Rx Offset: %dHz, Tx Offset: %dHz", host->m_modem->m_rxFrequency, host->m_modem->m_txFrequency, host->m_modem->m_rxTuning, host->m_modem->m_txTuning);
+        reply += string_format("\r\nRx Effective Freq: %uHz, Tx Effective Freq: %uHz", host->m_modem->m_rxFrequency + host->m_modem->m_rxTuning, host->m_modem->m_txFrequency + host->m_modem->m_txTuning);
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdMode(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+    std::string mode = getArgString(args, 0U);
+    if (mode == RCD_MODE_OPT_IDLE) {
+        host->m_fixedMode = false;
+        host->setState(STATE_IDLE);
+
+        reply = string_format("Dynamic mode, mode %u", host->m_state);
+        LogInfoEx(LOG_RCON, reply.c_str());
+    }
+    else if (mode == RCD_MODE_OPT_LCKOUT) {
+        host->m_fixedMode = false;
+        host->setState(HOST_STATE_LOCKOUT);
+        reply = string_format("Lockout mode, mode %u", host->m_state);
+        LogInfoEx(LOG_RCON, reply.c_str());
+    }
+#if defined(ENABLE_DMR)
+    else if (mode == RCD_MODE_OPT_FDMR) {
+        if (dmr != nullptr) {
+            host->m_fixedMode = true;
+            host->setState(STATE_DMR);
+            reply = string_format("Fixed mode, mode %u", host->m_state);
+            LogInfoEx(LOG_RCON, reply.c_str());
+        }
+        else {
+            reply = CMD_FAILED_STR "DMR mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+    else if (mode == RCD_MODE_OPT_FP25) {
+        if (p25 != nullptr) {
+            host->m_fixedMode = true;
+            host->setState(STATE_P25);
+            reply = string_format("Fixed mode, mode %u", host->m_state);
+            LogInfoEx(LOG_RCON, reply.c_str());
+        }
+        else {
+            reply = CMD_FAILED_STR "P25 mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+    else if (mode == RCD_MODE_OPT_FNXDN) {
+        if (nxdn != nullptr) {
+            host->m_fixedMode = true;
+            host->setState(STATE_NXDN);
+            reply = string_format("Fixed mode, mode %u", host->m_state);
+            LogInfoEx(LOG_RCON, reply.c_str());
+        }
+        else {
+            reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#endif // defined(ENABLE_NXDN)
+    else {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+    if (host->m_authoritative) {
+        DVM_STATE state = (DVM_STATE)getArgInt32(args, 0U);
+        uint32_t dstId = getArgInt32(args, 1U);
+        if (dstId == 0U) {
+            reply = string_format(INVALID_OPT_STR "illegal TGID permitted (%u)", dstId);
+            LogError(LOG_RCON, reply.c_str());
+        }
+        else {
+            switch (state) {
+            case STATE_DMR:
+#if defined(ENABLE_DMR)
+            {
+                if (dmr != nullptr) {
+                    // TODO TODO TODO -- handle permitting destination IDs
+                }
+                else {
+                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    LogError(LOG_RCON, reply.c_str());
+                }
+            }
+#else
+            {
+                reply = INVALID_OPT_STR "invalid mode!";
+                LogError(LOG_RCON, reply.c_str());
+            }
+#endif // defined(ENABLE_DMR)
+            break;
+            case STATE_P25:
+#if defined(ENABLE_P25)
+            {
+                if (p25 != nullptr) {
+                    // TODO TODO TODO -- handle permitting destination IDs
+                }
+                else {
+                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    LogError(LOG_RCON, reply.c_str());
+                }
+            }
+#else
+            {
+                reply = INVALID_OPT_STR "invalid mode!";
+                LogError(LOG_RCON, reply.c_str());
+            }
+#endif // defined(ENABLE_P25)
+            break;
+            case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+            {
+                if (nxdn != nullptr) {
+                    // TODO TODO TODO -- handle permitting destination IDs
+                }
+                else {
+                    reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                    LogError(LOG_RCON, reply.c_str());
+                }
+            }
+#else
+            {
+                reply = INVALID_OPT_STR "invalid mode!";
+                LogError(LOG_RCON, reply.c_str());
+            }
+#endif // defined(ENABLE_NXDN)
+            break;
+            default:
+                reply = INVALID_OPT_STR "invalid mode!";
+                LogError(LOG_RCON, reply.c_str());
+                break;
+            }
+        }
+    }
+    else {
+        reply = CMD_FAILED_STR "Host is authoritative, cannot permit TG!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdDMRModemInj(std::vector<std::string> args, Host* host, dmr::Control* dmr)
+{
+    std::string reply = "";
+
+    if (dmr != nullptr) {
+        uint8_t slot = getArgUInt32(args, 0U);
+        std::string argString = getArgString(args, 1U);
+        const char* fileName = argString.c_str();
+        if (fileName != nullptr) {
+            FILE* file = ::fopen(fileName, "r");
+            if (file != nullptr) {
+                uint8_t* buffer = nullptr;
+                int32_t fileSize = 0;
+
+                // obtain file size
+                ::fseek(file, 0, SEEK_END);
+                fileSize = ::ftell(file);
+                ::rewind(file);
+
+                // allocate a buffer and read file
+                buffer = new uint8_t[fileSize];
+                if (buffer != nullptr) {
+                    int32_t bytes = ::fread(buffer, 1U, fileSize, file);
+                    if (bytes == fileSize) {
+                        uint8_t sync[dmr::DMR_SYNC_LENGTH_BYTES];
+                        ::memcpy(sync, buffer, dmr::DMR_SYNC_LENGTH_BYTES);
+
+                        // count data sync errors
+                        uint8_t dataErrs = 0U;
+                        for (uint8_t i = 0U; i < dmr::DMR_SYNC_LENGTH_BYTES; i++)
+                            dataErrs += Utils::countBits8(sync[i] ^ dmr::DMR_MS_DATA_SYNC_BYTES[i]);
+
+                        // count voice sync errors
+                        uint8_t voiceErrs = 0U;
+                        for (uint8_t i = 0U; i < dmr::DMR_SYNC_LENGTH_BYTES; i++)
+                            voiceErrs += Utils::countBits8(sync[i] ^ dmr::DMR_MS_VOICE_SYNC_BYTES[i]);
+
+                        if ((dataErrs <= 4U) || (voiceErrs <= 4U)) {
+                            if (slot == 0U) {
+                                host->m_modem->injectDMRData1(buffer, fileSize);
+                            }
+                            else if (slot == 1U) {
+                                host->m_modem->injectDMRData2(buffer, fileSize);
+                            }
+                            else {
+                                reply = CMD_FAILED_STR "invalid DMR slot!";
+                                LogError(LOG_RCON, reply.c_str());
+                            }
+                        }
+                        else {
+                            reply = CMD_FAILED_STR "DMR data has too many errors!";
+                            LogError(LOG_RCON, reply.c_str());
+                        }
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "DMR failed to open DMR data!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+
+                    delete[] buffer;
+                }
+
+                ::fclose(file);
+            }
+        }
+    }
+    else {
+        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdP25ModemInj(std::vector<std::string> args, Host* host, p25::Control* p25)
+{
+    std::string reply = "";
+
+    if (p25 != nullptr) {
+        std::string argString = getArgString(args, 0U);
+        const char* fileName = argString.c_str();
+        if (fileName != nullptr) {
+            FILE* file = ::fopen(fileName, "r");
+            if (file != nullptr) {
+                uint8_t* buffer = nullptr;
+                int32_t fileSize = 0;
+
+                // obtain file size
+                ::fseek(file, 0, SEEK_END);
+                fileSize = ::ftell(file);
+                ::rewind(file);
+
+                // allocate a buffer and read file
+                buffer = new uint8_t[fileSize];
+                if (buffer != nullptr) {
+                    int32_t bytes = ::fread(buffer, 1U, fileSize, file);
+                    if (bytes == fileSize) {
+                        uint8_t sync[p25::P25_SYNC_LENGTH_BYTES];
+                        ::memcpy(sync, buffer, p25::P25_SYNC_LENGTH_BYTES);
+
+                        uint8_t errs = 0U;
+                        for (uint8_t i = 0U; i < p25::P25_SYNC_LENGTH_BYTES; i++)
+                            errs += Utils::countBits8(sync[i] ^ p25::P25_SYNC_BYTES[i]);
+
+                        if (errs <= 4U) {
+                            bool valid = p25->nid().decode(buffer);
+                            if (valid) {
+                                host->m_modem->injectP25Data(buffer, fileSize);
+                            }
+                            else {
+                                reply = CMD_FAILED_STR "P25 data did not contain a valid NID!";
+                                LogError(LOG_RCON, reply.c_str());
+                            }
+                        }
+                        else {
+                            reply = CMD_FAILED_STR "P25 data has too many errors!";
+                            LogError(LOG_RCON, reply.c_str());
+                        }
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "P25 failed to open P25 data!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+
+                    delete[] buffer;
+                }
+
+                ::fclose(file);
+            }
+        }
+    }
+    else {
+        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdNXDNModemInj(std::vector<std::string> args, Host* host, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+
+    if (nxdn != nullptr) {
+        std::string argString = getArgString(args, 0U);
+        const char* fileName = argString.c_str();
+        if (fileName != nullptr) {
+            FILE* file = ::fopen(fileName, "r");
+            if (file != nullptr) {
+                uint8_t* buffer = nullptr;
+                int32_t fileSize = 0;
+
+                // obtain file size
+                ::fseek(file, 0, SEEK_END);
+                fileSize = ::ftell(file);
+                ::rewind(file);
+
+                // allocate a buffer and read file
+                buffer = new uint8_t[fileSize];
+                if (buffer != nullptr) {
+                    int32_t bytes = ::fread(buffer, 1U, fileSize, file);
+                    if (bytes == fileSize) {
+                        uint8_t sync[nxdn::NXDN_FSW_BYTES_LENGTH];
+                        ::memcpy(sync, buffer, nxdn::NXDN_FSW_BYTES_LENGTH);
+
+                        uint8_t errs = 0U;
+                        for (uint8_t i = 0U; i < nxdn::NXDN_FSW_BYTES_LENGTH; i++)
+                            errs += Utils::countBits8(sync[i] ^ nxdn::NXDN_FSW_BYTES[i]);
+
+                        if (errs <= 4U) {
+                            host->m_modem->injectNXDNData(buffer, fileSize);
+                        }
+                        else {
+                            reply = CMD_FAILED_STR "NXDN data has too many errors!";
+                            LogError(LOG_RCON, reply.c_str());
+                        }
+                    }
+                    else {
+                        reply = CMD_FAILED_STR "NXDN failed to open NXDN data!";
+                        LogError(LOG_RCON, reply.c_str());
+                    }
+
+                    delete[] buffer;
+                }
+
+                ::fclose(file);
+            }
+        }
+    }
+    else {
+        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+
+    return reply;
+}
+
+/// <summary>
 ///
 /// </summary>
 /// <param name="args"></param>
@@ -1351,81 +1532,4 @@ std::string RemoteControl::getArgString(std::vector<std::string> args, uint32_t 
         return "";
 
     return args.at(n);
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-uint64_t RemoteControl::getArgUInt64(std::vector<std::string> args, uint32_t n) const
-{
-    return (uint64_t)::atol(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-uint32_t RemoteControl::getArgUInt32(std::vector<std::string> args, uint32_t n) const
-{
-    return (uint32_t)::atoi(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-int32_t RemoteControl::getArgInt32(std::vector<std::string> args, uint32_t n) const
-{
-    return ::atoi(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-uint16_t RemoteControl::getArgUInt16(std::vector<std::string> args, uint32_t n) const
-{
-    return (uint16_t)::atoi(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-int16_t RemoteControl::getArgInt16(std::vector<std::string> args, uint32_t n) const
-{
-    return (int16_t)::atoi(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-uint8_t RemoteControl::getArgUInt8(std::vector<std::string> args, uint32_t n) const
-{
-    return (uint8_t)::atoi(getArgString(args, n).c_str());
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="args"></param>
-/// <param name="n"></param>
-/// <returns></returns>
-int8_t RemoteControl::getArgInt8(std::vector<std::string> args, uint32_t n) const
-{
-    return (int8_t)::atoi(getArgString(args, n).c_str());
 }

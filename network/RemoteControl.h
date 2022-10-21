@@ -90,22 +90,36 @@ private:
     std::string displayHelp();
 
     /// <summary></summary>
+    std::string rcdGetStatus(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+    /// <summary></summary>
+    std::string rcdMode(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+    /// <summary></summary>
+    std::string rcdPermitTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+
+    /// <summary></summary>
+    std::string rcdDMRModemInj(std::vector<std::string> args, Host* host, dmr::Control* dmr);
+    /// <summary></summary>
+    std::string rcdP25ModemInj(std::vector<std::string> args, Host* host, p25::Control* p25);
+    /// <summary></summary>
+    std::string rcdNXDNModemInj(std::vector<std::string> args, Host* host, nxdn::Control* nxdn);
+
+    /// <summary></summary>
     std::string getArgString(std::vector<std::string> args, uint32_t n) const;
 
     /// <summary></summary>
-    uint64_t getArgUInt64(std::vector<std::string> args, uint32_t n) const;
+    __forceinline uint64_t getArgUInt64(std::vector<std::string> args, uint32_t n) const { return (uint64_t)::atol(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    uint32_t getArgUInt32(std::vector<std::string> args, uint32_t n) const;
+    __forceinline uint32_t getArgUInt32(std::vector<std::string> args, uint32_t n) const { return (uint32_t)::atoi(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    int32_t getArgInt32(std::vector<std::string> args, uint32_t n) const;
+    __forceinline int32_t getArgInt32(std::vector<std::string> args, uint32_t n) const { return ::atoi(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    uint16_t getArgUInt16(std::vector<std::string> args, uint32_t n) const;
+    __forceinline uint16_t getArgUInt16(std::vector<std::string> args, uint32_t n) const { return (uint16_t)::atoi(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    int16_t getArgInt16(std::vector<std::string> args, uint32_t n) const;
+    __forceinline int16_t getArgInt16(std::vector<std::string> args, uint32_t n) const { return (int16_t)::atoi(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n) const;
+    __forceinline uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n) const { return (uint8_t)::atoi(getArgString(args, n).c_str()); }
     /// <summary></summary>
-    int8_t getArgInt8(std::vector<std::string> args, uint32_t n) const;
+    __forceinline int8_t getArgInt8(std::vector<std::string> args, uint32_t n) const { return (int8_t)::atoi(getArgString(args, n).c_str()); }
 };
 
 #endif // __REMOTE_CONTROL_H__
