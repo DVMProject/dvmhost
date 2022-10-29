@@ -1868,14 +1868,30 @@ bool Host::readParams()
         }
 
         yaml::Node& voiceChList = rfssConfig["voiceChNo"];
+
+        if (voiceChList.size() == 0U) {
+            ::LogError(LOG_HOST, "No voice channel list defined!");
+            return false;
+        }
+
         for (size_t i = 0; i < voiceChList.size(); i++) {
-            uint32_t chNo = (uint32_t)::strtoul(voiceChList[i].as<std::string>("1").c_str(), NULL, 16);
+            yaml::Node& channel = voiceChList[i];
+
+            uint32_t chNo = (uint32_t)::strtoul(channel["channelNo"].as<std::string>("1").c_str(), NULL, 16);
             if (chNo == 0U) { // clamp to 1
                 chNo = 1U;
             }
             if (chNo > 4095U) { // clamp to 4095
                 chNo = 4095U;
             }
+
+            std::string rconAddress = channel["rconAddress"].as<std::string>("127.0.0.1");
+            uint16_t rconPort = (uint16_t)channel["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
+            std::string rconPassword = channel["rconPassword"].as<std::string>();
+
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RCON Adddress %s:%u", m_channelId, chNo, rconAddress.c_str(), rconPort);
+
+            // TODO handle storing RCON data for voice channels
 
             m_voiceChNo.push_back(chNo);
         }

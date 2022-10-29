@@ -123,7 +123,10 @@ system:
         channelNo: 1
         dmrNetId: 1
         voiceChNo:
-            - 1
+            - channelNo: 1
+              rconAddress: 127.0.0.1
+              rconPort: 9990
+              rconPassword: "PASSWORD"
         colorCode: 1
         nac: 293
 #         txNAC: 293
