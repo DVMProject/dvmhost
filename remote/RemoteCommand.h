@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Remote Command Client
+* Digital Voice Modem - Host Software
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Remote Command Client
+* @package DVM / Host Software
 *
 */
 //
@@ -44,7 +44,7 @@ class HOST_SW_API RemoteCommand
 {
 public:
     /// <summary>Initializes a new instance of the RemoteCommand class.</summary>
-    RemoteCommand(const std::string& address, uint32_t port, const std::string& password);
+    RemoteCommand(const std::string& address, uint32_t port, const std::string& password, bool debug);
     /// <summary>Finalizes a instance of the RemoteCommand class.</summary>
     ~RemoteCommand();
 
@@ -55,6 +55,8 @@ private:
     std::string m_address;
     uint32_t m_port;
     std::string m_password;
+
+    bool m_debug;
 };
 
 #endif // __REMOTE_COMMAND_H__

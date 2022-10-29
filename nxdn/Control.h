@@ -103,6 +103,9 @@ namespace nxdn
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        void permittedTG(uint32_t dstId);
+
         /// <summary>Flag indicating whether the processor or is busy or not.</summary>
         bool isBusy() const;
 

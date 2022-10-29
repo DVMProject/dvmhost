@@ -325,6 +325,15 @@ void Control::clock()
 }
 
 /// <summary>
+/// Permits a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::permittedTG(uint32_t dstId)
+{
+    // TODO TODO
+}
+
+/// <summary>
 /// Helper to return the slot carrying the TSCC.
 /// </summary>
 /// <returns>Pointer to the TSCC slot instance.</returns>

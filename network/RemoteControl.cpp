@@ -1221,7 +1221,7 @@ std::string RemoteControl::rcdMode(std::vector<std::string> args, Host* host, dm
 std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
 {
     std::string reply = "";
-    if (host->m_authoritative) {
+    if (!host->m_authoritative) {
         DVM_STATE state = (DVM_STATE)getArgInt32(args, 0U);
         uint32_t dstId = getArgInt32(args, 1U);
         if (dstId == 0U) {
@@ -1234,7 +1234,7 @@ std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host
 #if defined(ENABLE_DMR)
             {
                 if (dmr != nullptr) {
-                    // TODO TODO TODO -- handle permitting destination IDs
+                    dmr->permittedTG(dstId);
                 }
                 else {
                     reply = CMD_FAILED_STR "DMR mode is not enabled!";
@@ -1252,7 +1252,7 @@ std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host
 #if defined(ENABLE_P25)
             {
                 if (p25 != nullptr) {
-                    // TODO TODO TODO -- handle permitting destination IDs
+                    p25->permittedTG(dstId);
                 }
                 else {
                     reply = CMD_FAILED_STR "P25 mode is not enabled!";
@@ -1270,7 +1270,7 @@ std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host
 #if defined(ENABLE_NXDN)
             {
                 if (nxdn != nullptr) {
-                    // TODO TODO TODO -- handle permitting destination IDs
+                    nxdn->permittedTG(dstId);
                 }
                 else {
                     reply = CMD_FAILED_STR "NXDN mode is not enabled!";

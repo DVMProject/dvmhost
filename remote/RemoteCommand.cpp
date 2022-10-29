@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Remote Command Client
+* Digital Voice Modem - Host Software
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Remote Command Client
+* @package DVM / Host Software
 *
 */
 //
@@ -47,12 +47,6 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#undef __PROG_NAME__
-#define __PROG_NAME__ "Digital Voice Modem (DVM) RCON Tool"
-#undef __EXE_NAME__
-#define __EXE_NAME__ "dvmcmd"
-
-#define ERRNO_REMOTE_CMD 99
 #define ERRNO_SOCK_OPEN 98
 #define ERRNO_ADDR_LOOKUP 97
 #define ERRNO_FAILED_TO_SEND 96
@@ -67,180 +61,6 @@ const uint32_t RC_BUFFER_LENGTH = 250U;
 const uint32_t RESPONSE_BUFFER_LEN = 4095U;
 
 // ---------------------------------------------------------------------------
-//	Macros
-// ---------------------------------------------------------------------------
-
-#define IS(s) (::strcmp(argv[i], s) == 0)
-
-// ---------------------------------------------------------------------------
-//  Global Variables
-// ---------------------------------------------------------------------------
-
-static std::string g_progExe = std::string(__EXE_NAME__);
-static std::string g_remoteAddress = std::string("127.0.0.1");
-static uint32_t g_remotePort = RCON_DEFAULT_PORT;
-static std::string g_remotePassword = std::string();
-static bool g_debug = false;
-
-// ---------------------------------------------------------------------------
-//	Global Functions
-// ---------------------------------------------------------------------------
-
-void fatal(const char* message)
-{
-    ::fprintf(stderr, "%s: %s\n", g_progExe.c_str(), message);
-    exit(EXIT_FAILURE);
-}
-
-void usage(const char* message, const char* arg)
-{
-    ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-    ::fprintf(stdout, "Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
-    ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
-    if (message != nullptr) {
-        ::fprintf(stderr, "%s: ", g_progExe.c_str());
-        ::fprintf(stderr, message, arg);
-        ::fprintf(stderr, "\n\n");
-    }
-
-    ::fprintf(stdout, "usage: %s [-v] [-a <address>] [-p <port>] [-P <password>] <command>\n\n"
-        "  -a       remote modem command address\n"
-        "  -p       remote modem command port\n"
-        "  -P       remote modem authentication password\n"
-        "\n"
-        "  -d       enable debug\n"
-        "  -v       show version information\n"
-        "  -h       show this screen\n"
-        "  --       stop handling options\n",
-        g_progExe.c_str());
-    exit(EXIT_FAILURE);
-}
-
-int checkArgs(int argc, char* argv[])
-{
-    int i, p = 0;
-
-    // iterate through arguments
-    for (i = 1; i <= argc; i++)
-    {
-        if (argv[i] == nullptr) {
-            break;
-        }
-
-        if (*argv[i] != '-') {
-            continue;
-        }
-        else if (IS("--")) {
-            ++p;
-            break;
-        }
-        else if (IS("-a")) {
-            if ((argc - 1) <= 0)
-                usage("error: %s", "must specify the address to connect to");
-            g_remoteAddress = std::string(argv[++i]);
-
-            if (g_remoteAddress == "")
-                usage("error: %s", "remote address cannot be blank!");
-
-            p += 2;
-        }
-        else if (IS("-p")) {
-            if ((argc - 1) <= 0)
-                usage("error: %s", "must specify the port to connect to");
-            g_remotePort = (uint32_t)::atoi(argv[++i]);
-
-            if (g_remotePort == 0)
-                usage("error: %s", "remote port number cannot be blank or 0!");
-
-            p += 2;
-        }
-        else if (IS("-P")) {
-            if ((argc - 1) <= 0)
-                usage("error: %s", "must specify the auth password");
-            g_remotePassword = std::string(argv[++i]);
-
-            if (g_remotePassword == "")
-                usage("error: %s", "remote auth password cannot be blank!");
-
-            p += 2;
-        }
-        else if (IS("-d")) {
-            ++p;
-            g_debug = true;
-        }
-        else if (IS("-v")) {
-            ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-            ::fprintf(stdout, "Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n");
-            ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n");
-            if (argc == 2)
-                exit(EXIT_SUCCESS);
-        }
-        else if (IS("-h")) {
-            usage(nullptr, nullptr);
-            if (argc == 2)
-                exit(EXIT_SUCCESS);
-        }
-        else {
-            usage("unrecognized option `%s'", argv[i]);
-        }
-    }
-
-    if (p < 0 || p > argc) {
-        p = 0;
-    }
-
-    return ++p;
-}
-
-// ---------------------------------------------------------------------------
-//  Program Entry Point
-// ---------------------------------------------------------------------------
-
-int main(int argc, char** argv)
-{
-    if (argv[0] != nullptr && *argv[0] != 0)
-        g_progExe = std::string(argv[0]);
-
-    if (argc < 2) {
-        usage("error: %s", "must specify the remote command!");
-        return ERRNO_REMOTE_CMD;
-    }
-
-    if (argc > 1) {
-        // check arguments
-        int i = checkArgs(argc, argv);
-        if (i < argc) {
-            argc -= i;
-            argv += i;
-        }
-        else {
-            argc--;
-            argv++;
-        }
-    }
-
-    // process command
-    std::string cmd = std::string(argv[0]);
-    for (int i = 1; i < argc; i++) {
-        cmd += " ";
-        cmd += std::string(argv[i]);
-    }
-
-    // initialize system logging
-    bool ret = ::LogInitialise("", "", 0U, 1U, true);
-    if (!ret) {
-        ::fprintf(stderr, "unable to open the log file\n");
-        return 1;
-    }
-
-    RemoteCommand* command = new RemoteCommand(g_remoteAddress, g_remotePort, g_remotePassword);
-    int retCode = command->send(cmd);
-
-    ::LogFinalise();
-    return retCode;
-}
-
-// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -250,10 +70,12 @@ int main(int argc, char** argv)
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
-RemoteCommand::RemoteCommand(const std::string& address, uint32_t port, const std::string& password) :
+/// <param name="debug">Flag indicating whether debug is enabled.</param>
+RemoteCommand::RemoteCommand(const std::string& address, uint32_t port, const std::string& password, bool debug) :
     m_address(address),
     m_port(port),
-    m_password(password)
+    m_password(password),
+    m_debug(debug)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -291,8 +113,7 @@ int RemoteCommand::send(const std::string& command)
         return ERRNO_ADDR_LOOKUP;
     }
 
-    ::LogInfoEx(LOG_HOST, "%s: sending command \"%s\" to %s:%u", g_progExe.c_str(), command.c_str(),
-        m_address.c_str(), m_port);
+    ::LogInfoEx(LOG_HOST, "sending RCON command \"%s\" to %s:%u", command.c_str(), m_address.c_str(), m_port);
 
     buffer[0U] = RCON_FRAME_START;
     buffer[1U] = START_OF_TEXT;
@@ -318,7 +139,7 @@ int RemoteCommand::send(const std::string& command)
 
     buffer[35U + command.size()] = END_OF_TEXT;
 
-    if (g_debug)
+    if (m_debug)
         Utils::dump(1U, "RCON Sent", (uint8_t*)buffer, 36U + command.size());
 
     ret = socket.write((uint8_t *)buffer, 36U + command.size(), addr, addrLen);
@@ -345,12 +166,12 @@ int RemoteCommand::send(const std::string& command)
         if (offs + len > RESPONSE_BUFFER_LEN)
             break;
 
-        if (g_debug)
+        if (m_debug)
             ::LogDebug(LOG_RCON, "RemoteCommand::send() block len = %u, offs = %u", len - 3, offs);
 
         buffer[len] = '\0';
 
-        if (g_debug)
+        if (m_debug)
             Utils::dump(1U, "RCON Received", (uint8_t*)buffer, len);
 
         // make sure this is an RCON response

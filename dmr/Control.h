@@ -90,6 +90,9 @@ namespace dmr
         /// <summary>Updates the processor.</summary>
         void clock();
 
+        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        void permittedTG(uint32_t dstId);
+
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;
 

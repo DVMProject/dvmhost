@@ -110,6 +110,9 @@ namespace p25
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        void permittedTG(uint32_t dstId);
+
         /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
         /// <summary>Gets instance of the Trunk class.</summary>

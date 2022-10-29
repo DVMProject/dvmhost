@@ -736,6 +736,15 @@ void Control::clock(uint32_t ms)
 }
 
 /// <summary>
+/// Permits a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::permittedTG(uint32_t dstId)
+{
+    // TODO TODO
+}
+
+/// <summary>
 /// Flag indicating whether the processor or is busy or not.
 /// </summary>
 /// <returns>True, if processor is busy, otherwise false.</returns>

@@ -74,6 +74,8 @@ file(GLOB dvmhost_SRC
     "network/*.h"
     "network/*.cpp"
     "network/json/*.h"
+    "remote/RemoteCommand.cpp"
+    "remote/RemoteCommand.h"
     "yaml/*.h"
     "yaml/*.cpp"
     "*.h"
