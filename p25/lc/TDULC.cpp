@@ -199,7 +199,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* rs)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded TDULC", rs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
     }
 
     return true;
@@ -215,16 +215,17 @@ void TDULC::encode(uint8_t* data, const uint8_t* rs)
     assert(data != nullptr);
     assert(rs != nullptr);
 
-    if (m_verbose) {
-        Utils::dump(2U, "Encoded TDULC", rs, P25_TDULC_LENGTH_BYTES);
-    }
-
     uint8_t outRs[P25_TDULC_LENGTH_BYTES];
     ::memset(outRs, 0x00U, P25_TDULC_LENGTH_BYTES);
     ::memcpy(outRs, rs, P25_TDULC_LENGTH_BYTES);
 
+    outRs[0U] = m_lco;                                                              // LCO
     if (m_implicit)
         outRs[0U] |= 0x40U;                                                         // Implicit Operation
+
+    if (m_verbose) {
+        Utils::dump(2U, "TDULC::encode(), TDULC Value", outRs, P25_TDULC_LENGTH_BYTES);
+    }
 
     // encode RS (24,12,13) FEC
     m_rs.encode241213(outRs);

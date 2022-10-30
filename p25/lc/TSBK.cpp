@@ -257,7 +257,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Decoded TSBK", tsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO

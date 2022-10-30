@@ -127,6 +127,8 @@ namespace p25
             std::unordered_map<uint8_t, SiteData> m_sccbTable;
             std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
 
+            uint8_t m_lastMFID;
+
             bool m_noStatusAck;
             bool m_noMessageAck;
             bool m_unitToUnitAvailCheck;

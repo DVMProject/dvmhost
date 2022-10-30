@@ -197,6 +197,8 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
         uint32_t srcId = tsbk->getSrcId();
         uint32_t dstId = tsbk->getDstId();
 
+        m_lastMFID = tsbk->getMFId();
+
         // handle standard P25 reference opcodes
         switch (tsbk->getLCO()) {
             case TSBK_IOSP_GRP_VCH:
@@ -1151,6 +1153,7 @@ void Trunk::setTSBKVerbose(bool verbose)
 {
     m_dumpTSBK = verbose;
     lc::TSBK::setVerbose(verbose);
+    lc::TDULC::setVerbose(verbose);
 }
 
 // ---------------------------------------------------------------------------
@@ -1181,6 +1184,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_adjSiteUpdateCnt(),
     m_sccbTable(),
     m_sccbUpdateCnt(),
+    m_lastMFID(P25_MFG_STANDARD),
     m_noStatusAck(false),
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
@@ -1208,6 +1212,9 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT;
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
     m_adjSiteUpdateTimer.start();
+
+    lc::TSBK::setVerbose(verbose);
+    lc::TDULC::setVerbose(verbose);
 }
 
 /// <summary>
@@ -2195,6 +2202,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
+            iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchNo(chNo);
@@ -2216,6 +2224,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             std::unique_ptr<IOSP_UU_VCH> iosp = new_unique(IOSP_UU_VCH);
+            iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchNo(chNo);
@@ -2247,6 +2256,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
 {
     std::unique_ptr<OSP_SNDCP_CH_GNT> osp = new_unique(OSP_SNDCP_CH_GNT);
+    osp->setMFId(m_lastMFID);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
 
@@ -2320,6 +2330,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
 void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_UU_ANS> iosp = new_unique(IOSP_UU_ANS);
+    iosp->setMFId(m_lastMFID);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
@@ -2339,6 +2350,7 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = new_unique(IOSP_ACK_RSP);
+    iosp->setMFId(m_lastMFID);
     iosp->setSrcId(srcId);
     iosp->setService(service);
 
@@ -2365,6 +2377,7 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
 void Trunk::writeRF_TSDU_Deny(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = new_unique(OSP_DENY_RSP);
+    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
@@ -2389,6 +2402,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     bool ret = false;
 
     std::unique_ptr<IOSP_GRP_AFF> iosp = new_unique(IOSP_GRP_AFF);
+    iosp->setMFId(m_lastMFID);
     iosp->setAnnounceGroup(m_patchSuperGroup); // this isn't right...
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
@@ -2445,6 +2459,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
     std::unique_ptr<IOSP_U_REG> iosp = new_unique(IOSP_U_REG);
+    iosp->setMFId(m_lastMFID);
     iosp->setResponse(P25_RSP_ACCEPT);
     iosp->setSrcId(srcId);
     iosp->setDstId(srcId);
@@ -2503,6 +2518,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
         std::unique_ptr<OSP_U_DEREG_ACK> osp = new_unique(OSP_U_DEREG_ACK);
+        osp->setMFId(m_lastMFID);
         osp->setSrcId(P25_WUID_FNE);
         osp->setDstId(srcId);
 
@@ -2523,6 +2539,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 void Trunk::writeRF_TSDU_Queue(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
+    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
@@ -2548,6 +2565,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
     bool ret = false;
 
     std::unique_ptr<OSP_LOC_REG_RSP> osp = new_unique(OSP_LOC_REG_RSP);
+    osp->setMFId(m_lastMFID);
     osp->setResponse(P25_RSP_ACCEPT);
     osp->setDstId(dstId);
     osp->setSrcId(srcId);

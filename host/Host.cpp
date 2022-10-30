@@ -1029,42 +1029,46 @@ int Host::run()
                         }
                     }
                     else {
-                        // if we have no P25 data, and we're either idle or P25 state, check if we 
-                        // need to be starting the CC running flag or writing end of voice call data
-                        if (m_state == STATE_IDLE || m_state == STATE_P25) {
-                            if (p25->getCCHalted()) {
-                                p25->setCCHalted(false);
-                            }
+                        nextLen = 0U;
+                    }
+                }
+            }
 
-                            // write end of voice if necessary
-                            ret = p25->writeRF_VoiceEnd();
-                            if (ret) {
-                                if (m_state == STATE_IDLE) {
-                                    m_modeTimer.setTimeout(m_netModeHang);
-                                    setState(STATE_P25);
-                                }
-
-                                if (m_state == STATE_P25) {
-                                    m_modeTimer.start();
-                                }
-                            }
-                        }
+            if (nextLen == 0U) {
+                // if we have no P25 data, and we're either idle or P25 state, check if we 
+                // need to be starting the CC running flag or writing end of voice call data
+                if (m_state == STATE_IDLE || m_state == STATE_P25) {
+                    if (p25->getCCHalted()) {
+                        p25->setCCHalted(false);
                     }
 
-                    // if the modem is in duplex -- handle P25 CC burst control
-                    if (m_duplex) {
-                        if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
-                            p25BcastDurationTimer.resume();
+                    // write end of voice if necessary
+                    ret = p25->writeRF_VoiceEnd();
+                    if (ret) {
+                        if (m_state == STATE_IDLE) {
+                            m_modeTimer.setTimeout(m_netModeHang);
+                            setState(STATE_P25);
                         }
 
-                        if (p25->getCCHalted()) {
-                            p25->setCCHalted(false);
-                        }
-
-                        if (g_fireP25Control) {
-                            m_modeTimer.stop();
+                        if (m_state == STATE_P25) {
+                            m_modeTimer.start();
                         }
                     }
+                }
+            }
+
+            // if the modem is in duplex -- handle P25 CC burst control
+            if (m_duplex) {
+                if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
+                    p25BcastDurationTimer.resume();
+                }
+
+                if (p25->getCCHalted()) {
+                    p25->setCCHalted(false);
+                }
+
+                if (g_fireP25Control) {
+                    m_modeTimer.stop();
                 }
             }
         }
