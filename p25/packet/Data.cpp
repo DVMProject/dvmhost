@@ -717,7 +717,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
     m_p25->m_nid.encode(data + 2U, P25_DUID_PDU);
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, newBitLength, false, true);
+    P25Utils::addBusyBits(data + 2U, newBitLength, false, true);
 
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;

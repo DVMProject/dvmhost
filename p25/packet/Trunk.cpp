@@ -1435,7 +1435,7 @@ void Trunk::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     lc->encode(data + 2U);
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+    P25Utils::addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
 
     m_p25->m_rfTimeout.stop();
 
@@ -1476,7 +1476,7 @@ void Trunk::writeNet_TDULC(lc::TDULC* lc)
     lc->encode(buffer + 2U);
 
     // Add busy bits
-    m_p25->addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+    P25Utils::addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
 
     m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1587,10 +1587,10 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
     }
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
+    P25Utils::addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
 
     // Set first busy bits to 1,1
-    m_p25->setBusyBits(data + 2U, P25_SS0_START, true, true);
+    P25Utils::setBusyBits(data + 2U, P25_SS0_START, true, true);
 
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
@@ -1646,10 +1646,10 @@ void Trunk::writeNet_TSDU(lc::TSBK* tsbk)
     tsbk->encode(buffer + 2U);
 
     // Add busy bits
-    m_p25->addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    P25Utils::addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
 
     // Set first busy bits to 1,1
-    m_p25->setBusyBits(buffer + 2U, P25_SS0_START, true, true);
+    P25Utils::setBusyBits(buffer + 2U, P25_SS0_START, true, true);
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
 
@@ -1742,7 +1742,7 @@ void Trunk::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
         P25Utils::encode(tsdu, data + 2U, 114U, 720U);
 
         // Add busy bits
-        m_p25->addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
+        P25Utils::addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
 
         // Add idle bits
         addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
@@ -2633,10 +2633,10 @@ void Trunk::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
     tsbk->encode(data);
 
     // Add busy bits
-    m_p25->addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+    P25Utils::addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
 
     // Set first busy bits to 1,1
-    m_p25->setBusyBits(data, P25_SS0_START, true, true);
+    P25Utils::setBusyBits(data, P25_SS0_START, true, true);
 }
 
 /// <summary>

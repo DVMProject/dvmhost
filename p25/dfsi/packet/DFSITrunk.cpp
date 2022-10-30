@@ -149,10 +149,10 @@ void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBefor
     }
 
     // Add busy bits
-    m_p25->addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
+    P25Utils::addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
 
     // Set first busy bits to 1,1
-    m_p25->setBusyBits(data + 2U, P25_SS0_START, true, true);
+    P25Utils::setBusyBits(data + 2U, P25_SS0_START, true, true);
 
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);

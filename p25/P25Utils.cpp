@@ -41,6 +41,47 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
+/// Helper to set the busy status bits on P25 frame data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="ssOffset"></param>
+/// <param name="b1"></param>
+/// <param name="b2"></param>
+void P25Utils::setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2)
+{
+    assert(data != nullptr);
+
+    WRITE_BIT(data, ssOffset, b1);
+    WRITE_BIT(data, ssOffset + 1U, b2);
+}
+
+/// <summary>
+/// Helper to add the busy status bits on P25 frame data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+/// <param name="b1"></param>
+/// <param name="b2"></param>
+void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+{
+    assert(data != nullptr);
+
+    // insert the "10" (Unknown, use for inbound or outbound) status bits
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += P25_SS_INCREMENT) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, true);  // 1
+        WRITE_BIT(data, ss1Pos, false); // 0
+    }
+
+    // interleave the requested status bits (every other)
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2)) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, b1);
+        WRITE_BIT(data, ss1Pos, b2);
+    }
+}
+
+/// <summary>
 /// Decode bit interleaving.
 /// </summary>
 /// <param name="in"></param>

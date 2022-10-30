@@ -387,7 +387,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                         m_rfLC.encodeHDU(buffer + 2U);
 
                         // Add busy bits
-                        m_p25->addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
+                        P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
                         writeNetwork(buffer, P25_DUID_HDU);
 
@@ -462,7 +462,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     m_rfFrames++;
 
                     // Add busy bits
-                    m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
+                    P25Utils::addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
                     writeNetwork(buffer + 2U, P25_DUID_LDU1);
 
@@ -554,7 +554,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     m_rfFrames++;
 
                     // Add busy bits
-                    m_p25->addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
+                    P25Utils::addBusyBits(buffer + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
                     writeNetwork(buffer + 2U, P25_DUID_LDU2);
 
@@ -585,7 +585,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
             m_p25->m_nid.encode(data + 2U, P25_DUID_TDU);
 
             // Add busy bits
-            m_p25->addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
+            P25Utils::addBusyBits(data + 2U, P25_TDU_FRAME_LENGTH_BITS, true, true);
 
             writeNetwork(data + 2U, P25_DUID_TDU);
 

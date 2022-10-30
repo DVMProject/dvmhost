@@ -232,11 +232,6 @@ namespace p25
         void writeRF_Preamble(uint32_t preambleCount = 0, bool force = false);
         /// <summary>Helper to write a P25 TDU packet.</summary>
         void writeRF_TDU(bool noNetwork);
-
-        /// <summary>Helper to set the busy status bits on P25 frame data.</summary>
-        void setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2);
-        /// <summary>Helper to add the busy status bits on P25 frame data.</summary>
-        void addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2);
     };
 } // namespace p25
 
