@@ -105,14 +105,13 @@ using namespace modem;
 /// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
 /// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="p25CorrCount">P25 Correlation Countdown.</param>
-/// <param name="packetPlayoutTime">Length of time in MS between packets to send to modem.</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="ignoreModemConfigArea">Flag indicating whether the modem configuration area is ignored.</param>
 /// <param name="dumpModemStatus">Flag indicating whether the modem status is dumped to the log.</param>
 /// <param name="trace">Flag indicating whether air interface modem trace is enabled.</param>
 /// <param name="debug">Flag indicating whether air interface modem debug is enabled.</param>
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
-    uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint8_t packetPlayoutTime, bool disableOFlowReset,
+    uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, bool disableOFlowReset,
     bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
     m_port(port),
     m_protoVer(0U),

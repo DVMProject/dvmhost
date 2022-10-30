@@ -815,6 +815,7 @@ int Host::run()
     // Macro to interrupt a running P25 control channel transmission
     #define INTERRUPT_P25_CONTROL                                                                                       \
         if (p25 != nullptr) {                                                                                           \
+            LogDebug(LOG_HOST, "interrupt P25 control, m_state = %u", m_state);                                         \
             p25->setCCHalted(true);                                                                                     \
             if (p25BcastDurationTimer.isRunning() && !p25BcastDurationTimer.isPaused()) {                               \
                 p25BcastDurationTimer.pause();                                                                          \
@@ -826,6 +827,7 @@ int Host::run()
         if (dmr != nullptr) {                                                                                           \
             if (dmrBeaconDurationTimer.isRunning() && !dmrBeaconDurationTimer.hasExpired()) {                           \
                 if (m_dmrTSCCData && !m_dmrCtrlChannel) {                                                               \
+                    LogDebug(LOG_HOST, "interrupt DMR control, m_state = %u", m_state);                                 \
                     dmr->setCCHalted(true);                                                                             \
                     dmr->setCCRunning(false);                                                                           \
                 }                                                                                                       \
@@ -836,6 +838,7 @@ int Host::run()
     // Macro to interrupt a running NXDN control channel transmission
     #define INTERRUPT_NXDN_CONTROL                                                                                      \
         if (nxdn != nullptr) {                                                                                          \
+            LogDebug(LOG_HOST, "interrupt NXDN control, m_state = %u", m_state);                                        \
             nxdn->setCCHalted(true);                                                                                    \
             if (nxdnBcastDurationTimer.isRunning() && !nxdnBcastDurationTimer.isPaused()) {                             \
                 nxdnBcastDurationTimer.pause();                                                                         \
@@ -928,7 +931,6 @@ int Host::run()
                         // if there is a P25 CC running; halt the CC
                         if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
                             }
                         }
@@ -936,7 +938,6 @@ int Host::run()
                         // if there is a NXDN CC running; halt the CC
                         if (nxdn != nullptr) {
                             if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                nxdn->setCCHalted(true);
                                 INTERRUPT_NXDN_CONTROL;
                             }
                         }
@@ -975,7 +976,6 @@ int Host::run()
                         // if there is a P25 CC running; halt the CC
                         if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
                             }
                         }
@@ -983,7 +983,6 @@ int Host::run()
                         // if there is a NXDN CC running; halt the CC
                         if (nxdn != nullptr) {
                             if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                nxdn->setCCHalted(true);
                                 INTERRUPT_NXDN_CONTROL;
                             }
                         }
@@ -1022,7 +1021,6 @@ int Host::run()
                             // if there is a NXDN CC running; halt the CC
                             if (nxdn != nullptr) {
                                 if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                    nxdn->setCCHalted(true);
                                     INTERRUPT_NXDN_CONTROL;
                                 }
                             }
@@ -1097,7 +1095,6 @@ int Host::run()
                         // if there is a P25 CC running; halt the CC
                         if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                p25->setCCHalted(true);
                                 INTERRUPT_P25_CONTROL;
                             }
                         }
@@ -1263,7 +1260,7 @@ int Host::run()
                         setState(STATE_P25);
 
                         INTERRUPT_DMR_BEACON;
-                        INTERRUPT_P25_CONTROL;
+                        //INTERRUPT_P25_CONTROL;
                         INTERRUPT_NXDN_CONTROL;
                     }
                     else {
@@ -1306,7 +1303,7 @@ int Host::run()
                     bool ret = p25->processFrame(data, len);
                     if (ret) {
                         m_modeTimer.start();
-                        INTERRUPT_P25_CONTROL;
+                        //INTERRUPT_P25_CONTROL;
                     }
                     else {
                         ret = p25->writeRF_VoiceEnd();
@@ -2049,16 +2046,11 @@ bool Host::createModem()
     if (!modemConf["txLevel"].isNone()) {
         cwIdTXLevel = dmrTXLevel = p25TXLevel = nxdnTXLevel = modemConf["txLevel"].as<float>(50.0F);
     }
-    uint8_t packetPlayoutTime = (uint8_t)modemConf["packetPlayoutTime"].as<uint32_t>(10U);
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
     bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
     bool dumpModemStatus = modemConf["dumpModemStatus"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
-
-    // make sure playout time is always greater than 1ms
-    if (packetPlayoutTime < 1U)
-        packetPlayoutTime = 1U;
 
     if (rfPower == 0U) { // clamp to 1
         rfPower = 1U;
@@ -2175,7 +2167,6 @@ bool Host::createModem()
         LogInfo("    DMR TX Level: %.1f%%", dmrTXLevel);
         LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
         LogInfo("    NXDN TX Level: %.1f%%", nxdnTXLevel);
-        LogInfo("    Packet Playout Time: %u ms", packetPlayoutTime);
         LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
 
         if (m_useDFSI) {
@@ -2196,7 +2187,7 @@ bool Host::createModem()
     }
 
     m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
-        packetPlayoutTime, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+        disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
         m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
