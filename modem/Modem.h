@@ -277,7 +277,7 @@ namespace modem
         /// <summary>Helper to test if the DMR Slot 2 ring buffer has free space.</summary>
         bool hasDMRSpace2() const;
         /// <summary>Helper to test if the P25 ring buffer has free space.</summary>
-        bool hasP25Space() const;
+        bool hasP25Space(uint32_t length) const;
         /// <summary>Helper to test if the NXDN ring buffer has free space.</summary>
         bool hasNXDNSpace() const;
         
@@ -316,13 +316,13 @@ namespace modem
         void injectNXDNData(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
-        bool writeDMRData1(const uint8_t* data, uint32_t length, bool immediate = false);
+        bool writeDMRData1(const uint8_t* data, uint32_t length);
         /// <summary>Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.</summary>
-        bool writeDMRData2(const uint8_t* data, uint32_t length, bool immediate = false);
+        bool writeDMRData2(const uint8_t* data, uint32_t length);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
-        bool writeP25Data(const uint8_t* data, uint32_t length, bool immediate = false);
+        bool writeP25Data(const uint8_t* data, uint32_t length);
         /// <summary>Writes NXDN frame data to the NXDN ring buffer.</summary>
-        bool writeNXDNData(const uint8_t* data, uint32_t length, bool immediate = false);
+        bool writeNXDNData(const uint8_t* data, uint32_t length);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
         bool writeDMRStart(bool tx);
@@ -439,12 +439,8 @@ namespace modem
 
         RingBuffer<uint8_t> m_rxDMRData1;
         RingBuffer<uint8_t> m_rxDMRData2;
-        RingBuffer<uint8_t> m_txDMRData1;
-        RingBuffer<uint8_t> m_txDMRData2;
         RingBuffer<uint8_t> m_rxP25Data;
-        RingBuffer<uint8_t> m_txP25Data;
         RingBuffer<uint8_t> m_rxNXDNData;
-        RingBuffer<uint8_t> m_txNXDNData;
 
         bool m_useDFSI;
 
@@ -496,9 +492,6 @@ namespace modem
         __READONLY_PROPERTY(bool, trace, Trace);
         /// <summary>Flag indicating if modem debugging is enabled.</summary>
         __READONLY_PROPERTY(bool, debug, Debug);
-
-        /// <summary>Modem packet playout timer.</summary>
-        __READONLY_PROPERTY(Timer, playoutTimer, PlayoutTimer);
     };
 } // namespace modem
 

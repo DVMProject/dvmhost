@@ -181,12 +181,8 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_rspHandler(nullptr),
     m_rxDMRData1(1000U, "Modem RX DMR1"),
     m_rxDMRData2(1000U, "Modem RX DMR2"),
-    m_txDMRData1(1000U, "Modem TX DMR1"),
-    m_txDMRData2(1000U, "Modem TX DMR2"),
     m_rxP25Data(1000U, "Modem RX P25"),
-    m_txP25Data(1000U, "Modem TX P25"),
     m_rxNXDNData(1000U, "Modem RX NXDN"),
-    m_txNXDNData(1000U, "Modem TX NXDN"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
@@ -202,8 +198,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_flashDisabled(false),
     m_dumpModemStatus(dumpModemStatus),
     m_trace(trace),
-    m_debug(debug),
-    m_playoutTimer(1000U, 0U, packetPlayoutTime)
+    m_debug(debug)
 {
     assert(port != nullptr);
 
@@ -526,8 +521,6 @@ bool Modem::open()
             return false;
 
         m_error = false;
-        m_playoutTimer.start();
-
         return true;
     }
 
@@ -856,10 +849,11 @@ void Modem::clock(uint32_t ms)
 
             m_cd = (m_buffer[5U] & 0x40U) == 0x40U;
 
-            m_dmrSpace1 = m_buffer[7U];
-            m_dmrSpace2 = m_buffer[8U];
-            m_p25Space = m_buffer[10U];
-            m_nxdnSpace = m_buffer[11U];
+            // spaces from the modem are returned in "logical" frame count, not raw byte size
+            m_dmrSpace1 = m_buffer[7U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_dmrSpace2 = m_buffer[8U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_p25Space = m_buffer[10U] * (p25::P25_LDU_FRAME_LENGTH_BYTES);
+            m_nxdnSpace = m_buffer[11U] * (nxdn::NXDN_FRAME_LENGTH_BYTES);
 
             if (m_dumpModemStatus) {
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
@@ -867,9 +861,6 @@ void Modem::clock(uint32_t ms)
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
                     m_rxDMRData1.length(), m_rxDMRData1.dataSize(), m_rxDMRData1.freeSpace(), m_rxDMRData2.length(), m_rxDMRData2.dataSize(), m_rxDMRData2.freeSpace(),
                     m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace(), m_rxNXDNData.length(), m_rxNXDNData.dataSize(), m_rxNXDNData.freeSpace());
-                LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, txDMRData1 size = %u, len = %u, free = %u; txDMRData2 size = %u, len = %u, free = %u, txP25Data size = %u, len = %u, free = %u, txNXDNData size = %u, len = %u, free = %u",
-                    m_txDMRData1.length(), m_txDMRData1.dataSize(), m_txDMRData1.freeSpace(), m_txDMRData2.length(), m_txDMRData2.dataSize(), m_txDMRData2.freeSpace(),
-                    m_txP25Data.length(), m_txP25Data.dataSize(), m_txP25Data.freeSpace(), m_txNXDNData.length(), m_txNXDNData.dataSize(), m_txNXDNData.freeSpace());
             }
 
             m_inactivityTimer.start();
@@ -905,92 +896,6 @@ void Modem::clock(uint32_t ms)
         forceModemReset = false;
         reset();
     }
-
-    // Only feed data to the modem if the playout timer has expired
-    m_playoutTimer.clock(ms);
-    if (!m_playoutTimer.hasExpired())
-        return;
-
-    /** Digital Mobile Radio */
-#if defined(ENABLE_DMR)
-    // write DMR slot 1 data to air interface
-    if (m_dmrSpace1 > 1U && !m_txDMRData1.isEmpty()) {
-        uint8_t len = 0U;
-        m_txDMRData1.getData(&len, 1U);
-        m_txDMRData1.getData(m_buffer, len);
-
-        //if (m_trace)
-        //    Utils::dump(1U, "Buffered TX DMR Data 1", m_buffer, len);
-
-        int ret = write(m_buffer, len);
-        if (ret != int(len))
-            LogError(LOG_MODEM, "Error writing DMR slot 1 data");
-
-        m_playoutTimer.start();
-
-        m_dmrSpace1--;
-    }
-
-    // write DMR slot 2 data to air interface
-    if (m_dmrSpace2 > 1U && !m_txDMRData2.isEmpty()) {
-        uint8_t len = 0U;
-        m_txDMRData2.getData(&len, 1U);
-        m_txDMRData2.getData(m_buffer, len);
-
-        //if (m_trace)
-        //    Utils::dump(1U, "Buffered TX DMR Data 2", m_buffer, len);
-
-        int ret = write(m_buffer, len);
-        if (ret != int(len))
-            LogError(LOG_MODEM, "Error writing DMR slot 2 data");
-
-        m_playoutTimer.start();
-
-        m_dmrSpace2--;
-    }
-#endif // defined(ENABLE_DMR)
-
-    /** Project 25 */
-#if defined(ENABLE_P25)
-    // write P25 data to air interface
-    if (m_p25Space > 1U && !m_txP25Data.isEmpty()) {
-        uint8_t len = 0U;
-        m_txP25Data.getData(&len, 1U);
-        m_txP25Data.getData(m_buffer, len);
-
-        //if (m_trace)
-        //    Utils::dump(1U, "Buffered TX P25 Data", m_buffer, len);
-
-        int ret = write(m_buffer, len);
-        if (ret != int(len))
-            LogError(LOG_MODEM, "Error writing P25 data");
-
-        m_playoutTimer.start();
-
-        m_p25Space--;
-    }
-#endif // defined(ENABLE_P25)
-
-    /** Next Generation Digital Narrowband */
-#if defined(ENABLE_NXDN)
-    // write NXDN data to air interface
-    if (m_nxdnSpace > 1U && !m_txNXDNData.isEmpty()) {
-        uint8_t len = 0U;
-        m_txNXDNData.getData(&len, 1U);
-        m_txNXDNData.getData(m_buffer, len);
-
-        //if (m_trace)
-        //    Utils::dump(1U, "Buffered TX NXDN Data", m_buffer, len);
-
-        int ret = write(m_buffer, len);
-        if (ret != int(len))
-            LogError(LOG_MODEM, "Error writing NXDN data");
-
-        m_playoutTimer.start();
-
-        m_nxdnSpace--;
-    }
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1089,8 +994,7 @@ uint32_t Modem::readNXDNData(uint8_t* data)
 /// <returns>True, if the DMR Slot 1 ring buffer has free space, otherwise false.</returns>
 bool Modem::hasDMRSpace1() const
 {
-    uint32_t space = m_txDMRData1.freeSpace() / (dmr::DMR_FRAME_LENGTH_BYTES + 4U);
-    return space > 1U;
+    return m_dmrSpace1 >= (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
 /// <summary>
@@ -1099,18 +1003,17 @@ bool Modem::hasDMRSpace1() const
 /// <returns>True, if the DMR Slot 2 ring buffer has free space, otherwise false.</returns>
 bool Modem::hasDMRSpace2() const
 {
-    uint32_t space = m_txDMRData2.freeSpace() / (dmr::DMR_FRAME_LENGTH_BYTES + 4U);
-    return space > 1U;
+    return m_dmrSpace2 >= (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
 }
 
 /// <summary>
 /// Helper to test if the P25 ring buffer has free space.
 /// </summary>
+/// <param name="length"></param>
 /// <returns>True, if the P25 ring buffer has free space, otherwise false.</returns>
-bool Modem::hasP25Space() const
+bool Modem::hasP25Space(uint32_t length) const
 {
-    uint32_t space = m_txP25Data.freeSpace() / (p25::P25_LDU_FRAME_LENGTH_BYTES + 4U);
-    return space > 1U;
+    return m_p25Space >= length;
 }
 
 /// <summary>
@@ -1119,8 +1022,7 @@ bool Modem::hasP25Space() const
 /// <returns>True, if the NXDN ring buffer has free space, otherwise false.</returns>
 bool Modem::hasNXDNSpace() const
 {
-    uint32_t space = m_txNXDNData.freeSpace() / (nxdn::NXDN_FRAME_LENGTH_BYTES + 4U);
-    return space > 1U;
+    return m_nxdnSpace >= nxdn::NXDN_FRAME_LENGTH_BYTES;
 }
 
 /// <summary>
@@ -1182,9 +1084,7 @@ bool Modem::hasError() const
 /// </summary>
 void Modem::clearDMRData1()
 {
-    if (!m_txDMRData1.isEmpty()) {
-        m_txDMRData1.clear();
-    }
+    // TODO -- implement modem side buffer clear
 }
 
 /// <summary>
@@ -1192,9 +1092,7 @@ void Modem::clearDMRData1()
 /// </summary>
 void Modem::clearDMRData2()
 {
-    if (!m_txDMRData2.isEmpty()) {
-        m_txDMRData2.clear();
-    }
+    // TODO -- implement modem side buffer clear
 }
 
 /// <summary>
@@ -1202,19 +1100,15 @@ void Modem::clearDMRData2()
 /// </summary>
 void Modem::clearP25Data()
 {
-    if (!m_txP25Data.isEmpty()) {
-        m_txP25Data.clear();
+    uint8_t buffer[3U];
 
-        uint8_t buffer[3U];
-
-        buffer[0U] = DVM_FRAME_START;
-        buffer[1U] = 3U;
-        buffer[2U] = CMD_P25_CLEAR;
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_P25_CLEAR;
 #if DEBUG_MODEM
-        Utils::dump(1U, "Modem::clearP25Data(), Written", buffer, 3U);
+    Utils::dump(1U, "Modem::clearP25Data(), Written", buffer, 3U);
 #endif
-        write(buffer, 3U);
-    }
+    write(buffer, 3U);
 }
 
 /// <summary>
@@ -1222,9 +1116,7 @@ void Modem::clearP25Data()
 /// </summary>
 void Modem::clearNXDNData()
 {
-    if (!m_txNXDNData.isEmpty()) {
-        m_txNXDNData.clear();
-    }
+    // TODO -- implement modem side buffer clear
 }
 
 /// <summary>
@@ -1347,7 +1239,7 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
+bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1374,23 +1266,22 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
     uint8_t len = length + 2U;
 
     // write or buffer DMR slot 1 data to air interface
-    if (immediate && m_dmrSpace1 > 1U) {
+    if (m_dmrSpace1 >= length) {
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeDMRData1(); immediate write (len %u)", length);
         //if (m_trace)
         //    Utils::dump(1U, "Immediate TX DMR Data 1", m_buffer, len);
 
         int ret = write(buffer, len);
-        if (ret != int(len))
+        if (ret != int(len)) {
             LogError(LOG_MODEM, "Error writing DMR slot 1 data");
+            return false;
+        }
 
-        m_playoutTimer.start();
-
-        m_dmrSpace1--;
+        m_dmrSpace1 -= length;
     }
     else {
-        m_txDMRData1.addData(&len, 1U);
-        m_txDMRData1.addData(buffer, len);
+        return false;
     }
 
     return true;
@@ -1404,9 +1295,8 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length, bool immediate)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-/// <param name="immediate">Flag indicating data should be immediately written.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
+bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1433,23 +1323,22 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
     uint8_t len = length + 2U;
 
     // write or buffer DMR slot 2 data to air interface
-    if (immediate && m_dmrSpace2 > 1U) {
+    if (m_dmrSpace2 >= length) {
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeDMRData2(); immediate write (len %u)", length);
         //if (m_trace)
         //    Utils::dump(1U, "Immediate TX DMR Data 2", m_buffer, len);
 
         int ret = write(buffer, len);
-        if (ret != int(len))
+        if (ret != int(len)) {
             LogError(LOG_MODEM, "Error writing DMR slot 2 data");
+            return false;
+        }
 
-        m_playoutTimer.start();
-
-        m_dmrSpace2--;
+        m_dmrSpace2 -= length;
     }
     else {
-        m_txDMRData2.addData(&len, 1U);
-        m_txDMRData2.addData(buffer, len);
+        return false;
     }
 
     return true;
@@ -1463,9 +1352,8 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length, bool immediate)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-/// <param name="immediate">Flag indicating data should be immediately written.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
+bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_P25)
     assert(data != nullptr);
@@ -1492,23 +1380,22 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
     uint8_t len = length + 2U;
 
     // write or buffer P25 data to air interface
-    if (immediate && m_p25Space > 1U) {
+    if (m_p25Space >= length) {
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeP25Data(); immediate write (len %u)", length);
         //if (m_trace)
         //    Utils::dump(1U, "Immediate TX P25 Data", m_buffer, len);
 
         int ret = write(buffer, len);
-        if (ret != int(len))
+        if (ret != int(len)) {
             LogError(LOG_MODEM, "Error writing P25 data");
+            return false;
+        }
 
-        m_playoutTimer.start();
-
-        m_p25Space--;
+        m_p25Space -= length;
     }
     else {
-        m_txP25Data.addData(&len, 1U);
-        m_txP25Data.addData(buffer, len);
+        return false;
     }
 
     return true;
@@ -1522,9 +1409,8 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length, bool immediate)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-/// <param name="immediate">Flag indicating data should be immediately written.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
+bool Modem::writeNXDNData(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_NXDN)
     assert(data != nullptr);
@@ -1551,23 +1437,22 @@ bool Modem::writeNXDNData(const uint8_t* data, uint32_t length, bool immediate)
     uint8_t len = length + 2U;
 
     // write or buffer NXDN data to air interface
-    if (immediate && m_nxdnSpace > 1U) {
+    if (m_nxdnSpace >= length) {
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeNXDNData(); immediate write (len %u)", length);
         //if (m_trace)
         //    Utils::dump(1U, "Immediate TX NXDN Data", m_buffer, len);
 
         int ret = write(buffer, len);
-        if (ret != int(len))
+        if (ret != int(len)) {
             LogError(LOG_MODEM, "Error writing NXDN data");
+            return false;
+        }
 
-        m_playoutTimer.start();
-
-        m_nxdnSpace--;
+        m_nxdnSpace -= length;
     }
     else {
-        m_txNXDNData.addData(&len, 1U);
-        m_txNXDNData.addData(buffer, len);
+        return false;
     }
 
     return true;
@@ -1645,11 +1530,6 @@ bool Modem::writeDMRShortLC(const uint8_t* lc)
 bool Modem::writeDMRAbort(uint32_t slotNo)
 {
 #if defined(ENABLE_DMR)
-    if (slotNo == 1U)
-        m_txDMRData1.clear();
-    else
-        m_txDMRData2.clear();
-
     uint8_t buffer[4U];
 
     buffer[0U] = DVM_FRAME_START;
@@ -2029,8 +1909,6 @@ bool Modem::writeConfig()
         return false;
     }
 
-    m_playoutTimer.start();
-
     return true;
 }
 
@@ -2095,8 +1973,6 @@ bool Modem::writeSymbolAdjust()
 
         return false;
     }
-
-    m_playoutTimer.start();
 
     return true;
 }

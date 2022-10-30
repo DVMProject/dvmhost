@@ -1001,68 +1001,71 @@ int Host::run()
         // if there is read frames from the P25 controller and write it
         // to the modem
         if (p25 != nullptr) {
-            ret = m_modem->hasP25Space();
-            if (ret) {
-                len = p25->getFrame(data);
-                if (len > 0U) {
-                    // if the state is idle; set to P25 and start mode timer
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_P25);
+            uint8_t nextLen = p25->peekFrameLength();
+            if (nextLen > 0U) {
+                ret = m_modem->hasP25Space(nextLen);
+                if (ret) {
+                    len = p25->getFrame(data);
+                    if (len > 0U) {
+                        // if the state is idle; set to P25 and start mode timer
+                        if (m_state == STATE_IDLE) {
+                            m_modeTimer.setTimeout(m_netModeHang);
+                            setState(STATE_P25);
+                        }
+
+                        // if the state is P25; write P25 data
+                        if (m_state == STATE_P25) {
+                            m_modem->writeP25Data(data, len);
+                            
+                            INTERRUPT_DMR_BEACON;
+
+                            // if there is a NXDN CC running; halt the CC
+                            if (nxdn != nullptr) {
+                                if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                                    nxdn->setCCHalted(true);
+                                    INTERRUPT_NXDN_CONTROL;
+                                }
+                            }
+                            
+                            m_modeTimer.start();
+                        }
                     }
+                    else {
+                        // if we have no P25 data, and we're either idle or P25 state, check if we 
+                        // need to be starting the CC running flag or writing end of voice call data
+                        if (m_state == STATE_IDLE || m_state == STATE_P25) {
+                            if (p25->getCCHalted()) {
+                                p25->setCCHalted(false);
+                            }
 
-                    // if the state is P25; write P25 data
-                    if (m_state == STATE_P25) {
-                        m_modem->writeP25Data(data, len);
-                        
-                        INTERRUPT_DMR_BEACON;
+                            // write end of voice if necessary
+                            ret = p25->writeRF_VoiceEnd();
+                            if (ret) {
+                                if (m_state == STATE_IDLE) {
+                                    m_modeTimer.setTimeout(m_netModeHang);
+                                    setState(STATE_P25);
+                                }
 
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                nxdn->setCCHalted(true);
-                                INTERRUPT_NXDN_CONTROL;
+                                if (m_state == STATE_P25) {
+                                    m_modeTimer.start();
+                                }
                             }
                         }
-                        
-                        m_modeTimer.start();
                     }
-                }
-                else {
-                    // if we have no P25 data, and we're either idle or P25 state, check if we 
-                    // need to be starting the CC running flag or writing end of voice call data
-                    if (m_state == STATE_IDLE || m_state == STATE_P25) {
+
+                    // if the modem is in duplex -- handle P25 CC burst control
+                    if (m_duplex) {
+                        if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
+                            p25BcastDurationTimer.resume();
+                        }
+
                         if (p25->getCCHalted()) {
                             p25->setCCHalted(false);
                         }
 
-                        // write end of voice if necessary
-                        ret = p25->writeRF_VoiceEnd();
-                        if (ret) {
-                            if (m_state == STATE_IDLE) {
-                                m_modeTimer.setTimeout(m_netModeHang);
-                                setState(STATE_P25);
-                            }
-
-                            if (m_state == STATE_P25) {
-                                m_modeTimer.start();
-                            }
+                        if (g_fireP25Control) {
+                            m_modeTimer.stop();
                         }
-                    }
-                }
-
-                // if the modem is in duplex -- handle P25 CC burst control
-                if (m_duplex) {
-                    if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
-                        p25BcastDurationTimer.resume();
-                    }
-
-                    if (p25->getCCHalted()) {
-                        p25->setCCHalted(false);
-                    }
-
-                    if (g_fireP25Control) {
-                        m_modeTimer.stop();
                     }
                 }
             }
@@ -2398,13 +2401,6 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
 
         // send entire modem packet over the remote port
         m_modemRemotePort->write(buffer, len);
-
-        // Only feed data to the modem if the playout timer has expired
-        modem->getPlayoutTimer().clock(ms);
-        if (!modem->getPlayoutTimer().hasExpired()) {
-            // handled modem response
-            return true;
-        }
     }
 
     // read any data from the remote port for the air interface
@@ -2429,8 +2425,6 @@ bool Host::rmtPortModemHandler(Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM r
         if (ret != int(len))
             LogError(LOG_MODEM, "Error writing remote data");
     }
-
-    modem->getPlayoutTimer().start();
 
     // handled modem response
     return true;

@@ -550,6 +550,21 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <returns>Length of frame data retreived.</returns>
+uint32_t Control::peekFrameLength()
+{
+    if (m_queue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+    m_queue.peek(&len, 1U);
+
+    return len;
+}
+
+/// <summary>
 /// Get frame data from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to store frame data.</param>
@@ -786,9 +801,9 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             return;
     }
 
-    if (m_writeImmediate && m_modem->hasP25Space() && m_modem->getState() == modem::STATE_P25) {
+    if (m_writeImmediate && m_modem->hasP25Space(length) && m_modem->getState() == modem::STATE_P25) {
         m_writeImmediate = false;
-        m_modem->writeP25Data(data, length, true);
+        m_modem->writeP25Data(data, length);
     }
     else {
         uint32_t space = m_queue.freeSpace();

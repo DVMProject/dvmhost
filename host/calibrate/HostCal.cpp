@@ -1322,7 +1322,7 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
                 uint8_t dataLen = 0U;
                 m_queue.peek(&dataLen, 1U);
 
-                if (!m_queue.isEmpty() && m_modem->m_p25Space > len) {
+                if (!m_queue.isEmpty() && m_modem->m_p25Space >= dataLen) {
                     uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES + 2U];
 
                     dataLen = 0U;
@@ -1443,6 +1443,7 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
             bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
             bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
 
+            // spaces from the modem are returned in "logical" frame count, not raw byte size
             m_modem->m_dmrSpace1 = buffer[7U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
             m_modem->m_dmrSpace2 = buffer[8U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
             m_modem->m_p25Space = buffer[10U] * (p25::P25_LDU_FRAME_LENGTH_BYTES);
