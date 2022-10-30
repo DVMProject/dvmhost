@@ -136,7 +136,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
-    m_writeImmediate(false),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -801,33 +800,27 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             return;
     }
 
-    if (m_writeImmediate && m_modem->hasP25Space(length) && m_modem->getState() == modem::STATE_P25) {
-        m_writeImmediate = false;
-        m_modem->writeP25Data(data, length);
-    }
-    else {
-        uint32_t space = m_queue.freeSpace();
-        if (space < (length + 1U)) {
-            if (!net) {
-                uint32_t queueLen = m_queue.length();
-                m_queue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
-                LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
-                return;
-            }
-            else {
-                LogError(LOG_P25, "overflow in the P25 queue while writing network data; queue free is %u, needed %u", space, length);
-                return;
-            }
+    uint32_t space = m_queue.freeSpace();
+    if (space < (length + 1U)) {
+        if (!net) {
+            uint32_t queueLen = m_queue.length();
+            m_queue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
+            LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
+            return;
         }
-
-        if (m_debug) {
-            Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
+        else {
+            LogError(LOG_P25, "overflow in the P25 queue while writing network data; queue free is %u, needed %u", space, length);
+            return;
         }
-
-        uint8_t len = length;
-        m_queue.addData(&len, 1U);
-        m_queue.addData(data, len);
     }
+
+    if (m_debug) {
+        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
+    }
+
+    uint8_t len = length;
+    m_queue.addData(&len, 1U);
+    m_queue.addData(data, len);
 }
 
 #if ENABLE_DFSI_SUPPORT

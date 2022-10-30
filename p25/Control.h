@@ -207,8 +207,6 @@ namespace p25
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
-        bool m_writeImmediate; // This is essentially a "latch" that will auto-reset after a writeRF_Queue() call.
-
         bool m_verbose;
         bool m_debug;
 

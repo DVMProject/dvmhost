@@ -283,7 +283,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 (m_pduUserData[10U] << 8) + m_pduUserData[11U];
 
                             if (m_rfDataHeader.getAckNeeded()) {
-                                m_p25->m_writeImmediate = true;
                                 writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
                             }
 
@@ -302,7 +301,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                             uint32_t llId = (m_pduUserData[1U] << 16) + (m_pduUserData[2U] << 8) + m_pduUserData[3U];
 
                             if (m_rfDataHeader.getAckNeeded()) {
-                                m_p25->m_writeImmediate = true;
                                 writeRF_PDU_Ack_Response(PDU_ACK_CLASS_ACK, PDU_ACK_TYPE_ACK, llId);
                             }
 
@@ -573,7 +571,6 @@ void Data::clock(uint32_t ms)
         uint32_t llId = *it;
         uint64_t ipAddr = m_connQueueTable[llId];
 
-        m_p25->m_writeImmediate = true;
         if (!acl::AccessControl::validateSrcId(llId)) {
             LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
             writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);

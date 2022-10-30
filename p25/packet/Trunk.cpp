@@ -1514,6 +1514,9 @@ void Trunk::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
     }
 
     uint32_t count = m_p25->m_hangCount / 2;
+    if (m_p25->m_voiceOnControl) {
+        count = count / 2;
+    }
     std::unique_ptr<lc::TDULC> lc = nullptr;
 
     if (m_p25->m_control) {
@@ -2205,8 +2208,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit group grant
-//            m_p25->m_writeImmediate = true;
-            writeRF_TSDU_SBF(iosp.get(), false, true, net);
+            writeRF_TSDU_SBF(iosp.get(), false);//, true, net);
         }
         else {
             if (!net) {
@@ -2227,8 +2229,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit private grant
-//            m_p25->m_writeImmediate = true;
-            writeRF_TSDU_SBF(iosp.get(), false, true, net);
+            writeRF_TSDU_SBF(iosp.get(), false);//, true, net);
         }
     }
 
