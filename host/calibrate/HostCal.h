@@ -39,6 +39,7 @@
 #include "host/Host.h"
 #include "lookups/IdenTableLookup.h"
 #include "yaml/Yaml.h"
+#include "RingBuffer.h"
 
 #include <string>
 
@@ -63,6 +64,8 @@ private:
 
     modem::Modem* m_modem;
 
+    RingBuffer<uint8_t> m_queue;
+
     Console m_console;
     edac::AMBEFEC m_fec;
     bool m_transmit;
@@ -73,6 +76,7 @@ private:
     bool m_dmrRx1K;
     bool m_p25Enabled;
     bool m_p25Rx1K;
+    bool m_p25TduTest;
     bool m_nxdnEnabled;
 
     bool m_isHotspot;
@@ -102,6 +106,7 @@ private:
 
     bool m_updateConfigFromModem;
     bool m_hasFetchedStatus;
+    bool m_requestedStatus;
 
     /// <summary>Modem port open callback.</summary>
     bool portModemOpen(modem::Modem* modem);
@@ -179,6 +184,9 @@ private:
     void getStatus();
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
+
+    /// <summary>Add data frame to the data ring buffer.</summary>
+    void addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrameSize);
 
     /// <summary>Counts the total number of bit errors between bytes.</summary>
     uint8_t countErrs(uint8_t a, uint8_t b);

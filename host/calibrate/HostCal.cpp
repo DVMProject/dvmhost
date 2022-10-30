@@ -36,6 +36,8 @@
 #include "p25/data/DataHeader.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/tsbk/TSBKFactory.h"
+#include "p25/NID.h"
+#include "p25/Sync.h"
 #include "p25/P25Utils.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
@@ -43,6 +45,7 @@
 #include "edac/CRC.h"
 #include "HostMain.h"
 #include "Log.h"
+#include "StopWatch.h"
 #include "Utils.h"
 
 using namespace modem;
@@ -62,10 +65,10 @@ using namespace lookups;
 #define DMR_CAL_STR         "[Tx] DMR 1200 Hz Tone Mode (2.75Khz Deviation)"
 #define P25_CAL_STR         "[Tx] P25 1200 Hz Tone Mode (2.83Khz Deviation)"
 #define DMR_LF_CAL_STR      "[Tx] DMR Low Frequency Mode (80 Hz square wave)"
-#define P25_LF_CAL_STR      "[Tx] P25 Low Frequency Mode (80 Hz square wave)"
 #define DMR_CAL_1K_STR      "[Tx] DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define DMR_DMO_CAL_1K_STR  "[Tx] DMR MS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)"
 #define P25_CAL_1K_STR      "[Tx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1)"
+#define P25_TDU_TEST_STR    "[Tx] P25 TDU Data Test Stream"
 #define NXDN_CAL_1K_STR     "[Tx] NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)"
 #define DMR_FEC_STR         "[Rx] DMR MS FEC BER Test Mode"
 #define DMR_FEC_1K_STR      "[Rx] DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)"
@@ -134,6 +137,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
     m_modem(nullptr),
+    m_queue(4096U, "Frame Buffer"),
     m_console(),
     m_fec(),
     m_transmit(false),
@@ -142,6 +146,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_dmrRx1K(false),
     m_p25Enabled(false),
     m_p25Rx1K(false),
+    m_p25TduTest(false),
     m_nxdnEnabled(false),
     m_isHotspot(false),
     m_debug(true),
@@ -467,8 +472,13 @@ int HostCal::run()
         return 2;
     }
 
+    m_modem->m_statusTimer.start();
+
     displayHelp();
     printStatus();
+
+    StopWatch stopWatch;
+    stopWatch.start();
 
     bool end = false;
     while (!end) {
@@ -937,6 +947,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -952,6 +963,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -967,6 +979,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -975,14 +988,15 @@ int HostCal::run()
         break;
         case 'l':
         {
-            m_mode = STATE_P25_LF_CAL;
-            m_modeStr = P25_LF_CAL_STR;
+            m_mode = STATE_P25;
+            m_modeStr = P25_TDU_TEST_STR;
             m_duplex = true;
             m_dmrEnabled = false;
-            m_dmrRx1K = false;
-            m_p25Enabled = false;
-            m_p25Rx1K = false;
+            m_p25Enabled = true;
+            m_p25TduTest = true;
             m_nxdnEnabled = false;
+
+            m_queue.clear();
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -997,6 +1011,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1012,6 +1027,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1027,6 +1043,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1044,6 +1061,7 @@ int HostCal::run()
                 m_dmrRx1K = false;
                 m_p25Enabled = false;
                 m_p25Rx1K = false;
+                m_p25TduTest = false;
                 m_nxdnEnabled = false;
 
                 LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1095,6 +1113,7 @@ int HostCal::run()
             m_duplex = false;
             m_dmrEnabled = false;
             m_p25Enabled = true;
+            m_p25TduTest = false;
             m_nxdnEnabled = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1111,6 +1130,7 @@ int HostCal::run()
                 m_dmrEnabled = false;
                 m_p25Enabled = false;
                 m_p25Rx1K = false;
+                m_p25TduTest = false;
                 m_nxdnEnabled = true;
 
                 LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
@@ -1130,6 +1150,7 @@ int HostCal::run()
             m_dmrRx1K = false;
             m_p25Enabled = false;
             m_p25Rx1K = false;
+            m_p25TduTest = false;
 
             LogMessage(LOG_CAL, " - %s", m_modeStr.c_str());
             writeConfig();
@@ -1191,10 +1212,39 @@ int HostCal::run()
             break;
         }
 
-        m_modem->clock(0U);
+        if (m_p25TduTest && m_queue.hasSpace(p25::P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
+            uint8_t data[p25::P25_TDU_FRAME_LENGTH_BYTES + 2U];
+            ::memset(data + 2U, 0x00U, p25::P25_TDU_FRAME_LENGTH_BYTES);
+
+            // Generate Sync
+            p25::Sync::addP25Sync(data + 2U);
+
+            // Generate NID
+            std::unique_ptr<p25::NID> nid = new_unique(p25::NID, 1U);
+            nid->encode(data + 2U, p25::P25_DUID_TDU);
+
+            // Add busy bits
+            p25::P25Utils::addBusyBits(data + 2U, p25::P25_TDU_FRAME_LENGTH_BITS, true, true);
+
+            data[0U] = modem::TAG_EOT;
+            data[1U] = 0x00U;
+
+            addFrame(data, p25::P25_TDU_FRAME_LENGTH_BYTES + 2U, p25::P25_LDU_FRAME_LENGTH_BYTES);
+        }
+
+        // ------------------------------------------------------
+        //  -- Modem Clocking                                 --
+        // ------------------------------------------------------
+
+        uint32_t ms = stopWatch.elapsed();
+        stopWatch.start();
+
+        m_modem->clock(ms);
 
         timerClock();
-        sleep(5U);
+
+        if (ms < 2U)
+            Thread::sleep(1U);
     }
 
     if (m_transmit)
@@ -1265,7 +1315,45 @@ bool HostCal::portModemClose(Modem* modem)
 /// <returns></returns>
 bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len)
 {
-   if (rspType == RTM_OK && len > 0) {
+    switch (m_mode) {
+        case STATE_P25:
+        {
+            if (m_transmit) {
+                uint8_t dataLen = 0U;
+                m_queue.peek(&dataLen, 1U);
+
+                if (!m_queue.isEmpty() && m_modem->m_p25Space > len) {
+                    uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+
+                    dataLen = 0U;
+                    m_queue.getData(&dataLen, 1U);
+                    m_queue.getData(data, dataLen);
+
+                    uint8_t buffer[250U];
+
+                    buffer[0U] = DVM_FRAME_START;
+                    buffer[1U] = dataLen + 2U;
+                    buffer[2U] = CMD_P25_DATA;
+
+                    ::memcpy(buffer + 3U, data + 1U, dataLen - 1U);
+
+                    uint8_t len = dataLen + 2U;
+
+                    int ret = m_modem->write(buffer, len);
+                    if (ret != int(len))
+                        LogError(LOG_MODEM, "Error writing P25 data");
+
+                    m_modem->m_p25Space -= dataLen;
+                }
+            }
+        }
+        break;
+
+        default:
+            break;
+    }
+
+    if (rspType == RTM_OK && len > 0) {
         switch (buffer[2U]) {
         case CMD_CAL_DATA:
         {
@@ -1355,12 +1443,18 @@ bool HostCal::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspType,
             bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
             bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
 
-            if (m_hasFetchedStatus) {
+            m_modem->m_dmrSpace1 = buffer[7U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_modem->m_dmrSpace2 = buffer[8U] * (dmr::DMR_FRAME_LENGTH_BYTES + 2U);
+            m_modem->m_p25Space = buffer[10U] * (p25::P25_LDU_FRAME_LENGTH_BYTES);
+            m_modem->m_nxdnSpace = buffer[11U] * (nxdn::NXDN_FRAME_LENGTH_BYTES);
+
+            if (m_hasFetchedStatus && m_requestedStatus) {
                 LogMessage(LOG_CAL, " - Diagnostic Values [Modem State: %u, Transmitting: %d, ADC Overflow: %d, Rx Overflow: %d, Tx Overflow: %d, DAC Overflow: %d, HS: %u]",
                     modemState, tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_isHotspot);
             }
 
             m_hasFetchedStatus = true;
+            m_requestedStatus = false;
         }
         break;
 
@@ -1474,10 +1568,10 @@ void HostCal::displayHelp()
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
     LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
     LogMessage(LOG_CAL, "    L        %s", DMR_LF_CAL_STR);
-    LogMessage(LOG_CAL, "    l        %s", P25_LF_CAL_STR);
     LogMessage(LOG_CAL, "    M        %s", DMR_CAL_1K_STR);
     LogMessage(LOG_CAL, "    m        %s", DMR_DMO_CAL_1K_STR);
     LogMessage(LOG_CAL, "    P        %s", P25_CAL_1K_STR);
+    LogMessage(LOG_CAL, "    l        %s", P25_TDU_TEST_STR);
     LogMessage(LOG_CAL, "    N        %s", NXDN_CAL_1K_STR);
     LogMessage(LOG_CAL, "    B        %s", DMR_FEC_STR);
     LogMessage(LOG_CAL, "    J        %s", DMR_FEC_1K_STR);
@@ -1756,12 +1850,22 @@ bool HostCal::setNXDNSymLevel1Adj(int incr)
 /// <returns>True, if setting was applied, otherwise false.</returns>
 bool HostCal::setTransmit()
 {
-    if (m_dmrEnabled || m_p25Enabled) {
+    if (m_dmrEnabled || (m_p25Enabled && !m_p25TduTest)) {
         LogError(LOG_CAL, "No transmit allowed in a BER Test mode");
         return false;
     }
 
     m_transmit = !m_transmit;
+
+    if (m_p25Enabled && m_p25TduTest) {
+        if (m_transmit)
+            LogMessage(LOG_CAL, " - Modem start transmitting");
+        else
+            LogMessage(LOG_CAL, " - Modem stop transmitting");
+
+        m_modem->clock(0U);
+        return true;
+    }
 
     uint8_t buffer[50U];
 
@@ -2867,6 +2971,7 @@ void HostCal::getStatus()
 
     sleep(25U);
 
+    m_requestedStatus = true;
     m_modem->clock(0U);
 }
 
@@ -2941,6 +3046,29 @@ void HostCal::printStatus()
     }
 
     getStatus();
+}
+
+/// <summary>
+/// Add data frame to the data ring buffer.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+/// <param name="maxFrameSize"></param>
+void HostCal::addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrameSize)
+{
+    assert(data != nullptr);
+
+    uint32_t space = m_queue.freeSpace();
+    if (space < (length + 1U)) {
+        uint32_t queueLen = m_queue.length();
+        m_queue.resize(queueLen + maxFrameSize);
+        LogError(LOG_CAL, "overflow in the frame queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
+        return;
+    }
+
+    uint8_t len = length;
+    m_queue.addData(&len, 1U);
+    m_queue.addData(data, len);
 }
 
 /// <summary>

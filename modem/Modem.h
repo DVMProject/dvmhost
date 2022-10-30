@@ -83,7 +83,6 @@ namespace modem
         STATE_CW = 10U,
 
         // Calibration States
-        STATE_P25_LF_CAL = 91U,
         STATE_P25_CAL_1K = 92U,
 
         STATE_DMR_DMO_CAL_1K = 93U,
