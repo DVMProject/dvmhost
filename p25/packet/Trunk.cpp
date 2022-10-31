@@ -1213,8 +1213,8 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
     m_adjSiteUpdateTimer.start();
 
-    lc::TSBK::setVerbose(verbose);
-    lc::TDULC::setVerbose(verbose);
+    lc::TSBK::setVerbose(dumpTSBKData);
+    lc::TDULC::setVerbose(dumpTSBKData);
 }
 
 /// <summary>
