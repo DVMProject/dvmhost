@@ -149,7 +149,7 @@ HostCal::HostCal(const std::string& confFile) :
     m_p25TduTest(false),
     m_nxdnEnabled(false),
     m_isHotspot(false),
-    m_debug(true),
+    m_debug(false),
     m_mode(STATE_DMR_CAL),
     m_modeStr(DMR_CAL_STR),
     m_rxFrequency(0U),
