@@ -483,6 +483,8 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         LogMessage(LOG_RCON, "Remote P25, mfgId reset, mfgId = $%02X", mfId);
                         m_p25MFId = p25::P25_MFG_STANDARD;
                     }
+
+                    p25->trunk()->setLastMFId(m_p25MFId);
                 }
                 else {
                     reply = CMD_FAILED_STR "P25 mode is not enabled!";
