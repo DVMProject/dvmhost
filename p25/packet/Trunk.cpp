@@ -56,7 +56,7 @@ using namespace p25::packet;
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_p25->m_control) {                                                            \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, unsupported service, srcId = %u", _SRCID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT);             \
+        writeRF_TSDU_Deny(P25_WUID_FNE, _SRCID, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT); \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
@@ -65,7 +65,7 @@ using namespace p25::packet;
 #define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID)                                           \
     if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID rejection, srcId = %u", _SRCID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_REQ_UNIT_NOT_VALID, _PCKT);              \
+        writeRF_TSDU_Deny(P25_WUID_FNE, _SRCID, P25_DENY_RSN_REQ_UNIT_NOT_VALID, _PCKT); \
         denialInhibit(_SRCID);                                                          \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
@@ -75,7 +75,7 @@ using namespace p25::packet;
 #define VALID_DSTID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                   \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID rejection, dstId = %u", _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_TGT_UNIT_NOT_VALID, _PCKT);              \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, P25_DENY_RSN_TGT_UNIT_NOT_VALID, _PCKT);      \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
@@ -84,7 +84,7 @@ using namespace p25::packet;
 #define VALID_TGID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                    \
     if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, TGID rejection, dstId = %u", _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_TGT_GROUP_NOT_VALID, _PCKT);             \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, P25_DENY_RSN_TGT_GROUP_NOT_VALID, _PCKT);     \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
     }
@@ -93,7 +93,7 @@ using namespace p25::packet;
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID)                                      \
     if (!m_p25->m_affiliations.isUnitReg(_SRCID) && m_verifyReg) {                      \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not registered, srcId = %u", _SRCID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);               \
+        writeRF_TSDU_Deny(P25_WUID_FNE, _SRCID, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT); \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
@@ -103,7 +103,7 @@ using namespace p25::packet;
 #define VERIFY_SRCID_AFF(_PCKT_STR, _PCKT, _SRCID, _DSTID)                              \
     if (!m_p25->m_affiliations.isGroupAff(_SRCID, _DSTID) && m_verifyAff) {             \
         LogWarning(LOG_RF, P25_TSDU_STR ", " _PCKT_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _SRCID, _DSTID); \
-        writeRF_TSDU_Deny(_SRCID, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);               \
+        writeRF_TSDU_Deny(_SRCID, _DSTID, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, _PCKT);       \
         writeRF_TSDU_U_Reg_Cmd(_SRCID);                                                 \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
@@ -285,10 +285,10 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                     writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
-                    writeRF_TSDU_Deny(srcId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
+                    writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_WAIT) {
-                    writeRF_TSDU_Queue(srcId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_ANS);
+                    writeRF_TSDU_Queue(P25_WUID_FNE, srcId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_ANS);
                 }
             }
             break;
@@ -300,7 +300,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 // validate the source RID
                 VALID_SRCID("TSBK_IOSP_TELE_INT_ANS (Telephone Interconnect Answer Response)", TSBK_IOSP_TELE_INT_ANS, srcId);
 
-                writeRF_TSDU_Deny(srcId, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
+                writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_IOSP_TELE_INT_ANS);
             }
             break;
             case TSBK_ISP_SNDCP_CH_REQ:
@@ -321,7 +321,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                     writeRF_TSDU_SNDCP_Grant(false, false);
                 }
                 else {
-                    writeRF_TSDU_Deny(srcId, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_ISP_SNDCP_CH_REQ);
+                    writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, TSBK_ISP_SNDCP_CH_REQ);
                 }
             }
             break;
@@ -2124,7 +2124,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
             if (!net) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
-                writeRF_TSDU_Deny(srcId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_p25->m_rfState = RS_RF_REJECTED;
@@ -2136,7 +2136,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
         if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
             if (!net) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
-                writeRF_TSDU_Deny(srcId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_p25->m_rfState = RS_RF_REJECTED;
@@ -2149,7 +2149,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
         if (m_p25->m_rfLastDstId != 0U) {
             if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
                 if (!net) {
-                    writeRF_TSDU_Deny(srcId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                    writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
                     m_p25->m_rfState = RS_RF_REJECTED;
                 }
 
@@ -2162,7 +2162,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", dstId);
-                        writeRF_TSDU_Queue(srcId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_GRP_VCH);
+                        writeRF_TSDU_Queue(srcId, dstId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_GRP_VCH);
 
                         ::ActivityLog("P25", true, "group grant request from %u to TG %u queued", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
@@ -2173,7 +2173,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 else {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) queued, no channels available, dstId = %u", dstId);
-                        writeRF_TSDU_Queue(srcId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_UU_VCH);
+                        writeRF_TSDU_Queue(srcId, dstId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_IOSP_UU_VCH);
 
                         ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
@@ -2269,7 +2269,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
             if (!net) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) denied, traffic in progress, srcId = %u", srcId);
-                writeRF_TSDU_Queue(srcId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
+                writeRF_TSDU_Queue(srcId, dstId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
 
                 ::ActivityLog("P25", true, "SNDCP grant request from %u queued", srcId);
                 m_p25->m_rfState = RS_RF_REJECTED;
@@ -2282,7 +2282,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
             if (!m_p25->m_affiliations.isRFChAvailable()) {
                 if (!net) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) queued, no channels available, srcId = %u", srcId);
-                    writeRF_TSDU_Queue(srcId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
+                    writeRF_TSDU_Queue(srcId, dstId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
 
                     ::ActivityLog("P25", true, "SNDCP grant request from %u queued", srcId);
                     m_p25->m_rfState = RS_RF_REJECTED;
@@ -2350,7 +2350,6 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = new_unique(IOSP_ACK_RSP);
-    iosp->setMFId(m_lastMFID);
     iosp->setSrcId(srcId);
     iosp->setService(service);
 
@@ -2374,12 +2373,11 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
 /// <param name="reason"></param>
 /// <param name="service"></param>
 /// <param name="aiv"></param>
-void Trunk::writeRF_TSDU_Deny(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+void Trunk::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = new_unique(OSP_DENY_RSP);
-    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
-    osp->setSrcId(P25_WUID_FNE);
+    osp->setSrcId(srcId);
     osp->setDstId(dstId);
     osp->setService(service);
     osp->setResponse(reason);
@@ -2524,9 +2522,6 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 
         writeRF_TSDU_SBF(osp.get(), false);
     }
-    else {
-        ::ActivityLog("P25", true, "unit deregistration request from %u denied", srcId);
-    }
 }
 
 /// <summary>
@@ -2536,12 +2531,11 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// <param name="reason"></param>
 /// <param name="service"></param>
 /// <param name="aiv"></param>
-void Trunk::writeRF_TSDU_Queue(uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
-    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
-    osp->setSrcId(P25_WUID_FNE);
+    osp->setSrcId(srcId);
     osp->setDstId(dstId);
     osp->setService(service);
     osp->setResponse(reason);
