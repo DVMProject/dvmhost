@@ -2118,8 +2118,13 @@ bool Host::createModem()
 
         if (portType == PTY_PORT) {
 #if !defined(_WIN32) && !defined(_WIN64)
+/*
             modemPort = new port::PseudoPTYPort(uartPort, serialSpeed, true);
             LogInfo("    PTY File: %s", uartPort.c_str());
+            LogInfo("    PTY Speed: %u", uartSpeed);
+*/            
+            modemPort = new port::UARTPort(uartPort, serialSpeed, false);
+            LogInfo("    PTY Port: %s", uartPort.c_str());
             LogInfo("    PTY Speed: %u", uartSpeed);
 #else
             LogError(LOG_HOST, "Pseudo PTY is not supported on Windows!");
