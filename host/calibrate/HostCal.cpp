@@ -421,7 +421,7 @@ int HostCal::run()
     p25::lc::TSBK::setWarnCRC(true);
     p25::lc::tsbk::TSBKFactory::setWarnCRC(true);
 
-    m_modem = new Modem(modemPort, false, rxInvert, txInvert, pttInvert, dcBlocker, false, fdmaPreamble, dmrRxDelay, p25CorrCount, false, ignoreModemConfigArea, false, false, false);
+    m_modem = new Modem(modemPort, false, rxInvert, txInvert, pttInvert, dcBlocker, false, fdmaPreamble, dmrRxDelay, p25CorrCount, 3960U, 2592U, 1488U, false, ignoreModemConfigArea, false, false, false);
     m_modem->setLevels(rxLevel, txLevel, txLevel, txLevel, txLevel);
     m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
     m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);

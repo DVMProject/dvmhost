@@ -217,8 +217,8 @@ namespace modem
     public:
         /// <summary>Initializes a new instance of the Modem class.</summary>
         Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
-            uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, bool disableOFlowReset,
-            bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug);
+            uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint32_t dmrQueueSize, uint32_t p25QueueSize, uint32_t nxdnQueueSize,
+            bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug);
         /// <summary>Finalizes a instance of the Modem class.</summary>
         ~Modem();
 

@@ -133,6 +133,10 @@ private:
     uint8_t m_p25RfssId;
     uint32_t m_nxdnRAN;
 
+    uint32_t m_dmrQueueSizeBytes;
+    uint32_t m_p25QueueSizeBytes;
+    uint32_t m_nxdnQueueSizeBytes;
+
     bool m_authoritative;
 
     uint8_t m_activeTickDelay;

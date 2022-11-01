@@ -134,6 +134,9 @@ Host::Host(const std::string& confFile) :
     m_p25SysId(1U),
     m_p25RfssId(1U),
     m_nxdnRAN(1U),
+    m_dmrQueueSizeBytes(3960U), // 24 frames
+    m_p25QueueSizeBytes(2592U), // 12 frames
+    m_nxdnQueueSizeBytes(1488U), // 31 frames
     m_authoritative(true),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
@@ -372,24 +375,8 @@ int Host::run()
         bool dumpTAData = dmrProtocol["dumpTAData"].as<bool>(true);
         uint32_t callHang = dmrProtocol["callHang"].as<uint32_t>(3U);
         uint32_t txHang = dmrProtocol["txHang"].as<uint32_t>(4U);
-        uint32_t queueSize = dmrProtocol["queueSize"].as<uint32_t>(31U);
         bool dmrVerbose = dmrProtocol["verbose"].as<bool>(true);
         bool dmrDebug = dmrProtocol["debug"].as<bool>(false);
-
-        // clamp queue size to no less then 24 and no greater the 100
-        if (queueSize <= 24U) {
-            LogWarning(LOG_HOST, "DMR queue size must be greater then 24 frames, defaulting to 24 frames!");
-            queueSize = 24U;
-        }
-        if (queueSize > 100U) {
-            LogWarning(LOG_HOST, "DMR queue size must be less then 100 frames, defaulting to 100 frames!");
-            queueSize = 100U; 
-        }
-        if (queueSize > 60U) {
-            LogWarning(LOG_HOST, "DMR queue size is excessive, >60 frames!");
-        }
-
-        uint32_t queueSizeBytes = queueSize * (dmr::DMR_FRAME_LENGTH_BYTES * 5U);
 
         uint32_t jitter = m_conf["network"]["jitter"].as<uint32_t>(360U);
 
@@ -408,7 +395,6 @@ int Host::run()
         LogInfo("    Dump CSBK Data: %s", dmrDumpCsbkData ? "yes" : "no");
         LogInfo("    Call Hang: %us", callHang);
         LogInfo("    TX Hang: %us", txHang);
-        LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
 
         // forcibly enable beacons when TSCC is enabled but not in dedicated mode
         if (m_dmrTSCCData && !dmrCtrlChannel && !m_dmrBeacons) {
@@ -442,7 +428,7 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, queueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
+        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose));
         dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
@@ -480,31 +466,14 @@ int Host::run()
         bool p25RepeatDataPacket = p25Protocol["repeatDataPacket"].as<bool>(true);
         bool p25DumpTsbkData = p25Protocol["dumpTsbkData"].as<bool>(false);
         uint32_t callHang = p25Protocol["callHang"].as<uint32_t>(3U);
-        uint16_t queueSize = p25Protocol["queueSize"].as<uint16_t>(12U);
         bool p25Verbose = p25Protocol["verbose"].as<bool>(true);
         bool p25Debug = p25Protocol["debug"].as<bool>(false);
-
-        // clamp queue size to no less then 5 and no greater the 100 frames
-        if (queueSize <= 10U) {
-            LogWarning(LOG_HOST, "P25 queue size must be greater then 10 frames, defaulting to 10 frames!");
-            queueSize = 10U;
-        }
-        if (queueSize > 100U) {
-            LogWarning(LOG_HOST, "P25 queue size must be less then 100 frames, defaulting to 100 frames!");
-            queueSize = 100U; 
-        }
-        if (queueSize > 30U) {
-            LogWarning(LOG_HOST, "P25 queue size is excessive, >30 frames!");
-        }
-
-        uint32_t queueSizeBytes = queueSize * p25::P25_LDU_FRAME_LENGTH_BYTES;
 
         LogInfo("    TDU Preamble before Voice: %u", tduPreambleCount);
         LogInfo("    Dump Packet Data: %s", p25DumpDataPacket ? "yes" : "no");
         LogInfo("    Repeat Packet Data: %s", p25RepeatDataPacket ? "yes" : "no");
         LogInfo("    Dump TSBK Data: %s", p25DumpTsbkData ? "yes" : "no");
         LogInfo("    Call Hang: %us", callHang);
-        LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
 
         LogInfo("    Control: %s", m_p25CCData ? "yes" : "no");
 
@@ -532,7 +501,7 @@ int Host::run()
             }
         }
 
-        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, queueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
+        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
         p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
@@ -566,27 +535,10 @@ int Host::run()
         bool nxdnCtrlBroadcast = nxdnProtocol["control"]["broadcast"].as<bool>(true);
         bool nxdnDumpRcchData = nxdnProtocol["dumpRcchData"].as<bool>(false);
         uint32_t callHang = nxdnProtocol["callHang"].as<uint32_t>(3U);
-        uint32_t queueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
         bool nxdnVerbose = nxdnProtocol["verbose"].as<bool>(true);
         bool nxdnDebug = nxdnProtocol["debug"].as<bool>(false);
 
-        // clamp queue size to no less then 5 and no greater the 100 frames
-        if (queueSize <= 10U) {
-            LogWarning(LOG_HOST, "NXDN queue size must be greater then 10 frames, defaulting to 10 frames!");
-            queueSize = 10U;
-        }
-        if (queueSize > 100U) {
-            LogWarning(LOG_HOST, "NXDN queue size must be less then 100 frames, defaulting to 100 frames!");
-            queueSize = 100U; 
-        }
-        if (queueSize > 30U) {
-            LogWarning(LOG_HOST, "NXDN queue size is excessive, >30 frames!");
-        }
-
-        uint32_t queueSizeBytes = queueSize * (nxdn::NXDN_FRAME_LENGTH_BYTES * 5U);
-
         LogInfo("    Call Hang: %us", callHang);
-        LogInfo("    Queue Size: %u (%u bytes)", queueSize, queueSizeBytes);
 
         LogInfo("    Control: %s", m_nxdnCCData ? "yes" : "no");
 
@@ -614,7 +566,7 @@ int Host::run()
             }
         }
 
-        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, queueSizeBytes, m_timeout, m_rfTalkgroupHang,
+        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
         nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
@@ -1982,6 +1934,62 @@ bool Host::readParams()
 /// </summary>
 bool Host::createModem()
 {
+    yaml::Node protocolConf = m_conf["protocols"];
+
+    yaml::Node dmrProtocol = protocolConf["dmr"];
+    uint32_t dmrQueueSize = dmrProtocol["queueSize"].as<uint32_t>(24U);
+
+    // clamp queue size to no less then 24 and no greater the 100
+    if (dmrQueueSize <= 24U) {
+        LogWarning(LOG_HOST, "DMR queue size must be greater then 24 frames, defaulting to 24 frames!");
+        dmrQueueSize = 24U;
+    }
+    if (dmrQueueSize > 100U) {
+        LogWarning(LOG_HOST, "DMR queue size must be less then 100 frames, defaulting to 100 frames!");
+        dmrQueueSize = 100U; 
+    }
+    if (dmrQueueSize > 60U) {
+        LogWarning(LOG_HOST, "DMR queue size is excessive, >60 frames!");
+    }
+
+    m_dmrQueueSizeBytes = dmrQueueSize * (dmr::DMR_FRAME_LENGTH_BYTES * 5U);
+
+    yaml::Node p25Protocol = protocolConf["p25"];
+    uint32_t p25QueueSize = p25Protocol["queueSize"].as<uint16_t>(12U);
+
+    // clamp queue size to no less then 12 and no greater the 100 frames
+    if (p25QueueSize <= 12U) {
+        LogWarning(LOG_HOST, "P25 queue size must be greater then 12 frames, defaulting to 12 frames!");
+        p25QueueSize = 12U;
+    }
+    if (p25QueueSize > 50U) {
+        LogWarning(LOG_HOST, "P25 queue size must be less then 50 frames, defaulting to 50 frames!");
+        p25QueueSize = 50U; 
+    }
+    if (p25QueueSize > 30U) {
+        LogWarning(LOG_HOST, "P25 queue size is excessive, >30 frames!");
+    }
+
+    m_p25QueueSizeBytes = p25QueueSize * p25::P25_LDU_FRAME_LENGTH_BYTES;
+
+    yaml::Node nxdnProtocol = protocolConf["nxdn"];
+    uint32_t nxdnQueueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
+
+    // clamp queue size to no less then 31 and no greater the 50 frames
+    if (nxdnQueueSize <= 31U) {
+        LogWarning(LOG_HOST, "NXDN queue size must be greater then 31 frames, defaulting to 31 frames!");
+        nxdnQueueSize = 31U;
+    }
+    if (nxdnQueueSize > 50U) {
+        LogWarning(LOG_HOST, "NXDN queue size must be less then 50 frames, defaulting to 50 frames!");
+        nxdnQueueSize = 50U; 
+    }
+    if (nxdnQueueSize > 30U) {
+        LogWarning(LOG_HOST, "NXDN queue size is excessive, >30 frames!");
+    }
+
+    m_nxdnQueueSizeBytes = nxdnQueueSize * nxdn::NXDN_FRAME_LENGTH_BYTES;
+
     yaml::Node modemConf = m_conf["system"]["modem"];
 
     yaml::Node modemProtocol = modemConf["protocol"];
@@ -2172,6 +2180,9 @@ bool Host::createModem()
         LogInfo("    P25 TX Level: %.1f%%", p25TXLevel);
         LogInfo("    NXDN TX Level: %.1f%%", nxdnTXLevel);
         LogInfo("    Disable Overflow Reset: %s", disableOFlowReset ? "yes" : "no");
+        LogInfo("    DMR Queue Size: %u (%u bytes)", dmrQueueSize, m_dmrQueueSizeBytes);
+        LogInfo("    P25 Queue Size: %u (%u bytes)", p25QueueSize, m_p25QueueSizeBytes);
+        LogInfo("    NXDN Queue Size: %u (%u bytes)", nxdnQueueSize, m_nxdnQueueSizeBytes);
 
         if (m_useDFSI) {
             LogInfo("    Digital Fixed Station Interface: yes");
@@ -2191,7 +2202,7 @@ bool Host::createModem()
     }
 
     m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
-        disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+        m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
         m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);

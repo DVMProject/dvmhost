@@ -105,14 +105,17 @@ using namespace modem;
 /// <param name="fdmaPreamble">Count of FDMA preambles to transmit before data. (P25/DMR DMO)</param>
 /// <param name="dmrRxDelay">Compensate for delay in receiver audio chain in ms. Usually DSP based.</param>
 /// <param name="p25CorrCount">P25 Correlation Countdown.</param>
+/// <param name="dmrQueueSize">Modem DMR frame buffer queue size (bytes).</param>
+/// <param name="p25QueueSize">Modem P25 frame buffer queue size (bytes).</param>
+/// <param name="nxdnQueueSize">Modem NXDN frame buffer queue size (bytes).</param>
 /// <param name="disableOFlowReset">Flag indicating whether the ADC/DAC overflow reset logic is disabled.</param>
 /// <param name="ignoreModemConfigArea">Flag indicating whether the modem configuration area is ignored.</param>
 /// <param name="dumpModemStatus">Flag indicating whether the modem status is dumped to the log.</param>
 /// <param name="trace">Flag indicating whether air interface modem trace is enabled.</param>
 /// <param name="debug">Flag indicating whether air interface modem debug is enabled.</param>
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
-    uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, bool disableOFlowReset,
-    bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
+    uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint32_t dmrQueueSize, uint32_t p25QueueSize, uint32_t nxdnQueueSize,
+    bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
     m_port(port),
     m_protoVer(0U),
     m_dmrColorCode(0U),
@@ -178,10 +181,10 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_openPortHandler(nullptr),
     m_closePortHandler(nullptr),
     m_rspHandler(nullptr),
-    m_rxDMRData1(1000U, "Modem RX DMR1"),
-    m_rxDMRData2(1000U, "Modem RX DMR2"),
-    m_rxP25Data(1000U, "Modem RX P25"),
-    m_rxNXDNData(1000U, "Modem RX NXDN"),
+    m_rxDMRData1(dmrQueueSize, "Modem RX DMR1"),
+    m_rxDMRData2(dmrQueueSize, "Modem RX DMR2"),
+    m_rxP25Data(p25QueueSize, "Modem RX P25"),
+    m_rxNXDNData(nxdnQueueSize, "Modem RX NXDN"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
