@@ -90,7 +90,7 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-v] [-a <address>] [-p <port>] [-P <password>] <command>\n\n"
+    ::fprintf(stdout, "usage: %s [-dvh] [-a <address>] [-p <port>] [-P <password>] <command>\n\n"
         "  -a       remote modem command address\n"
         "  -p       remote modem command port\n"
         "  -P       remote modem authentication password\n"

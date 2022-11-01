@@ -140,7 +140,7 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-v] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
+    ::fprintf(stdout, "usage: %s [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
         "  -f       foreground mode\n"
         "  --cal    calibration mode\n"
         "  --setup  setup mode\n"
