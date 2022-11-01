@@ -529,10 +529,14 @@ int HostCal::run()
         }
         break;
         case 'R':
-            setRXLevel(1);
+            if (!m_isHotspot) {
+                setRXLevel(1);
+            }
             break;
         case 'r':
-            setRXLevel(-1);
+            if (!m_isHotspot) {
+                setRXLevel(-1);
+            }
             break;
         case 'T':
             setTXLevel(1);
@@ -541,16 +545,24 @@ int HostCal::run()
             setTXLevel(-1);
             break;
         case 'c':
-            setRXDCOffset(-1);
+            if (!m_isHotspot) {
+                setRXDCOffset(-1);
+            }
             break;
         case 'C':
-            setRXDCOffset(1);
+            if (!m_isHotspot) {
+                setRXDCOffset(1);
+            }
             break;
         case 'o':
-            setTXDCOffset(-1);
+            if (!m_isHotspot) {
+                setTXDCOffset(-1);
+            }
             break;
         case 'O':
-            setTXDCOffset(1);
+            if (!m_isHotspot) {
+                setTXDCOffset(1);
+            }
             break;
 
         case 'X':
@@ -1550,8 +1562,12 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    p        Toggle PTT inversion");
         LogMessage(LOG_CAL, "    d        Toggle DC blocker");
     }
-    LogMessage(LOG_CAL, "    R/r      Increase/Decrease receive level");
-    LogMessage(LOG_CAL, "    T/t      Increase/Decrease transmit level");
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    R/r      Increase/Decrease receive level");
+        LogMessage(LOG_CAL, "    T/t      Increase/Decrease transmit level");
+    } else {
+        LogMessage(LOG_CAL, "    T/t      Increase/Decrease deviation level");
+    }
     if (!m_isHotspot) {
         LogMessage(LOG_CAL, "    C/c      Increase/Decrease RX DC offset level");
         LogMessage(LOG_CAL, "    O/o      Increase/Decrease TX DC offset level");
