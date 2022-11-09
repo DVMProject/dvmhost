@@ -144,6 +144,8 @@ namespace p25
 
             uint16_t m_microslotCount;
 
+            bool m_ctrlTimeDateAnn;
+
             bool m_ctrlTSDUMBF;
 
             bool m_localEmergAlarm;

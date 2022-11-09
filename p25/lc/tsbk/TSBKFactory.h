@@ -75,6 +75,7 @@
 #include "p25/lc/tsbk/OSP_SNDCP_CH_GNT.h"
 #include "p25/lc/tsbk/OSP_SYNC_BCAST.h"
 #include "p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
+#include "p25/lc/tsbk/OSP_TIME_DATE_ANN.h"
 #include "p25/lc/tsbk/OSP_U_DEREG_ACK.h"
 #include "p25/lc/tsbk/OSP_U_REG_CMD.h"
 

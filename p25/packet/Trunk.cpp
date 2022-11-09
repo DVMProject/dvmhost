@@ -1193,6 +1193,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_adjSiteUpdateTimer(1000U),
     m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_microslotCount(0U),
+    m_ctrlTimeDateAnn(false),
     m_ctrlTSDUMBF(true),
     m_localEmergAlarm(false),
     m_sndcpChGrant(false),
@@ -1377,15 +1378,21 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         break;
     }
 
+    // are we transmitting the time/date annoucement?
+    bool timeDateAnn = (frameCnt % 64U) == 0U;
+    if (m_ctrlTimeDateAnn && timeDateAnn && n > 4U) {
+        queueRF_TSBK_Ctrl(TSBK_OSP_TIME_DATE_ANN);
+    }
+
     // should we insert the BSI bursts?
     bool bsi = (frameCnt % 127U) == 0U;
-    if (bsi && n > 3U) {
+    if (bsi && n > 4U) {
         queueRF_TSBK_Ctrl(TSBK_OSP_MOT_CC_BSI);
     }
 
-    // shuld we insert the Git Hash burst?
+    // should we insert the Git Hash burst?
     bool hash = (frameCnt % 125U) == 0U;
-    if (hash && n > 3U) {
+    if (hash && n > 4U) {
         queueRF_TSBK_Ctrl(TSBK_OSP_DVM_GIT_HASH);
     }
 
@@ -2052,6 +2059,19 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             std::unique_ptr<OSP_SYNC_BCAST> osp = new_unique(OSP_SYNC_BCAST);
             osp->setMicroslotCount(m_microslotCount);
             tsbk = std::move(osp);
+        }
+        break;
+        case TSBK_OSP_TIME_DATE_ANN:
+        {
+            if (m_ctrlTimeDateAnn) {
+                if (m_debug) {
+                    LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time and Date Announcement)");
+                }
+                
+                // transmit time/date announcement
+                std::unique_ptr<OSP_TIME_DATE_ANN> osp = new_unique(OSP_TIME_DATE_ANN);
+                tsbk = std::move(osp);
+            }
         }
         break;
 

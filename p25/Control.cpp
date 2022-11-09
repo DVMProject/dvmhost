@@ -254,6 +254,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
+    m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
 
 #if ENABLE_DFSI_SUPPORT
     if (m_modem->isP25DFSI()) {
@@ -326,6 +327,7 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
             LogInfo("    Disable Multi-Block TSDUs: yes");
         }
         LogInfo("    Emergency Support Disabled: %s", m_emergDisabled ? "yes" : "no");
+        LogInfo("    Time/Date Announcement TSBK: %s", m_trunk->m_ctrlTimeDateAnn ? "yes" : "no");
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");

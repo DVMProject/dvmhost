@@ -58,6 +58,8 @@ protocols:
             broadcast: true
             interval: 300
             duration: 1
+            disableTSDUMBF: false
+            enableTimeDateAnn: false
         voiceOnControl: false
         disableCompositeFlag: false
         inhibitIllegal: false

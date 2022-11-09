@@ -333,6 +333,7 @@ namespace p25
     const uint8_t   TSBK_OSP_AUTH_FNE_RESP = 0x32U;     // AUTH FNE RESP - Authentication FNE Response
     const uint8_t   TSBK_OSP_QUE_RSP = 0x33U;           // QUE RSP - Queued Response
     const uint8_t   TSBK_OSP_IDEN_UP_VU = 0x34U;        // IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
+    const uint8_t   TSBK_OSP_TIME_DATE_ANN = 0x35U;     // TIME DATE ANN - Time and Date Announcement
     const uint8_t   TSBK_OSP_SYS_SRV_BCAST = 0x38U;     // SYS SRV BCAST - System Service Broadcast
     const uint8_t   TSBK_OSP_SCCB = 0x39U;              // SCCB - Secondary Control Channel Broadcast
     const uint8_t   TSBK_OSP_RFSS_STS_BCAST = 0x3AU;    // RFSS STS BCAST - RFSS Status Broadcast
