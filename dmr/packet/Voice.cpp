@@ -197,7 +197,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+                LogMessage(LOG_RF, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, 
+                    m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getFLCO(), m_slot->m_rfLC->getFID(), m_slot->m_rfLC->getPF());
             }
 
             ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
@@ -235,7 +236,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->writeNetwork(data, DT_VOICE_PI_HEADER);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
+                LogMessage(LOG_RF, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, 
+                    m_slot->m_rfPrivacyLC->getAlgId(), m_slot->m_rfPrivacyLC->getKId(), m_slot->m_rfPrivacyLC->getDstId());
             }
 
             return true;
@@ -706,7 +708,8 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo, lc->getSrcId(), lc->getDstId(), lc->getFLCO(), lc->getFID(), lc->getPF());
+            LogMessage(LOG_NET, DMR_DT_VOICE_LC_HEADER ", slot = %u, srcId = %u, dstId = %u, FLCO = $%02X, FID = $%02X, PF = %u", m_slot->m_slotNo,
+                m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(), m_slot->m_netLC->getFLCO(), m_slot->m_netLC->getFID(), m_slot->m_netLC->getPF());
         }
 
         ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO_GROUP ? "TG " : "", dstId);
@@ -802,7 +805,8 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->addFrame(data, true);
 
         if (m_verbose) {
-            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo, lc->getAlgId(), lc->getKId(), lc->getDstId());
+            LogMessage(LOG_NET, DMR_DT_VOICE_PI_HEADER ", slot = %u, algId = %u, kId = %u, dstId = %u", m_slot->m_slotNo,
+                m_slot->m_netPrivacyLC->getAlgId(), m_slot->m_netPrivacyLC->getKId(), m_slot->m_netPrivacyLC->getDstId());
         }
     }
     else if (dataType == DT_VOICE_SYNC) {
