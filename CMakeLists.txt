@@ -1,6 +1,32 @@
+#/**
+#* Digital Voice Modem - Host Software
+#* GPLv2 Open Source. Use is subject to license terms.
+#* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#*
+#* @package DVM / Host Software
+#*
+#*/
+#/*
+#*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+#*   Copyright (C) 2022 by Natalie Moore <https://github.com/jelimoore>
+#*
+#*   This program is free software; you can redistribute it and/or modify
+#*   it under the terms of the GNU General Public License as published by
+#*   the Free Software Foundation; either version 2 of the License, or
+#*   (at your option) any later version.
+#*
+#*   This program is distributed in the hope that it will be useful,
+#*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#*   GNU General Public License for more details.
+#*
+#*   You should have received a copy of the GNU General Public License
+#*   along with this program; if not, write to the Free Software
+#*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#*/
 cmake_minimum_required(VERSION 3.18.4)
 
-# dvmhost
+# dvmhost source/header files
 file(GLOB dvmhost_SRC
     # DMR module
     "dmr/*.h"
@@ -82,7 +108,7 @@ file(GLOB dvmhost_SRC
     "*.cpp"
 )
 
-# dvmcmd
+# dvmcmd source/header files
 file(GLOB dvmcmd_SRC
     "network/UDPSocket.h"
     "network/UDPSocket.cpp"
@@ -99,7 +125,7 @@ file(GLOB dvmcmd_SRC
     "Utils.cpp"
 )
 
-# dvmcmd
+# dvmtest source/header files
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
 )
@@ -250,6 +276,9 @@ else ()
     message(CHECK_PASS "no")
 endif (CROSS_COMPILE_RPI_ARM)
 
+#
+# standard CMake options
+#
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY .)
@@ -257,6 +286,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O3 -Wall -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -Wall -std=c++11")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -O3 -Wall -std=c++11 -s")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -std=c++11 -s")
+
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+
+set(CMAKE_INSTALL_PREFIX "/opt/dvm")
 
 set(GIT_VER "")
 set(GIT_VER_HASH "")
@@ -266,12 +299,14 @@ execute_process(COMMAND git describe --abbrev=8 --always --tags WORKING_DIRECTOR
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
+# dvmhost project
 project(dvmhost)
 find_package(Threads REQUIRED)
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE .)
 target_link_libraries(dvmhost PRIVATE Threads::Threads util)
 
+# dvmcmd project
 project(dvmcmd)
 find_package(Threads REQUIRED)
 add_executable(dvmcmd ${dvmcmd_SRC})
@@ -279,6 +314,7 @@ target_link_libraries(dvmcmd PRIVATE Threads::Threads)
 target_include_directories(dvmcmd PRIVATE .)
 
 if (ENABLE_TESTS)
+# dvmtest project
 project(dvmtest)
 Include(FetchContent)
 
@@ -294,3 +330,15 @@ add_executable(dvmtests ${dvmtests_SRC})
 target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain Threads::Threads util)
 target_include_directories(dvmtests PRIVATE .)
 endif (ENABLE_TESTS)
+
+# dvmhost/dvmcmd install
+install(TARGETS dvmhost DESTINATION bin)
+install(TARGETS dvmcmd DESTINATION bin)
+install(FILES config.example.yml iden_table.dat RSSI.dat rid_acl.example.dat tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(PROGRAMS start-dvm.sh stop-dvm.sh dvm-watchdog.sh stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(CODE "execute_process(COMMAND mkdir -p /opt/dvm/log || true)")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/opt\\\\/dvm\\\\/iden_table.dat/' /opt/dvm/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/opt\\\\/dvm\\\\/rid_acl.dat/' /opt/dvm/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/opt\\\\/dvm\\\\/tg_acl.dat/' /opt/dvm/config.example.yml\")")
