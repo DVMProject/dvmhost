@@ -643,6 +643,9 @@ void Control::clock(uint32_t ms)
         else {
             m_siteData.setNetActive(false);
         }
+
+        lc::TDULC::setSiteData(m_siteData);
+        lc::TSBK::setSiteData(m_siteData);
     }
 
     // if we have control enabled; do clocking to generate a CC data stream
