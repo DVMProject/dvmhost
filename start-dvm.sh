@@ -1,4 +1,12 @@
 #!/bin/bash
+#/**
+#* Digital Voice Modem - Host Software
+#* GPLv2 Open Source. Use is subject to license terms.
+#* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#*
+#* @package DVM / Host Software
+#*
+#*/
 R_PATH=/opt/dvm
 pushd ${R_PATH} >/dev/null
 
