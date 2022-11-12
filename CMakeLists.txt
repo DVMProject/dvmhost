@@ -250,11 +250,15 @@ option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
 
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_CXX_COMPILER g++)
+set(ARCH amd64)
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
 
 message(CHECK_START "Cross compiling for 32-bit ARM")
 if (CROSS_COMPILE_ARM)
     set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
     set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+    set(ARCH arm)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm)
     message(CHECK_PASS "yes")
 else ()
     message(CHECK_PASS "no")
@@ -263,6 +267,8 @@ message(CHECK_START "Cross compiling for 64-bit ARM")
 if (CROSS_COMPILE_AARCH64)
     set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
     set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+    set(ARCH arm64)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)
     message(CHECK_PASS "yes")
 else ()
     message(CHECK_PASS "no")
@@ -271,6 +277,8 @@ message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM")
 if (CROSS_COMPILE_RPI_ARM)
     set(CMAKE_C_COMPILER /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
     set(CMAKE_CXX_COMPILER /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+    set(ARCH armhf)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
     message(CHECK_PASS "yes")
 else ()
     message(CHECK_PASS "no")
@@ -290,6 +298,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -std=c++11 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
 set(CMAKE_INSTALL_PREFIX "/opt/dvm")
+set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
 
 set(GIT_VER "")
 set(GIT_VER_HASH "")
@@ -305,6 +314,25 @@ find_package(Threads REQUIRED)
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE .)
 target_link_libraries(dvmhost PRIVATE Threads::Threads util)
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "dvmhost")
+set(CPACK_DEBIAN_PACKAGE_NAME "dvmhost")
+
+set(CPACK_PACKAGE_VENDOR "DVMProject")
+
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
+set(CPACK_DEBIAN_PACKAGE_VERSION "3.00")
+set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
+
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    "${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst;${CMAKE_CURRENT_SOURCE_DIR}/debian/postrm")
+
+set(CPACK_DEBIAN_FILE_NAME ${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_DEBIAN_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb)
+
+include(CPack)
 
 # dvmcmd project
 project(dvmcmd)
@@ -332,13 +360,28 @@ target_include_directories(dvmtests PRIVATE .)
 endif (ENABLE_TESTS)
 
 # dvmhost/dvmcmd install
-install(TARGETS dvmhost DESTINATION bin)
-install(TARGETS dvmcmd DESTINATION bin)
+install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(FILES config.example.yml iden_table.dat RSSI.dat rid_acl.example.dat tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(PROGRAMS start-dvm.sh stop-dvm.sh dvm-watchdog.sh stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(CODE "execute_process(COMMAND mkdir -p /opt/dvm/log || true)")
+install(CODE "execute_process(COMMAND mkdir -p /opt/dvm/log)")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/opt\\\\/dvm\\\\/iden_table.dat/' /opt/dvm/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/opt\\\\/dvm\\\\/rid_acl.dat/' /opt/dvm/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/opt\\\\/dvm\\\\/tg_acl.dat/' /opt/dvm/config.example.yml\")")
+
+# custom target to generate a tarball
+add_custom_target(tarball
+    COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+    COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+    COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+    COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DRIECTORY
+    COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+    COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+    COMMAND cp ../*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
+    COMMAND cp -v ../config*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cp -v ../*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_1.0.0_${ARCH}.tar.gz *
+    COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
