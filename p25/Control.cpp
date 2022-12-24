@@ -115,6 +115,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_permittedDstId(0U),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -208,18 +209,19 @@ void Control::reset()
 /// </summary>
 /// <param name="conf">Instance of the yaml::Node class.</param>
 /// <param name="cwCallsign"></param>
-/// <param name="voiceChNo"></param>
+/// <param name="voiceChNo">Voice Channel Number list.</param>
+/// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="pSuperGroup"></param>
-/// <param name="netId"></param>
-/// <param name="sysId"></param>
-/// <param name="rfssId"></param>
-/// <param name="siteId"></param>
-/// <param name="channelId"></param>
-/// <param name="channelNo"></param>
+/// <param name="netId">P25 Network ID.</param>
+/// <param name="sysId">P25 System ID.</param>
+/// <param name="rfssId">P25 RFSS ID.</param>
+/// <param name="siteId">P25 Site ID.</param>
+/// <param name="channelId">Channel ID.</param>
+/// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId,
-    uint32_t channelNo, bool printOptions)
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
+    uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
@@ -308,6 +310,8 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     for (auto it = availCh.begin(); it != availCh.end(); ++it) {
         m_affiliations.addRFCh(*it);
     }
+
+    m_affiliations.setRFChData(voiceChData);
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
@@ -760,7 +764,11 @@ void Control::clock(uint32_t ms)
 /// <param name="dstId"></param>
 void Control::permittedTG(uint32_t dstId)
 {
-    // TODO TODO
+    if (!m_authoritative) {
+        return;
+    }
+
+    m_permittedDstId = dstId;
 }
 
 /// <summary>

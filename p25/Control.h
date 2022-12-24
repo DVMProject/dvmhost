@@ -50,6 +50,8 @@
 #include "yaml/Yaml.h"
 
 #include <cstdio>
+#include <vector>
+#include <unordered_map>
 
 namespace p25
 {
@@ -83,9 +85,9 @@ namespace p25
         void reset();
 
         /// <summary>Helper to set P25 configuration options.</summary>
-        void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId,
-            uint8_t channelId, uint32_t channelNo, bool printOptions);
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
+            uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -177,6 +179,8 @@ namespace p25
         uint32_t m_rfLastDstId;
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
+
+        uint32_t m_permittedDstId;
 
         bool m_tailOnIdle;
         bool m_ccRunning;

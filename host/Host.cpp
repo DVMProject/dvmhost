@@ -113,6 +113,8 @@ Host::Host(const std::string& confFile) :
     m_txFrequency(0U),
     m_channelId(0U),
     m_channelNo(0U),
+    m_voiceChNo(),
+    m_voiceChData(),
     m_idenTable(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
@@ -431,7 +433,7 @@ int Host::run()
         dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose));
-        dmr->setOptions(m_conf, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
+        dmr->setOptions(m_conf, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
 
         if (dmrCtrlChannel) {
             dmr->setCCRunning(true);
@@ -504,7 +506,7 @@ int Host::run()
         p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
+        p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
             m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -1847,8 +1849,8 @@ bool Host::readParams()
 
             ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RCON Adddress %s:%u", m_channelId, chNo, rconAddress.c_str(), rconPort);
 
-            // TODO handle storing RCON data for voice channels
-
+            VoiceChData data = VoiceChData(chNo, rconAddress, rconPort, rconPassword);
+            m_voiceChData[chNo] = data;
             m_voiceChNo.push_back(chNo);
         }
 
@@ -1921,6 +1923,10 @@ bool Host::readParams()
         LogInfo("    P25 Network Id: $%05X", m_p25NetId);
         LogInfo("    P25 System Id: $%03X", m_p25SysId);
         LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
+
+        if (!m_authoritative) {
+            LogWarning(LOG_HOST, "Host is non-authoritative, this requires RCON to \"permit-tg\" for VCs and \"grant-tg\" for CCs!");
+        }
     }
     else {
         LogInfo("    Modem Remote Control: yes");

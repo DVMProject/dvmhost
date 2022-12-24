@@ -41,6 +41,7 @@
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "lookups/AffiliationLookup.h"
 #include "yaml/Yaml.h"
 
 namespace dmr
@@ -68,7 +69,8 @@ namespace dmr
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
-        void setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        void setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, 
+            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -91,7 +93,7 @@ namespace dmr
         void clock();
 
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
-        void permittedTG(uint32_t dstId);
+        void permittedTG(uint32_t dstId, uint8_t slot);
 
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;

@@ -467,6 +467,38 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 }
 
 /// <summary>
+/// Writes grant request to the network.
+/// </summary>
+/// <param name="mode"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="slot"></param>
+/// <param name="unitToUnit"></param>
+/// <returns></returns>
+bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
+    __SET_UINT32(m_id, buffer, 7U);
+
+    __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
+    __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
+    buffer[19U] = slot;                                                             // Slot Number
+
+    if (unitToUnit)
+        buffer[19U] |= 0x80U;
+
+    buffer[20U] = mode;                                                             // DVM Mode State
+
+    return write((uint8_t*)buffer, 21U);
+}
+
+/// <summary>
 /// Writes the local activity log to the network.
 /// </summary>
 /// <param name="message"></param>

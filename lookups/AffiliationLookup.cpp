@@ -44,6 +44,7 @@ using namespace lookups;
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
 AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_rfChTable(),
+    m_rfChDataTable(),
     m_rfGrantChCnt(0U),
     m_unitRegTable(),
     m_grpAffTable(),
@@ -399,6 +400,27 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
     }
 
     return 0U;
+}
+
+/// <summary>
+/// Helper to get RF channel data.
+/// </summary>
+/// <param name="chNo"></param>
+/// <returns></returns>
+VoiceChData AffiliationLookup::getRFChData(uint32_t chNo) const
+{
+    if (chNo == 0U) {
+        return VoiceChData();
+    }
+
+    VoiceChData data;
+    try {
+        data = m_rfChDataTable.at(chNo);
+    } catch (...) {
+        data = VoiceChData();
+    }
+
+    return VoiceChData();
 }
 
 /// <summary>

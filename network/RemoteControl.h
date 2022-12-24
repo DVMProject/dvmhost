@@ -92,9 +92,14 @@ private:
     /// <summary></summary>
     std::string rcdGetStatus(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
     /// <summary></summary>
+    std::string rcdGetVoiceCh(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+    /// <summary></summary>
     std::string rcdMode(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+
     /// <summary></summary>
     std::string rcdPermitTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
+    /// <summary></summary>
+    std::string rcdGrantTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
 
     /// <summary></summary>
     std::string rcdDMRModemInj(std::vector<std::string> args, Host* host, dmr::Control* dmr);

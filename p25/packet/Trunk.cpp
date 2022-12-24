@@ -219,11 +219,15 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                     LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
-                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
-                    (tsbk->getPriority() & 0x07U);                                      // Priority
+                if (m_p25->m_authoritative) {
+                    uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
+                        (tsbk->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
+                        (tsbk->getPriority() & 0x07U);                                      // Priority
 
-                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
+                    writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
+                } else {
+                    m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
+                }
             }
             break;
             case TSBK_IOSP_UU_VCH:
@@ -248,11 +252,15 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                     writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 }
                 else {
-                    uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                        (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                        (tsbk->getPriority() & 0x07U);                                  // Priority
+                    if (m_p25->m_authoritative) {
+                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                            (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                    writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                    } else {
+                        m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                    }
                 }
             }
             break;
@@ -278,11 +286,15 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                         writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_ANS, false, true);
                     }
 
-                    uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                        (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                        (tsbk->getPriority() & 0x07U);                                  // Priority
+                    if (m_p25->m_authoritative) {
+                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                            (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                    writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                    } else {
+                        m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                    }
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
                     writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);

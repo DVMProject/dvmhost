@@ -36,12 +36,14 @@
 #include "network/RemoteControl.h"
 #include "modem/Modem.h"
 #include "Timer.h"
+#include "lookups/AffiliationLookup.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
 #include "yaml/Yaml.h"
 
 #include <string>
+#include <unordered_map>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -63,6 +65,11 @@ public:
 
     /// <summary>Executes the main modem host processing loop.</summary>
     int run();
+
+    /// <summary>Gets the voice channel number list.</summary>
+    std::vector<uint32_t> getVoiceChNo() const { return m_voiceChNo; }
+    /// <summary>Gets the voice channel data.</summary>
+    std::unordered_map<uint32_t, lookups::VoiceChData> getVoiceChData() const { return m_voiceChData; }
 
 private:
     const std::string& m_confFile;
@@ -107,7 +114,9 @@ private:
     uint32_t m_txFrequency;
     uint8_t m_channelId;
     uint32_t m_channelNo;
+    
     std::vector<uint32_t> m_voiceChNo;
+    std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
 
     lookups::IdenTableLookup* m_idenTable;
     lookups::RadioIdLookup* m_ridLookup;

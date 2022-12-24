@@ -56,14 +56,18 @@ using namespace modem;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define BAD_CMD_STR                     "Bad or invalid remote command."
-#define INVALID_AUTH_STR                "Invalid authentication"
-#define INVALID_OPT_STR                 "Invalid command arguments: "
-#define CMD_FAILED_STR                  "Remote command failed: "
+#define RCON_CMD_OK                     "ACK"
+#define RCON_CMD_NACK                   "NACK: "
+
+#define BAD_CMD_STR                     "NACK: Bad or invalid remote command"
+#define NO_DATA_CMD_STR                 "NACK: No data"
+#define INVALID_AUTH_STR                "NACK: Invalid authentication"
+#define INVALID_OPT_STR                 "NACK: Invalid command arguments, "
 
 #define RCD_GET_VERSION                 "version"
 #define RCD_GET_HELP                    "help"
 #define RCD_GET_STATUS                  "status"
+#define RCD_GET_VOICE_CH                "voice-ch"
 
 #define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
@@ -76,6 +80,7 @@ using namespace modem;
 #define RCD_FORCE_KILL                  "mdm-force-kill"
 
 #define RCD_PERMIT_TG                   "permit-tg"
+#define RCD_GRANT_TG                    "grant-tg"
 
 #define RCD_RID_WLIST                   "rid-whitelist"
 #define RCD_RID_BLIST                   "rid-blacklist"
@@ -211,7 +216,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
     args.clear();
 
     uint8_t buffer[RC_BUFFER_LENGTH];
-    std::string reply = "OK";
+    std::string reply = RCON_CMD_OK;
 
     sockaddr_storage address;
     uint32_t addrLen;
@@ -245,7 +250,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             uint8_t hash[32U];
             ::memset(hash, 0x00U, 32U);
             if (::memcmp(m_passwordHash, buffer + 2U, 32U) != 0) {
-                LogError(LOG_RCON, CMD_FAILED_STR INVALID_AUTH_STR " from %s", UDPSocket::address(address).c_str());
+                LogError(LOG_RCON, INVALID_AUTH_STR " from %s", UDPSocket::address(address).c_str());
                 reply = INVALID_AUTH_STR;
                 writeResponse(reply, address, addrLen);
                 return;
@@ -294,6 +299,9 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
             else if (rcom == RCD_GET_STATUS) {
                 reply = rcdGetStatus(host, dmr, p25, nxdn);
             }
+            else if (rcom == RCD_GET_VOICE_CH) {
+                reply = rcdGetVoiceCh(host, dmr, p25, nxdn);
+            }
             else if (rcom == RCD_MODE && argCnt >= 1U) {
                 reply = rcdMode(args, host, dmr, p25, nxdn);
             }
@@ -305,6 +313,9 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 host->setState(HOST_STATE_QUIT); // ensures immediate cessation of service
             }
             else if (rcom == RCD_PERMIT_TG && argCnt >= 1U) {
+                reply = rcdPermitTG(args, host, dmr, p25, nxdn);
+            }
+            else if (rcom == RCD_GRANT_TG && argCnt >= 1U) {
                 reply = rcdPermitTG(args, host, dmr, p25, nxdn);
             }
             else if (rcom == RCD_RID_WLIST && argCnt >= 1U) {
@@ -334,12 +345,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         g_fireDMRBeacon = true;
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR beacons is not enabled!";
+                        reply = RCON_CMD_NACK "DMR beacons is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -351,12 +362,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         g_fireP25Control = true;
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 control data is not enabled!";
+                        reply = RCON_CMD_NACK "P25 control data is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -367,12 +378,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         p25->trunk()->setConvFallback((fallback == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 control data is not enabled!";
+                        reply = RCON_CMD_NACK "P25 control data is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -397,7 +408,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -420,7 +431,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -443,7 +454,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -466,7 +477,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -487,7 +498,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     p25->trunk()->setLastMFId(m_p25MFId);
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -505,7 +516,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -523,7 +534,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -541,7 +552,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -559,7 +570,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -577,7 +588,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -595,7 +606,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -604,7 +615,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     p25->affiliations().releaseGrant(0, true);
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -620,7 +631,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -630,7 +641,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (dmr != nullptr) {
                     if (host->m_dmrTSCCData) {
                         if (p25 != nullptr) {
-                            reply = CMD_FAILED_STR "Can't enable DMR control channel while P25 is enabled!";
+                            reply = RCON_CMD_NACK "Can't enable DMR control channel while P25 is enabled!";
                             LogError(LOG_RCON, reply.c_str());
                         }
                         else {
@@ -640,12 +651,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         }
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR control data is not enabled!";
+                        reply = RCON_CMD_NACK "DMR control data is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -656,7 +667,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                     LogInfoEx(LOG_RCON, reply.c_str());
                 }
                 else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                    reply = RCON_CMD_NACK "DMR mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -666,7 +677,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                 if (p25 != nullptr) {
                     if (host->m_p25CCData) {
                         if (dmr != nullptr) {
-                            reply = CMD_FAILED_STR "Can't enable P25 control channel while DMR is enabled!";
+                            reply = RCON_CMD_NACK "Can't enable P25 control channel while DMR is enabled!";
                             LogError(LOG_RCON, reply.c_str());
                         }
                         else {
@@ -680,12 +691,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         }
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 control data is not enabled!";
+                        reply = RCON_CMD_NACK "P25 control data is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -707,12 +718,12 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         LogInfoEx(LOG_RCON, reply.c_str());
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 control data is not enabled!";
+                        reply = RCON_CMD_NACK "P25 control data is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
                 else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                    reply = RCON_CMD_NACK "P25 mode is not enabled!";
                     LogError(LOG_RCON, reply.c_str());
                 }
             }
@@ -726,7 +737,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("dmr->debug = %u, dmr->verbose = %u", debug, verbose);
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        reply = RCON_CMD_NACK "DMR mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -737,7 +748,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         dmr->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        reply = RCON_CMD_NACK "DMR mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -749,7 +760,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("dmr->dumpCsbkData = %u", csbkDump);
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        reply = RCON_CMD_NACK "DMR mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -759,7 +770,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         dmr->setCSBKVerbose((verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+                        reply = RCON_CMD_NACK "DMR mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -774,7 +785,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("p25->debug = %u, p25->verbose = %u", debug, verbose);
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        reply = RCON_CMD_NACK "P25 mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -785,7 +796,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         p25->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        reply = RCON_CMD_NACK "P25 mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -797,7 +808,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("p25->dumpTsbkData = %u", tsbkDump);
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        reply = RCON_CMD_NACK "P25 mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -807,7 +818,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         p25->trunk()->setTSBKVerbose((verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+                        reply = RCON_CMD_NACK "P25 mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -822,7 +833,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("nxdn->debug = %u, nxdn->verbose = %u", debug, verbose);
                     }
                     else {
-                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        reply = RCON_CMD_NACK "NXDN mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -833,7 +844,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        reply = RCON_CMD_NACK "NXDN mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -845,7 +856,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         reply = string_format("nxdn->dumpRcchData = %u", rcchDump);
                     }
                     else {
-                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        reply = RCON_CMD_NACK "NXDN mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 } 
@@ -855,7 +866,7 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
                         nxdn->setRCCHVerbose((verbose == 1U) ? true : false);
                     }
                     else {
-                        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+                        reply = RCON_CMD_NACK "NXDN mode is not enabled!";
                         LogError(LOG_RCON, reply.c_str());
                     }
                 }
@@ -997,12 +1008,14 @@ std::string RemoteControl::displayHelp()
     reply += "  version                 Display current version of host\r\n";
     reply += "  help                    Displays RCON help\r\n";
     reply += "  status                  Display current settings and operation mode\r\n";
+    reply += "  voice-ch                Retrieves the list of configured voice channels\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>         Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                Causes the host to quit\r\n";
     reply += "  mdm-force-kill          Causes the host to quit immediately\r\n";
     reply += "\r\n";
     reply += "  permit-tg <state> <dstid> Causes the host to permit the specified destination ID if non-authoritative\r\n";
+    reply += "  grant-tg <state> <dstid> <uu> Causes the host to grant the specified destination ID if non-authoritative\r\n";
     reply += "\r\n";
     reply += "  rid-whitelist <rid>     Whitelists the specified RID in the host ACL tables\r\n";
     reply += "  rid-blacklist <rid>     Blacklists the specified RID in the host ACL tables\r\n";
@@ -1078,6 +1091,7 @@ std::string RemoteControl::rcdGetStatus(Host* host, dmr::Control* dmr, p25::Cont
 
         reply += string_format("Host State: %u, DMR: %u, P25: %u, NXDN: %u, Port Type: %s, Modem Port: %s, Port Speed: %u, Proto Ver: %u", host->m_state,
             dmr != nullptr, p25 != nullptr, nxdn != nullptr, type.c_str(), modemPort.c_str(), portSpeed, host->m_modem->getVersion());
+        reply += string_format("\r\nDMR CC: %u, P25 CC: %u, NXDN CC: %u", host->m_dmrCtrlChannel, host->m_p25CtrlChannel, host->m_nxdnCtrlChannel);
     }
 
     {
@@ -1138,6 +1152,33 @@ std::string RemoteControl::rcdGetStatus(Host* host, dmr::Control* dmr, p25::Cont
 /// <summary>
 /// 
 /// </summary>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdGetVoiceCh(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+
+    if (host->m_voiceChData.size() > 0) {
+        for (auto it = host->m_voiceChData.begin(); it != host->m_voiceChData.end(); ++it) {
+            uint32_t chNo = it->first;
+            lookups::VoiceChData data = it->second;
+
+            reply += string_format("\r\n%u, %s:%u", chNo, data.address().c_str(), data.port());
+        }
+    }
+    else {
+        reply = NO_DATA_CMD_STR;
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
 /// <param name="args"></param>
 /// <param name="host">Instance of the Host class.</param>
 /// <param name="dmr">Instance of the DMR Control class.</param>
@@ -1170,7 +1211,7 @@ std::string RemoteControl::rcdMode(std::vector<std::string> args, Host* host, dm
             LogInfoEx(LOG_RCON, reply.c_str());
         }
         else {
-            reply = CMD_FAILED_STR "DMR mode is not enabled!";
+            reply = RCON_CMD_NACK "DMR mode is not enabled!";
             LogError(LOG_RCON, reply.c_str());
         }
     }
@@ -1184,7 +1225,7 @@ std::string RemoteControl::rcdMode(std::vector<std::string> args, Host* host, dm
             LogInfoEx(LOG_RCON, reply.c_str());
         }
         else {
-            reply = CMD_FAILED_STR "P25 mode is not enabled!";
+            reply = RCON_CMD_NACK "P25 mode is not enabled!";
             LogError(LOG_RCON, reply.c_str());
         }
     }
@@ -1198,7 +1239,7 @@ std::string RemoteControl::rcdMode(std::vector<std::string> args, Host* host, dm
             LogInfoEx(LOG_RCON, reply.c_str());
         }
         else {
-            reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+            reply = RCON_CMD_NACK "NXDN mode is not enabled!";
             LogError(LOG_RCON, reply.c_str());
         }
     }
@@ -1224,78 +1265,192 @@ std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host
 {
     std::string reply = "";
     if (!host->m_authoritative) {
-        DVM_STATE state = (DVM_STATE)getArgInt32(args, 0U);
-        uint32_t dstId = getArgInt32(args, 1U);
-        if (dstId == 0U) {
-            reply = string_format(INVALID_OPT_STR "illegal TGID permitted (%u)", dstId);
+        reply = RCON_CMD_NACK "Host is authoritative, cannot permit TG!";
+        LogError(LOG_RCON, reply.c_str());
+        return reply;
+    }
+
+    DVM_STATE state = (DVM_STATE)getArgInt32(args, 0U);
+    uint32_t dstId = getArgInt32(args, 1U);
+    if (dstId == 0U) {
+        reply = string_format(INVALID_OPT_STR "illegal TGID permitted (%u)", dstId);
+        LogError(LOG_RCON, reply.c_str());
+        return reply;
+    }
+
+    switch (state) {
+    case STATE_DMR:
+#if defined(ENABLE_DMR)
+    {
+        uint8_t slot = getArgInt8(args, 2U);
+        if (slot == 0U) {
+            reply = INVALID_OPT_STR "illegal slot";
             LogError(LOG_RCON, reply.c_str());
+            return reply;
+        }
+
+        if (dmr != nullptr) {
+            dmr->permittedTG(dstId, slot);
         }
         else {
-            switch (state) {
-            case STATE_DMR:
-#if defined(ENABLE_DMR)
-            {
-                if (dmr != nullptr) {
-                    dmr->permittedTG(dstId);
-                }
-                else {
-                    reply = CMD_FAILED_STR "DMR mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
-            }
-#else
-            {
-                reply = INVALID_OPT_STR "invalid mode!";
-                LogError(LOG_RCON, reply.c_str());
-            }
-#endif // defined(ENABLE_DMR)
-            break;
-            case STATE_P25:
-#if defined(ENABLE_P25)
-            {
-                if (p25 != nullptr) {
-                    p25->permittedTG(dstId);
-                }
-                else {
-                    reply = CMD_FAILED_STR "P25 mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
-            }
-#else
-            {
-                reply = INVALID_OPT_STR "invalid mode!";
-                LogError(LOG_RCON, reply.c_str());
-            }
-#endif // defined(ENABLE_P25)
-            break;
-            case STATE_NXDN:
-#if defined(ENABLE_NXDN)
-            {
-                if (nxdn != nullptr) {
-                    nxdn->permittedTG(dstId);
-                }
-                else {
-                    reply = CMD_FAILED_STR "NXDN mode is not enabled!";
-                    LogError(LOG_RCON, reply.c_str());
-                }
-            }
-#else
-            {
-                reply = INVALID_OPT_STR "invalid mode!";
-                LogError(LOG_RCON, reply.c_str());
-            }
-#endif // defined(ENABLE_NXDN)
-            break;
-            default:
-                reply = INVALID_OPT_STR "invalid mode!";
-                LogError(LOG_RCON, reply.c_str());
-                break;
-            }
+            reply = RCON_CMD_NACK "DMR mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
         }
     }
-    else {
-        reply = CMD_FAILED_STR "Host is authoritative, cannot permit TG!";
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
         LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_DMR)
+    break;
+    case STATE_P25:
+#if defined(ENABLE_P25)
+    {
+        if (p25 != nullptr) {
+            p25->permittedTG(dstId);
+        }
+        else {
+            reply = RCON_CMD_NACK "P25 mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_P25)
+    break;
+    case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+    {
+        if (nxdn != nullptr) {
+            nxdn->permittedTG(dstId);
+        }
+        else {
+            reply = RCON_CMD_NACK "NXDN mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_NXDN)
+    break;
+    default:
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+        break;
+    }
+
+    return reply;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="args"></param>
+/// <param name="host">Instance of the Host class.</param>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+/// <returns></returns>
+std::string RemoteControl::rcdGrantTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    std::string reply = "";
+    if (!host->m_authoritative && (host->m_dmrCtrlChannel || host->m_p25CtrlChannel || host->m_nxdnCtrlChannel)) {
+        reply = RCON_CMD_NACK "Host is authoritative, cannot grant TG!";
+        LogError(LOG_RCON, reply.c_str());
+        return reply;
+    }
+
+    DVM_STATE state = (DVM_STATE)getArgInt32(args, 0U);
+    uint32_t dstId = getArgInt32(args, 1U);
+    uint8_t unitToUnit = getArgInt32(args, 2U);
+    if (unitToUnit > 1U) {
+        reply = string_format(INVALID_OPT_STR "illegal TGID granted (%u)", dstId);
+        LogError(LOG_RCON, reply.c_str());
+        return reply;
+    }
+
+    if (dstId == 0U) {
+        reply = string_format(INVALID_OPT_STR "illegal TGID granted (%u)", dstId);
+        LogError(LOG_RCON, reply.c_str());
+        return reply;
+    }
+
+    switch (state) {
+    case STATE_DMR:
+#if defined(ENABLE_DMR)
+    {
+        uint8_t slot = getArgInt8(args, 2U);
+        if (slot == 0U) {
+            reply = INVALID_OPT_STR "illegal slot";
+            LogError(LOG_RCON, reply.c_str());
+            return reply;
+        }
+
+        if (dmr != nullptr) {
+            // TODO TODO
+            //dmr->grantTG(dstId, slot, unitToUnit == 1U);
+        }
+        else {
+            reply = RCON_CMD_NACK "DMR mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_DMR)
+    break;
+    case STATE_P25:
+#if defined(ENABLE_P25)
+    {
+        if (p25 != nullptr) {
+            // TODO TODO
+            //p25->grantTG(dstId, unitToUnit == 1U);
+        }
+        else {
+            reply = RCON_CMD_NACK "P25 mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_P25)
+    break;
+    case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+    {
+        if (nxdn != nullptr) {
+            // TODO TODO
+            //nxdn->grantTG(dstId, unitToUnit == 1U);
+        }
+        else {
+            reply = RCON_CMD_NACK "NXDN mode is not enabled!";
+            LogError(LOG_RCON, reply.c_str());
+        }
+    }
+#else
+    {
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+    }
+#endif // defined(ENABLE_NXDN)
+    break;
+    default:
+        reply = INVALID_OPT_STR "invalid mode!";
+        LogError(LOG_RCON, reply.c_str());
+        break;
     }
 
     return reply;
@@ -1355,17 +1510,17 @@ std::string RemoteControl::rcdDMRModemInj(std::vector<std::string> args, Host* h
                                 host->m_modem->injectDMRData2(buffer, fileSize);
                             }
                             else {
-                                reply = CMD_FAILED_STR "invalid DMR slot!";
+                                reply = RCON_CMD_NACK "invalid DMR slot!";
                                 LogError(LOG_RCON, reply.c_str());
                             }
                         }
                         else {
-                            reply = CMD_FAILED_STR "DMR data has too many errors!";
+                            reply = RCON_CMD_NACK "DMR data has too many errors!";
                             LogError(LOG_RCON, reply.c_str());
                         }
                     }
                     else {
-                        reply = CMD_FAILED_STR "DMR failed to open DMR data!";
+                        reply = RCON_CMD_NACK "DMR failed to open DMR data!";
                         LogError(LOG_RCON, reply.c_str());
                     }
 
@@ -1377,7 +1532,7 @@ std::string RemoteControl::rcdDMRModemInj(std::vector<std::string> args, Host* h
         }
     }
     else {
-        reply = CMD_FAILED_STR "DMR mode is not enabled!";
+        reply = RCON_CMD_NACK "DMR mode is not enabled!";
         LogError(LOG_RCON, reply.c_str());
     }
 
@@ -1427,17 +1582,17 @@ std::string RemoteControl::rcdP25ModemInj(std::vector<std::string> args, Host* h
                                 host->m_modem->injectP25Data(buffer, fileSize);
                             }
                             else {
-                                reply = CMD_FAILED_STR "P25 data did not contain a valid NID!";
+                                reply = RCON_CMD_NACK "P25 data did not contain a valid NID!";
                                 LogError(LOG_RCON, reply.c_str());
                             }
                         }
                         else {
-                            reply = CMD_FAILED_STR "P25 data has too many errors!";
+                            reply = RCON_CMD_NACK "P25 data has too many errors!";
                             LogError(LOG_RCON, reply.c_str());
                         }
                     }
                     else {
-                        reply = CMD_FAILED_STR "P25 failed to open P25 data!";
+                        reply = RCON_CMD_NACK "P25 failed to open P25 data!";
                         LogError(LOG_RCON, reply.c_str());
                     }
 
@@ -1449,7 +1604,7 @@ std::string RemoteControl::rcdP25ModemInj(std::vector<std::string> args, Host* h
         }
     }
     else {
-        reply = CMD_FAILED_STR "P25 mode is not enabled!";
+        reply = RCON_CMD_NACK "P25 mode is not enabled!";
         LogError(LOG_RCON, reply.c_str());
     }
 
@@ -1497,12 +1652,12 @@ std::string RemoteControl::rcdNXDNModemInj(std::vector<std::string> args, Host* 
                             host->m_modem->injectNXDNData(buffer, fileSize);
                         }
                         else {
-                            reply = CMD_FAILED_STR "NXDN data has too many errors!";
+                            reply = RCON_CMD_NACK "NXDN data has too many errors!";
                             LogError(LOG_RCON, reply.c_str());
                         }
                     }
                     else {
-                        reply = CMD_FAILED_STR "NXDN failed to open NXDN data!";
+                        reply = RCON_CMD_NACK "NXDN failed to open NXDN data!";
                         LogError(LOG_RCON, reply.c_str());
                     }
 
@@ -1514,7 +1669,7 @@ std::string RemoteControl::rcdNXDNModemInj(std::vector<std::string> args, Host* 
         }
     }
     else {
-        reply = CMD_FAILED_STR "NXDN mode is not enabled!";
+        reply = RCON_CMD_NACK "NXDN mode is not enabled!";
         LogError(LOG_RCON, reply.c_str());
     }
 

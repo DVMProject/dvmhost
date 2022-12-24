@@ -181,7 +181,11 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 (rcch->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
                 (rcch->getPriority() & 0x07U);                                      // Priority
 
-            writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+            if (m_nxdn->m_authoritative) {
+                writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+            } else {
+                m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
+            }
         }
         break;
         case RCCH_MESSAGE_TYPE_REG:

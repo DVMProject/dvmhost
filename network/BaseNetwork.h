@@ -73,8 +73,6 @@
 #define TAG_MASTER_CLOSING      "MSTCL"
 #define TAG_MASTER_PONG         "MSTPONG"
 
-#define TAG_MASTER_GRANT        "MSTGRNT"
-
 #define TAG_REPEATER_LOGIN      "RPTL"
 #define TAG_REPEATER_AUTH       "RPTK"
 #define TAG_REPEATER_CONFIG     "RPTC"
@@ -82,6 +80,8 @@
 #define TAG_REPEATER_ACK        "RPTACK"
 #define TAG_REPEATER_CLOSING    "RPTCL"
 #define TAG_REPEATER_PING       "RPTPING"
+
+#define TAG_REPEATER_GRANT      "RPTGRNT"
 
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
@@ -155,6 +155,9 @@ namespace network
 
         /// <summary>Writes NXDN frame data to the network.</summary>
         virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
+
+        /// <summary>Writes a grant request to the network.</summary>
+        virtual bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
 
         /// <summary>Writes the local activity log to the network.</summary>
         virtual bool writeActLog(const char* message);

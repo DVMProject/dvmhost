@@ -215,7 +215,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // verify the source RID is registered
                     VERIFY_SRCID_REG("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
 
-                    writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    if (m_slot->m_authoritative) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    } else {
+                        m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
+                    }
                     break;
                 case SVC_KIND_GRP_VOICE_CALL:
                     // make sure control data is supported
@@ -227,7 +231,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // validate the talkgroup ID
                     VALID_TGID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId, dstId);
 
-                    writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    if (m_slot->m_authoritative) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    } else {
+                        m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false);
+                    }
                     break;
                 case SVC_KIND_IND_DATA_CALL:
                 case SVC_KIND_IND_UDT_DATA_CALL:

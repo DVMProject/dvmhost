@@ -38,6 +38,65 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
+    //      Represents voice channel data.
+    // ---------------------------------------------------------------------------
+
+    class HOST_SW_API VoiceChData {
+    public:
+        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
+        VoiceChData() :
+            m_chNo(0U),
+            m_address(),
+            m_port(),
+            m_password()
+        {
+            /* stub */
+        }
+        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
+        /// <param name="chNo">Voice Channel Number.</param>
+        /// <param name="address">RCON Address.</param>
+        /// <param name="port">RCON Port.</param>
+        /// <param name="password">RCON Password.</param>
+        VoiceChData(uint32_t chNo, std::string address, uint16_t port, std::string password) :
+            m_chNo(chNo),
+            m_address(address),
+            m_port(port),
+            m_password(password)
+        {
+            /* stub */
+        }
+
+        /// <summary>Equals operator.</summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        VoiceChData & operator=(const VoiceChData & data)
+        {
+            if (this != &data) {
+                m_chNo = data.m_chNo;
+                m_address = data.m_address;
+                m_port = data.m_port;
+                m_password = data.m_password;
+            }
+
+            return *this;
+        }
+
+        /// <summary>Helper to determine if the channel is valid.</summary>
+        bool isValidCh() { return m_chNo != 0U; }
+
+    public:
+        /// <summary>Voice Channel Number.</summary>
+        __READONLY_PROPERTY_PLAIN(uint32_t, chNo, chNo);
+        /// <summary>RCON Address.</summary>
+        __READONLY_PROPERTY_PLAIN(std::string, address, address);
+        /// <summary>RCON Port.</summary>
+        __READONLY_PROPERTY_PLAIN(uint16_t, port, port);
+        /// <summary>RCON Password.</summary>
+        __READONLY_PROPERTY_PLAIN(std::string, password, password);
+    };
+
+    // ---------------------------------------------------------------------------
+    //  Class Declaration
     //      Implements a lookup table class that contains subscriber registration
     //      and group affiliation information.
     // ---------------------------------------------------------------------------
@@ -90,6 +149,11 @@ namespace lookups
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
         virtual uint32_t getGrantedCh(uint32_t dstId);
 
+        /// <summary>Helper to set RF channel data.</summary>
+        void setRFChData(const std::unordered_map<uint32_t, VoiceChData> chData) { m_rfChDataTable = chData; }
+        /// <summary>Helper to get RF channel data.</summary>
+        VoiceChData getRFChData(uint32_t chNo) const;
+
         /// <summary>Helper to add a RF channel.</summary>
         void addRFCh(uint32_t chNo) { m_rfChTable.push_back(chNo); }
         /// <summary>Helper to remove a RF channel.</summary>
@@ -106,6 +170,7 @@ namespace lookups
 
     protected:
         std::vector<uint32_t> m_rfChTable;
+        std::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
         uint8_t m_rfGrantChCnt;
 
         std::vector<uint32_t> m_unitRegTable;

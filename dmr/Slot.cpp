@@ -125,6 +125,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_permittedDstId(0U),
     m_rfLC(nullptr),
     m_rfPrivacyLC(nullptr),
     m_rfDataHeader(nullptr),
@@ -539,6 +540,19 @@ void Slot::clock()
 }
 
 /// <summary>
+/// Permits a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::permittedTG(uint32_t dstId)
+{
+    if (!m_authoritative) {
+        return;
+    }
+
+    m_permittedDstId = dstId;
+}
+
+/// <summary>
 /// Helper to change the debug and verbose state.
 /// </summary>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
@@ -645,12 +659,15 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// <summary>
 /// Sets local configured site data.
 /// </summary>
+/// <param name="voiceChNo">Voice Channel Number list.</param>
+/// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="requireReg"></param>
-void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
+void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData,
+    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
@@ -663,6 +680,13 @@ void Slot::setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32
             break;
         }
     }
+
+    std::vector<uint32_t> availCh = voiceChNo;
+    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
+        m_affiliations->addRFCh(*it);
+    }
+
+    m_affiliations->setRFChData(voiceChData);
 
     lc::CSBK::setSiteData(m_siteData);
 }

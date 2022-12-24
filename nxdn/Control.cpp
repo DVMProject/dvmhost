@@ -105,6 +105,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
+    m_permittedDstId(0U),
     m_rfMask(0U),
     m_netMask(0U),
     m_idenTable(idenTable),
@@ -203,13 +204,15 @@ void Control::reset()
 /// </summary>
 /// <param name="conf">Instance of the yaml::Node class.</param>
 /// <param name="cwCallsign"></param>
-/// <param name="voiceChNo"></param>
-/// <param name="locId"></param>
-/// <param name="channelId"></param>
-/// <param name="channelNo"></param>
+/// <param name="voiceChNo">Voice Channel Number list.</param>
+/// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="locId">NXDN Location ID.</param>
+/// <param name="channelId">Channel ID.</param>
+/// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    uint16_t locId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+    const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId,
+    uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
@@ -249,6 +252,13 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
     m_siteData.setCallsign(cwCallsign);
 
+    std::vector<uint32_t> availCh = voiceChNo;
+    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
+        m_affiliations.addRFCh(*it);
+    }
+
+    m_affiliations.setRFChData(voiceChData);
+
     lc::RCCH::setSiteData(m_siteData);
     lc::RCCH::setCallsign(cwCallsign);
 
@@ -259,11 +269,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
             m_idenEntry = entry;
             break;
         }
-    }
-
-    std::vector<uint32_t> availCh = voiceChNo;
-    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
-        m_affiliations.addRFCh(*it);
     }
 
     if (printOptions) {
@@ -591,7 +596,11 @@ void Control::clock(uint32_t ms)
 /// <param name="dstId"></param>
 void Control::permittedTG(uint32_t dstId)
 {
-    // TODO TODO
+    if (!m_authoritative) {
+        return;
+    }
+
+    m_permittedDstId = dstId;
 }
 
 /// <summary>

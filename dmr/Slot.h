@@ -94,6 +94,9 @@ namespace dmr
         /// <summary>Updates the slot processor.</summary>
         void clock();
 
+        /// <summary>Permits a TGID on a non-authoritative host.</summary>
+        void permittedTG(uint32_t dstId);
+
         /// <summary>Gets instance of the ControlSignaling class.</summary>
         packet::ControlSignaling* control() { return m_control; }
 
@@ -110,7 +113,8 @@ namespace dmr
             network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
             lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
-        static void setSiteData(uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
+        static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, 
+            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
         /// <summary>Sets TSCC Aloha configuration.</summary>
         static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);
 
@@ -131,6 +135,8 @@ namespace dmr
         uint32_t m_rfLastDstId;
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
+
+        uint32_t m_permittedDstId;
 
         std::unique_ptr<lc::LC> m_rfLC;
         std::unique_ptr<lc::PrivacyLC> m_rfPrivacyLC;

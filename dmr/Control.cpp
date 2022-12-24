@@ -110,12 +110,15 @@ Control::~Control()
 /// Helper to set DMR configuration options.
 /// </summary>
 /// <param name="conf">Instance of the ConfigINI class.</param>
-/// <param name="netId"></param>
-/// <param name="siteId"></param>
-/// <param name="channelId"></param>
-/// <param name="channelNo"></param>
+/// <param name="voiceChNo">Voice Channel Number list.</param>
+/// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="netId">DMR Network ID.</param>
+/// <param name="siteId">DMR Site ID.</param>
+/// <param name="channelId">Channel ID.</param>
+/// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+void Control::setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData,
+    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
@@ -139,7 +142,7 @@ void Control::setOptions(yaml::Node& conf, uint32_t netId, uint8_t siteId, uint8
         dedicatedTSCC = false;
     }
 
-    Slot::setSiteData(netId, siteId, channelId, channelNo, dedicatedTSCC);
+    Slot::setSiteData(voiceChNo, voiceChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
     m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
@@ -328,9 +331,20 @@ void Control::clock()
 /// Permits a TGID on a non-authoritative host.
 /// </summary>
 /// <param name="dstId"></param>
-void Control::permittedTG(uint32_t dstId)
+/// <paran name="slot"></param>
+void Control::permittedTG(uint32_t dstId, uint8_t slot)
 {
-    // TODO TODO
+    switch (slot) {
+    case 1U:
+        m_slot1->permittedTG(dstId);
+        break;
+    case 2U:
+        m_slot2->permittedTG(dstId);
+        break;
+    default:
+        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
 }
 
 /// <summary>

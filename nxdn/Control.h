@@ -83,8 +83,9 @@ namespace nxdn
         void reset();
 
         /// <summary>Helper to set NXDN configuration options.</summary>
-        void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            uint16_t locId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+            const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId, 
+            uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -144,6 +145,8 @@ namespace nxdn
         channel::LICH m_rfLastLICH;
         lc::RTCH m_rfLC;
         lc::RTCH m_netLC;
+
+        uint32_t m_permittedDstId;
 
         uint8_t m_rfMask;
         uint8_t m_netMask;
