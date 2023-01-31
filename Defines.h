@@ -105,7 +105,7 @@ typedef unsigned long long  ulong64_t;
 #define __GIT_VER_HASH__ "00000000"
 #endif
 
-#define __PROG_NAME__ "Digital Voice Modem Host"
+#define __PROG_NAME__ "Digital Voice Modem (DVM) Host"
 #define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ "dvmhost"
 #define __VER__ "D03.00.00 (" __GIT_VER__ ")"
