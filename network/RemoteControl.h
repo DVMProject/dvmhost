@@ -40,6 +40,70 @@
 #include <string>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define RCD_GET_VERSION                 "version"
+#define RCD_GET_HELP                    "help"
+#define RCD_GET_STATUS                  "status"
+#define RCD_GET_VOICE_CH                "voice-ch"
+
+#define RCD_MODE                        "mdm-mode"
+#define RCD_MODE_OPT_IDLE               "idle"
+#define RCD_MODE_OPT_LCKOUT             "lockout"
+#define RCD_MODE_OPT_FDMR               "dmr"
+#define RCD_MODE_OPT_FP25               "p25"
+#define RCD_MODE_OPT_FNXDN              "nxdn"
+
+#define RCD_KILL                        "mdm-kill"
+#define RCD_FORCE_KILL                  "mdm-force-kill"
+
+#define RCD_PERMIT_TG                   "permit-tg"
+#define RCD_GRANT_TG                    "grant-tg"
+
+#define RCD_RID_WLIST                   "rid-whitelist"
+#define RCD_RID_BLIST                   "rid-blacklist"
+
+#define RCD_DMR_BEACON                  "dmr-beacon"
+#define RCD_P25_CC                      "p25-cc"
+#define RCD_P25_CC_FALLBACK             "p25-cc-fallback"
+
+#define RCD_DMR_RID_PAGE                "dmr-rid-page"
+#define RCD_DMR_RID_CHECK               "dmr-rid-check"
+#define RCD_DMR_RID_INHIBIT             "dmr-rid-inhibit"
+#define RCD_DMR_RID_UNINHIBIT           "dmr-rid-uninhibit"
+
+#define RCD_P25_SET_MFID                "p25-set-mfid"
+#define RCD_P25_RID_PAGE                "p25-rid-page"
+#define RCD_P25_RID_CHECK               "p25-rid-check"
+#define RCD_P25_RID_INHIBIT             "p25-rid-inhibit"
+#define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
+#define RCD_P25_RID_GAQ                 "p25-rid-gaq"
+#define RCD_P25_RID_UREG                "p25-rid-ureg"
+
+#define RCD_P25_RELEASE_GRANTS          "p25-rel-grnts"
+#define RCD_P25_RELEASE_AFFS            "p25-rel-affs"
+
+#define RCD_DMR_CC_DEDICATED            "dmr-cc-dedicated"
+#define RCD_DMR_CC_BCAST                "dmr-cc-bcast"
+
+#define RCD_P25_CC_DEDICATED            "p25-cc-dedicated"
+#define RCD_P25_CC_BCAST                "p25-cc-bcast"
+
+#define RCD_DMR_DEBUG                   "dmr-debug"
+#define RCD_DMR_DUMP_CSBK               "dmr-dump-csbk"
+#define RCD_P25_DEBUG                   "p25-debug"
+#define RCD_P25_DUMP_TSBK               "p25-dump-tsbk"
+#define RCD_NXDN_DEBUG                  "nxdn-debug"
+#define RCD_NXDN_DUMP_RCCH              "nxdn-dump-rcch"
+
+#define RCD_DMRD_MDM_INJ                "debug-dmrd-mdm-inj"
+#define RCD_P25D_MDM_INJ                "debug-p25d-mdm-inj"
+#define RCD_NXDD_MDM_INJ                "debug-nxdd-mdm-inj"
+
+#define RCD_PING                        "ping"
+
+// ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
