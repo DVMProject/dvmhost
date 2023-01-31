@@ -1306,7 +1306,7 @@ std::string RemoteControl::rcdPermitTG(std::vector<std::string> args, Host* host
 std::string RemoteControl::rcdGrantTG(std::vector<std::string> args, Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
 {
     std::string reply = "";
-    if (!host->m_authoritative && (host->m_dmrCtrlChannel || host->m_p25CtrlChannel || host->m_nxdnCtrlChannel)) {
+    if (host->m_authoritative && (host->m_dmrCtrlChannel || host->m_p25CtrlChannel || host->m_nxdnCtrlChannel)) {
         reply = RCON_CMD_NACK "Host is authoritative, cannot grant TG!";
         LogError(LOG_RCON, reply.c_str());
         return reply;
