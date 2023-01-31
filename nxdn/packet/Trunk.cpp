@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -507,6 +507,10 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             ::ActivityLog("NXDN", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
         }
     }
+
+    //
+    // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
+    //
 
     std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
     rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);

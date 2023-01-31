@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -167,6 +167,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 LogMessage(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", lc.getDstId(), lc.getAlgId(), lc.getKId());
             }
 
+            // don't process RF frames if this modem isn't authoritative
+            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
+                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                resetRF();
+                return false;
+            }
+
             // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
             if (m_p25->m_netState != RS_NET_IDLE && lc.getDstId() == m_p25->m_netLastDstId) {
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
@@ -230,6 +237,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             bool encrypted = lc.getEncrypted();
 
             alreadyDecoded = true;
+
+            // don't process RF frames if this modem isn't authoritative
+            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
+                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                resetRF();
+                return false;
+            }
 
             // don't process RF frames if the network isn't in a idle state and the RF destination is the network destination
             if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
@@ -1064,6 +1078,14 @@ void Voice::writeNet_LDU1()
     }
     else {
         LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, srcId = 0");
+    }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+        // bryanb: do we want to log this condition?
+        //LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!");
+        resetNet();
+        return;
     }
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running

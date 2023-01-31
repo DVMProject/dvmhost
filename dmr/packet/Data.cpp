@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -50,6 +50,17 @@ using namespace dmr::packet;
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
+
+#define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
+    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
+        LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
+        return false;                                                                   \
+    }
+
+#define CHECK_NET_AUTHORITATIVE(_DST_ID)                                                \
+    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
+        return;                                                                         \
+    }
 
 // Don't process RF frames if the network isn't in a idle state.
 #define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
@@ -161,6 +172,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         uint32_t srcId = dataHeader->getSrcId();
         uint32_t dstId = dataHeader->getDstId();
 
+        CHECK_AUTHORITATIVE(dstId);
         CHECK_TRAFFIC_COLLISION(dstId);
 
         // validate the source RID
@@ -378,6 +390,7 @@ void Data::processNetwork(const data::Data& dmrData)
         uint32_t srcId = dataHeader->getSrcId();
         uint32_t dstId = dataHeader->getDstId();
 
+        CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_TG_HANG(dstId);
 
         m_slot->m_netFrames = dataHeader->getBlocks();

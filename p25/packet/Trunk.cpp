@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *   Copyright (C) 2022 by Jason-UWU - TIME_DATE_ANN & RAD_MON_CMD
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -2233,6 +2233,10 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
+            //
+            // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
+            //
+
             std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
@@ -2254,6 +2258,10 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             if (!net) {
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
+
+            //
+            // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
+            //
 
             std::unique_ptr<IOSP_UU_VCH> iosp = new_unique(IOSP_UU_VCH);
             iosp->setMFId(m_lastMFID);

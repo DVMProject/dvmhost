@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015-2020 by Jonathan Naylor G4KLX
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -217,6 +217,17 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
         bool encrypted = lc.getEncrypted();
+
+        // don't process RF frames if this modem isn't authoritative
+        if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
+            if (m_nxdn->m_rfState != RS_RF_AUDIO) {
+                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                m_nxdn->m_rfState = RS_RF_LISTENING;
+                m_nxdn->m_rfMask  = 0x00U;
+                m_nxdn->m_rfLC.reset();
+                return false;
+            }
+        }
 
         uint8_t type = lc.getMessageType();
         if (type == RTCH_MESSAGE_TYPE_TX_REL) {
@@ -649,6 +660,18 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
         bool encrypted = lc.getEncrypted();
+
+        // don't process network frames if this modem isn't authoritative
+        if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
+            if (m_nxdn->m_netState != RS_NET_AUDIO) {
+                // bryanb: do we want to log this condition?
+                //LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!");
+                m_nxdn->m_netState = RS_NET_IDLE;
+                m_nxdn->m_netMask  = 0x00U;
+                m_nxdn->m_netLC.reset();
+                return false;
+            }
+        }
 
         uint8_t type = lc.getMessageType();
         if (type == RTCH_MESSAGE_TYPE_TX_REL) {
