@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2009,2014,2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018-2020 Bryan Biedenkapp N2PLL
+*   Copyright (C) 2018-2023 Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ const uint8_t BITS_TABLE[] = {
 void getHostVersion()
 {
     LogInfo(__PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
-    LogInfo("Copyright (c) 2017-2022 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
+    LogInfo("Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
     LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
 }
 
