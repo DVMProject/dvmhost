@@ -91,7 +91,8 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 
 ## Command Line Parameters
 
-```usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+```
+usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -f        foreground mode
   --cal     calibration mode
