@@ -53,7 +53,7 @@ namespace p25
             class HOST_SW_API DFSITrunk : public p25::packet::Trunk {
             public:
                 /// <summary>Process a data frame from the RF interface.</summary>
-                virtual bool process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK = NULL);
+                virtual bool process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK = nullptr);
 
             protected:
                 LC m_rfDFSILC;

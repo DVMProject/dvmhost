@@ -48,7 +48,7 @@ using namespace p25::dfsi::packet;
 /// <param name="len">Length of data frame.</param>
 /// <param name="preDecodedTSBK">Pre-decoded TSBK.</param>
 /// <returns></returns>
-bool DFSITrunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
+bool DFSITrunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK)
 {
     assert(data != nullptr);
 
@@ -59,11 +59,11 @@ bool DFSITrunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
         return false;
 
     if (preDecodedTSBK != nullptr) {
-        return Trunk::process(data + 2U, len, preDecodedTSBK);
+        return Trunk::process(data + 2U, len, std::move(preDecodedTSBK));
     }
     else {
         if (m_rfDFSILC.decodeTSBK(data + 2U)) {
-            return Trunk::process(tsbk, P25_TSBK_LENGTH_BYTES, m_rfDFSILC.tsbk());
+            return Trunk::process(tsbk, P25_TSBK_LENGTH_BYTES, std::unique_ptr<lc::TSBK>(m_rfDFSILC.tsbk()));
         }
     }
 

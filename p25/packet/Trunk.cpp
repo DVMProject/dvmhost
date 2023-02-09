@@ -152,7 +152,7 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 /// <param name="len">Length of data frame.</param>
 /// <param name="preDecodedTSBK">Pre-decoded TSBK.</param>
 /// <returns></returns>
-bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
+bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK)
 {
     assert(data != nullptr);
 
@@ -191,7 +191,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, lc::TSBK* preDecodedTSBK)
                 return false;
             }
         } else {
-            tsbk = std::unique_ptr<lc::TSBK>(preDecodedTSBK);
+            tsbk = std::move(preDecodedTSBK);
         }
 
         uint32_t srcId = tsbk->getSrcId();
@@ -907,12 +907,14 @@ bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
     uint8_t data[1U];
     ::memset(data, 0x00U, 1U);
 
+    bool ret = false;
+
     std::unique_ptr<lc::AMBT> ambt = TSBKFactory::createAMBT(dataHeader, blocks);
     if (ambt != nullptr) {
-        return process(data, 1U, ambt.get());
-    } else {
-        return false;
+        ret = process(data, 1U, std::move(ambt));
     }
+
+    return ret;
 }
 
 /// <summary>
