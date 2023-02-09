@@ -141,17 +141,19 @@ void usage(const char* message, const char* arg)
     }
 
     ::fprintf(stdout, "usage: %s [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
-        "  -f       foreground mode\n"
-        "  --cal    calibration mode\n"
-        "  --setup  setup mode\n"
+        "  -f        foreground mode\n"
+        "  --cal     calibration mode\n"
+        "  --setup   setup mode\n"
         "\n"
-        "  --remote remote modem mode\n"
-        "  -a       remote modem command address\n"
-        "  -p       remote modem command port\n"
+        "  -c <file> specifies the configuration file to use\n"
         "\n"
-        "  -v       show version information\n"
-        "  -h       show this screen\n"
-        "  --       stop handling options\n",
+        "  --remote  remote modem mode\n"
+        "  -a        remote modem command address\n"
+        "  -p        remote modem command port\n"
+        "\n"
+        "  -v        show version information\n"
+        "  -h        show this screen\n"
+        "  --        stop handling options\n",
         g_progExe.c_str());
     exit(EXIT_FAILURE);
 }

@@ -1,178 +1,444 @@
+#
+# Digital Voice Modem - Host Software Configuration
+#
+# @package DVM / Host Software
+#
+
+# Flag indicating whether the host will run as a background or foreground task.
 daemon: true
+
+#
+# Logging Configuration
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
 log:
+    # Console display logging level (used when in foreground).
     displayLevel: 1
+    # File logging level.
     fileLevel: 1
+    # Full path for the directory to store the log files.
     filePath: .
+    # Full path for the directory to store the activity log files.
     activityFilePath: .
+    # Log filename prefix.
     fileRoot: DVM
+
+#
+# Network Configuration
+#
 network:
+    # Flag indicating whether or not host networking is enabled.
     enable: true
+    # Network Peer ID
     id: 100000
+    # Hostname/IP address of the FNE to connect to.
     address: 127.0.0.1
+    # Port number of the FNE to connect to.
     port: 62031
-    jitter: 360
+    # FNE access password.
     password: "PASSWORD"
+    # Maximum allowable DMR network jitter.
+    jitter: 360
+    # Flag indicating whether DMR slot 1 traffic will be passed.
     slot1: true
+    # Flag indicating whether DMR slot 2 traffic will be passed.
     slot2: true
+    # Flag indicating whether the local host lookup tables (RID, TGID, etc) will be updated from the network.
     updateLookups: false
+    # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
+    # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
+    # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
+    # Flag indicating whether or not RCON (remote control) is enabled.
     rconEnable: false
+    # IP address of the network interface to listen for RCON commands on (or 0.0.0.0 for all).
     rconAddress: 127.0.0.1
+    # Port number for RCON to listen on.
     rconPort: 9990
+    # RCON access password.
     rconPassword: "PASSWORD"
+    # Flag indicating whether or not verbose RCON debug logging is enabled.
     rconDebug: false
+
+#
+# Digital Protocol Configuration
+#
 protocols:
+    #
+    # Digital Mobile Radio
+    #
     dmr:
+        # Flag indicating whether or not the protocol is enabled.
         enable: true
+
+        #
+        # DMR Roaming Beacon (and TSCC) Timing Configuration
+        #
         beacons:
+            # Flag indicating whether or not DMR roaming beacons are enabled.
             enable: false
+            # Time between roaming beacon bursts. (seconds)
             interval: 60
+            # Amount of time to transmit roaming beacon. (seconds)
             duration: 3
+          
+        #
+        # DMR Timeslot Control Channel (TSCC) Configuration
+        #
         control: 
+            # Flag indicating whether or not this TSCC is a dedicated CC.
             dedicated: false
+            # Flag indicating whether or not TSCC is enabled.
             enable: false
+            # DMR slot number to transmit TSCC data on.
             slot: 1
+        
+        # Flag indicating whether or not received RF embedded LC data only should be transmitted.
         embeddedLCOnly: false
+        # Flag indicating whether talker alias data should be dumped to the log.
         dumpTAData: true
+        # Flag indicating whether verbose dumping of DMR data packets is enabled.
         dumpDataPacket: false
+        # Flag indicating whether or not this host will repeat DMR data traffic.
         repeatDataPacket: true
+        # Flag indicating whether verbose dumping of DMR CSBK data is enabled.
         dumpCsbkData: false
+        # Flag indicating unit registration will be verified after some operations.
         verifyReg: false
+        # Specifies the random wait delay for a subscriber.
+        # (This should not be altered.)
         nRandWait: 8
+        # Specifies the random back-off count in DMR TDMA frames.
+        # (This should not be altered.)
         backOff: 1
+        # Amount of time to hang after a voice call.
         callHang: 5
+        # Amount of time to continue transmitting after the end of traffic.
         txHang: 8
+        # BER/Error threshold for silencing voice packets.
         silenceThreshold: 21
+        # Internal data queue size (in DMR packets).
         queueSize: 31
+        # Flag indicating whether or not verbose logging is enabled.
         verbose: true
+        # Flag indicating whether or not debug logging is enabled.
         debug: false
+    
+    #
+    # Project 25
+    #
     p25:
+        # Flag indicating whether or not the protocol is enabled.
         enable: true
+        # Sets the number of TDU preambles to transmit at the start of a transmission.
         tduPreambleCount: 6
+
+        #
+        # P25 Control Channel Configuration
+        #
         control:
+            # Flag indicating whether or not CC is enabled.
             enable: false
+            # Flag indicating whether or not the CC will optionally acknowledge incoming requests.
             ackRequests: true
+            # Flag indicating whether or not this CC is a dedicated CC.
             dedicated: false
+            # Flag indicating whether CC data will be broadcast.
             broadcast: true
+            # Time between non-dedicated CC broadcasts. (seconds)
             interval: 300
+            # Amount of time to transmit non-dedicated CC broadcasts. (seconds)
             duration: 1
+            # Flag to disable TSDU triple-block transmissions and instead transmit single-block TSDUs.
             disableTSDUMBF: false
+            # Flag to enable optional TIME_DATE_ANNC TSBK during a CC broadcast.
             enableTimeDateAnn: false
+
+        # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
+        # Flag indicating whether or not the composite flag in the CC service options is set.
+        #   (This is useful to disable for some radios when running in VOC mode.)
         disableCompositeFlag: false
+        # Flag indicating that the host will attempt to automatically inhibit illegal RIDs (those not in the
+        # RID ACL list).
         inhibitIllegal: false
+        # Flag indicating the fallback legacy group grant for radios that do not support group affilition to 
+        # have group grants transmitted. (Useful for alerting the FNE to affiliations to TGIDs for radios that
+        # do not properly support group affiliation.)
         legacyGroupGrnt: true
+        # Flag indicating the fallback legacy group registration. (Same as above except for group affiliations.)
         legacyGroupReg: false
+        # Flag indicating the host should verify group affiliation.
         verifyAff: false
+        # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating whether verbose dumping of P25 data packets is enabled.
         dumpDataPacket: false
+        # Flag indicating whether or not this host will repeat P25 data traffic.
         repeatDataPacket: true
+        # Flag indicating whether verbose dumping of P25 TSBK data is enabled.
         dumpTsbkData: false
+        # Amount of time to hang after a voice call.
         callHang: 5
+        # Flag indicating whether or not the host will acknowledge status packets.
         noStatusAck: false
+        # Flag indicating whether or not the host will acknowledge message packets.
         noMessageAck: true
+        # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: true
+        # Flag indicating that emergency alarm's will be acknowledged.
         localEmergAlarm: false
+        # Flag indicating whether or not the host will respond to SNDCP data grant requests.
         sndcpGrant: false
+        # BER/Error threshold for silencing voice packets.
         silenceThreshold: 124
+        # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
+        # Flag indicating whether or not emergency support is enabled.
         emergDisabled: true
+        # Internal data queue size (in P25 packets).
         queueSize: 12
+        # Flag indicating whether or not verbose logging is enabled.
         verbose: true
+        # Flag indicating whether or not debug logging is enabled.
         debug: false
+
+    #
+    # Next Generation Digital Narrowband
+    #
     nxdn:
+        # Flag indicating whether or not the protocol is enabled.
         enable: false
+
+        #
+        # NXDN Control Channel Configuration
+        #
         control:
+            # Flag indicating whether or not CC is enabled.
             enable: false
+            # Flag indicating whether or not this CC is a dedicated CC.
             dedicated: false
+            # Flag indicating whether CC data will be broadcast.
             broadcast: true
+            # Time between non-dedicated CC broadcasts. (seconds)
             interval: 300
+            # Amount of time to transmit non-dedicated CC broadcasts. (seconds)
             duration: 1
+
+        # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
+        # Flag indicating whether or not the composite flag in the CC service options is set.
         disableCompositeFlag: false
+        # Flag indicating the host should verify group affiliation.
         verifyAff: false
+        # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating whether verbose dumping of NXDN RCCH data is enabled.
         dumpRcchData: false
+        # Amount of time to hang after a voice call.
         callHang: 5
+        # BER/Error threshold for silencing voice packets.
         silenceThreshold: 14
+        # Internal data queue size (in NXDN packets).
         queueSize: 12
+        # Flag indicating whether or not verbose logging is enabled.
         verbose: true
+        # Flag indicating whether or not debug logging is enabled.
         debug: false
+
+#
+# System Configuration
+#
 system:
+    # Textual label of this host.
     identity: ABCD123
+    # Total call transmit time maximum. (seconds)
     timeout: 180
+    # Flag indicating whether or not the host is operating in duplex (simultaneous Rx/Tx) or simplex operation.
     duplex: true
+    # Flag indicating whether or not the host should utilize the same frequency in simplex operation 
+    # (instead of split frequency).
     simplexSameFrequency: false
+    # Amount of time the host will "hang" on a digital mode in multi-mode operation. (seconds)
     modeHang: 10
+    # Amount of time the host will "hang" on a RF received digital mode in multi-mode operation. (seconds)
 #    rfModeHang: 10
+    # Amount of time the host will "hang" on a network received digital mode in multi-mode operation. (seconds)
 #    netModeHang: 10
+    # Flag indicating the host is operating in a single digital mode.
 #    fixedMode: false
+    # Amount of time the host will "hang" on the last TGID received via RF before returning to allowing all 
+    # TGID traffic.
     rfTalkgroupHang: 10
+    # Sets the amount of delay between "ticks" of the processing loop when the host is active (i.e. 
+    # processing traffic). (ms) [Note: Default value is recommend, normally this should not be changed.]
     activeTickDelay: 5
+    # Sets the amount of delay between "ticks" of the processing loop when the host is idle (i.e. not 
+    # processing traffic). (ms) [Note: Default value is recommend, normally this should not be changed.]
     idleTickDelay: 5
+    # Sets the local time offset from GMT.
     localTimeOffset: 0
+
+    #
+    # Location Information
+    # (This is used mainly for reporting the location of the host to a connected network.)
+    #
     info:
+        # Latitude.
         latitude: -83.689428
+        # Longitude.
         longitude: -39.194973
+        # Height (in meters).
         height: 1
+        # Transmit Power (in watts).
         power: 10
+        # Textual location for this host.
         location: "Repeater Site, Antarctica"
+
+    #
+    # Site Configuration
+    #
     config:
+        # Flag indicating whether or not this host is authoritative for TGID operations.
+        # (By default this should be true, unless you are operating in a mode that will dynamically permit
+        # TGIDs via the permit-tg RCON command.)
         authoritative: true
+        # Channel Identity (corresponds to the appropriate entry in the iden_table file).
         channelId: 2
+        # Channel Number (used to calculate actual host frequency based on the identity table).
         channelNo: 1
+        # DMR network ID.
         dmrNetId: 1
+
+        #
+        # Voice Channels
+        #
         voiceChNo:
+              # Channel Number (used to calculate actual host frequency based on the identity table).
             - channelNo: 1
+              # RCON IP Address for voice channel.
               rconAddress: 127.0.0.1
+              # RCON Port number for voice channel.
               rconPort: 9990
+              # RCON access password for voice channel.
               rconPassword: "PASSWORD"
+
+        # DMR Color Code.
         colorCode: 1
+        # P25 Network Access Code (NAC). (Rx/Tx)
         nac: 293
+        # P25 Network Access Code (NAC). (Overrides the above for Tx when set.)
 #         txNAC: 293
+        # NXDN Random Access Number.
         ran: 1
+        # P25 Patch Super Group.
         pSuperGroup: FFFF
+        # P25 Network ID (WACN).
         netId: BB800
+        # P25 System ID.
         sysId: 001
+        # P25 RFSS (RF Sub-System) ID.
         rfssId: 1
+        # P25 Site ID.
         siteId: 1
+
+    #
+    # Modem Configuration
+    #
     modem:
+        #
+        # Protocol Configuration
+        #
         protocol:
+            # Modem port type.
             type: "null" # Valid values are "null", and "uart"
+
             uart:
+                # UART/RS232 serial port device.
                 port: /dev/ttyUSB0
+                # UART/RS232 serial port speed. (The default speed of 115200, should not be
+                # changed unless the speed is also changed in the firmware of the modem.)
                 speed: 115200
+        
+        # Flag indicating whether or not the recieved signal is polarity inverted.
         rxInvert: false
+        # Flag indicating whether or not the transmitted signal is polarity inverted.
         txInvert: false
+        # Flag indicating whether or not the modem PTT signal should be active low.
         pttInvert: false
+        # Flag indicating whether or not the modem DC noise blocker filter is enabled.
         dcBlocker: true
+        # Flag indicating whether or not the modem COS signal should lockout transmit.
         cosLockout: false
+        # Number of FDMA preambles to transmit before data.
         fdmaPreamble: 80
+        # Amount of time to wait before starting DMR transmissions after a signal is received.
         dmrRxDelay: 7
+        # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
+        # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
         p25CorrCount: 8
+
+        #
+        # Hotspot Modem Configuration
+        #
         hotspot:
+            # DMR Discriminator Bandwidth Adjustment.
             dmrDiscBWAdj: 0 # Valid values between -128 and 128
+            # DMR Post Demodulator Bandwidth Adjustment.
             dmrPostBWAdj: 0 # Valid values between -128 and 128
+            # P25 Discriminator Bandwidth Adjustment.
             p25DiscBWAdj: 0 # Valid values between -128 and 128
+            # P25 Post Demodulator Bandwidth Adjustment.
             p25PostBWAdj: 0 # Valid values between -128 and 128
+            # NXDN Discriminator Bandwidth Adjustment.
             nxdnDiscBWAdj: 0 # Valid values between -128 and 128
+            # NXDN Post Demodulator Bandwidth Adjustment.
             nxdnPostBWAdj: 0 # Valid values between -128 and 128
+            # LNA Gain Mode.
             adfGainMode: 0 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
+            # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
             afcEnable: false
+            # Don't change this. See the ADF7021 datasheet for more information.
             afcKI: 11
+            # Don't change this. See the ADF7021 datasheet for more information.
             afcKP: 4
+            # Sets the maximum frequency correction range of the ADF7021.
+            # (It is highly recommended *not* to alter this.)
             afcRange: 1
-            txTuning: 0 # Freq offset for the hotspot, in hz
+            # Sets the transmit frequency offset. (in Hz)
+            txTuning: 0
+            # Sets the receive frequency offset. (in Hz)
             rxTuning: 0
+
+        #
+        # Repeater Modem Configuration
+        #
         repeater:
+            # DMR +3/-3 symbol level adjustment.
             dmrSymLvl3Adj: 0 # Valid values between -128 and 128
+            # DMR +1/-1 symbol level adjustment.
             dmrSymLvl1Adj: 0 # Valid values between -128 and 128
+            # P25 +3/-3 symbol level adjustment.
             p25SymLvl3Adj: 0 # Valid values between -128 and 128
+            # P25 +1/-1 symbol level adjustment.
             p25SymLvl1Adj: 0 # Valid values between -128 and 128
+            # NXDN +3/-3 symbol level adjustment.
             nxdnSymLvl3Adj: 0 # Valid values between -128 and 128
+            # NXDN +1/-1 symbol level adjustment.
             nxdnSymLvl1Adj: 0 # Valid values between -128 and 128
+
+        #
+        # (Optional) Software Potentiometer Configuration
+        # [Note: This only applies to DVM board which include such support.]
+        #
         softpot:
             rxCoarse: 127
             rxFine: 127
@@ -180,33 +446,75 @@ system:
             txFine: 127
             rssiCoarse: 127
             rssiFine: 127
+
+        # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128
+        # Sets transmitted the signal offset from DC.
         txDCOffset: 0 # Valid values between -128 and 128
+        # Sets the received signal modulation level.
         rxLevel: 50
+        # Sets the transmitted signal modulation level.
         txLevel: 50
+        # Sets the transmitted CWID signal modulation level.
 #        cwIdTxLevel: 50
+        # Sets the transmitted DMR signal modulation level.
 #        dmrTxLevel: 50
+        # Sets the transmitted P25 signal modulation level.
 #        p25TxLevel: 50
+        # Sets the transmitted NXDN signal modulation level.
 #        nxdnTxLevel: 50
         rssiMappingFile: RSSI.dat
+        # Deprecated. Sets the playout time in seconds between sending buffered data to the modem.
         packetPlayoutTime: 10
+        # Flag indicating that modem resets due to ADC or DAC overflows is disabled.
         disableOFlowReset: false
+        # Flag indicating that the modem configuration area data should be ignored.
         ignoreModemConfigArea: false
+        # Flag indicating whether verbose dumping of the modem status is enabled.
         dumpModemStatus: false
+        # Flag indicating whether or not trace logging is enabled.
         trace: false
+        # Flag indicating whether or not debug logging is enabled.
         debug: false
+
+    #
+    # CW ID Configuration
+    #
     cwId:
+        # Flag indicating whether or not CWID is enabled.
         enable: true
+        # Amount of time between CWID transmissions. (minutes)
         time: 15
+        # Callsign to be transmitted.
         callsign: ABCD123
+
+    #
+    # Channel Identity Table Configuration
+    #
     iden_table:
+        # Full path to the identity table file.
         file: iden_table.dat
+        # Amount of time between updates of identity table file. (minutes)
         time: 30
+
+    #
+    # Radio ID ACL Configuration
+    #
     radio_id:
+        # Full path to the identity table file.
         file: rid_acl.dat
+        # Amount of time between updates of identity table file. (minutes)
         time: 2
+        # Flag indicating whether or not RID ACLs are enforced.
         acl: false
+
+    #
+    # Talkgroupd ID ACL Configuration
+    #
     talkgroup_id:
+        # Full path to the identity table file.
         file: tg_acl.dat
+        # Amount of time between updates of identity table file. (minutes)
         time: 2
+        # Flag indicating whether or not TGID ACLs are enforced.
         acl: false
