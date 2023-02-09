@@ -89,6 +89,24 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 * During Transmit Calibration, it may be necessary to adjust the symbol levels directly. Normally this isn't required as the DVM will just work, but some radios require some fine adjustment of the symbol levels, this is exposed in the calibration mode.
 * Unusually high BER >10% and other various receive problems may be due to the radio/hotspot being off frequency and requiring some adjustment. Even a slight frequency drift can be catastrophic for proper digital modulation. The recommendation is to ensure the interfaced radio does not have an overall reference frequency drift > +/- 150hz. An unusually high BER can also be explained by DC level offsets in the signal paths, or issues with the FM deviation levels on the interfaced radio being too high or too low.
 
+## Command Line Parameters
+
+```usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+
+  -f        foreground mode
+  --cal     calibration mode
+  --setup   setup mode
+
+  -c <file> specifies the configuration file to use
+
+  --remote  remote modem mode
+  -a        remote modem command address
+  -p        remote modem command port
+
+  -v        show version information
+  -h        show this screen
+  --        stop handling options```
+
 ## Notes
 
 Some extra notes for those who are using the Raspberry Pi, default Raspbian OS or Debian OS installations. You will not be able to flash or access the STM32 modem unless you do some things beforehand. 
