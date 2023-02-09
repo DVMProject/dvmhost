@@ -280,8 +280,6 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
                 m_control.setEmergency((serviceOptions & 0x80U) == 0x80U);
                 m_control.setEncrypted((serviceOptions & 0x40U) == 0x40U);
                 m_control.setPriority((serviceOptions & 0x07U));
-                LogMessage(LOG_NET, "dfsi::LC::decodeLDU1, raw control service, options = %02X, emerg = %u, encrypt = %u, prio = %u",
-                    serviceOptions, m_control.getEmergency(), m_control.getEncrypted(), m_control.getPriority());
                 ::memcpy(imbe, data + 5U, P25_RAW_IMBE_LENGTH_BYTES);               // IMBE
             }
             break;

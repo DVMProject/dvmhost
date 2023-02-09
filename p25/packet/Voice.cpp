@@ -1120,9 +1120,6 @@ void Voice::writeNet_LDU1()
         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
     }
 
-    LogMessage(LOG_NET, P25_LDU1_STR " raw control service, emerg = %u, encrypt = %u, prio = %u",
-        control.getEmergency(), control.getEncrypted(), control.getPriority());
-
     // set network and RF link control states
     m_netLC = lc::LC();
     m_netLC.setLCO(control.getLCO());
