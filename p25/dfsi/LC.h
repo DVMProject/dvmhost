@@ -56,6 +56,9 @@ namespace p25
             /// <summary>Equals operator.</summary>
             LC& operator=(const LC& data);
 
+            /// <summary>Helper to set the LC data.</summary>
+            void setControl(const lc::LC& data);
+
             /// <summary>Decode a NID start/stop.</summary>
             bool decodeNID(const uint8_t* data);
             /// <summary>Encode a NID start/stop.</summary>
@@ -106,11 +109,11 @@ namespace p25
             __PROPERTY(uint8_t, source, Source);
 
             /// <summary>Link control data.</summary>
-            __PROPERTY_PLAIN(p25::lc::LC, control, control);
+            __READONLY_PROPERTY_PLAIN(p25::lc::LC*, control, control);
+            /// <summary>Low speed data.</summary>
+            __READONLY_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd, lsd);
             /// <summary>TSBK.</summary>
             __PROPERTY_PLAIN(p25::lc::TSBK*, tsbk, tsbk);
-            /// <summary>Low speed data.</summary>
-            __PROPERTY_PLAIN(p25::data::LowSpeedData, lsd, lsd);
 
         private:
             /** Encryption data */

@@ -1050,8 +1050,12 @@ void Voice::checkNet_LDU1()
 /// <param name="lsd"></param>
 void Voice::writeNet_LDU1()
 {
-    lc::LC control = lc::LC(m_dfsiLC.control());
-    data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
+    lc::LC control = lc::LC(*m_dfsiLC.control());
+
+    // because the lc::LC internal copy routine will reset the encrypted flag -- lets force it
+    control.setEncrypted(m_dfsiLC.control()->getEncrypted());
+
+    data::LowSpeedData lsd = data::LowSpeedData(*m_dfsiLC.lsd());
 
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
@@ -1118,6 +1122,12 @@ void Voice::writeNet_LDU1()
 
     if (m_p25->m_control) {
         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+    }
+
+    if (m_debug) {
+        LogMessage(LOG_NET, P25_LDU1_STR " service flags, emerg = %u, encrypt = %u, prio = %u, DFSI emerg = %u, DFSI encrypt = %u, DFSI prio = %u",
+            control.getEmergency(), control.getEncrypted(), control.getPriority(),
+            m_dfsiLC.control()->getEmergency(), m_dfsiLC.control()->getEncrypted(), m_dfsiLC.control()->getPriority());
     }
 
     // set network and RF link control states
@@ -1348,8 +1358,8 @@ void Voice::checkNet_LDU2()
 /// <param name="lsd"></param>
 void Voice::writeNet_LDU2()
 {
-    lc::LC control = lc::LC(m_dfsiLC.control());
-    data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
+    lc::LC control = lc::LC(*m_dfsiLC.control());
+    data::LowSpeedData lsd = data::LowSpeedData(*m_dfsiLC.lsd());
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {

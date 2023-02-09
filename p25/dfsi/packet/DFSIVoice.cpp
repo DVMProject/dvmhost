@@ -113,7 +113,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            m_rfLC = m_rfDFSILC.control();
+            m_rfLC = lc::LC(*m_rfDFSILC.control());
 
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_HDU_STR " DFSI, HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
@@ -196,7 +196,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                         }
                     }
 
-                    lc::LC lc = m_rfDFSILC.control();
+                    lc::LC lc = lc::LC(*m_rfDFSILC.control());
 
                     uint32_t srcId = lc.getSrcId();
                     uint32_t dstId = lc.getDstId();
@@ -412,7 +412,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 
                 if (m_p25->m_rfState == RS_RF_AUDIO) {
                     if (!alreadyDecoded) {
-                        m_rfLC = m_rfDFSILC.control();
+                        m_rfLC = lc::LC(*m_rfDFSILC.control());
                         m_rfLastLDU1 = m_rfLC;
                     }
 
@@ -519,7 +519,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     return false;
                 }
                 else if (m_p25->m_rfState == RS_RF_AUDIO) {
-                    m_rfLC = m_rfDFSILC.control();
+                    m_rfLC = lc::LC(*m_rfDFSILC.control());
                     m_rfLastLDU2 = m_rfLC;
 
                     uint8_t buffer[P25_LDU_FRAME_LENGTH_BYTES + 2U];
@@ -869,8 +869,8 @@ void DFSIVoice::writeNet_TDU()
 /// <param name="lsd"></param>
 void DFSIVoice::writeNet_LDU1()
 {
-    lc::LC control = lc::LC(m_dfsiLC.control());
-    data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
+    lc::LC control = lc::LC(*m_dfsiLC.control());
+    data::LowSpeedData lsd = data::LowSpeedData(*m_dfsiLC.lsd());
 
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
@@ -1032,8 +1032,7 @@ void DFSIVoice::writeNet_LDU1()
         m_netLost = 0U;
         m_vocLDU1Count = 0U;
 
-        m_netDFSILC.control(m_netLC);
-        m_netDFSILC.lsd(lsd);
+        m_netDFSILC = dfsi::LC(m_netLC, lsd);
 
         m_trunk->writeRF_DFSI_Start(P25_DFSI_TYPE_VOICE);
 
@@ -1163,8 +1162,8 @@ void DFSIVoice::writeNet_LDU1()
 /// <param name="lsd"></param>
 void DFSIVoice::writeNet_LDU2()
 {
-    lc::LC control = lc::LC(m_dfsiLC.control());
-    data::LowSpeedData lsd = data::LowSpeedData(m_dfsiLC.lsd());
+    lc::LC control = lc::LC(*m_dfsiLC.control());
+    data::LowSpeedData lsd = data::LowSpeedData(*m_dfsiLC.lsd());
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {
@@ -1185,7 +1184,7 @@ void DFSIVoice::writeNet_LDU2()
     m_netLC.setAlgId(control.getAlgId());
     m_netLC.setKId(control.getKId());
 
-    m_netDFSILC.control(m_netLC);
+    m_netDFSILC.setControl(m_netLC);
 
     insertMissingAudio(m_netLDU2);
 
