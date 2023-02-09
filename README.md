@@ -105,7 +105,8 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 
   -v        show version information
   -h        show this screen
-  --        stop handling options```
+  --        stop handling options
+```
 
 ## Notes
 
