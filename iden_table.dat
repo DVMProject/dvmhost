@@ -1,5 +1,7 @@
 #
-# This file sets the valid P25 bandplan identity table.
+# This file sets the valid bandplan identity table.
+# (It is recommended to use the included iden_channel_calc.py Python script
+# to generate entries for this file.)
 #
 # ChId,Base Freq,Spacing (khz),Input Offset (mhz),Bandwidth (khz),<newline>
 0,851006250,6.25,-45.000,12.5,
