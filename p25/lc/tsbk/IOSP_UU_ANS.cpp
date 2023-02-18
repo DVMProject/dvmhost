@@ -70,7 +70,7 @@ bool IOSP_UU_ANS::decode(const uint8_t* data, bool rawTSBK)
     m_encrypted = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                   // Encryption Flag
     m_priority = (((tsbkValue >> 56) & 0xFFU) & 0x07U);                             // Priority
     m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Answer Response
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
+    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target ID
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;
@@ -92,7 +92,7 @@ void IOSP_UU_ANS::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         (m_emergency ? 0x80U : 0x00U) +                                             // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                             // Encrypted Flag
         (m_priority & 0x07U);                                                       // Priority
-    tsbkValue = (tsbkValue << 32) + m_dstId;                                        // Target Radio Address
+    tsbkValue = (tsbkValue << 32) + m_dstId;                                        // Target ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);

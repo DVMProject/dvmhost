@@ -71,7 +71,7 @@ bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
     m_priority = (((tsbkValue >> 56) & 0xFFU) & 0x07U);                             // Priority
     m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                                       // Channel ID
     m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                                      // Channel Number
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
+    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target ID
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;
@@ -95,7 +95,7 @@ void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         (m_priority & 0x07U);                                                       // Priority
     tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
-    tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target Radio Address
+    tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
