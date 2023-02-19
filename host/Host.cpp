@@ -571,7 +571,7 @@ int Host::run()
         nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_siteId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
