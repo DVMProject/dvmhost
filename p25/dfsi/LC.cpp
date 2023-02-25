@@ -434,7 +434,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = m_control->getMFId();                               // MFId
                 dfsiFrame[3U] = serviceOptions;                                     // Service Options
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE4:
@@ -444,7 +444,7 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = (dstId >> 8) & 0xFFU;
                 dfsiFrame[3U] = (dstId >> 0) & 0xFFU;
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE5:
@@ -454,25 +454,34 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = (srcId >> 8) & 0xFFU;
                 dfsiFrame[3U] = (srcId >> 0) & 0xFFU;
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE6:
             {
+                // first 3 bytes of frame are supposed to be
+                // part of the RS(24, 12, 13) of the VOICE3, 4, and 5 control
+                // bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE7:
             {
+                // first 3 bytes of frame are supposed to be
+                // part of the RS(24, 12, 13) of the VOICE3, 4, and 5 control
+                // bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE8:
             {
+                // first 3 bytes of frame are supposed to be
+                // part of the RS(24, 12, 13) of the VOICE3, 4, and 5 control
+                // bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE9:
@@ -664,7 +673,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE11:
             {
                 ::memcpy(dfsiFrame + 1U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[12U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[12U] = P25_DFSI_STATUS_ERASE;                                   // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE12:
@@ -673,7 +682,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[1U];
                 dfsiFrame[3U] = mi[2U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE13:
@@ -682,7 +691,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[4U];
                 dfsiFrame[3U] = mi[5U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE14:
@@ -691,29 +700,35 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[7U];
                 dfsiFrame[3U] = mi[8U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE15:
             {
-                dfsiFrame[1U] = m_control->getAlgId();                               // Algorithm ID
+                dfsiFrame[1U] = m_control->getAlgId();                              // Algorithm ID
                 uint32_t kid = m_control->getKId();
                 dfsiFrame[2U] = (kid >> 8) & 0xFFU;                                 // Key ID
                 dfsiFrame[3U] = (kid >> 0) & 0xFFU;
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE16:
             {
+                // first 3 bytes of frame are supposed to be
+                // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
+                // control bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE17:
             {
+                // first 3 bytes of frame are supposed to be
+                // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
+                // control bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS;                                   // Status
+                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE18:

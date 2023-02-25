@@ -73,7 +73,8 @@ namespace p25
 
         const uint32_t  P25_DFSI_TSBK_FRAME_LENGTH_BYTES = 25U;
 
-        const uint8_t   P25_DFSI_STATUS = 0x02U;            //
+        const uint8_t   P25_DFSI_STATUS_NO_ERROR = 0x00U;   //
+        const uint8_t   P25_DFSI_STATUS_ERASE = 0x02U;      //
 
         const uint8_t   P25_DFSI_RT_ENABLED = 0x02U;        //
         const uint8_t   P25_DFSI_RT_DISABLED = 0x04U;       //
