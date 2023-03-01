@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017,2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -63,8 +63,6 @@ namespace edac
         bool decode362017(uint8_t* data);
         /// <summary>Encode RS (36,20,17) FEC.</summary>
         void encode362017(uint8_t* data);
-        /// <summary>Encode RS (36,20,17) FEC.</summary>
-        void encode362017_2(uint8_t* data);
 
     private:
         /// <summary></summary>

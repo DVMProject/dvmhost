@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -735,7 +735,7 @@ namespace edac
                         data[i] &= msk;
                         data[i] |= tmp[LOAD - len + i];
                     }
-                    for ( int i = 0; i < NROOTS; ++i ) {
+                    for (int i = 0; i < NROOTS; ++i) {
                         parity[i] = tmp[LOAD + i];
                     }
                 }
@@ -765,7 +765,7 @@ namespace edac
                     }
 
                     std::rotate(parity, parity + 1, parity + NROOTS);
-                    if ( feedback != A0 ) {
+                    if (feedback != A0) {
                         parity[NROOTS - 1] = alpha_to[modnn(feedback + genpoly[0])];
                     } else {
                         parity[NROOTS - 1] = 0;
@@ -797,7 +797,7 @@ namespace edac
                     EZPWD_RAISE_OR_RETURN(std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1);
                 }
 
-                if ( no_eras ) {
+                if (no_eras) {
                     if (no_eras > NROOTS) {
                         EZPWD_RAISE_OR_RETURN(std::runtime_error, "reed-solomon: number of erasures exceeds capacity (number of roots)", -1);
                     }
