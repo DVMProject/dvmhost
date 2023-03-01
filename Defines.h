@@ -169,30 +169,55 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
 //  Inlines
 // ---------------------------------------------------------------------------
 
+/// <summary>
+/// String from boolean.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
 inline std::string __BOOL_STR(const bool& value) {
     std::stringstream ss;
     ss << std::boolalpha << value;
     return ss.str();
 }
 
+/// <summary>
+/// String from integer number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
 inline std::string __INT_STR(const int& value) {
     std::stringstream ss;
     ss << value;
     return ss.str();
 }
 
+/// <summary>
+/// String from hex integer number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
 inline std::string __INT_HEX_STR(const int& value) {
     std::stringstream ss;
     ss << std::hex << value;
     return ss.str();
 }
 
+/// <summary>
+/// String from floating point number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
 inline std::string __FLOAT_STR(const float& value) {
     std::stringstream ss;
     ss << value;
     return ss.str();
 }
 
+/// <summary>
+/// IP address from ulong64_t value.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
 inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
     std::stringstream ss;
     ss << ((value >> 24) & 0xFFU) << "." << ((value >> 16) & 0xFFU) << "." << ((value >> 8) & 0xFFU) << "." << (value & 0xFFU);
@@ -203,7 +228,11 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
 //  Macros
 // ---------------------------------------------------------------------------
 
+/// <summary>Pointer magic to get the memory address of a floating point number.</summary>
+/// <param name="x">Floating Point Variable</param>
 #define __FLOAT_ADDR(x)  (*(uint32_t*)& x)
+/// <summary>Pointer magic to get the memory address of a double precision number.</summary>
+/// <param name="x">Double Precision Variable</param>
 #define __DOUBLE_ADDR(x) (*(uint64_t*)& x)
 
 #define WRITE_BIT(p, i, b) p[(i) >> 3] = (b) ? (p[(i) >> 3] | BIT_MASK_TABLE[(i) & 7]) : (p[(i) >> 3] & ~BIT_MASK_TABLE[(i) & 7])

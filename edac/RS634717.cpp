@@ -98,22 +98,21 @@ const uint8_t ENCODE_MATRIX_362017[20U][36U] = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 002, 001, 053, 074, 002, 014, 052, 074, 012, 057, 024, 063, 015, 042, 052, 033 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 034, 035, 002, 023, 021, 027, 022, 033, 064, 042, 005, 073, 051, 046, 073, 060 } };
 
-// 
-// __RS( ... ) -- Define a reed-solomon codec 
-// 
-// @TYPE:       Data type primitive.
-// @SYMBOLS:    Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255.
-// @PAYLOAD:    The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols.
-// @POLY:       A primitive polynomial appropriate to the SYMBOLS size.
-// @FCR:        The first consecutive root of the Reed-Solomon generator polynomial.
-// @PRIM:       The primitive root of the generator polynomial.
-// 
+/// <summary>Define a reed-solomon codec.</summary>
+/// <param name="TYPE">Data type primitive</param>
+/// <param name="SYMBOLS">Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255</param>
+/// <param name="PAYLOAD">The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols</param>
+/// <param name="POLY">A primitive polynomial appropriate to the SYMBOLS size</param>
+/// <param name="FCR">The first consecutive root of the Reed-Solomon generator polynomial</param>
+/// <param name="PRIM">The primitive root of the generator polynomial</param>
 #define __RS(TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM)                           \
             edac::rs::reed_solomon<TYPE,                                        \
             edac::rs::log_<(SYMBOLS) + 1>::value,                               \
             (SYMBOLS) - (PAYLOAD), FCR, PRIM,                                   \
             edac::rs::gfpoly<edac::rs::log_<(SYMBOLS) + 1>::value, POLY>>
 
+/// <summary>Define a 63-symbol reed-solomon codec.</summary>
+/// <param name="PAYLOAD">The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols</param>
 #define __RS_63(PAYLOAD) __RS(uint8_t, 63, PAYLOAD, 0x43, 1, 1)
 
 // ---------------------------------------------------------------------------
