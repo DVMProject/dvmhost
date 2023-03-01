@@ -123,7 +123,7 @@ protocols:
         callHang: 5
         # Amount of time to continue transmitting after the end of traffic.
         txHang: 8
-        # BER/Error threshold for silencing voice packets.
+        # BER/Error threshold for silencing voice packets. (0 or 141 disables)
         silenceThreshold: 21
         # Internal data queue size (in DMR packets).
         queueSize: 31
@@ -196,7 +196,7 @@ protocols:
         unitToUnitAvailCheck: true
         # Flag indicating whether or not the host will respond to SNDCP data grant requests.
         sndcpGrant: false
-        # BER/Error threshold for silencing voice packets.
+        # BER/Error threshold for silencing voice packets. (0 or 1233 disables)
         silenceThreshold: 124
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
@@ -241,7 +241,7 @@ protocols:
         dumpRcchData: false
         # Amount of time to hang after a voice call.
         callHang: 5
-        # BER/Error threshold for silencing voice packets.
+        # BER/Error threshold for silencing voice packets. (0 or 144 disables)
         silenceThreshold: 14
         # Internal data queue size (in NXDN packets).
         queueSize: 12

@@ -124,8 +124,8 @@ namespace nxdn
     const uint32_t  NXDN_CAC_SHORT_CRC_LENGTH_BITS = 126U;                                          // Data + CRC-16 + 4-bit NULL
     const uint32_t  NXDN_CAC_SHORT_LENGTH_BITS = 106U;
 
-    const uint32_t NXDN_RTCH_LC_LENGTH_BITS = 176U;
-    const uint32_t NXDN_RTCH_LC_LENGTH_BYTES = (NXDN_RTCH_LC_LENGTH_BITS / 8U);
+    const uint32_t  NXDN_RTCH_LC_LENGTH_BITS = 176U;
+    const uint32_t  NXDN_RTCH_LC_LENGTH_BYTES = (NXDN_RTCH_LC_LENGTH_BITS / 8U);
 
     const uint32_t  NXDN_RCCH_LC_LENGTH_BITS = 144U;
     const uint32_t  NXDN_RCCH_LC_LENGTH_BYTES = (NXDN_RCCH_LC_LENGTH_BITS / 8U);
