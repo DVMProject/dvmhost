@@ -63,17 +63,17 @@ namespace edac
         bool decode362017(uint8_t* data);
         /// <summary>Encode RS (36,20,17) FEC.</summary>
         void encode362017(uint8_t* data);
+        /// <summary>Encode RS (36,20,17) FEC.</summary>
+        void encode362017_2(uint8_t* data);
 
     private:
         /// <summary></summary>
         static uint8_t bin2Hex(const uint8_t* input, uint32_t offset);
         /// <summary></summary>
-        static void hex2Bin(uint8_t input, uint8_t* output, uint32_t offset);
+        static void hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset);
 
         /// <summary></summary>
         uint8_t gf6Mult(uint8_t a, uint8_t b) const;
-        /// <summary>Decode variable length Reed-Solomon FEC.</summary>
-        bool decode(uint8_t* data, const uint32_t bitLength, const int firstData, const int roots);
     };
 } // namespace edac
 
