@@ -475,23 +475,18 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
             break;
             case TSBK_ISP_EMERG_ALRM_REQ:
             {
-                if (!m_p25->m_emergDisabled) {
-                    ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
-                    if (isp->getEmergency()) {
-                        if (m_verbose) {
-                            LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
-                                srcId, dstId);
-                        }
-
-                        ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
-
-                        writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
-                        if (m_localEmergAlarm) {
-                            writeRF_TSDU_Emerg_Alrm(srcId, dstId);
-                        }
+                ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
+                if (isp->getEmergency()) {
+                    if (m_verbose) {
+                        LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                            srcId, dstId);
                     }
-                } else {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request) denial, emergency while emergency disabled, srcId = %u", srcId);
+
+                    ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
+
+                    // emergency functions are expressly not supported by DVM -- DVM will *ACKNOWLEDGE* the request but will not do any
+                    // further processing with it
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_EMERG_ALRM_REQ, false, true);
                 }
             }
             break;
@@ -858,14 +853,9 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             // ignore a network deny command
                             return true; // don't allow this to write to the air
                         } else {
-                            if (!m_p25->m_emergDisabled) {
-                                if (m_verbose) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
-                                        srcId, dstId);
-                                }
-                            } else {
-                                LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request) denial, emergency while emergency disabled, srcId = %u", srcId);
-                                return true; // don't allow this to write to the air
+                            if (m_verbose) {
+                                LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
+                                    srcId, dstId);
                             }
                         }
                     }
@@ -1126,10 +1116,6 @@ void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 /// <param name="dstId"></param>
 void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 {
-    if (m_p25->m_emergDisabled) {
-        return;
-    }
-
     std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = new_unique(ISP_EMERG_ALRM_REQ);
     isp->setSrcId(srcId);
     isp->setDstId(dstId);
@@ -1209,7 +1195,6 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_microslotCount(0U),
     m_ctrlTimeDateAnn(false),
     m_ctrlTSDUMBF(true),
-    m_localEmergAlarm(false),
     m_sndcpChGrant(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),

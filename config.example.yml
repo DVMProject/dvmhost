@@ -194,16 +194,12 @@ protocols:
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: true
-        # Flag indicating that emergency alarm's will be acknowledged.
-        localEmergAlarm: false
         # Flag indicating whether or not the host will respond to SNDCP data grant requests.
         sndcpGrant: false
         # BER/Error threshold for silencing voice packets.
         silenceThreshold: 124
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
-        # Flag indicating whether or not emergency support is enabled.
-        emergDisabled: true
         # Internal data queue size (in P25 packets).
         queueSize: 12
         # Flag indicating whether or not verbose logging is enabled.

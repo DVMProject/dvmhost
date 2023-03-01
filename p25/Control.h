@@ -164,7 +164,6 @@ namespace p25
         bool m_voiceOnControl;
         bool m_ackTSBKRequests;
         bool m_disableNetworkHDU;
-        bool m_emergDisabled;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

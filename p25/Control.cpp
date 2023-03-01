@@ -104,7 +104,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_voiceOnControl(false),
     m_ackTSBKRequests(true),
     m_disableNetworkHDU(false),
-    m_emergDisabled(true),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -241,7 +240,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     m_trunk->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_trunk->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
 
-    m_trunk->m_localEmergAlarm = p25Protocol["localEmergAlarm"].as<bool>(false);
     m_trunk->m_sndcpChGrant = p25Protocol["sndcpGrant"].as<bool>(false);
 
     yaml::Node control = p25Protocol["control"];
@@ -316,8 +314,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
 
-    m_emergDisabled = p25Protocol["emergDisabled"].as<bool>(true);
-
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
 
@@ -330,7 +326,6 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         if (!m_trunk->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
         }
-        LogInfo("    Emergency Support Disabled: %s", m_emergDisabled ? "yes" : "no");
         LogInfo("    Time/Date Announcement TSBK: %s", m_trunk->m_ctrlTimeDateAnn ? "yes" : "no");
 
         LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");

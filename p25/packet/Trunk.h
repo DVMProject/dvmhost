@@ -148,7 +148,6 @@ namespace p25
 
             bool m_ctrlTSDUMBF;
 
-            bool m_localEmergAlarm;
             bool m_sndcpChGrant;
 
             bool m_dumpTSBK;
