@@ -124,19 +124,19 @@ class RS6347 : public __RS_63(47) {
 public:
     RS6347() : __RS_63(47)() { /* stub */ }
 };
-RS6347 rs634717;    // 16 bit / 8 bit corrections max
+RS6347 rs634717;    // 16 bit / 8 bit corrections max / 5 bytes total
 
 class RS6351 : public __RS_63(51) {
 public:
     RS6351() : __RS_63(51)() { /* stub */ }
 };
-RS6351 rs241213;    // 12 bit / 6 bit corrections max
+RS6351 rs241213;    // 12 bit / 6 bit corrections max / 3 bytes total
 
 class RS6355 : public __RS_63(55) {
 public:
     RS6355() : __RS_63(55)() { /* stub */ }
 };
-RS6355 rs24169;     // 8 bit / 4 bit corrections max
+RS6355 rs24169;     // 8 bit / 4 bit corrections max / 2 bytes total
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -181,7 +181,7 @@ bool RS634717::decode241213(uint8_t* data)
     for (uint32_t i = 0U; i < 12U; i++, offset += 6)
         hex2Bin(codeword[39 + i], data, offset);
 
-    if ((ec == -1) || ((ec >= 3) && (ec <= 6))) {
+    if ((ec == -1) || (ec >= 6)) {
         return false;
     }
 
@@ -236,7 +236,7 @@ bool RS634717::decode24169(uint8_t* data)
     for (uint32_t i = 0U; i < 16U; i++, offset += 6)
         hex2Bin(codeword[39 + i], data, offset);
 
-    if ((ec == -1) || ((ec >= 3) && (ec <= 4))) {
+    if ((ec == -1) || (ec >= 4)) {
         return false;
     }
 
@@ -291,7 +291,7 @@ bool RS634717::decode362017(uint8_t* data)
     for (uint32_t i = 0U; i < 20U; i++, offset += 6)
         hex2Bin(codeword[27 + i], data, offset);
 
-    if ((ec == -1) || ((ec >= 3) && (ec <= 8))) {
+    if ((ec == -1) || (ec >= 8)) {
         return false;
     }
 
