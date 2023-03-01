@@ -857,6 +857,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                                 LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_ISP_EMERG_ALRM_REQ (Emergency Alarm Request), srcId = %u, dstId = %u",
                                     srcId, dstId);
                             }
+                            return true; // don't allow this to write to the air
                         }
                     }
                     break;
