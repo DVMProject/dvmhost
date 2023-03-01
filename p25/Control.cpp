@@ -268,6 +268,12 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         m_voice->m_silenceThreshold = p25::DEFAULT_SILENCE_THRESHOLD;
     }
 
+    // either MAX_P25_VOICE_ERRORS or 0 will disable the threshold logic
+    if (m_voice->m_silenceThreshold == 0) {
+        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", p25::MAX_P25_VOICE_ERRORS);
+        m_voice->m_silenceThreshold = p25::MAX_P25_VOICE_ERRORS;
+    }
+    
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
     bool disableCompositeFlag = p25Protocol["disableCompositeFlag"].as<bool>(false);

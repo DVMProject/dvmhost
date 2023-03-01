@@ -237,6 +237,12 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const s
         m_voice->m_silenceThreshold = nxdn::DEFAULT_SILENCE_THRESHOLD;
     }
 
+    // either MAX_NXDN_VOICE_ERRORS or 0 will disable the threshold logic
+    if (m_voice->m_silenceThreshold == 0) {
+        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
+        m_voice->m_silenceThreshold = nxdn::MAX_NXDN_VOICE_ERRORS;
+    }
+    
     bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
     if (m_control) {

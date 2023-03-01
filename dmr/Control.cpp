@@ -164,6 +164,12 @@ void Control::setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo
         silenceThreshold = dmr::DEFAULT_SILENCE_THRESHOLD;
     }
 
+    // either MAX_DMR_VOICE_ERRORS or 0 will disable the threshold logic
+    if (silenceThreshold == 0) {
+        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
+        silenceThreshold = dmr::MAX_DMR_VOICE_ERRORS;
+    }
+    
     m_slot1->setSilenceThreshold(silenceThreshold);
     m_slot2->setSilenceThreshold(silenceThreshold);
 
