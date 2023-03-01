@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -135,6 +135,8 @@ namespace p25
             bool m_tsbkVendorSkip;
 
             uint32_t m_callTimer;
+
+            ulong64_t m_rsValue; // used for certain transparent passthru LCOs
 
             /** Encryption data */
             uint8_t* m_mi;

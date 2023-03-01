@@ -262,7 +262,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         if (m_slot->m_rfState == RS_RF_AUDIO) {
             m_lastRfN = 0U;
 
-            // Convert the Audio Sync to be from the BS or MS as needed
+            // convert the Audio Sync to be from the BS or MS as needed
             Sync::addDMRAudioSync(data + 2U, m_slot->m_duplex);
 
             uint32_t errors = 0U;
@@ -335,14 +335,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 if (errors > m_slot->m_silenceThreshold) {
-                    // Get the LCSS from the EMB
+                    // get the LCSS from the EMB
                     data::EMB emb;
                     emb.decode(data + 2U);
 
                     insertNullAudio(data + 2U);
                     m_fec.regenerateDMR(data + 2U);
 
-                    // Regenerate EMB
+                    // regenerate EMB
                     emb.encode(data + 2U);
 
                     LogWarning(LOG_RF, DMR_DT_VOICE ", exceeded lost audio threshold, filling in");
@@ -357,12 +357,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_rfTGHang.start();
             m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
 
-            // Get the LCSS from the EMB
+            // get the LCSS from the EMB
             data::EMB emb;
             emb.decode(data + 2U);
             uint8_t lcss = emb.getLCSS();
 
-            // Dump any interesting Embedded Data
+            // dump any interesting Embedded Data
             bool ret = m_rfEmbeddedData[m_rfEmbeddedWriteN].addData(data + 2U, lcss);
             if (ret) {
                 uint8_t flco = m_rfEmbeddedData[m_rfEmbeddedWriteN].getFLCO();
@@ -566,10 +566,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     return false;
                 m_lastRfN = m_rfN;
 
-                // Regenerate the EMB
+                // regenerate the EMB
                 emb.encode(data + 2U);
 
-                // Send the original audio frame out
+                // send the original audio frame out
                 uint32_t errors = 0U;
                 uint8_t fid = m_slot->m_rfLC->getFID();
                 if (fid == FID_ETSI || fid == FID_DMRA) {
@@ -580,14 +580,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     if (errors > m_slot->m_silenceThreshold) {
-                        // Get the LCSS from the EMB
+                        // get the LCSS from the EMB
                         data::EMB emb;
                         emb.decode(data + 2U);
 
                         insertNullAudio(data + 2U);
                         m_fec.regenerateDMR(data + 2U);
 
-                        // Regenerate EMB
+                        // regenerate EMB
                         emb.encode(data + 2U);
 
                         LogWarning(LOG_RF, DMR_DT_VOICE ", exceeded lost audio threshold, filling in");
@@ -1259,7 +1259,7 @@ void Voice::insertSilence(uint32_t count)
     emb.setColorCode(m_slot->m_colorCode);
 
     for (uint32_t i = 0U; i < count; i++) {
-        // Only use our silence frame if its AMBE audio data
+        // only use our silence frame if its AMBE audio data
         if (fid == FID_ETSI || fid == FID_DMRA) {
             if (i > 0U) {
                 ::memcpy(data, DMR_SILENCE_DATA, DMR_FRAME_LENGTH_BYTES + 2U);

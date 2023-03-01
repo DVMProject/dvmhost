@@ -501,19 +501,19 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
             }
 
-            // Generate Sync
+            // generate Sync
             Sync::addP25Sync(data + 2U);
 
-            // Generate NID
+            // generate NID
             m_p25->m_nid.encode(data + 2U, P25_DUID_LDU1);
 
-            // Generate LDU1 Data
+            // generate LDU1 Data
             m_rfLC.encodeLDU1(data + 2U);
 
-            // Generate Low Speed Data
+            // generate Low Speed Data
             m_rfLSD.process(data + 2U);
 
-            // Regenerate Audio
+            // regenerate audio
             uint32_t errors = m_audio.process(data + 2U);
 
             // replace audio with silence in cases where the error rate
@@ -527,7 +527,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 LogWarning(LOG_RF, P25_LDU1_STR ", exceeded lost audio threshold, filling in");
 
-                // Add the Audio
+                // add the audio
                 m_audio.encode(data + 2U, buffer + 10U, 0U);
                 m_audio.encode(data + 2U, buffer + 26U, 1U);
                 m_audio.encode(data + 2U, buffer + 55U, 2U);
@@ -537,13 +537,22 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_audio.encode(data + 2U, buffer + 155U, 6U);
                 m_audio.encode(data + 2U, buffer + 180U, 7U);
                 m_audio.encode(data + 2U, buffer + 204U, 8U);
+
+                // reset the encryption flags if necessary
+                if (m_rfLC.getEncrypted()) {
+                    m_rfLC.setEncrypted(false);
+                    m_rfLC.setAlgId(P25_ALGO_UNENCRYPT);
+
+                    // regenerate LDU1 data
+                    m_rfLC.encodeLDU1(data + 2U);
+                }
             }
 
             m_rfBits += 1233U;
             m_rfErrs += errors;
             m_rfFrames++;
 
-            // Add busy bits
+            // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
             writeNetwork(data + 2U, P25_DUID_LDU1);
@@ -580,19 +589,19 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfLastLDU2 = m_rfLC;
             }
 
-            // Generate Sync
+            // generate Sync
             Sync::addP25Sync(data + 2U);
 
-            // Generate NID
+            // generate NID
             m_p25->m_nid.encode(data + 2U, P25_DUID_LDU2);
 
-            // Generate LDU2 data
+            // generate LDU2 data
             m_rfLC.encodeLDU2(data + 2U);
 
-            // Generate Low Speed Data
+            // generate Low Speed Data
             m_rfLSD.process(data + 2U);
 
-            // Regenerate Audio
+            // regenerate audio
             uint32_t errors = m_audio.process(data + 2U);
 
             // replace audio with silence in cases where the error rate
@@ -606,7 +615,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 LogWarning(LOG_RF, P25_LDU2_STR ", exceeded lost audio threshold, filling in");
 
-                // Add the Audio
+                // add the Audio
                 m_audio.encode(data + 2U, buffer + 10U, 0U);
                 m_audio.encode(data + 2U, buffer + 26U, 1U);
                 m_audio.encode(data + 2U, buffer + 55U, 2U);
@@ -616,13 +625,22 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_audio.encode(data + 2U, buffer + 155U, 6U);
                 m_audio.encode(data + 2U, buffer + 180U, 7U);
                 m_audio.encode(data + 2U, buffer + 204U, 8U);
+
+                // reset the encryption flags if necessary
+                if (m_rfLC.getEncrypted()) {
+                    m_rfLC.setEncrypted(false);
+                    m_rfLC.setAlgId(P25_ALGO_UNENCRYPT);
+
+                    // regenerate LDU2 data
+                    m_rfLC.encodeLDU2(data + 2U);
+                }
             }
 
             m_rfBits += 1233U;
             m_rfErrs += errors;
             m_rfFrames++;
 
-            // Add busy bits
+            // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
             writeNetwork(data + 2U, P25_DUID_LDU2);

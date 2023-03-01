@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -76,6 +76,7 @@ LC::LC() :
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
     m_callTimer(0U),
+    m_rsValue(0U),
     m_mi(nullptr)
 {
     m_mi = new uint8_t[P25_MI_LENGTH_BYTES];
@@ -519,6 +520,8 @@ void LC::copy(const LC& data)
 
     m_callTimer = data.m_callTimer;
 
+    m_rsValue = data.m_rsValue;
+
     m_algId = data.m_algId;
     if (m_algId != P25_ALGO_UNENCRYPT) {
         delete[] m_mi;
@@ -569,6 +572,24 @@ bool LC::decodeLC(const uint8_t * rs)
 
     m_protect = (rs[0U] & 0x80U) == 0x80U;                                          // Protect Flag
     m_lco = rs[0U] & 0x3FU;                                                         // LCO
+    
+    m_mfId = rs[1U];                                                                // Mfg Id.
+
+    // Motorola P25 vendor opcodes (these are just detected for passthru)
+    if (m_mfId == P25_MFG_MOT) {
+        switch (m_lco) {
+        case LC_TEL_INT_VCH_USER:   // MOT GPS DATA
+            m_rsValue = rsValue;
+            break;
+        default:
+            LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            break;
+        }
+
+        if (m_mfId == P25_MFG_MOT) {
+            return true;
+        }
+    }
 
     // standard P25 reference opcodes
     switch (m_lco) {
@@ -678,6 +699,20 @@ void LC::encodeLC(uint8_t * rs)
     default:
         LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
         break;
+    }
+
+    // Motorola P25 vendor opcodes (these are just detected for passthru)
+    if (m_mfId == P25_MFG_MOT) {
+        rsValue = 0U;
+
+        switch (m_lco) {
+        case LC_TEL_INT_VCH_USER:   // MOT GPS DATA
+            rsValue = m_rsValue;
+            break;
+        default:
+            LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+            break;
+        }
     }
 
     // split ulong64_t (8 byte) value into bytes
