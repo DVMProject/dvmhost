@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *   Copyright (C) 2021 by Nat Moore <https://github.com/jelimoore>
 *
 *   This program is free software; you can redistribute it and/or modify
