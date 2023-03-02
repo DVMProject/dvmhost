@@ -1603,7 +1603,7 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    [/]      Inc/Dec P25 +/- 3 Symbol Level");
         LogMessage(LOG_CAL, "    {/}      Inc/Dec P25 +/- 1 Symbol Level");
         LogMessage(LOG_CAL, "    ;/'      Inc/Dec NXDN +/- 3 Symbol Level");
-        LogMessage(LOG_CAL, "    :/\"     Inc/Dec NXDN +/- 1 Symbol Level");
+        LogMessage(LOG_CAL, "    :/\"      Inc/Dec NXDN +/- 1 Symbol Level");
     }
     else {
         LogMessage(LOG_CAL, "    1        Set DMR Disc. Bandwidth Offset");

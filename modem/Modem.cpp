@@ -1272,7 +1272,7 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeDMRData1(); immediate write (len %u)", length);
         //if (m_trace)
-        //    Utils::dump(1U, "Immediate TX DMR Data 1", m_buffer, len);
+        //    Utils::dump(1U, "Immediate TX DMR Data 1", buffer, len);
 
         int ret = write(buffer, len);
         if (ret != int(len)) {
@@ -1329,7 +1329,7 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeDMRData2(); immediate write (len %u)", length);
         //if (m_trace)
-        //    Utils::dump(1U, "Immediate TX DMR Data 2", m_buffer, len);
+        //    Utils::dump(1U, "Immediate TX DMR Data 2", buffer, len);
 
         int ret = write(buffer, len);
         if (ret != int(len)) {
@@ -1386,7 +1386,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeP25Data(); immediate write (len %u)", length);
         //if (m_trace)
-        //    Utils::dump(1U, "Immediate TX P25 Data", m_buffer, len);
+        //    Utils::dump(1U, "Immediate TX P25 Data", buffer, len);
 
         int ret = write(buffer, len);
         if (ret != int(len)) {
@@ -1443,7 +1443,7 @@ bool Modem::writeNXDNData(const uint8_t* data, uint32_t length)
         if (m_debug)
             LogDebug(LOG_MODEM, "Modem::writeNXDNData(); immediate write (len %u)", length);
         //if (m_trace)
-        //    Utils::dump(1U, "Immediate TX NXDN Data", m_buffer, len);
+        //    Utils::dump(1U, "Immediate TX NXDN Data", buffer, len);
 
         int ret = write(buffer, len);
         if (ret != int(len)) {

@@ -244,7 +244,7 @@ protocols:
         # BER/Error threshold for silencing voice packets. (0 or 144 disables)
         silenceThreshold: 14
         # Internal data queue size (in NXDN packets).
-        queueSize: 12
+        queueSize: 31
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
         # Flag indicating whether or not debug logging is enabled.

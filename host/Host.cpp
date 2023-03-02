@@ -1301,7 +1301,7 @@ int Host::run()
                     bool ret = nxdn->processFrame(data, len);
                     if (ret) {
                         m_modeTimer.start();
-                        INTERRUPT_NXDN_CONTROL;
+                        //INTERRUPT_NXDN_CONTROL;
                     }
                 }
                 else if (m_state != HOST_STATE_LOCKOUT) {

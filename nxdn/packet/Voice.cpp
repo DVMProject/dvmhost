@@ -525,7 +525,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)", errors, float(errors) / 1.88F);
+                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/188 (%.1f%%)", errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch11;
