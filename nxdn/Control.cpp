@@ -94,6 +94,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_voice(nullptr),
     m_data(nullptr),
     m_authoritative(authoritative),
+    m_controlPermitTG(false),
     m_ran(ran),
     m_timeout(timeout),
     m_modem(modem),
@@ -203,6 +204,7 @@ void Control::reset()
 /// Helper to set NXDN configuration options.
 /// </summary>
 /// <param name="conf">Instance of the yaml::Node class.</param>
+/// <param name="controlPermitTG"></param>
 /// <param name="cwCallsign"></param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
@@ -210,12 +212,14 @@ void Control::reset()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
     const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId,
     uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
+
+    m_controlPermitTG = controlPermitTG;
 
     m_trunk->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
     m_trunk->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);

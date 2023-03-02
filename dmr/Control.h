@@ -63,13 +63,13 @@ namespace dmr
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
             bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-            lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssi,
+            ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
-        void setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, 
+        void setOptions(yaml::Node& conf, bool controlPermitTG, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, 
             uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
@@ -121,6 +121,7 @@ namespace dmr
         friend class Slot;
 
         bool m_authoritative;
+        bool m_controlPermitTG;
 
         uint32_t m_colorCode;
 
@@ -130,9 +131,9 @@ namespace dmr
         Slot* m_slot1;
         Slot* m_slot2;
 
-        lookups::IdenTableLookup* m_idenTable;
-        lookups::RadioIdLookup* m_ridLookup;
-        lookups::TalkgroupIdLookup* m_tidLookup;
+        ::lookups::IdenTableLookup* m_idenTable;
+        ::lookups::RadioIdLookup* m_ridLookup;
+        ::lookups::TalkgroupIdLookup* m_tidLookup;
 
         uint8_t m_tsccSlotNo;
         bool m_ccRunning;

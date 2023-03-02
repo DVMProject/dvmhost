@@ -96,6 +96,25 @@ RemoteCommand::~RemoteCommand()
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RemoteCommand::send(const std::string& command)
 {
+    assert(!m_address.empty());
+    assert(m_port > 0U);
+
+    return send(m_address, m_port, m_password, command, m_debug);
+}
+
+/// <summary>
+/// Sends remote control command to the specified modem.
+/// </summary>
+/// <param name="address">Network Hostname/IP address to connect to.</param>
+/// <param name="port">Network port number.</param>
+/// <param name="password">Authentication password.</param>
+/// <param name="command">Command string to send to remote modem.</param>
+/// <param name="debug">Flag indicating whether debug is enabled.</param>
+/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+int RemoteCommand::send(const std::string& address, uint32_t port, const std::string& password, const std::string& command, bool debug)
+{
+    assert(!address.empty());
+    assert(port > 0U);
     UDPSocket socket(0U);
 
     bool ret = socket.open();
@@ -108,22 +127,22 @@ int RemoteCommand::send(const std::string& command)
     sockaddr_storage addr;
     uint32_t addrLen;
 
-    if (UDPSocket::lookup(m_address, m_port, addr, addrLen) != 0) {
+    if (UDPSocket::lookup(address, port, addr, addrLen) != 0) {
         ::LogError(LOG_HOST, "Could not lookup the address of remote");
         return ERRNO_ADDR_LOOKUP;
     }
 
-    ::LogInfoEx(LOG_HOST, "sending RCON command \"%s\" to %s:%u", command.c_str(), m_address.c_str(), m_port);
+    ::LogInfoEx(LOG_HOST, "sending RCON command \"%s\" to %s:%u", command.c_str(), address.c_str(), port);
 
     buffer[0U] = RCON_FRAME_START;
     buffer[1U] = START_OF_TEXT;
 
-    if (!m_password.empty()) {
-        size_t size = m_password.size();
+    if (!password.empty()) {
+        size_t size = password.size();
 
         uint8_t* in = new uint8_t[size];
         for (size_t i = 0U; i < size; i++)
-            in[i] = m_password.at(i);
+            in[i] = password.at(i);
 
         uint8_t out[32U];
         ::memset(out, 0x00U, 32U);
@@ -139,7 +158,7 @@ int RemoteCommand::send(const std::string& command)
 
     buffer[35U + command.size()] = END_OF_TEXT;
 
-    if (m_debug)
+    if (debug)
         Utils::dump(1U, "RCON Sent", (uint8_t*)buffer, 36U + command.size());
 
     ret = socket.write((uint8_t *)buffer, 36U + command.size(), addr, addrLen);
@@ -166,23 +185,23 @@ int RemoteCommand::send(const std::string& command)
         if (offs + len > RESPONSE_BUFFER_LEN)
             break;
 
-        if (m_debug)
+        if (debug)
             ::LogDebug(LOG_RCON, "RemoteCommand::send() block len = %u, offs = %u", len - 3, offs);
 
         buffer[len] = '\0';
 
-        if (m_debug)
+        if (debug)
             Utils::dump(1U, "RCON Received", (uint8_t*)buffer, len);
 
         // make sure this is an RCON response
         if (buffer[0U] != RCON_FRAME_START) {
-            ::LogError(LOG_HOST, "Invalid response from host %s:%u", m_address.c_str(), m_port);
+            ::LogError(LOG_HOST, "Invalid response from host %s:%u", address.c_str(), port);
             socket.close();
             return EXIT_FAILURE;
         }
 
         if (buffer[1U] != START_OF_TEXT) {
-            ::LogError(LOG_HOST, "Invalid response from host %s:%u", m_address.c_str(), m_port);
+            ::LogError(LOG_HOST, "Invalid response from host %s:%u", address.c_str(), port);
             socket.close();
             return EXIT_FAILURE;
         }

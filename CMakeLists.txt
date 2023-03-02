@@ -41,6 +41,8 @@ file(GLOB dvmhost_SRC
     "dmr/lc/*.cpp"
     "dmr/lc/csbk/*.h"
     "dmr/lc/csbk/*.cpp"
+    "dmr/lookups/*.h"
+    "dmr/lookups/*.cpp"
     "dmr/packet*.h"
     "dmr/packet/*.cpp"
 

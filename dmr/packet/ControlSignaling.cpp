@@ -38,6 +38,7 @@
 #include "dmr/Sync.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
+#include "remote/RemoteCommand.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -737,6 +738,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
 
+    uint8_t slot = 0U;
+
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
     bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
@@ -812,13 +815,14 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             else {
                 if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
-
+                    slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
                 }
             }
         }
         else {
             chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+            slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
             m_tscc->m_affiliations->touchGrant(dstId);
         }
@@ -829,15 +833,23 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        //
-        // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
-        //
+        // callback RCON to permit-tg on the specified voice channel
+        if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                std::stringstream ss;
+                ss << "permit-tg " << modem::DVM_STATE::STATE_DMR << " " << dstId << " " << slot;
+
+                RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
+                    ss.str(), m_tscc->m_debug);
+            }
+        }
 
         std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
         if (broadcast)
             csbk->setCSBKO(CSBKO_BTV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(1U); // eah? this can't be okay...
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -856,13 +868,21 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        //
-        // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
-        //
+        // callback RCON to permit-tg on the specified voice channel
+        if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                std::stringstream ss;
+                ss << "permit-tg " << modem::DVM_STATE::STATE_DMR << " " << dstId << " " << slot;
+
+                RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
+                    ss.str(), m_tscc->m_debug);
+            }
+        }
 
         std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(1U); // eah? this can't be okay...
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -894,6 +914,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, uint32_t chNo, bool net)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+
+    uint8_t slot = 0U;
 
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
@@ -970,6 +992,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             else {
                 if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+                    slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
                 }
@@ -977,6 +1000,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         }
         else {
             chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+            slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
             m_tscc->m_affiliations->touchGrant(dstId);
         }
@@ -990,7 +1014,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         std::unique_ptr<CSBK_TD_GRANT> csbk = new_unique(CSBK_TD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(1U); // eah? this can't be okay...
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -1011,7 +1035,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         std::unique_ptr<CSBK_PD_GRANT> csbk = new_unique(CSBK_PD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(1U); // eah? this can't be okay...
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",

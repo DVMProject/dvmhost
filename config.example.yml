@@ -307,6 +307,10 @@ system:
         # (By default this should be true, unless you are operating in a mode that will dynamically permit
         # TGIDs via the permit-tg RCON command.)
         authoritative: true
+        # Flag indicating whether or not this host sends permit-tg commands to voice channels for TGID operations.
+        # (By default this should be false, unless you are operating in a mode that will dynamically permit
+        # TGIDs via the permit-tg RCON command.)
+        controlPermitTG: false
         # Channel Identity (corresponds to the appropriate entry in the iden_table file).
         channelId: 2
         # Channel Number (used to calculate actual host frequency based on the identity table).

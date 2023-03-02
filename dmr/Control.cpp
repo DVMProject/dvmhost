@@ -66,7 +66,7 @@ using namespace dmr;
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
     bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-    lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+    ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
     m_colorCode(colorCode),
@@ -110,6 +110,7 @@ Control::~Control()
 /// Helper to set DMR configuration options.
 /// </summary>
 /// <param name="conf">Instance of the ConfigINI class.</param>
+/// <param name="controlPermitTG"></param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="netId">DMR Network ID.</param>
@@ -117,11 +118,13 @@ Control::~Control()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData,
+void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
+
+    m_controlPermitTG = controlPermitTG;
 
     Slot::m_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
@@ -149,9 +152,11 @@ void Control::setOptions(yaml::Node& conf, const std::vector<uint32_t> voiceChNo
     switch (m_tsccSlotNo) {
     case 1U:
         m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
+        m_slot1->setControlPermitTG(m_controlPermitTG);
         break;
     case 2U:
         m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
+        m_slot2->setControlPermitTG(m_controlPermitTG);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);

@@ -88,7 +88,7 @@ CSBK::CSBK() :
     m_logicalCh1(DMR_CHNULL),
     m_logicalCh2(DMR_CHNULL),
     m_slotNo(0U),
-    m_siteIdenEntry(lookups::IdenTable())
+    m_siteIdenEntry(::lookups::IdenTable())
 {
     /* stub */
 }

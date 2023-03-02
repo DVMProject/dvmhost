@@ -36,6 +36,7 @@
 #include "nxdn/Sync.h"
 #include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
+#include "remote/RemoteCommand.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
@@ -508,9 +509,18 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
         }
     }
 
-    //
-    // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
-    //
+    // callback RCON to permit-tg on the specified voice channel
+    if (m_nxdn->m_authoritative && m_nxdn->m_controlPermitTG) {
+        ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.getRFChData(chNo);
+        if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+            chNo != m_nxdn->m_siteData.channelNo()) {
+            std::stringstream ss;
+            ss << "permit-tg " << modem::DVM_STATE::STATE_NXDN << " " << dstId;
+
+            RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
+                ss.str(), m_nxdn->m_debug);
+        }
+    }
 
     std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
     rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);

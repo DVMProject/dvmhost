@@ -83,7 +83,7 @@ namespace nxdn
         void reset();
 
         /// <summary>Helper to set NXDN configuration options.</summary>
-        void setOptions(yaml::Node& conf, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+        void setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
             const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId, 
             uint8_t channelId, uint32_t channelNo, bool printOptions);
         
@@ -130,6 +130,7 @@ namespace nxdn
         packet::Trunk* m_trunk;
 
         bool m_authoritative;
+        bool m_controlPermitTG;
 
         uint32_t m_ran;
         uint32_t m_timeout;

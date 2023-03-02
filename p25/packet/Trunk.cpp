@@ -35,6 +35,7 @@
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
+#include "remote/RemoteCommand.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -2221,9 +2222,18 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
-            //
-            // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
-            //
+            // callback RCON to permit-tg on the specified voice channel
+            if (m_p25->m_authoritative && m_p25->m_controlPermitTG) {
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+                    chNo != m_p25->m_siteData.channelNo()) {
+                    std::stringstream ss;
+                    ss << "permit-tg " << modem::DVM_STATE::STATE_P25 << " " << dstId;
+
+                    RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
+                        ss.str(), m_p25->m_debug);
+                }
+            }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
             iosp->setMFId(m_lastMFID);
@@ -2247,9 +2257,18 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
 
-            //
-            // TODO TODO: Implement RCON callback for authoritative CC to trigger permit-tg
-            //
+            // callback RCON to permit-tg on the specified voice channel
+            if (m_p25->m_authoritative && m_p25->m_controlPermitTG) {
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+                    chNo != m_p25->m_siteData.channelNo()) {
+                    std::stringstream ss;
+                    ss << "permit-tg " << modem::DVM_STATE::STATE_P25 << " " << dstId;
+
+                    RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
+                        ss.str(), m_p25->m_debug);
+                }
+            }
 
             std::unique_ptr<IOSP_UU_VCH> iosp = new_unique(IOSP_UU_VCH);
             iosp->setMFId(m_lastMFID);

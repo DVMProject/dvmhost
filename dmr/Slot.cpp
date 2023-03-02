@@ -71,16 +71,16 @@ network::BaseNetwork* Slot::m_network = nullptr;
 
 bool Slot::m_duplex = true;
 
-lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
-lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
-lookups::TalkgroupIdLookup* Slot::m_tidLookup = nullptr;
-lookups::AffiliationLookup *Slot::m_affiliations = nullptr;
+::lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
+::lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
+::lookups::TalkgroupIdLookup* Slot::m_tidLookup = nullptr;
+dmr::lookups::DMRAffiliationLookup *Slot::m_affiliations = nullptr;
 
-lookups::IdenTable Slot::m_idenEntry = lookups::IdenTable();
+::lookups::IdenTable Slot::m_idenEntry = ::lookups::IdenTable();
 
 uint32_t Slot::m_hangCount = 3U * 17U;
 
-lookups::RSSIInterpolator* Slot::m_rssiMapper = nullptr;
+::lookups::RSSIInterpolator* Slot::m_rssiMapper = nullptr;
 
 uint32_t Slot::m_jitterTime = 360U;
 uint32_t Slot::m_jitterSlots = 6U;
@@ -574,6 +574,7 @@ void Slot::setTSCC(bool enable, bool dedicated)
     m_dedicatedTSCC = dedicated;
     if (m_enableTSCC) {
         m_modem->setDMRIgnoreCACH_AT(m_slotNo);
+        m_affiliations->setSlotForChannelTSCC(m_channelNo, m_slotNo);
     }
 }
 
@@ -606,8 +607,8 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-    network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-    lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
+    network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+    ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
     assert(dmr != nullptr);
     assert(modem != nullptr);
@@ -635,7 +636,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_idenTable = idenTable;
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
-    m_affiliations = new lookups::AffiliationLookup("DMR Affiliations", verbose);
+    m_affiliations = new dmr::lookups::DMRAffiliationLookup(verbose);
 
     m_hangCount = callHang * 17U;
 
@@ -666,15 +667,15 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="requireReg"></param>
-void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData,
+void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
 
-    std::vector<lookups::IdenTable> entries = m_idenTable->list();
+    std::vector<::lookups::IdenTable> entries = m_idenTable->list();
     for (auto it = entries.begin(); it != entries.end(); ++it) {
-        lookups::IdenTable entry = *it;
+        ::lookups::IdenTable entry = *it;
         if (entry.channelId() == channelId) {
             m_idenEntry = entry;
             break;

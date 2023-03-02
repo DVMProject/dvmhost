@@ -140,6 +140,7 @@ Host::Host(const std::string& confFile) :
     m_p25QueueSizeBytes(2592U), // 12 frames
     m_nxdnQueueSizeBytes(1488U), // 31 frames
     m_authoritative(true),
+    m_controlPermitTG(false),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_remoteControl(nullptr)
@@ -433,7 +434,7 @@ int Host::run()
         dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose));
-        dmr->setOptions(m_conf, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
+        dmr->setOptions(m_conf, m_controlPermitTG, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
 
         if (dmrCtrlChannel) {
             dmr->setCCRunning(true);
@@ -506,7 +507,7 @@ int Host::run()
         p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
+        p25->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
             m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -571,7 +572,7 @@ int Host::run()
         nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
@@ -1925,7 +1926,11 @@ bool Host::readParams()
         LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
 
         if (!m_authoritative) {
+            m_controlPermitTG = false;
             LogWarning(LOG_HOST, "Host is non-authoritative, this requires RCON to \"permit-tg\" for VCs and \"grant-tg\" for CCs!");
+        } else {
+            m_controlPermitTG = rfssConfig["controlPermitTG"].as<bool>(false);
+            LogInfo("    Control Permit TG: %s", m_controlPermitTG ? "yes" : "no");
         }
     }
     else {

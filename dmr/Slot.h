@@ -34,6 +34,7 @@
 #include "Defines.h"
 #include "dmr/Control.h"
 #include "dmr/SiteData.h"
+#include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/packet/ControlSignaling.h"
 #include "dmr/packet/Data.h"
 #include "dmr/packet/Voice.h"
@@ -43,7 +44,6 @@
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
-#include "lookups/AffiliationLookup.h"
 #include "RingBuffer.h"
 #include "StopWatch.h"
 #include "Timer.h"
@@ -105,15 +105,17 @@ namespace dmr
 
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
+        /// <summary>Sets a flag indicating whether the DMR control channel can send permit-tg to voice channels.</summary>
+        void setControlPermitTG(bool controlPermitTG) { m_controlPermitTG = controlPermitTG; }
         /// <summary>Helper to set the voice error silence threshold.</summary>
         void setSilenceThreshold(uint32_t threshold);
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-            network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup,
-            lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
+            network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+            ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
-        static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, 
+        static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, 
             uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
         /// <summary>Sets TSCC Aloha configuration.</summary>
         static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);
@@ -188,6 +190,8 @@ namespace dmr
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
 
+        bool m_controlPermitTG;
+
         bool m_verbose;
         bool m_debug;
 
@@ -208,16 +212,16 @@ namespace dmr
 
         static bool m_duplex;
 
-        static lookups::IdenTableLookup* m_idenTable;
-        static lookups::RadioIdLookup* m_ridLookup;
-        static lookups::TalkgroupIdLookup* m_tidLookup;
-        static lookups::AffiliationLookup* m_affiliations;
+        static ::lookups::IdenTableLookup* m_idenTable;
+        static ::lookups::RadioIdLookup* m_ridLookup;
+        static ::lookups::TalkgroupIdLookup* m_tidLookup;
+        static lookups::DMRAffiliationLookup* m_affiliations;
 
-        static lookups::IdenTable m_idenEntry;
+        static ::lookups::IdenTable m_idenEntry;
 
         static uint32_t m_hangCount;
 
-        static lookups::RSSIInterpolator* m_rssiMapper;
+        static ::lookups::RSSIInterpolator* m_rssiMapper;
 
         static uint32_t m_jitterTime;
         static uint32_t m_jitterSlots;

@@ -51,6 +51,9 @@ public:
     /// <summary>Sends remote control command to the specified modem.</summary>
     int send(const std::string& command);
 
+    /// <summary>Sends remote control command to the specified modem.</summary>
+    static int send(const std::string& address, uint32_t port, const std::string& password, const std::string& command, bool debug = false);
+
 private:
     std::string m_address;
     uint32_t m_port;
