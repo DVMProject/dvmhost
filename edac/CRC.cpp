@@ -690,8 +690,9 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
+/// <param name="offset">Offset in bits to write CRC.</param>
 /// <returns>16-bit CRC.</returns>
-uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
+uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength, uint32_t offset)
 {
     assert(in != nullptr);
 
@@ -704,7 +705,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
     uint32_t n = bitLength;
     for (uint32_t i = 0U; i < 16U; i++, n++) {
         bool b = READ_BIT(temp, i);
-        WRITE_BIT(in, n, b);
+        WRITE_BIT(in, n + offset, b);
     }
 
 #if DEBUG_CRC

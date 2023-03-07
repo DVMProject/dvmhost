@@ -85,8 +85,8 @@ namespace edac
 
         /// <summary>Check 16-bit CRC-CCITT.</summary>
         static bool checkCRC16(const uint8_t* in, uint32_t bitLength);
-        /// <summary>Encode 15-bit CRC.</summary>
-        static uint16_t addCRC16(uint8_t* in, uint32_t bitLength);
+        /// <summary>Encode 16-bit CRC.</summary>
+        static uint16_t addCRC16(uint8_t* in, uint32_t bitLength, uint32_t offset = 0);
 
     private:
         /// <summary></summary>

@@ -758,12 +758,12 @@ void Trunk::writeRF_CC_Message_Service_Info()
 
     std::unique_ptr<rcch::MESSAGE_TYPE_SRV_INFO> rcch = new_unique(rcch::MESSAGE_TYPE_SRV_INFO);
     rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
-    rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);
+    //rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);
 
     // generate the CAC
     channel::CAC cac;
     cac.setRAN(m_nxdn->m_ran);
-    cac.setStructure(NXDN_SR_RCCH_DUAL);
+    cac.setStructure(NXDN_SR_RCCH_SINGLE);
     cac.setData(buffer);
     cac.encode(data + 2U);
 

@@ -261,11 +261,8 @@ void CAC::encode(uint8_t* data) const
 {
     assert(data != nullptr);
 
-    m_data[0U] &= 0xC0U;
-    m_data[0U] |= m_ran;
-
-    m_data[0U] &= 0x3FU;
-    m_data[0U] |= (m_structure << 6) & 0xC0U;
+    m_data[0U] = m_ran;
+    m_data[0U] |= ((m_structure << 6) & 0xC0U);
 
     uint8_t buffer[NXDN_CAC_FEC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_CAC_FEC_LENGTH_BYTES);
@@ -275,7 +272,7 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
+    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS, 5U);
 
 #if DEBUG_NXDN_CAC
     Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
