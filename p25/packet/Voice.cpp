@@ -1332,19 +1332,8 @@ void Voice::writeNet_LDU1()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        uint32_t loss = 0;
-        if (m_netFrames != 0) {
-            loss = (m_netLost * 100U) / m_netFrames;
-        }
-        else {
-            loss = (m_netLost * 100U) / 1U;
-            if (loss > 100) {
-                loss = 100;
-            }
-        }
-
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, %u%% packet loss",
-            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(), loss);
+        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
+            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority());
     }
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);
@@ -1437,18 +1426,7 @@ void Voice::writeNet_LDU2()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        uint32_t loss = 0;
-        if (m_netFrames != 0) {
-            loss = (m_netLost * 100U) / m_netFrames;
-        }
-        else {
-            loss = (m_netLost * 100U) / 1U;
-            if (loss > 100) {
-                loss = 100;
-            }
-        }
-
-        LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X, %u%% packet loss", m_netLC.getAlgId(), m_netLC.getKId(), loss);
+        LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_netLC.getAlgId(), m_netLC.getKId());
     }
 
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
