@@ -513,8 +513,8 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC6(uint8_t* in, uint32_t bitLength)
+/// <returns>6-bit CRC.</returns>
+uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
 
@@ -530,6 +530,7 @@ void CRC::addCRC6(uint8_t* in, uint32_t bitLength)
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC::addCRC6(), crc = $%04X, bitlen = %u", crc[0U], bitLength);
 #endif
+    return crc[0U];
 }
 
 /// <summary>
@@ -569,8 +570,8 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC12(uint8_t* in, uint32_t bitLength)
+/// <returns>12-bit CRC.</returns>
+uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
 
@@ -589,6 +590,7 @@ void CRC::addCRC12(uint8_t* in, uint32_t bitLength)
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC::addCRC12(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
+    return crc;
 }
 
 /// <summary>
@@ -628,8 +630,8 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC15(uint8_t* in, uint32_t bitLength)
+/// <returns>15-bit CRC.</returns>
+uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
 
@@ -648,6 +650,7 @@ void CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC::addCRC15(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
+    return crc;
 }
 
 /// <summary>
@@ -687,8 +690,8 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>True, if CRC is valid, otherwise false.</returns>
-void CRC::addCRC16(uint8_t* in, uint32_t bitLength)
+/// <returns>16-bit CRC.</returns>
+uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
 
@@ -707,6 +710,7 @@ void CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC::addCRC16(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
+    return crc;
 }
 
 // ---------------------------------------------------------------------------

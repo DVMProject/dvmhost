@@ -71,22 +71,22 @@ namespace edac
         /// <summary>Check 6-bit CRC.</summary>
         static bool checkCRC6(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 6-bit CRC.</summary>
-        static void addCRC6(uint8_t* in, uint32_t bitLength);
+        static uint8_t addCRC6(uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 12-bit CRC.</summary>
         static bool checkCRC12(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 12-bit CRC.</summary>
-        static void addCRC12(uint8_t* in, uint32_t bitLength);
+        static uint16_t addCRC12(uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 15-bit CRC.</summary>
         static bool checkCRC15(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 15-bit CRC.</summary>
-        static void addCRC15(uint8_t* in, uint32_t bitLength);
+        static uint16_t addCRC15(uint8_t* in, uint32_t bitLength);
 
         /// <summary>Check 16-bit CRC-CCITT.</summary>
         static bool checkCRC16(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 15-bit CRC.</summary>
-        static void addCRC16(uint8_t* in, uint32_t bitLength);
+        static uint16_t addCRC16(uint8_t* in, uint32_t bitLength);
 
     private:
         /// <summary></summary>

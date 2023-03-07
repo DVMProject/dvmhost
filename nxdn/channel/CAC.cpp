@@ -275,7 +275,7 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
+    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
     Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
@@ -324,8 +324,8 @@ void CAC::encode(uint8_t* data) const
 
     control[0U] = ((m_idleBusy ? 0x03U : 0x01U) << 6) + ((m_txContinuous ? 0x03U : 0x01U) << 4) +
         (parity << 2) + ((m_receive ? 0x03U : 0x01U));
-    control[1U] = (m_rxCRC >> 8U) & 0xFFU;
-    control[2U] = (m_rxCRC >> 0U) & 0xFFU;
+    control[1U] = (crc >> 8U) & 0xFFU;
+    control[2U] = (crc >> 0U) & 0xFFU;
 
     for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {
         uint32_t n = i + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_FEC_LENGTH_BITS;
