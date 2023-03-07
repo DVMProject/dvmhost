@@ -128,12 +128,12 @@ Host::Host(const std::string& confFile) :
     m_nxdnCtrlChannel(false),
     m_nxdnCtrlBroadcast(false),
     m_siteId(1U),
+    m_sysId(1U),
     m_dmrNetId(1U),
     m_dmrColorCode(1U),
     m_p25NAC(0x293U),
     m_p25PatchSuperGroup(0xFFFFU),
     m_p25NetId(0xBB800U),
-    m_p25SysId(1U),
     m_p25RfssId(1U),
     m_nxdnRAN(1U),
     m_dmrQueueSizeBytes(3960U), // 24 frames
@@ -507,7 +507,7 @@ int Host::run()
         p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_p25SysId, m_p25RfssId,
+        p25->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId,
             m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -572,7 +572,7 @@ int Host::run()
         nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
@@ -1888,8 +1888,8 @@ bool Host::readParams()
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
 
-        m_p25SysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
-        m_p25SysId = p25::P25Utils::sysId(m_p25SysId);
+        m_sysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
+        m_sysId = p25::P25Utils::sysId(m_sysId);
 
         m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
         m_p25RfssId = p25::P25Utils::rfssId(m_p25RfssId);
@@ -1910,6 +1910,7 @@ bool Host::readParams()
         LogInfo("    Channel No.: $%04X", m_channelNo);
         LogInfo("    Voice Channel No(s).: %s", strVoiceChNo.c_str());
         LogInfo("    Site Id: $%02X", m_siteId);
+        LogInfo("    System Id: $%03X", m_sysId);
         LogInfo("    DMR Color Code: %u", m_dmrColorCode);
         LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
         LogInfo("    P25 NAC: $%03X", m_p25NAC);
@@ -1918,12 +1919,10 @@ bool Host::readParams()
             LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
         }
 
-        LogInfo("    NXDN RAN: %u", m_nxdnRAN);
-
         LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
         LogInfo("    P25 Network Id: $%05X", m_p25NetId);
-        LogInfo("    P25 System Id: $%03X", m_p25SysId);
         LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
+        LogInfo("    NXDN RAN: %u", m_nxdnRAN);
 
         if (!m_authoritative) {
             m_controlPermitTG = false;

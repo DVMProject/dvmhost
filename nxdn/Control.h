@@ -84,7 +84,7 @@ namespace nxdn
 
         /// <summary>Helper to set NXDN configuration options.</summary>
         void setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
-            const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId, 
+            const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
             uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>

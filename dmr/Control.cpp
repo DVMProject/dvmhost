@@ -171,7 +171,7 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
 
     // either MAX_DMR_VOICE_ERRORS or 0 will disable the threshold logic
     if (silenceThreshold == 0) {
-        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
+        LogWarning(LOG_DMR, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
         silenceThreshold = dmr::MAX_DMR_VOICE_ERRORS;
     }
     

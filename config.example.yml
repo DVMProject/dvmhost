@@ -315,8 +315,6 @@ system:
         channelId: 2
         # Channel Number (used to calculate actual host frequency based on the identity table).
         channelNo: 1
-        # DMR network ID.
-        dmrNetId: 1
 
         #
         # Voice Channels
@@ -339,15 +337,19 @@ system:
 #         txNAC: 293
         # NXDN Random Access Number.
         ran: 1
+
         # P25 Patch Super Group.
         pSuperGroup: FFFF
+
+        # DMR network ID.
+        dmrNetId: 1
         # P25 Network ID (WACN).
         netId: BB800
-        # P25 System ID.
+        # P25/NXDN System ID.
         sysId: 001
         # P25 RFSS (RF Sub-System) ID.
         rfssId: 1
-        # P25 Site ID.
+        # DMR/P25/NXDN Site ID.
         siteId: 1
 
     #

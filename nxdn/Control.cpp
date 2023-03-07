@@ -208,12 +208,13 @@ void Control::reset()
 /// <param name="cwCallsign"></param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
-/// <param name="locId">NXDN Location ID.</param>
+/// <param name="siteId">NXDN Site Code.</param>
+/// <param name="sysId">NXDN System Code.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
-    const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t locId,
+    const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
     uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
@@ -243,7 +244,7 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
 
     // either MAX_NXDN_VOICE_ERRORS or 0 will disable the threshold logic
     if (m_voice->m_silenceThreshold == 0) {
-        LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
+        LogWarning(LOG_NXDN, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
         m_voice->m_silenceThreshold = nxdn::MAX_NXDN_VOICE_ERRORS;
     }
     
@@ -258,6 +259,11 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
             serviceClass |= NXDN_SIF1_COMPOSITE_CONTROL;
         }
     }
+
+    // calculate the NXDN location ID
+    uint32_t locId = NXDN_LOC_CAT_LOCAL; // DVM is currently fixed to "local" category
+    locId = (locId << 17) + sysId;
+    locId = (locId << 5) + (siteId & 0x1FU);
 
     m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
     m_siteData.setCallsign(cwCallsign);

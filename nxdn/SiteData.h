@@ -71,8 +71,8 @@ namespace nxdn
             m_requireReg(requireReq),
             m_netActive(false)
         {
-            if (m_locId > 0xFFFFFU)
-                m_locId = 0xFFFFFU;
+            if (m_locId > 0xFFFFFFU)
+                m_locId = 0xFFFFFFU;
 
             // channel id clamping
             if (channelId > 15U)
@@ -110,8 +110,8 @@ namespace nxdn
         /// <param name="serviceClass">Service class.</param>
         void setAdjSite(uint32_t locId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
-            if (m_locId > 0xFFFFFU)
-                m_locId = 0xFFFFFU;
+            if (m_locId > 0xFFFFFFU)
+                m_locId = 0xFFFFFFU;
 
             // channel id clamping
             if (channelId > 15U)

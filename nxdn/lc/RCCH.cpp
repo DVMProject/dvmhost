@@ -159,11 +159,13 @@ void RCCH::encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t 
     assert(data != nullptr);
     assert(rcch != nullptr);
 
-    data[0U] = m_messageType & 0x3FU;                                               // Message Type
-
     for (uint32_t i = 0U; i < length; i++, offset++) {
         bool b = READ_BIT(rcch, i);
         WRITE_BIT(data, offset, b);
+    }
+
+    if (data[0U] == 0x00U) {
+        data[0U] = m_messageType & 0x3FU;                                           // Message Type
     }
 
     if (m_verbose) {
