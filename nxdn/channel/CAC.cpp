@@ -272,7 +272,7 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS, 5U);
+    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
     Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);

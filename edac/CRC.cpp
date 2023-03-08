@@ -228,7 +228,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 }
 
 /// <summary>
-/// Check 16-bit CRC-CCITT.
+/// Check 16-bit CRC CCITT-162.
 /// </summary>
 /// <remarks>This uses polynomial 0x1021.</remarks>
 /// <param name="in">Input byte array.</param>
@@ -260,7 +260,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 }
 
 /// <summary>
-/// Encode 16-bit CRC-CCITT.
+/// Encode 16-bit CRC CCITT-162.
 /// </summary>
 /// <remarks>This uses polynomial 0x1021.</remarks>
 /// <param name="in">Input byte array.</param>
@@ -291,7 +291,7 @@ void CRC::addCCITT162(uint8_t* in, uint32_t length)
 }
 
 /// <summary>
-/// Check 16-bit CRC-CCITT.
+/// Check 16-bit CRC CCITT-161.
 /// </summary>
 /// <remarks>This uses polynomial 0x1189.</remarks>
 /// <param name="in">Input byte array.</param>
@@ -323,7 +323,7 @@ bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 }
 
 /// <summary>
-/// Encode 16-bit CRC-CCITT.
+/// Encode 16-bit CRC CCITT-161.
 /// </summary>
 /// <remarks>This uses polynomial 0x1189.</remarks>
 /// <param name="in">Input byte array.</param>
@@ -654,7 +654,7 @@ uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-/// Check 16-bit CRC.
+/// Check 16-bit CRC CCITT-162 w/ initial generator of 1.
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
@@ -686,13 +686,13 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-/// Encode 16-bit CRC.
+/// Encode 16-bit CRC CCITT-162 w/ initial generator of 1.
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
 /// <param name="offset">Offset in bits to write CRC.</param>
 /// <returns>16-bit CRC.</returns>
-uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength, uint32_t offset)
+uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 {
     assert(in != nullptr);
 
@@ -705,7 +705,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength, uint32_t offset)
     uint32_t n = bitLength;
     for (uint32_t i = 0U; i < 16U; i++, n++) {
         bool b = READ_BIT(temp, i);
-        WRITE_BIT(in, n + offset, b);
+        WRITE_BIT(in, n, b);
     }
 
 #if DEBUG_CRC
@@ -795,7 +795,7 @@ uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 /// <returns></returns>
 uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
 {
-    uint16_t crc = 0x0000U;
+    uint16_t crc = 0xFFFFU;
 
     for (uint32_t i = 0U; i < bitLength; i++) {
         bool bit1 = READ_BIT(in, i) != 0x00U;
@@ -807,6 +807,5 @@ uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
             crc ^= 0x1021U;
     }
 
-    crc = ~crc;
     return crc & 0xFFFFU;
 }

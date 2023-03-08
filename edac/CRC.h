@@ -47,14 +47,14 @@ namespace edac
         /// <summary>Encode 5-bit CRC.</summary>
         static void encodeFiveBit(const bool* in, uint32_t& tcrc);
 
-        /// <summary>Check 16-bit CRC-CCITT.</summary>
+        /// <summary>Check 16-bit CRC CCITT-162.</summary>
         static bool checkCCITT162(const uint8_t* in, uint32_t length);
-        /// <summary>Encode 16-bit CRC-CCITT.</summary>
+        /// <summary>Encode 16-bit CRC CCITT-162.</summary>
         static void addCCITT162(uint8_t* in, uint32_t length);
 
-        /// <summary>Check 16-bit CRC-CCITT.</summary>
+        /// <summary>Check 16-bit CRC CCITT-161.</summary>
         static bool checkCCITT161(const uint8_t* in, uint32_t length);
-        /// <summary>Encode 16-bit CRC-CCITT.</summary>
+        /// <summary>Encode 16-bit CRC CCITT-161.</summary>
         static void addCCITT161(uint8_t* in, uint32_t length);
 
         /// <summary>Check 32-bit CRC.</summary>
@@ -83,10 +83,10 @@ namespace edac
         /// <summary>Encode 15-bit CRC.</summary>
         static uint16_t addCRC15(uint8_t* in, uint32_t bitLength);
 
-        /// <summary>Check 16-bit CRC-CCITT.</summary>
+        /// <summary>Check 16-bit CRC CCITT-162 w/ initial generator of 1.</summary>
         static bool checkCRC16(const uint8_t* in, uint32_t bitLength);
-        /// <summary>Encode 16-bit CRC.</summary>
-        static uint16_t addCRC16(uint8_t* in, uint32_t bitLength, uint32_t offset = 0);
+        /// <summary>Encode 16-bit CRC CCITT-162 w/ initial generator of 1.</summary>
+        static uint16_t addCRC16(uint8_t* in, uint32_t bitLength);
 
     private:
         /// <summary></summary>
