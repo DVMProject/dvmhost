@@ -195,7 +195,7 @@ bool LC::decodeHDU(const uint8_t* data)
 /// Encode a header data unit.
 /// </summary>
 /// <param name="data"></param>
-void LC::encodeHDU(uint8_t * data)
+void LC::encodeHDU(uint8_t* data)
 {
     assert(data != nullptr);
     assert(m_mi != nullptr);
@@ -243,7 +243,7 @@ void LC::encodeHDU(uint8_t * data)
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if LDU1 was decoded, otherwise false.</returns>
-bool LC::decodeLDU1(const uint8_t * data)
+bool LC::decodeLDU1(const uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -297,7 +297,7 @@ bool LC::decodeLDU1(const uint8_t * data)
 /// Encode a logical link data unit 1.
 /// </summary>
 /// <param name="data"></param>
-void LC::encodeLDU1(uint8_t * data)
+void LC::encodeLDU1(uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -347,7 +347,7 @@ void LC::encodeLDU1(uint8_t * data)
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if LDU2 was decoded, otherwise false.</returns>
-bool LC::decodeLDU2(const uint8_t * data)
+bool LC::decodeLDU2(const uint8_t* data)
 {
     assert(data != nullptr);
 
@@ -424,7 +424,7 @@ bool LC::decodeLDU2(const uint8_t * data)
 /// Encode a logical link data unit 2.
 /// </summary>
 /// <param name="data"></param>
-void LC::encodeLDU2(uint8_t * data)
+void LC::encodeLDU2(uint8_t* data)
 {
     assert(data != nullptr);
     assert(m_mi != nullptr);
@@ -556,7 +556,7 @@ void LC::copy(const LC& data)
 /// </summary>
 /// <param name="rs"></param>
 /// <returns></returns>
-bool LC::decodeLC(const uint8_t * rs)
+bool LC::decodeLC(const uint8_t* rs)
 {
     ulong64_t rsValue = 0U;
 
@@ -643,7 +643,7 @@ bool LC::decodeLC(const uint8_t * rs)
 /// Encode link control.
 /// </summary>
 /// <param name="rs"></param>
-void LC::encodeLC(uint8_t * rs)
+void LC::encodeLC(uint8_t* rs)
 {
     ulong64_t rsValue = 0U;
     rs[0U] = m_lco;                                                                 // LCO
@@ -731,7 +731,7 @@ void LC::encodeLC(uint8_t * rs)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="raw"></param>
-void LC::decodeLDUHamming(const uint8_t * data, uint8_t * raw)
+void LC::decodeLDUHamming(const uint8_t* data, uint8_t* raw)
 {
     uint32_t n = 0U;
     uint32_t m = 0U;
@@ -757,7 +757,7 @@ void LC::decodeLDUHamming(const uint8_t * data, uint8_t * raw)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="raw"></param>
-void LC::encodeLDUHamming(uint8_t * data, const uint8_t * raw)
+void LC::encodeLDUHamming(uint8_t* data, const uint8_t* raw)
 {
     uint32_t n = 0U;
     uint32_t m = 0U;
@@ -783,7 +783,7 @@ void LC::encodeLDUHamming(uint8_t * data, const uint8_t * raw)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="raw"></param>
-void LC::decodeHDUGolay(const uint8_t * data, uint8_t * raw)
+void LC::decodeHDUGolay(const uint8_t* data, uint8_t* raw)
 {
     // shortened Golay (18,6,8) decode
     uint32_t n = 0U;
@@ -819,7 +819,7 @@ void LC::decodeHDUGolay(const uint8_t * data, uint8_t * raw)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="raw"></param>
-void LC::encodeHDUGolay(uint8_t * data, const uint8_t * raw)
+void LC::encodeHDUGolay(uint8_t* data, const uint8_t* raw)
 {
     // shortened Golay (18,6,8) encode
     uint32_t n = 0U;
