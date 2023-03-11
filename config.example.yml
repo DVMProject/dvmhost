@@ -405,13 +405,13 @@ system:
             # NXDN Post Demodulator Bandwidth Adjustment.
             nxdnPostBWAdj: 0 # Valid values between -128 and 128
             # LNA Gain Mode.
-            adfGainMode: 0 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
+            adfGainMode: 2 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
             # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
-            afcEnable: false
+            afcEnable: true
             # Don't change this. See the ADF7021 datasheet for more information.
-            afcKI: 11
+            afcKI: 13
             # Don't change this. See the ADF7021 datasheet for more information.
-            afcKP: 4
+            afcKP: 5
             # Sets the maximum frequency correction range of the ADF7021.
             # (It is highly recommended *not* to alter this.)
             afcRange: 1
