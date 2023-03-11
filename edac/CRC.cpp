@@ -469,9 +469,7 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
         }
     }
 
-    // crc = ~crc;
     crc &= 0x1FFU;
-    crc ^= 0x1FFU;
 
 #if DEBUG_CRC
     LogDebug(LOG_HOST, "CRC::crc9(), crc = $%03X, bitlen = %u", crc, bitLength);
