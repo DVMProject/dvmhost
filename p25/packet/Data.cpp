@@ -290,7 +290,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_REQ_CNCT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
                             }
 
-                            m_connQueueTable[llId] = ipAddr;
+                            m_connQueueTable[llId] = std::make_tuple(m_rfDataHeader.getMFId(), ipAddr);
 
                             m_connTimerTable[llId] = Timer(1000U, CONN_WAIT_TIMEOUT);
                             m_connTimerTable[llId].start();
@@ -569,11 +569,12 @@ void Data::clock(uint32_t ms)
     // handle PDU connection registration
     for (auto it = connToClear.begin(); it != connToClear.end(); ++it) {
         uint32_t llId = *it;
-        uint64_t ipAddr = m_connQueueTable[llId];
+        uint8_t mfId = std::get<0>(m_connQueueTable[llId]);
+        uint64_t ipAddr = std::get<1>(m_connQueueTable[llId]);
 
         if (!acl::AccessControl::validateSrcId(llId)) {
             LogWarning(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
-            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, llId, ipAddr);
+            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_DENY, mfId, llId, ipAddr);
         }
         else {
             if (!hasLLIdFNEReg(llId)) {
@@ -585,7 +586,7 @@ void Data::clock(uint32_t ms)
                 LogMessage(LOG_RF, P25_PDU_STR ", PDU_REG_TYPE_RSP_ACCPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_ULONG(ipAddr).c_str());
             }
 
-            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, llId, ipAddr);
+            writeRF_PDU_Reg_Response(PDU_REG_TYPE_RSP_ACCPT, mfId, llId, ipAddr);
         }
 
         m_connQueueTable.erase(llId);
@@ -833,9 +834,10 @@ void Data::writeRF_PDU_Buffered()
 /// Helper to write a PDU registration response.
 /// </summary>
 /// <param name="regType"></param>
+/// <param name="mfId"></param>
 /// <param name="llId"></param>
 /// <param name="ipAddr"></param>
-void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr)
+void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr)
 {
     if ((regType != PDU_REG_TYPE_RSP_ACCPT) && (regType != PDU_REG_TYPE_RSP_DENY))
         return;
@@ -850,11 +852,11 @@ void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ip
 
     DataHeader rspHeader = DataHeader();
     rspHeader.setFormat(PDU_FMT_CONFIRMED);
-    rspHeader.setMFId(m_rfDataHeader.getMFId());
+    rspHeader.setMFId(mfId);
     rspHeader.setAckNeeded(true);
     rspHeader.setOutbound(true);
     rspHeader.setSAP(PDU_SAP_REG);
-    rspHeader.setLLId(m_rfDataHeader.getLLId());
+    rspHeader.setLLId(llId);
     rspHeader.setBlocksToFollow(1U);
 
     // Generate the PDU header and 1/2 rate Trellis

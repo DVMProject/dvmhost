@@ -124,10 +124,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
                 ::memcpy(m_data, buffer + 2U, count);                                    // Payload Data
              }
 
-#if DEBUG_P25_PDU_DATA
-            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Block Data", m_data, count);
-#endif
-
             // compute CRC-9 for the packet
             uint16_t calculated = edac::CRC::crc9(buffer, 144U);
             if (((crc ^ calculated) != 0) && ((crc ^ calculated) != 0x1FFU)) {
@@ -136,6 +132,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
 
 #if DEBUG_P25_PDU_DATA
             LogDebug(LOG_P25, "P25_DUID_PDU, fmt = $%02X, crc = $%04X, calculated = $%04X", m_fmt, crc, calculated);
+            Utils::dump(1U, "P25, DataBlock::decode(), Confirmed PDU Block Data", m_data, count);
 #endif
         }
         catch (...) {

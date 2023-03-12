@@ -253,7 +253,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 
 #if DEBUG_CRC
     uint16_t inCrc = (in[length - 2U] << 8) | (in[length - 1U] << 0);
-    LogDebug(LOG_HOST, "CRC::checkCCITT161(), crc = $%04X, in = $%04X, len = %u", crc16, inCrc, length);
+    LogDebug(LOG_HOST, "CRC::checkCCITT162(), crc = $%04X, in = $%04X, len = %u", crc16, inCrc, length);
 #endif
 
     return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U];

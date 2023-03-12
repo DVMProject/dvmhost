@@ -110,7 +110,7 @@ namespace p25
 
             std::unordered_map<uint32_t, ulong64_t> m_fneRegTable;
 
-            std::unordered_map<uint32_t, ulong64_t> m_connQueueTable;
+            std::unordered_map<uint32_t, std::tuple<uint8_t, ulong64_t>> m_connQueueTable;
             std::unordered_map<uint32_t, Timer> m_connTimerTable;
 
             bool m_dumpPDUData;
@@ -134,7 +134,7 @@ namespace p25
             /// <summary>Helper to re-write a received P25 PDU packet.</summary>
             void writeRF_PDU_Buffered();
             /// <summary>Helper to write a PDU registration response.</summary>
-            void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, ulong64_t ipAddr);
+            void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr);
             /// <summary>Helper to write a PDU acknowledge response.</summary>
             void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls = false);
         };

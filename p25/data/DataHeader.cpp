@@ -101,12 +101,12 @@ bool DataHeader::decode(const uint8_t* data)
     }
 
 #if DEBUG_P25_PDU_DATA
-    Utils::dump(1U, "P25, DataHeader::decode(), PDU Header Data", data, P25_PDU_HEADER_LENGTH_BYTES);
+    Utils::dump(1U, "P25, DataHeader::decode(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
     m_ackNeeded = (header[0U] & 0x40U) == 0x40U;                                // Acknowledge Needed
     m_outbound = (header[0U] & 0x20U) == 0x20U;                                 // Inbound/Outbound
-    m_fmt = header[0U] & 0x1F;                                                  // Packet Format
+    m_fmt = header[0U] & 0x1FU;                                                 // Packet Format
 
     m_sap = header[1U] & 0x3FU;                                                 // Service Access Point
 
@@ -193,7 +193,7 @@ void DataHeader::encode(uint8_t* data)
         (m_fmt & 0x1FU);                                                        // Packet Format
 
     header[1U] = m_sap & 0x3FU;                                                 // Service Access Point
-    header[1U] |= 0xC0;
+    header[1U] |= 0xC0U;
 
     header[2U] = m_mfId;                                                        // Mfg Id.
 
