@@ -1271,8 +1271,6 @@ void Voice::writeNet_LDU1()
         m_netLost = 0U;
         m_vocLDU1Count = 0U;
 
-        LogDebug(LOG_NET, "P25, frameType = $%02X", m_netLastFrameType);
-
         if (!m_p25->m_disableNetworkHDU) {
             if (m_netLastFrameType != P25_FT_HDU_LATE_ENTRY) {
                 uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
