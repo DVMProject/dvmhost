@@ -115,7 +115,7 @@ Some extra notes for those who are using the Raspberry Pi, default Raspbian OS o
 
 1. Disable the Bluetooth services. Bluetooth will share the GPIO serial interface on ```/dev/ttyAMA0```. On Rasbian OS or Debian OS, this is done by: ```systemctl disable bluetooth```
 2. The default Rasbian OS and Debian OS will have a getty instance listening on ```/dev/ttyAMA0```. This can conflict with the STM32, and is best if disabled. On Rasbian OS or Debian OS, this is done by: ```systemctl disable serial-getty@ttyAMA0.service```
-3. There's a default boot option which is also listening on the GPIO serial interface. This **must be disabled**. Open the ```/boot/config.txt``` file in your favorite editor (vi or pico) and change it from: 
+3. There's a default boot option which is also listening on the GPIO serial interface. This **must be disabled**. Open the ```/boot/cmdline.txt``` file in your favorite editor (vi or pico) and change it from: 
 
  ```console=serial0,115200 console=tty1 root=PARTUUID=[this is dynamic per partition] rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait```
  
