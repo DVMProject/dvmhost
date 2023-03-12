@@ -202,9 +202,6 @@ void Network::clock(uint32_t ms)
         return;
     }
 
-    if (m_debug && length > 0)
-        Utils::dump(1U, "Network Received", m_buffer, length);
-
     if (length > 0) {
         if (!UDPSocket::match(m_addr, address)) {
             LogError(LOG_NET, "Packet received from an invalid source");
@@ -212,6 +209,7 @@ void Network::clock(uint32_t ms)
         }
 
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {
+#if defined(ENABLE_DMR)            
             if (m_enabled && m_dmrEnabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, DMR", m_buffer, length);
@@ -220,8 +218,10 @@ void Network::clock(uint32_t ms)
                 m_rxDMRData.addData(&len, 1U);
                 m_rxDMRData.addData(m_buffer, len);
             }
+#endif
         }
         else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {
+#if defined(ENABLE_P25)
             if (m_enabled && m_p25Enabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, P25", m_buffer, length);
@@ -230,9 +230,10 @@ void Network::clock(uint32_t ms)
                 m_rxP25Data.addData(&len, 1U);
                 m_rxP25Data.addData(m_buffer, len);
             }
+#endif
         }
         else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {
-#if ENABLE_NXDN_SUPPORT
+#if defined(ENABLE_NXDN)
             if (m_enabled && m_nxdnEnabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, NXDN", m_buffer, length);

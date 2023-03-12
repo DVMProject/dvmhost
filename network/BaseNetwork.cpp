@@ -186,9 +186,10 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
+/// <param name="frameType"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint32_t& len)
+uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
         ret = false;
@@ -216,9 +217,40 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
     uint8_t lsd2 = m_buffer[21U];
 
     duid = m_buffer[22U];
+    frameType = p25::P25_FT_DATA_UNIT;
 
     if (m_debug) {
-        LogDebug(LOG_NET, "P25, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", lco, MFId, srcId, dstId, length);
+        LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+    }
+
+    // is this a LDU1, is this the first of a call?
+    if (duid == p25::P25_DUID_LDU1) {
+        frameType = m_buffer[180U];
+
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
+        }
+
+        if (frameType == p25::P25_FT_HDU_VALID) {
+            uint8_t algId = m_buffer[181U];
+            uint32_t kid = (m_buffer[182U] << 8) | (m_buffer[183U] << 0);
+
+            // copy MI data
+            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+
+            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+                mi[i] = m_buffer[184U + i];
+            }
+
+            if (m_debug) {
+                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+            }
+
+            control.setAlgId(algId);
+            control.setKId(kid);
+            control.setMI(mi);
+        }
     }
 
     control.setLCO(lco);
@@ -345,8 +377,9 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="data"></param>
+/// <param name="frameType"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
+bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -357,7 +390,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 
     m_streamId[0] = m_p25StreamId;
 
-    return writeP25LDU1(m_id, m_p25StreamId, control, lsd, data);
+    return writeP25LDU1(m_id, m_p25StreamId, control, lsd, data, frameType);
 }
 
 /// <summary>
@@ -678,9 +711,10 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="data"></param>
+/// <param name="frameType"></param>
 /// <returns></returns>
 bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    const uint8_t* data)
+    const uint8_t* data, uint8_t frameType)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -712,6 +746,27 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
 
     buffer[22U] = p25::P25_DUID_LDU1;                                               // DUID
+
+    buffer[180U] = frameType;                                                       // DVM Frame Type
+
+    // is this the first frame of a call?
+    if (frameType == p25::P25_FT_HDU_VALID) {
+        buffer[180U] = 0x01U;                                                       // First LDU1 Marker
+        buffer[181U] = control.getAlgId();                                          // Algorithm ID
+
+        uint32_t kid = control.getKId();
+        buffer[182U] = (kid >> 8) & 0xFFU;                                          // Key ID
+        buffer[183U] = (kid >> 0) & 0xFFU;
+
+        // copy MI data
+        uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+        ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+        control.getMI(mi);
+
+        for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+            buffer[184U + i] = mi[i];                                               // Message Indicator
+        }
+    }
 
     uint32_t count = 24U;
     uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
@@ -764,9 +819,9 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 LDU1", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Transmitted, P25 LDU1", buffer, (count + 15U + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
+    write(buffer, (count + 15U + PACKET_PAD));
 
     return true;
 }
@@ -1073,7 +1128,7 @@ bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nx
 
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(streamId, buffer, 16U);                                        // Stream ID
 
     uint32_t count = 24U;
 

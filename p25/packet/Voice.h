@@ -68,7 +68,7 @@ namespace p25
             /// <summary>Process a data frame from the RF interface.</summary>
             virtual bool process(uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+            virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType);
 
         protected:
             friend class packet::Trunk;
@@ -93,6 +93,7 @@ namespace p25
 
             lc::LC m_netLC;
             lc::LC m_netLastLDU1;
+            uint8_t m_netLastFrameType;
 
             data::LowSpeedData m_rfLSD;
             data::LowSpeedData m_netLSD;
@@ -120,7 +121,7 @@ namespace p25
             virtual ~Voice();
 
             /// <summary>Write data processed from RF to the network.</summary>
-            void writeNetwork(const uint8_t* data, uint8_t duid);
+            void writeNetwork(const uint8_t* data, uint8_t duid, uint8_t frameType = P25_FT_DATA_UNIT);
 
             /// <summary>Helper to write end of voice frame data.</summary>
             void writeRF_EndOfVoice();

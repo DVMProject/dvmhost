@@ -211,6 +211,10 @@ namespace p25
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
     const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
 
+    const uint8_t   P25_FT_HDU_VALID = 0x01U;
+    const uint8_t   P25_FT_HDU_LATE_ENTRY = 0x02U;
+    const uint8_t   P25_FT_DATA_UNIT = 0x00U;
+
     // PDU Format Type(s)
     const uint8_t   PDU_FMT_RSP = 0x03U;
     const uint8_t   PDU_FMT_UNCONFIRMED = 0x15U;

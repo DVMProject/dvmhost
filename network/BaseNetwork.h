@@ -135,14 +135,14 @@ namespace network
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint32_t& len);
+        virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& len);
         /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
         virtual uint8_t* readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len);
 
         /// <summary>Writes DMR frame data to the network.</summary>
         virtual bool writeDMR(const dmr::data::Data& data);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
-        virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
+        virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType);
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>
@@ -221,7 +221,7 @@ namespace network
         /// <summary>Writes DMR frame data to the network.</summary>
         bool writeDMR(const uint32_t id, const uint32_t streamId, const dmr::data::Data& data);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
-        bool writeP25LDU1(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
+        bool writeP25LDU1(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType);
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         bool writeP25LDU2(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>

@@ -88,6 +88,7 @@ void Voice::resetNet()
 
     m_netLC = lc;
     m_netLastLDU1 = lc;
+    //m_netLastFrameType = P25_FT_DATA_UNIT;
 
     m_netFrames = 0U;
     m_netLost = 0U;
@@ -208,6 +209,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         bool alreadyDecoded = false;
         m_lastDUID = P25_DUID_LDU1;
 
+        uint8_t frameType = P25_FT_DATA_UNIT;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             // if this is a late entry call, clear states
             if (m_rfLastHDU.getDstId() == 0U) {
@@ -429,11 +431,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
                 }
 
+                frameType = P25_FT_HDU_VALID;
+
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
                 }
             }
             else {
+                frameType = P25_FT_HDU_LATE_ENTRY;
                 LogWarning(LOG_RF, P25_HDU_STR ", not transmitted; possible late entry, dstId = %u, algo = $%02X, kid = $%04X", m_rfLastHDU.getDstId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
             }
 
@@ -555,7 +560,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // add busy bits
             P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
 
-            writeNetwork(data + 2U, P25_DUID_LDU1);
+            writeNetwork(data + 2U, P25_DUID_LDU1, frameType);
 
             if (m_p25->m_duplex) {
                 data[0U] = modem::TAG_DATA;
@@ -723,8 +728,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
+/// <param name="frameType"></param>
 /// <returns></returns>
-bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
 {
     uint32_t count = 0U;
 
@@ -775,6 +781,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 count += 16U;
 
                 m_netLastLDU1 = control;
+                m_netLastFrameType = frameType;
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     // are we interrupting a running CC?
@@ -902,6 +909,7 @@ Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbo
     m_rfLastLDU2(),
     m_netLC(),
     m_netLastLDU1(),
+    m_netLastFrameType(P25_FT_DATA_UNIT),
     m_rfLSD(),
     m_netLSD(),
     m_dfsiLC(),
@@ -941,7 +949,8 @@ Voice::~Voice()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="duid"></param>
-void Voice::writeNetwork(const uint8_t *data, uint8_t duid)
+/// <param name="frameType"></param>
+void Voice::writeNetwork(const uint8_t *data, uint8_t duid, uint8_t frameType)
 {
     assert(data != nullptr);
 
@@ -956,7 +965,7 @@ void Voice::writeNetwork(const uint8_t *data, uint8_t duid)
             // ignore HDU
             break;
         case P25_DUID_LDU1:
-            m_network->writeP25LDU1(m_rfLC, m_rfLSD, data);
+            m_network->writeP25LDU1(m_rfLC, m_rfLSD, data, frameType);
             break;
         case P25_DUID_LDU2:
             m_network->writeP25LDU2(m_rfLC, m_rfLSD, data);
@@ -1082,24 +1091,24 @@ void Voice::writeNet_LDU1()
     // ensure our srcId and dstId are sane from the last LDU1
     if (m_netLastLDU1.getDstId() != 0U) {
         if (dstId != m_netLastLDU1.getDstId()) {
-            LogWarning(LOG_NET, P25_HDU_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
+            LogWarning(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
                 m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
             dstId = m_netLastLDU1.getDstId();
         }
     }
     else {
-        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, dstId = 0");
+        LogWarning(LOG_NET, P25_LDU1_STR ", last LDU1 LC has bad data, dstId = 0");
     }
 
     if (m_netLastLDU1.getSrcId() != 0U) {
         if (srcId != m_netLastLDU1.getSrcId()) {
-            LogWarning(LOG_NET, P25_HDU_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
+            LogWarning(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
                 m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
             srcId = m_netLastLDU1.getSrcId();
         }
     }
     else {
-        LogWarning(LOG_NET, P25_HDU_STR ", last LDU1 LC has bad data, srcId = 0");
+        LogWarning(LOG_NET, P25_LDU1_STR ", last LDU1 LC has bad data, srcId = 0");
     }
 
     // don't process network frames if this modem isn't authoritative
@@ -1172,7 +1181,17 @@ void Voice::writeNet_LDU1()
     // if we are idle lets generate HDU data
     if (m_p25->m_netState == RS_NET_IDLE) {
         uint8_t mi[P25_MI_LENGTH_BYTES];
-        control.getMI(mi);
+        ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
+
+        if (m_netLastLDU1.getAlgId() != P25_ALGO_UNENCRYPT && m_netLastLDU1.getKId() != 0) {
+            m_netLastLDU1.getMI(mi);
+
+            control.setAlgId(m_netLastLDU1.getAlgId());
+            control.setKId(m_netLastLDU1.getKId());
+        }
+        else {
+            control.getMI(mi);
+        }
 
         if (m_verbose && m_debug) {
             Utils::dump(1U, "Network HDU MI", mi, P25_MI_LENGTH_BYTES);
@@ -1229,6 +1248,7 @@ void Voice::writeNet_LDU1()
 
                 m_netLC = lc::LC();
                 m_netLastLDU1 = lc::LC();
+                m_netLastFrameType = P25_FT_DATA_UNIT;
 
                 m_p25->m_netState = RS_NET_IDLE;
                 m_p25->m_netLastDstId = 0U;
@@ -1251,29 +1271,38 @@ void Voice::writeNet_LDU1()
         m_netLost = 0U;
         m_vocLDU1Count = 0U;
 
+        LogDebug(LOG_NET, "P25, frameType = $%02X", m_netLastFrameType);
+
         if (!m_p25->m_disableNetworkHDU) {
-            uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
-            ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+            if (m_netLastFrameType != P25_FT_HDU_LATE_ENTRY) {
+                uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
 
-            // Generate Sync
-            Sync::addP25Sync(buffer + 2U);
+                // Generate Sync
+                Sync::addP25Sync(buffer + 2U);
 
-            // Generate NID
-            m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+                // Generate NID
+                m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
 
-            // Generate header
-            m_netLC.encodeHDU(buffer + 2U);
+                // Generate header
+                m_netLC.encodeHDU(buffer + 2U);
 
-            // Add busy bits
-            P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
+                // Add busy bits
+                P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
 
-            buffer[0U] = modem::TAG_DATA;
-            buffer[1U] = 0x00U;
+                buffer[0U] = modem::TAG_DATA;
+                buffer[1U] = 0x00U;
 
-            m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U, true);
+                m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U, true);
 
-            if (m_verbose) {
-                LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                if (m_verbose) {
+                    LogMessage(LOG_NET, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                }
+            }
+            else {
+                if (m_verbose) {
+                    LogMessage(LOG_NET, P25_HDU_STR ", not transmitted; network HDU late entry, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
+                }
             }
         }
         else {
