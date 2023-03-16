@@ -131,6 +131,8 @@ file(GLOB dvmcmd_SRC
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
 
+    "tests/edac/*.cpp"
+
     "tests/p25/*.cpp"
 )
 
