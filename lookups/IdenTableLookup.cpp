@@ -98,9 +98,8 @@ std::vector<IdenTable> IdenTableLookup::list()
 {
     std::vector<IdenTable> list = std::vector<IdenTable>();
     if (m_table.size() > 0) {
-        for (auto it = m_table.begin(); it != m_table.end(); ++it) {
-            IdenTable entry = it->second;
-            list.push_back(entry);
+        for (auto entry : m_table) {
+            list.push_back(entry.second);
         }
     }
 

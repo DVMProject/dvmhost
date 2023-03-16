@@ -354,7 +354,7 @@ namespace p25
     const uint8_t   TSBK_OSP_MOT_PSH_CCH = 0x0EU;       // MOT PSH CCH - Motorola / Planned Control Channel Shutdown
 
     // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
-    const uint8_t   TSBK_OSP_DVM_GIT_HASH = 0x7BU;      //
+    const uint8_t   TSBK_OSP_DVM_GIT_HASH = 0x3FU;      //
 
     // Data Unit ID(s)
     const uint8_t   P25_DUID_HDU = 0x00U;               // Header Data Unit

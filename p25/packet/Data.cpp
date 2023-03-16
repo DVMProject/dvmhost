@@ -557,8 +557,8 @@ void Data::clock(uint32_t ms)
 {
     // clock all the connect timers
     std::vector<uint32_t> connToClear = std::vector<uint32_t>();
-    for (auto it = m_connQueueTable.begin(); it != m_connQueueTable.end(); ++it) {
-        uint32_t llId = it->first;
+    for (auto entry : m_connQueueTable) {
+        uint32_t llId = entry.first;
 
         m_connTimerTable[llId].clock(ms);
         if (m_connTimerTable[llId].isRunning() && m_connTimerTable[llId].hasExpired()) {
@@ -567,8 +567,7 @@ void Data::clock(uint32_t ms)
     }
 
     // handle PDU connection registration
-    for (auto it = connToClear.begin(); it != connToClear.end(); ++it) {
-        uint32_t llId = *it;
+    for (uint32_t llId : connToClear) {
         uint8_t mfId = std::get<0>(m_connQueueTable[llId]);
         uint64_t ipAddr = std::get<1>(m_connQueueTable[llId]);
 

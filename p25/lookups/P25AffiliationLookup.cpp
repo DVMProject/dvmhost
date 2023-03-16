@@ -88,8 +88,8 @@ std::vector<uint32_t> P25AffiliationLookup::clearGroupAff(uint32_t dstId, bool r
     std::vector<uint32_t> srcToRel = ::lookups::AffiliationLookup::clearGroupAff(dstId, releaseAll);
     if (srcToRel.size() > 0U) {
         // release affiliations
-        for (auto it = srcToRel.begin(); it != srcToRel.end(); ++it) {
-            m_p25->m_trunk->writeRF_TSDU_U_Dereg_Ack(*it);
+        for (uint32_t srcId : srcToRel) {
+            m_p25->m_trunk->writeRF_TSDU_U_Dereg_Ack(srcId);
         }
     }
 

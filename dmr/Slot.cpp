@@ -674,17 +674,15 @@ void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unorder
     m_channelNo = channelNo;
 
     std::vector<::lookups::IdenTable> entries = m_idenTable->list();
-    for (auto it = entries.begin(); it != entries.end(); ++it) {
-        ::lookups::IdenTable entry = *it;
+    for (auto entry : entries) {
         if (entry.channelId() == channelId) {
             m_idenEntry = entry;
             break;
         }
     }
 
-    std::vector<uint32_t> availCh = voiceChNo;
-    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
-        m_affiliations->addRFCh(*it);
+    for (uint32_t chNo : voiceChNo) {
+        m_affiliations->addRFCh(chNo);
     }
 
     m_affiliations->setRFChData(voiceChData);

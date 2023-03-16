@@ -133,14 +133,14 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name);
 
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
-        for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
-            uint32_t dstId = it->first;
+        for (auto entry : m_grantChTable) {
+            uint32_t dstId = entry.first;
             gntsToRel.push_back(dstId);
         }
 
         // release grants
-        for (auto it = gntsToRel.begin(); it != gntsToRel.end(); ++it) {
-            releaseGrant(*it, false);
+        for (uint32_t dstId : gntsToRel) {
+            releaseGrant(dstId, false);
         }
 
         return true;
@@ -190,15 +190,15 @@ bool DMRAffiliationLookup::isChBusy(uint32_t chNo) const
     }
 
     // lookup dynamic channel grant table entry
-    for (auto it = m_grantChTable.begin(); it != m_grantChTable.end(); ++it) {
-        if (it->second == chNo) {
+    for (auto grantEntry : m_grantChTable) {
+        if (grantEntry.second == chNo) {
             uint8_t slotCount = 0U;
             if (chNo == m_tsccChNo) {
                 slotCount++; // one slot is *always* used for TSCC
             }
 
-            for (auto it = m_grantChSlotTable.begin(); it != m_grantChSlotTable.end(); ++it) {
-                uint32_t foundChNo = std::get<0>(it->second);
+            for (auto slotEntry : m_grantChSlotTable) {
+                uint32_t foundChNo = std::get<0>(slotEntry.second);
                 if (foundChNo == chNo)
                     slotCount++;
             }
@@ -226,9 +226,9 @@ uint8_t DMRAffiliationLookup::getGrantedSlot(uint32_t dstId) const
     }
 
     // lookup dynamic channel grant table entry
-    for (auto it = m_grantChSlotTable.begin(); it != m_grantChSlotTable.end(); ++it) {
-        if (it->first == dstId) {
-            uint8_t slot = std::get<1>(it->second);
+    for (auto entry : m_grantChSlotTable) {
+        if (entry.first == dstId) {
+            uint8_t slot = std::get<1>(entry.second);
             return slot;
         }
     }
@@ -269,11 +269,11 @@ uint8_t DMRAffiliationLookup::getAvailableSlotForChannel(uint32_t chNo) const
     // lookup dynamic channel slot grant table entry
     bool grantedSlot = false;
     int slotCount = 0U;
-    for (auto it = m_grantChSlotTable.begin(); it != m_grantChSlotTable.end(); ++it) {
-        uint32_t foundChNo = std::get<0>(it->second);
+    for (auto entry : m_grantChSlotTable) {
+        uint32_t foundChNo = std::get<0>(entry.second);
         if (foundChNo == chNo)
         {
-            uint8_t foundSlot = std::get<1>(it->second);
+            uint8_t foundSlot = std::get<1>(entry.second);
             if (slot == foundSlot) {
                 switch (foundSlot) {
                 case 1U:

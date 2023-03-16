@@ -958,10 +958,9 @@ void Trunk::clock(uint32_t ms)
         m_adjSiteUpdateTimer.clock(ms);
         if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
             // update adjacent site data
-            for (auto it = m_adjSiteUpdateCnt.begin(); it != m_adjSiteUpdateCnt.end(); ++it) {
-                uint8_t siteId = it->first;
-
-                uint8_t updateCnt = it->second;
+            for (auto& entry : m_adjSiteUpdateCnt) {
+                uint8_t siteId = entry.first;
+                uint8_t updateCnt = entry.second;
                 if (updateCnt > 0U) {
                     updateCnt--;
                 }
@@ -972,14 +971,13 @@ void Trunk::clock(uint32_t ms)
                         siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                 }
 
-                m_adjSiteUpdateCnt[siteId] = updateCnt;
+                entry.second = updateCnt;
             }
 
             // update SCCB data
-            for (auto it = m_sccbUpdateCnt.begin(); it != m_sccbUpdateCnt.end(); ++it) {
-                uint8_t rfssId = it->first;
-
-                uint8_t updateCnt = it->second;
+            for (auto& entry : m_sccbUpdateCnt) {
+                uint8_t rfssId = entry.first;
+                uint8_t updateCnt = entry.second;
                 if (updateCnt > 0U) {
                     updateCnt--;
                 }
@@ -990,7 +988,7 @@ void Trunk::clock(uint32_t ms)
                         siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                 }
 
-                m_sccbUpdateCnt[rfssId] = updateCnt;
+                entry.second = updateCnt;
             }
 
             m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
@@ -1858,15 +1856,15 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                 bool noData = false;
                 uint8_t i = 0U;
                 std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations.grantTable();
-                for (auto it = grantTable.begin(); it != grantTable.end(); ++it) {
+                for (auto entry : grantTable) {
                     // no good very bad way of skipping entries...
                     if (i != m_mbfGrpGrntCnt) {
                         i++;
                         continue;
                     }
                     else {
-                        uint32_t dstId = it->first;
-                        uint32_t chNo = it->second;
+                        uint32_t dstId = entry.first;
+                        uint32_t chNo = entry.second;
 
                         if (chNo == 0U) {
                             noData = true;
@@ -1906,15 +1904,13 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                     m_mbfIdenCnt = 0U;
 
                 uint8_t i = 0U;
-                for (auto it = entries.begin(); it != entries.end(); ++it) {
+                for (auto entry : entries) {
                     // no good very bad way of skipping entries...
                     if (i != m_mbfIdenCnt) {
                         i++;
                         continue;
                     }
                     else {
-                        ::lookups::IdenTable entry = *it;
-
                         // LogDebug(LOG_P25, "baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
                         //    entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
 
@@ -1969,14 +1965,14 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                 std::unique_ptr<OSP_ADJ_STS_BCAST> osp = new_unique(OSP_ADJ_STS_BCAST);
 
                 uint8_t i = 0U;
-                for (auto it = m_adjSiteTable.begin(); it != m_adjSiteTable.end(); ++it) {
+                for (auto entry : m_adjSiteTable) {
                     // no good very bad way of skipping entries...
                     if (i != m_mbfAdjSSCnt) {
                         i++;
                         continue;
                     }
                     else {
-                        SiteData site = it->second;
+                        SiteData site = entry.second;
 
                         uint8_t cfva = P25_CFVA_NETWORK;
                         if (m_adjSiteUpdateCnt[site.siteId()] == 0U) {
@@ -2018,14 +2014,14 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                 std::unique_ptr<OSP_SCCB_EXP> osp = new_unique(OSP_SCCB_EXP);
 
                 uint8_t i = 0U;
-                for (auto it = m_sccbTable.begin(); it != m_sccbTable.end(); ++it) {
+                for (auto entry : m_sccbTable) {
                     // no good very bad way of skipping entries...
                     if (i != m_mbfSCCBCnt) {
                         i++;
                         continue;
                     }
                     else {
-                        SiteData site = it->second;
+                        SiteData site = entry.second;
 
                         // transmit SCCB broadcast
                         osp->setLCO(TSBK_OSP_SCCB_EXP);

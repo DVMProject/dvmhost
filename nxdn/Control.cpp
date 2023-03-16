@@ -268,9 +268,8 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
     m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
     m_siteData.setCallsign(cwCallsign);
 
-    std::vector<uint32_t> availCh = voiceChNo;
-    for (auto it = availCh.begin(); it != availCh.end(); ++it) {
-        m_affiliations.addRFCh(*it);
+    for (uint32_t ch : voiceChNo) {
+        m_affiliations.addRFCh(ch);
     }
 
     m_affiliations.setRFChData(voiceChData);
@@ -279,8 +278,7 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
     lc::RCCH::setCallsign(cwCallsign);
 
     std::vector<lookups::IdenTable> entries = m_idenTable->list();
-    for (auto it = entries.begin(); it != entries.end(); ++it) {
-        lookups::IdenTable entry = *it;
+    for (auto entry : entries) {
         if (entry.channelId() == channelId) {
             m_idenEntry = entry;
             break;

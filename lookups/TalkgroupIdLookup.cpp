@@ -161,15 +161,15 @@ bool TalkgroupIdLookup::load()
                 std::vector<std::string> parsed;
                 char delim = ',';
 
-                for (auto it = line.begin(); it != line.end(); it++) {
-                    if (*it == delim) {
+                for (char c : line) {
+                    if (c == delim) {
                         if (!next.empty()) {
                             parsed.push_back(next);
                             next.clear();
                         }
                     }
                     else
-                        next += *it;
+                        next += c;
                 }
                 if (!next.empty())
                     parsed.push_back(next);

@@ -1107,9 +1107,9 @@ std::string RemoteControl::rcdGetVoiceCh(Host* host, dmr::Control* dmr, p25::Con
     std::string reply = "";
 
     if (host->m_voiceChData.size() > 0) {
-        for (auto it = host->m_voiceChData.begin(); it != host->m_voiceChData.end(); ++it) {
-            uint32_t chNo = it->first;
-            lookups::VoiceChData data = it->second;
+        for (auto entry : host->m_voiceChData) {
+            uint32_t chNo = entry.first;
+            lookups::VoiceChData data = entry.second;
 
             reply += string_format("\r\n%u, %s:%u", chNo, data.address().c_str(), data.port());
         }
