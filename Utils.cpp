@@ -96,7 +96,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
             ::sprintf(temp, "%02X ", data[offset + i]);
             output += temp;
         }
-
+#if !defined(CATCH2_TEST_COMPILATION)
         for (uint32_t i = bytes; i < 16U; i++)
             output += "   ";
 
@@ -112,7 +112,7 @@ void Utils::dump(int level, const std::string& title, const uint8_t* data, uint3
         }
 
         output += '*';
-
+#endif
         ::Log(level, "DUMP", "%04X:  %s", offset, output.c_str());
 
         offset += 16U;

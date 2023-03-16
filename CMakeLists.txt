@@ -130,6 +130,8 @@ file(GLOB dvmcmd_SRC
 # dvmtest source/header files
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
+
+    "tests/p25/lc/*.cpp"
 )
 
 # digital mode options
@@ -360,7 +362,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 find_package(Threads REQUIRED)
-add_executable(dvmtests ${dvmtests_SRC})
+add_executable(dvmtests ${dvmhost_SRC} ${dvmtests_SRC})
+target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
 target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain Threads::Threads util)
 target_include_directories(dvmtests PRIVATE .)
 endif (ENABLE_TESTS)

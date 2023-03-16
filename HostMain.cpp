@@ -105,7 +105,7 @@ uint8_t* g_gitHashBytes = nullptr;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-#if !defined(_WIN32) && !defined(_WIN64)
+#if !defined(_WIN32) && !defined(_WIN64) && !defined(CATCH2_TEST_COMPILATION)
 static void sigHandler(int signum)
 {
     g_killed = true;
@@ -245,7 +245,7 @@ int checkArgs(int argc, char* argv[])
 // ---------------------------------------------------------------------------
 //  Program Entry Point
 // ---------------------------------------------------------------------------
-
+#if !defined(CATCH2_TEST_COMPILATION)
 int main(int argc, char** argv)
 {
     g_gitHashBytes = new uint8_t[4U];
@@ -314,3 +314,4 @@ int main(int argc, char** argv)
 
     return ret;
 }
+#endif

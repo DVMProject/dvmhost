@@ -38,6 +38,10 @@
 #include <sys/time.h>
 #endif
 
+#if defined(CATCH2_TEST_COMPILATION)
+#include <catch2/catch_test_macros.hpp>
+#endif
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
@@ -91,6 +95,9 @@ static char LEVELS[] = " DMIWEF";
 /// <returns>True, if log file is opened, otherwise false.
 static bool LogOpen()
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return true;
+#endif
     if (m_fileLevel == 0U)
         return true;
 
@@ -158,6 +165,9 @@ static bool ActivityLogOpen()
 /// <param name="network">Instance of the Network class.</param>
 void LogSetNetwork(void* network)
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return;
+#endif
     // note: The Network class is passed here as a void so we can avoid including the Network.h
     // header in Log.h. This is dirty and probably terrible...
     m_network = (network::Network*)network;
@@ -170,6 +180,9 @@ void LogSetNetwork(void* network)
 /// <param name="fileRoot">Prefix of the activity log file name.</param>
 bool ActivityLogInitialise(const std::string& filePath, const std::string& fileRoot)
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return true;
+#endif
     m_actFilePath = filePath;
     m_actFileRoot = fileRoot;
     m_network = nullptr;
@@ -182,6 +195,9 @@ bool ActivityLogInitialise(const std::string& filePath, const std::string& fileR
 /// </summary>
 void ActivityLogFinalise()
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return;
+#endif
     if (m_actFpLog != nullptr)
         ::fclose(m_actFpLog);
 }
@@ -194,6 +210,9 @@ void ActivityLogFinalise()
 /// <param name="msg">Formatted string to write to activity log.</param>
 void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return;
+#endif
     assert(mode != nullptr);
     assert(msg != nullptr);
 
@@ -268,6 +287,9 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
 /// </summary>
 void LogFinalise()
 {
+#if defined(CATCH2_TEST_COMPILATION)
+    return;
+#endif
     if (m_fpLog != nullptr)
         ::fclose(m_fpLog);
 }
@@ -281,7 +303,9 @@ void LogFinalise()
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != nullptr);
-
+#if defined(CATCH2_TEST_COMPILATION)
+    m_disableTimeDisplay = true;
+#endif
     char buffer[LOG_BUFFER_LEN];
 #if defined(_WIN32) || defined(_WIN64)
     if (!m_disableTimeDisplay) {
@@ -340,6 +364,11 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             m_network->writeDiagLog(buffer);
         }
     }
+
+#if defined(CATCH2_TEST_COMPILATION)
+    UNSCOPED_INFO(buffer);
+    return;
+#endif
 
     if (level >= m_fileLevel && m_fileLevel != 0U) {
         bool ret = ::LogOpen();
