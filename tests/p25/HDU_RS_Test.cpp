@@ -36,7 +36,7 @@ using namespace p25;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("HDU", "[RS_362017_Test]") {
+TEST_CASE("HDU", "[Reed-Soloman 36,20,17 Test]") {
     SECTION("RS_362017_Test") {
         bool failed = false;
 

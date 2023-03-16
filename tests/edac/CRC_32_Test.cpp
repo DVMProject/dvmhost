@@ -34,8 +34,8 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[32_Test]") {
-    SECTION("32_Test") {
+TEST_CASE("CRC", "[32-bit Test]") {
+    SECTION("32_Sanity_Test") {
         bool failed = false;
 
         INFO("CRC 32-bit CRC Test");
@@ -51,11 +51,14 @@ TEST_CASE("CRC", "[32_Test]") {
 
         CRC::addCRC32(random, len);
 
-        Utils::dump(2U, "32_Test CRC", random, len);
+        uint32_t inCrc = (random[len - 4U] << 24) | (random[len - 3U] << 16) | (random[len - 2U] << 8) | (random[len - 1U] << 0);
+        ::LogDebug("T", "CRC::checkCRC32(), crc = $%08X", inCrc);
+
+        Utils::dump(2U, "32_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCRC32(random, len);
         if (!ret) {
-            ::LogDebug("T", "32_Test, failed CRC32 check");
+            ::LogDebug("T", "32_Sanity_Test, failed CRC32 check");
             failed = true;
             goto cleanup;
         }
@@ -65,7 +68,7 @@ TEST_CASE("CRC", "[32_Test]") {
 
         ret = CRC::checkCRC32(random, len);
         if (ret) {
-            ::LogDebug("T", "32_Test, failed CRC32 check");
+            ::LogDebug("T", "32_Sanity_Test, failed CRC32 error check");
             failed = true;
             goto cleanup;
         }

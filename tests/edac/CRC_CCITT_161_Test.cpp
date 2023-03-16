@@ -34,8 +34,8 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[CCITT-161_Test]") {
-    SECTION("CCITT-161_Test") {
+TEST_CASE("CRC", "[16-bit CCITT-161 Test]") {
+    SECTION("CCITT-161_Sanity_Test") {
         bool failed = false;
 
         INFO("CRC CCITT-161 16-bit CRC Test");
@@ -51,11 +51,14 @@ TEST_CASE("CRC", "[CCITT-161_Test]") {
 
         CRC::addCCITT161(random, len);
 
-        Utils::dump(2U, "CCITT-161_Test CRC", random, len);
+        uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
+        ::LogDebug("T", "CRC::checkCCITT161(), crc = $%04X", inCrc);
+
+        Utils::dump(2U, "CCITT-161_Sanity_Test CRC", random, len);
 
         bool ret = CRC::checkCCITT161(random, len);
         if (!ret) {
-            ::LogDebug("T", "CCITT-161_Test, failed CRC CCITT-162 check");
+            ::LogDebug("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 check");
             failed = true;
             goto cleanup;
         }
@@ -65,7 +68,7 @@ TEST_CASE("CRC", "[CCITT-161_Test]") {
 
         ret = CRC::checkCCITT161(random, len);
         if (ret) {
-            ::LogDebug("T", "CCITT-161_Test, failed CRC CCITT-162 check");
+            ::LogDebug("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 error check");
             failed = true;
             goto cleanup;
         }

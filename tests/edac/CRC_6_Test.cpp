@@ -34,31 +34,32 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[16-bit CCITT-162 Test]") {
-    SECTION("CCITT-162_Sanity_Test") {
+TEST_CASE("CRC", "[6-bit Test]") {
+    SECTION("6_Sanity_Test") {
         bool failed = false;
 
-        INFO("CRC CCITT-162 16-bit CRC Test");
+        INFO("CRC 6-bit CRC Test");
 
         srand((unsigned int)time(NULL));
 
         const uint32_t len = 32U;
+        const uint32_t lenBits = len * 8U;
         uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len - 2U; i++) {
+        for (size_t i = 0; i < len - 1U; i++) {
             random[i] = rand();
         }
 
-        CRC::addCCITT162(random, len);
+        CRC::addCRC6(random, lenBits);
 
-        uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogDebug("T", "CRC::checkCCITT162(), crc = $%04X", inCrc);
+        uint32_t inCrc = (random[len - 1U] << 0);
+        ::LogDebug("T", "CRC::checkCRC6(), crc = $%02X", inCrc);
 
-        Utils::dump(2U, "CCITT-162_Sanity_Test CRC", random, len);
+        Utils::dump(2U, "6_Sanity_Test CRC", random, len);
 
-        bool ret = CRC::checkCCITT162(random, len);
+        bool ret = CRC::checkCRC6(random, lenBits);
         if (!ret) {
-            ::LogDebug("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 check");
+            ::LogDebug("T", "6_Sanity_Test, failed CRC6 check");
             failed = true;
             goto cleanup;
         }
@@ -66,9 +67,9 @@ TEST_CASE("CRC", "[16-bit CCITT-162 Test]") {
         random[10U] >>= 8;
         random[11U] >>= 8;
 
-        ret = CRC::checkCCITT162(random, len);
+        ret = CRC::checkCRC6(random, lenBits);
         if (ret) {
-            ::LogDebug("T", "CCITT-162_Sanity_Test, failed CRC CCITT-162 error check");
+            ::LogDebug("T", "6_Sanity_Test, failed CRC6 error check");
             failed = true;
             goto cleanup;
         }
