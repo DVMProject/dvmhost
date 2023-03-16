@@ -131,7 +131,7 @@ file(GLOB dvmcmd_SRC
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
 
-    "tests/p25/lc/*.cpp"
+    "tests/p25/*.cpp"
 )
 
 # digital mode options
