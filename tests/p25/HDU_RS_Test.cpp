@@ -79,7 +79,7 @@ TEST_CASE("HDU", "[Reed-Soloman 36,20,17 Test]") {
         try {
             bool ret = m_rs.decode362017(rs);
             if (!ret) {
-                fprintf(stdout, "LC::decodeHDU(), failed to decode RS (36,20,17) FEC\n");
+                ::LogDebug("T", "LC::decodeHDU(), failed to decode RS (36,20,17) FEC\n");
                 failed = true;
                 goto cleanup;
             }
