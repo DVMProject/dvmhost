@@ -13,7 +13,7 @@ This project utilizes CMake for its build system. (All following information ass
 
 The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
 
-## Dependancies
+### Dependancies
 
 This project requires the ASIO library (https://think-async.com/Asio/) for its REST API services. This can be installed on most Debian/Ubuntu Linux's with: ```apt-get install libasio-dev```
 
