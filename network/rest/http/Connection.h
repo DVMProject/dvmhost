@@ -48,127 +48,130 @@
 #include <iterator>
 #include <asio.hpp>
  
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Class Prototypes
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Class Prototypes
+            // ---------------------------------------------------------------------------
 
-        template<class> class ConnectionManager;
-    
-        // ---------------------------------------------------------------------------
-        //  Class Declaration
-        //      This class represents a single connection from a client.
-        // ---------------------------------------------------------------------------
+            template<class> class ConnectionManager;
         
-        template <typename RequestHandlerType>
-        class Connection : public std::enable_shared_from_this<Connection<RequestHandlerType>>
-        {
-            typedef Connection<RequestHandlerType> selfType;
-            typedef std::shared_ptr<selfType> selfTypePtr;
-            typedef ConnectionManager<selfTypePtr> ConnectionManagerType;
-        public:
-            /// <summary>Initializes a new instance of the Connection class.</summary>
-            explicit Connection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
-                bool persistent = false) :
-                m_socket(std::move(socket)),
-                m_connectionManager(manager),
-                m_requestHandler(handler),
-                m_persistent(persistent)
-            {
-                /* stub */
-            }
-            /// <summary>Initializes a copy instance of the Connection class.</summary>
-            Connection(const Connection&) = delete;
+            // ---------------------------------------------------------------------------
+            //  Class Declaration
+            //      This class represents a single connection from a client.
+            // ---------------------------------------------------------------------------
             
-            /// <summary></summary>
-            Connection& operator=(const Connection&) = delete;
-    
-            /// <summary>Start the first asynchronous operation for the connection.</summary>
-            void start() { read(); }
-            /// <summary>Stop all asynchronous operations associated with the connection.</summary>
-            void stop() { m_socket.close(); }
-        private:
-            /// <summary>Perform an asynchronous read operation.</summary>
-            void read()
+            template <typename RequestHandlerType>
+            class Connection : public std::enable_shared_from_this<Connection<RequestHandlerType>>
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
+                typedef Connection<RequestHandlerType> selfType;
+                typedef std::shared_ptr<selfType> selfTypePtr;
+                typedef ConnectionManager<selfTypePtr> ConnectionManagerType;
+            public:
+                /// <summary>Initializes a new instance of the Connection class.</summary>
+                explicit Connection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
+                                    bool persistent = false) :
+                    m_socket(std::move(socket)),
+                    m_connectionManager(manager),
+                    m_requestHandler(handler),
+                    m_persistent(persistent)
+                {
+                    /* stub */
                 }
-
-                m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
-                    if (!ec) {
-                        HTTPRequestLexer::ResultType result;
-                        char* data;
-
-                        std::tie(result, data) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
-                        auto itr = std::find_if(m_request.headers.begin(), m_request.headers.end(), [](const header &h) { return h.name == "content-length"; });
-                        if (itr != request_.headers.end()) {
-                            m_request.data = std::string(data, std::static_cast<long>(itr->value));
-                        }
-
-                        if (result == HTTPRequestLexer::GOOD) {
-                            m_requestHandler.handleRequest(m_request, m_reply);
-                            write();
-                        }
-                        else if (result == HTTPRequestLexer::BAD) {
-                            m_reply = reply::stockReply(HTTPReply::BAD_REQUEST);
-                            write();
-                        }
-                        else {
-                            read();
-                        }
-                    }
-                    else if (ec != asio::error::operation_aborted) {
-                        m_connectionManager.stop(this->shared_from_this());
-                    }
-                });
-            }
-    
-            /// <summary>Perform an asynchronous write operation.</summary>
-            void write()
-            {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                } else {
-                    m_reply.headers.emplace_back("Connection:", "keep-alive");
-                }
-
-                asio::async_write(m_socket, m_reply.to_buffers(), [=](asio::error_code ec, std::size_t) {
-                    if (m_persistent) {
-                        m_lexer.reset();
-                        m_reply.headers.resize(0);
-                        m_reply.status = HTTPReply::OK;
-                        m_reply.content = "";
-                        m_request = HTTPRequest();
-                        read();
-                    }
-                    else
-                    {
-                        if (!ec) {
-                            // initiate graceful connection closure
-                            asio::error_code ignored_ec;
-                            m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
-                        }
+                /// <summary>Initializes a copy instance of the Connection class.</summary>
+                Connection(const Connection&) = delete;
                 
-                        if (ec != asio::error::operation_aborted) {
+                /// <summary></summary>
+                Connection& operator=(const Connection&) = delete;
+        
+                /// <summary>Start the first asynchronous operation for the connection.</summary>
+                void start() { read(); }
+                /// <summary>Stop all asynchronous operations associated with the connection.</summary>
+                void stop() { m_socket.close(); }
+            private:
+                /// <summary>Perform an asynchronous read operation.</summary>
+                void read()
+                {
+                    if (!m_persistent) {
+                        auto self(this->shared_from_this());
+                    }
+
+                    m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
+                        if (!ec) {
+                            HTTPRequestLexer::ResultType result;
+                            char* data;
+
+                            std::tie(result, data) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+                            auto header = std::find_if(m_request.headers.begin(), m_request.headers.end(), [](const HTTPHeader& h) { return h.name == "content-length"; });
+                            if (header != m_request.headers.end()) {
+                                size_t length = (size_t)::strtoul(header->value.c_str(), NULL, 10);
+                                m_request.data = std::string(data, length);
+                            }
+
+                            if (result == HTTPRequestLexer::GOOD) {
+                                m_requestHandler.handleRequest(m_request, m_reply);
+                                write();
+                            }
+                            else if (result == HTTPRequestLexer::BAD) {
+                                m_reply = HTTPReply::stockReply(HTTPReply::BAD_REQUEST);
+                                write();
+                            }
+                            else {
+                                read();
+                            }
+                        }
+                        else if (ec != asio::error::operation_aborted) {
                             m_connectionManager.stop(this->shared_from_this());
                         }
+                    });
+                }
+        
+                /// <summary>Perform an asynchronous write operation.</summary>
+                void write()
+                {
+                    if (!m_persistent) {
+                        auto self(this->shared_from_this());
+                    } else {
+                        m_reply.headers.emplace_back("Connection:", "keep-alive");
                     }
-                });
-            }
-    
-            asio::ip::tcp::socket m_socket;
-            ConnectionManagerType& m_connectionManager;
-            RequestHandlerType& m_requestHandler;
-            std::array<char, 8192> m_buffer;
-            HTTPRequest m_request;
-            HTTPRequestLexer m_lexer;
-            HTTPReply m_reply;
-            bool m_persistent;
-        };
-    } // namespace server
-} // namespace rest
+
+                    asio::async_write(m_socket, m_reply.toBuffers(), [=](asio::error_code ec, std::size_t) {
+                        if (m_persistent) {
+                            m_lexer.reset();
+                            m_reply.headers.resize(0);
+                            m_reply.status = HTTPReply::OK;
+                            m_reply.content = "";
+                            m_request = HTTPRequest();
+                            read();
+                        }
+                        else
+                        {
+                            if (!ec) {
+                                // initiate graceful connection closure
+                                asio::error_code ignored_ec;
+                                m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                            }
+                    
+                            if (ec != asio::error::operation_aborted) {
+                                m_connectionManager.stop(this->shared_from_this());
+                            }
+                        }
+                    });
+                }
+        
+                asio::ip::tcp::socket m_socket;
+                ConnectionManagerType& m_connectionManager;
+                RequestHandlerType& m_requestHandler;
+                std::array<char, 8192> m_buffer;
+                HTTPRequest m_request;
+                HTTPRequestLexer m_lexer;
+                HTTPReply m_reply;
+                bool m_persistent;
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
  
 #endif // __REST_HTTP__CONNECTION_H__

@@ -34,13 +34,15 @@
 *   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
- #if !defined(__REST_HTTP__HTTP_SERVER_H__)
+#if !defined(__REST_HTTP__HTTP_SERVER_H__)
 #define __REST_HTTP__HTTP_SERVER_H__
 
 #include "Defines.h"
-#include "network/rest/Connection.h"
-#include "network/rest/ConnectionManager.h"
-#include "network/rest/HTTPRequestHandler.h"
+#include "network/rest/http/Connection.h"
+#include "network/rest/http/ConnectionManager.h"
+#include "network/rest/http/HTTPRequestHandler.h"
+#include "network/rest/http/HTTPReply.h"
+#include "network/rest/http/HTTPRequest.h"
 
 #include <asio.hpp>
 
@@ -50,111 +52,104 @@
 #include <utility>
 #include <memory>
  
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Class Declaration
-        //      This class implements top-level routines of the HTTP server.
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Class Declaration
+            //      This class implements top-level routines of the HTTP server.
+            // ---------------------------------------------------------------------------
 
-        template<typename RequestHandlerType, template<class> class ConnectionImpl = Connection>
-        class HTTPServer {
-        public:
-            /// <summary>Initializes a new instance of the HTTPServer class.</summary>
-            template<typename Handler>
-            explicit HTTPServer(const std::string& address, const std::string& port, Handler&& handler) :
-                m_ioService(), 
-                m_signals(m_ioService), 
-                m_acceptor(m_ioService), 
-                m_connectionManager(),
-                m_socket(m_ioService), 
-                m_requestHandler(std::forward<Handler>(handler))
-            {
-                // register to handle the signals that indicate when the server should exit
-                // it is safe to register for the same signal multiple times in a program,
-                // provided all registration for the specified signal is made through ASIO
-                m_signals.add(SIGINT);
-                m_signals.add(SIGTERM);
-#if defined(SIGQUIT)
-                m_signals.add(SIGQUIT);
-#endif
-            
-                awaitStop();
-            
-                // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
-                asio::ip::tcp::resolver resolver(m_ioService);
-                asio::ip::tcp::endpoint endpoint = *resolver.resolve({address, port});
+            template<typename RequestHandlerType, template<class> class ConnectionImpl = Connection>
+            class HTTPServer {
+            public:
+                /// <summary>Initializes a new instance of the HTTPServer class.</summary>
+                explicit HTTPServer(const std::string& address, uint16_t port) :
+                    m_ioService(), 
+                    m_acceptor(m_ioService), 
+                    m_connectionManager(),
+                    m_socket(m_ioService), 
+                    m_requestHandler()
+                {
+                    // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
+                    asio::ip::address ipAddress = asio::ip::address::from_string(address);
+                    asio::ip::tcp::endpoint endpoint(ipAddress, port);
 
-                m_acceptor.open(endpoint.protocol());
-                m_acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-                m_acceptor.set_option(asio::socket_base::keep_alive(true));
-                m_acceptor.bind(endpoint);
-                m_acceptor.listen();
-            
-                accept();
-            }
-            /// <summary>Initializes a copy instance of the HTTPServer class.</summary>
-            HTTPServer(const HTTPServer&) = delete;
- 
-            /// <summary></summary>
-            HTTPServer& operator=(const HTTPServer&) = delete;
-
-            /// <summary>Run the servers ASIO IO service loop.</summary>
-            void run()
-            {
-                // the run() call will block until all asynchronous operations
-                // have finished; while the server is running, there is always at least one
-                // asynchronous operation outstanding: the asynchronous accept call waiting
-                // for new incoming connections
-                m_ioService.run();
-            }
-            
-        private:
-            /// <summary>Perform an asynchronous accept operation.</summary>
-            void accept()
-            {
-                m_acceptor.async_accept(m_socket, [this](asio::error_code ec) {
-                    // check whether the server was stopped by a signal before this
-                    // completion handler had a chance to run
-                    if (!m_acceptor.is_open()) {
-                        return;
-                    }
-                
-                    if (!ec) {
-                        m_connectionManager.start(std::make_shared<connection_type>(std::move(m_socket), m_connectionManager, m_requestHandler));
-                    }
+                    m_acceptor.open(endpoint.protocol());
+                    m_acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+                    m_acceptor.set_option(asio::socket_base::keep_alive(true));
+                    m_acceptor.bind(endpoint);
+                    m_acceptor.listen();
                 
                     accept();
-                });
-            }
-            
-            /// <summary>Wait for a request to stop the server.</summary>
-            void awaitStop()
-            {
-                m_signals.async_wait([this](asio::error_code /*ec*/, int /*signo*/) {
+                }
+                /// <summary>Initializes a copy instance of the HTTPServer class.</summary>
+                HTTPServer(const HTTPServer&) = delete;
+    
+                /// <summary></summary>
+                HTTPServer& operator=(const HTTPServer&) = delete;
+
+                /// <summary>Helper to set the HTTP request handlers.</summary>
+                template<typename Handler>
+                void setHandler(Handler&& handler)
+                {
+                    m_requestHandler = RequestHandlerType(std::forward<Handler>(handler));
+                }
+
+                /// <summary>Run the servers ASIO IO service loop.</summary>
+                void run()
+                {
+                    // the run() call will block until all asynchronous operations
+                    // have finished; while the server is running, there is always at least one
+                    // asynchronous operation outstanding: the asynchronous accept call waiting
+                    // for new incoming connections
+                    m_ioService.run();
+                }
+
+                /// <summary>Helper to stop running ASIO IO services.</summary>
+                void stop()
+                {
                     // the server is stopped by cancelling all outstanding asynchronous
                     // operations; once all operations have finished the m_ioService::run()
                     // call will exit
                     m_acceptor.close();
                     m_connectionManager.stopAll();
-                });
-            }
-            
-            typedef ConnectionImpl<RequestHandlerType> ConnectionType;
-            typedef std::shared_ptr<ConnectionType> ConnectionTypePtr;
-            
-            asio::io_service m_ioService;
-            asio::signal_set m_signals;
-            asio::ip::tcp::acceptor m_acceptor;
-            
-            ConnectionManager<ConnectionTypePtr> m_connectionManager;
-            
-            asio::ip::tcp::socket m_socket;
-            
-            RequestHandlerType m_requestHandler;
-        };
-     } // namespace server
-} // namespace rest
+                }
+                
+            private:
+                /// <summary>Perform an asynchronous accept operation.</summary>
+                void accept()
+                {
+                    m_acceptor.async_accept(m_socket, [this](asio::error_code ec) {
+                        // check whether the server was stopped by a signal before this
+                        // completion handler had a chance to run
+                        if (!m_acceptor.is_open()) {
+                            return;
+                        }
+                    
+                        if (!ec) {
+                            m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler));
+                        }
+                    
+                        accept();
+                    });
+                }
+                
+                typedef ConnectionImpl<RequestHandlerType> ConnectionType;
+                typedef std::shared_ptr<ConnectionType> ConnectionTypePtr;
+                
+                asio::io_service m_ioService;
+                asio::ip::tcp::acceptor m_acceptor;
+                
+                ConnectionManager<ConnectionTypePtr> m_connectionManager;
+                
+                asio::ip::tcp::socket m_socket;
+                
+                RequestHandlerType m_requestHandler;
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
  
 #endif // __REST_HTTP__HTTP_SERVER_H__

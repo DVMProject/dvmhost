@@ -33,8 +33,11 @@
 
 #include "Defines.h"
 #include "network/UDPSocket.h"
+#include "network/rest/RequestDispatcher.h"
+#include "network/rest/http/HTTPServer.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
+#include "Thread.h"
 
 #include <vector>
 #include <string>
@@ -117,15 +120,17 @@ namespace nxdn { class HOST_SW_API Control; }
 //      Implements the remote control networking logic.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API RemoteControl {
+class HOST_SW_API RemoteControl : private Thread {
 public:
     /// <summary>Initializes a new instance of the RemoteControl class.</summary>
-    RemoteControl(const std::string& address, uint16_t port, const std::string& password, bool debug);
+    RemoteControl(const std::string& address, uint16_t port, const std::string& password, Host* host, bool debug);
     /// <summary>Finalizes a instance of the RemoteControl class.</summary>
     ~RemoteControl();
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
     void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup);
+    /// <summary>Sets the instances of the digital radio protocols.</summary>
+    void setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
 
     /// <summary>Process remote network command data.</summary>
     void process(Host* host, dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
@@ -137,6 +142,10 @@ public:
     void close();
 
 private:
+    typedef network::rest::RequestDispatcher<network::rest::http::HTTPRequest, network::rest::http::HTTPReply> RESTDispatcherType;
+    RESTDispatcherType m_dispatcher;
+    network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
+
     network::UDPSocket m_socket;
     uint8_t m_p25MFId;
 
@@ -144,8 +153,19 @@ private:
     uint8_t* m_passwordHash;
     bool m_debug;
 
+    Host* m_host;
+    dmr::Control* m_dmr;
+    p25::Control* m_p25;
+    nxdn::Control* m_nxdn;
+
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupIdLookup* m_tidLookup;
+
+    /// <summary>Helper to initialize REST API endpoints.</summary>
+    void initializeEndpoints();
+
+    /// <summary></summary>
+    virtual void entry();
 
     /// <summary>Helper to send response to client.</summary>
     void writeResponse(std::string reply, sockaddr_storage address, uint32_t addrLen);

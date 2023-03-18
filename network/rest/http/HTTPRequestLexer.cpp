@@ -38,7 +38,7 @@
 #include "network/rest/http/HTTPRequestLexer.h"
 #include "network/rest/http/HTTPRequest.h"
 
-using namespace rest::server;
+using namespace network::rest::http;
 
 #include <cctype>
 

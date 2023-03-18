@@ -722,6 +722,10 @@ int Host::run()
             setState(STATE_IDLE);
         }
 
+        if (m_remoteControl != nullptr) {
+            m_remoteControl->setProtocols(dmr.get(), p25.get(), nxdn.get());
+        }
+
         ::LogInfoEx(LOG_HOST, "Host is performing late initialization and warmup");
 
         // perform early pumping of the modem clock (this is so the DSP has time to setup its buffers),
@@ -2345,7 +2349,7 @@ bool Host::createNetwork()
 
     // initialize network remote command
     if (rconEnable) {
-        m_remoteControl = new RemoteControl(rconAddress, rconPort, rconPassword, rconDebug);
+        m_remoteControl = new RemoteControl(rconAddress, rconPort, rconPassword, this, rconDebug);
         m_remoteControl->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_remoteControl->open();
         if (!ret) {

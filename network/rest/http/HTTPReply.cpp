@@ -37,7 +37,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPReply.h"
 
-using namespace rest::server;
+using namespace network::rest::http;
 
 #include <string>
 
@@ -105,24 +105,6 @@ namespace misc_strings {
     const char name_value_separator[] = { ':', ' ' };
     const char crlf[] = { '\r', '\n' };
 } // namespace misc_strings
-
-std::vector<asio::const_buffer> HTTPReply::toBuffers()
-{
-    std::vector<asio::const_buffer> buffers;
-    buffers.push_back(status_strings::toBuffer(status));
-
-    for (std::size_t i = 0; i < headers.size(); ++i) {
-        HTTPHeader& h = headers[i];
-        buffers.push_back(asio::buffer(h.name));
-        buffers.push_back(asio::buffer(misc_strings::name_value_separator));
-        buffers.push_back(asio::buffer(h.value));
-        buffers.push_back(asio::buffer(misc_strings::crlf));
-    }
-
-    buffers.push_back(asio::buffer(misc_strings::crlf));
-    buffers.push_back(asio::buffer(content));
-    return buffers;
-}
 
 namespace stock_replies {
     const char ok[] = "";
@@ -244,24 +226,91 @@ namespace stock_replies {
     }
 } // namespace stock_replies
 
-HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const char* mime)
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Convert the reply into a vector of buffers. The buffers do not own the
+/// underlying memory blocks, therefore the reply object must remain valid and
+/// not be changed until the write operation has completed.
+/// </summary>
+std::vector<asio::const_buffer> HTTPReply::toBuffers()
+{
+    std::vector<asio::const_buffer> buffers;
+    buffers.push_back(status_strings::toBuffer(status));
+
+    for (std::size_t i = 0; i < headers.size(); ++i) {
+        HTTPHeader& h = headers[i];
+        buffers.push_back(asio::buffer(h.name));
+        buffers.push_back(asio::buffer(misc_strings::name_value_separator));
+        buffers.push_back(asio::buffer(h.value));
+        buffers.push_back(asio::buffer(misc_strings::crlf));
+    }
+
+    buffers.push_back(asio::buffer(misc_strings::crlf));
+    buffers.push_back(asio::buffer(content));
+    return buffers;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="obj"></param>
+/// <param name="s"></param>
+void HTTPReply::reply(json::object obj, HTTPReply::StatusType s)
+{
+    json::value v = json::value(obj);
+    std::string json = v.serialize();
+    reply(json, s, "text/json");
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="c"></param>
+/// <param name="s"></param>
+/// <param name="contentType"></param>
+void HTTPReply::reply(std::string c, HTTPReply::StatusType s, std::string contentType)
+{
+    content = c;
+    status = s;
+    ensureDefaultHeaders(contentType);
+}
+
+// ---------------------------------------------------------------------------
+//  Static Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Get a stock reply.
+/// </summary>
+/// <param name="status"></param>
+/// <param name="contentType"></param>
+HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const std::string contentType)
 {
     HTTPReply rep;
     rep.status = status;
 
     if (status != HTTPReply::NO_CONTENT) {
         rep.content = stock_replies::to_string(status);
-        rep.headers.resize(2);
-        rep.headers[0].name = "Content-Length";
-        rep.headers[0].value = std::to_string(rep.content.size());
-        rep.headers[1].name = "Content-Type";
-        rep.headers[1].value = mime;
+        rep.ensureDefaultHeaders(contentType);
     }
     
     return rep;
 }
 
-HTTPReply& operator<<(HTTPReply& r, const std::string &value) {
-    r.content.append(value);
-    return r;
+// ---------------------------------------------------------------------------
+//  Private Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+///
+/// </summary>
+/// <param name="contentType"></param>
+void HTTPReply::ensureDefaultHeaders(std::string contentType)
+{
+    headers.push_back(HTTPHeader("Content-Length", std::to_string(content.size())));
+    headers.push_back(HTTPHeader("Content-Type", contentType));
+    headers.push_back(HTTPHeader("Server", std::string((__EXE_NAME__ "/" __VER__))));
 }

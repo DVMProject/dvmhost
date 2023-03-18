@@ -43,26 +43,28 @@
 #include <string>
 #include <vector>
 
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Structure Declaration
-        //      This struct implements a model of a request received from a HTTP client.
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Structure Declaration
+            //      This struct implements a model of a request received from a HTTP client.
+            // ---------------------------------------------------------------------------
 
-        struct HTTPRequest
-        {
-            std::string method;
-            std::string uri;
+            struct HTTPRequest
+            {
+                std::string method;
+                std::string uri;
 
-            int httpVersionMajor;
-            int httpVersionMinor;
-        
-            std::vector<HTTPHeader> headers;
-            std::string data;
-        };
-    } // namespace server
-} // namespace http
+                int httpVersionMajor;
+                int httpVersionMinor;
+            
+                std::vector<HTTPHeader> headers;
+                std::string data;
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
 
 #endif // __REST_HTTP__HTTP_REQUEST_H__

@@ -41,47 +41,49 @@
 
 #include <string>
 
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Class Prototypes
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Class Prototypes
+            // ---------------------------------------------------------------------------
 
-        struct HTTPReply;
-        struct HTTPRequest;
-    
-        // ---------------------------------------------------------------------------
-        //  Class Declaration
-        //      This class implements the common handler for all incoming requests.
-        // ---------------------------------------------------------------------------
+            struct HTTPReply;
+            struct HTTPRequest;
+        
+            // ---------------------------------------------------------------------------
+            //  Class Declaration
+            //      This class implements the common handler for all incoming requests.
+            // ---------------------------------------------------------------------------
 
-        class HTTPRequestHandler
-        {
-        public:
-            /// <summary>Initializes a new instance of the HTTPRequestHandler class.</summary>
-            explicit HTTPRequestHandler(const std::string& docRoot);
-            /// <summary>Initializes a copy instance of the HTTPRequestHandler class.</summary>
-            HTTPRequestHandler(const HTTPRequestHandler&) = delete;
-            /// <summary></summary>
-            HTTPRequestHandler(HTTPRequestHandler&&) = default;
-            
-            /// <summary></summary>
-            HTTPRequestHandler& operator=(const HTTPRequestHandler&) = delete;
-            /// <summary></summary>
-            HTTPRequestHandler& operator=(HTTPRequestHandler&&) = default;
+            class HTTPRequestHandler
+            {
+            public:
+                /// <summary>Initializes a new instance of the HTTPRequestHandler class.</summary>
+                explicit HTTPRequestHandler(const std::string& docRoot);
+                /// <summary>Initializes a copy instance of the HTTPRequestHandler class.</summary>
+                HTTPRequestHandler(const HTTPRequestHandler&) = delete;
+                /// <summary></summary>
+                HTTPRequestHandler(HTTPRequestHandler&&) = default;
+                
+                /// <summary></summary>
+                HTTPRequestHandler& operator=(const HTTPRequestHandler&) = delete;
+                /// <summary></summary>
+                HTTPRequestHandler& operator=(HTTPRequestHandler&&) = default;
 
-            /// <summary>Handle a request and produce a reply.</summary>
-            void handleRequest(const HTTPRequest& req, HTTPReply& reply);
+                /// <summary>Handle a request and produce a reply.</summary>
+                void handleRequest(const HTTPRequest& req, HTTPReply& reply);
 
-        private:
-            /// <summary>Perform URL-decoding on a string. Returns false if the encoding was
-            /// invalid.</summary>
-            static bool urlDecode(const std::string& in, std::string& out);
+            private:
+                /// <summary>Perform URL-decoding on a string. Returns false if the encoding was
+                /// invalid.</summary>
+                static bool urlDecode(const std::string& in, std::string& out);
 
-            std::string m_docRoot;
-        };
-    } // namespace server
-} // namespace rest
+                std::string m_docRoot;
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
 
 #endif // __REST_HTTP__HTTP_REQUEST_HANDLER_H__

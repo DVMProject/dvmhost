@@ -38,6 +38,7 @@
 #define __REST_HTTP__HTTP_REPLY_H__
 
 #include "Defines.h" 
+#include "network/json/json.h"
 #include "network/rest/http/HTTPHeader.h"
 
 #include <string>
@@ -45,49 +46,61 @@
 
 #include <asio.hpp>
 
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Structure Declaration
-        //      This struct implements a model of a reply to be sent to a HTTP client.
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Structure Declaration
+            //      This struct implements a model of a reply to be sent to a HTTP client.
+            // ---------------------------------------------------------------------------
 
-        struct HTTPReply
-        {
-        enum StatusType {
-            OK = 200,
-            CREATED = 201,
-            ACCEPTED = 202,
-            NO_CONTENT = 204,
-            MULTIPLE_CHOICES = 300,
-            MOVED_PERMANENTLY = 301,
-            MOVED_TEMPORARILY = 302,
-            NOT_MODIFIED = 304,
-            BAD_REQUEST = 400,
-            UNAUTHORIZED = 401,
-            FORBIDDEN = 403,
-            NOT_FOUND = 404,
-            INTERNAL_SERVER_ERROR = 500,
-            NOT_IMPLEMENTED = 501,
-            BAD_GATEWAY = 502,
-            SERVICE_UNAVAILABLE = 503
-        } status;
+            struct HTTPReply
+            {
+                /// <summary>
+                /// HTTP Status/Response Codes
+                /// </summary>
+                enum StatusType {
+                    OK = 200,
+                    CREATED = 201,
+                    ACCEPTED = 202,
+                    NO_CONTENT = 204,
+                    MULTIPLE_CHOICES = 300,
+                    MOVED_PERMANENTLY = 301,
+                    MOVED_TEMPORARILY = 302,
+                    NOT_MODIFIED = 304,
+                    BAD_REQUEST = 400,
+                    UNAUTHORIZED = 401,
+                    FORBIDDEN = 403,
+                    NOT_FOUND = 404,
+                    INTERNAL_SERVER_ERROR = 500,
+                    NOT_IMPLEMENTED = 501,
+                    BAD_GATEWAY = 502,
+                    SERVICE_UNAVAILABLE = 503
+                } status;
 
-        std::vector<HTTPHeader> headers;
-        std::string content;
+                std::vector<HTTPHeader> headers;
+                std::string content;
 
-        /// <summary>Convert the reply into a vector of buffers. The buffers do not own the
-        /// underlying memory blocks, therefore the reply object must remain valid and
-        /// not be changed until the write operation has completed.</summary>
-        std::vector<asio::const_buffer> toBuffers();
+                /// <summary>Convert the reply into a vector of buffers. The buffers do not own the
+                /// underlying memory blocks, therefore the reply object must remain valid and
+                /// not be changed until the write operation has completed.</summary>
+                std::vector<asio::const_buffer> toBuffers();
 
-        /// <summary>Get a stock reply.</summary>
-        static HTTPReply stockReply(StatusType status, const char* mime = "text/html");
-        };
+                /// <summary>Prepares reply for transmission by finalizing status and content type.</summary>
+                void reply(json::object obj, StatusType status = OK);
+                /// <summary>Prepares reply for transmission by finalizing status and content type.</summary>
+                void reply(std::string content, StatusType status = OK, std::string contentType = "text/html");
 
-        HTTPReply& operator<<(HTTPReply& r, const std::string& value);
-    } // namespace server
-} // namespace rest
+                /// <summary>Get a stock reply.</summary>
+                static HTTPReply stockReply(StatusType status, std::string contentType = "text/html");
+
+            private:
+                /// <summary></summary>
+                void ensureDefaultHeaders(std::string contentType = "text/html");
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
 
 #endif // __REST_HTTP__HTTP_REPLY_H__

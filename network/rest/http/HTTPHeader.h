@@ -41,26 +41,28 @@
 
 #include <string>
 
-namespace rest {
-    namespace server {
+namespace network {
+    namespace rest {
+        namespace http {
 
-        // ---------------------------------------------------------------------------
-        //  Structure Declaration
-        //      This class implements a model for an HTTP header.
-        // ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            //  Structure Declaration
+            //      This class implements a model for an HTTP header.
+            // ---------------------------------------------------------------------------
 
-        struct HTTPHeader
-        {
-            std::string name;
-            std::string value;
-        
-            /// <summary>Initializes a new instance of the HTTPHeader struct.</summary>
-            HTTPHeader() { /* stub */ }
-            /// <summary>Initializes a new instance of the HTTPHeader struct.</summary>
-            HTTPHeader(const std::string& name, const std::string& value) : name{name}, value{value} { /* stub */ }
-        };
+            struct HTTPHeader
+            {
+                std::string name;
+                std::string value;
+            
+                /// <summary>Initializes a new instance of the HTTPHeader struct.</summary>
+                HTTPHeader() { /* stub */ }
+                /// <summary>Initializes a new instance of the HTTPHeader struct.</summary>
+                HTTPHeader(const std::string& name, const std::string& value) : name(name), value(value) { /* stub */ }
+            };
 
-    } // namespace server
-} // namespace rest
+        } // namespace http
+    } // namespace rest
+} // namespace network
 
 #endif // __REST_HTTP__HTTP_HEADER_H__

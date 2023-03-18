@@ -39,7 +39,7 @@
 #include "network/rest/http/HTTPRequest.h"
 #include "network/rest/http/HTTPReply.h"
 
-using namespace rest::server;
+using namespace network::rest::http;
 
 #include <fstream>
 #include <sstream>

@@ -36,12 +36,16 @@
 #include "modem/Modem.h"
 #include "host/Host.h"
 #include "network/UDPSocket.h"
+#include "network/json/json.h"
 #include "RemoteControl.h"
 #include "HostMain.h"
 #include "Log.h"
+#include "Thread.h"
 #include "Utils.h"
 
 using namespace network;
+using namespace network::rest;
+using namespace network::rest::http;
 using namespace modem;
 
 #include <cstdio>
@@ -100,13 +104,22 @@ std::string string_format(const std::string& format, FormatArgs ... args)
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
+/// <param name="host">Instance of the Host class.</param>
 /// <param name="debug"></param>
-RemoteControl::RemoteControl(const std::string& address, uint16_t port, const std::string& password, bool debug) :
+RemoteControl::RemoteControl(const std::string& address, uint16_t port, const std::string& password, Host* host, bool debug) :
+    m_dispatcher(),
+    m_restServer(address, (uint16_t)(port + 1U)/*port*/),
     m_socket(address, port),
     m_p25MFId(p25::P25_MFG_STANDARD),
     m_password(password),
     m_passwordHash(nullptr),
-    m_debug(debug)
+    m_debug(debug),
+    m_host(host),
+    m_dmr(nullptr),
+    m_p25(nullptr),
+    m_nxdn(nullptr),
+    m_ridLookup(nullptr),
+    m_tidLookup(nullptr)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -143,6 +156,19 @@ void RemoteControl::setLookups(lookups::RadioIdLookup* ridLookup, lookups::Talkg
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+}
+
+/// <summary>
+/// Sets the instances of the digital radio protocols.
+/// </summary>
+/// <param name="dmr">Instance of the DMR Control class.</param>
+/// <param name="p25">Instance of the P25 Control class.</param>
+/// <param name="nxdn">Instance of the NXDN Control class.</param>
+void RemoteControl::setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn)
+{
+    m_dmr = dmr;
+    m_p25 = p25;
+    m_nxdn = nxdn;
 }
 
 /// <summary>
@@ -850,6 +876,10 @@ void RemoteControl::process(Host* host, dmr::Control* dmr, p25::Control* p25, nx
 /// <returns></returns>
 bool RemoteControl::open()
 {
+    initializeEndpoints();
+    m_restServer.setHandler(m_dispatcher);
+
+    run();
     return m_socket.open();
 }
 
@@ -858,12 +888,37 @@ bool RemoteControl::open()
 /// </summary>
 void RemoteControl::close()
 {
+    m_restServer.stop();
+    wait();
+    
     m_socket.close();
 }
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to initialize REST API endpoints.
+/// </summary>
+void RemoteControl::initializeEndpoints()
+{
+    m_dispatcher.match("/version")
+        .get([](HTTPReply& reply, const RequestMatch& match) {
+            json::object response = json::object();            
+            response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built " __BUILD__ ")")));
+
+            reply.reply(response);
+        });
+}
+
+/// <summary>
+///
+/// </summary>
+void RemoteControl::entry()
+{
+    m_restServer.run();
+}
 
 /// <summary>
 /// Helper to write response to client.

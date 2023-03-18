@@ -42,63 +42,65 @@
 #include <set>
 #include <mutex>
  
-namespace rest {
-    namespace server {
- 
-        // ---------------------------------------------------------------------------
-        //  Class Declaration
-        //      Manages open connections so that they may be cleanly stopped when the server
-        //      needs to shut down.
-        // ---------------------------------------------------------------------------
+namespace network {
+    namespace rest {
+        namespace http {
+    
+            // ---------------------------------------------------------------------------
+            //  Class Declaration
+            //      Manages open connections so that they may be cleanly stopped when the server
+            //      needs to shut down.
+            // ---------------------------------------------------------------------------
 
-        template<typename ConnectionPtr>   
-        class ConnectionManager
-        {
-        public:
-            /// <summary>Initializes a new instance of the ConnectionManager class.</summary>
-            ConnectionManager() { /* stub */ }
-            /// <summary>Initializes a copy instance of the ConnectionManager class.</summary>
-            ConnectionManager(const ConnectionManager&) = delete;
-
-            /// <summary></summary>
-            ConnectionManager& operator=(const ConnectionManager&) = delete;
-        
-            /// <summary>Add the specified connection to the manager and start it.</summary>
-            void start(ConnectionPtr c)
+            template<typename ConnectionPtr>   
+            class ConnectionManager
             {
-                std::lock_guard<std::mutex> guard(m_lock);
-                {
-                    m_connections.insert(c);
-                }
-                c->start();
-            }
+            public:
+                /// <summary>Initializes a new instance of the ConnectionManager class.</summary>
+                ConnectionManager() { /* stub */ }
+                /// <summary>Initializes a copy instance of the ConnectionManager class.</summary>
+                ConnectionManager(const ConnectionManager&) = delete;
+
+                /// <summary></summary>
+                ConnectionManager& operator=(const ConnectionManager&) = delete;
             
-            /// <summary>Stop the specified connection.</summary>
-            void stop(connection_ptr c)
-            {
-                std::lock_guard<std::mutex> guard(m_lock);
+                /// <summary>Add the specified connection to the manager and start it.</summary>
+                void start(ConnectionPtr c)
                 {
-                    m_connections.erase(c);
+                    std::lock_guard<std::mutex> guard(m_lock);
+                    {
+                        m_connections.insert(c);
+                    }
+                    c->start();
                 }
-                c->stop();
-            }
-            
-            /// <summary>Stop all connections.</summary>
-            void stopAll()
-            {
-                for (auto c : m_connections)
-                c->stop();
+                
+                /// <summary>Stop the specified connection.</summary>
+                void stop(ConnectionPtr c)
+                {
+                    std::lock_guard<std::mutex> guard(m_lock);
+                    {
+                        m_connections.erase(c);
+                    }
+                    c->stop();
+                }
+                
+                /// <summary>Stop all connections.</summary>
+                void stopAll()
+                {
+                    for (auto c : m_connections)
+                    c->stop();
 
-                std::lock_guard<std::mutex> guard(m_lock);
-                m_connections.clear();
-            }
-        
-        private:
-            std::set<ConnectionPtr> m_connections;
-            std::mutex m_lock;
-        };
-    } // namespace server
-} // namespace rest
- 
+                    std::lock_guard<std::mutex> guard(m_lock);
+                    m_connections.clear();
+                }
+            
+            private:
+                std::set<ConnectionPtr> m_connections;
+                std::mutex m_lock;
+            };
+        } // namespace http
+    } // namespace rest
+} // namespace network
+
 #endif // __REST_HTTP__CONNECTION_MANAGER_H__
  
