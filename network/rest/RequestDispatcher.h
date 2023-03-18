@@ -59,35 +59,35 @@ namespace network
         //      
         // ---------------------------------------------------------------------------
         
-        template<typename Reply>
+        template<typename Request, typename Reply>
         struct RequestMatcher {
-            typedef std::function<void(Reply&, const RequestMatch&)> RequestHandlerType;
+            typedef std::function<void(const Request&, Reply&, const RequestMatch&)> RequestHandlerType;
 
             /// <summary>Initializes a new instance of the RequestMatcher structure.</summary>
             explicit RequestMatcher(const std::string& expression) : m_expression(expression), m_isRegEx(false) { /* stub */ }
 
             /// <summary></summary>
-            RequestMatcher<Reply>& get(RequestHandlerType handler) {
+            RequestMatcher<Request, Reply>& get(RequestHandlerType handler) {
                 m_handlers["GET"] = handler;
                 return *this;
             }
             /// <summary></summary>
-            RequestMatcher<Reply>& post(RequestHandlerType handler) {
+            RequestMatcher<Request, Reply>& post(RequestHandlerType handler) {
                 m_handlers["POST"] = handler;
                 return *this;
             }
             /// <summary></summary>
-            RequestMatcher<Reply>& put(RequestHandlerType handler) {
+            RequestMatcher<Request, Reply>& put(RequestHandlerType handler) {
                 m_handlers["PUT"] = handler;
                 return *this;
             }
             /// <summary></summary>
-            RequestMatcher<Reply>& del(RequestHandlerType handler) {
+            RequestMatcher<Request, Reply>& del(RequestHandlerType handler) {
                 m_handlers["DELETE"] = handler;
                 return *this;
             }
             /// <summary></summary>
-            RequestMatcher<Reply>& options(RequestHandlerType handler) {
+            RequestMatcher<Request, Reply>& options(RequestHandlerType handler) {
                 m_handlers["OPTIONS"] = handler;
                 return *this;
             }
@@ -96,13 +96,12 @@ namespace network
             void setRegEx(bool regEx) { m_isRegEx = regEx; }
 
             /// <summary></summary>
-            template<typename Request>
             void handleRequest(const Request& request, Reply& reply, const std::smatch &what) {
                 // dispatching to matching based on handler
                 RequestMatch match(what, request.data);
                 auto& handler = m_handlers[request.method];
                 if (handler) {
-                    handler(reply, match);
+                    handler(request, reply, match);
                 }
             }
         
@@ -119,7 +118,7 @@ namespace network
 
         template<typename Request = http::HTTPRequest, typename Reply = http::HTTPReply>
         class RequestDispatcher {
-            typedef RequestMatcher<Reply> MatcherType;
+            typedef RequestMatcher<Request, Reply> MatcherType;
         public:
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
             RequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
