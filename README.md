@@ -13,6 +13,13 @@ This project utilizes CMake for its build system. (All following information ass
 
 The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
 
+## Dependancies
+
+This project requires the ASIO library (https://think-async.com/Asio/) for its REST API services. This can be installed on most Debian/Ubuntu Linux's with: ```apt-get install libasio-dev```
+
+Alternatively, if you download the ASIO library from the ASIO website and extract it to a location, you can specify the path to the ASIO library using: ```-DWITH_ASIO=/path/to/asio```. This method is required when cross-compiling
+for old Raspberry Pi ARM 32 bit.
+
 ### Build Instructions
 1. Clone the repository. ```git clone https://github.com/DVMProject/dvmhost.git```
 2. Switch into the "dvmhost" folder. Create a new folder named "build" and switch into it.

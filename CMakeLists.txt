@@ -102,6 +102,10 @@ file(GLOB dvmhost_SRC
     "network/*.h"
     "network/*.cpp"
     "network/json/*.h"
+    "network/rest/*.h"
+    "network/rest/*.cpp"
+    "network/rest/http/*.h"
+    "network/rest/http/*.cpp"
     "remote/RemoteCommand.cpp"
     "remote/RemoteCommand.h"
     "yaml/*.h"
@@ -294,6 +298,12 @@ else ()
     message(CHECK_PASS "no")
 endif (CROSS_COMPILE_RPI_ARM)
 
+option(WITH_ASIO "Specifies the location for the ASIO library" off)
+if (WITH_ASIO)
+    set(ASIO_INCLUDE_DIR ${WITH_ASIO}/include)
+    message(CHECK_START "With ASIO: ${ASIO_INCLUDE_DIR}")
+endif (WITH_ASIO)
+
 #
 # standard CMake options
 #
@@ -321,6 +331,14 @@ add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 # dvmhost project
 project(dvmhost)
 find_package(Threads REQUIRED)
+if (NOT WITH_ASIO)
+    find_package(ASIO REQUIRED)
+else()
+    add_library(asio::asio INTERFACE IMPORTED)
+    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+    target_link_libraries(asio::asio INTERFACE Threads::Threads)
+endif ()
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE .)
 target_link_libraries(dvmhost PRIVATE Threads::Threads util)
@@ -354,6 +372,7 @@ target_include_directories(dvmcmd PRIVATE .)
 if (ENABLE_TESTS)
 # dvmtest project
 project(dvmtest)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 Include(FetchContent)
 
 FetchContent_Declare(
@@ -364,6 +383,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 find_package(Threads REQUIRED)
+if (NOT WITH_ASIO)
+    find_package(ASIO REQUIRED)
+else()
+    add_library(asio::asio INTERFACE IMPORTED)
+    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+    target_link_libraries(asio::asio INTERFACE Threads::Threads)
+endif ()
 add_executable(dvmtests ${dvmhost_SRC} ${dvmtests_SRC})
 target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
 target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain Threads::Threads util)
