@@ -463,6 +463,7 @@ namespace json
     SET(array, array, u_.array_ = new array(_val);)
     SET(object, object, u_.object_ = new object(_val);)
     SET(double, number, u_.number_ = _val;)
+    SET(int8_t, int32, u_.int32_ = _val;)
     SET(int, int32, u_.int32_ = _val;)
     SET(uint32_t, uint32, u_.uint32_ = _val;)
     SET(uint16_t, uint16, u_.uint16_ = _val;)
