@@ -330,6 +330,7 @@ add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
 # dvmhost project
 project(dvmhost)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
 if (NOT WITH_ASIO)
     find_package(ASIO REQUIRED)
