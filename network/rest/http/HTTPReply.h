@@ -46,9 +46,12 @@
 
 #include <asio.hpp>
 
-namespace network {
-    namespace rest {
-        namespace http {
+namespace network 
+{
+    namespace rest 
+    {
+        namespace http 
+        {
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration

@@ -108,120 +108,178 @@ namespace misc_strings {
 
 namespace stock_replies {
     const char ok[] = "";
+    const char json_ok[] = "{status:200,message:\"ok\"}";
     const char created[] =
         "<html>"
         "<head><title>Created</title></head>"
         "<body><h1>201 Created</h1></body>"
         "</html>";
+    const char json_created[] = "{status:201,message:\"created\"}";
     const char accepted[] =
         "<html>"
         "<head><title>Accepted</title></head>"
         "<body><h1>202 Accepted</h1></body>"
         "</html>";
+    const char json_accepted[] = "{status:202,message:\"accepted\"}";
     const char no_content[] =
         "<html>"
         "<head><title>No Content</title></head>"
         "<body><h1>204 Content</h1></body>"
         "</html>";
+    const char json_no_content[] = "{status:204,message:\"no content\"}";
     const char multiple_choices[] =
         "<html>"
         "<head><title>Multiple Choices</title></head>"
         "<body><h1>300 Multiple Choices</h1></body>"
         "</html>";
+    const char json_multiple_choices[] = "{status:300,message:\"multiple choices\"}";
     const char moved_permanently[] =
         "<html>"
         "<head><title>Moved Permanently</title></head>"
         "<body><h1>301 Moved Permanently</h1></body>"
         "</html>";
+    const char json_moved_permanently[] = "{status:301,message:\"moved permanently\"}";
     const char moved_temporarily[] =
         "<html>"
         "<head><title>Moved Temporarily</title></head>"
         "<body><h1>302 Moved Temporarily</h1></body>"
         "</html>";
+    const char json_moved_temporarily[] = "{status:302,message:\"moved temporarily\"}";
     const char not_modified[] =
         "<html>"
         "<head><title>Not Modified</title></head>"
         "<body><h1>304 Not Modified</h1></body>"
         "</html>";
+    const char json_not_modified[] = "{status:304,message:\"not modified\"}";
     const char bad_request[] =
         "<html>"
         "<head><title>Bad Request</title></head>"
         "<body><h1>400 Bad Request</h1></body>"
         "</html>";
+    const char json_bad_request[] = "{status:400,message:\"bad request\"}";
     const char unauthorized[] =
         "<html>"
         "<head><title>Unauthorized</title></head>"
         "<body><h1>401 Unauthorized</h1></body>"
         "</html>";
+    const char json_unauthorized[] = "{status:401,message:\"unauthorized\"}";
     const char forbidden[] =
         "<html>"
         "<head><title>Forbidden</title></head>"
         "<body><h1>403 Forbidden</h1></body>"
         "</html>";
+    const char json_forbidden[] = "{status:403,message:\"forbidden\"}";
     const char not_found[] =
         "<html>"
         "<head><title>Not Found</title></head>"
         "<body><h1>404 Not Found</h1></body>"
         "</html>";
+    const char json_not_found[] = "{status:404,message:\"not found\"}";
     const char internal_server_error[] =
         "<html>"
         "<head><title>Internal Server Error</title></head>"
         "<body><h1>500 Internal Server Error</h1></body>"
         "</html>";
+    const char json_internal_server_error[] = "{status:500,message:\"internal server error\"}";
     const char not_implemented[] =
         "<html>"
         "<head><title>Not Implemented</title></head>"
         "<body><h1>501 Not Implemented</h1></body>"
         "</html>";
+    const char json_not_implemented[] = "{status:501,message:\"not implemented\"}";
     const char bad_gateway[] =
         "<html>"
         "<head><title>Bad Gateway</title></head>"
         "<body><h1>502 Bad Gateway</h1></body>"
         "</html>";
+    const char json_bad_gateway[] = "{status:502,message:\"bad gateway\"}";
     const char service_unavailable[] =
         "<html>"
         "<head><title>Service Unavailable</title></head>"
         "<body><h1>503 Service Unavailable</h1></body>"
         "</html>";
+    const char json_service_unavailable[] = "{status:503,message:\"service unavailable\"}";
 
-    std::string to_string(HTTPReply::StatusType status)
+    std::string to_string(HTTPReply::StatusType status, std::string contentType)
     {
-        switch (status)
-        {
-        case HTTPReply::OK:
-            return ok;
-        case HTTPReply::CREATED:
-            return created;
-        case HTTPReply::ACCEPTED:
-            return accepted;
-        case HTTPReply::NO_CONTENT:
-            return no_content;
-        case HTTPReply::MULTIPLE_CHOICES:
-            return multiple_choices;
-        case HTTPReply::MOVED_PERMANENTLY:
-            return moved_permanently;
-        case HTTPReply::MOVED_TEMPORARILY:
-            return moved_temporarily;
-        case HTTPReply::NOT_MODIFIED:
-            return not_modified;
-        case HTTPReply::BAD_REQUEST:
-            return bad_request;
-        case HTTPReply::UNAUTHORIZED:
-            return unauthorized;
-        case HTTPReply::FORBIDDEN:
-            return forbidden;
-        case HTTPReply::NOT_FOUND:
-            return not_found;
-        case HTTPReply::INTERNAL_SERVER_ERROR:
-            return internal_server_error;
-        case HTTPReply::NOT_IMPLEMENTED:
-            return not_implemented;
-        case HTTPReply::BAD_GATEWAY:
-            return bad_gateway;
-        case HTTPReply::SERVICE_UNAVAILABLE:
-            return service_unavailable;
-        default:
-            return internal_server_error;
+        std::transform(contentType.begin(), contentType.end(), contentType.begin(), ::tolower);
+        if (contentType == "application/json") {
+            switch (status)
+            {
+            case HTTPReply::OK:
+                return json_ok;
+            case HTTPReply::CREATED:
+                return json_created;
+            case HTTPReply::ACCEPTED:
+                return json_accepted;
+            case HTTPReply::NO_CONTENT:
+                return json_no_content;
+            case HTTPReply::MULTIPLE_CHOICES:
+                return json_multiple_choices;
+            case HTTPReply::MOVED_PERMANENTLY:
+                return json_moved_permanently;
+            case HTTPReply::MOVED_TEMPORARILY:
+                return json_moved_temporarily;
+            case HTTPReply::NOT_MODIFIED:
+                return json_not_modified;
+            case HTTPReply::BAD_REQUEST:
+                return json_bad_request;
+            case HTTPReply::UNAUTHORIZED:
+                return json_unauthorized;
+            case HTTPReply::FORBIDDEN:
+                return json_forbidden;
+            case HTTPReply::NOT_FOUND:
+                return json_not_found;
+            case HTTPReply::INTERNAL_SERVER_ERROR:
+                return json_internal_server_error;
+            case HTTPReply::NOT_IMPLEMENTED:
+                return json_not_implemented;
+            case HTTPReply::BAD_GATEWAY:
+                return json_bad_gateway;
+            case HTTPReply::SERVICE_UNAVAILABLE:
+                return json_service_unavailable;
+            default:
+                return json_internal_server_error;
+            }
+        }
+        else {
+            switch (status)
+            {
+            case HTTPReply::OK:
+                return ok;
+            case HTTPReply::CREATED:
+                return created;
+            case HTTPReply::ACCEPTED:
+                return accepted;
+            case HTTPReply::NO_CONTENT:
+                return no_content;
+            case HTTPReply::MULTIPLE_CHOICES:
+                return multiple_choices;
+            case HTTPReply::MOVED_PERMANENTLY:
+                return moved_permanently;
+            case HTTPReply::MOVED_TEMPORARILY:
+                return moved_temporarily;
+            case HTTPReply::NOT_MODIFIED:
+                return not_modified;
+            case HTTPReply::BAD_REQUEST:
+                return bad_request;
+            case HTTPReply::UNAUTHORIZED:
+                return unauthorized;
+            case HTTPReply::FORBIDDEN:
+                return forbidden;
+            case HTTPReply::NOT_FOUND:
+                return not_found;
+            case HTTPReply::INTERNAL_SERVER_ERROR:
+                return internal_server_error;
+            case HTTPReply::NOT_IMPLEMENTED:
+                return not_implemented;
+            case HTTPReply::BAD_GATEWAY:
+                return bad_gateway;
+            case HTTPReply::SERVICE_UNAVAILABLE:
+                return service_unavailable;
+            default:
+                return internal_server_error;
+            }
         }
     }
 } // namespace stock_replies
@@ -262,7 +320,7 @@ void HTTPReply::reply(json::object obj, HTTPReply::StatusType s)
 {
     json::value v = json::value(obj);
     std::string json = v.serialize();
-    reply(json, s, "text/json");
+    reply(json, s, "application/json");
 }
 
 /// <summary>
@@ -293,7 +351,7 @@ HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const std::string 
     rep.status = status;
 
     if (status != HTTPReply::NO_CONTENT) {
-        rep.content = stock_replies::to_string(status);
+        rep.content = stock_replies::to_string(status, contentType);
         rep.ensureDefaultHeaders(contentType);
     }
     

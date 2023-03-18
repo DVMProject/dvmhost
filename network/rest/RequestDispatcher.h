@@ -29,6 +29,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPRequest.h"
 #include "network/rest/http/HTTPReply.h"
+#include "Log.h"
  
 #include <functional>
 #include <map>
@@ -36,8 +37,10 @@
 #include <regex>
 #include <memory>
  
-namespace network {
-    namespace rest {
+namespace network 
+{
+    namespace rest 
+    {
         // ---------------------------------------------------------------------------
         //  Structure Declaration
         //      
@@ -119,16 +122,25 @@ namespace network {
             typedef RequestMatcher<Reply> MatcherType;
         public:
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
-            RequestDispatcher() : m_basePath() { /* stub */ }
+            RequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
-            RequestDispatcher(const std::string& basePath) : m_basePath(basePath) { /* stub */ }
+            RequestDispatcher(bool debug) : m_basePath(), m_debug(debug) { /* stub */ }
+            /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
+            RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
             /// <summary></summary>
             MatcherType& match(const std::string& expression) 
             {
                 MatcherTypePtr& p = m_matchers[expression];
                 if (!p) {
+                    if (m_debug) {
+                        ::LogDebug(LOG_RCON, "creating REST RequestDispatcher, expression = %s", expression.c_str());
+                    }
                     p = std::make_shared<MatcherType>(expression);
+                } else {
+                    if (m_debug) {
+                        ::LogDebug(LOG_RCON, "fetching REST RequestDispatcher, expression = %s", expression.c_str());
+                    }
                 }
 
                 return *p;
@@ -141,19 +153,28 @@ namespace network {
                     std::smatch what;
                     if (!matcher.second->regex()) {
                         if (request.uri.find(matcher.first) != std::string::npos) {
+                            if (m_debug) {
+                                ::LogDebug(LOG_RCON, "non-regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
+                            }
+
                             //what = matcher.first;
                             matcher.second->handleRequest(request, reply, what);
-                        } else {
-                            reply = http::HTTPReply::stockReply(http::HTTPReply::BAD_REQUEST);
+                            return;
                         }
                     } else {
                         if (std::regex_match(request.uri, what, std::regex(matcher.first))) {
+                            if (m_debug) {
+                                ::LogDebug(LOG_RCON, "regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
+                            }
+
                             matcher.second->handleRequest(request, reply, what);
-                        } else {
-                            reply = http::HTTPReply::stockReply(http::HTTPReply::BAD_REQUEST);
+                            return;
                         }
                     }
                 }
+
+                ::LogError(LOG_RCON, "unknown endpoint, uri = %s", request.uri.c_str());
+                reply = http::HTTPReply::stockReply(http::HTTPReply::BAD_REQUEST, "application/json");
             }
         
         private:
@@ -161,6 +182,8 @@ namespace network {
 
             std::string m_basePath;
             std::map<std::string, MatcherTypePtr> m_matchers;
+
+            bool m_debug;
         };
 
         typedef RequestDispatcher<http::HTTPRequest, http::HTTPReply> DefaultRequestDispatcher;        
