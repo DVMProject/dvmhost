@@ -40,7 +40,6 @@
 #include "nxdn/packet/Data.h"
 #include "nxdn/SiteData.h"
 #include "network/BaseNetwork.h"
-#include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
@@ -106,6 +105,9 @@ namespace nxdn
 
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
+
+        /// <summary>Gets instance of the AffiliationLookup class.</summary>
+        lookups::AffiliationLookup affiliations() { return m_affiliations; }
 
         /// <summary>Flag indicating whether the processor or is busy or not.</summary>
         bool isBusy() const;

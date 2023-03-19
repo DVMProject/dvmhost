@@ -38,6 +38,7 @@
 #define __REST_HTTP__HTTP_REQUEST_PARSER_H__
 
 #include <tuple>
+#include <vector>
 
 namespace network 
 {
@@ -95,6 +96,17 @@ namespace network
                 static bool isSpecial(int c);
                 /// <summary>Check if a byte is an digit.</summary>
                 static bool isDigit(int c);
+
+                struct LexedHeader
+                {
+                    std::string name;
+                    std::string value;
+
+                    LexedHeader() { /* stub */ }
+                    LexedHeader(const std::string& name, const std::string& value) : name(name), value(value) {}
+                };
+
+                std::vector<LexedHeader> m_headers;
 
                 enum state
                 {

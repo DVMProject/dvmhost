@@ -36,6 +36,7 @@
 */
 #include "Defines.h"
 #include "network/rest/http/HTTPReply.h"
+#include "Log.h"
 
 using namespace network::rest::http;
 
@@ -299,7 +300,9 @@ std::vector<asio::const_buffer> HTTPReply::toBuffers()
     buffers.push_back(status_strings::toBuffer(status));
 
     for (std::size_t i = 0; i < headers.size(); ++i) {
-        HTTPHeader& h = headers[i];
+        HTTPHeaders::Header& h = headers.m_headers[i];
+        //::LogDebug(LOG_REST, "HTTPReply::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
+
         buffers.push_back(asio::buffer(h.name));
         buffers.push_back(asio::buffer(misc_strings::name_value_separator));
         buffers.push_back(asio::buffer(h.value));
@@ -368,7 +371,10 @@ HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const std::string 
 /// <param name="contentType"></param>
 void HTTPReply::ensureDefaultHeaders(std::string contentType)
 {
-    headers.push_back(HTTPHeader("Content-Length", std::to_string(content.size())));
-    headers.push_back(HTTPHeader("Content-Type", contentType));
-    headers.push_back(HTTPHeader("Server", std::string((__EXE_NAME__ "/" __VER__))));
+    headers.add("Content-Type", contentType);
+    headers.add("Content-Length", std::to_string(content.size()));
+    headers.add("Server", std::string((__EXE_NAME__ "/" __VER__)));
+
+    //for (auto header : headers.headers())
+    //    ::LogDebug(LOG_REST, "HTTPReply::ensureDefaultHeaders() header = %s, value = %s", header.name.c_str(), header.value.c_str());
 }

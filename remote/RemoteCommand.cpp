@@ -186,7 +186,7 @@ int RemoteCommand::send(const std::string& address, uint32_t port, const std::st
             break;
 
         if (debug)
-            ::LogDebug(LOG_RCON, "RemoteCommand::send() block len = %u, offs = %u", len - 3, offs);
+            ::LogDebug(LOG_HOST, "RemoteCommand::send() block len = %u, offs = %u", len - 3, offs);
 
         buffer[len] = '\0';
 

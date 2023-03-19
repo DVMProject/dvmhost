@@ -86,8 +86,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t local, uint
     m_longitude(0.0F),
     m_height(0),
     m_location(),
-    m_rconPassword(),
-    m_rconPort(0)
+    m_restApiPassword(),
+    m_restApiPort(0)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -148,14 +148,14 @@ void Network::setMetadata(const std::string& identity, uint32_t rxFrequency, uin
 }
 
 /// <summary>
-/// Sets RCON configuration settings from the modem.
+/// Sets REST API configuration settings from the modem.
 /// </summary>
 /// <param name="password"></param>
 /// <param name="port"></param>
-void Network::setRconData(const std::string& password, uint16_t port)
+void Network::setRESTAPIData(const std::string& password, uint16_t port)
 {
-    m_rconPassword = password;
-    m_rconPort = port;
+    m_restApiPassword = password;
+    m_restApiPort = port;
 }
 
 /// <summary>
@@ -539,8 +539,8 @@ bool Network::writeConfig()
 
     // RCON
     json::object rcon = json::object();
-    rcon["password"].set<std::string>(m_rconPassword);                              // RCON Password
-    rcon["port"].set<uint16_t>(m_rconPort);                                         // RCON Port
+    rcon["password"].set<std::string>(m_restApiPassword);                           // REST API Password
+    rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
     config["rcon"].set<json::object>(rcon);
 
     config["software"].set<std::string>(std::string(software));                     // Software ID

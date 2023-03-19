@@ -49,9 +49,9 @@ namespace network
         struct RequestMatch : std::smatch 
         {
             /// <summary>Initializes a new instance of the RequestMatch structure.</summary>
-            RequestMatch(const std::smatch& m, const std::string& d) : std::smatch(m), data(d) { /* stub */ }
+            RequestMatch(const std::smatch& m, const std::string& c) : std::smatch(m), content(c) { /* stub */ }
             
-            std::string data;
+            std::string content;
         };
 
         // ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ namespace network
             /// <summary></summary>
             void handleRequest(const Request& request, Reply& reply, const std::smatch &what) {
                 // dispatching to matching based on handler
-                RequestMatch match(what, request.data);
+                RequestMatch match(what, request.content);
                 auto& handler = m_handlers[request.method];
                 if (handler) {
                     handler(request, reply, match);
@@ -128,20 +128,21 @@ namespace network
             RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
             /// <summary></summary>
-            MatcherType& match(const std::string& expression) 
+            MatcherType& match(const std::string& expression, bool regex = false) 
             {
                 MatcherTypePtr& p = m_matchers[expression];
                 if (!p) {
                     if (m_debug) {
-                        ::LogDebug(LOG_RCON, "creating REST RequestDispatcher, expression = %s", expression.c_str());
+                        ::LogDebug(LOG_REST, "creating RequestDispatcher, expression = %s", expression.c_str());
                     }
                     p = std::make_shared<MatcherType>(expression);
                 } else {
                     if (m_debug) {
-                        ::LogDebug(LOG_RCON, "fetching REST RequestDispatcher, expression = %s", expression.c_str());
+                        ::LogDebug(LOG_REST, "fetching RequestDispatcher, expression = %s", expression.c_str());
                     }
                 }
 
+                p->setRegEx(regex);
                 return *p;
             }
 
@@ -153,7 +154,7 @@ namespace network
                     if (!matcher.second->regex()) {
                         if (request.uri.find(matcher.first) != std::string::npos) {
                             if (m_debug) {
-                                ::LogDebug(LOG_RCON, "non-regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
+                                ::LogDebug(LOG_REST, "non-regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
                             }
 
                             //what = matcher.first;
@@ -163,7 +164,7 @@ namespace network
                     } else {
                         if (std::regex_match(request.uri, what, std::regex(matcher.first))) {
                             if (m_debug) {
-                                ::LogDebug(LOG_RCON, "regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
+                                ::LogDebug(LOG_REST, "regex endpoint, uri = %s, expression = %s", request.uri.c_str(), matcher.first.c_str());
                             }
 
                             matcher.second->handleRequest(request, reply, what);
@@ -172,7 +173,7 @@ namespace network
                     }
                 }
 
-                ::LogError(LOG_RCON, "unknown endpoint, uri = %s", request.uri.c_str());
+                ::LogError(LOG_REST, "unknown endpoint, uri = %s", request.uri.c_str());
                 reply = http::HTTPReply::stockReply(http::HTTPReply::BAD_REQUEST, "application/json");
             }
         

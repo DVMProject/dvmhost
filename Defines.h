@@ -36,6 +36,7 @@
 #include <memory>
 #include <sstream>
 #include <ios>
+#include <algorithm>
 #include <string>
 
 #if !defined(ENABLE_DMR) && !defined(ENABLE_P25) && !defined(ENABLE_NXDN)
@@ -134,7 +135,7 @@ typedef unsigned long long  ulong64_t;
 
 const uint32_t  REMOTE_MODEM_PORT = 3334;
 const uint32_t  TRAFFIC_DEFAULT_PORT = 62031;
-const uint32_t  RCON_DEFAULT_PORT = 9990;
+const uint32_t  REST_API_DEFAULT_PORT = 9990;
 
 const uint8_t   BIT_MASK_TABLE[] = { 0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U };
 
@@ -222,6 +223,17 @@ inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
     std::stringstream ss;
     ss << ((value >> 24) & 0xFFU) << "." << ((value >> 16) & 0xFFU) << "." << ((value >> 8) & 0xFFU) << "." << (value & 0xFFU);
     return ss.str();
+}
+
+/// <summary>
+/// Helper to lower-case an input string.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string strtolower(const std::string value) {
+    std::string v = value;
+    std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+    return v;
 }
 
 // ---------------------------------------------------------------------------

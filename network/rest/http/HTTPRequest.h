@@ -38,7 +38,8 @@
 #define __REST_HTTP__HTTP_REQUEST_H__
 
 #include "Defines.h"
-#include "network/rest/http/HTTPHeader.h"
+#include "network/rest/http/HTTPHeaders.h"
+#include "Log.h"
 
 #include <string>
 #include <vector>
@@ -49,7 +50,6 @@ namespace network
     {
         namespace http 
         {
-
             // ---------------------------------------------------------------------------
             //  Structure Declaration
             //      This struct implements a model of a request received from a HTTP client.
@@ -60,11 +60,12 @@ namespace network
                 std::string method;
                 std::string uri;
 
+                HTTPHeaders headers;
+                std::string content;
+
                 int httpVersionMajor;
                 int httpVersionMinor;
-            
-                std::vector<HTTPHeader> headers;
-                std::string data;
+
             };
         } // namespace http
     } // namespace rest

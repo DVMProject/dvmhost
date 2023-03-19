@@ -143,7 +143,7 @@ Host::Host(const std::string& confFile) :
     m_controlPermitTG(false),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
-    m_remoteControl(nullptr)
+    m_RESTAPI(nullptr)
 {
     UDPSocket::startup();
 }
@@ -722,8 +722,8 @@ int Host::run()
             setState(STATE_IDLE);
         }
 
-        if (m_remoteControl != nullptr) {
-            m_remoteControl->setProtocols(dmr.get(), p25.get(), nxdn.get());
+        if (m_RESTAPI != nullptr) {
+            m_RESTAPI->setProtocols(dmr.get(), p25.get(), nxdn.get());
         }
 
         ::LogInfoEx(LOG_HOST, "Host is performing late initialization and warmup");
@@ -1336,14 +1336,6 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
 
         // ------------------------------------------------------
-        //  -- Remote Control Processing                      --
-        // ------------------------------------------------------
-
-        if (m_remoteControl != nullptr) {
-            m_remoteControl->process(this, dmr.get(), p25.get(), nxdn.get());
-        }
-
-        // ------------------------------------------------------
         //  -- Timer Clocking                                 --
         // ------------------------------------------------------
 
@@ -1848,13 +1840,13 @@ bool Host::readParams()
                 chNo = 4095U;
             }
 
-            std::string rconAddress = channel["rconAddress"].as<std::string>("127.0.0.1");
-            uint16_t rconPort = (uint16_t)channel["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
-            std::string rconPassword = channel["rconPassword"].as<std::string>();
+            std::string restApiAddress = channel["rconAddress"].as<std::string>("127.0.0.1");
+            uint16_t restApiPort = (uint16_t)channel["rconPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+            std::string restApiPassword = channel["rconPassword"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X RCON Adddress %s:%u", m_channelId, chNo, rconAddress.c_str(), rconPort);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Adddress %s:%u", m_channelId, chNo, restApiAddress.c_str(), restApiPort);
 
-            VoiceChData data = VoiceChData(chNo, rconAddress, rconPort, rconPassword);
+            VoiceChData data = VoiceChData(chNo, restApiAddress, restApiPort, restApiPassword);
             m_voiceChData[chNo] = data;
             m_voiceChNo.push_back(chNo);
         }
@@ -2260,20 +2252,20 @@ bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
     bool netEnable = networkConf["enable"].as<bool>(false);
-    bool rconEnable = networkConf["rconEnable"].as<bool>(false);
+    bool restApiEnable = networkConf["rconEnable"].as<bool>(false);
 
-    // dump out if both networking and RCON are disabled
-    if (!netEnable && !rconEnable) {
+    // dump out if both networking and REST API are disabled
+    if (!netEnable && !restApiEnable) {
         return true;
     }
 
     std::string address = networkConf["address"].as<std::string>();
     uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
-    std::string rconAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
-    uint16_t rconPort = (uint16_t)networkConf["rconPort"].as<uint32_t>(RCON_DEFAULT_PORT);
-    std::string rconPassword = networkConf["rconPassword"].as<std::string>();
-    bool rconDebug = networkConf["rconDebug"].as<bool>(false);
+    std::string restApiAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
+    uint16_t restApiPort = (uint16_t)networkConf["rconPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+    std::string restApiPassword = networkConf["rconPassword"].as<std::string>();
+    bool restApiDebug = networkConf["rconDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(0U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
@@ -2284,11 +2276,16 @@ bool Host::createNetwork()
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
-    if (rconPassword.length() > 64) {
-        std::string password = rconPassword;
-        rconPassword = password.substr(0, 64);
+    if (restApiPassword.length() > 64) {
+        std::string password = restApiPassword;
+        restApiPassword = password.substr(0, 64);
 
-        ::LogWarning(LOG_HOST, "RCON password is too long; truncating to the first 64 characters.");
+        ::LogWarning(LOG_HOST, "REST API password is too long; truncating to the first 64 characters.");
+    }
+
+    if (restApiPassword.empty() && restApiEnable) {
+        ::LogWarning(LOG_HOST, "REST API password not provided; REST API disabled.");
+        restApiEnable = false;
     }
 
     IdenTable entry = m_idenTable->find(m_channelId);
@@ -2314,13 +2311,13 @@ bool Host::createNetwork()
             LogInfo("    Debug: yes");
         }
     }
-    LogInfo("    RCON Enabled: %s", rconEnable ? "yes" : "no");
-    if (rconEnable) {
-        LogInfo("    RCON Address: %s", rconAddress.c_str());
-        LogInfo("    RCON Port: %u", rconPort);
+    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+    if (restApiEnable) {
+        LogInfo("    REST API Address: %s", restApiAddress.c_str());
+        LogInfo("    REST API Port: %u", restApiPort);
 
-        if (rconDebug) {
-            LogInfo("    RCON Debug: yes");
+        if (restApiDebug) {
+            LogInfo("    REST API Debug: yes");
         }
     }
 
@@ -2331,8 +2328,8 @@ bool Host::createNetwork()
         m_network->setLookups(m_ridLookup, m_tidLookup);
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
             m_power, m_latitude, m_longitude, m_height, m_location);
-        if (rconEnable) {
-            m_network->setRconData(rconPassword, rconPort);
+        if (restApiEnable) {
+            m_network->setRESTAPIData(restApiPassword, restApiPort);
         }
 
         bool ret = m_network->open();
@@ -2348,19 +2345,19 @@ bool Host::createNetwork()
     }
 
     // initialize network remote command
-    if (rconEnable) {
-        m_remoteControl = new RemoteControl(rconAddress, rconPort, rconPassword, this, rconDebug);
-        m_remoteControl->setLookups(m_ridLookup, m_tidLookup);
-        bool ret = m_remoteControl->open();
+    if (restApiEnable) {
+        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, this, restApiDebug);
+        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
+        bool ret = m_RESTAPI->open();
         if (!ret) {
-            delete m_remoteControl;
-            m_remoteControl = nullptr;
-            LogError(LOG_HOST, "failed to initialize remote command networking! remote command control will be unavailable!");
-            // remote command control failing isn't fatal -- we'll allow this to return normally
+            delete m_RESTAPI;
+            m_RESTAPI = nullptr;
+            LogError(LOG_HOST, "failed to initialize REST API networking! REST API will be unavailable!");
+            // REST API failing isn't fatal -- we'll allow this to return normally
         }
     }
     else {
-        m_remoteControl = nullptr;
+        m_RESTAPI = nullptr;
     }
 
     return true;
@@ -2564,9 +2561,9 @@ void Host::setState(uint8_t state)
                     delete m_network;
                 }
 
-                if (m_remoteControl != nullptr) {
-                    m_remoteControl->close();
-                    delete m_remoteControl;
+                if (m_RESTAPI != nullptr) {
+                    m_RESTAPI->close();
+                    delete m_RESTAPI;
                 }
             }
             else {

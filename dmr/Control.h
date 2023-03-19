@@ -33,15 +33,14 @@
 
 #include "Defines.h"
 #include "dmr/data/Data.h"
+#include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/Slot.h"
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
-#include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
 #include "lookups/TalkgroupIdLookup.h"
-#include "lookups/AffiliationLookup.h"
 #include "yaml/Yaml.h"
 
 namespace dmr
@@ -94,6 +93,9 @@ namespace dmr
 
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
+
+        /// <summary>Gets instance of the DMRAffiliationLookup class.</summary>
+        lookups::DMRAffiliationLookup affiliations();
 
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;

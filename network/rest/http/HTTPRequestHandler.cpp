@@ -106,11 +106,9 @@ void HTTPRequestHandler::handleRequest(const HTTPRequest& request, HTTPReply& re
     while (is.read(buf, sizeof(buf)).gcount() > 0)
         reply.content.append(buf, is.gcount());
 
-    reply.headers.resize(2);
-    reply.headers[0].name = "Content-Length";
-    reply.headers[0].value = std::to_string(reply.content.size());
-    reply.headers[1].name = "Content-Type";
-    reply.headers[1].value = "application/octet-stream";
+    reply.headers.clearHeaders();
+    reply.headers.add("Content-Length", std::to_string(reply.content.size()));
+    reply.headers.add("Content-Type", "application/octet-stream");
 }
 
 /// <summary>

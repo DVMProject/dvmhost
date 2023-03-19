@@ -33,7 +33,7 @@
 
 #include "Defines.h"
 #include "network/Network.h"
-#include "network/RemoteControl.h"
+#include "network/RESTAPI.h"
 #include "modem/Modem.h"
 #include "Timer.h"
 #include "lookups/AffiliationLookup.h"
@@ -49,7 +49,7 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API RemoteControl;
+class HOST_SW_API RESTAPI;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -152,8 +152,8 @@ private:
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;
 
-    friend class RemoteControl;
-    RemoteControl* m_remoteControl;
+    friend class RESTAPI;
+    RESTAPI* m_RESTAPI;
 
     /// <summary>Reads basic configuration parameters from the INI.</summary>
     bool readParams();

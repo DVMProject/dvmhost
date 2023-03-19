@@ -38,9 +38,9 @@
 #define __REST_HTTP__CONNECTION_H__
 
 #include "Defines.h" 
-#include "network/rest/http/HTTPReply.h"
 #include "network/rest/http/HTTPRequest.h"
 #include "network/rest/http/HTTPRequestLexer.h"
+#include "network/rest/http/HTTPReply.h"
 
 #include <array>
 #include <memory>
@@ -104,13 +104,14 @@ namespace network
                     m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
                         if (!ec) {
                             HTTPRequestLexer::ResultType result;
-                            char* data;
+                            char* content;
 
-                            std::tie(result, data) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
-                            auto header = std::find_if(m_request.headers.begin(), m_request.headers.end(), [](const HTTPHeader& h) { return h.name == "content-length"; });
-                            if (header != m_request.headers.end()) {
-                                size_t length = (size_t)::strtoul(header->value.c_str(), NULL, 10);
-                                m_request.data = std::string(data, length);
+                            std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+
+                            std::string contentLength = m_request.headers.find("Content-Length");
+                            if (contentLength != "") {
+                                size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
+                                m_request.content = std::string(content, length);
                             }
 
                             if (result == HTTPRequestLexer::GOOD) {
@@ -137,13 +138,13 @@ namespace network
                     if (!m_persistent) {
                         auto self(this->shared_from_this());
                     } else {
-                        m_reply.headers.emplace_back("Connection:", "keep-alive");
+                        m_reply.headers.add("Connection", "keep-alive");
                     }
 
                     asio::async_write(m_socket, m_reply.toBuffers(), [=](asio::error_code ec, std::size_t) {
                         if (m_persistent) {
                             m_lexer.reset();
-                            m_reply.headers.resize(0);
+                            m_reply.headers = HTTPHeaders();
                             m_reply.status = HTTPReply::OK;
                             m_reply.content = "";
                             m_request = HTTPRequest();

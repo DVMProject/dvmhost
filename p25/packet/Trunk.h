@@ -34,7 +34,6 @@
 #include "p25/lc/TDULC.h"
 #include "p25/Control.h"
 #include "network/BaseNetwork.h"
-#include "network/RemoteControl.h"
 #include "Timer.h"
 
 #include <cstdio>

@@ -34,7 +34,7 @@
 
 #include "Defines.h"
 #include "modem/port/IModemPort.h"
-#include "network/RemoteControl.h"
+#include "network/RESTAPI.h"
 #include "RingBuffer.h"
 #include "Timer.h"
 
@@ -56,7 +56,7 @@
 // ---------------------------------------------------------------------------
 
 class HOST_SW_API HostCal;
-class HOST_SW_API RemoteControl;
+class HOST_SW_API RESTAPI;
 
 namespace modem
 {
@@ -349,7 +349,7 @@ namespace modem
 
     private:
         friend class ::HostCal;
-        friend class ::RemoteControl;
+        friend class ::RESTAPI;
 
         port::IModemPort* m_port;
 

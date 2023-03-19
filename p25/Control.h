@@ -38,7 +38,6 @@
 #include "p25/packet/Voice.h"
 #include "p25/packet/Trunk.h"
 #include "network/BaseNetwork.h"
-#include "network/RemoteControl.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"

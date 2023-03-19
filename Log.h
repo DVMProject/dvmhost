@@ -40,7 +40,7 @@
 // ---------------------------------------------------------------------------
 
 #define LOG_HOST    "HOST"
-#define LOG_RCON    "RCON"
+#define LOG_REST    "RESTAPI"
 #define LOG_MODEM   "MODEM"
 #define LOG_RF      "RF"
 #define LOG_NET     "NET"

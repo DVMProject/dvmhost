@@ -65,7 +65,7 @@ using namespace network;
 
 static std::string g_progExe = std::string(__EXE_NAME__);
 static std::string g_remoteAddress = std::string("127.0.0.1");
-static uint32_t g_remotePort = RCON_DEFAULT_PORT;
+static uint32_t g_remotePort = REST_API_DEFAULT_PORT;
 static std::string g_remotePassword = std::string();
 static bool g_debug = false;
 

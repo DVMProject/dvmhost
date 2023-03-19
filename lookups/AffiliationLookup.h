@@ -54,9 +54,9 @@ namespace lookups
         }
         /// <summary>Initializes a new instance of the VoiceChData class.</summary>
         /// <param name="chNo">Voice Channel Number.</param>
-        /// <param name="address">RCON Address.</param>
-        /// <param name="port">RCON Port.</param>
-        /// <param name="password">RCON Password.</param>
+        /// <param name="address">REST API Address.</param>
+        /// <param name="port">REST API Port.</param>
+        /// <param name="password">REST API Password.</param>
         VoiceChData(uint32_t chNo, std::string address, uint16_t port, std::string password) :
             m_chNo(chNo),
             m_address(address),
@@ -87,11 +87,11 @@ namespace lookups
     public:
         /// <summary>Voice Channel Number.</summary>
         __READONLY_PROPERTY_PLAIN(uint32_t, chNo, chNo);
-        /// <summary>RCON Address.</summary>
+        /// <summary>REST API Address.</summary>
         __READONLY_PROPERTY_PLAIN(std::string, address, address);
-        /// <summary>RCON Port.</summary>
+        /// <summary>REST API Port.</summary>
         __READONLY_PROPERTY_PLAIN(uint16_t, port, port);
-        /// <summary>RCON Password.</summary>
+        /// <summary>REST API Password.</summary>
         __READONLY_PROPERTY_PLAIN(std::string, password, password);
     };
 

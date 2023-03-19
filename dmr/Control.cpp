@@ -206,7 +206,7 @@ void Control::setCCRunning(bool ccRunning)
         m_slot2->setCCRunning(ccRunning);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         break;
     }
 }
@@ -226,7 +226,7 @@ void Control::setCCHalted(bool ccHalted)
         m_slot2->setCCHalted(ccHalted);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         break;
     }
 }
@@ -285,7 +285,7 @@ bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
     case 2U:
         return m_slot2->processFrame(data, len);
     default:
-        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
         return false;
     }
 }
@@ -305,7 +305,7 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
     case 2U:
         return m_slot2->getFrame(data);
     default:
-        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
         return 0U;
     }
 }
@@ -328,7 +328,7 @@ void Control::clock()
                     m_slot2->processNetwork(data);
                     break;
                 default:
-                    LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+                    LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
                     break;
             }
         }
@@ -353,9 +353,28 @@ void Control::permittedTG(uint32_t dstId, uint8_t slot)
         m_slot2->permittedTG(dstId);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slot);
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
         break;
     }
+}
+
+/// <summary>
+/// Gets instance of the AffiliationLookup class.
+/// </summary>
+dmr::lookups::DMRAffiliationLookup Control::affiliations()
+{
+    switch (m_tsccSlotNo) {
+    case 1U:
+        return m_slot1->m_affiliations;
+    case 2U:
+        return m_slot2->m_affiliations;
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
+        break;
+    }
+
+    return 0; // ??
 }
 
 /// <summary>
@@ -372,7 +391,7 @@ Slot* Control::getTSCCSlot() const
         return m_slot2;
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         return nullptr;
     }
 }
@@ -394,7 +413,7 @@ void Control::writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uin
         m_slot2->control()->writeRF_Ext_Func(func, arg, dstId);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
         break;
     }
 }
@@ -415,7 +434,7 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
         m_slot2->control()->writeRF_Call_Alrt(srcId, dstId);
         break;
     default:
-        LogError(LOG_NET, "DMR, invalid slot, slotNo = %u", slotNo);
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
         break;
     }
 }

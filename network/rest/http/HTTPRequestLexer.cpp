@@ -37,6 +37,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPRequestLexer.h"
 #include "network/rest/http/HTTPRequest.h"
+#include "Log.h"
 
 using namespace network::rest::http;
 
@@ -51,6 +52,7 @@ using namespace network::rest::http;
 /// </summary>
 
 HTTPRequestLexer::HTTPRequestLexer() : 
+    m_headers(),
     m_state(METHOD_START)
 {
     /* stub */
@@ -60,6 +62,7 @@ HTTPRequestLexer::HTTPRequestLexer() :
 void HTTPRequestLexer::reset()
 {
     m_state = METHOD_START;
+    m_headers = std::vector<LexedHeader>();
 }
 
 // ---------------------------------------------------------------------------
@@ -234,8 +237,8 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
             return BAD;
         }
         else {
-            req.headers.push_back(HTTPHeader());
-            req.headers.back().name.push_back(std::tolower(input));
+            m_headers.push_back(LexedHeader());
+            m_headers.back().name.push_back(std::tolower(input));
             m_state = HEADER_NAME;
             return INDETERMINATE;
         }
@@ -253,7 +256,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
         }
         else {
             m_state = HEADER_VALUE;
-            req.headers.back().value.push_back(input);
+            m_headers.back().value.push_back(input);
             return INDETERMINATE;
         }
 
@@ -267,7 +270,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
         }
         else
         {
-            req.headers.back().name.push_back(std::tolower(input));
+            m_headers.back().name.push_back(std::tolower(input));
             return INDETERMINATE;
         }
 
@@ -290,7 +293,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
             return BAD;
         }
         else {
-            req.headers.back().value.push_back(input);
+            m_headers.back().value.push_back(input);
             return INDETERMINATE;
         }
 
@@ -304,7 +307,16 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
         }
 
     case EXPECTING_NEWLINE_3:
-        return (input == '\n') ? GOOD : BAD;
+        if (input == '\n') {
+            for (auto header : m_headers) {
+                //::LogDebug(LOG_REST, "HTTPRequestLexer::consume(), header = %s, value = %s", header.name.c_str(), header.value.c_str());
+                req.headers.add(header.name, header.value);
+            }
+
+            return GOOD;
+        } else {
+            return BAD;
+        }
     
     default:
         return BAD;

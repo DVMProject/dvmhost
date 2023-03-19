@@ -59,8 +59,8 @@ namespace network
         /// <summary>Sets metadata configuration settings from the modem.</summary>
         void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz, 
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
-        /// <summary>Sets RCON configuration settings from the modem.</summary>
-        void setRconData(const std::string& password, uint16_t port);
+        /// <summary>Sets REST API configuration settings from the modem.</summary>
+        void setRESTAPIData(const std::string& password, uint16_t port);
         /// <summary>Gets the current status of the network.</summary>
         uint8_t getStatus();
 
@@ -109,8 +109,8 @@ namespace network
         int m_height;
         std::string m_location;
 
-        std::string m_rconPassword;
-        uint16_t m_rconPort;
+        std::string m_restApiPassword;
+        uint16_t m_restApiPort;
 
         /// <summary>Writes login request to the network.</summary>
         bool writeLogin();

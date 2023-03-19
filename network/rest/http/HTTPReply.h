@@ -39,7 +39,7 @@
 
 #include "Defines.h" 
 #include "network/json/json.h"
-#include "network/rest/http/HTTPHeader.h"
+#include "network/rest/http/HTTPHeaders.h"
 
 #include <string>
 #include <vector>
@@ -82,7 +82,7 @@ namespace network
                     SERVICE_UNAVAILABLE = 503
                 } status;
 
-                std::vector<HTTPHeader> headers;
+                HTTPHeaders headers;
                 std::string content;
 
                 /// <summary>Convert the reply into a vector of buffers. The buffers do not own the
