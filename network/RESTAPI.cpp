@@ -67,6 +67,16 @@ using namespace modem;
 /// <summary>
 /// 
 /// </summary>
+/// <param name="obj"></param>
+void setResponseDefaultStatus(json::object& obj)
+{
+    int s = (int)HTTPReply::OK;
+    obj["status"].set<int>(s);
+}
+
+/// <summary>
+/// 
+/// </summary>
 /// <param name="reply"></param>
 /// <param name="message"></param>
 /// <param name="status"></param>
@@ -342,6 +352,8 @@ void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, cons
 {
     std::string host = request.headers.find("Host");
     json::object response = json::object();
+    setResponseDefaultStatus(response);
+
     json::object req = json::object();
     if (!parseRequestBody(request, reply, req)) {
         return;
@@ -422,6 +434,7 @@ void RESTAPI::restAPI_GetVersion(const HTTPRequest& request, HTTPReply& reply, c
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
     response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built " __BUILD__ ")")));
 
     reply.reply(response);
@@ -440,6 +453,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, co
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 
     yaml::Node systemConf = m_host->m_conf["system"];
     {
@@ -453,7 +467,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, co
         uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
         response["portSpeed"].set<uint32_t>(portSpeed);
 
-        response["hostState"].set<uint8_t>(m_host->m_state);
+        response["state"].set<uint8_t>(m_host->m_state);
         bool dmrEnabled = m_dmr != nullptr;
         response["dmrEnabled"].set<bool>(dmrEnabled);
         bool p25Enabled = m_p25 != nullptr;
@@ -565,6 +579,7 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPRequest& request, HTTPReply& reply, c
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
     
     json::array channels = json::array();
     if (m_host->m_voiceChData.size() > 0) {
@@ -600,6 +615,8 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
+
     json::object req = json::object();
     if (!parseRequestBody(request, reply, req)) {
         return;
@@ -738,6 +755,8 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
         return;
     }
 
+    errorReply(reply, "OK", HTTPReply::OK);
+
     if (!m_host->m_authoritative) {
         errorReply(reply, "Host is authoritative, cannot permit TG");
         return;
@@ -848,6 +867,8 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
+
+    errorReply(reply, "OK", HTTPReply::OK);
 
     if (m_host->m_authoritative && (m_host->m_dmrCtrlChannel || m_host->m_p25CtrlChannel || m_host->m_nxdnCtrlChannel)) {
         errorReply(reply, "Host is authoritative, cannot grant TG");
@@ -1058,7 +1079,6 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPRequest& request, HTTPReply& rep
         return;
     }
 
-    json::object response = json::object();
     if (match.size() < 2) {
         errorReply(reply, "invalid API call arguments");
         return;
@@ -1071,7 +1091,7 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPRequest& request, HTTPReply& rep
         m_ridLookup->toggleEntry(srcId, false);
     }
     else {
-        errorReply(reply, "tried to whitelist RID 0");
+        errorReply(reply, "tried to blacklist RID 0");
     }
 }
 
@@ -1124,6 +1144,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, 
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_DMR)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_dmr != nullptr) {
@@ -1167,6 +1188,7 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& repl
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_DMR)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_dmr != nullptr) {
@@ -1206,13 +1228,12 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPRequest& request, HTTPReply& reply, co
         return;
     }
 
-    json::object response = json::object();
     json::object req = json::object();
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
 
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /// <summary>
@@ -1227,15 +1248,12 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPRequest& request, HTTPReply& repl
         return;
     }
 
-    json::object response = json::object();
     if (match.size() < 2) {
         errorReply(reply, "invalid API call arguments");
         return;
     }
 
-    uint32_t v = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /// <summary>
@@ -1250,15 +1268,12 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPRequest& request, HTTPReply& r
         return;
     }
 
-    json::object response = json::object();
     if (match.size() < 2) {
         errorReply(reply, "invalid API call arguments");
         return;
     }
 
-    uint32_t v = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /*
@@ -1279,7 +1294,7 @@ void RESTAPI::restAPI_GetP25CC(const HTTPRequest& request, HTTPReply& reply, con
 
 #if defined(ENABLE_P25)
     errorReply(reply, "OK", HTTPReply::OK);
-    if (m_dmr != nullptr) {
+    if (m_p25 != nullptr) {
         if (m_host->m_p25CCData) {
             g_fireP25Control = true;
         }
@@ -1310,6 +1325,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, 
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_P25)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_dmr != nullptr) {
@@ -1353,6 +1369,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& repl
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_P25)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_p25 != nullptr) {
@@ -1392,13 +1409,12 @@ void RESTAPI::restAPI_PutP25RID(const HTTPRequest& request, HTTPReply& reply, co
         return;
     }
 
-    json::object response = json::object();
     json::object req = json::object();
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
 
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /// <summary>
@@ -1413,15 +1429,12 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPRequest& request, HTTPReply& repl
         return;
     }
 
-    json::object response = json::object();
     if (match.size() < 2) {
         errorReply(reply, "invalid API call arguments");
         return;
     }
 
-    uint32_t v = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /// <summary>
@@ -1436,15 +1449,12 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPRequest& request, HTTPReply& r
         return;
     }
 
-    json::object response = json::object();
     if (match.size() < 2) {
         errorReply(reply, "invalid API call arguments");
         return;
     }
 
-    uint32_t v = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
-    reply.reply(response);
+    errorReply(reply, "OK", HTTPReply::OK);
 }
 
 /*
@@ -1464,6 +1474,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply,
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_NXDN)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_dmr != nullptr) {
@@ -1507,6 +1518,7 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPRequest& request, HTTPReply& rep
     }
 
     json::object response = json::object();
+    setResponseDefaultStatus(response);
 #if defined(ENABLE_NXDN)
     errorReply(reply, "OK", HTTPReply::OK);
     if (m_p25 != nullptr) {
