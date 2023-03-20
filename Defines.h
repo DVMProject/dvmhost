@@ -236,6 +236,17 @@ inline std::string strtolower(const std::string value) {
     return v;
 }
 
+/// <summary>
+/// Helper to upper-case an input string.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string strtoupper(const std::string value) {
+    std::string v = value;
+    std::transform(v.begin(), v.end(), v.begin(), ::toupper);
+    return v;
+}
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------

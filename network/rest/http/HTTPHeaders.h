@@ -54,7 +54,7 @@ namespace network
             //  Class Prototypes
             // ---------------------------------------------------------------------------
 
-            struct HTTPReply;
+            struct HTTPPayload;
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
@@ -122,7 +122,7 @@ namespace network
                 }
 
             private:
-                friend struct HTTPReply;
+                friend struct HTTPPayload;
                 std::vector<Header> m_headers;
             };
         } // namespace http

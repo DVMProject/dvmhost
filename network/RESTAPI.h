@@ -118,9 +118,8 @@ public:
     void close();
 
 private:
-    typedef network::rest::RequestDispatcher<network::rest::http::HTTPRequest, network::rest::http::HTTPReply> RESTDispatcherType;
-    typedef network::rest::http::HTTPRequest HTTPRequest;
-    typedef network::rest::http::HTTPReply HTTPReply;
+    typedef network::rest::RequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
+    typedef network::rest::http::HTTPPayload HTTPPayload;
     RESTDispatcherType m_dispatcher;
     network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
 
@@ -152,79 +151,79 @@ private:
     /// <summary></summary>
     void invalidateHostToken(const std::string host);
     /// <summary></summary>
-    bool validateAuth(const HTTPRequest& request, HTTPReply& reply);
+    bool validateAuth(const HTTPPayload& request, HTTPPayload& reply);
 
     /// <summary></summary>
-    void restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
-    void restAPI_GetVersion(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetVoiceCh(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
-    void restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_PutModemKill(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
-    void restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetReleaseGrants(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetReleaseAffs(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
-    void restAPI_GetRIDWhitelist(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetRIDBlacklist(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*
     ** Digital Mobile Radio
     */
 
     /// <summary></summary>
-    void restAPI_GetDMRBeacon(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_PutDMRRID(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetDMRCCEnable(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetDMRCCBroadcast(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*
     ** Project 25
     */
 
     /// <summary></summary>
-    void restAPI_GetP25CC(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_PutP25RID(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetP25CCEnable(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetP25CCBroadcast(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*
     ** Next Generation Digital Narrowband
     */
 
     /// <summary></summary>
-    void restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
-    void restAPI_GetNXDNDumpRCCH(const HTTPRequest& request, HTTPReply& reply, const network::rest::RequestMatch& match);
+    void restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

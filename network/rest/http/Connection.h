@@ -38,9 +38,8 @@
 #define __REST_HTTP__CONNECTION_H__
 
 #include "Defines.h" 
-#include "network/rest/http/HTTPRequest.h"
-#include "network/rest/http/HTTPRequestLexer.h"
-#include "network/rest/http/HTTPReply.h"
+#include "network/rest/http/HTTPLexer.h"
+#include "network/rest/http/HTTPPayload.h"
 
 #include <array>
 #include <memory>
@@ -75,11 +74,13 @@ namespace network
             public:
                 /// <summary>Initializes a new instance of the Connection class.</summary>
                 explicit Connection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
-                                    bool persistent = false) :
+                                    bool persistent = false, bool client = false) :
                     m_socket(std::move(socket)),
                     m_connectionManager(manager),
                     m_requestHandler(handler),
-                    m_persistent(persistent)
+                    m_lexer(HTTPLexer(client)),
+                    m_persistent(persistent),
+                    m_client(client)
                 {
                     /* stub */
                 }
@@ -88,7 +89,7 @@ namespace network
                 
                 /// <summary></summary>
                 Connection& operator=(const Connection&) = delete;
-        
+
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
                 /// <summary>Stop all asynchronous operations associated with the connection.</summary>
@@ -103,7 +104,7 @@ namespace network
 
                     m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
                         if (!ec) {
-                            HTTPRequestLexer::ResultType result;
+                            HTTPLexer::ResultType result;
                             char* content;
 
                             std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
@@ -114,20 +115,30 @@ namespace network
                                 m_request.content = std::string(content, length);
                             }
 
-                            if (result == HTTPRequestLexer::GOOD) {
+                            if (m_client) {
                                 m_requestHandler.handleRequest(m_request, m_reply);
-                                write();
-                            }
-                            else if (result == HTTPRequestLexer::BAD) {
-                                m_reply = HTTPReply::stockReply(HTTPReply::BAD_REQUEST);
-                                write();
                             }
                             else {
-                                read();
+                                if (result == HTTPLexer::GOOD) {
+                                    m_requestHandler.handleRequest(m_request, m_reply);
+                                    write();
+                                }
+                                else if (result == HTTPLexer::BAD) {
+                                    m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
+                                    write();
+                                }
+                                else {
+                                    read();
+                                }
                             }
                         }
                         else if (ec != asio::error::operation_aborted) {
-                            m_connectionManager.stop(this->shared_from_this());
+                            if (m_client) {
+                                m_socket.close();
+                            }
+                            else {
+                                m_connectionManager.stop(this->shared_from_this());
+                            }
                         }
                     });
                 }
@@ -135,6 +146,10 @@ namespace network
                 /// <summary>Perform an asynchronous write operation.</summary>
                 void write()
                 {
+                    if (m_client) {
+                        return;
+                    }
+
                     if (!m_persistent) {
                         auto self(this->shared_from_this());
                     } else {
@@ -145,9 +160,9 @@ namespace network
                         if (m_persistent) {
                             m_lexer.reset();
                             m_reply.headers = HTTPHeaders();
-                            m_reply.status = HTTPReply::OK;
+                            m_reply.status = HTTPPayload::OK;
                             m_reply.content = "";
-                            m_request = HTTPRequest();
+                            m_request = HTTPPayload();
                             read();
                         }
                         else
@@ -166,13 +181,18 @@ namespace network
                 }
         
                 asio::ip::tcp::socket m_socket;
+
                 ConnectionManagerType& m_connectionManager;
                 RequestHandlerType& m_requestHandler;
+
                 std::array<char, 8192> m_buffer;
-                HTTPRequest m_request;
-                HTTPRequestLexer m_lexer;
-                HTTPReply m_reply;
+
+                HTTPPayload m_request;
+                HTTPLexer m_lexer;
+                HTTPPayload m_reply;
+
                 bool m_persistent;
+                bool m_client;
             };
         } // namespace http
     } // namespace rest

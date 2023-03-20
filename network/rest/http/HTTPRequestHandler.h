@@ -52,8 +52,7 @@ namespace network
             //  Class Prototypes
             // ---------------------------------------------------------------------------
 
-            struct HTTPReply;
-            struct HTTPRequest;
+            struct HTTPPayload;
         
             // ---------------------------------------------------------------------------
             //  Class Declaration
@@ -76,7 +75,7 @@ namespace network
                 HTTPRequestHandler& operator=(HTTPRequestHandler&&) = default;
 
                 /// <summary>Handle a request and produce a reply.</summary>
-                void handleRequest(const HTTPRequest& req, HTTPReply& reply);
+                void handleRequest(const HTTPPayload& req, HTTPPayload& reply);
 
             private:
                 /// <summary>Perform URL-decoding on a string. Returns false if the encoding was

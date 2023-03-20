@@ -34,8 +34,10 @@
 *   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-#if !defined(__REST_HTTP__HTTP_REQUEST_PARSER_H__)
-#define __REST_HTTP__HTTP_REQUEST_PARSER_H__
+#if !defined(__REST_HTTP__HTTP_LEXER_H__)
+#define __REST_HTTP__HTTP_LEXER_H__
+
+#include "Defines.h"
 
 #include <tuple>
 #include <vector>
@@ -51,20 +53,20 @@ namespace network
             //  Class Prototypes
             // ---------------------------------------------------------------------------
 
-            struct HTTPRequest;
+            struct HTTPPayload;
         
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      This class implements the lexer for incoming requests.
+            //      This class implements the lexer for incoming payloads.
             // ---------------------------------------------------------------------------
 
-            class HTTPRequestLexer
+            class HTTPLexer
             {
             public:
                 enum ResultType { GOOD, BAD, INDETERMINATE };
 
-                /// <summary>Initializes a new instance of the HTTPRequestLexer class.</summary>
-                HTTPRequestLexer();
+                /// <summary>Initializes a new instance of the HTTPLexer class.</summary>
+                HTTPLexer(bool clientLexer);
 
                 /// <summary>Reset to initial parser state.</summary>
                 void reset();
@@ -74,10 +76,10 @@ namespace network
                 /// required. The InputIterator return value indicates how much of the input
                 /// has been consumed.</summary>
                 template <typename InputIterator>
-                std::tuple<ResultType, InputIterator> parse(HTTPRequest& req, InputIterator begin, InputIterator end)
+                std::tuple<ResultType, InputIterator> parse(HTTPPayload& payload, InputIterator begin, InputIterator end)
                 {
                     while (begin != end) {
-                        ResultType result = consume(req, *begin++);
+                        ResultType result = consume(payload, *begin++);
                         if (result == GOOD || result == BAD)
                             return std::make_tuple(result, begin);
                     }
@@ -86,7 +88,7 @@ namespace network
 
             private:
                 /// <summary>Handle the next character of input.</summary>
-                ResultType consume(HTTPRequest& req, char input);
+                ResultType consume(HTTPPayload& payload, char input);
 
                 /// <summary>Check if a byte is an HTTP character.</summary>
                 static bool isChar(int c);
@@ -107,6 +109,8 @@ namespace network
                 };
 
                 std::vector<LexedHeader> m_headers;
+                uint16_t m_status;
+                bool m_clientLexer = false;
 
                 enum state
                 {
@@ -122,6 +126,12 @@ namespace network
                     HTTP_VERSION_MAJOR,
                     HTTP_VERSION_MINOR_START,
                     HTTP_VERSION_MINOR,
+                    HTTP_STATUS_1,
+                    HTTP_STATUS_2,
+                    HTTP_STATUS_3,
+                    HTTP_STATUS_END,
+                    HTTP_STATUS_MESSAGE_START,
+                    HTTP_STATUS_MESSAGE,
                     EXPECTING_NEWLINE_1,
                     HEADER_LINE_START,
                     HEADER_LWS,
@@ -136,4 +146,4 @@ namespace network
     } // namespace rest
 } // namespace network
 
-#endif // __REST_HTTP__HTTP_REQUEST_PARSER_H__
+#endif // __REST_HTTP__HTTP_LEXER_H__

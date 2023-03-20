@@ -70,7 +70,7 @@ using namespace modem;
 /// <param name="obj"></param>
 void setResponseDefaultStatus(json::object& obj)
 {
-    int s = (int)HTTPReply::OK;
+    int s = (int)HTTPPayload::OK;
     obj["status"].set<int>(s);
 }
 
@@ -80,9 +80,9 @@ void setResponseDefaultStatus(json::object& obj)
 /// <param name="reply"></param>
 /// <param name="message"></param>
 /// <param name="status"></param>
-void errorReply(HTTPReply& reply, std::string message, HTTPReply::StatusType status = HTTPReply::BAD_REQUEST)
+void errorPayload(HTTPPayload& reply, std::string message, HTTPPayload::StatusType status = HTTPPayload::BAD_REQUEST)
 {
-    HTTPReply rep;
+    HTTPPayload rep;
     rep.status = status;
 
     json::object response = json::object();
@@ -91,7 +91,7 @@ void errorReply(HTTPReply& reply, std::string message, HTTPReply::StatusType sta
     response["status"].set<int>(s);
     response["message"].set<std::string>(message);
 
-    reply.reply(response);
+    reply.payload(response);
 }
 
 /// <summary>
@@ -101,11 +101,11 @@ void errorReply(HTTPReply& reply, std::string message, HTTPReply::StatusType sta
 /// <param name="reply"></param>
 /// <param name="obj"></param>
 /// <returns></returns>
-bool parseRequestBody(const HTTPRequest& request, HTTPReply& reply, json::object& obj)
+bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::object& obj)
 {
     std::string contentType = request.headers.find("Content-Type");
     if (contentType != "application/json") {
-        reply = HTTPReply::stockReply(HTTPReply::BAD_REQUEST, "application/json");
+        reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST, "application/json");
         return false;
     }
 
@@ -113,13 +113,13 @@ bool parseRequestBody(const HTTPRequest& request, HTTPReply& reply, json::object
     json::value v;
     std::string err = json::parse(v, request.content);
     if (!err.empty()) {
-        errorReply(reply, err);
+        errorPayload(reply, err);
         return false;
     }
 
     // ensure parsed JSON is an object
     if (!v.is<json::object>()) {
-        errorReply(reply, "Request was not a valid JSON object.");
+        errorPayload(reply, "Request was not a valid JSON object.");
         return false;
     }
 
@@ -313,12 +313,12 @@ void RESTAPI::invalidateHostToken(const std::string host)
 ///
 /// </summary>
 /// <param name="request"></param>
-bool RESTAPI::validateAuth(const HTTPRequest& request, HTTPReply& reply)
+bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 {
     std::string host = request.headers.find("Host");
     std::string headerToken = request.headers.find("X-DVM-Auth-Token");
     if (headerToken == "") {
-        errorReply(reply, "invalid authentication token", HTTPReply::UNAUTHORIZED);
+        errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
         return false;
     }
 
@@ -330,12 +330,12 @@ bool RESTAPI::validateAuth(const HTTPRequest& request, HTTPReply& reply)
             return true;
         } else {
             m_authTokens.erase(host); // devalidate host
-            errorReply(reply, "invalid authentication token", HTTPReply::UNAUTHORIZED);
+            errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
             return false;
         }
     }
     else {
-        errorReply(reply, "invalid authentication token", HTTPReply::UNAUTHORIZED);
+        errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
         return false;
     }
 
@@ -348,7 +348,7 @@ bool RESTAPI::validateAuth(const HTTPRequest& request, HTTPReply& reply)
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     std::string host = request.headers.find("Host");
     json::object response = json::object();
@@ -362,26 +362,26 @@ void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, cons
     // validate auth is a string within the JSON blob
     if (!req["auth"].is<std::string>()) {
         invalidateHostToken(host);
-        errorReply(reply, "password was not a valid string");
+        errorPayload(reply, "password was not a valid string");
         return;
     }
 
     std::string auth = req["auth"].get<std::string>();
     if (auth.empty()) {
         invalidateHostToken(host);
-        errorReply(reply, "auth cannot be empty");
+        errorPayload(reply, "auth cannot be empty");
         return;
     }
 
     if (auth.size() > 64) {
         invalidateHostToken(host);
-        errorReply(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth cannot be longer than 64 characters");
         return;
     }
 
     if (!(auth.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
         invalidateHostToken(host);
-        errorReply(reply, "auth contains invalid characters");
+        errorPayload(reply, "auth contains invalid characters");
         return;
     }
 
@@ -406,7 +406,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, cons
     // compare hashes
     if (::memcmp(m_passwordHash, passwordHash, 32U) != 0) {
         invalidateHostToken(host);
-        errorReply(reply, "invalid password");
+        errorPayload(reply, "invalid password");
         return;
     }
 
@@ -418,7 +418,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, cons
 
     m_authTokens[host] = salt;
     response["token"].set<std::string>(std::to_string(salt));
-    reply.reply(response);
+    reply.payload(response);
 }
 
 /// <summary>
@@ -427,7 +427,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPRequest& request, HTTPReply& reply, cons
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetVersion(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -437,7 +437,7 @@ void RESTAPI::restAPI_GetVersion(const HTTPRequest& request, HTTPReply& reply, c
     setResponseDefaultStatus(response);
     response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built " __BUILD__ ")")));
 
-    reply.reply(response);
+    reply.payload(response);
 }
 
 /// <summary>
@@ -446,7 +446,7 @@ void RESTAPI::restAPI_GetVersion(const HTTPRequest& request, HTTPReply& reply, c
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -563,7 +563,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, co
         response["modem"].set<json::object>(modemInfo);
     }
 
-    reply.reply(response);
+    reply.payload(response);
 }
 
 /// <summary>
@@ -572,7 +572,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPRequest& request, HTTPReply& reply, co
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetVoiceCh(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -599,7 +599,7 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPRequest& request, HTTPReply& reply, c
     }
 
     response["channels"].set<json::array>(channels);
-    reply.reply(response);
+    reply.payload(response);
 }
 
 /// <summary>
@@ -608,7 +608,7 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPRequest& request, HTTPReply& reply, c
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -624,7 +624,7 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
 
     // validate mode is a string within the JSON blob
     if (!req["mode"].is<std::string>()) {
-        errorReply(reply, "password was not a valid string");
+        errorPayload(reply, "password was not a valid string");
         return;
     }
 
@@ -638,7 +638,7 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
         uint8_t hostMode = m_host->m_state;
         response["mode"].set<uint8_t>(hostMode);
 
-        reply.reply(response);
+        reply.payload(response);
     }
     else if (mode == MODE_OPT_LCKOUT) {
         m_host->m_fixedMode = false;
@@ -648,7 +648,7 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
         uint8_t hostMode = m_host->m_state;
         response["mode"].set<uint8_t>(hostMode);
 
-        reply.reply(response);
+        reply.payload(response);
     }
 #if defined(ENABLE_DMR)
     else if (mode == MODE_OPT_FDMR) {
@@ -660,10 +660,10 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
             uint8_t hostMode = m_host->m_state;
             response["mode"].set<uint8_t>(hostMode);
 
-            reply.reply(response);
+            reply.payload(response);
         }
         else {
-            errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #endif // defined(ENABLE_DMR)
@@ -677,10 +677,10 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
             uint8_t hostMode = m_host->m_state;
             response["mode"].set<uint8_t>(hostMode);
 
-            reply.reply(response);
+            reply.payload(response);
         }
         else {
-            errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #endif // defined(ENABLE_P25)
@@ -694,15 +694,15 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
             uint8_t hostMode = m_host->m_state;
             response["mode"].set<uint8_t>(hostMode);
 
-            reply.reply(response);
+            reply.payload(response);
         }
         else {
-            errorReply(reply, "NXDN mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #endif // defined(ENABLE_NXDN)
     else {
-        errorReply(reply, "invalid mode");
+        errorPayload(reply, "invalid mode");
     }
 }
 
@@ -712,7 +712,7 @@ void RESTAPI::restAPI_PutModemMode(const HTTPRequest& request, HTTPReply& reply,
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutModemKill(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -723,7 +723,7 @@ void RESTAPI::restAPI_PutModemKill(const HTTPRequest& request, HTTPReply& reply,
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 
     if (!req["force"].is<bool>()) {
         g_killed = true;
@@ -744,7 +744,7 @@ void RESTAPI::restAPI_PutModemKill(const HTTPRequest& request, HTTPReply& reply,
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -755,16 +755,16 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 
     if (!m_host->m_authoritative) {
-        errorReply(reply, "Host is authoritative, cannot permit TG");
+        errorPayload(reply, "Host is authoritative, cannot permit TG");
         return;
     }
 
     // validate state is a string within the JSON blob
     if (!req["state"].is<int>()) {
-        errorReply(reply, "state was not a valid integer");
+        errorPayload(reply, "state was not a valid integer");
         return;
     }
 
@@ -772,14 +772,14 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        errorReply(reply, "destination ID was not a valid integer");
+        errorPayload(reply, "destination ID was not a valid integer");
         return;
     }
 
     uint32_t dstId = req["dstId"].get<uint32_t>();
 
     if (dstId == 0U) {
-        errorReply(reply, "destination ID is an illegal TGID");
+        errorPayload(reply, "destination ID is an illegal TGID");
         return;
     }
 
@@ -789,14 +789,14 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
-            errorReply(reply, "slot was not a valid integer");
+            errorPayload(reply, "slot was not a valid integer");
             return;
         }
 
         uint8_t slot = (uint8_t)req["slot"].get<int>();
 
         if (slot == 0U || slot > 2U) {
-            errorReply(reply, "illegal DMR slot");
+            errorPayload(reply, "illegal DMR slot");
             return;
         }
 
@@ -804,12 +804,12 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
             m_dmr->permittedTG(dstId, slot);
         }
         else {
-            errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "DMR operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_DMR)
     break;
@@ -820,12 +820,12 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
             m_p25->permittedTG(dstId);
         }
         else {
-          errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+          errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "P25 operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_P25)
     break;
@@ -836,17 +836,17 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
             m_nxdn->permittedTG(dstId);
         }
         else {
-            errorReply(reply, "NXDN mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "NXDN operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_NXDN)
     break;
     default:
-        errorReply(reply, "invalid mode");
+        errorPayload(reply, "invalid mode");
         break;
     }
 }
@@ -857,7 +857,7 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPRequest& request, HTTPReply& reply, 
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -868,16 +868,16 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 
     if (m_host->m_authoritative && (m_host->m_dmrCtrlChannel || m_host->m_p25CtrlChannel || m_host->m_nxdnCtrlChannel)) {
-        errorReply(reply, "Host is authoritative, cannot grant TG");
+        errorPayload(reply, "Host is authoritative, cannot grant TG");
         return;
     }
 
     // validate state is a string within the JSON blob
     if (!req["state"].is<int>()) {
-        errorReply(reply, "state was not a valid integer");
+        errorPayload(reply, "state was not a valid integer");
         return;
     }
 
@@ -885,27 +885,27 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
 
     // validate destination ID is a integer within the JSON blob
     if (!req["dstId"].is<int>()) {
-        errorReply(reply, "destination ID was not a valid integer");
+        errorPayload(reply, "destination ID was not a valid integer");
         return;
     }
 
     uint32_t dstId = req["dstId"].get<uint32_t>();
 
     if (dstId == 0U) {
-        errorReply(reply, "destination ID is an illegal TGID");
+        errorPayload(reply, "destination ID is an illegal TGID");
         return;
     }
 
     // validate unit-to-unit is a integer within the JSON blob
     if (!req["unitToUnit"].is<int>()) {
-        errorReply(reply, "unit-to-unit was not a valid integer");
+        errorPayload(reply, "unit-to-unit was not a valid integer");
         return;
     }
 
     uint8_t unitToUnit = (uint8_t)req["unitToUnit"].get<int>();
 
     if (unitToUnit > 1U) {
-        errorReply(reply, "unit-to-unit must be a 0 or 1");
+        errorPayload(reply, "unit-to-unit must be a 0 or 1");
         return;
     }
 
@@ -915,14 +915,14 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
-            errorReply(reply, "slot was not a valid integer");
+            errorPayload(reply, "slot was not a valid integer");
             return;
         }
 
         uint8_t slot = (uint8_t)req["slot"].get<int>();
 
         if (slot == 0U || slot > 2U) {
-            errorReply(reply, "illegal DMR slot");
+            errorPayload(reply, "illegal DMR slot");
             return;
         }
 
@@ -931,12 +931,12 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
             //m_dmr->grantTG(dstId, slot, unitToUnit == 1U);
         }
         else {
-            errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "DMR operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_DMR)
     break;
@@ -948,12 +948,12 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
             //m_p25->grantTG(dstId, unitToUnit == 1U);
         }
         else {
-            errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "P25 operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_P25)
     break;
@@ -965,17 +965,17 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
             //nxdn->grantTG(dstId, unitToUnit == 1U);
         }
         else {
-            errorReply(reply, "NXDN mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
 #else
     {
-        errorReply(reply, "NXDN operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
     }
 #endif // defined(ENABLE_NXDN)
     break;
     default:
-        errorReply(reply, "invalid mode");
+        errorPayload(reply, "invalid mode");
     }
 }
 
@@ -985,13 +985,13 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPRequest& request, HTTPReply& reply, c
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetReleaseGrants(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 #if defined(ENABLE_DMR)
     if (m_dmr != nullptr) {
         m_dmr->affiliations().releaseGrant(0, true);
@@ -1015,13 +1015,13 @@ void RESTAPI::restAPI_GetReleaseGrants(const HTTPRequest& request, HTTPReply& re
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetReleaseAffs(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 #if defined(ENABLE_DMR)
     if (m_dmr != nullptr) {
         m_dmr->affiliations().clearGroupAff(0, true);
@@ -1045,25 +1045,25 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPRequest& request, HTTPReply& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetRIDWhitelist(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     uint32_t srcId = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
    
     if (srcId != 0U) {
         m_ridLookup->toggleEntry(srcId, true);
     }
     else {
-        errorReply(reply, "tried to whitelist RID 0");
+        errorPayload(reply, "tried to whitelist RID 0");
     }
 }
 
@@ -1073,25 +1073,25 @@ void RESTAPI::restAPI_GetRIDWhitelist(const HTTPRequest& request, HTTPReply& rep
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetRIDBlacklist(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     uint32_t srcId = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
    
     if (srcId != 0U) {
         m_ridLookup->toggleEntry(srcId, false);
     }
     else {
-        errorReply(reply, "tried to blacklist RID 0");
+        errorPayload(reply, "tried to blacklist RID 0");
     }
 }
 
@@ -1105,29 +1105,29 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPRequest& request, HTTPReply& rep
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetDMRBeacon(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
 #if defined(ENABLE_DMR)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (m_host->m_dmrBeacons) {
             g_fireDMRBeacon = true;
         }
         else {
-            errorReply(reply, "DMR beacons are not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "DMR beacons are not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
             return;
         }
     }
     else {
-        errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "DMR operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_DMR)
 }
 
@@ -1137,7 +1137,7 @@ void RESTAPI::restAPI_GetDMRBeacon(const HTTPRequest& request, HTTPReply& reply,
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1146,7 +1146,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, 
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_DMR)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
             bool debug = m_dmr->getDebug();
@@ -1155,7 +1155,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, 
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1167,11 +1167,11 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, 
         }
     }
     else {
-        errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "DMR operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_DMR)
 }
 
@@ -1181,7 +1181,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPRequest& request, HTTPReply& reply, 
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1190,14 +1190,14 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& repl
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_DMR)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
             bool csbkDump = m_dmr->getCSBKVerbose();
 
             response["verbose"].set<bool>(csbkDump);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1208,11 +1208,11 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& repl
         }
     }
     else {
-        errorReply(reply, "DMR mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "DMR operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_DMR)
 }
 
@@ -1222,7 +1222,7 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPRequest& request, HTTPReply& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutDMRRID(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1233,7 +1233,7 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPRequest& request, HTTPReply& reply, co
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /// <summary>
@@ -1242,18 +1242,18 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPRequest& request, HTTPReply& reply, co
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetDMRCCEnable(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /// <summary>
@@ -1262,18 +1262,18 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPRequest& request, HTTPReply& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /*
@@ -1286,29 +1286,29 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPRequest& request, HTTPReply& r
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetP25CC(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
 #if defined(ENABLE_P25)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (m_host->m_p25CCData) {
             g_fireP25Control = true;
         }
         else {
-            errorReply(reply, "P25 control data is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+            errorPayload(reply, "P25 control data is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
             return;
         }
     }
     else {
-        errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "P25 operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_P25)
 }
 
@@ -1318,7 +1318,7 @@ void RESTAPI::restAPI_GetP25CC(const HTTPRequest& request, HTTPReply& reply, con
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1327,7 +1327,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, 
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_P25)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
             bool debug = m_p25->getDebug();
@@ -1336,7 +1336,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, 
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1348,11 +1348,11 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, 
         }
     }
     else {
-        errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "P25 operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_P25)
 }
 
@@ -1362,7 +1362,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPRequest& request, HTTPReply& reply, 
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1371,14 +1371,14 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& repl
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_P25)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (match.size() <= 1) {
             bool tsbkDump = m_p25->trunk()->getTSBKVerbose();
 
             response["verbose"].set<bool>(tsbkDump);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1389,11 +1389,11 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& repl
         }
     }
     else {
-        errorReply(reply, "P25 mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "P25 operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_P25)
 }
 
@@ -1403,7 +1403,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPRequest& request, HTTPReply& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_PutP25RID(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1414,7 +1414,7 @@ void RESTAPI::restAPI_PutP25RID(const HTTPRequest& request, HTTPReply& reply, co
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /// <summary>
@@ -1423,18 +1423,18 @@ void RESTAPI::restAPI_PutP25RID(const HTTPRequest& request, HTTPReply& reply, co
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetP25CCEnable(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /// <summary>
@@ -1443,18 +1443,18 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPRequest& request, HTTPReply& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
     }
 
     if (match.size() < 2) {
-        errorReply(reply, "invalid API call arguments");
+        errorPayload(reply, "invalid API call arguments");
         return;
     }
 
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
 }
 
 /*
@@ -1467,7 +1467,7 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPRequest& request, HTTPReply& r
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1476,7 +1476,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply,
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_NXDN)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
             bool debug = m_nxdn->getDebug();
@@ -1485,7 +1485,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply,
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1497,11 +1497,11 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply,
         }
     }
     else {
-        errorReply(reply, "NXDN mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "NXDN operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_NXDN)
 }
 
@@ -1511,7 +1511,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPRequest& request, HTTPReply& reply,
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPRequest& request, HTTPReply& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -1520,14 +1520,14 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPRequest& request, HTTPReply& rep
     json::object response = json::object();
     setResponseDefaultStatus(response);
 #if defined(ENABLE_NXDN)
-    errorReply(reply, "OK", HTTPReply::OK);
+    errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (match.size() <= 1) {
             bool rcchDump = m_nxdn->getRCCHVerbose();
 
             response["verbose"].set<bool>(rcchDump);
         
-            reply.reply(response);
+            reply.payload(response);
             return;
         }
         else {
@@ -1538,10 +1538,10 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPRequest& request, HTTPReply& rep
         }
     }
     else {
-        errorReply(reply, "NXDN mode is not enabled", HTTPReply::SERVICE_UNAVAILABLE);
+        errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
 #else
-    errorReply(reply, "NXDN operations are unavailable", HTTPReply::SERVICE_UNAVAILABLE);
+    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_NXDN)
 }

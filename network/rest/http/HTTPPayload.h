@@ -54,11 +54,24 @@ namespace network
         {
 
             // ---------------------------------------------------------------------------
-            //  Structure Declaration
-            //      This struct implements a model of a reply to be sent to a HTTP client.
+            //  Constants
             // ---------------------------------------------------------------------------
 
-            struct HTTPReply
+            #define HTTP_GET "GET"
+            #define HTTP_POST "POST"
+            #define HTTP_PUT "PUT"
+            #define HTTP_DELETE "DELETE"
+            #define HTTP_OPTIONS "OPTIONS"
+
+            #define HTTP_DEFAULT_VERSION "HTTP/1.0"
+
+            // ---------------------------------------------------------------------------
+            //  Structure Declaration
+            //      This struct implements a model of a payload to be sent to a 
+            //      HTTP client/server.
+            // ---------------------------------------------------------------------------
+
+            struct HTTPPayload
             {
                 /// <summary>
                 /// HTTP Status/Response Codes
@@ -85,18 +98,28 @@ namespace network
                 HTTPHeaders headers;
                 std::string content;
 
-                /// <summary>Convert the reply into a vector of buffers. The buffers do not own the
-                /// underlying memory blocks, therefore the reply object must remain valid and
+                std::string method;
+                std::string uri;
+
+                int httpVersionMajor;
+                int httpVersionMinor;
+
+                bool isClientPayload = false;
+
+                /// <summary>Convert the payload into a vector of buffers. The buffers do not own the
+                /// underlying memory blocks, therefore the payload object must remain valid and
                 /// not be changed until the write operation has completed.</summary>
                 std::vector<asio::const_buffer> toBuffers();
 
-                /// <summary>Prepares reply for transmission by finalizing status and content type.</summary>
-                void reply(json::object obj, StatusType status = OK);
-                /// <summary>Prepares reply for transmission by finalizing status and content type.</summary>
-                void reply(std::string content, StatusType status = OK, std::string contentType = "text/html");
+                /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
+                void payload(json::object obj, StatusType status = OK);
+                /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
+                void payload(std::string content, StatusType status = OK, std::string contentType = "text/html");
 
-                /// <summary>Get a stock reply.</summary>
-                static HTTPReply stockReply(StatusType status, std::string contentType = "text/html");
+                /// <summary>Get a request payload.</summary>
+                static HTTPPayload requestPayload(std::string method, std::string uri, std::string contentType = "text/html");
+                /// <summary>Get a status payload.</summary>
+                static HTTPPayload statusPayload(StatusType status, std::string contentType = "text/html");
 
             private:
                 /// <summary></summary>

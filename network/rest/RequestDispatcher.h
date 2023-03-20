@@ -27,8 +27,7 @@
 #define __REST__DISPATCHER_H__
 
 #include "Defines.h"
-#include "network/rest/http/HTTPRequest.h"
-#include "network/rest/http/HTTPReply.h"
+#include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
  
 #include <functional>
@@ -68,27 +67,27 @@ namespace network
 
             /// <summary></summary>
             RequestMatcher<Request, Reply>& get(RequestHandlerType handler) {
-                m_handlers["GET"] = handler;
+                m_handlers[HTTP_GET] = handler;
                 return *this;
             }
             /// <summary></summary>
             RequestMatcher<Request, Reply>& post(RequestHandlerType handler) {
-                m_handlers["POST"] = handler;
+                m_handlers[HTTP_POST] = handler;
                 return *this;
             }
             /// <summary></summary>
             RequestMatcher<Request, Reply>& put(RequestHandlerType handler) {
-                m_handlers["PUT"] = handler;
+                m_handlers[HTTP_PUT] = handler;
                 return *this;
             }
             /// <summary></summary>
             RequestMatcher<Request, Reply>& del(RequestHandlerType handler) {
-                m_handlers["DELETE"] = handler;
+                m_handlers[HTTP_DELETE] = handler;
                 return *this;
             }
             /// <summary></summary>
             RequestMatcher<Request, Reply>& options(RequestHandlerType handler) {
-                m_handlers["OPTIONS"] = handler;
+                m_handlers[HTTP_OPTIONS] = handler;
                 return *this;
             }
 
@@ -116,7 +115,7 @@ namespace network
         //      This class implements RESTful web request dispatching.
         // ---------------------------------------------------------------------------
 
-        template<typename Request = http::HTTPRequest, typename Reply = http::HTTPReply>
+        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
         class RequestDispatcher {
             typedef RequestMatcher<Request, Reply> MatcherType;
         public:
@@ -174,7 +173,7 @@ namespace network
                 }
 
                 ::LogError(LOG_REST, "unknown endpoint, uri = %s", request.uri.c_str());
-                reply = http::HTTPReply::stockReply(http::HTTPReply::BAD_REQUEST, "application/json");
+                reply = http::HTTPPayload::statusPayload(http::HTTPPayload::BAD_REQUEST, "application/json");
             }
         
         private:
@@ -186,7 +185,7 @@ namespace network
             bool m_debug;
         };
 
-        typedef RequestDispatcher<http::HTTPRequest, http::HTTPReply> DefaultRequestDispatcher;        
+        typedef RequestDispatcher<http::HTTPPayload, http::HTTPPayload> DefaultRequestDispatcher;        
     } // namespace rest
 } // namespace network
   

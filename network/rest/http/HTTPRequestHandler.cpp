@@ -36,8 +36,7 @@
 */
 #include "Defines.h"
 #include "network/rest/http/HTTPRequestHandler.h"
-#include "network/rest/http/HTTPRequest.h"
-#include "network/rest/http/HTTPReply.h"
+#include "network/rest/http/HTTPPayload.h"
 
 using namespace network::rest::http;
 
@@ -62,19 +61,19 @@ HTTPRequestHandler::HTTPRequestHandler(const std::string& docRoot) :
 /// <summary>
 /// Handle a request and produce a reply.
 /// </summary>
-void HTTPRequestHandler::handleRequest(const HTTPRequest& request, HTTPReply& reply)
+void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& reply)
 {
     // decode url to path
     std::string requestPath;
     if (!urlDecode(request.uri, requestPath)) {
-        reply = HTTPReply::stockReply(HTTPReply::BAD_REQUEST);
+        reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
         return;
     }
 
     // request path must be absolute and not contain "..".
     if (requestPath.empty() || requestPath[0] != '/' || 
         requestPath.find("..") != std::string::npos) {
-        reply = HTTPReply::stockReply(HTTPReply::BAD_REQUEST);
+        reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
         return;
     }
 
@@ -95,12 +94,12 @@ void HTTPRequestHandler::handleRequest(const HTTPRequest& request, HTTPReply& re
     std::string fullPath = m_docRoot + requestPath;
     std::ifstream is(fullPath.c_str(), std::ios::in | std::ios::binary);
     if (!is) {
-        reply = HTTPReply::stockReply(HTTPReply::NOT_FOUND);
+        reply = HTTPPayload::statusPayload(HTTPPayload::NOT_FOUND);
         return;
     }
 
     // fill out the reply to be sent to the client
-    reply.status = HTTPReply::OK;
+    reply.status = HTTPPayload::OK;
     
     char buf[512];
     while (is.read(buf, sizeof(buf)).gcount() > 0)

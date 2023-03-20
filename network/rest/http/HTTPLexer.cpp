@@ -35,8 +35,8 @@
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "Defines.h"
-#include "network/rest/http/HTTPRequestLexer.h"
-#include "network/rest/http/HTTPRequest.h"
+#include "network/rest/http/HTTPLexer.h"
+#include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
 
 using namespace network::rest::http;
@@ -48,20 +48,27 @@ using namespace network::rest::http;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the HTTPRequestLexer class.
+/// Initializes a new instance of the HTTPLexer class.
 /// </summary>
-
-HTTPRequestLexer::HTTPRequestLexer() : 
+/// <param name="clientLexer"></param>
+HTTPLexer::HTTPLexer(bool clientLexer) : 
     m_headers(),
+    m_clientLexer(clientLexer),
     m_state(METHOD_START)
 {
-    /* stub */
+    if (m_clientLexer) {
+        m_state = HTTP_VERSION_H;
+    }
 }
 
 /// <summary>Reset to initial parser state.</summary>
-void HTTPRequestLexer::reset()
+void HTTPLexer::reset()
 {
     m_state = METHOD_START;
+    if (m_clientLexer) {
+        m_state = HTTP_VERSION_H;
+    }
+
     m_headers = std::vector<LexedHeader>();
 }
 
@@ -75,7 +82,7 @@ void HTTPRequestLexer::reset()
 /// <param name="req"></param>
 /// <param name="input"></param>
 /// <returns></returns>
-HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char input)
+HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
 {
     switch (m_state)
     {
@@ -123,6 +130,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
 
     /*
     ** HTTP/1.0
+    ** HTTP/1.0 200 OK
     */
     case HTTP_VERSION_H:
         if (input == 'H') {
@@ -197,18 +205,85 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
             return BAD;
         }
     case HTTP_VERSION_MINOR:
-        if (input == '\r')
-        {
+        if (input == '\r') {
             m_state = EXPECTING_NEWLINE_1;
-            return INDETERMINATE;
+            if (m_clientLexer) {
+                return BAD;
+            }
+            else {
+                return INDETERMINATE;
+            }
         }
-        else if (isDigit(input))
-        {
+        else if (input == ' ') {
+            if (m_clientLexer) {
+                m_state = HTTP_STATUS_1;
+                return INDETERMINATE;
+            }
+            else {
+                return BAD;
+            }
+        }
+        else if (isDigit(input)) {
             req.httpVersionMinor = req.httpVersionMinor * 10 + input - '0';
             return INDETERMINATE;
         }
         else {
             return BAD;
+        }
+    case HTTP_STATUS_1:
+        if (isDigit(input)) {
+            m_state = HTTP_STATUS_2;
+            m_status = m_status * 10 + input - '0';
+            return INDETERMINATE;
+        }
+        else {
+            return BAD;
+        }
+    case HTTP_STATUS_2:
+        if (isDigit(input)) {
+            m_state = HTTP_STATUS_3;
+            m_status = m_status * 10 + input - '0';
+            return INDETERMINATE;
+        }
+        else {
+            return BAD;
+        }
+    case HTTP_STATUS_3:
+        if (isDigit(input)) {
+            m_state = HTTP_STATUS_END;
+            m_status = m_status * 10 + input - '0';
+            req.status = (HTTPPayload::StatusType)m_status;
+            return INDETERMINATE;
+        }
+        else {
+            return BAD;
+        }
+    case HTTP_STATUS_END:
+        if (input == ' ') {
+            m_state = HTTP_STATUS_MESSAGE;
+            return INDETERMINATE;
+        }
+        else {
+            return BAD;
+        }
+    case HTTP_STATUS_MESSAGE_START:
+        if (!isChar(input) || isControl(input) || isSpecial(input)) {
+            return BAD;
+        }
+        else {
+            m_state = HTTP_STATUS_MESSAGE;
+            return INDETERMINATE;
+        }
+    case HTTP_STATUS_MESSAGE:
+        if (input == '\r') {
+            m_state = EXPECTING_NEWLINE_1;
+            return INDETERMINATE;
+        }
+        else if (!isChar(input) || isControl(input) || isSpecial(input)) {
+            return BAD;
+        }
+        else {
+            return INDETERMINATE;
         }
 
     case EXPECTING_NEWLINE_1:
@@ -275,8 +350,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
         }
 
     case SPACE_BEFORE_HEADER_VALUE:
-        if (input == ' ')
-        {
+        if (input == ' ') {
             m_state = HEADER_VALUE;
             return INDETERMINATE;
         }
@@ -309,7 +383,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
     case EXPECTING_NEWLINE_3:
         if (input == '\n') {
             for (auto header : m_headers) {
-                //::LogDebug(LOG_REST, "HTTPRequestLexer::consume(), header = %s, value = %s", header.name.c_str(), header.value.c_str());
+                //::LogDebug(LOG_REST, "HTTPLexer::consume(), header = %s, value = %s", header.name.c_str(), header.value.c_str());
                 req.headers.add(header.name, header.value);
             }
 
@@ -328,7 +402,7 @@ HTTPRequestLexer::ResultType HTTPRequestLexer::consume(HTTPRequest& req, char in
 /// </summary>
 /// <param name="c"></param>
 /// <returns></returns>
-bool HTTPRequestLexer::isChar(int c)
+bool HTTPLexer::isChar(int c)
 {
     return c >= 0 && c <= 127;
 }
@@ -338,7 +412,7 @@ bool HTTPRequestLexer::isChar(int c)
 /// </summary>
 /// <param name="c"></param>
 /// <returns></returns>
-bool HTTPRequestLexer::isControl(int c)
+bool HTTPLexer::isControl(int c)
 {
     return (c >= 0 && c <= 31) || (c == 127);
 }
@@ -348,7 +422,7 @@ bool HTTPRequestLexer::isControl(int c)
 /// </summary>
 /// <param name="c"></param>
 /// <returns></returns>
-bool HTTPRequestLexer::isSpecial(int c)
+bool HTTPLexer::isSpecial(int c)
 {
     switch (c)
     {
@@ -367,7 +441,7 @@ bool HTTPRequestLexer::isSpecial(int c)
 /// </summary>
 /// <param name="c"></param>
 /// <returns></returns>
-bool HTTPRequestLexer::isDigit(int c)
+bool HTTPLexer::isDigit(int c)
 {
     return c >= '0' && c <= '9';
 }

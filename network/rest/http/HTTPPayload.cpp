@@ -35,7 +35,7 @@
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "Defines.h"
-#include "network/rest/http/HTTPReply.h"
+#include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
 
 using namespace network::rest::http;
@@ -60,41 +60,41 @@ namespace status_strings {
     const std::string bad_gateway = "HTTP/1.0 502 Bad Gateway\r\n";
     const std::string service_unavailable = "HTTP/1.0 503 Service Unavailable\r\n";
 
-    asio::const_buffer toBuffer(HTTPReply::StatusType status)
+    asio::const_buffer toBuffer(HTTPPayload::StatusType status)
     {
         switch (status)
         {
-        case HTTPReply::OK:
+        case HTTPPayload::OK:
             return asio::buffer(ok);
-        case HTTPReply::CREATED:
+        case HTTPPayload::CREATED:
             return asio::buffer(created);
-        case HTTPReply::ACCEPTED:
+        case HTTPPayload::ACCEPTED:
             return asio::buffer(accepted);
-        case HTTPReply::NO_CONTENT:
+        case HTTPPayload::NO_CONTENT:
             return asio::buffer(no_content);
-        case HTTPReply::MULTIPLE_CHOICES:
+        case HTTPPayload::MULTIPLE_CHOICES:
             return asio::buffer(multiple_choices);
-        case HTTPReply::MOVED_PERMANENTLY:
+        case HTTPPayload::MOVED_PERMANENTLY:
             return asio::buffer(moved_permanently);
-        case HTTPReply::MOVED_TEMPORARILY:
+        case HTTPPayload::MOVED_TEMPORARILY:
             return asio::buffer(moved_temporarily);
-        case HTTPReply::NOT_MODIFIED:
+        case HTTPPayload::NOT_MODIFIED:
             return asio::buffer(not_modified);
-        case HTTPReply::BAD_REQUEST:
+        case HTTPPayload::BAD_REQUEST:
             return asio::buffer(bad_request);
-        case HTTPReply::UNAUTHORIZED:
+        case HTTPPayload::UNAUTHORIZED:
             return asio::buffer(unauthorized);
-        case HTTPReply::FORBIDDEN:
+        case HTTPPayload::FORBIDDEN:
             return asio::buffer(forbidden);
-        case HTTPReply::NOT_FOUND:
+        case HTTPPayload::NOT_FOUND:
             return asio::buffer(not_found);
-        case HTTPReply::INTERNAL_SERVER_ERROR:
+        case HTTPPayload::INTERNAL_SERVER_ERROR:
             return asio::buffer(internal_server_error);
-        case HTTPReply::NOT_IMPLEMENTED:
+        case HTTPPayload::NOT_IMPLEMENTED:
             return asio::buffer(not_implemented);
-        case HTTPReply::BAD_GATEWAY:
+        case HTTPPayload::BAD_GATEWAY:
             return asio::buffer(bad_gateway);
-        case HTTPReply::SERVICE_UNAVAILABLE:
+        case HTTPPayload::SERVICE_UNAVAILABLE:
             return asio::buffer(service_unavailable);
         default:
             return asio::buffer(internal_server_error);
@@ -201,43 +201,43 @@ namespace stock_replies {
         "</html>";
     const char json_service_unavailable[] = "{status:503,message:\"service unavailable\"}";
 
-    std::string to_string(HTTPReply::StatusType status, std::string contentType)
+    std::string to_string(HTTPPayload::StatusType status, std::string contentType)
     {
         std::transform(contentType.begin(), contentType.end(), contentType.begin(), ::tolower);
         if (contentType == "application/json") {
             switch (status)
             {
-            case HTTPReply::OK:
+            case HTTPPayload::OK:
                 return json_ok;
-            case HTTPReply::CREATED:
+            case HTTPPayload::CREATED:
                 return json_created;
-            case HTTPReply::ACCEPTED:
+            case HTTPPayload::ACCEPTED:
                 return json_accepted;
-            case HTTPReply::NO_CONTENT:
+            case HTTPPayload::NO_CONTENT:
                 return json_no_content;
-            case HTTPReply::MULTIPLE_CHOICES:
+            case HTTPPayload::MULTIPLE_CHOICES:
                 return json_multiple_choices;
-            case HTTPReply::MOVED_PERMANENTLY:
+            case HTTPPayload::MOVED_PERMANENTLY:
                 return json_moved_permanently;
-            case HTTPReply::MOVED_TEMPORARILY:
+            case HTTPPayload::MOVED_TEMPORARILY:
                 return json_moved_temporarily;
-            case HTTPReply::NOT_MODIFIED:
+            case HTTPPayload::NOT_MODIFIED:
                 return json_not_modified;
-            case HTTPReply::BAD_REQUEST:
+            case HTTPPayload::BAD_REQUEST:
                 return json_bad_request;
-            case HTTPReply::UNAUTHORIZED:
+            case HTTPPayload::UNAUTHORIZED:
                 return json_unauthorized;
-            case HTTPReply::FORBIDDEN:
+            case HTTPPayload::FORBIDDEN:
                 return json_forbidden;
-            case HTTPReply::NOT_FOUND:
+            case HTTPPayload::NOT_FOUND:
                 return json_not_found;
-            case HTTPReply::INTERNAL_SERVER_ERROR:
+            case HTTPPayload::INTERNAL_SERVER_ERROR:
                 return json_internal_server_error;
-            case HTTPReply::NOT_IMPLEMENTED:
+            case HTTPPayload::NOT_IMPLEMENTED:
                 return json_not_implemented;
-            case HTTPReply::BAD_GATEWAY:
+            case HTTPPayload::BAD_GATEWAY:
                 return json_bad_gateway;
-            case HTTPReply::SERVICE_UNAVAILABLE:
+            case HTTPPayload::SERVICE_UNAVAILABLE:
                 return json_service_unavailable;
             default:
                 return json_internal_server_error;
@@ -246,37 +246,37 @@ namespace stock_replies {
         else {
             switch (status)
             {
-            case HTTPReply::OK:
+            case HTTPPayload::OK:
                 return ok;
-            case HTTPReply::CREATED:
+            case HTTPPayload::CREATED:
                 return created;
-            case HTTPReply::ACCEPTED:
+            case HTTPPayload::ACCEPTED:
                 return accepted;
-            case HTTPReply::NO_CONTENT:
+            case HTTPPayload::NO_CONTENT:
                 return no_content;
-            case HTTPReply::MULTIPLE_CHOICES:
+            case HTTPPayload::MULTIPLE_CHOICES:
                 return multiple_choices;
-            case HTTPReply::MOVED_PERMANENTLY:
+            case HTTPPayload::MOVED_PERMANENTLY:
                 return moved_permanently;
-            case HTTPReply::MOVED_TEMPORARILY:
+            case HTTPPayload::MOVED_TEMPORARILY:
                 return moved_temporarily;
-            case HTTPReply::NOT_MODIFIED:
+            case HTTPPayload::NOT_MODIFIED:
                 return not_modified;
-            case HTTPReply::BAD_REQUEST:
+            case HTTPPayload::BAD_REQUEST:
                 return bad_request;
-            case HTTPReply::UNAUTHORIZED:
+            case HTTPPayload::UNAUTHORIZED:
                 return unauthorized;
-            case HTTPReply::FORBIDDEN:
+            case HTTPPayload::FORBIDDEN:
                 return forbidden;
-            case HTTPReply::NOT_FOUND:
+            case HTTPPayload::NOT_FOUND:
                 return not_found;
-            case HTTPReply::INTERNAL_SERVER_ERROR:
+            case HTTPPayload::INTERNAL_SERVER_ERROR:
                 return internal_server_error;
-            case HTTPReply::NOT_IMPLEMENTED:
+            case HTTPPayload::NOT_IMPLEMENTED:
                 return not_implemented;
-            case HTTPReply::BAD_GATEWAY:
+            case HTTPPayload::BAD_GATEWAY:
                 return bad_gateway;
-            case HTTPReply::SERVICE_UNAVAILABLE:
+            case HTTPPayload::SERVICE_UNAVAILABLE:
                 return service_unavailable;
             default:
                 return internal_server_error;
@@ -294,14 +294,23 @@ namespace stock_replies {
 /// underlying memory blocks, therefore the reply object must remain valid and
 /// not be changed until the write operation has completed.
 /// </summary>
-std::vector<asio::const_buffer> HTTPReply::toBuffers()
+std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 {
     std::vector<asio::const_buffer> buffers;
-    buffers.push_back(status_strings::toBuffer(status));
+    if (isClientPayload) {
+        std::stringstream ss;
+        ss << ::strtoupper(method) << " " << uri << " " << HTTP_DEFAULT_VERSION;
+        std::string request = ss.str();
+
+        buffers.push_back(asio::buffer(request));
+    }
+    else {
+        buffers.push_back(status_strings::toBuffer(status));
+    }
 
     for (std::size_t i = 0; i < headers.size(); ++i) {
         HTTPHeaders::Header& h = headers.m_headers[i];
-        //::LogDebug(LOG_REST, "HTTPReply::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
+        //::LogDebug(LOG_REST, "HTTPPayload::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
 
         buffers.push_back(asio::buffer(h.name));
         buffers.push_back(asio::buffer(misc_strings::name_value_separator));
@@ -319,11 +328,11 @@ std::vector<asio::const_buffer> HTTPReply::toBuffers()
 /// </summary>
 /// <param name="obj"></param>
 /// <param name="s"></param>
-void HTTPReply::reply(json::object obj, HTTPReply::StatusType s)
+void HTTPPayload::payload(json::object obj, HTTPPayload::StatusType s)
 {
     json::value v = json::value(obj);
     std::string json = v.serialize();
-    reply(json, s, "application/json");
+    payload(json, s, "application/json");
 }
 
 /// <summary>
@@ -332,7 +341,7 @@ void HTTPReply::reply(json::object obj, HTTPReply::StatusType s)
 /// <param name="c"></param>
 /// <param name="s"></param>
 /// <param name="contentType"></param>
-void HTTPReply::reply(std::string c, HTTPReply::StatusType s, std::string contentType)
+void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, std::string contentType)
 {
     content = c;
     status = s;
@@ -344,16 +353,34 @@ void HTTPReply::reply(std::string c, HTTPReply::StatusType s, std::string conten
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Get a stock reply.
+/// Get a status payload.
+/// </summary>
+/// <param name="method"></param>
+/// <param name="uri"></param>
+/// <param name="contentType"></param>
+HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri, std::string contentType)
+{
+    HTTPPayload rep;
+    rep.isClientPayload = true;
+    rep.method = ::strtoupper(method);
+    rep.uri = uri;
+    rep.ensureDefaultHeaders(contentType);
+    
+    return rep;
+}
+
+/// <summary>
+/// Get a status payload.
 /// </summary>
 /// <param name="status"></param>
 /// <param name="contentType"></param>
-HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const std::string contentType)
+HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std::string contentType)
 {
-    HTTPReply rep;
+    HTTPPayload rep;
+    rep.isClientPayload = false;
     rep.status = status;
 
-    if (status != HTTPReply::NO_CONTENT) {
+    if (status != HTTPPayload::NO_CONTENT) {
         rep.content = stock_replies::to_string(status, contentType);
         rep.ensureDefaultHeaders(contentType);
     }
@@ -369,12 +396,22 @@ HTTPReply HTTPReply::stockReply(HTTPReply::StatusType status, const std::string 
 ///
 /// </summary>
 /// <param name="contentType"></param>
-void HTTPReply::ensureDefaultHeaders(std::string contentType)
+void HTTPPayload::ensureDefaultHeaders(std::string contentType)
 {
-    headers.add("Content-Type", contentType);
-    headers.add("Content-Length", std::to_string(content.size()));
-    headers.add("Server", std::string((__EXE_NAME__ "/" __VER__)));
+    if (!isClientPayload) {
+        headers.add("Content-Type", contentType);
+        headers.add("Content-Length", std::to_string(content.size()));
+        headers.add("Server", std::string((__EXE_NAME__ "/" __VER__)));
+    }
+    else {
+        headers.add("User-Agent", std::string((__EXE_NAME__ "/" __VER__)));
+        headers.add("Accept", "*/*");
+        if (::strtoupper(method) != HTTP_GET) {
+            headers.add("Content-Type", contentType);
+            headers.add("Content-Length", std::to_string(content.size()));
+        }
+    }
 
     //for (auto header : headers.headers())
-    //    ::LogDebug(LOG_REST, "HTTPReply::ensureDefaultHeaders() header = %s, value = %s", header.name.c_str(), header.value.c_str());
+    //    ::LogDebug(LOG_REST, "HTTPPayload::ensureDefaultHeaders() header = %s, value = %s", header.name.c_str(), header.value.c_str());
 }

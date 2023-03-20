@@ -41,8 +41,6 @@
 #include "network/rest/http/Connection.h"
 #include "network/rest/http/ConnectionManager.h"
 #include "network/rest/http/HTTPRequestHandler.h"
-#include "network/rest/http/HTTPReply.h"
-#include "network/rest/http/HTTPRequest.h"
 
 #include <asio.hpp>
 

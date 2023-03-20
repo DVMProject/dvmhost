@@ -118,6 +118,11 @@ file(GLOB dvmhost_SRC
 file(GLOB dvmcmd_SRC
     "network/UDPSocket.h"
     "network/UDPSocket.cpp"
+    "network/json/*.h"
+    "network/rest/*.h"
+    "network/rest/*.cpp"
+    "network/rest/http/*.h"
+    "network/rest/http/*.cpp"
     "remote/*.h"
     "remote/*.cpp"
     "edac/SHA256.h"
