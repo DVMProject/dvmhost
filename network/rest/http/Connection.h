@@ -59,7 +59,7 @@ namespace network
             // ---------------------------------------------------------------------------
 
             template<class> class ConnectionManager;
-        
+
             // ---------------------------------------------------------------------------
             //  Class Declaration
             //      This class represents a single connection from a client.
@@ -94,6 +94,13 @@ namespace network
                 void start() { read(); }
                 /// <summary>Stop all asynchronous operations associated with the connection.</summary>
                 void stop() { m_socket.close(); }
+
+                /// <summary>Perform an asynchronous write operation.</summary>
+                void send(HTTPPayload request) 
+                {
+                    request.attachHostHeader(m_socket.local_endpoint());
+                    write(request); 
+                }
             private:
                 /// <summary>Perform an asynchronous read operation.</summary>
                 void read()
@@ -116,7 +123,15 @@ namespace network
                             }
 
                             if (m_client) {
-                                m_requestHandler.handleRequest(m_request, m_reply);
+                                if (result == HTTPLexer::GOOD) {
+                                    m_requestHandler.handleRequest(m_request, m_reply);
+                                }
+                                else if (result == HTTPLexer::BAD) {
+                                    return;
+                                }
+                                else {
+                                    read();
+                                }
                             }
                             else {
                                 if (result == HTTPLexer::GOOD) {
@@ -165,8 +180,7 @@ namespace network
                             m_request = HTTPPayload();
                             read();
                         }
-                        else
-                        {
+                        else {
                             if (!ec) {
                                 // initiate graceful connection closure
                                 asio::error_code ignored_ec;
@@ -179,7 +193,30 @@ namespace network
                         }
                     });
                 }
-        
+
+                /// <summary>Perform an asynchronous write operation.</summary>
+                void write(HTTPPayload request)
+                {
+                    if (!m_client) {
+                        return;
+                    }
+
+                    asio::async_write(m_socket, request.toBuffers(), [=](asio::error_code ec, std::size_t) {
+                        if (ec) {                            
+                            // initiate graceful connection closure
+                            asio::error_code ignored_ec;
+                            m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                        }
+
+                        if (ec.value() == 0) {
+                            return;
+                        }
+                        else if (ec != asio::error::operation_aborted) {
+                            m_socket.close();
+                        }
+                    });
+                }
+
                 asio::ip::tcp::socket m_socket;
 
                 ConnectionManagerType& m_connectionManager;

@@ -63,8 +63,6 @@ namespace network
             #define HTTP_DELETE "DELETE"
             #define HTTP_OPTIONS "OPTIONS"
 
-            #define HTTP_DEFAULT_VERSION "HTTP/1.0"
-
             // ---------------------------------------------------------------------------
             //  Structure Declaration
             //      This struct implements a model of a payload to be sent to a 
@@ -114,16 +112,18 @@ namespace network
                 /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
                 void payload(json::object obj, StatusType status = OK);
                 /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
-                void payload(std::string content, StatusType status = OK, std::string contentType = "text/html");
+                void payload(std::string content, StatusType status = OK, const std::string contentType = "text/html");
 
                 /// <summary>Get a request payload.</summary>
-                static HTTPPayload requestPayload(std::string method, std::string uri, std::string contentType = "text/html");
+                static HTTPPayload requestPayload(std::string method, std::string uri, const std::string contentType = "text/html");
                 /// <summary>Get a status payload.</summary>
-                static HTTPPayload statusPayload(StatusType status, std::string contentType = "text/html");
+                static HTTPPayload statusPayload(StatusType status, const std::string contentType = "text/html");
 
+                /// <summary></summary>
+                void attachHostHeader(const asio::ip::tcp::endpoint localEndpoint);
             private:
                 /// <summary></summary>
-                void ensureDefaultHeaders(std::string contentType = "text/html");
+                void ensureDefaultHeaders(const std::string& contentType = "text/html");
             };
         } // namespace http
     } // namespace rest

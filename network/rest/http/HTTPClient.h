@@ -93,7 +93,9 @@ namespace network
                     asio::post(m_ioContext, [this, request]() {
                         std::lock_guard<std::mutex> guard(m_lock);
                         {
-                            write(request);
+                            if (m_connection != nullptr) {
+                                m_connection->send(request);
+                            }
                         }
                     });
                 }
@@ -131,28 +133,9 @@ namespace network
                 /// <summary>Perform an asynchronous connect operation.</summary>
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
-                    asio::async_connect(m_socket, endpoints, [this](asio::error_code ec, asio::ip::tcp::endpoint) {
-                        if (!ec) {
-                            m_connection = std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, true);
-                            m_connection->start();
-                        }
-                    });
-                }
-
-                /// <summary>Perform an asynchronous write operation.</summary>
-                void write(HTTPPayload request)
-                {
-                    asio::async_write(m_socket, request.toBuffers(), [=](asio::error_code ec, std::size_t) {
-                        if (!ec) {
-                            // initiate graceful connection closure
-                            asio::error_code ignored_ec;
-                            m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
-                        }
-                
-                        if (ec != asio::error::operation_aborted) {
-                            m_socket.close();
-                        }
-                    });
+                    asio::connect(m_socket, endpoints);
+                    m_connection = std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, true);
+                    m_connection->start();
                 }
 
                 std::string m_address;

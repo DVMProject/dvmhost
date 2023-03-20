@@ -185,6 +185,27 @@ namespace network
             bool m_debug;
         };
 
+        // ---------------------------------------------------------------------------
+        //  Class Declaration
+        //      This class implements a generic debug request dispatcher.
+        // ---------------------------------------------------------------------------
+
+        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
+        class DebugRequestDispatcher {
+        public:
+            /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>
+            DebugRequestDispatcher() { /* stub */ }
+
+            /// <summary></summary>
+            void handleRequest(const Request& request, Reply& reply) 
+            {
+                for (auto header : request.headers.headers())
+                    ::LogDebug(LOG_REST, "DebugRequestDispatcher::handleRequest() header = %s, value = %s", header.name.c_str(), header.value.c_str());
+
+                ::LogDebug(LOG_REST, "DebugRequestDispatcher::handleRequest() content = %s", request.content.c_str());
+            }
+        };
+
         typedef RequestDispatcher<http::HTTPPayload, http::HTTPPayload> DefaultRequestDispatcher;        
     } // namespace rest
 } // namespace network

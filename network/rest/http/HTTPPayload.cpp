@@ -37,6 +37,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
+#include "Utils.h"
 
 using namespace network::rest::http;
 
@@ -104,7 +105,10 @@ namespace status_strings {
 
 namespace misc_strings {
     const char name_value_separator[] = { ':', ' ' };
+    const char request_method_separator[] = { ' ' };
     const char crlf[] = { '\r', '\n' };
+
+    const char http_default_version[] = { 'H', 'T', 'T', 'P', '/', '1', '.', '0' };
 } // namespace misc_strings
 
 namespace stock_replies {
@@ -298,11 +302,20 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 {
     std::vector<asio::const_buffer> buffers;
     if (isClientPayload) {
-        std::stringstream ss;
-        ss << ::strtoupper(method) << " " << uri << " " << HTTP_DEFAULT_VERSION;
-        std::string request = ss.str();
+        // copy method and erase zero terminator
+        method.erase(std::find(method.begin(), method.end(), '\0'), method.end());
 
-        buffers.push_back(asio::buffer(request));
+        // copy URI and erase zero terminator
+        uri.erase(std::find(uri.begin(), uri.end(), '\0'), uri.end());
+#if DEBUG_HTTP_PAYLOAD
+        ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() method = %s, uri = %s", method.c_str(), uri.c_str());
+#endif
+        buffers.push_back(asio::buffer(method));
+        buffers.push_back(asio::buffer(misc_strings::request_method_separator));
+        buffers.push_back(asio::buffer(uri));
+        buffers.push_back(asio::buffer(misc_strings::request_method_separator));
+        buffers.push_back(asio::buffer(misc_strings::http_default_version));
+        buffers.push_back(asio::buffer(misc_strings::crlf));
     }
     else {
         buffers.push_back(status_strings::toBuffer(status));
@@ -310,7 +323,9 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 
     for (std::size_t i = 0; i < headers.size(); ++i) {
         HTTPHeaders::Header& h = headers.m_headers[i];
-        //::LogDebug(LOG_REST, "HTTPPayload::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
+#if DEBUG_HTTP_PAYLOAD
+        ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() header = %s, value = %s", h.name.c_str(), h.value.c_str());
+#endif
 
         buffers.push_back(asio::buffer(h.name));
         buffers.push_back(asio::buffer(misc_strings::name_value_separator));
@@ -319,7 +334,15 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
     }
 
     buffers.push_back(asio::buffer(misc_strings::crlf));
-    buffers.push_back(asio::buffer(content));
+    if (content.size() > 0)
+        buffers.push_back(asio::buffer(content));
+
+#if DEBUG_HTTP_PAYLOAD
+    ::LogDebug(LOG_REST, "HTTPPayload::toBuffers() content = %s", content.c_str());
+    for (auto buffer : buffers)
+        Utils::dump("buffer[]", (uint8_t*)buffer.data(), buffer.size());
+#endif
+
     return buffers;
 }
 
@@ -341,7 +364,7 @@ void HTTPPayload::payload(json::object obj, HTTPPayload::StatusType s)
 /// <param name="c"></param>
 /// <param name="s"></param>
 /// <param name="contentType"></param>
-void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, std::string contentType)
+void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, const std::string contentType)
 {
     content = c;
     status = s;
@@ -358,14 +381,14 @@ void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, std::string 
 /// <param name="method"></param>
 /// <param name="uri"></param>
 /// <param name="contentType"></param>
-HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri, std::string contentType)
+HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri, const std::string contentType)
 {
     HTTPPayload rep;
     rep.isClientPayload = true;
     rep.method = ::strtoupper(method);
-    rep.uri = uri;
+    rep.uri = std::string(uri);
     rep.ensureDefaultHeaders(contentType);
-    
+
     return rep;
 }
 
@@ -388,6 +411,16 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
     return rep;
 }
 
+
+/// <summary>
+///
+/// </summary>
+/// <param name="localEndpoint"></param>
+void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint localEndpoint)
+{
+    headers.add("Host", std::string(localEndpoint.address().to_string() + ":" + std::to_string(localEndpoint.port())));
+}
+
 // ---------------------------------------------------------------------------
 //  Private Members
 // ---------------------------------------------------------------------------
@@ -396,7 +429,7 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
 ///
 /// </summary>
 /// <param name="contentType"></param>
-void HTTPPayload::ensureDefaultHeaders(std::string contentType)
+void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
 {
     if (!isClientPayload) {
         headers.add("Content-Type", contentType);

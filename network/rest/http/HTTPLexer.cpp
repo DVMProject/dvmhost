@@ -279,6 +279,10 @@ HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
             m_state = EXPECTING_NEWLINE_1;
             return INDETERMINATE;
         }
+        else if (input == ' ') {
+            m_state = HTTP_STATUS_MESSAGE;
+            return INDETERMINATE;
+        }
         else if (!isChar(input) || isControl(input) || isSpecial(input)) {
             return BAD;
         }
