@@ -108,7 +108,7 @@ namespace network
                 void close()
                 {
                     if (m_connection != nullptr) {
-                        m_connection.stop();
+                        m_connection->stop();
                     }
 
                     wait();
@@ -140,7 +140,7 @@ namespace network
                 }
 
                 /// <summary>Perform an asynchronous write operation.</summary>
-                void write(HTTPPayload& request)
+                void write(HTTPPayload request)
                 {
                     asio::async_write(m_socket, request.toBuffers(), [=](asio::error_code ec, std::size_t) {
                         if (!ec) {
