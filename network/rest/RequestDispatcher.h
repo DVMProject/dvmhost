@@ -191,6 +191,33 @@ namespace network
         // ---------------------------------------------------------------------------
 
         template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
+        class BasicRequestDispatcher {
+        public:
+            typedef std::function<void(const Request&, Reply&)> RequestHandlerType;
+
+            /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>
+            BasicRequestDispatcher() { /* stub */ }
+            /// <summary>Initializes a new instance of the BasicRequestDispatcher class.</summary>
+            BasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
+
+            /// <summary></summary>
+            void handleRequest(const Request& request, Reply& reply) 
+            {
+                if (m_handler) {
+                    m_handler(request, reply);
+                }
+            }
+
+        private:
+            RequestHandlerType m_handler;
+        };
+
+        // ---------------------------------------------------------------------------
+        //  Class Declaration
+        //      This class implements a generic debug request dispatcher.
+        // ---------------------------------------------------------------------------
+
+        template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
         class DebugRequestDispatcher {
         public:
             /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>

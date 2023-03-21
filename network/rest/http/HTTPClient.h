@@ -103,12 +103,16 @@ namespace network
                 /// <summary>Opens connection to the network.</summary>
                 bool open()
                 {
+                    m_running = true;
                     return run();
                 }
 
                 /// <summary>Closes connection to the network.</summary>
                 void close()
                 {
+                    m_running = false;
+                    m_ioContext.stop();
+
                     if (m_connection != nullptr) {
                         m_connection->stop();
                     }
@@ -125,14 +129,24 @@ namespace network
 
                     connect(endpoints);
 
-                    // the entry() call will block until all asynchronous operations
-                    // have finished
-                    m_ioContext.run();
+                    while (m_running) {
+                        // the entry() call will block until all asynchronous operations
+                        // have finished
+                        m_ioContext.run();
+
+                        m_ioContext.restart();
+                        connect(endpoints);
+                    }
                 }
 
                 /// <summary>Perform an asynchronous connect operation.</summary>
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
+                    if (m_connection != nullptr) {
+                        m_connection->stop();
+                        m_socket = asio::ip::tcp::socket(m_ioContext);
+                    }
+
                     asio::connect(m_socket, endpoints);
                     m_connection = std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, true);
                     m_connection->start();
@@ -146,6 +160,7 @@ namespace network
 
                 ConnectionTypePtr m_connection;
 
+                bool m_running = false;
                 asio::io_context m_ioContext;
 
                 ConnectionManager<ConnectionTypePtr> m_connectionManager;

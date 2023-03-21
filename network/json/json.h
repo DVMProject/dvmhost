@@ -11,6 +11,7 @@
 // Licensed under the BSD-2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
 //
 /*
+ * Copyright (C) 2023 by Bryan Biedenkapp N2PLL
  * Copyright 2009-2010 Cybozu Labs, Inc.
  * Copyright 2011-2014 Kazuho Oku
  * All rights reserved.
@@ -135,6 +136,9 @@ namespace json
         null_type,
         boolean_type,
         number_type,
+#ifdef PICOJSON_USE_INT64
+        int64_type,
+#endif
         int32_type,
         uint32_type,
         uint16_type,
@@ -143,9 +147,6 @@ namespace json
         string_type,
         array_type,
         object_type
-#ifdef PICOJSON_USE_INT64
-        ,int64_type
-#endif
     };
 
     enum { INDENT_WIDTH = 2, DEFAULT_MAX_DEPTHS = 100 };
@@ -230,6 +231,7 @@ namespace json
         bool contains(const std::string &key) const;
 
         std::string to_str() const;
+        std::string to_type() const;
 
         template <typename Iter> void serialize(Iter os, bool prettify = false) const;
         std::string serialize(bool prettify = false) const;
@@ -400,19 +402,26 @@ namespace json
             return type_ == jtype##_type;                                           \
         }
 
+    #define IS_NUMBER(ctype, jtype)                                                 \
+        template <> inline bool value::is<ctype>() const {                          \
+            return type_ == jtype##_type || type_ == number_type;                   \
+        }
+
     IS(null, null)
     IS(bool, boolean)
 #ifdef PICOJSON_USE_INT64
     IS(int64_t, int64)
 #endif
-    IS(int, int32)
-    IS(uint32_t, uint32)
-    IS(uint16_t, uint16)
-    IS(uint8_t, uint8)
+    IS_NUMBER(int, int32)
+    IS_NUMBER(uint32_t, uint32)
+    IS_NUMBER(uint16_t, uint16)
+    IS_NUMBER(uint8_t, uint8)
+    IS_NUMBER(float, float)
     IS(std::string, string)
     IS(array, array)
     IS(object, object)
     #undef IS
+    #undef IS_NUMBER
 
     template <> inline bool value::is<double>() const {
         return type_ == number_type
@@ -444,11 +453,21 @@ namespace json
 #else
     GET(double, u_.number_)
 #endif
-    GET(int, u_.int32_)
-    GET(uint32_t, u_.uint32_)
-    GET(uint16_t, u_.uint16_)
-    GET(uint8_t, u_.uint8_)
-    GET(float, u_.float_)
+    GET(int,
+        (type_ == number_type && (const_cast<value *>(this)->type_ = int32_type, (const_cast<value *>(this)->u_.int32_ = u_.number_)),
+            u_.int32_))
+    GET(uint32_t, 
+        (type_ == number_type && (const_cast<value *>(this)->type_ = uint32_type, (const_cast<value *>(this)->u_.uint32_ = u_.number_)),
+            u_.uint32_))
+    GET(uint16_t, 
+        (type_ == number_type && (const_cast<value *>(this)->type_ = uint16_type, (const_cast<value *>(this)->u_.uint16_ = u_.number_)),
+            u_.uint16_))
+    GET(uint8_t,
+        (type_ == number_type && (const_cast<value *>(this)->type_ = uint8_type, (const_cast<value *>(this)->u_.uint8_ = u_.number_)),
+            u_.uint8_))
+    GET(float,
+        (type_ == number_type && (const_cast<value *>(this)->type_ = float_type, (const_cast<value *>(this)->u_.float_ = u_.number_)),
+            u_.float_))
     #undef GET
 
     #define SET(ctype, jtype, setter)                                               \
@@ -611,6 +630,44 @@ namespace json
             }
             case string_type:
                 return *u_.string_;
+            case array_type:
+                return "array";
+            case object_type:
+                return "object";
+            default:
+                PICOJSON_ASSERT(0);
+#ifdef _MSC_VER
+                __assume(0);
+#endif
+        }
+
+        return std::string();
+    }
+
+    inline std::string value::to_type() const {
+        switch (type_) {
+            case null_type:
+                return "null";
+            case boolean_type:
+                return "boolean";
+#ifdef PICOJSON_USE_INT64
+            case int64_type:
+                return "int64";
+#endif
+            case number_type:
+                return "number";
+            case int32_type:
+                return "int32";
+            case uint32_type:
+                return "uint32";
+            case uint16_type:
+                return "uint16";
+            case uint8_type:
+                return "uint8";
+            case float_type:
+                return "float";
+            case string_type:
+                return "string";
             case array_type:
                 return "array";
             case object_type:

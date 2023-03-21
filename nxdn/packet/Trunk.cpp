@@ -36,7 +36,7 @@
 #include "nxdn/Sync.h"
 #include "nxdn/NXDNUtils.h"
 #include "edac/CRC.h"
-#include "remote/RemoteCommand.h"
+#include "remote/RESTClient.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
@@ -514,11 +514,13 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
         ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {
-            std::stringstream ss;
-            ss << "permit-tg " << modem::DVM_STATE::STATE_NXDN << " " << dstId;
+            json::object req = json::object();
+            int state = modem::DVM_STATE::STATE_NXDN;
+            req["state"].set<int>(state);
+            req["dstId"].set<uint32_t>(dstId);
 
-            RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
-                ss.str(), m_nxdn->m_debug);
+            RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                HTTP_PUT, PUT_PERMIT_TG, req, m_nxdn->m_debug);
         }
     }
 

@@ -110,17 +110,17 @@ namespace network
                 std::vector<asio::const_buffer> toBuffers();
 
                 /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
-                void payload(json::object obj, StatusType status = OK);
+                void payload(json::object& obj, StatusType status = OK);
                 /// <summary>Prepares payload for transmission by finalizing status and content type.</summary>
-                void payload(std::string content, StatusType status = OK, const std::string contentType = "text/html");
+                void payload(std::string& content, StatusType status = OK, const std::string& contentType = "text/html");
 
                 /// <summary>Get a request payload.</summary>
-                static HTTPPayload requestPayload(std::string method, std::string uri, const std::string contentType = "text/html");
+                static HTTPPayload requestPayload(std::string method, std::string uri);
                 /// <summary>Get a status payload.</summary>
-                static HTTPPayload statusPayload(StatusType status, const std::string contentType = "text/html");
+                static HTTPPayload statusPayload(StatusType status, const std::string& contentType = "text/html");
 
                 /// <summary></summary>
-                void attachHostHeader(const asio::ip::tcp::endpoint localEndpoint);
+                void attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint);
             private:
                 /// <summary></summary>
                 void ensureDefaultHeaders(const std::string& contentType = "text/html");

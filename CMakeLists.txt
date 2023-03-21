@@ -106,8 +106,8 @@ file(GLOB dvmhost_SRC
     "network/rest/*.cpp"
     "network/rest/http/*.h"
     "network/rest/http/*.cpp"
-    "remote/RemoteCommand.cpp"
-    "remote/RemoteCommand.h"
+    "remote/RESTClient.cpp"
+    "remote/RESTClient.h"
     "yaml/*.h"
     "yaml/*.cpp"
     "*.h"
@@ -118,6 +118,7 @@ file(GLOB dvmhost_SRC
 file(GLOB dvmcmd_SRC
     "network/UDPSocket.h"
     "network/UDPSocket.cpp"
+    "network/RESTDefines.h"
     "network/json/*.h"
     "network/rest/*.h"
     "network/rest/*.cpp"

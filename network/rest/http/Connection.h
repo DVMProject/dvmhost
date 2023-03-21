@@ -40,6 +40,7 @@
 #include "Defines.h" 
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
+#include "Utils.h"
 
 #include <array>
 #include <memory>
@@ -93,12 +94,21 @@ namespace network
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
                 /// <summary>Stop all asynchronous operations associated with the connection.</summary>
-                void stop() { m_socket.close(); }
+                void stop() 
+                {
+                    try
+                    {
+                        if (m_socket.is_open()) {
+                            m_socket.close(); 
+                        }
+                    }
+                    catch(const std::exception&) { /* ignore */ }
+                }
 
-                /// <summary>Perform an asynchronous write operation.</summary>
+                /// <summary>Perform an synchronous write operation.</summary>
                 void send(HTTPPayload request) 
                 {
-                    request.attachHostHeader(m_socket.local_endpoint());
+                    request.attachHostHeader(m_socket.remote_endpoint());
                     write(request); 
                 }
             private:
@@ -149,7 +159,9 @@ namespace network
                         }
                         else if (ec != asio::error::operation_aborted) {
                             if (m_client) {
-                                m_socket.close();
+                                if (m_socket.is_open()) {
+                                    m_socket.close();
+                                }
                             }
                             else {
                                 m_connectionManager.stop(this->shared_from_this());
@@ -171,7 +183,8 @@ namespace network
                         m_reply.headers.add("Connection", "keep-alive");
                     }
 
-                    asio::async_write(m_socket, m_reply.toBuffers(), [=](asio::error_code ec, std::size_t) {
+                    auto buffers = m_reply.toBuffers();
+                    asio::async_write(m_socket, buffers, [=](asio::error_code ec, std::size_t) {
                         if (m_persistent) {
                             m_lexer.reset();
                             m_reply.headers = HTTPHeaders();
@@ -194,27 +207,23 @@ namespace network
                     });
                 }
 
-                /// <summary>Perform an asynchronous write operation.</summary>
+                /// <summary>Perform an synchronous write operation.</summary>
                 void write(HTTPPayload request)
                 {
-                    if (!m_client) {
-                        return;
+                    try
+                    {
+                        auto buffers = request.toBuffers();
+                        asio::write(m_socket, buffers);
                     }
-
-                    asio::async_write(m_socket, request.toBuffers(), [=](asio::error_code ec, std::size_t) {
-                        if (ec) {                            
+                    catch(const asio::system_error& e)
+                    {
+                        asio::error_code ec = e.code();
+                        if (ec) {
                             // initiate graceful connection closure
                             asio::error_code ignored_ec;
                             m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
                         }
-
-                        if (ec.value() == 0) {
-                            return;
-                        }
-                        else if (ec != asio::error::operation_aborted) {
-                            m_socket.close();
-                        }
-                    });
+                    }
                 }
 
                 asio::ip::tcp::socket m_socket;

@@ -41,9 +41,17 @@
 #include <string>
 #include <functional>
 
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
 #define MODEM_VERSION_STR "%.*s, Modem protocol: %u"
 #define MODEM_UNSUPPORTED_STR "Modem protocol: %u, unsupported! Stopping."
 #define NULL_MODEM "null"
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
 
 #define MODEM_OC_PORT_HANDLER bool(modem::Modem* modem)
 #define MODEM_OC_PORT_HANDLER_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1)

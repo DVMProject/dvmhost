@@ -28,6 +28,7 @@
 
 #include "Defines.h"
 #include "network/UDPSocket.h"
+#include "network/RESTDefines.h"
 #include "network/rest/RequestDispatcher.h"
 #include "network/rest/http/HTTPServer.h"
 #include "lookups/RadioIdLookup.h"
@@ -37,53 +38,6 @@
 #include <vector>
 #include <string>
 #include <random>
-
-// ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-#define DVM_REST_RAND_MAX 0xfffffffffffffffe
-
-#define PUT_AUTHENTICATE                "/auth"
-
-#define GET_VERSION                     "/version"
-#define GET_STATUS                      "/status"
-#define GET_VOICE_CH                    "/voice-ch"
-
-#define PUT_MDM_MODE                    "/mdm/mode"
-#define MODE_OPT_IDLE                   "idle"
-#define MODE_OPT_LCKOUT                 "lockout"
-#define MODE_OPT_FDMR                   "dmr"
-#define MODE_OPT_FP25                   "p25"
-#define MODE_OPT_FNXDN                  "nxdn"
-
-#define PUT_MDM_KILL                    "/mdm/kill"
-
-#define PUT_PERMIT_TG                   "/permit-tg"
-#define PUT_GRANT_TG                    "/grant-tg"
-#define GET_RELEASE_GRNTS               "/release-grants"
-#define GET_RELEASE_AFFS                "/release-affs"
-
-#define GET_RID_WHITELIST               "/rid-whitelist/(\\d+)"
-#define GET_RID_BLACKLIST               "/rid-blacklist/(\\d+)"
-
-#define GET_DMR_BEACON                  "/dmr/beacon"
-#define GET_DMR_DEBUG                   "/dmr/debug/(\\d+)/(\\d+)"
-#define GET_DMR_DUMP_CSBK               "/dmr/dump-csbk/(\\d+)" 
-#define PUT_DMR_RID                     "/dmr/rid"
-#define GET_DMR_CC_DEDICATED            "/dmr/cc-enable/(\\d+)"
-#define GET_DMR_CC_BCAST                "/dmr/cc-broadcast/(\\d+)"
-
-#define GET_P25_CC                      "/p25/cc"
-//#define GET_P25_CC_FALLBACK             "/p25/cc-fallback/(\\d+)"
-#define GET_P25_DEBUG                   "/p25/debug/(\\d+)/(\\d+)"
-#define GET_P25_DUMP_TSBK               "/p25/dump-tsbk/(\\d+)"
-#define PUT_P25_RID                     "/p25/rid"
-#define GET_P25_CC_DEDICATED            "/p25/cc-enable/(\\d+)"
-#define GET_P25_CC_BCAST                "/p25/cc-broadcast/(\\d+)"
-
-#define GET_NXDN_DEBUG                  "/nxdn/debug/(\\d+)/(\\d+)"
-#define GET_NXDN_DUMP_RCCH              "/nxdn/dump-rcch/(\\d+)"
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -220,10 +174,14 @@ private:
     ** Next Generation Digital Narrowband
     */
 
-    /// <summary></summary>
+     /// <summary></summary>
+    void restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+   /// <summary></summary>
     void restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

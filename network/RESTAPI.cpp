@@ -55,7 +55,7 @@ using namespace modem;
 #include <stdexcept>
 
 // ---------------------------------------------------------------------------
-//  Constants
+//  Macros
 // ---------------------------------------------------------------------------
 
 #define REST_API_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1,  std::placeholders::_2, std::placeholders::_3)
@@ -63,6 +63,20 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+
+template<typename ... FormatArgs>
+std::string string_format(const std::string& format, FormatArgs ... args)
+{
+    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // extra space for '\0'
+    if (size_s <= 0)
+        throw std::runtime_error("Error during string formatting.");
+
+    auto size = static_cast<size_t>(size_s);
+    std::unique_ptr<char[]> buf(new char[ size ]);
+    std::snprintf(buf.get(), size, format.c_str(), args ...);
+
+    return std::string(buf.get(), buf.get() + size - 1); 
+}
 
 /// <summary>
 /// 
@@ -275,8 +289,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_DMR_DEBUG, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRDebug, this));
     m_dispatcher.match(GET_DMR_DUMP_CSBK, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRDumpCSBK, this));
     m_dispatcher.match(PUT_DMR_RID).get(REST_API_BIND(RESTAPI::restAPI_PutDMRRID, this));
-    m_dispatcher.match(GET_DMR_CC_DEDICATED, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCEnable, this));
-    m_dispatcher.match(GET_DMR_CC_BCAST, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCBroadcast, this));
+    m_dispatcher.match(GET_DMR_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCEnable, this));
+    m_dispatcher.match(GET_DMR_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCBroadcast, this));
 
     /*
     ** Project 25
@@ -286,15 +300,17 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_P25_DEBUG, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25Debug, this));
     m_dispatcher.match(GET_P25_DUMP_TSBK, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25DumpTSBK, this));
     m_dispatcher.match(PUT_P25_RID).get(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
-    m_dispatcher.match(GET_P25_CC_DEDICATED, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCEnable, this));
-    m_dispatcher.match(GET_P25_CC_BCAST, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCBroadcast, this));
+    m_dispatcher.match(GET_P25_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCEnable, this));
+    m_dispatcher.match(GET_P25_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCBroadcast, this));
 
     /*
     ** Next Generation Digital Narrowband
     */
 
-    m_dispatcher.match(GET_NXDN_DEBUG, true).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDebug, this));
-    m_dispatcher.match(GET_NXDN_DUMP_RCCH, true).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDumpRCCH, this));
+    m_dispatcher.match(GET_NXDN_CC).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNCC, this));
+    m_dispatcher.match(GET_NXDN_DEBUG).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDebug, this));
+    m_dispatcher.match(GET_NXDN_DUMP_RCCH).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDumpRCCH, this));
+    m_dispatcher.match(GET_NXDN_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNCCEnable, this));
 }
 
 /// <summary>
@@ -725,16 +741,19 @@ void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& repl
 
     errorPayload(reply, "OK", HTTPPayload::OK);
 
+    // validate mode is a string within the JSON blob
     if (!req["force"].is<bool>()) {
+        errorPayload(reply, "force was not a valid value");
+        return;
+    }
+
+    bool force = req["force"].get<bool>();
+
+    if (!force) {
         g_killed = true;
     } else {
-        bool force = req["force"].get<bool>();
-        if (force) {
-            g_killed = true;
-            m_host->setState(HOST_STATE_QUIT);
-        } else {
-            g_killed = true;
-        }
+        g_killed = true;
+        m_host->setState(HOST_STATE_QUIT);
     }
 }
 
@@ -897,17 +916,12 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
     }
 
     // validate unit-to-unit is a integer within the JSON blob
-    if (!req["unitToUnit"].is<int>()) {
-        errorPayload(reply, "unit-to-unit was not a valid integer");
+    if (!req["unitToUnit"].is<bool>()) {
+        errorPayload(reply, "unit-to-unit was not a valid boolean");
         return;
     }
 
-    uint8_t unitToUnit = (uint8_t)req["unitToUnit"].get<int>();
-
-    if (unitToUnit > 1U) {
-        errorPayload(reply, "unit-to-unit must be a 0 or 1");
-        return;
-    }
+    //bool unitToUnit = req["unitToUnit"].get<bool>();
 
     switch (state) {
     case STATE_DMR:
@@ -928,7 +942,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
 
         if (m_dmr != nullptr) {
             // TODO TODO
-            //m_dmr->grantTG(dstId, slot, unitToUnit == 1U);
+            //m_dmr->grantTG(dstId, slot, unitToUnit);
         }
         else {
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -945,7 +959,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
     {
         if (m_p25 != nullptr) {
             // TODO TODO
-            //m_p25->grantTG(dstId, unitToUnit == 1U);
+            //m_p25->grantTG(dstId, unitToUnit);
         }
         else {
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -962,7 +976,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
     {
         if (m_nxdn != nullptr) {
             // TODO TODO
-            //nxdn->grantTG(dstId, unitToUnit == 1U);
+            //nxdn->grantTG(dstId, unitToUnit);
         }
         else {
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1247,13 +1261,33 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
     if (!validateAuth(request, reply)) {
         return;
     }
+#if defined(ENABLE_DMR)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_dmr != nullptr) {
+        if (m_host->m_dmrTSCCData) {
+            if (m_p25 != nullptr) {
+                errorPayload(reply, "Can't enable DMR control channel while P25 is enabled!");
+            }
 
-    if (match.size() < 2) {
-        errorPayload(reply, "invalid API call arguments");
+            if (m_nxdn != nullptr) {
+                errorPayload(reply, "Can't enable DMR control channel while NXDN is enabled!");
+                return;
+            }
+
+            m_host->m_dmrCtrlChannel = !m_host->m_dmrCtrlChannel;
+            errorPayload(reply, string_format("DMR CC is %s", m_host->m_p25CtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
+        }
+        else {
+            errorPayload(reply, "DMR control data is not enabled!");
+        }        
+    }
+    else {
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
+#else
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1267,13 +1301,19 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload&
     if (!validateAuth(request, reply)) {
         return;
     }
-
-    if (match.size() < 2) {
-        errorPayload(reply, "invalid API call arguments");
+#if defined(ENABLE_DMR)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_dmr != nullptr) {
+        m_host->m_dmrTSCCData = !m_host->m_dmrTSCCData;
+        errorPayload(reply, string_format("DMR CC broadcast is %s", m_host->m_dmrTSCCData ? "enabled" : "disabled"), HTTPPayload::OK);
+    }
+    else {
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
+#else
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_DMR)
 }
 
 /*
@@ -1428,13 +1468,38 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& re
     if (!validateAuth(request, reply)) {
         return;
     }
+#if defined(ENABLE_P25)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_p25 != nullptr) {
+        if (m_host->m_p25CCData) {
+            if (m_dmr != nullptr) {
+                errorPayload(reply, "Can't enable P25 control channel while DMR is enabled!");
+                return;
+            }
 
-    if (match.size() < 2) {
-        errorPayload(reply, "invalid API call arguments");
+            if (m_nxdn != nullptr) {
+                errorPayload(reply, "Can't enable P25 control channel while NXDN is enabled!");
+                return;
+            }
+
+            m_host->m_p25CtrlChannel = !m_host->m_p25CtrlChannel;
+            m_host->m_p25CtrlBroadcast = true;
+            g_fireP25Control = true;
+            m_p25->setCCHalted(false);        
+
+            errorPayload(reply, string_format("P25 CC is %s", m_host->m_p25CtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
+        }
+        else {
+            errorPayload(reply, "P25 control data is not enabled!");
+        }        
+    }
+    else {
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
+#else
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -1448,18 +1513,71 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
     if (!validateAuth(request, reply)) {
         return;
     }
+#if defined(ENABLE_P25)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_p25 != nullptr) {
+        if (m_host->m_p25CCData) {
+            m_host->m_p25CtrlBroadcast = !m_host->m_p25CtrlBroadcast;
 
-    if (match.size() < 2) {
-        errorPayload(reply, "invalid API call arguments");
+            if (!m_host->m_p25CtrlBroadcast) {
+                g_fireP25Control = false;
+                m_p25->setCCHalted(true);
+            }
+            else {
+                g_fireP25Control = true;
+                m_p25->setCCHalted(false);
+            }
+
+            errorPayload(reply, string_format("P25 CC broadcast is %s", m_host->m_p25CtrlBroadcast ? "enabled" : "disabled"), HTTPPayload::OK);
+        }
+        else {
+            errorPayload(reply, "P25 control data is not enabled!");
+        }        
+    }
+    else {
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
+#else
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_P25)
 }
 
 /*
 ** Next Generation Digital Narrowband
 */
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+#if defined(ENABLE_NXDN)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_nxdn != nullptr) {
+        if (m_host->m_nxdnCCData) {
+            g_fireNXDNControl = true;
+        }
+        else {
+            errorPayload(reply, "NXDN control data is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+            return;
+        }
+    }
+    else {
+        errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+#else
+    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_NXDN)
+}
 
 /// <summary>
 ///
@@ -1536,6 +1654,51 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
                 m_nxdn->setRCCHVerbose((enable == 1U) ? true : false);
             }
         }
+    }
+    else {
+        errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+#else
+    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_NXDN)
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+#if defined(ENABLE_NXDN)
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (m_nxdn != nullptr) {
+        if (m_host->m_nxdnCCData) {
+            if (m_dmr != nullptr) {
+                errorPayload(reply, "Can't enable NXDN control channel while DMR is enabled!");
+                return;
+            }
+
+            if (m_p25 != nullptr) {
+                errorPayload(reply, "Can't enable NXDN control channel while P25 is enabled!");
+                return;
+            }
+
+            m_host->m_nxdnCtrlChannel = !m_host->m_nxdnCtrlChannel;
+            m_host->m_nxdnCtrlBroadcast = true;
+            g_fireNXDNControl = true;
+            m_nxdn->setCCHalted(false);
+
+            errorPayload(reply, string_format("NXDN CC is %s", m_host->m_nxdnCtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
+        }
+        else {
+            errorPayload(reply, "NXDN control data is not enabled!");
+        }        
     }
     else {
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);

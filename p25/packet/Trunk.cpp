@@ -35,7 +35,7 @@
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
-#include "remote/RemoteCommand.h"
+#include "remote/RESTClient.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -2223,11 +2223,13 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
-                    std::stringstream ss;
-                    ss << "permit-tg " << modem::DVM_STATE::STATE_P25 << " " << dstId;
+                    json::object req = json::object();
+                    int state = modem::DVM_STATE::STATE_P25;
+                    req["state"].set<int>(state);
+                    req["dstId"].set<uint32_t>(dstId);
 
-                    RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
-                        ss.str(), m_p25->m_debug);
+                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                        HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
                 }
             }
 
@@ -2258,11 +2260,13 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
-                    std::stringstream ss;
-                    ss << "permit-tg " << modem::DVM_STATE::STATE_P25 << " " << dstId;
+                    json::object req = json::object();
+                    int state = modem::DVM_STATE::STATE_P25;
+                    req["state"].set<int>(state);
+                    req["dstId"].set<uint32_t>(dstId);
 
-                    RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
-                        ss.str(), m_p25->m_debug);
+                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                        HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
                 }
             }
 

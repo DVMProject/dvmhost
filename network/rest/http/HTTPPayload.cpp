@@ -351,10 +351,10 @@ std::vector<asio::const_buffer> HTTPPayload::toBuffers()
 /// </summary>
 /// <param name="obj"></param>
 /// <param name="s"></param>
-void HTTPPayload::payload(json::object obj, HTTPPayload::StatusType s)
+void HTTPPayload::payload(json::object& obj, HTTPPayload::StatusType s)
 {
     json::value v = json::value(obj);
-    std::string json = v.serialize();
+    std::string json = std::string(v.serialize());
     payload(json, s, "application/json");
 }
 
@@ -364,7 +364,7 @@ void HTTPPayload::payload(json::object obj, HTTPPayload::StatusType s)
 /// <param name="c"></param>
 /// <param name="s"></param>
 /// <param name="contentType"></param>
-void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, const std::string contentType)
+void HTTPPayload::payload(std::string& c, HTTPPayload::StatusType s, const std::string& contentType)
 {
     content = c;
     status = s;
@@ -380,15 +380,12 @@ void HTTPPayload::payload(std::string c, HTTPPayload::StatusType s, const std::s
 /// </summary>
 /// <param name="method"></param>
 /// <param name="uri"></param>
-/// <param name="contentType"></param>
-HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri, const std::string contentType)
+HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri)
 {
     HTTPPayload rep;
     rep.isClientPayload = true;
     rep.method = ::strtoupper(method);
     rep.uri = std::string(uri);
-    rep.ensureDefaultHeaders(contentType);
-
     return rep;
 }
 
@@ -397,7 +394,7 @@ HTTPPayload HTTPPayload::requestPayload(std::string method, std::string uri, con
 /// </summary>
 /// <param name="status"></param>
 /// <param name="contentType"></param>
-HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std::string contentType)
+HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std::string& contentType)
 {
     HTTPPayload rep;
     rep.isClientPayload = false;
@@ -415,10 +412,10 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
 /// <summary>
 ///
 /// </summary>
-/// <param name="localEndpoint"></param>
-void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint localEndpoint)
+/// <param name="remoteEndpoint"></param>
+void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint remoteEndpoint)
 {
-    headers.add("Host", std::string(localEndpoint.address().to_string() + ":" + std::to_string(localEndpoint.port())));
+    headers.add("Host", std::string(remoteEndpoint.address().to_string() + ":" + std::to_string(remoteEndpoint.port())));
 }
 
 // ---------------------------------------------------------------------------
@@ -432,7 +429,7 @@ void HTTPPayload::attachHostHeader(const asio::ip::tcp::endpoint localEndpoint)
 void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
 {
     if (!isClientPayload) {
-        headers.add("Content-Type", contentType);
+        headers.add("Content-Type", std::string(contentType));
         headers.add("Content-Length", std::to_string(content.size()));
         headers.add("Server", std::string((__EXE_NAME__ "/" __VER__)));
     }
@@ -440,11 +437,8 @@ void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
         headers.add("User-Agent", std::string((__EXE_NAME__ "/" __VER__)));
         headers.add("Accept", "*/*");
         if (::strtoupper(method) != HTTP_GET) {
-            headers.add("Content-Type", contentType);
+            headers.add("Content-Type", std::string(contentType));
             headers.add("Content-Length", std::to_string(content.size()));
         }
     }
-
-    //for (auto header : headers.headers())
-    //    ::LogDebug(LOG_REST, "HTTPPayload::ensureDefaultHeaders() header = %s, value = %s", header.name.c_str(), header.value.c_str());
 }

@@ -38,7 +38,7 @@
 #include "dmr/Sync.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
-#include "remote/RemoteCommand.h"
+#include "remote/RESTClient.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -837,11 +837,14 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                std::stringstream ss;
-                ss << "permit-tg " << modem::DVM_STATE::STATE_DMR << " " << dstId << " " << slot;
+                json::object req = json::object();
+                int state = modem::DVM_STATE::STATE_DMR;
+                req["state"].set<int>(state);
+                req["dstId"].set<uint32_t>(dstId);
+                req["slot"].set<uint8_t>(slot);
 
-                RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
-                    ss.str(), m_tscc->m_debug);
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
             }
         }
 
@@ -872,11 +875,14 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                std::stringstream ss;
-                ss << "permit-tg " << modem::DVM_STATE::STATE_DMR << " " << dstId << " " << slot;
+                json::object req = json::object();
+                int state = modem::DVM_STATE::STATE_DMR;
+                req["state"].set<int>(state);
+                req["dstId"].set<uint32_t>(dstId);
+                req["slot"].set<uint8_t>(slot);
 
-                RemoteCommand::send(voiceChData.address(), voiceChData.port(), voiceChData.password(), 
-                    ss.str(), m_tscc->m_debug);
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
             }
         }
 
