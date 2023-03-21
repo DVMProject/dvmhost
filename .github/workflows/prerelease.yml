@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v3
         
       - name: Install Dependencies
-        run: sudo apt-get install -y gcc-arm-none-eabi cmake build-essential devscripts debhelper
+        run: sudo apt-get install -y gcc-arm-none-eabi cmake build-essential devscripts debhelper libasio-dev
         
       - name: Sync Git Submodules
         run: git submodule init && git submodule update
