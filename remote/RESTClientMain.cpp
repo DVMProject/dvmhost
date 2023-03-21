@@ -91,6 +91,7 @@
 #define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
 #define RCD_P25_RID_GAQ                 "p25-rid-gaq"
 #define RCD_P25_RID_UREG                "p25-rid-ureg"
+#define RCD_P25_RID_EMERG               "p25-rid-emerg"
 
 #define RCD_DMR_CC_DEDICATED            "dmr-cc-dedicated"
 #define RCD_DMR_CC_BCAST                "dmr-cc-bcast"
@@ -319,6 +320,7 @@ std::string displayHelp()
     reply += "  p25-rid-uninhibit <rid> Uninhibits the specified RID\r\n";
     reply += "  p25-rid-gaq <rid>       Group affiliation queries the specified RID\r\n";
     reply += "  p25-rid-ureg <rid>      Demand unit registration for the specified RID\r\n";
+    reply += "  p25-rid-emerg <src> <dst> Send emergency from the specified RID to the specified RID\r\n";
     reply += "\r\n";
     reply += "  p25-cc-dedicated        Enables or disables dedicated control channel\r\n";
     reply += "  p25-cc-bcast            Enables or disables broadcast of the control channel\r\n";
@@ -588,7 +590,7 @@ int main(int argc, char** argv)
                 retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE + std::to_string(verbose), json::object());
             }
         }
-        else if (rcom == RCD_P25_SET_MFID && argCnt >= 2U) {
+        else if (rcom == RCD_P25_SET_MFID && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_P25_SET_MFID));
             uint8_t mfId = getArgUInt8(args, 0U);
@@ -596,7 +598,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_PAGE && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_PAGE));
             uint32_t dstId = getArgUInt32(args, 0U);
@@ -604,7 +606,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_CHECK && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_CHECK));
             uint32_t dstId = getArgUInt32(args, 0U);
@@ -612,7 +614,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_INHIBIT));
             uint32_t dstId = getArgUInt32(args, 0U);
@@ -620,7 +622,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_UNINHIBIT));
             uint32_t dstId = getArgUInt32(args, 0U);
@@ -628,7 +630,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_GAQ && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_GAQ));
             uint32_t dstId = getArgUInt32(args, 0U);
@@ -636,11 +638,21 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_UREG && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_UREG));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+        }
+        else if (rcom == RCD_P25_RID_UREG && argCnt >= 2U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_EMERG));
+            uint32_t dstId = getArgUInt32(args, 0U);
+            req["dstId"].set<uint32_t>(dstId);
+            uint32_t srcId = getArgUInt32(args, 1U);
+            req["srcId"].set<uint32_t>(srcId);
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
