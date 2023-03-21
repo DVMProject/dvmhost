@@ -110,6 +110,6 @@ if __name__ == '__main__':
         offsetHz = int(cli_args.InputOffset * HZ_MHZ)
 
         rootFreq = cli_args.TxFrequency - cli_args.BaseFrequency
-        chNo = rootFreq / spaceHz
+        chNo = int(rootFreq / spaceHz)
 
         print ('\r\nChannel Number: ' + '%x' % chNo)
