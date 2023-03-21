@@ -47,6 +47,7 @@
 #define MODE_OPT_FP25                   "p25"
 #define MODE_OPT_FNXDN                  "nxdn"
 
+#define RID_CMD_P25_SET_MFID            "p25-setmfid"
 #define RID_CMD_PAGE                    "page"
 #define RID_CMD_CHECK                   "check"
 #define RID_CMD_INHIBIT                 "inhibit"

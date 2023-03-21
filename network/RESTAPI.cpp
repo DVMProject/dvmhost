@@ -644,7 +644,7 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
         return;
     }
 
-    std::string mode = req["mode"].get<std::string>();
+    std::string mode = ::strtolower(req["mode"].get<std::string>());
 
     if (mode == MODE_OPT_IDLE) {
         m_host->m_fixedMode = false;
@@ -1246,8 +1246,64 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
+#if defined(ENABLE_DMR)
+    if (m_dmr == nullptr) {
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["command"].is<std::string>()) {
+        errorPayload(reply, "command was not valid");
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<uint32_t>()) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["slot"].is<uint8_t>()) {
+        errorPayload(reply, "slot was not valid");
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+    uint8_t slot = req["slot"].get<uint8_t>();
+
+    if (dstId == 0U) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    if (slot == 0U && slot >= 3U) {
+        errorPayload(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
+        return;
+    }
 
     errorPayload(reply, "OK", HTTPPayload::OK);
+    std::string command = req["command"].get<std::string>();
+    if (::strtolower(command) == RID_CMD_PAGE) {
+        m_dmr->writeRF_Call_Alrt(slot, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_CHECK) {
+        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_INHIBIT) {
+        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
+        m_dmr->writeRF_Ext_Func(slot, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else {
+        errorPayload(reply, "invalid command");
+        return;
+    }
+#else
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1453,8 +1509,73 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
+#if defined(ENABLE_P25)
+    if (m_p25 == nullptr) {
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["command"].is<std::string>()) {
+        errorPayload(reply, "command was not valid");
+        return;
+    }
+
+    std::string command = req["command"].get<std::string>();
+    uint32_t dstId = 0;
+
+    if (::strtolower(command) != RID_CMD_P25_SET_MFID) {
+        // validate destination ID is a integer within the JSON blob
+        if (!req["dstId"].is<uint32_t>()) {
+            errorPayload(reply, "destination ID was not valid");
+            return;
+        }
+
+        dstId = req["dstId"].get<uint32_t>();
+
+        if (dstId == 0U) {
+            errorPayload(reply, "destination ID was not valid");
+            return;
+        }
+    }
+    
 
     errorPayload(reply, "OK", HTTPPayload::OK);
+    if (::strtolower(command) == RID_CMD_P25_SET_MFID) {
+        // validate destination ID is a integer within the JSON blob
+        if (!req["mfId"].is<uint8_t>()) {
+            errorPayload(reply, "MFID was not valid");
+            return;
+        }
+
+        uint8_t mfId = req["mfId"].get<uint8_t>();
+        m_p25->trunk()->setLastMFId(mfId);
+    }
+    else if (::strtolower(command) == RID_CMD_PAGE) {
+        m_p25->trunk()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_CHECK) {
+        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_INHIBIT) {
+        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
+        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_GAQ) {
+        m_p25->trunk()->writeRF_TSDU_Grp_Aff_Q(dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UREG) {
+        m_p25->trunk()->writeRF_TSDU_U_Reg_Cmd(dstId);
+    }
+    else {
+        errorPayload(reply, "invalid command");
+        return;
+    }
+#else
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_P25)
 }
 
 /// <summary>

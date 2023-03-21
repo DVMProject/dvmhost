@@ -588,6 +588,14 @@ int main(int argc, char** argv)
                 retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE + std::to_string(verbose), json::object());
             }
         }
+        else if (rcom == RCD_P25_SET_MFID && argCnt >= 2U) {
+            json::object req = json::object();
+            req["command"].set<std::string>(std::string(RID_CMD_P25_SET_MFID));
+            uint8_t mfId = getArgUInt8(args, 0U);
+            req["mfId"].set<uint8_t>(mfId);
+
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+        }
         else if (rcom == RCD_P25_RID_PAGE && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_PAGE));
