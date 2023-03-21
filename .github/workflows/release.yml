@@ -1,0 +1,83 @@
+# Author: K4YT3X <i@k4yt3x.com>
+# Cross-compiles dvmhost and dvmcmd for all architectures upon pushing a new tag.
+
+name: dvmhost-build-release
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
+      VERSION: ${{ steps.get_version.outputs.VERSION }}
+    steps:
+      - name: Get app name
+        id: get_appname
+        run: echo ::set-output name=APPNAME::${{ github.event.repository.name }}
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+  create-release:
+    needs:
+      - setup
+    name: Create Relase
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.setup.outputs.VERSION }}
+          release_name: Release ${{ needs.setup.outputs.VERSION }}
+          draft: true
+          prerelease: false
+
+  ubuntu:
+    strategy:
+      matrix:
+        arch: ["AMD64", "ARM", "AARCH64", "RPI_ARM"]
+    needs: [setup, create-release]
+    runs-on: ubuntu-latest
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.setup.outputs.VERSION }}
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y git build-essential cmake g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf g++-aarch64-linux-gnu libasio-dev
+          sudo git clone --recurse-submodules https://github.com/raspberrypi/tools.git /opt/tools
+      - name: Build
+        run: |
+          sed -i 's/3.18.4/3.16.3/g' CMakeLists.txt
+          cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
+          make
+      - name: Package
+        run: |
+          mkdir -p ${{ env.PACKAGENAME }}
+          cp dvmcmd dvmhost ${{ env.PACKAGENAME }}
+          zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
+      - name: Upload
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.PACKAGENAME }}.zip
+          asset_name: ${{ env.PACKAGENAME }}.zip
+          asset_content_type: application/zip
