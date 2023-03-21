@@ -1129,6 +1129,22 @@ void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 }
 
 /// <summary>
+/// Helper to write a raw TSBK.
+/// </summary>
+/// <param name="tsbk"></param>
+void Trunk::writeRF_TSDU_Raw(const uint8_t* tsbk)
+{
+    if (tsbk == nullptr) {
+        return;
+    }
+
+    std::unique_ptr<TSBK_RAW> osp = new_unique(TSBK_RAW);
+    osp->setTSBK(tsbk);
+
+    writeRF_TSDU_SBF(osp.get(), true);
+}
+
+/// <summary>
 /// Helper to change the conventional fallback state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether conventional fallback is enabled.</param>

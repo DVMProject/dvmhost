@@ -54,6 +54,7 @@
 #define RID_CMD_UNINHIBIT               "uninhibit"
 #define RID_CMD_GAQ                     "group-aff-req"
 #define RID_CMD_UREG                    "unit-reg"
+#define RID_CMD_EMERG                   "emerg"
 
 #define PUT_MDM_KILL                    "/mdm/kill"
 
@@ -77,8 +78,8 @@
 #define GET_DMR_CC_BCAST                "/dmr/cc-broadcast"
 
 #define GET_P25_CC                      "/p25/cc"
-//#define GET_P25_CC_FALLBACK_BASE        "/p25/cc-fallback/"
-//#define GET_P25_CC_FALLBACK             GET_P25_CC_FALLBACK_BASE"(\\d+)"
+#define GET_P25_CC_FALLBACK_BASE        "/p25/cc-fallback/"
+#define GET_P25_CC_FALLBACK             GET_P25_CC_FALLBACK_BASE"(\\d+)"
 #define GET_P25_DEBUG_BASE              "/p25/debug/(\\d+)/(\\d+)"
 #define GET_P25_DEBUG                   GET_P25_DEBUG_BASE"(\\d+)/(\\d+)"
 #define GET_P25_DUMP_TSBK_BASE          "/p25/dump-tsbk/(\\d+)"
@@ -86,6 +87,7 @@
 #define PUT_P25_RID                     "/p25/rid"
 #define GET_P25_CC_DEDICATED            "/p25/cc-enable"
 #define GET_P25_CC_BCAST                "/p25/cc-broadcast"
+#define PUT_P25_RAW_TSBK                "/p25/raw-tsbk"
 
 #define GET_NXDN_CC                     "/nxdn/cc"
 #define GET_NXDN_DEBUG_BASE             "/nxdn/debug/(\\d+)/(\\d+)"

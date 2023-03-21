@@ -169,6 +169,8 @@ private:
     void restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*
     ** Next Generation Digital Narrowband

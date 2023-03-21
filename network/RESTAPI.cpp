@@ -271,10 +271,10 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_VOICE_CH).get(REST_API_BIND(RESTAPI::restAPI_GetVoiceCh, this));
 
     m_dispatcher.match(PUT_MDM_MODE).put(REST_API_BIND(RESTAPI::restAPI_PutModemMode, this));
-    m_dispatcher.match(PUT_MDM_KILL).get(REST_API_BIND(RESTAPI::restAPI_PutModemKill, this));
+    m_dispatcher.match(PUT_MDM_KILL).put(REST_API_BIND(RESTAPI::restAPI_PutModemKill, this));
 
-    m_dispatcher.match(PUT_PERMIT_TG).get(REST_API_BIND(RESTAPI::restAPI_PutPermitTG, this));
-    m_dispatcher.match(PUT_GRANT_TG).get(REST_API_BIND(RESTAPI::restAPI_PutGrantTG, this));
+    m_dispatcher.match(PUT_PERMIT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutPermitTG, this));
+    m_dispatcher.match(PUT_GRANT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutGrantTG, this));
     m_dispatcher.match(GET_RELEASE_GRNTS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseGrants, this));
     m_dispatcher.match(GET_RELEASE_AFFS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseAffs, this));
 
@@ -288,7 +288,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_DMR_BEACON).get(REST_API_BIND(RESTAPI::restAPI_GetDMRBeacon, this));
     m_dispatcher.match(GET_DMR_DEBUG, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRDebug, this));
     m_dispatcher.match(GET_DMR_DUMP_CSBK, true).get(REST_API_BIND(RESTAPI::restAPI_GetDMRDumpCSBK, this));
-    m_dispatcher.match(PUT_DMR_RID).get(REST_API_BIND(RESTAPI::restAPI_PutDMRRID, this));
+    m_dispatcher.match(PUT_DMR_RID).put(REST_API_BIND(RESTAPI::restAPI_PutDMRRID, this));
     m_dispatcher.match(GET_DMR_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCEnable, this));
     m_dispatcher.match(GET_DMR_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCBroadcast, this));
 
@@ -299,9 +299,10 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_P25_CC).get(REST_API_BIND(RESTAPI::restAPI_GetP25CC, this));
     m_dispatcher.match(GET_P25_DEBUG, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25Debug, this));
     m_dispatcher.match(GET_P25_DUMP_TSBK, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25DumpTSBK, this));
-    m_dispatcher.match(PUT_P25_RID).get(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
+    m_dispatcher.match(PUT_P25_RID).put(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
     m_dispatcher.match(GET_P25_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCEnable, this));
     m_dispatcher.match(GET_P25_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCBroadcast, this));
+    m_dispatcher.match(PUT_P25_RAW_TSBK).put(REST_API_BIND(RESTAPI::restAPI_PutP25RawTSBK, this));
 
     /*
     ** Next Generation Digital Narrowband
@@ -1569,6 +1570,22 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
     else if (::strtolower(command) == RID_CMD_UREG) {
         m_p25->trunk()->writeRF_TSDU_U_Reg_Cmd(dstId);
     }
+    else if (::strtolower(command) == RID_CMD_EMERG) {
+        // validate source ID is a integer within the JSON blob
+        if (!req["srcId"].is<uint32_t>()) {
+            errorPayload(reply, "source ID was not valid");
+            return;
+        }
+
+        uint32_t srcId = req["srcId"].get<uint32_t>();
+
+        if (srcId == 0U) {
+            errorPayload(reply, "source ID was not valid");
+            return;
+        }
+
+        m_p25->trunk()->writeRF_TSDU_Emerg_Alrm(srcId, dstId);
+    }
     else {
         errorPayload(reply, "invalid command");
         return;
@@ -1659,6 +1676,66 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
+#else
+    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_P25)
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+#if defined(ENABLE_P25)
+    if (m_p25 == nullptr) {
+        errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["tsbk"].is<std::string>()) {
+        errorPayload(reply, "tsbk was not valid");
+        return;
+    }
+
+    std::string tsbkBytes = req["tsbk"].get<std::string>();
+
+    if (tsbkBytes.size() != 24) {
+        errorPayload(reply, "TSBK must be 24 characters in length");
+        return;
+    }
+
+    if (!(tsbkBytes.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+        errorPayload(reply, "TSBK contains invalid characters");
+        return;
+    }
+
+    const char* tsbkPtr = tsbkBytes.c_str();
+    uint8_t* tsbk = new uint8_t[p25::P25_TSBK_LENGTH_BYTES];
+    ::memset(tsbk, 0x00U, p25::P25_TSBK_LENGTH_BYTES);
+
+    for (uint8_t i = 0; i < p25::P25_TSBK_LENGTH_BYTES; i++) {
+        char t[4] = {tsbkPtr[0], tsbkPtr[1], 0};
+        tsbk[i] = (uint8_t)::strtoul(t, NULL, 16);
+        tsbkPtr += 2 * sizeof(char);
+    }
+
+    if (m_debug) {
+        Utils::dump("Raw TSBK", tsbk, p25::P25_TSBK_LENGTH_BYTES);    
+    }
+
+    m_p25->trunk()->writeRF_TSDU_Raw(tsbk);
 #else
     errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_P25)

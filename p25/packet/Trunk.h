@@ -88,6 +88,8 @@ namespace p25
             void writeRF_TSDU_U_Reg_Cmd(uint32_t dstId);
             /// <summary>Helper to write a emergency alarm packet.</summary>
             void writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId);
+            /// <summary>Helper to write a emergency alarm packet.</summary>
+            void writeRF_TSDU_Raw(const uint8_t* tsbk);
 
             /// <summary>Helper to change the conventional fallback state.</summary>
             void setConvFallback(bool fallback);

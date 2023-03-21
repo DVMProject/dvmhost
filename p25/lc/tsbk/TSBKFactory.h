@@ -94,6 +94,8 @@
 #include "p25/lc/tsbk/MBT_OSP_NET_STS_BCAST.h"
 #include "p25/lc/tsbk/MBT_OSP_RFSS_STS_BCAST.h"
 
+#include "p25/lc/tsbk/TSBK_RAW.h"
+
 namespace p25
 {
     namespace lc
