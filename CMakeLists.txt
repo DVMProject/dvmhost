@@ -375,9 +375,17 @@ include(CPack)
 
 # dvmcmd project
 project(dvmcmd)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
+if (NOT WITH_ASIO)
+    find_package(ASIO REQUIRED)
+else()
+    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+    target_link_libraries(asio::asio INTERFACE Threads::Threads)
+endif ()
 add_executable(dvmcmd ${dvmcmd_SRC})
-target_link_libraries(dvmcmd PRIVATE Threads::Threads)
+target_link_libraries(dvmcmd PRIVATE asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE .)
 
 if (ENABLE_TESTS)
