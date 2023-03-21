@@ -646,7 +646,7 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
         }
-        else if (rcom == RCD_P25_RID_UREG && argCnt >= 2U) {
+        else if (rcom == RCD_P25_RID_EMERG && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_EMERG));
             uint32_t dstId = getArgUInt32(args, 0U);
