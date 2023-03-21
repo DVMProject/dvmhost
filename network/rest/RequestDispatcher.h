@@ -187,7 +187,7 @@ namespace network
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements a generic debug request dispatcher.
+        //      This class implements a generic basic request dispatcher.
         // ---------------------------------------------------------------------------
 
         template<typename Request = http::HTTPPayload, typename Reply = http::HTTPPayload>
