@@ -1,4 +1,4 @@
-name: dvmhost-build-release
+name: dvmhost-build-prerelease
 
 # Controls when the workflow will run
 on:

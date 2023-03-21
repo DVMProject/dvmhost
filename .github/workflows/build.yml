@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   #run on push/PR
   push:
-    branches: [ "master", "3.0-dev" ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
