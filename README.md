@@ -118,6 +118,8 @@ usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remot
 
 ## Notes
 
+Security note: It is highly recommended that the REST API interface not be exposed directly to the internet. If such exposure is wanted/needed, it is highly recommended to proxy the dvmhost REST API through a modern web server (like nginx for example) rather then directly exposing dvmhost's REST API port.
+
 Some extra notes for those who are using the Raspberry Pi, default Raspbian OS or Debian OS installations. You will not be able to flash or access the STM32 modem unless you do some things beforehand. 
 
 1. Disable the Bluetooth services. Bluetooth will share the GPIO serial interface on ```/dev/ttyAMA0```. On Rasbian OS or Debian OS, this is done by: ```systemctl disable bluetooth```
