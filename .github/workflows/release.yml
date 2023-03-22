@@ -19,10 +19,10 @@ jobs:
     steps:
       - name: Get app name
         id: get_appname
-        run: echo ::set-output name=APPNAME::${{ github.event.repository.name }}
+        run: echo APPNAME=${{ github.event.repository.name }} >> $GITHUB_OUTPUT
       - name: Get version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo VERSION=${GITHUB_REF/refs\/tags\//} >> $GITHUB_OUTPUT
 
   create-release:
     needs:
