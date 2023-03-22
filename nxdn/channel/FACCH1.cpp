@@ -28,13 +28,12 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/channel/FACCH1.h"
-#include "nxdn/Convolution.h"
+#include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
 #include "edac/CRC.h"
 #include "Log.h"
 #include "Utils.h"
 
-using namespace edac;
 using namespace nxdn;
 using namespace nxdn::channel;
 
@@ -151,7 +150,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     }
 
     // decode convolution
-    Convolution conv;
+    edac::Convolution conv;
     conv.start();
 
     n = 0U;
@@ -172,7 +171,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 #endif
 
     // check CRC-12
-    bool ret = CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
+    bool ret = ::edac::CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "FACCH1::decode(), failed CRC-12 check");
         return false;
@@ -194,7 +193,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     ::memset(buffer, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
     ::memcpy(buffer, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 
-    CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
+    ::edac::CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
     Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);
@@ -204,7 +203,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     uint8_t convolution[NXDN_FACCH1_FEC_CONV_LENGTH_BYTES];
     ::memset(convolution, 0x00U, NXDN_FACCH1_FEC_CONV_LENGTH_BYTES);
 
-    Convolution conv;
+    edac::Convolution conv;
     conv.encode(buffer, convolution, NXDN_FACCH1_CRC_LENGTH_BITS);
 
     // puncture

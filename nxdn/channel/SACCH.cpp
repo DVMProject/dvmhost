@@ -29,13 +29,12 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/channel/SACCH.h"
-#include "nxdn/Convolution.h"
+#include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
 #include "edac/CRC.h"
 #include "Log.h"
 #include "Utils.h"
 
-using namespace edac;
 using namespace nxdn;
 using namespace nxdn::channel;
 
@@ -153,7 +152,7 @@ bool SACCH::decode(const uint8_t* data)
     }
 
     // decode convolution
-    Convolution conv;
+    edac::Convolution conv;
     conv.start();
 
     n = 0U;
@@ -174,7 +173,7 @@ bool SACCH::decode(const uint8_t* data)
 #endif
 
     // check CRC-6
-    bool ret = CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
+    bool ret = ::edac::CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "SACCH::decode(), failed CRC-6 check");
         return false;
@@ -208,7 +207,7 @@ void SACCH::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
+    ::edac::CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
         Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);
@@ -218,7 +217,7 @@ void SACCH::encode(uint8_t* data) const
     uint8_t convolution[NXDN_SACCH_FEC_CONV_LENGTH_BYTES];
     ::memset(convolution, 0x00U, NXDN_SACCH_FEC_CONV_LENGTH_BYTES);
 
-    Convolution conv;
+    edac::Convolution conv;
     conv.encode(buffer, convolution, NXDN_SACCH_CRC_LENGTH_BITS);
 
     // puncture

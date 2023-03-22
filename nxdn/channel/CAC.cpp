@@ -28,13 +28,12 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/channel/CAC.h"
-#include "nxdn/Convolution.h"
+#include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
 #include "edac/CRC.h"
 #include "Log.h"
 #include "Utils.h"
 
-using namespace edac;
 using namespace nxdn;
 using namespace nxdn::channel;
 
@@ -204,7 +203,7 @@ bool CAC::decode(const uint8_t* data)
     // TODO TODO -- Long CAC Puncturing
 
     // decode convolution
-    Convolution conv;
+    edac::Convolution conv;
     conv.start();
 
     uint32_t n = 0U;
@@ -225,7 +224,7 @@ bool CAC::decode(const uint8_t* data)
 #endif
 
     // check CRC-16
-    bool ret = CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
+    bool ret = ::edac::CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "CAC::decode(), failed CRC-6 check");
         return false;
@@ -272,7 +271,7 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    uint16_t crc = CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
+    uint16_t crc = ::edac::CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
     Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);
@@ -282,7 +281,7 @@ void CAC::encode(uint8_t* data) const
     uint8_t convolution[NXDN_CAC_FEC_CONV_LENGTH_BYTES];
     ::memset(convolution, 0x00U, NXDN_CAC_FEC_CONV_LENGTH_BYTES);
 
-    Convolution conv;
+    edac::Convolution conv;
     conv.encode(buffer, convolution, NXDN_CAC_CRC_LENGTH_BITS);
 
     // puncture

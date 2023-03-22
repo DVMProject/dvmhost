@@ -29,13 +29,12 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/channel/UDCH.h"
-#include "nxdn/Convolution.h"
+#include "nxdn/edac/Convolution.h"
 #include "nxdn/NXDNDefines.h"
 #include "edac/CRC.h"
 #include "Log.h"
 #include "Utils.h"
 
-using namespace edac;
 using namespace nxdn;
 using namespace nxdn::channel;
 
@@ -177,7 +176,7 @@ bool UDCH::decode(const uint8_t* data)
     }
 
     // decode convolution
-    Convolution conv;
+    edac::Convolution conv;
     conv.start();
 
     n = 0U;
@@ -198,7 +197,7 @@ bool UDCH::decode(const uint8_t* data)
 #endif
 
     // check CRC-15
-    bool ret = CRC::checkCRC15(m_data, NXDN_UDCH_LENGTH_BITS);
+    bool ret = ::edac::CRC::checkCRC15(m_data, NXDN_UDCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "UDCH::decode(), failed CRC-15 check");
         return false;
@@ -223,7 +222,7 @@ void UDCH::encode(uint8_t* data) const
     ::memset(buffer, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
     ::memcpy(buffer, m_data, 23U);
 
-    CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
+    ::edac::CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
     Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
@@ -233,7 +232,7 @@ void UDCH::encode(uint8_t* data) const
     uint8_t convolution[NXDN_UDCH_FEC_CONV_LENGTH_BYTES];
     ::memset(convolution, 0x00U, NXDN_UDCH_FEC_CONV_LENGTH_BYTES);
 
-    Convolution conv;
+    edac::Convolution conv;
     conv.encode(buffer, convolution, NXDN_UDCH_CRC_LENGTH_BITS);
 
     // puncture

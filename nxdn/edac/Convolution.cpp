@@ -28,11 +28,11 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "nxdn/Convolution.h"
+#include "nxdn/edac/Convolution.h"
 #include "Log.h"
 #include "Utils.h"
 
-using namespace nxdn;
+using namespace nxdn::edac;
 
 #include <cstdio>
 #include <cassert>

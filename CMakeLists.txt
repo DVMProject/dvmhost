@@ -77,6 +77,8 @@ file(GLOB dvmhost_SRC
     "nxdn/acl/*.cpp"
     "nxdn/channel/*.h"
     "nxdn/channel/*.cpp"
+    "nxdn/edac/*.h"
+    "nxdn/edac/*.cpp"
     "nxdn/lc/*.h"
     "nxdn/lc/*.cpp"
     "nxdn/lc/rcch/*.h"
@@ -85,8 +87,9 @@ file(GLOB dvmhost_SRC
     "nxdn/packet/*.cpp"
 
     # Core
-    "edac/*.h"
+    "edac/*.h"    
     "edac/*.cpp"
+    "edac/rs/*.h"
     "host/*.h"
     "host/*.cpp"
     "host/calibrate/*.h"
@@ -149,7 +152,7 @@ file(GLOB dvmtests_SRC
 # digital mode options
 option(ENABLE_DMR "Enable DMR Digtial Mode" on)
 option(ENABLE_P25 "Enable P25 Digital Mode" on)
-option(ENABLE_NXDN "Enable NXDN Digital Mode" off)
+option(ENABLE_NXDN "Enable NXDN Digital Mode" on)
 option(ENABLE_DFSI_SUPPORT "Enable P25 DFSI Transport Support" off)
 option(ENABLE_TESTS "Enable compilation of test suite" off)
 
