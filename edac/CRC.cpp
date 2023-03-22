@@ -251,7 +251,7 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 
     crc16 = ~crc16;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint16_t inCrc = (in[length - 2U] << 8) | (in[length - 1U] << 0);
     LogDebug(LOG_HOST, "CRC::checkCCITT162(), crc = $%04X, in = $%04X, len = %u", crc16, inCrc, length);
 #endif
@@ -282,7 +282,7 @@ void CRC::addCCITT162(uint8_t* in, uint32_t length)
 
     crc16 = ~crc16;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCCITT162(), crc = $%04X, len = %u", crc16, length);
 #endif
 
@@ -314,7 +314,7 @@ bool CRC::checkCCITT161(const uint8_t *in, uint32_t length)
 
     crc16 = ~crc16;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint16_t inCrc = (in[length - 2U] << 8) | (in[length - 1U] << 0);
     LogDebug(LOG_HOST, "CRC::checkCCITT161(), crc = $%04X, in = $%04X, len = %u", crc16, inCrc, length);
 #endif
@@ -345,7 +345,7 @@ void CRC::addCCITT161(uint8_t* in, uint32_t length)
 
     crc16 = ~crc16;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCCITT161(), crc = $%04X, len = %u", crc16, length);
 #endif
 
@@ -380,7 +380,7 @@ bool CRC::checkCRC32(const uint8_t *in, uint32_t length)
     crc32 = ~crc32;
     crc32 &= 0xFFFFFFFFU;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint32_t inCrc = (in[length - 4U] << 24) | (in[length - 3U] << 16) | (in[length - 2U] << 8) | (in[length - 1U] << 0);
     LogDebug(LOG_HOST, "CRC::checkCRC32(), crc = $%08X, in = $%08X, len = %u", crc32, inCrc, length);
 #endif
@@ -414,7 +414,7 @@ void CRC::addCRC32(uint8_t* in, uint32_t length)
     crc32 = ~crc32;
     crc32 &= 0xFFFFFFFFU;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCRC32(), crc = $%08X, len = %u", crc32, length);
 #endif
 
@@ -439,7 +439,7 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
     for (uint32_t i = 0U; i < length; i++)
         crc = CRC8_TABLE[crc ^ in[i]];
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     LogDebug(LOG_HOST, "CRC::crc8(), crc = $%02X, len = %u", crc, length);
 #endif
 
@@ -471,7 +471,7 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 
     crc &= 0x1FFU;
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     LogDebug(LOG_HOST, "CRC::crc9(), crc = $%03X, bitlen = %u", crc, bitLength);
 #endif
     
@@ -498,7 +498,7 @@ bool CRC::checkCRC6(const uint8_t* in, uint32_t bitLength)
         WRITE_BIT(temp, i, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint32_t inCrc = temp[0U];
     LogDebug(LOG_HOST, "CRC::checkCRC6(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
@@ -525,7 +525,7 @@ uint8_t CRC::addCRC6(uint8_t* in, uint32_t bitLength)
         WRITE_BIT(in, n, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCRC6(), crc = $%04X, bitlen = %u", crc[0U], bitLength);
 #endif
     return crc[0U];
@@ -555,7 +555,7 @@ bool CRC::checkCRC12(const uint8_t* in, uint32_t bitLength)
         WRITE_BIT(temp2, i, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
     LogDebug(LOG_HOST, "CRC:checkCRC12(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
@@ -585,7 +585,7 @@ uint16_t CRC::addCRC12(uint8_t* in, uint32_t bitLength)
         WRITE_BIT(in, n, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCRC12(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
     return crc;
@@ -615,7 +615,7 @@ bool CRC::checkCRC15(const uint8_t* in, uint32_t bitLength)
         WRITE_BIT(temp2, i, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
     LogDebug(LOG_HOST, "CRC:checkCRC15(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
@@ -645,7 +645,7 @@ uint16_t CRC::addCRC15(uint8_t* in, uint32_t bitLength)
         WRITE_BIT(in, n, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCRC15(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
     return crc;
@@ -675,7 +675,7 @@ bool CRC::checkCRC16(const uint8_t* in, uint32_t bitLength)
         WRITE_BIT(temp2, i, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_CHECK
     uint16_t inCrc = (temp2[0U] << 8) | (temp2[1U] << 0);
     LogDebug(LOG_HOST, "CRC:checkCRC16(), crc = $%04X, in = $%04X, bitlen = %u", crc, inCrc, bitLength);
 #endif
@@ -706,7 +706,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
         WRITE_BIT(in, n, b);
     }
 
-#if DEBUG_CRC
+#if DEBUG_CRC_ADD
     LogDebug(LOG_HOST, "CRC::addCRC16(), crc = $%04X, bitlen = %u", crc, bitLength);
 #endif
     return crc;
