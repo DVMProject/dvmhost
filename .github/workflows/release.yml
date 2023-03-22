@@ -60,12 +60,24 @@ jobs:
           submodules: recursive
       - name: Install dependencies
         run: |
-          sudo apt-get install -y git build-essential cmake g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf g++-aarch64-linux-gnu libasio-dev
+          sudo apt-get install -y git build-essential cmake \
+            g++-arm-linux-gnueabihf \
+            gcc-arm-linux-gnueabihf \
+            g++-aarch64-linux-gnu \
+            libasio-dev
           sudo git clone --recurse-submodules https://github.com/raspberrypi/tools.git /opt/tools
       - name: Build
         run: |
-          sed -i 's/3.18.4/3.16.3/g' CMakeLists.txt
-          cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
+          if [[ "${{ matrix.arch }}" == "RPI_ARM" ]]; then
+            sudo sed -i 's/^# deb-src/deb-src/g' /etc/apt/sources.list
+            sudo apt-get update
+            sudo apt-get source asio
+            cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 \
+              -DWITH_ASIO="$(realpath -e $(find . -maxdepth 1 -type d -iname 'asio*'))" .
+          else
+            cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
+          fi
+
           make
       - name: Package
         run: |
