@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/TSBK_RAW.h"
+#include "p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,18 +40,18 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the TSBK_RAW class.
+/// Initializes a new instance of the OSP_TSBK_RAW class.
 /// </summary>
-TSBK_RAW::TSBK_RAW() : TSBK(),
+OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
     m_tsbk(nullptr)
 {
     m_lco = TSBK_IOSP_ACK_RSP;
 }
 
 /// <summary>
-/// Finalizes a new instance of the TSBK_RAW class.
+/// Finalizes a new instance of the OSP_TSBK_RAW class.
 /// </summary>
-TSBK_RAW::~TSBK_RAW()
+OSP_TSBK_RAW::~OSP_TSBK_RAW()
 {
     if (m_tsbk != nullptr) {
         delete m_tsbk;
@@ -64,7 +64,7 @@ TSBK_RAW::~TSBK_RAW()
 /// <param name="data"></param>
 /// <param name="rawTSBK"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
+bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != NULL);
 
@@ -79,9 +79,10 @@ bool TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="data"></param>
 /// <param name="rawTSBK"></param>
 /// <param name="noTrellis"></param>
-void TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
+void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != NULL);
+    assert(m_tsbk != NULL);
 
     /* stub */
 
@@ -92,7 +93,7 @@ void TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// Sets the TSBK to encode.
 /// </summary>
 /// <param name="tsbk"></param>
-void TSBK_RAW::setTSBK(const uint8_t* tsbk)
+void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
 {
     assert(tsbk != NULL);
 

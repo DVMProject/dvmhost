@@ -1138,7 +1138,7 @@ void Trunk::writeRF_TSDU_Raw(const uint8_t* tsbk)
         return;
     }
 
-    std::unique_ptr<TSBK_RAW> osp = new_unique(TSBK_RAW);
+    std::unique_ptr<OSP_TSBK_RAW> osp = new_unique(OSP_TSBK_RAW);
     osp->setTSBK(tsbk);
 
     writeRF_TSDU_SBF(osp.get(), true);

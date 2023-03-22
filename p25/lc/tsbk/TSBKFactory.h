@@ -76,6 +76,7 @@
 #include "p25/lc/tsbk/OSP_SYNC_BCAST.h"
 #include "p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
 #include "p25/lc/tsbk/OSP_TIME_DATE_ANN.h"
+#include "p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "p25/lc/tsbk/OSP_U_DEREG_ACK.h"
 #include "p25/lc/tsbk/OSP_U_REG_CMD.h"
 
@@ -93,8 +94,6 @@
 #include "p25/lc/tsbk/MBT_OSP_AUTH_DMD.h"
 #include "p25/lc/tsbk/MBT_OSP_NET_STS_BCAST.h"
 #include "p25/lc/tsbk/MBT_OSP_RFSS_STS_BCAST.h"
-
-#include "p25/lc/tsbk/TSBK_RAW.h"
 
 namespace p25
 {

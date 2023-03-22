@@ -41,6 +41,7 @@
 #include "dmr/lc/csbk/CSBK_PRECCSBK.h"
 #include "dmr/lc/csbk/CSBK_PV_GRANT.h"
 #include "dmr/lc/csbk/CSBK_RAND.h"
+#include "dmr/lc/csbk/CSBK_RAW.h"
 #include "dmr/lc/csbk/CSBK_TD_GRANT.h"
 #include "dmr/lc/csbk/CSBK_TV_GRANT.h"
 #include "dmr/lc/csbk/CSBK_UU_ANS_RSP.h"

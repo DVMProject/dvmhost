@@ -23,43 +23,43 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__P25_LC_TSBK__TSBK_RAW_H__)
-#define  __P25_LC_TSBK__TSBK_RAW_H__
+#if !defined(__DMR_LC_CSBK__CSBK_RAW_H__)
+#define  __DMR_LC_CSBK__CSBK_RAW_H__
 
 #include "Defines.h"
-#include "p25/lc/TSBK.h"
+#include "dmr/lc/CSBK.h"
 
-namespace p25
+namespace dmr
 {
     namespace lc
     {
-        namespace tsbk
+        namespace csbk
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements a mechanism to generate raw TSBK data from bytes.
+            //      Implements a mechanism to generate raw CSBK data from bytes.
             // ---------------------------------------------------------------------------
 
-            class HOST_SW_API TSBK_RAW : public TSBK {
+            class HOST_SW_API CSBK_RAW : public CSBK {
             public:
-                /// <summary>Initializes a new instance of the TSBK_RAW class.</summary>
-                TSBK_RAW();
-                /// <summary>Finalizes a instance of the TSBK_RAW class.</summary>
-                ~TSBK_RAW();
+                /// <summary>Initializes a new instance of the CSBK_RAW class.</summary>
+                CSBK_RAW();
+                /// <summary>Finalizes a instance of the CSBK_RAW class.</summary>
+                ~CSBK_RAW();
 
                 /// <summary>Decode a trunking signalling block.</summary>
-                virtual bool decode(const uint8_t* data, bool rawTSBK = false);
+                virtual bool decode(const uint8_t* data);
                 /// <summary>Encode a trunking signalling block.</summary>
-                virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+                virtual void encode(uint8_t* data);
 
-                /// <summary>Sets the TSBK to encode.</summary>
-                void setTSBK(const uint8_t* tsbk);
+                /// <summary>Sets the CSBK to encode.</summary>
+                void setCSBK(const uint8_t* csbk);
             
             private:
-                uint8_t* m_tsbk;
+                uint8_t* m_csbk;
             };
-        } // namespace tsbk
+        } // namespace csbk
     } // namespace lc
-} // namespace p25
+} // namespace dmr
 
-#endif // __P25_LC_TSBK__TSBK_RAW_H__
+#endif // __DMR_LC_CSBK__CSBK_RAW_H__
