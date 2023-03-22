@@ -209,6 +209,7 @@ option(FORCE_TSBK_CRC_WARN "" off)
 option(DEBUG_P25_DFSI "" off)
 option(DEBUG_RINGBUFFER "" off)
 option(DEBUG_HTTP_PAYLOAD "" off)
+option(DEBUG_TRELLIS "" off)
 
 if (DEBUG_DMR_PDU_DATA)
     add_definitions(-DDEBUG_DMR_PDU_DATA)
@@ -273,6 +274,9 @@ endif (DEBUG_RINGBUFFER)
 if (DEBUG_HTTP_PAYLOAD)
     add_definitions(-DDEBUG_HTTP_PAYLOAD)
 endif (DEBUG_HTTP_PAYLOAD)
+if (DEBUG_TRELLIS)
+    add_definitions(-DDEBUG_TRELLIS)
+endif (DEBUG_TRELLIS)
 
 # cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)

@@ -24,6 +24,7 @@
 */
 #include "Defines.h"
 #include "p25/edac/Trellis.h"
+#include "Log.h"
 
 using namespace p25::edac;
 
@@ -512,6 +513,9 @@ void Trellis::dibitsToBits(const uint8_t* dibits, uint8_t* payload) const
 /// <returns>True, if error corrected, otherwise false.</returns>
 bool Trellis::fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) const
 {
+#if DEBUG_TRELLIS
+    ::LogDebug(LOG_HOST, "Trellis::fixCode34() failPos = %u, val = %01X", failPos, points[failPos]);
+#endif
     for (unsigned j = 0U; j < 20U; j++) {
         uint32_t bestPos = 0U;
         uint32_t bestVal = 0U;
@@ -522,6 +526,9 @@ bool Trellis::fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) con
             uint8_t tribits[49U];
             uint32_t pos = checkCode34(points, tribits);
             if (pos == 999U) {
+#if DEBUG_TRELLIS
+                ::LogDebug(LOG_HOST, "Trellis::fixCode34() fixed, failPos = %u, pos = %u, val = %01X", failPos, bestPos, bestVal);
+#endif
                 tribitsToBits(tribits, payload);
                 return true;
             }
@@ -581,16 +588,22 @@ uint32_t Trellis::checkCode34(const uint8_t* points, uint8_t* tribits) const
 /// <returns>True, if error corrected, otherwise false.</returns>
 bool Trellis::fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) const
 {
+#if DEBUG_TRELLIS
+    ::LogDebug(LOG_HOST, "Trellis::fixCode12() failPos = %u, val = %01X", failPos, points[failPos]);
+#endif
     for (unsigned j = 0U; j < 20U; j++) {
         uint32_t bestPos = 0U;
         uint32_t bestVal = 0U;
 
-        for (uint32_t i = 0U; i < 4U; i++) {
+        for (uint32_t i = 0U; i < 16U; i++) {
             points[failPos] = i;
 
             uint8_t dibits[49U];
             uint32_t pos = checkCode12(points, dibits);
             if (pos == 999U) {
+#if DEBUG_TRELLIS
+                ::LogDebug(LOG_HOST, "Trellis::fixCode12() fixed, failPos = %u, pos = %u, val = %01X", failPos, bestPos, bestVal);
+#endif
                 dibitsToBits(dibits, payload);
                 return true;
             }

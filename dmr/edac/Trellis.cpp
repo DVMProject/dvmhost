@@ -395,6 +395,9 @@ void Trellis::tribitsToBits(const uint8_t* tribits, uint8_t* payload) const
 /// <returns>True, if error corrected, otherwise false.</returns>
 bool Trellis::fixCode(uint8_t* points, uint32_t failPos, uint8_t* payload) const
 {
+#if DEBUG_TRELLIS
+    ::LogDebug(LOG_HOST, "Trellis::fixCode() failPos = %u, val = %01X", failPos, points[failPos]);
+#endif
     for (unsigned j = 0U; j < 20U; j++) {
         uint32_t bestPos = 0U;
         uint32_t bestVal = 0U;
@@ -405,6 +408,9 @@ bool Trellis::fixCode(uint8_t* points, uint32_t failPos, uint8_t* payload) const
             uint8_t tribits[49U];
             uint32_t pos = checkCode(points, tribits);
             if (pos == 999U) {
+#if DEBUG_TRELLIS
+                ::LogDebug(LOG_HOST, "Trellis::fixCode34() fixed, failPos = %u, pos = %u, val = %01X", failPos, bestPos, bestVal);
+#endif
                 tribitsToBits(tribits, payload);
                 return true;
             }
