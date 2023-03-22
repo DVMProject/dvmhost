@@ -24,7 +24,7 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-cmake_minimum_required(VERSION 3.18.4)
+cmake_minimum_required(VERSION 3.16.0)
 
 # dvmhost source/header files
 file(GLOB dvmhost_SRC
