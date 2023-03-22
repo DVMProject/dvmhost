@@ -80,9 +80,9 @@
 #define GET_P25_CC                      "/p25/cc"
 #define GET_P25_CC_FALLBACK_BASE        "/p25/cc-fallback/"
 #define GET_P25_CC_FALLBACK             GET_P25_CC_FALLBACK_BASE"(\\d+)"
-#define GET_P25_DEBUG_BASE              "/p25/debug/(\\d+)/(\\d+)"
+#define GET_P25_DEBUG_BASE              "/p25/debug/"
 #define GET_P25_DEBUG                   GET_P25_DEBUG_BASE"(\\d+)/(\\d+)"
-#define GET_P25_DUMP_TSBK_BASE          "/p25/dump-tsbk/(\\d+)"
+#define GET_P25_DUMP_TSBK_BASE          "/p25/dump-tsbk/"
 #define GET_P25_DUMP_TSBK               GET_P25_DUMP_TSBK_BASE"(\\d+)"
 #define PUT_P25_RID                     "/p25/rid"
 #define GET_P25_CC_DEDICATED            "/p25/cc-enable"
@@ -90,9 +90,9 @@
 #define PUT_P25_RAW_TSBK                "/p25/raw-tsbk"
 
 #define GET_NXDN_CC                     "/nxdn/cc"
-#define GET_NXDN_DEBUG_BASE             "/nxdn/debug/(\\d+)/(\\d+)"
+#define GET_NXDN_DEBUG_BASE             "/nxdn/debug/"
 #define GET_NXDN_DEBUG                  GET_NXDN_DEBUG_BASE"(\\d+)/(\\d+)"
-#define GET_NXDN_DUMP_RCCH_BASE         "/nxdn/dump-rcch/(\\d+)"
+#define GET_NXDN_DUMP_RCCH_BASE         "/nxdn/dump-rcch/"
 #define GET_NXDN_DUMP_RCCH              GET_NXDN_DUMP_RCCH_BASE"(\\d+)"
 #define GET_NXDN_CC_DEDICATED           "/nxdn/cc-enable"
 
