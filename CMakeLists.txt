@@ -29,123 +29,121 @@ cmake_minimum_required(VERSION 3.16.0)
 # dvmhost source/header files
 file(GLOB dvmhost_SRC
     # DMR module
-    "dmr/*.h"
-    "dmr/*.cpp"
-    "dmr/acl/*.h"
-    "dmr/acl/*.cpp"
-    "dmr/data/*.h"
-    "dmr/data/*.cpp"
-    "dmr/edac/*.h"
-    "dmr/edac/*.cpp"
-    "dmr/lc/*.h"
-    "dmr/lc/*.cpp"
-    "dmr/lc/csbk/*.h"
-    "dmr/lc/csbk/*.cpp"
-    "dmr/lookups/*.h"
-    "dmr/lookups/*.cpp"
-    "dmr/packet*.h"
-    "dmr/packet/*.cpp"
+    "src/dmr/*.h"
+    "src/dmr/*.cpp"
+    "src/dmr/acl/*.h"
+    "src/dmr/acl/*.cpp"
+    "src/dmr/data/*.h"
+    "src/dmr/data/*.cpp"
+    "src/dmr/edac/*.h"
+    "src/dmr/edac/*.cpp"
+    "src/dmr/lc/*.h"
+    "src/dmr/lc/*.cpp"
+    "src/dmr/lc/csbk/*.h"
+    "src/dmr/lc/csbk/*.cpp"
+    "src/dmr/lookups/*.h"
+    "src/dmr/lookups/*.cpp"
+    "src/dmr/packet*.h"
+    "src/dmr/packet/*.cpp"
 
     # P25 module
-    "p25/*.h"
-    "p25/*.cpp"
-    "p25/acl/*.h"
-    "p25/acl/*.cpp"
-    "p25/data/*.h"
-    "p25/data/*.cpp"
-    "p25/dfsi/*.h"
-    "p25/dfsi/*.cpp"
-    "p25/dfsi/packet/*.h"
-    "p25/dfsi/packet/*.cpp"
-    "p25/edac/*.h"
-    "p25/edac/*.cpp"
-    "p25/lc/*.h"
-    "p25/lc/*.cpp"
-    "p25/lc/tdulc/*.h"
-    "p25/lc/tdulc/*.cpp"
-    "p25/lc/tsbk/*.h"
-    "p25/lc/tsbk/*.cpp"
-    "p25/lookups/*.h"
-    "p25/lookups/*.cpp"
-    "p25/packet/*.h"
-    "p25/packet/*.cpp"
+    "src/p25/*.h"
+    "src/p25/*.cpp"
+    "src/p25/acl/*.h"
+    "src/p25/acl/*.cpp"
+    "src/p25/data/*.h"
+    "src/p25/data/*.cpp"
+    "src/p25/dfsi/*.h"
+    "src/p25/dfsi/*.cpp"
+    "src/p25/dfsi/packet/*.h"
+    "src/p25/dfsi/packet/*.cpp"
+    "src/p25/edac/*.h"
+    "src/p25/edac/*.cpp"
+    "src/p25/lc/*.h"
+    "src/p25/lc/*.cpp"
+    "src/p25/lc/tdulc/*.h"
+    "src/p25/lc/tdulc/*.cpp"
+    "src/p25/lc/tsbk/*.h"
+    "src/p25/lc/tsbk/*.cpp"
+    "src/p25/lookups/*.h"
+    "src/p25/lookups/*.cpp"
+    "src/p25/packet/*.h"
+    "src/p25/packet/*.cpp"
 
     # NXDN module
-    "nxdn/*.h"
-    "nxdn/*.cpp"
-    "nxdn/acl/*.h"
-    "nxdn/acl/*.cpp"
-    "nxdn/channel/*.h"
-    "nxdn/channel/*.cpp"
-    "nxdn/edac/*.h"
-    "nxdn/edac/*.cpp"
-    "nxdn/lc/*.h"
-    "nxdn/lc/*.cpp"
-    "nxdn/lc/rcch/*.h"
-    "nxdn/lc/rcch/*.cpp"
-    "nxdn/packet/*.h"
-    "nxdn/packet/*.cpp"
+    "src/nxdn/*.h"
+    "src/nxdn/*.cpp"
+    "src/nxdn/acl/*.h"
+    "src/nxdn/acl/*.cpp"
+    "src/nxdn/channel/*.h"
+    "src/nxdn/channel/*.cpp"
+    "src/nxdn/edac/*.h"
+    "src/nxdn/edac/*.cpp"
+    "src/nxdn/lc/*.h"
+    "src/nxdn/lc/*.cpp"
+    "src/nxdn/lc/rcch/*.h"
+    "src/nxdn/lc/rcch/*.cpp"
+    "src/nxdn/packet/*.h"
+    "src/nxdn/packet/*.cpp"
 
     # Core
-    "edac/*.h"    
-    "edac/*.cpp"
-    "edac/rs/*.h"
-    "host/*.h"
-    "host/*.cpp"
-    "host/calibrate/*.h"
-    "host/calibrate/*.cpp"
-    "host/setup/*.h"
-    "host/setup/*.cpp"
-    "lookups/*.h"
-    "lookups/*.cpp"
-    "modem/*.h"
-    "modem/*.cpp"
-    "modem/port/*.h"
-    "modem/port/*.cpp"
-    "network/*.h"
-    "network/*.cpp"
-    "network/json/*.h"
-    "network/rest/*.h"
-    "network/rest/*.cpp"
-    "network/rest/http/*.h"
-    "network/rest/http/*.cpp"
-    "remote/RESTClient.cpp"
-    "remote/RESTClient.h"
-    "yaml/*.h"
-    "yaml/*.cpp"
-    "*.h"
-    "*.cpp"
+    "src/edac/*.h"
+    "src/edac/*.cpp"
+    "src/edac/rs/*.h"
+    "src/host/*.h"
+    "src/host/*.cpp"
+    "src/host/calibrate/*.h"
+    "src/host/calibrate/*.cpp"
+    "src/host/setup/*.h"
+    "src/host/setup/*.cpp"
+    "src/lookups/*.h"
+    "src/lookups/*.cpp"
+    "src/modem/*.h"
+    "src/modem/*.cpp"
+    "src/modem/port/*.h"
+    "src/modem/port/*.cpp"
+    "src/network/*.h"
+    "src/network/*.cpp"
+    "src/network/json/*.h"
+    "src/network/rest/*.h"
+    "src/network/rest/*.cpp"
+    "src/network/rest/http/*.h"
+    "src/network/rest/http/*.cpp"
+    "src/remote/RESTClient.cpp"
+    "src/remote/RESTClient.h"
+    "src/yaml/*.h"
+    "src/yaml/*.cpp"
+    "src/*.h"
+    "src/*.cpp"
 )
 
 # dvmcmd source/header files
 file(GLOB dvmcmd_SRC
-    "network/UDPSocket.h"
-    "network/UDPSocket.cpp"
-    "network/RESTDefines.h"
-    "network/json/*.h"
-    "network/rest/*.h"
-    "network/rest/*.cpp"
-    "network/rest/http/*.h"
-    "network/rest/http/*.cpp"
-    "remote/*.h"
-    "remote/*.cpp"
-    "edac/SHA256.h"
-    "edac/SHA256.cpp"
-    "Defines.h"
-    "Thread.h"
-    "Thread.cpp"
-    "Log.h"
-    "Log.cpp"
-    "Utils.h"
-    "Utils.cpp"
+    "src/network/UDPSocket.h"
+    "src/network/UDPSocket.cpp"
+    "src/network/RESTDefines.h"
+    "src/network/json/*.h"
+    "src/network/rest/*.h"
+    "src/network/rest/*.cpp"
+    "src/network/rest/http/*.h"
+    "src/network/rest/http/*.cpp"
+    "src/remote/*.h"
+    "src/remote/*.cpp"
+    "src/edac/SHA256.h"
+    "src/edac/SHA256.cpp"
+    "src/Defines.h"
+    "src/Thread.h"
+    "src/Thread.cpp"
+    "src/Log.h"
+    "src/Log.cpp"
+    "src/Utils.h"
+    "src/Utils.cpp"
 )
 
 # dvmtest source/header files
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
-
     "tests/edac/*.cpp"
-
     "tests/p25/*.cpp"
 )
 
@@ -313,8 +311,15 @@ else ()
 endif (CROSS_COMPILE_AARCH64)
 message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM")
 if (CROSS_COMPILE_RPI_ARM)
-    set(CMAKE_C_COMPILER /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-    set(CMAKE_CXX_COMPILER /opt/tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+    message("Cloning legacy Raspberry Pi compilation toolchain")
+    Include(FetchContent)
+    FetchContent_Declare(
+        RPiTools
+        GIT_REPOSITORY https://github.com/raspberrypi/tools.git
+    )
+    FetchContent_MakeAvailable(RPiTools)
+    set(CMAKE_C_COMPILER ${CMAKE_CURRENT_LIST_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
+    set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_LIST_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
     set(ARCH armhf)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
     message(CHECK_PASS "yes")
@@ -365,7 +370,7 @@ else()
     target_link_libraries(asio::asio INTERFACE Threads::Threads)
 endif ()
 add_executable(dvmhost ${dvmhost_SRC})
-target_include_directories(dvmhost PRIVATE .)
+target_include_directories(dvmhost PRIVATE src)
 target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
 
 set(CPACK_SET_DESTDIR true)
@@ -403,7 +408,7 @@ else()
 endif ()
 add_executable(dvmcmd ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE asio::asio Threads::Threads)
-target_include_directories(dvmcmd PRIVATE .)
+target_include_directories(dvmcmd PRIVATE src)
 
 if (ENABLE_TESTS)
 # dvmtest project
