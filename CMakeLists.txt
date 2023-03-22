@@ -346,7 +346,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -std=c++11 
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
-set(CMAKE_INSTALL_PREFIX "/opt/dvm")
+set(CMAKE_INSTALL_PREFIX "/usr/local")
 set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
 
 set(GIT_VER "")
@@ -374,7 +374,7 @@ target_include_directories(dvmhost PRIVATE src)
 target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
 
 set(CPACK_SET_DESTDIR true)
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/dvm")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
 
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "dvmhost")
@@ -384,7 +384,7 @@ set(CPACK_PACKAGE_VENDOR "DVMProject")
 
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
-set(CPACK_DEBIAN_PACKAGE_VERSION "3.00")
+set(CPACK_DEBIAN_PACKAGE_VERSION "3.0.0")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
 
@@ -440,14 +440,13 @@ endif (ENABLE_TESTS)
 # dvmhost/dvmcmd install
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-install(FILES config.example.yml iden_table.dat RSSI.dat rid_acl.example.dat tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(PROGRAMS start-dvm.sh stop-dvm.sh dvm-watchdog.sh stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(CODE "execute_process(COMMAND mkdir -p /opt/dvm/log)")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/opt\\\\/dvm\\\\/log\\\\//' /opt/dvm/config.example.yml\")")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/opt\\\\/dvm\\\\/iden_table.dat/' /opt/dvm/config.example.yml\")")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/opt\\\\/dvm\\\\/rid_acl.dat/' /opt/dvm/config.example.yml\")")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/opt\\\\/dvm\\\\/tg_acl.dat/' /opt/dvm/config.example.yml\")")
+install(FILES configs/config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/iden_table.dat/' /usr/local/etc/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/rid_acl.dat/' /usr/local/etc/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/tg_acl.dat/' /usr/local/etc/config.example.yml\")")
 
 # custom target to generate a tarball
 add_custom_target(tarball
@@ -457,9 +456,9 @@ add_custom_target(tarball
     COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DRIECTORY
     COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
     COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-    COMMAND cp ../*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
     COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-    COMMAND cp -v ../config*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-    COMMAND cp -v ../*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-    COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_1.0.0_${ARCH}.tar.gz *
+    COMMAND cp -v ../configs/config*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})

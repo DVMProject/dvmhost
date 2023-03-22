@@ -10,7 +10,7 @@ Please feel free to reach out to us for help, comments or otherwise, on our Disc
 
 This project utilizes CMake for its build system. (All following information assumes familiarity with the standard Linux make system.)
 
-The DVM Host software does not have any specific library dependancies and is written to be as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
+The DVM Host software requires the library dependancies below. Generally, the software attempts to be as portable as possible and as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
 
 ### Dependencies
 
@@ -144,4 +144,4 @@ All thats being done is to remove the `console=serial0,115200` part. Do not chan
 
 ## License
 
-This project is licensed under the GPLv2 License - see the [LICENSE.md](LICENSE.md) file for details. Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.
+This project is licensed under the GPLv2 License - see the [LICENSE](LICENSE) file for details. Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.

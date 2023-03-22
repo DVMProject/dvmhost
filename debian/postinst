@@ -3,11 +3,17 @@ set -e
 if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ] ; then
     useradd --user-group -M --system dvmhost --shell /bin/false || true
     usermod --groups dialout --append dvmhost || true
-    chown dvmhost:dvmhost /opt/dvm/config.yml
-    chown dvmhost:dvmhost /opt/dvm/iden_table.dat
-    chown dvmhost:dvmhost /opt/dvm/rid_acl.dat
-    chown dvmhost:dvmhost /opt/dvm/tg_acl.dat
-    chown dvmhost:dvmhost /opt/dvm/log
+    chown dvmhost:dvmhost /usr/local/etc/config.yml
+    chown dvmhost:dvmhost /usr/local/etc/iden_table.dat
+    chown dvmhost:dvmhost /usr/local/etc/rid_acl.dat
+    chown dvmhost:dvmhost /usr/local/etc/tg_acl.dat
+    chown dvmhost:dvmhost /usr/local/etc/log
+
+    sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\"
+    sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\"
+    sed -i 's/file: iden_table.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/iden_table.dat/' /usr/local/etc/config.example.yml\"
+    sed -i 's/file: rid_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/rid_acl.dat/' /usr/local/etc/config.example.yml\"
+    sed -i 's/file: tg_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/tg_acl.dat/' /usr/local/etc/config.example.yml\"
 
     # This will only remove masks created by d-s-h on package removal.
     deb-systemd-helper unmask 'dvmhost.service' >/dev/null || true
