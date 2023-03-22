@@ -63,7 +63,6 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-aarch64-linux-gnu \
             libasio-dev
-          sudo git clone --recurse-submodules https://github.com/raspberrypi/tools.git /opt/tools
       - name: Build
         run: |
           if [[ "${{ matrix.arch }}" == "RPI_ARM" ]]; then
