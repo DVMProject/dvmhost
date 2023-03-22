@@ -24,6 +24,7 @@
 */
 #include "Defines.h"
 #include "dmr/edac/Trellis.h"
+#include "Log.h"
 
 using namespace dmr::edac;
 
