@@ -69,10 +69,12 @@ jobs:
             sudo sed -i 's/^# deb-src/deb-src/g' /etc/apt/sources.list
             sudo apt-get update
             sudo apt-get source asio
-            cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 \
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+              -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 \
               -DWITH_ASIO="$(realpath -e $(find . -maxdepth 1 -type d -iname 'asio*'))" .
           else
-            cmake -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+              -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
           fi
 
           make
