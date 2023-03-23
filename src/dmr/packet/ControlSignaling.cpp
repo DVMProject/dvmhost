@@ -800,7 +800,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -811,7 +811,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 else {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -983,7 +983,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
@@ -994,7 +994,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 else {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
-                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_SYS_BUSY, (grp) ? 1U : 0U);
+                        writeRF_CSBK_ACK_RSP(srcId, TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
                         ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", m_tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;

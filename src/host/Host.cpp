@@ -1854,9 +1854,9 @@ bool Host::readParams()
         std::string strVoiceChNo = "";
         for (auto it = m_voiceChNo.begin(); it != m_voiceChNo.end(); ++it) {
             int decVal = ::atoi(std::to_string(*it).c_str());
-            char hexStr[8];
+            char hexStr[23];
 
-            ::sprintf(hexStr, "$%04X", decVal);
+            ::sprintf(hexStr, "$%04X (%u)", decVal, decVal);
 
             strVoiceChNo.append(std::string(hexStr));
             strVoiceChNo.append(",");
@@ -1903,7 +1903,7 @@ bool Host::readParams()
         LogInfo("    Bandwidth: %fKHz", entry.chBandwidthKhz());
         LogInfo("    Channel Spacing: %fKHz", entry.chSpaceKhz());
         LogInfo("    Channel Id: %u", m_channelId);
-        LogInfo("    Channel No.: $%04X", m_channelNo);
+        LogInfo("    Channel No.: $%04X (%u)", m_channelNo, m_channelNo);
         LogInfo("    Voice Channel No(s).: %s", strVoiceChNo.c_str());
         LogInfo("    Site Id: $%02X", m_siteId);
         LogInfo("    System Id: $%03X", m_sysId);
