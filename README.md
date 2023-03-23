@@ -43,9 +43,6 @@ If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi 
 
 Please note cross-compliation requires you to have the appropriate development packages installed for your system. For ARM 32-bit, on Debian/Ubuntu OS install the "arm-linux-gnueabihf-gcc" and "arm-linux-gnueabihf-g++" packages. For ARM 64-bit, on Debian/Ubuntu OS install the "aarch64-linux-gnu-gcc" and "aarch64-linux-gnu-g++" packages.
 
-- For old RPi 1 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++").
-  1. Switch to "/opt" and checkout `https://github.com/raspberrypi/tools.git`.
-
 [See build notes](#build-notes).
 
 ### Compiled Protocol Options
@@ -130,6 +127,12 @@ usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remot
 
 - The installation path of "/opt/dvm" is still supported by the CMake Makefile (and will be for the forseeable future); after compiling, in order to install to this path simply use: `make old_install`.
 - The installation of the systemd service is also still supported by the CMake Makefile, after using `make old_install`, simply use: `make old_install-service`.
+
+- The old RPi 1 cross-compile *requires* a downloaded copy of ASIO pointed to with the `-DWITH_ASIO=/path/to/asio`.
+- By default when cross-compiling for old RPi 1 using the Debian/Ubuntu OS, the toolchain will attempt to fetch and clone the tools automatically. If you already have a copy of these tools, you can specify the location for them with the `-DWITH_RPI_ARM_TOOLS=/path/to/tools`
+- For old RPi 1 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++").
+  1. Switch to "/opt" and checkout `https://github.com/raspberrypi/tools.git`.
+
 
 There is an automated process to generate a tarball package if required as well, after compiling simply run: `make tarball`. This will generate a tarball package, the tarball package contains the similar pathing that the `make old_install` would generate.
 
