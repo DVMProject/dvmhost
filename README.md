@@ -46,6 +46,8 @@ Please note cross-compliation requires you to have the appropriate development p
 - For old RPi 1 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++").
   1. Switch to "/opt" and checkout `https://github.com/raspberrypi/tools.git`.
 
+[See build notes](#build-notes).
+
 ### Compiled Protocol Options
 
 These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols are enabled. And, support for the NXDN protocol is disabled. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
@@ -123,6 +125,13 @@ usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remot
   -h        show this screen
   --        stop handling options
 ```
+
+### Build Notes
+
+- The installation path of "/opt/dvm" is still supported by the CMake Makefile (and will be for the forseeable future); after compiling, in order to install to this path simply use: `make old_install`.
+- The installation of the systemd service is also still supported by the CMake Makefile, after using `make old_install`, simply use: `make old_install-service`.
+
+There is an automated process to generate a tarball package if required as well, after compiling simply run: `make tarball`. This will generate a tarball package, the tarball package contains the similar pathing that the `make old_install` would generate.
 
 ## Notes
 

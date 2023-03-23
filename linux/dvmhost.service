@@ -5,7 +5,7 @@ After=syslog.target network.target
 [Service]
 User=dvmhost
 Type=forking
-ExecStart=/opt/dvm/bin/dvmhost -c /opt/dvm/config.yml
+ExecStart=/usr/local/bin/dvmhost -c /usr/local/etc/config.yml
 Restart=on-abnormal
 
 [Install]

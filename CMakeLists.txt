@@ -530,4 +530,6 @@ add_custom_target(old_install-service
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/tg_acl.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log
-    COMMAND cp ../linux/dvmhost.service /lib/systemd/system/)
+    COMMAND cp ../linux/dvmhost.service /lib/systemd/system/
+    COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/bin/\\\\/opt\\\\/dvm\\\\/bin/' /lib/systemd/system/dvmhost.service\"
+    COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/etc/\\\\/opt\\\\/dvm/' /lib/systemd/system/dvmhost.service\")
