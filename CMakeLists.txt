@@ -26,7 +26,9 @@
 #*/
 cmake_minimum_required(VERSION 3.16.0)
 
-# dvmhost source/header files
+#
+## dvmhost source/header files
+#
 file(GLOB dvmhost_SRC
     # DMR module
     "src/dmr/*.h"
@@ -117,7 +119,9 @@ file(GLOB dvmhost_SRC
     "src/*.cpp"
 )
 
-# dvmcmd source/header files
+#
+## dvmcmd source/header files
+#
 file(GLOB dvmcmd_SRC
     "src/network/UDPSocket.h"
     "src/network/UDPSocket.cpp"
@@ -140,14 +144,16 @@ file(GLOB dvmcmd_SRC
     "src/Utils.cpp"
 )
 
-# dvmtest source/header files
+#
+## dvmtest source/header files
+#
 file(GLOB dvmtests_SRC
     "tests/nulltest.cpp"
     "tests/edac/*.cpp"
     "tests/p25/*.cpp"
 )
 
-# digital mode options
+# Digital mode options and other compilation features
 option(ENABLE_DMR "Enable DMR Digtial Mode" on)
 option(ENABLE_P25 "Enable P25 Digital Mode" on)
 option(ENABLE_NXDN "Enable NXDN Digital Mode" on)
@@ -189,7 +195,7 @@ else ()
     message(CHECK_PASS "disabled")
 endif (ENABLE_TESTS)
 
-# debug options
+# Debug compilation features/options (these should not be enabled for production!)
 option(DEBUG_DMR_PDU_DATA "" off)
 option(DEBUG_CRC "" off)
 option(DEBUG_RS "" off)
@@ -279,7 +285,7 @@ if (DEBUG_TRELLIS)
     add_definitions(-DDEBUG_TRELLIS)
 endif (DEBUG_TRELLIS)
 
-# cross-compile options
+# Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
@@ -333,9 +339,7 @@ if (WITH_ASIO)
     message(CHECK_START "With ASIO: ${ASIO_INCLUDE_DIR}")
 endif (WITH_ASIO)
 
-#
-# standard CMake options
-#
+# Standard CMake options
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY .)
@@ -356,7 +360,9 @@ execute_process(COMMAND git describe --abbrev=8 --always --tags WORKING_DIRECTOR
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
-# dvmhost project
+#
+## dvmhost project
+#
 project(dvmhost)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
@@ -394,7 +400,9 @@ set(CPACK_DEBIAN_FILE_NAME ${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_DEBIAN_PACKAGE_V
 
 include(CPack)
 
-# dvmcmd project
+#
+## dvmcmd project
+#
 project(dvmcmd)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
@@ -410,7 +418,9 @@ target_link_libraries(dvmcmd PRIVATE asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE src)
 
 if (ENABLE_TESTS)
-# dvmtest project
+#
+## dvmtest project
+#
 project(dvmtest)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 Include(FetchContent)
@@ -436,7 +446,9 @@ target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain asio::asio Threads
 target_include_directories(dvmtests PRIVATE .)
 endif (ENABLE_TESTS)
 
-# dvmhost/dvmcmd install
+#
+# Standard dvmhost/dvmcmd install
+#
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(FILES configs/config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
@@ -447,12 +459,22 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.d
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/rid_acl.dat/' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/tg_acl.dat/' /usr/local/etc/config.example.yml\")")
 
-# custom target to force strip binaries
+#
+# Helper target to force strip binaries.
+#
 add_custom_target(strip
     COMMAND strip -s dvmhost
     COMMAND strip -s dvmcmd)
 
-# custom target to generate a tarball
+#/*
+#** bryanb: Please do not change the following section unless adding or removing paths that need to be part of a build
+#** these sections are maintained for internal use.
+#*/
+
+#
+# Custom make target to perform a tarball packaging. This will ultimately contain the same type of pathing
+# the non-standard legacy install to "/opt/dvm" does.
+# 
 set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
 add_custom_target(tarball
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
@@ -468,7 +490,13 @@ add_custom_target(tarball
     COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
 
-# custom target to perform legacy install
+#
+# Custom make target to perform non-standard legacy install to "/opt/dvm". This is meant
+# to retain backward compatibility with deployment scripts and other tools that work with "/opt/dvm"
+# instead of system paths.
+#
+# This is inherited logic from the old DVMHost 2.0 Makefile.
+#
 set(CMAKE_LEGACY_INSTALL_PREFIX "/opt/dvm")
 add_custom_target(old_install
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}
@@ -476,7 +504,7 @@ add_custom_target(old_install
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/log
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
-    COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.yml
+    COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
     COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
@@ -485,3 +513,21 @@ add_custom_target(old_install
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX})
+
+#
+# Custom make target to perform non-standard legacy service install. This is meant
+# to retain backward compatibility with deployment scripts and other tools that work with "/opt/dvm"
+# instead of system paths.
+#
+# This is inherited logic from the old DVMHost 2.0 Makefile.
+#
+add_custom_target(old_install-service
+    COMMAND useradd --user-group -M --system dvmhost --shell /bin/false || true
+    COMMAND usermod --groups dialout --append dvmhost || true
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/tg_acl.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log
+    COMMAND cp ../linux/dvmhost.service /lib/systemd/system/)
