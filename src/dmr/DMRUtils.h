@@ -58,8 +58,8 @@ namespace dmr
         /// <summary>Helper to test and clamp a DMR site ID.</summary>
         static uint32_t siteId(uint32_t id, uint8_t siteModel)
         {
-            if (id == 0U) { // clamp to 1
-                id = 1U;
+            if (id > 0U) {
+                id--;
             }
 
             switch (siteModel)
@@ -100,10 +100,6 @@ namespace dmr
         /// <summary>Helper to test and clamp a DMR network ID.</summary>
         static uint32_t netId(uint32_t id, uint8_t siteModel)
         {
-            if (id == 0U) { // clamp to 1
-                id = 1U;
-            }
-
             switch (siteModel) {
             case SITE_MODEL_TINY:
             {
