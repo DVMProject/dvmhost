@@ -80,15 +80,15 @@ namespace dmr
             break;
             case SITE_MODEL_LARGE:
             {
-                if (id > 0xFFU) { // clamp to $FF
-                    id = 0xFFU;
+                if (id > 0x7FU) { // clamp to $7F
+                    id = 0x7FU;
                 }
             }
             break;
             case SITE_MODEL_HUGE:
             {
-                if (id > 0x7FFU) { // clamp to $7FF
-                    id = 0x7FFU;
+                if (id > 0x3FFU) { // clamp to $3FF
+                    id = 0x3FFU;
                 }
             }
             break;

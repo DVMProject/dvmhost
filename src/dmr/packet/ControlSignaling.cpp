@@ -852,7 +852,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         if (broadcast)
             csbk->setCSBKO(CSBKO_BTV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot);
+        csbk->setSlotNo(slot - 1U);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -888,7 +888,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot);
+        csbk->setSlotNo(slot - 1U);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -1020,7 +1020,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         std::unique_ptr<CSBK_TD_GRANT> csbk = new_unique(CSBK_TD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot);
+        csbk->setSlotNo(slot - 1U);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -1041,7 +1041,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         std::unique_ptr<CSBK_PD_GRANT> csbk = new_unique(CSBK_PD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot);
+        csbk->setSlotNo(slot - 1U);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",

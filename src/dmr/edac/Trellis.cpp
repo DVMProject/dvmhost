@@ -411,7 +411,7 @@ bool Trellis::fixCode(uint8_t* points, uint32_t failPos, uint8_t* payload) const
             uint32_t pos = checkCode(points, tribits);
             if (pos == 999U) {
 #if DEBUG_TRELLIS
-                ::LogDebug(LOG_HOST, "Trellis::fixCode34() fixed, failPos = %u, pos = %u, val = %01X", failPos, bestPos, bestVal);
+                ::LogDebug(LOG_HOST, "Trellis::fixCode() fixed, failPos = %u, pos = %u, val = %01X", failPos, bestPos, bestVal);
 #endif
                 tribitsToBits(tribits, payload);
                 return true;

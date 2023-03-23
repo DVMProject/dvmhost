@@ -103,32 +103,32 @@ namespace dmr
             {
             case SITE_MODEL_TINY:
             {
-                value = (value << 9) + m_netId;
-                value = (value << 3) + m_siteId;
+                value = (value << 9) + (m_netId & 0x1FFU);
+                value = (value << 3) + (m_siteId & 0x07U);
             }
             break;
             case SITE_MODEL_SMALL:
             {
-                value = (value << 7) + m_netId;
-                value = (value << 5) + m_siteId;
+                value = (value << 7) + (m_netId & 0x7FU);
+                value = (value << 5) + (m_siteId & 0x1FU);
             }
             break;
             case SITE_MODEL_LARGE:
             {
-                value = (value << 5) + m_netId;
-                value = (value << 7) + m_siteId;
+                value = (value << 5) + (m_netId & 0x1FU);
+                value = (value << 7) + (m_siteId & 0x7FU);
             }
             break;
             case SITE_MODEL_HUGE:
             {
-                value = (value << 2) + m_netId;
-                value = (value << 10) + m_siteId;
+                value = (value << 2) + (m_netId & 0x03U); 
+                value = (value << 10) + (m_siteId & 0x3FFU);
             }
             break;
             }
 
             if (!msb) {
-                value = (value << 2) + m_parId;
+                value = (value << 2) + (m_parId & 0x03U);
             }
 
             return value & 0xFFFFU;

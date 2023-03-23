@@ -416,6 +416,9 @@ void Slot::clock()
 
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
+        // clock all the grant timers
+        m_affiliations->clock(ms);
+
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
         }
@@ -1118,6 +1121,9 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
     lc[2U] = (uint8_t)((lcValue >> 8) & 0xFFU);
     lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
     lc[4U] = edac::CRC::crc8(lc, 4U);
+
+    //LogDebug(LOG_DMR, "setShortLC_TSCC, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "shortLC_TSCC", lc, 5U);
 
     uint8_t sLC[9U];
 
