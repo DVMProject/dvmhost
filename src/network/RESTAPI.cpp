@@ -332,30 +332,35 @@ void RESTAPI::invalidateHostToken(const std::string host)
 /// <param name="request"></param>
 bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 {
-    std::string host = request.headers.find("Host");
+    std::string host = request.headers.find("RemoteHost");
     std::string headerToken = request.headers.find("X-DVM-Auth-Token");
+#if DEBUG_HTTP_PAYLOAD
+    ::LogDebug(LOG_REST, "RESTAPI::validateAuth() token, host = %s, token = %s", host.c_str(), headerToken.c_str());
+#endif
     if (headerToken == "") {
-        errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
+        errorPayload(reply, "no authentication token", HTTPPayload::UNAUTHORIZED);
         return false;
     }
 
-    auto token = std::find_if(m_authTokens.begin(), m_authTokens.end(), [&](const AuthTokenValueType& tok) { return tok.first == host; });
-    if (token != m_authTokens.end()) {
-        uint32_t storedToken = token->second;
-        uint32_t passedToken = (uint32_t)::strtoul(headerToken.c_str(), NULL, 10);
-        if (storedToken == passedToken) {
-            return true;
-        } else {
-            m_authTokens.erase(host); // devalidate host
-            errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
-            return false;
+    for (auto& token : m_authTokens) {
+#if DEBUG_HTTP_PAYLOAD
+        ::LogDebug(LOG_REST, "RESTAPI::validateAuth() valid list, host = %s, token = %s", token.first.c_str(), std::to_string(token.second).c_str());
+#endif
+        if (token.first.compare(host) == 0) {
+#if DEBUG_HTTP_PAYLOAD
+            ::LogDebug(LOG_REST, "RESTAPI::validateAuth() storedToken = %s, passedToken = %s", std::to_string(token.second).c_str(), headerToken.c_str());
+#endif
+            if (std::to_string(token.second).compare(headerToken) == 0) {
+                return true;
+            } else {
+                m_authTokens.erase(host); // devalidate host
+                errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
+                return false;
+            }
         }
     }
-    else {
-        errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
-        return false;
-    }
 
+    errorPayload(reply, "illegal authentication token", HTTPPayload::UNAUTHORIZED);
     return false;
 }
 
@@ -367,7 +372,7 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 /// <param name="match"></param>
 void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
-    std::string host = request.headers.find("Host");
+    std::string host = request.headers.find("RemoteHost");
     json::object response = json::object();
     setResponseDefaultStatus(response);
 

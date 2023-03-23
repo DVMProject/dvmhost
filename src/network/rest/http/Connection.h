@@ -132,6 +132,8 @@ namespace network
                                 m_request.content = std::string(content, length);
                             }
 
+                            m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
+
                             if (m_client) {
                                 if (result == HTTPLexer::GOOD) {
                                     m_requestHandler.handleRequest(m_request, m_reply);
