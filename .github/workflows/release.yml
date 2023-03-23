@@ -27,7 +27,7 @@ jobs:
   create-release:
     needs:
       - setup
-    name: Create Relase
+    name: Create Release
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
