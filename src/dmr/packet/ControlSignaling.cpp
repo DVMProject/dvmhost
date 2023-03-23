@@ -216,6 +216,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // verify the source RID is registered
                     VERIFY_SRCID_REG("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
 
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
                     } else {
@@ -231,6 +233,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                     // validate the talkgroup ID
                     VALID_TGID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId, dstId);
+
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
 
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
@@ -252,6 +256,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // verify the source RID is registered
                     VERIFY_SRCID_REG("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)", SVC_KIND_IND_VOICE_CALL, srcId);
 
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
                     break;
                 case SVC_KIND_GRP_DATA_CALL:
@@ -264,6 +270,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                     // validate the talkgroup ID
                     VALID_TGID("DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)", SVC_KIND_GRP_VOICE_CALL, srcId, dstId);
+
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     break;

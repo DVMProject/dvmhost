@@ -246,6 +246,11 @@ namespace dmr
     const uint8_t   TS_DENY_RSN_TGT_BUSY = 0x2EU;
     const uint8_t   TS_DENY_RSN_TGT_GROUP_NOT_VALID = 0x2FU;
 
+    const uint8_t   TS_QUEUED_RSN_NO_RESOURCE = 0xA0U;
+    const uint8_t   TS_QUEUED_RSN_SYS_BUSY = 0xA1U;
+
+    const uint8_t   TS_WAIT_RSN = 0xE0U;
+
     const uint8_t   MS_DENY_RSN_UNSUPPORTED_SVC = 0x00U;
 
     // Random Access Service Kind
