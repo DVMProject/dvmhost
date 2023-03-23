@@ -347,7 +347,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -Wall -std=c++11 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
 set(CMAKE_INSTALL_PREFIX "/usr/local")
-set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
 
 set(GIT_VER "")
 set(GIT_VER_HASH "")
@@ -448,7 +447,13 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.d
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/rid_acl.dat/' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/tg_acl.dat/' /usr/local/etc/config.example.yml\")")
 
+# custom target to force strip binaries
+add_custom_target(strip
+    COMMAND strip -s dvmhost
+    COMMAND strip -s dvmcmd)
+
 # custom target to generate a tarball
+set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
 add_custom_target(tarball
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
     COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
@@ -462,3 +467,21 @@ add_custom_target(tarball
     COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
     COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+
+# custom target to perform legacy install
+set(CMAKE_LEGACY_INSTALL_PREFIX "/opt/dvm")
+add_custom_target(old_install
+    COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/log
+    COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.yml
+    COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
+    COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
+    COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
+    COMMAND install -m 644 ../configs/tg_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/tg_acl.dat
+    COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX})
