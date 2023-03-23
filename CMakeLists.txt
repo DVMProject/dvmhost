@@ -315,17 +315,31 @@ if (CROSS_COMPILE_AARCH64)
 else ()
     message(CHECK_PASS "no")
 endif (CROSS_COMPILE_AARCH64)
+
+option(WITH_RPI_ARM_TOOLS "Specifies the location for the RPI ARM tools" off)
+if (WITH_RPI_ARM_TOOLS)
+    set(RPI_ARM_TOOLS ${WITH_RPI_ARM_TOOLS})
+    message(CHECK_START "With RPi 1 Tools: ${RPI_ARM_TOOLS}")
+endif (WITH_RPI_ARM_TOOLS)
+
 message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM")
 if (CROSS_COMPILE_RPI_ARM)
-    message("Cloning legacy Raspberry Pi compilation toolchain")
-    Include(FetchContent)
-    FetchContent_Declare(
-        RPiTools
-        GIT_REPOSITORY https://github.com/raspberrypi/tools.git
-    )
-    FetchContent_MakeAvailable(RPiTools)
-    set(CMAKE_C_COMPILER ${CMAKE_CURRENT_LIST_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-    set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_LIST_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+
+    if (NOT WITH_RPI_ARM_TOOLS)
+        message("-- Cloning legacy Raspberry Pi compilation toolchain")
+        Include(FetchContent)
+        FetchContent_Declare(
+            RPiTools
+            GIT_REPOSITORY https://github.com/raspberrypi/tools.git
+        )
+        FetchContent_MakeAvailable(RPiTools)
+        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
+        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+    else()
+        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
+        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+    endif ()
+
     set(ARCH armhf)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
     message(CHECK_PASS "yes")
