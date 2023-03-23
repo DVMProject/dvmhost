@@ -324,7 +324,6 @@ endif (WITH_RPI_ARM_TOOLS)
 
 message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM")
 if (CROSS_COMPILE_RPI_ARM)
-
     if (NOT WITH_RPI_ARM_TOOLS)
         message("-- Cloning legacy Raspberry Pi compilation toolchain")
         Include(FetchContent)
