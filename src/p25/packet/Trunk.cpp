@@ -669,8 +669,8 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 uint32_t srcId = tsbk->getSrcId();
                 uint32_t dstId = tsbk->getDstId();
 
-                // handle internal DVM TSDUs
-                if (tsbk->getMFId() == P25_MFG_DVM) {
+                // handle internal / Omaha Communication Systems DVM TSDUs
+                if (tsbk->getMFId() == P25_MFG_DVM_OCS) {
                     switch (tsbk->getLCO()) {
                         case LC_CALL_TERM:
                         {

@@ -45,7 +45,7 @@ using namespace p25;
 OSP_DVM_LC_CALL_TERM::OSP_DVM_LC_CALL_TERM() : TSBK()
 {
     m_lco = LC_CALL_TERM;
-    m_mfId = P25_MFG_DVM;
+    m_mfId = P25_MFG_DVM_OCS;
 }
 
 /// <summary>

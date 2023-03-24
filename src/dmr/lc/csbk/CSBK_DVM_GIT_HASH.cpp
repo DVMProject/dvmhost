@@ -46,7 +46,7 @@ using namespace dmr;
 CSBK_DVM_GIT_HASH::CSBK_DVM_GIT_HASH() : CSBK()
 {
     m_CSBKO = CSBKO_DVM_GIT_HASH;
-    m_FID = FID_DVM;
+    m_FID = FID_OCS_DVM;
 }
 
 /// <summary>

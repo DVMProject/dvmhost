@@ -46,7 +46,7 @@ using namespace p25;
 OSP_DVM_GIT_HASH::OSP_DVM_GIT_HASH() : TSBK()
 {
     m_lco = TSBK_OSP_DVM_GIT_HASH;
-    m_mfId = P25_MFG_DVM;
+    m_mfId = P25_MFG_DVM_OCS;
 }
 
 /// <summary>

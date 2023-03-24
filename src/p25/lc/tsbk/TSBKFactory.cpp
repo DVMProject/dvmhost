@@ -167,8 +167,8 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         }
     }
 
-    // internal P25 vendor opcodes
-    if (mfId == P25_MFG_DVM) {
+    // internal / Omaha Communication Systems P25 vendor opcodes
+    if (mfId == P25_MFG_DVM_OCS) {
         switch (lco) {
         case LC_CALL_TERM:
             return decode(new OSP_DVM_LC_CALL_TERM(), data, rawTSBK);
@@ -177,7 +177,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
             break;
         }
 
-        if (mfId == P25_MFG_DVM) {
+        if (mfId == P25_MFG_DVM_OCS) {
             return nullptr;
         }
         else {

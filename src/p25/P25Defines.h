@@ -113,7 +113,7 @@ namespace p25
 
     const uint8_t   P25_MFG_STANDARD = 0x00U;
     const uint8_t   P25_MFG_MOT = 0x90U;
-    const uint8_t   P25_MFG_DVM = 0xFEU; // internal P25 MFId used for internal signalling
+    const uint8_t   P25_MFG_DVM_OCS = 0x9CU;                // P25 MFId used for internal signalling; Omaha Communication Systems, LLC ($9C)
 
     const uint8_t   P25_MOT_CALLSIGN_LENGTH_BYTES = 8U;
 
