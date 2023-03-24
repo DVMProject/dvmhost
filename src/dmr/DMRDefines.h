@@ -222,6 +222,7 @@ namespace dmr
     const uint8_t   SLCO_NULL = 0x00U;
     const uint8_t   SLCO_ACT = 0x01U;
     const uint8_t   SLCO_TSCC = 0x02U;
+    const uint8_t   SLCO_PAYLOAD = 0x03U;
 
     // Reason Code(s)
     const uint8_t   TS_ACK_RSN_MSG = 0x60U;                 // TS - Message Accepted

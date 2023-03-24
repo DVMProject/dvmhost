@@ -153,10 +153,12 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
     case 1U:
         m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
         m_slot1->setControlPermitTG(m_controlPermitTG);
+        //m_slot2->setTSCCPayload(true); // this is not the correct way this should be done
         break;
     case 2U:
         m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
         m_slot2->setControlPermitTG(m_controlPermitTG);
+        //m_slot1->setTSCCPayload(true); // this is not the correct way this should be done
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);

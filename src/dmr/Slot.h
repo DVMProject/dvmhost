@@ -105,6 +105,8 @@ namespace dmr
 
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
+        /// <summary>Sets a flag indicating whether the slot is a TSCC payload slot.</summary>
+        void setTSCCPayload(bool payload) { m_tsccPayloadSlot = payload; }
         /// <summary>Sets a flag indicating whether the DMR control channel can send permit-tg to voice channels.</summary>
         void setControlPermitTG(bool controlPermitTG) { m_controlPermitTG = controlPermitTG; }
         /// <summary>Helper to set the voice error silence threshold.</summary>
@@ -189,6 +191,7 @@ namespace dmr
 
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
+        bool m_tsccPayloadSlot;
 
         bool m_controlPermitTG;
 
@@ -264,6 +267,8 @@ namespace dmr
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);
         /// <summary>Helper to set the DMR short LC for TSCC.</summary>
         static void setShortLC_TSCC(SiteData siteData, uint16_t counter);
+        /// <summary>Helper to set the DMR short LC for payload.</summary>
+        static void setShortLC_Payload(SiteData siteData, uint16_t counter);
     };
 } // namespace dmr
 

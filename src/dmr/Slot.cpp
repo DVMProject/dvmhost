@@ -414,6 +414,12 @@ void Slot::clock()
         }
     }
 
+    // increment the TSCC counter on every slot 1 clock
+    m_tsccCnt++;
+    if (m_tsccCnt == TSCC_MAX_CNT) {
+        m_tsccCnt = 0U;
+    }
+
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
         // clock all the grant timers
@@ -438,12 +444,6 @@ void Slot::clock()
 
             if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
                 if (m_ccRunning) {
-                    // increment the TSCC counter on every slot 1 clock
-                    m_tsccCnt++;
-                    if (m_tsccCnt == TSCC_MAX_CNT) {
-                        m_tsccCnt = 0U;
-                    }
-
                     if (m_ccSeq == 3U) {
                         m_ccSeq = 0U;
                     }
@@ -462,6 +462,10 @@ void Slot::clock()
             m_queue.clear(); // clear the frame buffer
             m_ccPrevRunning = m_ccRunning;
         }
+    }
+
+    if (m_tsccPayloadSlot) {
+        setShortLC_Payload(m_siteData, m_tsccCnt);
     }
 
     m_rfTimeoutTimer.clock(ms);
@@ -1072,7 +1076,6 @@ void Slot::setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco, bool voice)
 /// <summary>
 ///
 /// </summary>
-/// <param name="slotNo"></param>
 /// <param name="siteData"></param>
 /// <param name="counter"></param>
 void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
@@ -1124,6 +1127,69 @@ void Slot::setShortLC_TSCC(SiteData siteData, uint16_t counter)
 
     //LogDebug(LOG_DMR, "setShortLC_TSCC, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
     //Utils::dump(1U, "shortLC_TSCC", lc, 5U);
+
+    uint8_t sLC[9U];
+
+    lc::ShortLC shortLC;
+    shortLC.encode(lc, sLC);
+
+    m_modem->writeDMRShortLC(sLC);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="siteData"></param>
+/// <param name="counter"></param>
+void Slot::setShortLC_Payload(SiteData siteData, uint16_t counter)
+{
+    assert(m_modem != nullptr);
+
+    uint8_t lc[5U];
+    uint32_t lcValue = 0U;
+    lcValue = SLCO_PAYLOAD;
+    lcValue = (lcValue << 2) + siteData.siteModel();
+
+    switch (siteData.siteModel())
+    {
+    case SITE_MODEL_TINY:
+    {
+        lcValue = (lcValue << 9) + siteData.netId();
+        lcValue = (lcValue << 3) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_SMALL:
+    {
+        lcValue = (lcValue << 7) + siteData.netId();
+        lcValue = (lcValue << 5) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_LARGE:
+    {
+        lcValue = (lcValue << 5) + siteData.netId();
+        lcValue = (lcValue << 7) + siteData.siteId();
+    }
+    break;
+    case SITE_MODEL_HUGE:
+    {
+        lcValue = (lcValue << 2) + siteData.netId();
+        lcValue = (lcValue << 10) + siteData.siteId();
+    }
+    break;
+    }
+
+    lcValue = (lcValue << 1) + 0U;                          // Payload channel is Normal
+    lcValue = (lcValue << 9) + (counter & 0x1FFU);
+
+    // split value into bytes
+    lc[0U] = (uint8_t)((lcValue >> 24) & 0xFFU);
+    lc[1U] = (uint8_t)((lcValue >> 16) & 0xFFU);
+    lc[2U] = (uint8_t)((lcValue >> 8) & 0xFFU);
+    lc[3U] = (uint8_t)((lcValue >> 0) & 0xFFU);
+    lc[4U] = edac::CRC::crc8(lc, 4U);
+
+    //LogDebug(LOG_DMR, "setShortLC_Payload, netId = %02X, siteId = %02X", siteData.netId(), siteData.siteId());
+    //Utils::dump(1U, "setShortLC_Payload", lc, 5U);
 
     uint8_t sLC[9U];
 
