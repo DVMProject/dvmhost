@@ -851,7 +851,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["group"].set<bool>(grp);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -913,7 +913,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["group"].set<bool>(grp);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -1084,7 +1084,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["group"].set<bool>(grp);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -1126,7 +1126,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["group"].set<bool>(grp);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);

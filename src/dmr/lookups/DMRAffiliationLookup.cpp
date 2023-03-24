@@ -44,7 +44,8 @@ using namespace dmr::lookups;
 DMRAffiliationLookup::DMRAffiliationLookup(bool verbose) : ::lookups::AffiliationLookup("DMR Affiliation", verbose),
     m_grantChSlotTable(),
     m_tsccChNo(0U),
-    m_tsccSlot(0U)
+    m_tsccSlot(0U),
+    m_releaseGrant(nullptr)
 {
     /* stub */
 }
@@ -154,6 +155,10 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, slot = %u, dstId = %u",
                 m_name, chNo, slot, dstId);
+        }
+
+        if (m_releaseGrant != nullptr) {
+            m_releaseGrant(chNo, dstId, slot);
         }
 
         m_grantChTable[dstId] = 0U;

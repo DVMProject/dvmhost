@@ -142,6 +142,7 @@ namespace dmr
         ::lookups::TalkgroupIdLookup* m_tidLookup;
 
         uint8_t m_tsccSlotNo;
+        bool m_tsccPayloadActive;
         bool m_ccRunning;
         bool m_ccHalted;
 

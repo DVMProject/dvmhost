@@ -78,6 +78,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_tsccSlotNo(0U),
+    m_tsccPayloadActive(false),
     m_ccRunning(false),
     m_ccHalted(false),
     m_dumpCSBKData(dumpCSBKData),
@@ -408,14 +409,16 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
 {
     if (m_verbose) {
         LogMessage(LOG_DMR, "DMR Slot %u, payload activation, group = %u, dstId = %u",
-            group, dstId);
+            slotNo, group, dstId);
     }
 
     switch (slotNo) {
     case 1U:
+        m_tsccPayloadActive = true;
         m_slot1->setTSCCActivated(dstId, group);
         break;
     case 2U:
+        m_tsccPayloadActive = true;
         m_slot2->setTSCCActivated(dstId, group);
         break;
     default:
@@ -431,7 +434,7 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
 void Control::tsccClearActivatedSlot(uint32_t slotNo)
 {
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, payload activation clear");
+        LogMessage(LOG_DMR, "DMR Slot %u, payload activation clear", slotNo);
     }
 
     switch (slotNo) {
@@ -444,6 +447,10 @@ void Control::tsccClearActivatedSlot(uint32_t slotNo)
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC payload activation, slotNo = %u", slotNo);
         break;
+    }
+
+    if (m_tsccPayloadActive && m_slot1->m_tsccPayloadDstId == 0U && m_slot2->m_tsccPayloadDstId == 0U) {
+        m_tsccPayloadActive = false;
     }
 }
 

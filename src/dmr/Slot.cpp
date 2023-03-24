@@ -33,6 +33,7 @@
 #include "dmr/Sync.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
+#include "remote/RESTClient.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -419,12 +420,6 @@ void Slot::clock()
         }
     }
 
-    // increment the TSCC counter on every slot 1 clock
-    m_tsccCnt++;
-    if (m_tsccCnt == TSCC_MAX_CNT) {
-        m_tsccCnt = 0U;
-    }
-
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
         // clock all the grant timers
@@ -448,12 +443,25 @@ void Slot::clock()
             }
 
             if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
+                m_tsccCnt++;
+                if (m_tsccCnt == TSCC_MAX_CNT) {
+                    m_tsccCnt = 0U;
+                }
+
                 if (m_ccRunning) {
                     if (m_ccSeq == 3U) {
                         m_ccSeq = 0U;
                     }
 
-                    setShortLC_TSCC(m_siteData, m_tsccCnt);
+                    if (m_dmr->m_tsccPayloadActive) {
+                        if ((m_tsccCnt % 2) == 0) {
+                            setShortLC_TSCC(m_siteData, m_tsccCnt);
+                        }
+                    } 
+                    else {
+                        setShortLC_TSCC(m_siteData, m_tsccCnt);
+                    }
+
                     writeRF_ControlData(m_tsccCnt, m_ccSeq);
 
                     m_ccSeq++;
@@ -470,30 +478,21 @@ void Slot::clock()
     }
 
     // never allow the TSCC to become payload activated
-    if (m_tsccActivated && m_enableTSCC) {
+    if (m_tsccActivated && m_slotNo == m_dmr->m_tsccSlotNo) {
         ::LogDebug(LOG_DMR, "DMR Slot %u, BUG BUG tried to payload activate the TSCC slot", m_slotNo);
         clearTSCCActivated();
     }
 
     // activate payload channel if requested from the TSCC
-    if (m_tsccActivated && !m_enableTSCC) {
+    if (m_tsccActivated) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
-                if (m_dmr->m_tsccSlotNo > 0U) {
-                    // every 4 frames transmit the payload TSCC
-                    if ((m_tsccCnt % 4) == 0) {
-                        setShortLC_Payload(m_siteData, m_tsccCnt);
-                    }
-                    else {
-                        // only transmit the payload short LC every 2 frames
-                        if ((m_tsccCnt % 2) == 0) {
-                            setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, true);
-                        }
-                    }
+                if ((m_tsccCnt % 2) > 0) {
+                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, false);
                 }
-                else {
-                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, true);
-                }
+            }
+            else {
+                setShortLC_TSCC(m_siteData, m_tsccCnt);
             }
         }
         else {
@@ -563,7 +562,9 @@ void Slot::clock()
     }
 
     if (m_rfState == RS_RF_REJECTED) {
-        m_queue.clear();
+        if (!m_enableTSCC) {
+            m_queue.clear();
+        }
 
         m_rfFrames = 0U;
         m_rfErrs = 0U;
@@ -677,6 +678,29 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_affiliations = new dmr::lookups::DMRAffiliationLookup(verbose);
+    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
+        Slot* tscc = m_dmr->getTSCCSlot();
+        if (tscc != nullptr) {
+            if (chNo == tscc->m_channelNo) {
+                m_dmr->tsccClearActivatedSlot(slot);
+                return;
+            }
+
+            ::lookups::VoiceChData voiceChData = tscc->m_affiliations->getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                json::object req = json::object();
+                req["slot"].set<uint8_t>(slot);
+                bool clear = true;
+                req["clear"].set<bool>(clear);
+
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, tscc->m_debug);
+            }
+            else {
+                ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear payload channel, chNo = %u", tscc->m_slotNo, chNo);
+            }
+        }
+    });
 
     m_hangCount = callHang * 17U;
 

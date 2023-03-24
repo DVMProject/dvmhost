@@ -30,6 +30,7 @@
 #include "lookups/AffiliationLookup.h"
 
 #include <tuple>
+#include <functional>
 
 namespace dmr
 {
@@ -65,13 +66,18 @@ namespace dmr
             /// <summary>Helper to determine the first available slot for given the channel number.</summary>
             uint8_t getAvailableSlotForChannel(uint32_t chNo) const;
 
+            /// <summary>Helper to set the release grant callback.</summary>
+            void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
+
         protected:
             std::unordered_map<uint32_t, std::tuple<uint32_t, uint8_t>> m_grantChSlotTable;
 
             uint32_t m_tsccChNo;
             uint8_t m_tsccSlot;
+
+            std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
         };
     } // namespace lookups
-} // namespace dmr
+} // namespace dmr 
 
 #endif // __DMR_AFFILIATION_LOOKUP_H__

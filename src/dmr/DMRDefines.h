@@ -171,7 +171,7 @@ namespace dmr
     // Feature IDs
     const uint8_t   FID_ETSI = 0x00U;                       // ETSI Standard Feature Set
     const uint8_t   FID_DMRA = 0x10U;                       //
-    const uint8_t   FID_DVM = 0xFEU; // internal DMR FID used for internal signalling
+    const uint8_t   FID_DVM = 0x3FU;                        // internal DMR FID used for internal signalling
 
     // LC Service Options
     const uint8_t   LC_SVC_OPT_EMERGENCY = 0x80U;
