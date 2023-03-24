@@ -77,6 +77,8 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_tsccCnt(0U),
+    m_tsccCntInterval(1000U, 0U, DMR_SLOT_TIME / 2U),
     m_tsccSlotNo(0U),
     m_tsccPayloadActive(false),
     m_ccRunning(false),
@@ -96,6 +98,8 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
+
+    m_tsccCntInterval.start();
 }
 
 /// <summary>
@@ -314,9 +318,10 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 }
 
 /// <summary>
-/// Updates the processor.
+/// Updates the processor by the passed number of milliseconds.
 /// </summary>
-void Control::clock()
+/// <param name="ms"></param>
+void Control::clock(uint32_t ms)
 {
     if (m_network != nullptr) {
         data::Data data;
@@ -335,6 +340,16 @@ void Control::clock()
                     break;
             }
         }
+    }
+
+    m_tsccCntInterval.clock(ms);
+    if (m_tsccCntInterval.isRunning() && m_tsccCntInterval.hasExpired()) {
+        m_tsccCnt++;
+        if (m_tsccCnt == TSCC_MAX_CSC_CNT) {
+            m_tsccCnt = 0U;
+        }
+
+        m_tsccCntInterval.start();
     }
 
     m_slot1->clock();

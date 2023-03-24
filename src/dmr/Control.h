@@ -89,7 +89,7 @@ namespace dmr
         uint32_t getFrame(uint32_t slotNo, uint8_t* data);
 
         /// <summary>Updates the processor.</summary>
-        void clock();
+        void clock(uint32_t ms);
 
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
@@ -140,6 +140,9 @@ namespace dmr
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupIdLookup* m_tidLookup;
+
+        uint16_t m_tsccCnt;
+        Timer m_tsccCntInterval;
 
         uint8_t m_tsccSlotNo;
         bool m_tsccPayloadActive;

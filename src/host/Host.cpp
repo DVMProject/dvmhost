@@ -1324,7 +1324,7 @@ int Host::run()
 
 #if defined(ENABLE_DMR)
         if (dmr != nullptr)
-            dmr->clock();
+            dmr->clock(ms);
 #endif // defined(ENABLE_DMR)
 #if defined(ENABLE_P25)
         if (p25 != nullptr)

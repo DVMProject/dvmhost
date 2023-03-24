@@ -243,8 +243,6 @@ namespace dmr
 
         static bool m_verifyReg;
 
-        static uint16_t m_tsccCnt;
-
         static uint8_t m_alohaNRandWait;
         static uint8_t m_alohaBackOff;
 

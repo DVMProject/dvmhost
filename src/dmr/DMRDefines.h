@@ -111,6 +111,8 @@ namespace dmr
     const uint8_t   DATA_HEADER_CRC_MASK[] = { 0xCCU, 0xCCU };
     const uint8_t   CSBK_CRC_MASK[] = { 0xA5U, 0xA5U };
 
+    const uint16_t  TSCC_MAX_CSC_CNT = 511U;
+
     const uint32_t  DMR_SLOT_TIME = 60U;
     const uint32_t  AMBE_PER_SLOT = 3U;
 

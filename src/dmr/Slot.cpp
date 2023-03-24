@@ -46,12 +46,6 @@ using namespace dmr::packet;
 #include <cmath>
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint16_t TSCC_MAX_CNT = 511U;
-
-// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
@@ -97,8 +91,6 @@ bool Slot::m_voice2 = true;
 
 bool Slot::m_verifyReg = false;
 
-uint16_t Slot::m_tsccCnt = 0U;
-
 uint8_t Slot::m_alohaNRandWait = DEFAULT_NRAND_WAIT;
 uint8_t Slot::m_alohaBackOff = 1U;
 
@@ -139,7 +131,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfTGHang(1000U, tgHang),
     m_netTimeoutTimer(1000U, timeout),
     m_packetTimer(1000U, 0U, 50U),
-    m_ccPacketInterval(1000U, 0U, 60U),
+    m_ccPacketInterval(1000U, 0U, DMR_SLOT_TIME),
     m_interval(),
     m_elapsed(),
     m_rfFrames(0U),
@@ -421,6 +413,8 @@ void Slot::clock()
 
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
+        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
+
         // clock all the grant timers
         m_affiliations->clock(ms);
 
@@ -442,26 +436,21 @@ void Slot::clock()
             }
 
             if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
-                m_tsccCnt++;
-                if (m_tsccCnt == TSCC_MAX_CNT) {
-                    m_tsccCnt = 0U;
-                }
-
                 if (m_ccRunning) {
                     if (m_ccSeq == 3U) {
                         m_ccSeq = 0U;
                     }
 
                     if (m_dmr->m_tsccPayloadActive) {
-                        if ((m_tsccCnt % 2) == 0) {
-                            setShortLC_TSCC(m_siteData, m_tsccCnt);
+                        if ((m_dmr->m_tsccCnt % 2) == 0) {
+                            setShortLC_Payload(m_siteData, m_dmr->m_tsccCnt);
                         }
                     } 
                     else {
-                        setShortLC_TSCC(m_siteData, m_tsccCnt);
+                        setShortLC_TSCC(m_siteData, m_dmr->m_tsccCnt);
                     }
 
-                    writeRF_ControlData(m_tsccCnt, m_ccSeq);
+                    writeRF_ControlData(m_dmr->m_tsccCnt, m_ccSeq);
 
                     m_ccSeq++;
                 }
@@ -480,12 +469,9 @@ void Slot::clock()
     if (m_dmr->m_tsccPayloadActive) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
-                if ((m_tsccCnt % 2) > 0) {
+                if ((m_dmr->m_tsccCnt % 2) > 0) {
                     setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, false);
                 }
-            }
-            else {
-                setShortLC_TSCC(m_siteData, m_tsccCnt);
             }
         }
         else {
@@ -861,7 +847,7 @@ void Slot::writeEndRF(bool writeEnd)
 
     if (m_netState == RS_NET_IDLE) {
         if (m_enableTSCC)
-            setShortLC_TSCC(m_siteData, m_tsccCnt);
+            setShortLC_Payload(m_siteData, m_dmr->m_tsccCnt);
         else
             setShortLC(m_slotNo, 0U);
     }
