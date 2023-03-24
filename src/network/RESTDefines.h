@@ -76,6 +76,7 @@
 #define PUT_DMR_RID                     "/dmr/rid"
 #define GET_DMR_CC_DEDICATED            "/dmr/cc-enable"
 #define GET_DMR_CC_BCAST                "/dmr/cc-broadcast"
+#define PUT_DMR_TSCC_PAYLOAD_ACT        "/dmr/payload-activate"
 
 #define GET_P25_CC                      "/p25/cc"
 #define GET_P25_CC_FALLBACK_BASE        "/p25/cc-fallback/"

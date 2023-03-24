@@ -54,6 +54,7 @@ using namespace network::rest::http;
 #define ERRNO_SOCK_OPEN 98
 #define ERRNO_BAD_API_RESPONSE 97
 #define ERRNO_API_CALL_TIMEOUT 96
+#define ERRNO_INTERNAL_ERROR 100
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -165,76 +166,82 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
 
-    HTTPClient<RESTDispatcherType> client(address, port);
-    if (!client.open())
-        return ERRNO_SOCK_OPEN;
-    client.setHandler(m_dispatcher);
+    try {
+        HTTPClient<RESTDispatcherType> client(address, port);
+        if (!client.open())
+            return ERRNO_SOCK_OPEN;
+        client.setHandler(m_dispatcher);
 
-    // generate password SHA hash
-    size_t size = password.size();
+        // generate password SHA hash
+        size_t size = password.size();
 
-    uint8_t* in = new uint8_t[size];
-    for (size_t i = 0U; i < size; i++)
-        in[i] = password.at(i);
+        uint8_t* in = new uint8_t[size];
+        for (size_t i = 0U; i < size; i++)
+            in[i] = password.at(i);
 
-    uint8_t out[32U];
-    ::memset(out, 0x00U, 32U);
+        uint8_t out[32U];
+        ::memset(out, 0x00U, 32U);
 
-    edac::SHA256 sha256;
-    sha256.buffer(in, (uint32_t)(size), out);
+        edac::SHA256 sha256;
+        sha256.buffer(in, (uint32_t)(size), out);
 
-    std::stringstream ss;
-    ss << std::hex;
+        std::stringstream ss;
+        ss << std::hex;
 
-    for (uint8_t i = 0; i < 32U; i++)
-        ss << std::setw(2) << std::setfill('0') << (int)out[i];
+        for (uint8_t i = 0; i < 32U; i++)
+            ss << std::setw(2) << std::setfill('0') << (int)out[i];
 
-    std::string hash = ss.str();
+        std::string hash = ss.str();
 
-    // send authentication API
-    json::object request = json::object();
-    request["auth"].set<std::string>(hash);
+        // send authentication API
+        json::object request = json::object();
+        request["auth"].set<std::string>(hash);
 
-    HTTPPayload httpPayload = HTTPPayload::requestPayload(HTTP_PUT, "/auth");
-    httpPayload.payload(request);
-    client.request(httpPayload);
+        HTTPPayload httpPayload = HTTPPayload::requestPayload(HTTP_PUT, "/auth");
+        httpPayload.payload(request);
+        client.request(httpPayload);
 
-    // wait for response and parse
-    if (wait()) {
+        // wait for response and parse
+        if (wait()) {
+            client.close();
+            return ERRNO_API_CALL_TIMEOUT;
+        }
+
+        json::object rsp = json::object();
+        if (!parseResponseBody(m_response, rsp)) {
+            return ERRNO_BAD_API_RESPONSE;
+        }
+
+        std::string token = "";
+        int status = rsp["status"].get<int>();
+        if (status == HTTPPayload::StatusType::OK) {
+            token = rsp["token"].get<std::string>();
+        }
+        else {
+            client.close();
+            return ERRNO_BAD_API_RESPONSE;
+        }
+
+        // send actual API request
+        httpPayload = HTTPPayload::requestPayload(method, endpoint);
+        httpPayload.headers.add("X-DVM-Auth-Token", token);
+        httpPayload.payload(payload);
+        client.request(httpPayload);
+
+        // wait for response and parse
+        if (wait()) {
+            client.close();
+            return ERRNO_API_CALL_TIMEOUT;
+        }
+
+        fprintf(stdout, "%s\r\n", m_response.content.c_str());
+
         client.close();
-        return ERRNO_API_CALL_TIMEOUT;
     }
-
-    json::object rsp = json::object();
-    if (!parseResponseBody(m_response, rsp)) {
-        return ERRNO_BAD_API_RESPONSE;
+    catch (std::exception&) {
+        return ERRNO_INTERNAL_ERROR;
     }
-
-    std::string token = "";
-    int status = rsp["status"].get<int>();
-    if (status == HTTPPayload::StatusType::OK) {
-        token = rsp["token"].get<std::string>();
-    }
-    else {
-        client.close();
-        return ERRNO_BAD_API_RESPONSE;
-    }
-
-    // send actual API request
-    httpPayload = HTTPPayload::requestPayload(method, endpoint);
-    httpPayload.headers.add("X-DVM-Auth-Token", token);
-    httpPayload.payload(payload);
-    client.request(httpPayload);
-
-    // wait for response and parse
-    if (wait()) {
-        client.close();
-        return ERRNO_API_CALL_TIMEOUT;
-    }
-
-    fprintf(stdout, "%s\r\n", m_response.content.c_str());
-
-    client.close();
+    
     return EXIT_SUCCESS;
 }
 

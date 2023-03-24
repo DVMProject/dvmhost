@@ -99,6 +99,10 @@ namespace dmr
 
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;
+        /// <summary>Helper to payload activate the slot carrying granted payload traffic.</summary>
+        void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group);
+        /// <summary>Helper to clear an activated payload slot.</summary>
+        void tsccClearActivatedSlot(uint32_t slotNo);
 
         /// <summary>Helper to write a DMR extended function packet on the RF interface.</summary>
         void writeRF_Ext_Func(uint32_t slotNo, uint32_t func, uint32_t arg, uint32_t dstId);

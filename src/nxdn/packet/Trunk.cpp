@@ -522,6 +522,9 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                 HTTP_PUT, PUT_PERMIT_TG, req, m_nxdn->m_debug);
         }
+        else {
+            ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to permit TG for use, chNo = %u", chNo);
+        }
     }
 
     std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);

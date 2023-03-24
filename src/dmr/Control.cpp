@@ -148,21 +148,21 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
     Slot::setSiteData(voiceChNo, voiceChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
-    m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
-    switch (m_tsccSlotNo) {
-    case 1U:
-        m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
-        m_slot1->setControlPermitTG(m_controlPermitTG);
-        //m_slot2->setTSCCPayload(true); // this is not the correct way this should be done
-        break;
-    case 2U:
-        m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
-        m_slot2->setControlPermitTG(m_controlPermitTG);
-        //m_slot1->setTSCCPayload(true); // this is not the correct way this should be done
-        break;
-    default:
-        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
-        break;
+    if (enableTSCC) {
+        m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
+        switch (m_tsccSlotNo) {
+        case 1U:
+            m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
+            m_slot1->setControlPermitTG(m_controlPermitTG);
+            break;
+        case 2U:
+            m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
+            m_slot2->setControlPermitTG(m_controlPermitTG);
+            break;
+        default:
+            LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
+            break;
+        }
     }
 
     uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
@@ -395,6 +395,55 @@ Slot* Control::getTSCCSlot() const
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         return nullptr;
+    }
+}
+
+/// <summary>
+/// Helper to payload activate the slot carrying granted payload traffic.
+/// </summary>
+/// <param name="slotNo">DMR slot number.</param>
+/// <param name="dstId"></param>
+/// <param name="group"></param>
+void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
+{
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, payload activation, group = %u, dstId = %u",
+            group, dstId);
+    }
+
+    switch (slotNo) {
+    case 1U:
+        m_slot1->setTSCCActivated(dstId, group);
+        break;
+    case 2U:
+        m_slot2->setTSCCActivated(dstId, group);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC payload activation, slotNo = %u", slotNo);
+        break;
+    }
+}
+
+/// <summary>
+/// Helper to clear an activated payload slot.
+/// </summary>
+/// <param name="slotNo">DMR slot number.</param>
+void Control::tsccClearActivatedSlot(uint32_t slotNo)
+{
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, payload activation clear");
+    }
+
+    switch (slotNo) {
+    case 1U:
+        m_slot1->clearTSCCActivated();
+        break;
+    case 2U:
+        m_slot2->clearTSCCActivated();
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, TSCC payload activation, slotNo = %u", slotNo);
+        break;
     }
 }
 

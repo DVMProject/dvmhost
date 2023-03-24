@@ -2247,6 +2247,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                     RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
                 }
+                else {
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                }
             }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
@@ -2283,6 +2286,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
                     RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
+                }
+                else {
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
                 }
             }
 

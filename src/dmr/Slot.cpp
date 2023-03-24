@@ -162,6 +162,10 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_ccPrevRunning(false),
     m_ccHalted(false),
     m_enableTSCC(false),
+    m_dedicatedTSCC(false),
+    m_tsccActivated(false),
+    m_tsccPayloadDstId(0U),
+    m_tsccPayloadGroup(false),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -288,12 +292,11 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     if ((dataSync || voiceSync) && m_rfState != RS_RF_LISTENING)
         m_rfTGHang.start();
 
-    // write and process TSCC CSBKs and short LC
-    if (m_enableTSCC && m_dedicatedTSCC)
-    {
-        if (dataSync) {
-            uint8_t dataType = data[1U] & 0x0FU;
+    if (dataSync) {
+        uint8_t dataType = data[1U] & 0x0FU;
 
+        // write and process TSCC CSBKs and short LC
+        if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo) {
             switch (dataType)
             {
             case DT_CSBK:
@@ -301,13 +304,9 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
             default:
                 break;
             }
+
+            return false;
         }
-
-        return false;
-    }
-
-    if (dataSync) {
-        uint8_t dataType = data[1U] & 0x0FU;
 
         switch (dataType)
         {
@@ -374,6 +373,12 @@ void Slot::processNetwork(const data::Data& dmrData)
     m_networkWatchdog.start();
 
     uint8_t dataType = dmrData.getDataType();
+
+    // ignore non-CSBK data destined for the TSCC slot
+    if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo &&
+        dataType != DT_CSBK) {
+        return;
+    }
 
     switch (dataType)
     {
@@ -464,8 +469,36 @@ void Slot::clock()
         }
     }
 
-    if (m_tsccPayloadSlot) {
-        setShortLC_Payload(m_siteData, m_tsccCnt);
+    // never allow the TSCC to become payload activated
+    if (m_tsccActivated && m_enableTSCC) {
+        ::LogDebug(LOG_DMR, "DMR Slot %u, BUG BUG tried to payload activate the TSCC slot", m_slotNo);
+        clearTSCCActivated();
+    }
+
+    // activate payload channel if requested from the TSCC
+    if (m_tsccActivated && !m_enableTSCC) {
+        if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+            if (m_tsccPayloadDstId > 0U) {
+                if (m_dmr->m_tsccSlotNo > 0U) {
+                    // every 4 frames transmit the payload TSCC
+                    if ((m_tsccCnt % 4) == 0) {
+                        setShortLC_Payload(m_siteData, m_tsccCnt);
+                    }
+                    else {
+                        // only transmit the payload short LC every 2 frames
+                        if ((m_tsccCnt % 2) == 0) {
+                            setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, true);
+                        }
+                    }
+                }
+                else {
+                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, true);
+                }
+            }
+        }
+        else {
+            clearTSCCActivated();
+        }
     }
 
     m_rfTimeoutTimer.clock(ms);

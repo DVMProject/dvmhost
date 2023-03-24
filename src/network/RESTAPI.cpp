@@ -291,6 +291,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(PUT_DMR_RID).put(REST_API_BIND(RESTAPI::restAPI_PutDMRRID, this));
     m_dispatcher.match(GET_DMR_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCEnable, this));
     m_dispatcher.match(GET_DMR_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCBroadcast, this));
+    m_dispatcher.match(PUT_DMR_TSCC_PAYLOAD_ACT).put(REST_API_BIND(RESTAPI::restAPI_PutTSCCPayloadActivate, this));
 
     /*
     ** Project 25
@@ -1372,6 +1373,80 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload&
     else {
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
+    }
+#else
+    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+#endif // defined(ENABLE_DMR)
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+#if defined(ENABLE_DMR)
+    if (m_dmr == nullptr) {
+        errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["slot"].is<uint8_t>()) {
+        errorPayload(reply, "slot was not valid");
+        return;
+    }
+
+    // validate clear flag is a boolean within the JSON blob
+    if (!req["clear"].is<bool>()) {
+        errorPayload(reply, "clear flag was not valid");
+        return;
+    }
+
+    uint8_t slot = req["slot"].get<uint8_t>();
+    bool clear = req["clear"].get<bool>();
+
+    if (slot == 0U && slot >= 3U) {
+        errorPayload(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (clear) {
+        m_dmr->tsccClearActivatedSlot(slot);
+    }
+    else {
+        // validate destination ID is a integer within the JSON blob
+        if (!req["dstId"].is<uint32_t>()) {
+            errorPayload(reply, "destination ID was not valid");
+            return;
+        }
+
+        // validate group flag is a boolean within the JSON blob
+        if (!req["group"].is<bool>()) {
+            errorPayload(reply, "group flag was not valid");
+            return;
+        }
+
+        uint32_t dstId = req["dstId"].get<uint32_t>();
+        bool group = req["group"].get<bool>();
+
+        if (dstId == 0U) {
+            errorPayload(reply, "destination ID was not valid");
+            return;
+        }
+
+        m_dmr->tsccActivateSlot(slot, dstId, group);
     }
 #else
     errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);

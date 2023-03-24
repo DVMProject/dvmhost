@@ -148,6 +148,8 @@ bool Data::process(uint8_t* data, uint32_t len)
         LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
             m_slot->m_slotNo, m_slot->m_rfFrames, m_slot->m_rfBits, m_slot->m_rfErrs, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
 
+        m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
+
         if (m_slot->m_rfTimeout) {
             m_slot->writeEndRF();
             return false;
@@ -371,6 +373,8 @@ void Data::processNetwork(const data::Data& dmrData)
         ::ActivityLog("DMR", false, "Slot %u network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
             m_slot->m_slotNo, float(m_slot->m_netFrames) / 16.667F, (m_slot->m_netLost * 100U) / m_slot->m_netFrames, float(m_slot->m_netErrs * 100U) / float(m_slot->m_netBits));
 
+        m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
+        
         m_slot->writeEndNet();
     }
     else if (dataType == DT_DATA_HEADER) {

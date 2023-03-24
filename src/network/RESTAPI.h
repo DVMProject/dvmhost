@@ -152,6 +152,8 @@ private:
     void restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*
     ** Project 25
