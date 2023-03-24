@@ -158,6 +158,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_dedicatedTSCC(false),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadGroup(false),
+    m_tsccPayloadVoice(true),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -470,7 +471,7 @@ void Slot::clock()
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
                 if ((m_dmr->m_tsccCnt % 2) > 0) {
-                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, false);
+                    setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, m_tsccPayloadVoice);
                 }
             }
         }

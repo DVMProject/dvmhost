@@ -420,7 +420,8 @@ Slot* Control::getTSCCSlot() const
 /// <param name="slotNo">DMR slot number.</param>
 /// <param name="dstId"></param>
 /// <param name="group"></param>
-void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
+/// <param name="voice"></param>
+void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group, bool voice)
 {
     if (m_verbose) {
         LogMessage(LOG_DMR, "DMR Slot %u, payload activation, group = %u, dstId = %u",
@@ -436,11 +437,11 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
     switch (slotNo) {
     case 1U:
         m_tsccPayloadActive = true;
-        m_slot1->setTSCCActivated(dstId, group);
+        m_slot1->setTSCCActivated(dstId, group, voice);
         break;
     case 2U:
         m_tsccPayloadActive = true;
-        m_slot2->setTSCCActivated(dstId, group);
+        m_slot2->setTSCCActivated(dstId, group, voice);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC payload activation, slotNo = %u", slotNo);

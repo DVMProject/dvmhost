@@ -849,16 +849,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
+                bool voice = true;
+                req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
+                                 HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, true);
         }
 
         // callback RCON to permit-tg on the specified voice channel
@@ -911,6 +913,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
+                bool voice = true;
+                req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
@@ -920,7 +924,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, true);
         }
 
         // callback RCON to permit-tg on the specified voice channel
@@ -1082,6 +1086,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
+                bool voice = false;
+                req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
@@ -1091,7 +1097,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, false);
         }
 
         std::unique_ptr<CSBK_TD_GRANT> csbk = new_unique(CSBK_TD_GRANT);
@@ -1124,6 +1130,8 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
+                bool voice = false;
+                req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
@@ -1133,7 +1141,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, false);
         }
 
         std::unique_ptr<CSBK_PD_GRANT> csbk = new_unique(CSBK_PD_GRANT);

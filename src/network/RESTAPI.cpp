@@ -1438,15 +1438,22 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
             return;
         }
 
+        // validate voice flag is a boolean within the JSON blob
+        if (!req["voice"].is<bool>()) {
+            errorPayload(reply, "voice flag was not valid");
+            return;
+        }
+
         uint32_t dstId = req["dstId"].get<uint32_t>();
         bool group = req["group"].get<bool>();
+        bool voice = req["voice"].get<bool>();
 
         if (dstId == 0U) {
             errorPayload(reply, "destination ID was not valid");
             return;
         }
 
-        m_dmr->tsccActivateSlot(slot, dstId, group);
+        m_dmr->tsccActivateSlot(slot, dstId, group, voice);
     }
 #else
     errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);

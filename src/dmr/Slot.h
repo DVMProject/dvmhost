@@ -106,7 +106,7 @@ namespace dmr
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
         /// <summary>Sets a flag indicating whether the slot is a TSCC payload slot.</summary>
-        void setTSCCActivated(uint32_t dstId, bool group) { m_tsccPayloadDstId = dstId; m_tsccPayloadGroup = group; }
+        void setTSCCActivated(uint32_t dstId, bool group, bool voice) { m_tsccPayloadDstId = dstId; m_tsccPayloadGroup = group; m_tsccPayloadVoice = voice; }
         /// <summary>Sets a flag indicating whether the DMR control channel can send permit-tg to voice channels.</summary>
         void setControlPermitTG(bool controlPermitTG) { m_controlPermitTG = controlPermitTG; }
         /// <summary>Helper to set the voice error silence threshold.</summary>
@@ -194,6 +194,7 @@ namespace dmr
 
         uint32_t m_tsccPayloadDstId;
         bool m_tsccPayloadGroup;
+        bool m_tsccPayloadVoice;
 
         bool m_controlPermitTG;
 
@@ -264,7 +265,7 @@ namespace dmr
         void writeRF_ControlData(uint16_t frameCnt, uint8_t n);
 
         /// <summary>Clears the flag indicating whether the slot is a TSCC payload slot.</summary>
-        void clearTSCCActivated() { m_tsccPayloadDstId = 0U; m_tsccPayloadGroup = false; }
+        void clearTSCCActivated() { m_tsccPayloadDstId = 0U; m_tsccPayloadGroup = false; m_tsccPayloadVoice = true; }
 
         /// <summary>Helper to set the DMR short LC.</summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);

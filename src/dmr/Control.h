@@ -100,7 +100,7 @@ namespace dmr
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;
         /// <summary>Helper to payload activate the slot carrying granted payload traffic.</summary>
-        void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group);
+        void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group, bool voice);
         /// <summary>Helper to clear an activated payload slot.</summary>
         void tsccClearActivatedSlot(uint32_t slotNo);
 
