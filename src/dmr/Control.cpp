@@ -412,6 +412,12 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group)
             slotNo, group, dstId);
     }
 
+    // never allow the TSCC to become payload activated
+    if (m_tsccSlotNo == slotNo) {
+        LogError(LOG_DMR, "DMR, cowardly refusing to, TSCC payload activation, slotNo = %u", slotNo);
+        return;
+    }
+
     switch (slotNo) {
     case 1U:
         m_tsccPayloadActive = true;

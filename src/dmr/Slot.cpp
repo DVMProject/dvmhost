@@ -164,7 +164,6 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_ccHalted(false),
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
-    m_tsccActivated(false),
     m_tsccPayloadDstId(0U),
     m_tsccPayloadGroup(false),
     m_verbose(verbose),
@@ -477,14 +476,8 @@ void Slot::clock()
         }
     }
 
-    // never allow the TSCC to become payload activated
-    if (m_tsccActivated && m_slotNo == m_dmr->m_tsccSlotNo) {
-        ::LogDebug(LOG_DMR, "DMR Slot %u, BUG BUG tried to payload activate the TSCC slot", m_slotNo);
-        clearTSCCActivated();
-    }
-
     // activate payload channel if requested from the TSCC
-    if (m_tsccActivated) {
+    if (m_dmr->m_tsccPayloadActive) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
                 if ((m_tsccCnt % 2) > 0) {
