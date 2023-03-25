@@ -302,6 +302,7 @@ namespace dmr
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
     const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDUs
+    const uint8_t   CSBKO_P_CLEAR = 0x2EU;                  // P_CLEAR - Payload Channel Clear
     const uint8_t   CSBKO_PV_GRANT = 0x30U;                 // PV_GRANT - Private Voice Channel Grant
     const uint8_t   CSBKO_TV_GRANT = 0x31U;                 // TV_GRANT - Talkgroup Voice Channel Grant
     const uint8_t   CSBKO_BTV_GRANT = 0x32U;                // BTV_GRANT - Broadcast Talkgroup Voice Channel Grant

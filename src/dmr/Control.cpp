@@ -77,6 +77,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
+    m_enableTSCC(false),
     m_tsccCnt(0U),
     m_tsccCntInterval(1000U, 0U, DMR_SLOT_TIME / 2U),
     m_tsccSlotNo(0U),
@@ -170,6 +171,8 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
         }
     }
 
+    m_enableTSCC = enableTSCC;
+
     uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
     if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {
         LogWarning(LOG_DMR, "Silence threshold > %u, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS, dmr::DEFAULT_SILENCE_THRESHOLD);
@@ -186,8 +189,8 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
     m_slot2->setSilenceThreshold(silenceThreshold);
 
     if (printOptions) {
-        LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
         if (enableTSCC) {
+            LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
             LogInfo("    TSCC Aloha Random Access Wait: %u", nRandWait);
             LogInfo("    TSCC Aloha Backoff: %u", backOff);
         }
@@ -204,6 +207,11 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
 /// <param name="ccRunning"></param>
 void Control::setCCRunning(bool ccRunning)
 {
+    if (!m_enableTSCC) {
+        m_ccRunning = false;
+        return;
+    }
+
     m_ccRunning = ccRunning;
     switch (m_tsccSlotNo) {
     case 1U:
@@ -224,6 +232,11 @@ void Control::setCCRunning(bool ccRunning)
 /// <param name="ccHalted"></param>
 void Control::setCCHalted(bool ccHalted)
 {
+    if (!m_enableTSCC) {
+        m_ccHalted = true;
+        return;
+    }
+
     m_ccHalted = ccHalted;
     switch (m_tsccSlotNo) {
     case 1U:
@@ -419,13 +432,14 @@ Slot* Control::getTSCCSlot() const
 /// </summary>
 /// <param name="slotNo">DMR slot number.</param>
 /// <param name="dstId"></param>
+/// <param name="srcId"></param>
 /// <param name="group"></param>
 /// <param name="voice"></param>
-void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group, bool voice)
+void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, payload activation, group = %u, dstId = %u",
-            slotNo, group, dstId);
+        LogMessage(LOG_DMR, "DMR Slot %u, payload activation, srcId = %u, group = %u, dstId = %u",
+            slotNo, srcId, group, dstId);
     }
 
     // never allow the TSCC to become payload activated
@@ -437,11 +451,11 @@ void Control::tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group, bool
     switch (slotNo) {
     case 1U:
         m_tsccPayloadActive = true;
-        m_slot1->setTSCCActivated(dstId, group, voice);
+        m_slot1->setTSCCActivated(dstId, srcId, group, voice);
         break;
     case 2U:
         m_tsccPayloadActive = true;
-        m_slot2->setTSCCActivated(dstId, group, voice);
+        m_slot2->setTSCCActivated(dstId, srcId, group, voice);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, TSCC payload activation, slotNo = %u", slotNo);

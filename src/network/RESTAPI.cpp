@@ -1432,6 +1432,12 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
             return;
         }
 
+        // validate destination ID is a integer within the JSON blob
+        if (!req["srcId"].is<uint32_t>()) {
+            errorPayload(reply, "source ID was not valid");
+            return;
+        }
+
         // validate group flag is a boolean within the JSON blob
         if (!req["group"].is<bool>()) {
             errorPayload(reply, "group flag was not valid");
@@ -1445,6 +1451,7 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
         }
 
         uint32_t dstId = req["dstId"].get<uint32_t>();
+        uint32_t srcId = req["srcId"].get<uint32_t>();
         bool group = req["group"].get<bool>();
         bool voice = req["voice"].get<bool>();
 
@@ -1453,7 +1460,7 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
             return;
         }
 
-        m_dmr->tsccActivateSlot(slot, dstId, group, voice);
+        m_dmr->tsccActivateSlot(slot, dstId, srcId, group, voice);
     }
 #else
     errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);

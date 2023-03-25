@@ -650,50 +650,44 @@ ControlSignaling::~ControlSignaling()
 /// <param name="clearBeforeWrite"></param>
 void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite)
 {
-    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
-    if (m_tscc != nullptr) {
-        if (!m_tscc->m_enableTSCC)
-            return;
-
-        // don't add any frames if the queue is full
-        uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-        uint32_t space = m_tscc->m_queue.freeSpace();
-        if (space < (len + 1U)) {
-            return;
-        }
-
-        uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
-        ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
-
-        SlotType slotType;
-        slotType.setColorCode(m_tscc->m_colorCode);
-        slotType.setDataType(DT_CSBK);
-
-        // Regenerate the CSBK data
-        csbk->encode(data + 2U);
-
-        // Regenerate the Slot Type
-        slotType.encode(data + 2U);
-
-        // Convert the Data Sync to be from the BS or MS as needed
-        Sync::addDMRDataSync(data + 2U, m_tscc->m_duplex);
-
-        m_tscc->m_rfSeqNo = 0U;
-
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
-
-        if (clearBeforeWrite) {
-            if (m_tscc->m_slotNo == 1U)
-                m_tscc->m_modem->clearDMRData1();
-            if (m_tscc->m_slotNo == 2U)
-                m_tscc->m_modem->clearDMRData2();
-            m_tscc->m_queue.clear();
-        }
-
-        if (m_tscc->m_duplex)
-            m_tscc->addFrame(data);
+    // don't add any frames if the queue is full
+    uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
+    uint32_t space = m_slot->m_queue.freeSpace();
+    if (space < (len + 1U)) {
+        return;
     }
+
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    // Regenerate the CSBK data
+    csbk->encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, m_slot->m_duplex);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (clearBeforeWrite) {
+        if (m_slot->m_slotNo == 1U)
+            m_slot->m_modem->clearDMRData1();
+        if (m_slot->m_slotNo == 2U)
+            m_slot->m_modem->clearDMRData2();
+        m_slot->m_queue.clear();
+    }
+
+    if (m_slot->m_duplex)
+        m_slot->addFrame(data);
 }
 
 /// <summary>
@@ -841,28 +835,6 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        // if the channel granted isn't the same as the TSCC; remote activate the payload channel
-        if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
-            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                json::object req = json::object();
-                req["dstId"].set<uint32_t>(dstId);
-                req["slot"].set<uint8_t>(slot);
-                req["group"].set<bool>(grp);
-                bool voice = true;
-                req["voice"].set<bool>(voice);
-
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                                 HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
-            }
-            else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
-            }
-        }
-        else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, true);
-        }
-
         // callback RCON to permit-tg on the specified voice channel
         if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
@@ -881,11 +853,13 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
 
+        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+
         std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
         if (broadcast)
             csbk->setCSBKO(CSBKO_BTV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot - 1U);
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -899,11 +873,6 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // transmit group grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
             writeRF_CSBK(csbk.get());
-    }
-    else {
-        if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
-        }
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -911,20 +880,26 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);
+                req["srcId"].set<uint32_t>(srcId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
                 bool voice = true;
                 req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
+                                 HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, true);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, srcId, grp, true);
+        }
+    }
+    else {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
         // callback RCON to permit-tg on the specified voice channel
@@ -945,9 +920,11 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
 
+        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
+
         std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot - 1U);
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -961,6 +938,29 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // transmit private grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
             writeRF_CSBK(csbk.get());
+
+        // if the channel granted isn't the same as the TSCC; remote activate the payload channel
+        if (chNo != m_tscc->m_channelNo) {
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                json::object req = json::object();
+                req["dstId"].set<uint32_t>(dstId);
+                req["srcId"].set<uint32_t>(srcId);
+                req["slot"].set<uint8_t>(slot);
+                req["group"].set<bool>(grp);
+                bool voice = true;
+                req["voice"].set<bool>(voice);
+
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
+            }
+            else {
+                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+            }
+        }
+        else {
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, srcId, grp, true);
+        }
     }
 
     return true;
@@ -1078,31 +1078,11 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        // if the channel granted isn't the same as the TSCC; remote activate the payload channel
-        if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
-            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                json::object req = json::object();
-                req["dstId"].set<uint32_t>(dstId);
-                req["slot"].set<uint8_t>(slot);
-                req["group"].set<bool>(grp);
-                bool voice = false;
-                req["voice"].set<bool>(voice);
-
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
-            }
-            else {
-                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
-            }
-        }
-        else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, false);
-        }
+        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_TD_GRANT> csbk = new_unique(CSBK_TD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot - 1U);
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -1116,11 +1096,6 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         // transmit group grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
             writeRF_CSBK(csbk.get());
-    }
-    else {
-        if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
-        }
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -1128,6 +1103,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);
+                req["srcId"].set<uint32_t>(srcId);
                 req["slot"].set<uint8_t>(slot);
                 req["group"].set<bool>(grp);
                 bool voice = false;
@@ -1141,12 +1117,19 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             }
         }
         else {
-            m_slot->m_dmr->tsccActivateSlot(slot, dstId, grp, false);
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, srcId, grp, false);
         }
+    }
+    else {
+        if (!net) {
+            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
+        }
+
+        writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
         std::unique_ptr<CSBK_PD_GRANT> csbk = new_unique(CSBK_PD_GRANT);
         csbk->setLogicalCh1(chNo);
-        csbk->setSlotNo(slot - 1U);
+        csbk->setSlotNo(slot);
 
         if (m_verbose) {
             LogMessage((net) ? LOG_NET : LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call), emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
@@ -1160,6 +1143,29 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         // transmit private grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
             writeRF_CSBK(csbk.get());
+
+        // if the channel granted isn't the same as the TSCC; remote activate the payload channel
+        if (chNo != m_tscc->m_channelNo) {
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                json::object req = json::object();
+                req["dstId"].set<uint32_t>(dstId);
+                req["srcId"].set<uint32_t>(srcId);
+                req["slot"].set<uint8_t>(slot);
+                req["group"].set<bool>(grp);
+                bool voice = false;
+                req["voice"].set<bool>(voice);
+
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, m_tscc->m_debug);
+            }
+            else {
+                ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+            }
+        }
+        else {
+            m_slot->m_dmr->tsccActivateSlot(slot, dstId, srcId, grp, false);
+        }
     }
 
     return true;
@@ -1219,9 +1225,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
     writeRF_CSBK(csbk.get());
 }
 
-
 /// <summary>
-/// Helper to write a grant packet.
+/// Helper to write a TSCC late entry channel grant packet on the RF interface.
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
@@ -1234,10 +1239,49 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
 
     std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
     csbk->setLogicalCh1(chNo);
-    csbk->setSlotNo(slot - 1U);
+    csbk->setSlotNo(slot);
 
     csbk->setSrcId(srcId);
     csbk->setDstId(dstId);
+
+    writeRF_CSBK(csbk.get());
+}
+
+/// <summary>
+/// Helper to write a payload grant to a TSCC payload channel on the RF interface.
+/// </summary>
+/// <param name="dstId"></param>
+/// <param name="srcId"></param>
+void ControlSignaling::writeRF_CSBK_Payload_Grant(uint32_t dstId, uint32_t srcId, bool grp, bool voice)
+{
+    std::unique_ptr<CSBK_P_GRANT> csbk = new_unique(CSBK_P_GRANT);
+    if (voice) {
+        if (grp) {
+            csbk->setCSBKO(CSBKO_TV_GRANT);
+        }
+        else {
+            csbk->setCSBKO(CSBKO_PV_GRANT);
+        }
+    }
+    else {
+        if (grp) {
+            csbk->setCSBKO(CSBKO_TD_GRANT);
+        }
+        else {
+            csbk->setCSBKO(CSBKO_PD_GRANT);
+        }
+    }
+
+    csbk->setLogicalCh1(m_slot->m_channelNo);
+    csbk->setSlotNo(m_slot->m_slotNo);
+
+    csbk->setSrcId(srcId);
+    csbk->setDstId(dstId);
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, CSBK_P_GRANT (Payload Grant), chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
+    }
 
     writeRF_CSBK(csbk.get());
 }

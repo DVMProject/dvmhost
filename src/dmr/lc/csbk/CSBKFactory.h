@@ -37,6 +37,8 @@
 #include "dmr/lc/csbk/CSBK_DVM_GIT_HASH.h"
 #include "dmr/lc/csbk/CSBK_EXT_FNCT.h"
 #include "dmr/lc/csbk/CSBK_NACK_RSP.h"
+#include "dmr/lc/csbk/CSBK_P_CLEAR.h"
+#include "dmr/lc/csbk/CSBK_P_GRANT.h"
 #include "dmr/lc/csbk/CSBK_PD_GRANT.h"
 #include "dmr/lc/csbk/CSBK_PRECCSBK.h"
 #include "dmr/lc/csbk/CSBK_PV_GRANT.h"

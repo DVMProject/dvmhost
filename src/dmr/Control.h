@@ -100,7 +100,7 @@ namespace dmr
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;
         /// <summary>Helper to payload activate the slot carrying granted payload traffic.</summary>
-        void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, bool group, bool voice);
+        void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, bool group, bool voice);
         /// <summary>Helper to clear an activated payload slot.</summary>
         void tsccClearActivatedSlot(uint32_t slotNo);
 
@@ -140,6 +140,8 @@ namespace dmr
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupIdLookup* m_tidLookup;
+
+        bool m_enableTSCC;
 
         uint16_t m_tsccCnt;
         Timer m_tsccCntInterval;

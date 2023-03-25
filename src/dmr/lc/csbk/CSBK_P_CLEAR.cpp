@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "dmr/lc/csbk/CSBK_TV_GRANT.h"
+#include "dmr/lc/csbk/CSBK_P_CLEAR.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,12 +40,11 @@ using namespace dmr;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the CSBK_TV_GRANT class.
+/// Initializes a new instance of the CSBK_P_CLEAR class.
 /// </summary>
-CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
-    m_lateEntry(false)
+CSBK_P_CLEAR::CSBK_P_CLEAR() : CSBK()
 {
-    m_CSBKO = CSBKO_TV_GRANT;
+    m_CSBKO = CSBKO_P_CLEAR;
 }
 
 /// <summary>
@@ -53,7 +52,7 @@ CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
 /// </summary>
 /// <param name="data"></param>
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
-bool CSBK_TV_GRANT::decode(const uint8_t* data)
+bool CSBK_P_CLEAR::decode(const uint8_t* data)
 {
     assert(data != NULL);
 
@@ -66,35 +65,19 @@ bool CSBK_TV_GRANT::decode(const uint8_t* data)
 /// Encode a control signalling block.
 /// </summary>
 /// <param name="data"></param>
-void CSBK_TV_GRANT::encode(uint8_t* data)
+void CSBK_P_CLEAR::encode(uint8_t* data)
 {
     assert(data != NULL);
 
     ulong64_t csbkValue = 0U;
 
     csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                        // Logical Physical Channel 1
-    csbkValue = (csbkValue << 1) + ((m_slotNo == 2U) ? 1U : 0U);                    // Logical Slot Number
-    csbkValue = (csbkValue << 1) + ((m_lateEntry) ? 1U : 0U);;                      // Late Entry
-    csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                       // Emergency
-    csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);                // Site Timing: Aligned or Offset
+    csbkValue = (csbkValue << 1) + 0U;                                              // Reserved
+    csbkValue = (csbkValue << 3) + 0U;                                              // Reserved
+    csbkValue = (csbkValue << 1) + ((m_GI) ? 1U : 0U);                              // Group/Individual Flag
     csbkValue = (csbkValue << 24) + m_dstId;                                        // Talkgroup ID
     csbkValue = (csbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
-void CSBK_TV_GRANT::copy(const CSBK_TV_GRANT& data)
-{
-    CSBK::copy(data);
-
-    m_lateEntry = data.m_lateEntry;
 }

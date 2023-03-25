@@ -105,8 +105,8 @@ namespace dmr
 
         /// <summary>Helper to enable and configure TSCC support for this slot.</summary>
         void setTSCC(bool enable, bool dedicated);
-        /// <summary>Sets a flag indicating whether the slot is a TSCC payload slot.</summary>
-        void setTSCCActivated(uint32_t dstId, bool group, bool voice) { m_tsccPayloadDstId = dstId; m_tsccPayloadGroup = group; m_tsccPayloadVoice = voice; }
+        /// <summary>Helper to activate a TSCC payload slot.</summary>
+        void setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice);
         /// <summary>Sets a flag indicating whether the DMR control channel can send permit-tg to voice channels.</summary>
         void setControlPermitTG(bool controlPermitTG) { m_controlPermitTG = controlPermitTG; }
         /// <summary>Helper to set the voice error silence threshold.</summary>

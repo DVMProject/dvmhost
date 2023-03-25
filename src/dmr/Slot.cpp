@@ -289,23 +289,15 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     if (dataSync) {
         uint8_t dataType = data[1U] & 0x0FU;
 
-        // write and process TSCC CSBKs and short LC
-        if (m_enableTSCC && m_dedicatedTSCC && m_slotNo == m_dmr->m_tsccSlotNo) {
-            switch (dataType)
-            {
-            case DT_CSBK:
-                return m_control->process(data, len);
-            default:
-                break;
-            }
-
-            return false;
+        if (dataType == DT_CSBK) {
+            return m_control->process(data, len);
         }
+
+        if (m_enableTSCC && m_dedicatedTSCC)
+            return false;
 
         switch (dataType)
         {
-        case DT_CSBK:
-            return m_control->process(data, len);
         case DT_VOICE_LC_HEADER:
         case DT_VOICE_PI_HEADER:
             return m_voice->process(data, len);
@@ -598,6 +590,20 @@ void Slot::setTSCC(bool enable, bool dedicated)
         m_modem->setDMRIgnoreCACH_AT(m_slotNo);
         m_affiliations->setSlotForChannelTSCC(m_channelNo, m_slotNo);
     }
+}
+
+/// <summary>
+/// Helper to activate a TSCC payload slot.
+/// </summary>
+/// <param name="dstId"></param>
+/// <param name="srcId"></param>
+/// <param name="group"></param>
+/// <param name="voice"></param>
+void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice) 
+{
+    m_tsccPayloadDstId = dstId;
+    m_tsccPayloadGroup = group;
+    m_tsccPayloadVoice = voice;
 }
 
 /// <summary>
