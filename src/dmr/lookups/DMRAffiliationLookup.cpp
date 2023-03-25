@@ -62,9 +62,10 @@ DMRAffiliationLookup::~DMRAffiliationLookup()
 /// Helper to grant a channel.
 /// </summary>
 /// <param name="dstId"></param>
+/// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t grantTimeout)
+bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout)
 {
     uint32_t chNo = m_rfChTable.at(0);
     uint8_t slot = getAvailableSlotForChannel(chNo);
@@ -73,17 +74,18 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t grantTimeout)
         return false;
     }
 
-    return grantChSlot(dstId, slot, grantTimeout);
+    return grantChSlot(dstId, srcId, slot, grantTimeout);
 }
 
 /// <summary>
 /// Helper to grant a channel and slot.
 /// </summary>
 /// <param name="dstId"></param>
+/// <param name="srcId"></param>
 /// <param name="slot"></param>
 /// <param name="grantTimeout"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint8_t slot, uint32_t grantTimeout)
+bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout)
 {
     if (dstId == 0U) {
         return false;
@@ -104,6 +106,7 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint8_t slot, uint32_t gr
     }
 
     m_grantChTable[dstId] = chNo;
+    m_grantSrcIdTable[dstId] = srcId;
     m_grantChSlotTable[dstId] = std::make_tuple(chNo, slot);
     m_rfGrantChCnt++;
 
@@ -161,7 +164,8 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
             m_releaseGrant(chNo, dstId, slot);
         }
 
-        m_grantChTable[dstId] = 0U;
+        m_grantChTable.erase(dstId);
+        m_grantSrcIdTable.erase(dstId);
         m_grantChSlotTable.erase(dstId);
 
         auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);

@@ -159,6 +159,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadDstId(0U),
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
+    m_lastLateEntry(0U),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -438,7 +439,7 @@ void Slot::clock()
 
             if (m_ccPacketInterval.isRunning() && m_ccPacketInterval.hasExpired()) {
                 if (m_ccRunning) {
-                    if (m_ccSeq == 3U) {
+                    if (m_ccSeq == 4U) {
                         m_ccSeq = 0U;
                     }
 
@@ -975,9 +976,9 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
         return;
     }
 
-    // loop to generate 3 control sequences
+    // loop to generate 4 control sequences
     if (frameCnt == 511U) {
-        seqCnt = 3U;
+        seqCnt = 4U;
     }
 
     // should we insert the Git Hash burst?
@@ -999,6 +1000,37 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 
         switch (n)
         {
+        case 3:
+        {
+            std::unordered_map<uint32_t, uint32_t> grants = m_affiliations->grantTable();
+            if (grants.size() > 0) {
+                uint32_t j = 0U;
+                if (m_lastLateEntry > grants.size()) {
+                    m_lastLateEntry = 0U;
+                }
+
+                for (auto entry : grants) {
+                    if (j == m_lastLateEntry) {
+                        uint32_t dstId = entry.first;
+                        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+
+                        if (m_debug) {
+                            LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
+                        }
+
+                        m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId);
+                        m_lastLateEntry = j++;
+                        break;
+                    }
+
+                    j++;
+                }
+            }
+            else {
+                m_control->writeRF_TSCC_Bcast_Sys_Parm();
+            }
+        }
+        break;
         case 2:
             m_control->writeRF_TSCC_Bcast_Ann_Wd(m_channelNo, true);
             break;

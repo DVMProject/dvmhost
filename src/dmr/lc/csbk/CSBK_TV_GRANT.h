@@ -49,6 +49,12 @@ namespace dmr
                 virtual bool decode(const uint8_t* data);
                 /// <summary>Encode a control signalling block.</summary>
                 virtual void encode(uint8_t* data);
+
+            public:
+                /// <summary>Flag indicating whether the grant is a late entry.</summary>
+                __PROPERTY(bool, lateEntry, LateEntry);
+
+                __COPY(CSBK_TV_GRANT);      
             };
         } // namespace csbk
     } // namespace lc

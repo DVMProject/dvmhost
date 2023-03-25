@@ -137,7 +137,7 @@ namespace lookups
         /// <summary>Gets the grant table.</summary>
         std::unordered_map<uint32_t, uint32_t> grantTable() const { return m_grantChTable; }
         /// <summary>Helper to grant a channel.</summary>
-        virtual bool grantCh(uint32_t dstId, uint32_t grantTimeout);
+        virtual bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout);
         /// <summary>Helper to start the destination ID grant timer.</summary>
         virtual void touchGrant(uint32_t dstId);
         /// <summary>Helper to release the channel grant for the destination ID.</summary>
@@ -148,6 +148,8 @@ namespace lookups
         virtual bool isGranted(uint32_t dstId) const;
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
         virtual uint32_t getGrantedCh(uint32_t dstId);
+        /// <summary>Helper to get the source ID granted for the given destination ID.</summary>        
+        virtual uint32_t getGrantedSrcId(uint32_t srcId);
 
         /// <summary>Helper to set RF channel data.</summary>
         void setRFChData(const std::unordered_map<uint32_t, VoiceChData> chData) { m_rfChDataTable = chData; }
@@ -177,6 +179,7 @@ namespace lookups
         std::unordered_map<uint32_t, uint32_t> m_grpAffTable;
 
         std::unordered_map<uint32_t, uint32_t> m_grantChTable;
+        std::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
         std::unordered_map<uint32_t, Timer> m_grantTimers;
 
         const char *m_name;

@@ -2216,7 +2216,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 }
             }
             else {
-                if (m_p25->m_affiliations.grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_p25->m_affiliations.getGrantedCh(dstId);
                     m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
                 }
@@ -2360,7 +2360,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
                 return false;
             }
             else {
-                if (m_p25->m_affiliations.grantCh(srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT)) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
                     osp->setGrpVchNo(chNo);
                     osp->setDataChnNo(chNo);

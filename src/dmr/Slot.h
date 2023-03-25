@@ -196,6 +196,8 @@ namespace dmr
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
 
+        uint32_t m_lastLateEntry;
+
         bool m_controlPermitTG;
 
         bool m_verbose;

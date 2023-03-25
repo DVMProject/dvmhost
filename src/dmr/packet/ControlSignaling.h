@@ -101,6 +101,9 @@ namespace dmr
             /// <summary>Helper to write a unit registration response packet.</summary>
             void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions);
 
+            /// <summary>Helper to write a TSCC late entry channel grant packet on the RF interface.</summary>
+            void writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId);
+
             /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Aloha();
             /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>

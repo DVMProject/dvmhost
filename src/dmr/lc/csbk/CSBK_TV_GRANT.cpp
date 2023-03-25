@@ -42,7 +42,8 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the CSBK_TV_GRANT class.
 /// </summary>
-CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK()
+CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
+    m_lateEntry(false)
 {
     m_CSBKO = CSBKO_TV_GRANT;
 }
@@ -73,7 +74,7 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
 
     csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                        // Logical Physical Channel 1
     csbkValue = (csbkValue << 1) + (m_slotNo & 0x3U);                               // Logical Slot Number
-    csbkValue = (csbkValue << 1) + 0U;                                              // Late Entry
+    csbkValue = (csbkValue << 1) + ((m_lateEntry) ? 1U : 0U);;                      // Late Entry
     csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                       // Emergency
     csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);                // Site Timing: Aligned or Offset
     csbkValue = (csbkValue << 24) + m_dstId;                                        // Talkgroup ID
@@ -81,4 +82,19 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
 
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void CSBK_TV_GRANT::copy(const CSBK_TV_GRANT& data)
+{
+    CSBK::copy(data);
+
+    m_lateEntry = data.m_lateEntry;
 }

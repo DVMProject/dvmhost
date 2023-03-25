@@ -821,7 +821,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
@@ -1056,7 +1056,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
@@ -1215,6 +1215,29 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 
     csbk->setSrcId(DMR_WUID_REGI);
     csbk->setDstId(srcId);
+
+    writeRF_CSBK(csbk.get());
+}
+
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="dstId"></param>
+/// <param name="srcId"></param>
+void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId)
+{
+    Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+
+    uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+    uint8_t slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
+
+    std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
+    csbk->setLogicalCh1(chNo);
+    csbk->setSlotNo(slot - 1U);
+
+    csbk->setSrcId(srcId);
+    csbk->setDstId(dstId);
 
     writeRF_CSBK(csbk.get());
 }

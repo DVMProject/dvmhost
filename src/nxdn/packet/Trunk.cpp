@@ -488,7 +488,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
                 }
             }
             else {
-                if (m_nxdn->m_affiliations.grantCh(dstId, GRANT_TIMER_TIMEOUT)) {
+                if (m_nxdn->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
                     chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
                 }
             }

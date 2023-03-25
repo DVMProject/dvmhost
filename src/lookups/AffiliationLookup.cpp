@@ -49,6 +49,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_unitRegTable(),
     m_grpAffTable(),
     m_grantChTable(),
+    m_grantSrcIdTable(),
     m_grantTimers(),
     m_name(name),
     m_verbose(verbose)
@@ -59,6 +60,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_grpAffTable.clear();
 
     m_grantChTable.clear();
+    m_grantSrcIdTable.clear();
     m_grantTimers.clear();
 }
 
@@ -238,9 +240,10 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
 /// Helper to grant a channel.
 /// </summary>
 /// <param name="dstId"></param>
+/// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
 /// <returns></returns>
-bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t grantTimeout)
+bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout)
 {
     if (dstId == 0U) {
         return false;
@@ -255,14 +258,15 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t grantTimeout)
     m_rfChTable.erase(it);
 
     m_grantChTable[dstId] = chNo;
+    m_grantSrcIdTable[dstId] = srcId;
     m_rfGrantChCnt++;
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u",
-            m_name, chNo, dstId);
+        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u",
+            m_name, chNo, dstId, srcId);
     }
 
     return true;
@@ -321,7 +325,8 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
                 m_name, chNo, dstId);
         }
 
-        m_grantChTable[dstId] = 0U;
+        m_grantChTable.erase(dstId);
+        m_grantSrcIdTable.erase(dstId);
         m_rfChTable.push_back(chNo);
 
         if (m_rfGrantChCnt > 0U) {
@@ -397,6 +402,24 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
 
     if (isGranted(dstId)) {
         return m_grantChTable[dstId];
+    }
+
+    return 0U;
+}
+
+/// <summary>
+/// Helper to get the source ID granted for the given destination ID.
+/// </summary>
+/// <param name="dstId"></param>
+/// <returns></returns>
+uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
+{
+    if (dstId == 0U) {
+        return 0U;
+    }
+
+    if (isGranted(dstId)) {
+        return m_grantSrcIdTable[dstId];
     }
 
     return 0U;
