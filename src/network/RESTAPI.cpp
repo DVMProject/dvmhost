@@ -783,7 +783,7 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
 
     errorPayload(reply, "OK", HTTPPayload::OK);
 
-    if (!m_host->m_authoritative) {
+    if (m_host->m_authoritative) {
         errorPayload(reply, "Host is authoritative, cannot permit TG");
         return;
     }
