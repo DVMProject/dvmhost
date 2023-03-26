@@ -147,7 +147,7 @@ private:
     uint32_t m_nxdnQueueSizeBytes;
 
     bool m_authoritative;
-    bool m_controlPermitTG;
+    bool m_supervisor;
 
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;

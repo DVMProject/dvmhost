@@ -57,16 +57,16 @@ network:
     allowDiagnosticTransfer: true
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
-    # Flag indicating whether or not RCON (remote control) is enabled.
-    rconEnable: false
-    # IP address of the network interface to listen for RCON commands on (or 0.0.0.0 for all).
-    rconAddress: 127.0.0.1
-    # Port number for RCON to listen on.
-    rconPort: 9990
-    # RCON access password.
-    rconPassword: "PASSWORD"
-    # Flag indicating whether or not verbose RCON debug logging is enabled.
-    rconDebug: false
+    # Flag indicating whether or not REST API is enabled.
+    restEnable: false
+    # IP address of the network interface to listen for REST API on (or 0.0.0.0 for all).
+    restAddress: 127.0.0.1
+    # Port number for REST API to listen on.
+    restPort: 9990
+    # REST API authentication password.
+    restPassword: "PASSWORD"
+    # Flag indicating whether or not verbose REST API debug logging is enabled.
+    restDebug: false
 
 #
 # Digital Protocol Configuration
@@ -303,14 +303,11 @@ system:
     # Site Configuration
     #
     config:
-        # Flag indicating whether or not this host is authoritative for TGID operations.
-        # (By default this should be true, unless you are operating in a mode that will dynamically permit
-        # TGIDs via the permit-tg RCON command.)
+        # Flag indicating whether or not this host is authoritative (i.e. will automatically handle channel grant) for TGID operations.
         authoritative: true
-        # Flag indicating whether or not this host sends permit-tg commands to voice channels for TGID operations.
-        # (By default this should be false, unless you are operating in a mode that will dynamically permit
-        # TGIDs via the permit-tg RCON command.)
-        controlPermitTG: false
+        # Flag indicating whether or not this host acts as a supervisor (i.e. will automatically handle permission) for voice channel TGID permission.
+        supervisor: false
+
         # Channel Identity (corresponds to the appropriate entry in the iden_table file).
         channelId: 2
         # Channel Number (used to calculate actual host frequency based on the identity table).
@@ -322,12 +319,12 @@ system:
         voiceChNo:
               # Channel Number (used to calculate actual host frequency based on the identity table).
             - channelNo: 1
-              # RCON IP Address for voice channel.
-              rconAddress: 127.0.0.1
-              # RCON Port number for voice channel.
-              rconPort: 9990
-              # RCON access password for voice channel.
-              rconPassword: "PASSWORD"
+              # REST API IP Address for voice channel.
+              restAddress: 127.0.0.1
+              # REST API Port number for voice channel.
+              restPort: 9990
+              # REST API access password for voice channel.
+              restPassword: "PASSWORD"
 
         # DMR Color Code.
         colorCode: 1

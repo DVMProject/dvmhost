@@ -123,6 +123,8 @@ private:
     void restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
+    void restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
     void restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);

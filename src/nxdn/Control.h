@@ -82,7 +82,7 @@ namespace nxdn
         void reset();
 
         /// <summary>Helper to set NXDN configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
             const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
             uint8_t channelId, uint32_t channelNo, bool printOptions);
         
@@ -103,6 +103,8 @@ namespace nxdn
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Sets a flag indicating whether NXDN has supervisory functions and can send permit TG to voice channels.</summary>
+        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
 
@@ -132,7 +134,7 @@ namespace nxdn
         packet::Trunk* m_trunk;
 
         bool m_authoritative;
-        bool m_controlPermitTG;
+        bool m_supervisor;
 
         uint32_t m_ran;
         uint32_t m_timeout;

@@ -68,7 +68,7 @@ namespace dmr
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool controlPermitTG, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, 
+        void setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, 
             uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
         
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
@@ -91,6 +91,8 @@ namespace dmr
         /// <summary>Updates the processor.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels.</summary>
+        void setSupervisor(bool supervisor);
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
 
@@ -127,7 +129,7 @@ namespace dmr
         friend class Slot;
 
         bool m_authoritative;
-        bool m_controlPermitTG;
+        bool m_supervisor;
 
         uint32_t m_colorCode;
 

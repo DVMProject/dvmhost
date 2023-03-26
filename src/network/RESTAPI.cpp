@@ -273,6 +273,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(PUT_MDM_MODE).put(REST_API_BIND(RESTAPI::restAPI_PutModemMode, this));
     m_dispatcher.match(PUT_MDM_KILL).put(REST_API_BIND(RESTAPI::restAPI_PutModemKill, this));
 
+    m_dispatcher.match(PUT_SET_SUPERVISOR).put(REST_API_BIND(RESTAPI::restAPI_PutSetSupervisor, this));
     m_dispatcher.match(PUT_PERMIT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutPermitTG, this));
     m_dispatcher.match(PUT_GRANT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutGrantTG, this));
     m_dispatcher.match(GET_RELEASE_GRNTS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseGrants, this));
@@ -761,6 +762,101 @@ void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& repl
     } else {
         g_killed = true;
         m_host->setState(HOST_STATE_QUIT);
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!m_host->m_authoritative) {
+        errorPayload(reply, "Host is not authoritative, cannot set supervisory state");
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["state"].is<int>()) {
+        errorPayload(reply, "state was not a valid integer");
+        return;
+    }
+
+    DVM_STATE state = (DVM_STATE)req["state"].get<int>();
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["enable"].is<bool>()) {
+        errorPayload(reply, "enable was not a boolean");
+        return;
+    }
+
+    bool enable = req["enable"].get<bool>();
+
+    switch (state) {
+    case STATE_DMR:
+#if defined(ENABLE_DMR)
+    {
+        if (m_dmr != nullptr) {
+            m_dmr->setSupervisor(enable);
+        }
+        else {
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_DMR)
+    break;
+    case STATE_P25:
+#if defined(ENABLE_P25)
+    {
+        if (m_p25 != nullptr) {
+            m_p25->setSupervisor(enable);
+        }
+        else {
+          errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_P25)
+    break;
+    case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+    {
+        if (m_nxdn != nullptr) {
+            m_nxdn->setSupervisor(enable);
+        }
+        else {
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_NXDN)
+    break;
+    default:
+        errorPayload(reply, "invalid mode");
+        break;
     }
 }
 

@@ -160,6 +160,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
     m_lastLateEntry(0U),
+    m_supervisor(false),
     m_verbose(verbose),
     m_debug(debug)
 {

@@ -69,6 +69,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
+    m_supervisor(false),
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
@@ -116,7 +117,7 @@ Control::~Control()
 /// Helper to set DMR configuration options.
 /// </summary>
 /// <param name="conf">Instance of the ConfigINI class.</param>
-/// <param name="controlPermitTG"></param>
+/// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="netId">DMR Network ID.</param>
@@ -124,13 +125,13 @@ Control::~Control()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
+void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
 
-    m_controlPermitTG = controlPermitTG;
+    m_supervisor = supervisor;
 
     Slot::m_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
@@ -159,11 +160,11 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::vect
         switch (m_tsccSlotNo) {
         case 1U:
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot1->setControlPermitTG(m_controlPermitTG);
+            m_slot1->setSupervisor(m_supervisor);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot2->setControlPermitTG(m_controlPermitTG);
+            m_slot2->setSupervisor(m_supervisor);
             break;
         default:
             LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
@@ -367,6 +368,29 @@ void Control::clock(uint32_t ms)
 
     m_slot1->clock();
     m_slot2->clock();
+}
+
+/// <summary>
+/// Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels.
+/// </summary>
+/// <param name="supervisor"></param>
+void Control::setSupervisor(bool supervisor)
+{
+    if (!m_enableTSCC) {
+        return;
+    }
+
+    switch (m_tsccSlotNo) {
+    case 1U:
+        m_slot1->setSupervisor(supervisor);
+        break;
+    case 2U:
+        m_slot2->setSupervisor(supervisor);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
+        break;
+    }
 }
 
 /// <summary>

@@ -2232,8 +2232,8 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
-            // callback RCON to permit-tg on the specified voice channel
-            if (m_p25->m_authoritative && m_p25->m_controlPermitTG) {
+            // callback REST API to permit the granted TG on the specified voice channel
+            if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
@@ -2272,8 +2272,8 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
 
-            // callback RCON to permit-tg on the specified voice channel
-            if (m_p25->m_authoritative && m_p25->m_controlPermitTG) {
+            // callback REST API to permit the granted TG on the specified voice channel
+            if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {

@@ -90,7 +90,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_data(nullptr),
     m_trunk(nullptr),
     m_authoritative(authoritative),
-    m_controlPermitTG(false),
+    m_supervisor(false),
     m_nac(nac),
     m_txNAC(nac),
     m_timeout(timeout),
@@ -208,8 +208,8 @@ void Control::reset()
 /// Helper to set P25 configuration options.
 /// </summary>
 /// <param name="conf">Instance of the yaml::Node class.</param>
-/// <param name="controlPermitTG"></param>
-/// <param name="cwCallsign"></param>
+/// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
+/// <param name="cwCallsign">CW callsign of this host.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="pSuperGroup"></param>
@@ -220,14 +220,14 @@ void Control::reset()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
     const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
     uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
 
-    m_controlPermitTG = controlPermitTG;
+    m_supervisor = supervisor;
 
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 

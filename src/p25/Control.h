@@ -84,7 +84,7 @@ namespace p25
         void reset();
 
         /// <summary>Helper to set P25 configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool controlPermitTG, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
             const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
             uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
         
@@ -113,6 +113,8 @@ namespace p25
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Sets a flag indicating whether P25 has supervisory functions and can send permit TG to voice channels.</summary>
+        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
 
@@ -145,7 +147,7 @@ namespace p25
         friend class lookups::P25AffiliationLookup;
 
         bool m_authoritative;
-        bool m_controlPermitTG;
+        bool m_supervisor;
 
         uint32_t m_nac;
         uint32_t m_txNAC;

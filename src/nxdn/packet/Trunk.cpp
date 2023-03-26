@@ -550,8 +550,8 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
         }
     }
 
-    // callback RCON to permit-tg on the specified voice channel
-    if (m_nxdn->m_authoritative && m_nxdn->m_controlPermitTG) {
+    // callback REST API to permit the granted TG on the specified voice channel
+    if (m_nxdn->m_authoritative && m_nxdn->m_supervisor) {
         ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {

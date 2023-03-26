@@ -872,8 +872,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        // callback RCON to permit-tg on the specified voice channel
-        if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
+        // callback REST API to permit the granted TG on the specified voice channel
+        if (m_tscc->m_authoritative && m_tscc->m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
@@ -939,8 +939,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", m_tscc->m_slotNo, srcId, dstId);
         }
 
-        // callback RCON to permit-tg on the specified voice channel
-        if (m_tscc->m_authoritative && m_tscc->m_controlPermitTG) {
+        // callback REST API to permit the granted TG on the specified voice channel
+        if (m_tscc->m_authoritative && m_tscc->m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();

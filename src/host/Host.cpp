@@ -140,7 +140,7 @@ Host::Host(const std::string& confFile) :
     m_p25QueueSizeBytes(2592U), // 12 frames
     m_nxdnQueueSizeBytes(1488U), // 31 frames
     m_authoritative(true),
-    m_controlPermitTG(false),
+    m_supervisor(false),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_RESTAPI(nullptr)
@@ -434,7 +434,7 @@ int Host::run()
         dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
             dmrDumpCsbkData, dmrDebug, dmrVerbose));
-        dmr->setOptions(m_conf, m_controlPermitTG, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
+        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
 
         if (dmrCtrlChannel) {
             dmr->setCCRunning(true);
@@ -507,7 +507,7 @@ int Host::run()
         p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
             m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
             p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId,
+        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId,
             m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -572,7 +572,7 @@ int Host::run()
         nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
             m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_controlPermitTG, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
@@ -1840,9 +1840,9 @@ bool Host::readParams()
                 chNo = 4095U;
             }
 
-            std::string restApiAddress = channel["rconAddress"].as<std::string>("127.0.0.1");
-            uint16_t restApiPort = (uint16_t)channel["rconPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-            std::string restApiPassword = channel["rconPassword"].as<std::string>();
+            std::string restApiAddress = channel["restAddress"].as<std::string>("127.0.0.1");
+            uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+            std::string restApiPassword = channel["restPassword"].as<std::string>();
 
             ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Adddress %s:%u", m_channelId, chNo, restApiAddress.c_str(), restApiPort);
 
@@ -1896,6 +1896,10 @@ bool Host::readParams()
 
         LogInfo("System Config Parameters");
         LogInfo("    Authoritative: %s", m_authoritative ? "yes" : "no");
+        if (m_authoritative) {
+            m_supervisor = rfssConfig["supervisor"].as<bool>(false);
+            LogInfo("    Supervisor: %s", m_supervisor ? "yes" : "no");
+        }
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
         LogInfo("    TX Frequency: %uHz", m_txFrequency);
         LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
@@ -1921,11 +1925,8 @@ bool Host::readParams()
         LogInfo("    NXDN RAN: %u", m_nxdnRAN);
 
         if (!m_authoritative) {
-            m_controlPermitTG = false;
-            LogWarning(LOG_HOST, "Host is non-authoritative, this requires RCON to \"permit-tg\" for VCs and \"grant-tg\" for CCs!");
-        } else {
-            m_controlPermitTG = rfssConfig["controlPermitTG"].as<bool>(false);
-            LogInfo("    Control Permit TG: %s", m_controlPermitTG ? "yes" : "no");
+            m_supervisor = false;
+            LogWarning(LOG_HOST, "Host is non-authoritative! This requires REST API to handle permit TG for VCs and grant TG for CCs!");
         }
     }
     else {
@@ -2252,7 +2253,7 @@ bool Host::createNetwork()
 {
     yaml::Node networkConf = m_conf["network"];
     bool netEnable = networkConf["enable"].as<bool>(false);
-    bool restApiEnable = networkConf["rconEnable"].as<bool>(false);
+    bool restApiEnable = networkConf["restEnable"].as<bool>(false);
 
     // dump out if both networking and REST API are disabled
     if (!netEnable && !restApiEnable) {
@@ -2262,10 +2263,10 @@ bool Host::createNetwork()
     std::string address = networkConf["address"].as<std::string>();
     uint16_t port = (uint16_t)networkConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint16_t local = (uint16_t)networkConf["local"].as<uint32_t>(0U);
-    std::string restApiAddress = networkConf["rconAddress"].as<std::string>("127.0.0.1");
-    uint16_t restApiPort = (uint16_t)networkConf["rconPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-    std::string restApiPassword = networkConf["rconPassword"].as<std::string>();
-    bool restApiDebug = networkConf["rconDebug"].as<bool>(false);
+    std::string restApiAddress = networkConf["restAddress"].as<std::string>("127.0.0.1");
+    uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+    std::string restApiPassword = networkConf["restPassword"].as<std::string>();
+    bool restApiDebug = networkConf["restDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(0U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
