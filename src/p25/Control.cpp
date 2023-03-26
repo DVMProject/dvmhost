@@ -37,6 +37,7 @@
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
+#include "remote/RESTClient.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
@@ -318,6 +319,28 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
     m_affiliations.setRFChData(chData);
+
+    // set the grant release callback
+    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
+        // callback REST API to clear TG permit for the granted TG on the specified voice channel
+        if (m_authoritative && m_supervisor) {
+            ::lookups::VoiceChData voiceChData = m_affiliations.getRFChData(chNo);
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+                chNo != m_siteData.channelNo()) {
+                json::object req = json::object();
+                int state = modem::DVM_STATE::STATE_P25;
+                req["state"].set<int>(state);
+                dstId = 0U; // clear TG value
+                req["dstId"].set<uint32_t>(dstId);
+
+                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    HTTP_PUT, PUT_PERMIT_TG, req, m_debug);
+            }
+            else {
+                ::LogError(LOG_P25, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
+            }
+        }
+    });
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;

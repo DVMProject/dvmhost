@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <vector>
+#include <functional>
 
 namespace lookups
 {
@@ -170,6 +171,9 @@ namespace lookups
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Helper to set the release grant callback.</summary>
+        void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
+
     protected:
         std::vector<uint32_t> m_rfChTable;
         std::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
@@ -181,6 +185,9 @@ namespace lookups
         std::unordered_map<uint32_t, uint32_t> m_grantChTable;
         std::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
         std::unordered_map<uint32_t, Timer> m_grantTimers;
+
+        //                 chNo      dstId     slot
+        std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
 
         const char *m_name;
 

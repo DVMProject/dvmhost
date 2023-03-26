@@ -44,8 +44,7 @@ using namespace dmr::lookups;
 DMRAffiliationLookup::DMRAffiliationLookup(bool verbose) : ::lookups::AffiliationLookup("DMR Affiliation", verbose),
     m_grantChSlotTable(),
     m_tsccChNo(0U),
-    m_tsccSlot(0U),
-    m_releaseGrant(nullptr)
+    m_tsccSlot(0U)
 {
     /* stub */
 }

@@ -900,11 +900,6 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
 
     uint32_t dstId = req["dstId"].get<uint32_t>();
 
-    if (dstId == 0U) {
-        errorPayload(reply, "destination ID is an illegal TGID");
-        return;
-    }
-
     switch (state) {
     case STATE_DMR:
 #if defined(ENABLE_DMR)

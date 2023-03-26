@@ -671,6 +671,8 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_affiliations = new dmr::lookups::DMRAffiliationLookup(verbose);
+
+    // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
         Slot* tscc = m_dmr->getTSCCSlot();
         if (tscc != nullptr) {
@@ -690,7 +692,25 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                     HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, tscc->m_debug);
             }
             else {
-                ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear payload channel, chNo = %u", tscc->m_slotNo, chNo);
+                ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+            }
+
+            // callback REST API to clear TG permit for the granted TG on the specified voice channel
+            if (m_authoritative && m_dmr->m_supervisor) {
+                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                    json::object req = json::object();
+                    int state = modem::DVM_STATE::STATE_DMR;
+                    req["state"].set<int>(state);
+                    dstId = 0U; // clear TG value
+                    req["dstId"].set<uint32_t>(dstId);
+                    req["slot"].set<uint8_t>(slot);
+
+                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                        HTTP_PUT, PUT_PERMIT_TG, req, m_dmr->m_debug);
+                }
+                else {
+                    ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
+                }
             }
         }
     });

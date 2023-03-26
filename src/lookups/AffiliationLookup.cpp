@@ -51,6 +51,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_grantChTable(),
     m_grantSrcIdTable(),
     m_grantTimers(),
+    m_releaseGrant(nullptr),
     m_name(name),
     m_verbose(verbose)
 {
@@ -323,6 +324,10 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, dstId = %u",
                 m_name, chNo, dstId);
+        }
+
+        if (m_releaseGrant != nullptr) {
+            m_releaseGrant(chNo, dstId, 0U);
         }
 
         m_grantChTable.erase(dstId);
