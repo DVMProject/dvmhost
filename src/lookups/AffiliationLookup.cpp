@@ -443,7 +443,7 @@ VoiceChData AffiliationLookup::getRFChData(uint32_t chNo) const
         data = VoiceChData();
     }
 
-    return VoiceChData();
+    return data;
 }
 
 /// <summary>

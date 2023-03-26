@@ -316,7 +316,8 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
         m_affiliations.addRFCh(ch);
     }
 
-    m_affiliations.setRFChData(voiceChData);
+    std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
+    m_affiliations.setRFChData(chData);
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;

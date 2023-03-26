@@ -64,6 +64,8 @@ private:
     uint32_t m_port;
     std::string m_password;
 
+    static bool m_console;
+
     static bool m_responseAvailable;
     static HTTPPayload m_response;
 

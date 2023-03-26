@@ -63,6 +63,7 @@ using namespace network::rest::http;
 bool RESTClient::m_responseAvailable = false;
 HTTPPayload RESTClient::m_response;
 
+bool RESTClient::m_console = false;
 bool RESTClient::m_debug = false;
 
 // ---------------------------------------------------------------------------
@@ -117,6 +118,7 @@ RESTClient::RESTClient(const std::string& address, uint32_t port, const std::str
     assert(!address.empty());
     assert(port > 0U);
 
+    m_console = true;
     m_debug = debug;
 }
 
@@ -234,7 +236,14 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             return ERRNO_API_CALL_TIMEOUT;
         }
 
-        fprintf(stdout, "%s\r\n", m_response.content.c_str());
+        if (m_console) {
+            fprintf(stdout, "%s\r\n", m_response.content.c_str());
+        }
+        else {
+            if (m_debug) {
+                ::LogDebug(LOG_REST, "REST Response: %s", m_response.content.c_str());
+            }
+        }
 
         client.close();
     }

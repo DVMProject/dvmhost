@@ -152,7 +152,7 @@ namespace lookups
         virtual uint32_t getGrantedSrcId(uint32_t srcId);
 
         /// <summary>Helper to set RF channel data.</summary>
-        void setRFChData(const std::unordered_map<uint32_t, VoiceChData> chData) { m_rfChDataTable = chData; }
+        void setRFChData(const std::unordered_map<uint32_t, VoiceChData>& chData) { m_rfChDataTable = chData; }
         /// <summary>Helper to get RF channel data.</summary>
         VoiceChData getRFChData(uint32_t chNo) const;
 

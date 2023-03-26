@@ -272,7 +272,8 @@ void Control::setOptions(yaml::Node& conf, bool controlPermitTG, const std::stri
         m_affiliations.addRFCh(ch);
     }
 
-    m_affiliations.setRFChData(voiceChData);
+    std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
+    m_affiliations.setRFChData(chData);
 
     lc::RCCH::setSiteData(m_siteData);
     lc::RCCH::setCallsign(cwCallsign);

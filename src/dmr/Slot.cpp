@@ -736,7 +736,8 @@ void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unorder
         m_affiliations->addRFCh(chNo);
     }
 
-    m_affiliations->setRFChData(voiceChData);
+    std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
+    m_affiliations->setRFChData(chData);
 
     lc::CSBK::setSiteData(m_siteData);
 }
