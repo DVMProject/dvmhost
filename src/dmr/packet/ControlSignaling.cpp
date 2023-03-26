@@ -443,6 +443,43 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                     LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), serviceKind = $%02X, serviceOptions = $%02X, serviceExtra = $%02X, srcId = %u, dstId = %u",
                         m_slot->m_slotNo, isp->getServiceKind(), isp->getServiceOptions(), isp->getServiceExtra(), isp->getSrcId(), isp->getDstId());
                 }
+
+                switch (isp->getServiceKind()) {
+                case SVC_KIND_IND_VOICE_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+
+                    if (m_slot->m_authoritative) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    }
+                    break;
+                case SVC_KIND_GRP_VOICE_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
+
+                    if (m_slot->m_authoritative) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    }
+                    break;
+                case SVC_KIND_IND_DATA_CALL:
+                case SVC_KIND_IND_UDT_DATA_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+
+                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    break;
+                case SVC_KIND_GRP_DATA_CALL:
+                case SVC_KIND_GRP_UDT_DATA_CALL:
+                    writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
+
+                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    break;
+                case SVC_KIND_REG_SVC:
+                    break;
+                default:
+                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
+                    // should we drop the CSBK and not repeat it?
+                    break;
+                }
+
+                handled = true;
             }
         }
         break;

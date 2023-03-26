@@ -43,6 +43,7 @@
 
 using namespace nxdn;
 using namespace nxdn::lc;
+using namespace nxdn::lc::rcch;
 using namespace nxdn::packet;
 
 #include <cassert>
@@ -235,8 +236,48 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 {
     assert(data != nullptr);
 
+    if (!m_nxdn->m_control)
+        return false;
+    if (m_nxdn->m_rfState != RS_RF_LISTENING && m_nxdn->m_netState == RS_NET_IDLE)
+        return false;
+
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
+    }
+
+    if (m_nxdn->m_netState == RS_NET_IDLE) {
+        std::unique_ptr<lc::RCCH> rcch = RCCHFactory::createRCCH(data, len);
+        if (rcch == nullptr) {
+            return false;
+        }
+
+        uint16_t srcId = rcch->getSrcId();
+        uint16_t dstId = rcch->getDstId();
+
+        // handle standard P25 reference opcodes
+        switch (rcch->getMessageType()) {
+            case RTCH_MESSAGE_TYPE_VCALL:
+            {
+                if (m_verbose) {
+                    LogMessage(LOG_NET, NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ ", emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                        rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
+                }
+
+                uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                    (rcch->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                    (rcch->getPriority() & 0x07U);                                  // Priority
+
+                if (m_nxdn->m_dedicatedControl && !m_nxdn->m_voiceOnControl) {
+                    writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+                }
+            }
+            return true; // don't allow this to write to the air
+            default:
+                LogError(LOG_NET, "NXDN, unhandled message type, messageType = $%02X", rcch->getMessageType());
+                return false;
+        } // switch (rcch->getMessageType())
+
+        writeRF_Message(rcch.get(), true);
     }
 
     return true;

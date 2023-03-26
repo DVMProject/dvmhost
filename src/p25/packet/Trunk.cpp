@@ -710,8 +710,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                             (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                        // workaround for single channel dedicated sites to pass network traffic on a lone VC
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                             writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                         }
                     }
@@ -727,8 +726,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                             (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                        // workaround for single channel dedicated sites to pass network traffic on a lone VC
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl && m_p25->m_affiliations.getRFChCnt() == 1U) {
+                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                             writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                         }
                     }
