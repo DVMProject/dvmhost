@@ -564,7 +564,7 @@ void Slot::clock()
 /// <param name="dstId"></param>
 void Slot::permittedTG(uint32_t dstId)
 {
-    if (!m_authoritative) {
+    if (m_authoritative) {
         return;
     }
 
