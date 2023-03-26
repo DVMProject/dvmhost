@@ -2237,7 +2237,6 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             // callback RCON to permit-tg on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_controlPermitTG) {
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
-
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
