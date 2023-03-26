@@ -498,6 +498,11 @@ void Slot::clock()
                 LogMessage(LOG_RF, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_rfLastDstId);
             }
             m_rfLastDstId = 0U;
+
+            // reset permitted ID and clear permission state
+            if (!m_authoritative && m_permittedDstId != 0U) {
+                m_permittedDstId = 0U;
+            }
         }
     }
 
