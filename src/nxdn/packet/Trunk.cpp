@@ -268,7 +268,9 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                     (rcch->getPriority() & 0x07U);                                  // Priority
 
                 if (m_nxdn->m_dedicatedControl && !m_nxdn->m_voiceOnControl) {
-                    writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+                    if (!m_nxdn->m_affiliations.isGranted(dstId)) {
+                        writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+                    }
                 }
             }
             return true; // don't allow this to write to the air

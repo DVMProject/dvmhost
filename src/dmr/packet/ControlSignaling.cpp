@@ -449,27 +449,35 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
 
                     if (m_slot->m_authoritative) {
-                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                        if (!m_slot->m_affiliations->isGranted(dstId)) {
+                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                        }
                     }
                     break;
                 case SVC_KIND_GRP_VOICE_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
 
                     if (m_slot->m_authoritative) {
-                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                        if (!m_slot->m_affiliations->isGranted(dstId)) {
+                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                        }
                     }
                     break;
                 case SVC_KIND_IND_DATA_CALL:
                 case SVC_KIND_IND_UDT_DATA_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
-                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    if (!m_slot->m_affiliations->isGranted(dstId)) {
+                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                    }
                     break;
                 case SVC_KIND_GRP_DATA_CALL:
                 case SVC_KIND_GRP_UDT_DATA_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
-                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    if (!m_slot->m_affiliations->isGranted(dstId)) {
+                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                    }
                     break;
                 case SVC_KIND_REG_SVC:
                     break;

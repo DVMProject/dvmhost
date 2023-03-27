@@ -711,7 +711,9 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             (tsbk->getPriority() & 0x07U);                                  // Priority
 
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
-                            writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
+                            if (!m_p25->m_affiliations.isGranted(dstId)) {
+                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
+                            }
                         }
                     }
                     return true; // don't allow this to write to the air
@@ -727,7 +729,9 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                             (tsbk->getPriority() & 0x07U);                                  // Priority
 
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
-                            writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                            if (!m_p25->m_affiliations.isGranted(dstId)) {
+                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                            }
                         }
                     }
                     return true; // don't allow this to write to the air
@@ -2235,8 +2239,8 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             // callback REST API to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
-                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
-                    chNo != m_p25->m_siteData.channelNo()) {
+                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0/* &&
+                    chNo != m_p25->m_siteData.channelNo()*/) {
                     json::object req = json::object();
                     int state = modem::DVM_STATE::STATE_P25;
                     req["state"].set<int>(state);
