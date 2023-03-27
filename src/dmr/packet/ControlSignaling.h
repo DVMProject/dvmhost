@@ -95,9 +95,9 @@ namespace dmr
             /// <summary>Helper to write a NACK RSP packet.</summary>
             void writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uint8_t service);
             /// <summary>Helper to write a grant packet.</summary>
-            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, uint32_t chNo = 0U, bool net = false, bool skipNetCheck = false);
+            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
             /// <summary>Helper to write a data grant packet.</summary>
-            bool writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, uint32_t chNo = 0U, bool net = false);
+            bool writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
             /// <summary>Helper to write a unit registration response packet.</summary>
             void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions);
 

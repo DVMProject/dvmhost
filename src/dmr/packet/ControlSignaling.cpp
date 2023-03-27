@@ -450,7 +450,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 
                     if (m_slot->m_authoritative) {
                         if (!m_slot->m_affiliations->isGranted(dstId)) {
-                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                         }
                     }
                     break;
@@ -459,7 +459,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 
                     if (m_slot->m_authoritative) {
                         if (!m_slot->m_affiliations->isGranted(dstId)) {
-                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                         }
                     }
                     break;
@@ -468,7 +468,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
                     if (!m_slot->m_affiliations->isGranted(dstId)) {
-                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                     }
                     break;
                 case SVC_KIND_GRP_DATA_CALL:
@@ -476,7 +476,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
                     if (!m_slot->m_affiliations->isGranted(dstId)) {
-                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
+                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                     }
                     break;
                 case SVC_KIND_REG_SVC:
@@ -776,12 +776,11 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
 /// <param name="dstId"></param>
 /// <param name="serviceOptions"></param>
 /// <param name="grp"></param>
+/// <param name="net"></param>
 /// <param name="skip"></param>
 /// <param name="chNo"></param>
-/// <param name="net"></param>
-/// <param name="skipNetCheck"></param>
 /// <returns></returns>
-bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, uint32_t chNo, bool net, bool skipNetCheck)
+bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
 
@@ -1018,11 +1017,11 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 /// <param name="dstId"></param>
 /// <param name="serviceOptions"></param>
 /// <param name="grp"></param>
+/// <param name="net"></param>
 /// <param name="skip"></param>
 /// <param name="chNo"></param>
-/// <param name="net"></param>
 /// <returns></returns>
-bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, uint32_t chNo, bool net)
+bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
 

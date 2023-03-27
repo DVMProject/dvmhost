@@ -701,36 +701,36 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 switch (tsbk->getLCO()) {
                     case TSBK_IOSP_GRP_VCH:
                     {
-                        if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
-                        }
-
-                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                            (tsbk->getPriority() & 0x07U);                                  // Priority
-
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                             if (!m_p25->m_affiliations.isGranted(dstId)) {
-                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
+                                if (m_verbose) {
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                        tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
+                                }
+
+                                uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                                    (tsbk->getPriority() & 0x07U);                                  // Priority
+
+                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true, true);
                             }
                         }
                     }
                     return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
                     {
-                        if (m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
-                        }
-
-                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                            (tsbk->getPriority() & 0x07U);                                  // Priority
-
                         if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                             if (!m_p25->m_affiliations.isGranted(dstId)) {
-                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                                if (m_verbose) {
+                                    LogMessage(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                        tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
+                                }
+
+                                uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                                    (tsbk->getPriority() & 0x07U);                                  // Priority
+
+                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false, true);
                             }
                         }
                     }
@@ -2138,13 +2138,12 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-/// <param name="chNo"></param>
 /// <param name="grp"></param>
-/// <param name="skip"></param>
 /// <param name="net"></param>
-/// <param name="skipNetCheck"></param>
+/// <param name="skip"></param>
+/// <param name="chNo"></param>
 /// <returns></returns>
-bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, uint32_t chNo, bool net, bool skipNetCheck)
+bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -2269,7 +2268,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit group grant
-            writeRF_TSDU_SBF(iosp.get(), false);//, true, net);
+            writeRF_TSDU_SBF(iosp.get(), net);
         }
         else {
             if (!net) {
@@ -2309,7 +2308,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit private grant
-            writeRF_TSDU_SBF(iosp.get(), false);//, true, net);
+            writeRF_TSDU_SBF(iosp.get(), net);
         }
     }
 

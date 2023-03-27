@@ -258,18 +258,18 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         switch (rcch->getMessageType()) {
             case RTCH_MESSAGE_TYPE_VCALL:
             {
-                if (m_verbose) {
-                    LogMessage(LOG_NET, NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ ", emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                        rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
-                }
-
-                uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                    (rcch->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                    (rcch->getPriority() & 0x07U);                                  // Priority
-
                 if (m_nxdn->m_dedicatedControl && !m_nxdn->m_voiceOnControl) {
                     if (!m_nxdn->m_affiliations.isGranted(dstId)) {
-                        writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+                        if (m_verbose) {
+                            LogMessage(LOG_NET, NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ ", emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
+                        }
+
+                        uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
+                            (rcch->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
+                            (rcch->getPriority() & 0x07U);                                  // Priority
+
+                        writeRF_Message_Grant(srcId, dstId, serviceOptions, true, true);
                     }
                 }
             }
@@ -456,12 +456,11 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
 /// <param name="dstId"></param>
 /// <param name="serviceOptions"></param>
 /// <param name="grp"></param>
+/// <param name="net"></param>
 /// <param name="skip"></param>
 /// <param name="chNo"></param>
-/// <param name="net"></param>
-/// <param name="skipNetCheck"></param>
 /// <returns></returns>
-bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip, uint32_t chNo, bool net, bool skipNetCheck)
+bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -587,7 +586,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
     }
 
     // transmit group grant
-    writeRF_Message(rcch.get(), false, true);
+    writeRF_Message(rcch.get(), net, true);
     return true;
 }
 

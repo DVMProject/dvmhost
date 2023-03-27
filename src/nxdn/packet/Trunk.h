@@ -102,7 +102,7 @@ namespace nxdn
             void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false);
 
             /// <summary>Helper to write a grant packet.</summary>
-            bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool skip = false, uint32_t chNo = 0U, bool net = false, bool skipNetCheck = false);
+            bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
             /// <summary>Helper to write a deny packet.</summary>
             void writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service);
             /// <summary>Helper to write a group registration response packet.</summary>
