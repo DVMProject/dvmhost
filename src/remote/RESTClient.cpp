@@ -167,12 +167,16 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
-    HTTPClient<RESTDispatcherType> client(address, port);
+    HTTPClient<RESTDispatcherType>* client = nullptr;
 
     try {
-        if (!client.open())
+        // setup HTTP client for authentication payload
+        client = new HTTPClient<RESTDispatcherType>(address, port);
+        if (!client->open()) {
+            delete client;
             return ERRNO_SOCK_OPEN;
-        client.setHandler(m_dispatcher);
+        }
+        client->setHandler(m_dispatcher);
 
         // generate password SHA hash
         size_t size = password.size();
@@ -203,11 +207,12 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
         HTTPPayload httpPayload = HTTPPayload::requestPayload(HTTP_PUT, "/auth");
         httpPayload.payload(request);
-        client.request(httpPayload);
+        client->request(httpPayload);
 
         // wait for response and parse
         if (wait()) {
-            client.close();
+            client->close();
+            delete client;
             return ERRNO_API_CALL_TIMEOUT;
         }
 
@@ -222,19 +227,30 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             token = rsp["token"].get<std::string>();
         }
         else {
-            client.close();
+            client->close();
+            delete client;
             return ERRNO_BAD_API_RESPONSE;
         }
+
+        client->close();
+        delete client;
+
+        // reset the HTTP client and setup for actual payload request
+        client = new HTTPClient<RESTDispatcherType>(address, port);
+        if (!client->open())
+            return ERRNO_SOCK_OPEN;
+        client->setHandler(m_dispatcher);
 
         // send actual API request
         httpPayload = HTTPPayload::requestPayload(method, endpoint);
         httpPayload.headers.add("X-DVM-Auth-Token", token);
         httpPayload.payload(payload);
-        client.request(httpPayload);
+        client->request(httpPayload);
 
         // wait for response and parse
         if (wait()) {
-            client.close();
+            client->close();
+            delete client;
             return ERRNO_API_CALL_TIMEOUT;
         }
 
@@ -247,10 +263,13 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             }
         }
 
-        client.close();
+        client->close();
+        delete client;
     }
     catch (std::exception&) {
-        client.close();
+        if (client != nullptr) {
+            delete client;
+        }
         return ERRNO_INTERNAL_ERROR;
     }
     

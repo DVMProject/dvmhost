@@ -62,7 +62,7 @@ namespace network
             class HTTPClient : private Thread {
             public:
                 /// <summary>Initializes a new instance of the HTTPClient class.</summary>
-                explicit HTTPClient(const std::string& address, uint16_t port) :
+                HTTPClient(const std::string& address, uint16_t port) :
                     m_address(address),
                     m_port(port),
                     m_connection(nullptr),
@@ -74,6 +74,13 @@ namespace network
                 }
                 /// <summary>Initializes a copy instance of the HTTPClient class.</summary>
                 HTTPClient(const HTTPClient&) = delete;
+                /// <summary>Finalizes a instance of the HTTPClient class.</summary>
+                ~HTTPClient() 
+                {
+                    if (m_connection != nullptr) {
+                        close();
+                    }
+                }
     
                 /// <summary></summary>
                 HTTPClient& operator=(const HTTPClient&) = delete;
@@ -86,8 +93,12 @@ namespace network
                 }
 
                 /// <summary>Send HTTP request to HTTP server.</summary>
-                void request(HTTPPayload& request)
+                bool request(HTTPPayload& request)
                 {
+                    if (m_completed) {
+                        return false;
+                    }
+
                     asio::post(m_ioContext, [this, request]() {
                         std::lock_guard<std::mutex> guard(m_lock);
                         {
@@ -96,19 +107,28 @@ namespace network
                             }
                         }
                     });
+
+                    return true;
                 }
 
                 /// <summary>Opens connection to the network.</summary>
                 bool open()
                 {
-                    m_running = true;
+                    if (m_completed) {
+                        return false;
+                    }
+
                     return run();
                 }
 
                 /// <summary>Closes connection to the network.</summary>
                 void close()
                 {
-                    m_running = false;
+                    if (m_completed) {
+                        return;
+                    }
+
+                    m_completed = true;
                     m_ioContext.stop();
 
                     if (m_connection != nullptr) {
@@ -124,36 +144,28 @@ namespace network
                 /// <summary></summary>
                 virtual void entry()
                 {
-                    while (m_running) {
-                        asio::ip::tcp::resolver resolver(m_ioContext);
-                        auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
+                    asio::ip::tcp::resolver resolver(m_ioContext);
+                    auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
 
-                        connect(endpoints);
+                    connect(endpoints);
 
-                        // the entry() call will block until all asynchronous operations
-                        // have finished
-                        m_ioContext.run();
-                        m_ioContext.restart();
+                    // the entry() call will block until all asynchronous operations
+                    // have finished
+                    m_ioContext.run();
+                
+                    if (m_connection != nullptr) {
+                        m_connection->stop();
+                        delete m_connection;
+                        m_connection = nullptr;
                     }
                 }
 
                 /// <summary>Perform an asynchronous connect operation.</summary>
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
-                    std::lock_guard<std::mutex> guard(m_lock);
-                    {
-                        if (m_connection != nullptr) {
-                            m_connection->stop();
-                            delete m_connection;
-                            m_connection = nullptr;
-
-                            m_socket = asio::ip::tcp::socket(m_ioContext);
-                        }
-
-                        asio::connect(m_socket, endpoints);
-                        m_connection = new ConnectionType(std::move(m_socket), m_requestHandler);
-                        m_connection->start();
-                    }
+                    asio::connect(m_socket, endpoints);
+                    m_connection = new ConnectionType(std::move(m_socket), m_requestHandler);
+                    m_connection->start();
                 }
 
                 std::string m_address;
@@ -163,7 +175,7 @@ namespace network
 
                 ConnectionType* m_connection;
 
-                bool m_running = false;
+                bool m_completed = false;
                 asio::io_context m_ioContext;
 
                 asio::ip::tcp::socket m_socket;
