@@ -167,9 +167,9 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
     RESTDispatcherType m_dispatcher(RESTClient::responseHandler);
+    HTTPClient<RESTDispatcherType> client(address, port);
 
     try {
-        HTTPClient<RESTDispatcherType> client(address, port);
         if (!client.open())
             return ERRNO_SOCK_OPEN;
         client.setHandler(m_dispatcher);
@@ -186,6 +186,8 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 
         edac::SHA256 sha256;
         sha256.buffer(in, (uint32_t)(size), out);
+
+        delete[] in;
 
         std::stringstream ss;
         ss << std::hex;
@@ -248,6 +250,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         client.close();
     }
     catch (std::exception&) {
+        client.close();
         return ERRNO_INTERNAL_ERROR;
     }
     

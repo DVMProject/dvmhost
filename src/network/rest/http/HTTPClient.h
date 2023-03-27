@@ -33,8 +33,7 @@
 #define __REST_HTTP__HTTP_CLIENT_H__
 
 #include "Defines.h"
-#include "network/rest/http/Connection.h"
-#include "network/rest/http/ConnectionManager.h"
+#include "network/rest/http/ClientConnection.h"
 #include "network/rest/http/HTTPRequestHandler.h"
 #include "Thread.h"
 
@@ -59,7 +58,7 @@ namespace network
             //      This class implements top-level routines of the HTTP client.
             // ---------------------------------------------------------------------------
 
-            template<typename RequestHandlerType, template<class> class ConnectionImpl = Connection>
+            template<typename RequestHandlerType, template<class> class ConnectionImpl = ClientConnection>
             class HTTPClient : private Thread {
             public:
                 /// <summary>Initializes a new instance of the HTTPClient class.</summary>
@@ -68,7 +67,6 @@ namespace network
                     m_port(port),
                     m_connection(nullptr),
                     m_ioContext(), 
-                    m_connectionManager(),
                     m_socket(m_ioContext), 
                     m_requestHandler() 
                 { 
@@ -115,6 +113,8 @@ namespace network
 
                     if (m_connection != nullptr) {
                         m_connection->stop();
+                        delete m_connection;
+                        m_connection = nullptr;
                     }
 
                     wait();
@@ -124,46 +124,47 @@ namespace network
                 /// <summary></summary>
                 virtual void entry()
                 {
-                    asio::ip::tcp::resolver resolver(m_ioContext);
-                    auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
-
-                    connect(endpoints);
-
                     while (m_running) {
+                        asio::ip::tcp::resolver resolver(m_ioContext);
+                        auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
+
+                        connect(endpoints);
+
                         // the entry() call will block until all asynchronous operations
                         // have finished
                         m_ioContext.run();
-
                         m_ioContext.restart();
-                        connect(endpoints);
                     }
                 }
 
                 /// <summary>Perform an asynchronous connect operation.</summary>
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
-                    if (m_connection != nullptr) {
-                        m_connection->stop();
-                        m_socket = asio::ip::tcp::socket(m_ioContext);
-                    }
+                    std::lock_guard<std::mutex> guard(m_lock);
+                    {
+                        if (m_connection != nullptr) {
+                            m_connection->stop();
+                            delete m_connection;
+                            m_connection = nullptr;
 
-                    asio::connect(m_socket, endpoints);
-                    m_connection = std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, true);
-                    m_connection->start();
+                            m_socket = asio::ip::tcp::socket(m_ioContext);
+                        }
+
+                        asio::connect(m_socket, endpoints);
+                        m_connection = new ConnectionType(std::move(m_socket), m_requestHandler);
+                        m_connection->start();
+                    }
                 }
 
                 std::string m_address;
                 uint16_t m_port;
 
                 typedef ConnectionImpl<RequestHandlerType> ConnectionType;
-                typedef std::shared_ptr<ConnectionType> ConnectionTypePtr;
 
-                ConnectionTypePtr m_connection;
+                ConnectionType* m_connection;
 
                 bool m_running = false;
                 asio::io_context m_ioContext;
-
-                ConnectionManager<ConnectionTypePtr> m_connectionManager;
 
                 asio::ip::tcp::socket m_socket;
                 

@@ -34,8 +34,8 @@
 *   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-#if !defined(__REST_HTTP__CONNECTION_H__)
-#define __REST_HTTP__CONNECTION_H__
+#if !defined(__REST_HTTP__CLIENT_CONNECTION_H__)
+#define __REST_HTTP__CLIENT_CONNECTION_H__
 
 #include "Defines.h" 
 #include "network/rest/http/HTTPLexer.h"
@@ -54,42 +54,28 @@ namespace network
     {
         namespace http 
         {
-
-            // ---------------------------------------------------------------------------
-            //  Class Prototypes
-            // ---------------------------------------------------------------------------
-
-            template<class> class ConnectionManager;
-
             // ---------------------------------------------------------------------------
             //  Class Declaration
             //      This class represents a single connection from a client.
             // ---------------------------------------------------------------------------
             
             template <typename RequestHandlerType>
-            class Connection : public std::enable_shared_from_this<Connection<RequestHandlerType>>
+            class ClientConnection
             {
-                typedef Connection<RequestHandlerType> selfType;
-                typedef std::shared_ptr<selfType> selfTypePtr;
-                typedef ConnectionManager<selfTypePtr> ConnectionManagerType;
             public:
-                /// <summary>Initializes a new instance of the Connection class.</summary>
-                explicit Connection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
-                                    bool persistent = false, bool client = false) :
+                /// <summary>Initializes a new instance of the ClientConnection class.</summary>
+                explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :
                     m_socket(std::move(socket)),
-                    m_connectionManager(manager),
                     m_requestHandler(handler),
-                    m_lexer(HTTPLexer(client)),
-                    m_persistent(persistent),
-                    m_client(client)
+                    m_lexer(HTTPLexer(true))
                 {
                     /* stub */
                 }
-                /// <summary>Initializes a copy instance of the Connection class.</summary>
-                Connection(const Connection&) = delete;
+                /// <summary>Initializes a copy instance of the ClientConnection class.</summary>
+                ClientConnection(const ClientConnection&) = delete;
                 
                 /// <summary></summary>
-                Connection& operator=(const Connection&) = delete;
+                ClientConnection& operator=(const ClientConnection&) = delete;
 
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
@@ -115,10 +101,6 @@ namespace network
                 /// <summary>Perform an asynchronous read operation.</summary>
                 void read()
                 {
-                    if (!m_persistent) {
-                        auto self(this->shared_from_this());
-                    }
-
                     m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
                         if (!ec) {
                             HTTPLexer::ResultType result;
@@ -134,76 +116,19 @@ namespace network
 
                             m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
 
-                            if (m_client) {
-                                if (result == HTTPLexer::GOOD) {
-                                    m_requestHandler.handleRequest(m_request, m_reply);
-                                }
-                                else if (result == HTTPLexer::BAD) {
-                                    return;
-                                }
-                                else {
-                                    read();
-                                }
+                            if (result == HTTPLexer::GOOD) {
+                                m_requestHandler.handleRequest(m_request, m_reply);
+                            }
+                            else if (result == HTTPLexer::BAD) {
+                                return;
                             }
                             else {
-                                if (result == HTTPLexer::GOOD) {
-                                    m_requestHandler.handleRequest(m_request, m_reply);
-                                    write();
-                                }
-                                else if (result == HTTPLexer::BAD) {
-                                    m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
-                                    write();
-                                }
-                                else {
-                                    read();
-                                }
+                                read();
                             }
                         }
                         else if (ec != asio::error::operation_aborted) {
-                            if (m_client) {
-                                if (m_socket.is_open()) {
-                                    m_socket.close();
-                                }
-                            }
-                            else {
-                                m_connectionManager.stop(this->shared_from_this());
-                            }
-                        }
-                    });
-                }
-        
-                /// <summary>Perform an asynchronous write operation.</summary>
-                void write()
-                {
-                    if (m_client) {
-                        return;
-                    }
-
-                    if (!m_persistent) {
-                        auto self(this->shared_from_this());
-                    } else {
-                        m_reply.headers.add("Connection", "keep-alive");
-                    }
-
-                    auto buffers = m_reply.toBuffers();
-                    asio::async_write(m_socket, buffers, [=](asio::error_code ec, std::size_t) {
-                        if (m_persistent) {
-                            m_lexer.reset();
-                            m_reply.headers = HTTPHeaders();
-                            m_reply.status = HTTPPayload::OK;
-                            m_reply.content = "";
-                            m_request = HTTPPayload();
-                            read();
-                        }
-                        else {
-                            if (!ec) {
-                                // initiate graceful connection closure
-                                asio::error_code ignored_ec;
-                                m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
-                            }
-                    
-                            if (ec != asio::error::operation_aborted) {
-                                m_connectionManager.stop(this->shared_from_this());
+                            if (m_socket.is_open()) {
+                                m_socket.close();
                             }
                         }
                     });
@@ -230,7 +155,6 @@ namespace network
 
                 asio::ip::tcp::socket m_socket;
 
-                ConnectionManagerType& m_connectionManager;
                 RequestHandlerType& m_requestHandler;
 
                 std::array<char, 8192> m_buffer;
@@ -238,12 +162,9 @@ namespace network
                 HTTPPayload m_request;
                 HTTPLexer m_lexer;
                 HTTPPayload m_reply;
-
-                bool m_persistent;
-                bool m_client;
             };
         } // namespace http
     } // namespace rest
 } // namespace network
  
-#endif // __REST_HTTP__CONNECTION_H__
+#endif // __REST_HTTP__CLIENT_CONNECTION_H__

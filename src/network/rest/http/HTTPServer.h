@@ -38,8 +38,8 @@
 #define __REST_HTTP__HTTP_SERVER_H__
 
 #include "Defines.h"
-#include "network/rest/http/Connection.h"
-#include "network/rest/http/ConnectionManager.h"
+#include "network/rest/http/ServerConnection.h"
+#include "network/rest/http/ServerConnectionManager.h"
 #include "network/rest/http/HTTPRequestHandler.h"
 
 #include <asio.hpp>
@@ -62,7 +62,7 @@ namespace network
             //      This class implements top-level routines of the HTTP server.
             // ---------------------------------------------------------------------------
 
-            template<typename RequestHandlerType, template<class> class ConnectionImpl = Connection>
+            template<typename RequestHandlerType, template<class> class ConnectionImpl = ServerConnection>
             class HTTPServer {
             public:
                 /// <summary>Initializes a new instance of the HTTPServer class.</summary>
@@ -143,7 +143,7 @@ namespace network
                 asio::io_service m_ioService;
                 asio::ip::tcp::acceptor m_acceptor;
                 
-                ConnectionManager<ConnectionTypePtr> m_connectionManager;
+                ServerConnectionManager<ConnectionTypePtr> m_connectionManager;
                 
                 asio::ip::tcp::socket m_socket;
                 

@@ -34,8 +34,8 @@
 *   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 *   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-#if !defined(__REST_HTTP__CONNECTION_MANAGER_H__)
-#define __REST_HTTP__CONNECTION_MANAGER_H__
+#if !defined(__REST_HTTP__SERVER_CONNECTION_MANAGER_H__)
+#define __REST_HTTP__SERVER_CONNECTION_MANAGER_H__
 
 #include "Defines.h"
 
@@ -56,16 +56,16 @@ namespace network
             // ---------------------------------------------------------------------------
 
             template<typename ConnectionPtr>   
-            class ConnectionManager
+            class ServerConnectionManager
             {
             public:
-                /// <summary>Initializes a new instance of the ConnectionManager class.</summary>
-                ConnectionManager() { /* stub */ }
-                /// <summary>Initializes a copy instance of the ConnectionManager class.</summary>
-                ConnectionManager(const ConnectionManager&) = delete;
+                /// <summary>Initializes a new instance of the ServerConnectionManager class.</summary>
+                ServerConnectionManager() { /* stub */ }
+                /// <summary>Initializes a copy instance of the ServerConnectionManager class.</summary>
+                ServerConnectionManager(const ServerConnectionManager&) = delete;
 
                 /// <summary></summary>
-                ConnectionManager& operator=(const ConnectionManager&) = delete;
+                ServerConnectionManager& operator=(const ServerConnectionManager&) = delete;
             
                 /// <summary>Add the specified connection to the manager and start it.</summary>
                 void start(ConnectionPtr c)
@@ -105,5 +105,5 @@ namespace network
     } // namespace rest
 } // namespace network
 
-#endif // __REST_HTTP__CONNECTION_MANAGER_H__
+#endif // __REST_HTTP__SERVER_CONNECTION_MANAGER_H__
  
