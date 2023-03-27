@@ -173,7 +173,7 @@ bool SACCH::decode(const uint8_t* data)
 #endif
 
     // check CRC-6
-    bool ret = ::edac::CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
+    bool ret = edac::CRC::checkCRC6(m_data, NXDN_SACCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "SACCH::decode(), failed CRC-6 check");
         return false;
@@ -207,7 +207,7 @@ void SACCH::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    ::edac::CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
+    edac::CRC::addCRC6(buffer, NXDN_SACCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_SACCH
         Utils::dump(2U, "Encoded SACCH", buffer, NXDN_SACCH_CRC_LENGTH_BYTES);

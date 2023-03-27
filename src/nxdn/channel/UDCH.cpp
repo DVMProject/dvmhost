@@ -197,7 +197,7 @@ bool UDCH::decode(const uint8_t* data)
 #endif
 
     // check CRC-15
-    bool ret = ::edac::CRC::checkCRC15(m_data, NXDN_UDCH_LENGTH_BITS);
+    bool ret = edac::CRC::checkCRC15(m_data, NXDN_UDCH_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "UDCH::decode(), failed CRC-15 check");
         return false;
@@ -222,7 +222,7 @@ void UDCH::encode(uint8_t* data) const
     ::memset(buffer, 0x00U, NXDN_UDCH_CRC_LENGTH_BYTES);
     ::memcpy(buffer, m_data, 23U);
 
-    ::edac::CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
+    edac::CRC::addCRC15(buffer, NXDN_UDCH_LENGTH_BITS);
 
 #if DEBUG_NXDN_UDCH
     Utils::dump(2U, "Encoded UDCH", m_data, NXDN_UDCH_CRC_LENGTH_BYTES);

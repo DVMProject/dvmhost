@@ -171,7 +171,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
 #endif
 
     // check CRC-12
-    bool ret = ::edac::CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
+    bool ret = edac::CRC::checkCRC12(m_data, NXDN_FACCH1_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "FACCH1::decode(), failed CRC-12 check");
         return false;
@@ -193,7 +193,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
     ::memset(buffer, 0x00U, NXDN_FACCH1_CRC_LENGTH_BYTES);
     ::memcpy(buffer, m_data, NXDN_FACCH1_CRC_LENGTH_BYTES - 2U);
 
-    ::edac::CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
+    edac::CRC::addCRC12(buffer, NXDN_FACCH1_LENGTH_BITS);
 
 #if DEBUG_NXDN_FACCH1
     Utils::dump(2U, "Encoded FACCH1", buffer, NXDN_FACCH1_CRC_LENGTH_BYTES);

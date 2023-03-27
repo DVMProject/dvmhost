@@ -224,7 +224,7 @@ bool CAC::decode(const uint8_t* data)
 #endif
 
     // check CRC-16
-    bool ret = ::edac::CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
+    bool ret = edac::CRC::checkCRC16(m_data, NXDN_CAC_SHORT_LENGTH_BITS);
     if (!ret) {
         LogError(LOG_NXDN, "CAC::decode(), failed CRC-6 check");
         return false;
@@ -271,7 +271,7 @@ void CAC::encode(uint8_t* data) const
         WRITE_BIT(buffer, i, b);
     }
 
-    uint16_t crc = ::edac::CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
+    uint16_t crc = edac::CRC::addCRC16(buffer, NXDN_CAC_LENGTH_BITS);
 
 #if DEBUG_NXDN_CAC
     Utils::dump(2U, "Encoded CAC", buffer, NXDN_CAC_FEC_LENGTH_BYTES);

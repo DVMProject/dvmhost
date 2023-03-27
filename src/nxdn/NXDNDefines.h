@@ -301,4 +301,16 @@ namespace nxdn
 
 } // namespace nxdn
 
+// ---------------------------------------------------------------------------
+//  Namespace Prototypes
+// ---------------------------------------------------------------------------
+namespace edac { }
+namespace nxdn
+{
+    namespace edac
+    {
+        using namespace ::edac;
+    } // namespace edac
+} // namespace nxdn
+
 #endif // __NXDN_DEFINES_H__
