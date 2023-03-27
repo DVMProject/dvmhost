@@ -1653,6 +1653,10 @@ int Host::run()
             Thread::sleep(m_idleTickDelay);
     }
 
+    if (rssi != nullptr) {
+        delete rssi;
+    }
+
     setState(HOST_STATE_QUIT);
     return EXIT_SUCCESS;
 }

@@ -185,6 +185,8 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     edac::SHA256 sha256;
     sha256.buffer(in, (uint32_t)(size), m_passwordHash);
 
+    delete[] in;
+
     if (m_debug) {
         Utils::dump("REST Password Hash", m_passwordHash, 32U);
     }

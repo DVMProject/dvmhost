@@ -658,6 +658,8 @@ Data::Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool r
 /// </summary>
 Data::~Data()
 {
+    delete[] m_rfData;
+    delete[] m_netData;
     delete[] m_rfPDU;
     delete[] m_netPDU;
     delete[] m_pduUserData;
