@@ -1867,7 +1867,7 @@ bool HostCal::setNXDNSymLevel1Adj(int incr)
 /// <returns>True, if setting was applied, otherwise false.</returns>
 bool HostCal::setTransmit()
 {
-    if (m_dmrEnabled || (m_p25Enabled && !m_p25TduTest)) {
+    if (m_dmrEnabled || (m_p25Enabled && !m_p25TduTest) || m_nxdnEnabled) {
         LogError(LOG_CAL, "No transmit allowed in a BER Test mode");
         return false;
     }
@@ -2420,6 +2420,11 @@ bool HostCal::writeConfig()
 /// <returns>True, if configuration is written, otherwise false.</returns>
 bool HostCal::writeConfig(uint8_t modeOverride)
 {
+    if (m_isHotspot && m_transmit) {
+        setTransmit();
+        sleep(25U);
+    }
+
     uint8_t buffer[25U];
     ::memset(buffer, 0x00U, 25U);
     uint8_t lengthToWrite = 17U;
