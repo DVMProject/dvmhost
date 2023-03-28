@@ -561,8 +561,18 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             req["state"].set<int>(state);
             req["dstId"].set<uint32_t>(dstId);
 
-            RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+            int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                 HTTP_PUT, PUT_PERMIT_TG, req, m_nxdn->m_debug);
+            if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to permit TG for use, chNo = %u", chNo);
+                m_nxdn->m_affiliations.releaseGrant(dstId, false);
+                if (!net) {
+                    writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
+                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                }
+
+                return false;
+            }
         }
         else {
             ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to permit TG for use, chNo = %u", chNo);

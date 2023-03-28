@@ -2245,8 +2245,18 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                     req["state"].set<int>(state);
                     req["dstId"].set<uint32_t>(dstId);
 
-                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
+                    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                        m_p25->m_affiliations.releaseGrant(dstId, false);
+                        if (!net) {
+                            writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                            m_p25->m_rfState = RS_RF_REJECTED;
+                        }
+
+                        return false;
+                    }
                 }
                 else {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
@@ -2285,11 +2295,21 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                     req["state"].set<int>(state);
                     req["dstId"].set<uint32_t>(dstId);
 
-                    RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                    int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
+                    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                        m_p25->m_affiliations.releaseGrant(dstId, false);
+                        if (!net) {
+                            writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                            m_p25->m_rfState = RS_RF_REJECTED;
+                        }
+
+                        return false;
+                    }
                 }
                 else {
-                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
                 }
             }
 

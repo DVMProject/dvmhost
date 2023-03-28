@@ -163,6 +163,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     assert(port > 0U);
     assert(password.empty());
 
+    int ret = EXIT_SUCCESS;
     m_debug = debug;
 
     typedef network::rest::BasicRequestDispatcher<network::rest::http::HTTPPayload, network::rest::http::HTTPPayload> RESTDispatcherType;
@@ -254,6 +255,12 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             return ERRNO_API_CALL_TIMEOUT;
         }
 
+        rsp = json::object();
+        if (!parseResponseBody(m_response, rsp)) {
+            return ERRNO_BAD_API_RESPONSE;
+        }
+
+        ret = rsp["status"].get<int>();
         if (m_console) {
             fprintf(stdout, "%s\r\n", m_response.content.c_str());
         }
@@ -273,7 +280,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         return ERRNO_INTERNAL_ERROR;
     }
     
-    return EXIT_SUCCESS;
+    return ret;
 }
 
 // ---------------------------------------------------------------------------

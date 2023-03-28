@@ -889,8 +889,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
 
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                    ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    m_tscc->m_affiliations->releaseGrant(dstId, false);
+                    if (!net) {
+                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -956,8 +966,18 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["dstId"].set<uint32_t>(dstId);
                 req["slot"].set<uint8_t>(slot);
 
-                RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
+                int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                     HTTP_PUT, PUT_PERMIT_TG, req, m_tscc->m_debug);
+                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                    ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
+                    m_tscc->m_affiliations->releaseGrant(dstId, false);
+                    if (!net) {
+                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
