@@ -133,8 +133,6 @@ namespace network
 
                     if (m_connection != nullptr) {
                         m_connection->stop();
-                        delete m_connection;
-                        m_connection = nullptr;
                     }
 
                     wait();
@@ -155,8 +153,6 @@ namespace network
                 
                     if (m_connection != nullptr) {
                         m_connection->stop();
-                        delete m_connection;
-                        m_connection = nullptr;
                     }
                 }
 
@@ -164,7 +160,7 @@ namespace network
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
                     asio::connect(m_socket, endpoints);
-                    m_connection = new ConnectionType(std::move(m_socket), m_requestHandler);
+                    m_connection = new_unique(ConnectionType, std::move(m_socket), m_requestHandler);
                     m_connection->start();
                 }
 
@@ -173,7 +169,7 @@ namespace network
 
                 typedef ConnectionImpl<RequestHandlerType> ConnectionType;
 
-                ConnectionType* m_connection;
+                std::unique_ptr<ConnectionType> m_connection;
 
                 bool m_completed = false;
                 asio::io_context m_ioContext;
