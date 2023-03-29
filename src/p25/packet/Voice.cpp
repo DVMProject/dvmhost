@@ -783,6 +783,15 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_netLastLDU1 = control;
                 m_netLastFrameType = frameType;
 
+                if (m_p25->m_control) {
+                    lc::LC control = lc::LC(*m_dfsiLC.control());
+                    m_p25->m_affiliations.touchGrant(control.getDstId());
+                }
+                
+                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                    return true;
+                } 
+
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     // are we interrupting a running CC?
                     if (m_p25->m_ccRunning) {
@@ -837,6 +846,15 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE18);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 204U);
                 count += 16U;
+            
+                if (m_p25->m_control) {
+                    lc::LC control = lc::LC(*m_dfsiLC.control());
+                    m_p25->m_affiliations.touchGrant(control.getDstId());
+                }
+                
+                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                    return true;
+                } 
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     if (!m_p25->m_voiceOnControl) {
@@ -1113,8 +1131,7 @@ void Voice::writeNet_LDU1()
 
     // don't process network frames if this modem isn't authoritative
     if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        // bryanb: do we want to log this condition?
-        //LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!");
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
         resetNet();
         return;
     }
@@ -1394,6 +1411,15 @@ void Voice::writeNet_LDU2()
 {
     lc::LC control = lc::LC(*m_dfsiLC.control());
     data::LowSpeedData lsd = data::LowSpeedData(*m_dfsiLC.lsd());
+    
+    uint32_t dstId = control.getDstId();
+    
+    // don't process network frames if this modem isn't authoritative
+    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU2), destination not permitted!");
+        resetNet();
+        return;
+    }
 
     // don't process network frames if the destination ID's don't match and the network TG hang timer is running
     if (m_p25->m_rfLastDstId != 0U) {

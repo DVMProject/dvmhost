@@ -1056,13 +1056,7 @@ void Control::processNetwork()
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
-            if (!m_dedicatedControl)
-                ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
-            else {
-                if (m_voiceOnControl) {
-                    ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
-                }
-            }
+            ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_TDU:
