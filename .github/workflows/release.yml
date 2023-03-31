@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   setup:
+    name: Setup
     runs-on: ubuntu-latest
     outputs:
       APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
@@ -24,28 +25,12 @@ jobs:
         id: get_version
         run: echo VERSION=${GITHUB_REF/refs\/tags\//} >> $GITHUB_OUTPUT
 
-  create-release:
-    needs:
-      - setup
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Create release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ needs.setup.outputs.VERSION }}
-          name: Release ${{ needs.setup.outputs.VERSION }}
-          draft: true
-          prerelease: false
-
-  ubuntu:
+  build:
+    name: Build
+    needs: [setup]
     strategy:
       matrix:
-        arch: ["AMD64", "ARM", "AARCH64", "RPI_ARM"]
-    needs: [setup, create-release]
+        arch: ["amd64", "arm", "aarch64", "armhf"]
     runs-on: ubuntu-latest
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
@@ -65,16 +50,13 @@ jobs:
             libasio-dev
       - name: Build
         run: |
-          if [[ "${{ matrix.arch }}" == "RPI_ARM" ]]; then
-            sudo sed -i 's/^# deb-src/deb-src/g' /etc/apt/sources.list
-            sudo apt-get update
-            sudo apt-get source asio
+          if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
+            git clone https://github.com/chriskohlhoff/asio.git
             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
-              -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 \
-              -DWITH_ASIO="$(realpath -e $(find . -maxdepth 1 -type d -iname 'asio*'))" .
+              -DCROSS_COMPILE_RPI_ARM=1 -DWITH_ASIO='asio/asio' .
           else
             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
-              -DENABLE_DMR=1 -DENABLE_P25=1 -DENABLE_NXDN=1 -DCROSS_COMPILE_${{ matrix.arch }}=1 .
+              -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
           fi
 
           make -j $(nproc)
@@ -83,7 +65,44 @@ jobs:
           mkdir -p ${{ env.PACKAGENAME }}
           cp dvmcmd dvmhost ${{ env.PACKAGENAME }}
           zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
-      - name: Upload
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
+          path: ${{ env.PACKAGENAME }}.zip
+
+  create-release:
+    name: Create Release
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.setup.outputs.VERSION }}
+          name: Release ${{ needs.setup.outputs.VERSION }}
+          draft: true
+          prerelease: false
+
+  upload:
+    name: Upload
+    needs: [setup, build, create-release]
+    strategy:
+      matrix:
+        arch: ["amd64", "arm", "aarch64", "armhf"]
+    runs-on: ubuntu-latest
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ needs.setup.outputs.APPNAME }}-${{ matrix.arch }}
+      - name: Upload release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
