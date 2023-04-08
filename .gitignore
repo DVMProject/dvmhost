@@ -1,4 +1,22 @@
+# Ignore built binaries
+build/
+dvmcmd
 dvmhost
+
+# Ignore CMake temporary files
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Voice.plist
+Testing
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
 
 # Ignore thumbnails created by windows
 Thumbs.db
@@ -40,10 +58,10 @@ build/
 .vscode/
 package/
 *.ini
+.vs
 
-# Compiled binary files
-*.exe
-*.dll
+# Prerequisites
+*.d
 
 # Compiled Object files
 *.slo
@@ -51,10 +69,18 @@ package/
 *.o
 *.obj
 
+# Precompiled Headers
+*.gch
+*.pch
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
+
+# Fortran module files
+*.mod
+*.smod
 
 # Compiled Static libraries
 *.lai
@@ -62,5 +88,7 @@ package/
 *.a
 *.lib
 
-# Visual Studio
-.vs
+# Executables
+*.exe
+*.out
+*.app
