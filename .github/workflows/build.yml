@@ -77,8 +77,7 @@ jobs:
           fi
 
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
-            git clone https://github.com/chriskohlhoff/asio.git
-            cmake $(echo $build_args) -DCROSS_COMPILE_RPI_ARM=1 -DWITH_ASIO='asio/asio' .
+            cmake $(echo $build_args) -DCROSS_COMPILE_RPI_ARM=1 .
           else
             cmake $(echo $build_args) \
               -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
