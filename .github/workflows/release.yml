@@ -13,7 +13,7 @@ permissions:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
       VERSION: ${{ steps.get_version.outputs.VERSION }}
@@ -31,7 +31,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
@@ -74,7 +74,7 @@ jobs:
   create-release:
     name: Create Release
     needs: [setup, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
@@ -84,7 +84,7 @@ jobs:
         with:
           tag_name: ${{ needs.setup.outputs.VERSION }}
           name: Release ${{ needs.setup.outputs.VERSION }}
-          draft: true
+          draft: false
           prerelease: false
 
   upload:
@@ -93,7 +93,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.VERSION }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive

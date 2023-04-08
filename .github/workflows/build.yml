@@ -31,7 +31,7 @@ permissions:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
       DATE: ${{ steps.get_date.outputs.DATE }}
@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
@@ -100,7 +100,7 @@ jobs:
     if: ${{ github.event == 'push' }}
     name: Create Release
     needs: [setup, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
@@ -120,7 +120,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
