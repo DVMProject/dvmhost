@@ -104,6 +104,7 @@ namespace p25
 
             uint8_t m_lastDUID;
             uint8_t* m_lastIMBE;
+            uint8_t* m_lastMI;
 
             bool m_hadVoice;
             uint32_t m_lastRejectId;
@@ -141,6 +142,10 @@ namespace p25
             void insertMissingAudio(uint8_t* data);
             /// <summary>Helper to insert IMBE null frames for missing audio.</summary>
             void insertNullAudio(uint8_t* data);
+            /// <summary>Helper to insert encrypted IMBE null frames for missing audio.</summary>
+            void insertEncryptedNullAudio(uint8_t* data);
+            /// <summary>Given the last MI, generate the next MI using LFSR.</summary>
+            void getNextMI(uint8_t lastMI[9U], uint8_t nestMI[9U]);
         };
     } // namespace packet
 } // namespace p25

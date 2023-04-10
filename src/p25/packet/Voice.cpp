@@ -107,24 +107,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
     // Decode the NID
     bool valid = m_p25->m_nid.decode(data + 2U);
-
-    if (m_p25->m_rfState == RS_RF_LISTENING && !valid)
+    if (!valid) {
         return false;
+    }
 
     uint8_t duid = m_p25->m_nid.getDUID();
-    if (!valid) {
-        switch (m_lastDUID) {
-            case P25_DUID_HDU:
-            case P25_DUID_LDU2:
-                duid = P25_DUID_LDU1;
-                break;
-            case P25_DUID_LDU1:
-                duid = P25_DUID_LDU2;
-                break;
-            default:
-                break;
-        }
-    }
 
     // are we interrupting a running CC?
     if (m_p25->m_ccRunning) {
@@ -162,6 +149,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 LogWarning(LOG_RF, P25_HDU_STR ", undecodable LC");
                 m_rfUndecodableLC++;
                 return false;
+            }
+
+            if (m_verbose && m_debug) {
+                uint8_t mi[P25_MI_LENGTH_BYTES];
+                ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+                lc.getMI(mi);
+                Utils::dump(1U, "P25 HDU MI read from RF", mi, P25_MI_LENGTH_BYTES);
             }
 
             if (m_verbose) {
@@ -206,9 +200,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
         return true;
     }
     else if (duid == P25_DUID_LDU1) {
-        bool alreadyDecoded = false;
+        
+        // prevent two LDUs of the same type from being sent consecutively
+        if (m_lastDUID == P25_DUID_LDU1) {
+            return false;
+        }
         m_lastDUID = P25_DUID_LDU1;
 
+        bool alreadyDecoded = false;
         uint8_t frameType = P25_FT_DATA_UNIT;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             // if this is a late entry call, clear states
@@ -528,7 +527,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 uint8_t buffer[9U * 25U];
                 ::memset(buffer, 0x00U, 9U * 25U);
 
-                insertNullAudio(buffer);
+                if (m_rfLC.getEncrypted()) {
+                    insertEncryptedNullAudio(buffer);
+                }
+                else {
+                    insertNullAudio(buffer);
+                }
 
                 LogWarning(LOG_RF, P25_LDU1_STR ", exceeded lost audio threshold, filling in");
 
@@ -542,15 +546,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_audio.encode(data + 2U, buffer + 155U, 6U);
                 m_audio.encode(data + 2U, buffer + 180U, 7U);
                 m_audio.encode(data + 2U, buffer + 204U, 8U);
-
-                // reset the encryption flags if necessary
-                if (m_rfLC.getEncrypted()) {
-                    m_rfLC.setEncrypted(false);
-                    m_rfLC.setAlgId(P25_ALGO_UNENCRYPT);
-
-                    // regenerate LDU1 data
-                    m_rfLC.encodeLDU1(data + 2U);
-                }
             }
 
             m_rfBits += 1233U;
@@ -578,6 +573,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_LDU2) {
+        
+        // prevent two LDUs of the same type from being sent consecutively
+        if (m_lastDUID == P25_DUID_LDU2) {
+            return false;
+        }
         m_lastDUID = P25_DUID_LDU2;
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
@@ -589,6 +589,24 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 LogWarning(LOG_RF, P25_LDU2_STR ", undecodable LC, using last LDU2 LC");
                 m_rfLC = m_rfLastLDU2;
                 m_rfUndecodableLC++;
+
+                // regenerate the MI using LFSR
+                uint8_t lastMI[P25_MI_LENGTH_BYTES];
+                ::memset(lastMI, 0x00U, P25_MI_LENGTH_BYTES);
+
+                uint8_t nextMI[P25_MI_LENGTH_BYTES];
+                ::memset(nextMI, 0x00U, P25_MI_LENGTH_BYTES);
+
+                m_rfLastLDU2.getMI(lastMI);
+                getNextMI(lastMI, nextMI);
+
+                if (m_verbose && m_debug) {
+                    Utils::dump(1U, "Previous P25 HDU MI", lastMI, P25_MI_LENGTH_BYTES);
+                    Utils::dump(1U, "Calculated next P25 HDU MI", nextMI, P25_MI_LENGTH_BYTES);
+                }
+
+                m_rfLC.setMI(nextMI);
+                m_rfLastLDU2.setMI(nextMI);
             }
             else {
                 m_rfLastLDU2 = m_rfLC;
@@ -616,7 +634,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 uint8_t buffer[9U * 25U];
                 ::memset(buffer, 0x00U, 9U * 25U);
 
-                insertNullAudio(buffer);
+                if (m_rfLC.getEncrypted()) {
+                    insertEncryptedNullAudio(buffer);
+                }
+                else {
+                    insertNullAudio(buffer);
+                }
 
                 LogWarning(LOG_RF, P25_LDU2_STR ", exceeded lost audio threshold, filling in");
 
@@ -630,15 +653,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_audio.encode(data + 2U, buffer + 155U, 6U);
                 m_audio.encode(data + 2U, buffer + 180U, 7U);
                 m_audio.encode(data + 2U, buffer + 204U, 8U);
-
-                // reset the encryption flags if necessary
-                if (m_rfLC.getEncrypted()) {
-                    m_rfLC.setEncrypted(false);
-                    m_rfLC.setAlgId(P25_ALGO_UNENCRYPT);
-
-                    // regenerate LDU2 data
-                    m_rfLC.encodeLDU2(data + 2U);
-                }
             }
 
             m_rfBits += 1233U;
@@ -782,6 +796,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 m_netLastLDU1 = control;
                 m_netLastFrameType = frameType;
+
+                // save MI to member variable before writing to RF
+                control.getMI(m_lastMI);
 
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
@@ -935,6 +952,7 @@ Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbo
     m_netLDU2(nullptr),
     m_lastDUID(P25_DUID_TDU),
     m_lastIMBE(nullptr),
+    m_lastMI(nullptr),
     m_hadVoice(false),
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
@@ -950,6 +968,9 @@ Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbo
 
     m_lastIMBE = new uint8_t[11U];
     ::memcpy(m_lastIMBE, P25_NULL_IMBE, 11U);
+
+    m_lastMI = new uint8_t[P25_MI_LENGTH_BYTES];
+    ::memset(m_lastMI, 0x00U, P25_MI_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -960,6 +981,7 @@ Voice::~Voice()
     delete[] m_netLDU1;
     delete[] m_netLDU2;
     delete[] m_lastIMBE;
+    delete[] m_lastMI;
 }
 
 /// <summary>
@@ -1164,10 +1186,6 @@ void Voice::writeNet_LDU1()
         }
     }
 
-    if (m_p25->m_control) {
-        m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
-    }
-
     if (m_debug) {
         LogMessage(LOG_NET, P25_LDU1_STR " service flags, emerg = %u, encrypt = %u, prio = %u, DFSI emerg = %u, DFSI encrypt = %u, DFSI prio = %u",
             control.getEmergency(), control.getEncrypted(), control.getPriority(),
@@ -1201,17 +1219,16 @@ void Voice::writeNet_LDU1()
         ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
 
         if (m_netLastLDU1.getAlgId() != P25_ALGO_UNENCRYPT && m_netLastLDU1.getKId() != 0) {
-            m_netLastLDU1.getMI(mi);
-
             control.setAlgId(m_netLastLDU1.getAlgId());
             control.setKId(m_netLastLDU1.getKId());
         }
-        else {
-            control.getMI(mi);
-        }
+
+
+        // restore MI from member variable
+        ::memcpy(mi, m_lastMI, P25_MI_LENGTH_BYTES);
 
         if (m_verbose && m_debug) {
-            Utils::dump(1U, "Network HDU MI", mi, P25_MI_LENGTH_BYTES);
+            Utils::dump(1U, "P25 HDU MI from network to RF", mi, P25_MI_LENGTH_BYTES);
         }
 
         m_netLC.setMI(mi);
@@ -1606,5 +1623,78 @@ void Voice::insertNullAudio(uint8_t* data)
 
     if (data[200U] == 0x00U) {
         ::memcpy(data + 204U, P25_NULL_IMBE, 11U);
+    }
+}
+
+/// <summary>
+/// Helper to insert encrypted IMBE null frames for missing audio.
+/// </summary>
+/// <param name="data"></param>
+
+void Voice::insertEncryptedNullAudio(uint8_t* data)
+{
+    if (data[0U] == 0x00U) {
+        ::memcpy(data + 10U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[25U] == 0x00U) {
+        ::memcpy(data + 26U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[50U] == 0x00U) {
+        ::memcpy(data + 55U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[75U] == 0x00U) {
+        ::memcpy(data + 80U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[100U] == 0x00U) {
+        ::memcpy(data + 105U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[125U] == 0x00U) {
+        ::memcpy(data + 130U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[150U] == 0x00U) {
+        ::memcpy(data + 155U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[175U] == 0x00U) {
+        ::memcpy(data + 180U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+
+    if (data[200U] == 0x00U) {
+        ::memcpy(data + 204U, P25_ENCRYPTED_NULL_IMBE, 11U);
+    }
+}
+
+/// <summary>
+/// Given the last MI, generate the next MI using LFSR.
+/// </summary>
+/// <param name="lastMI"></param>
+/// <param name="nextMI"></param>
+
+void Voice::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
+{
+    uint8_t carry, i;
+    std::copy(lastMI, lastMI + 9, nextMI);
+
+    for (uint8_t cycle = 0; cycle < 64; cycle++) {
+        // calculate bit 0 for the next cycle
+        carry = ((nextMI[0] >> 7) ^ (nextMI[0] >> 5) ^ (nextMI[2] >> 5) ^
+                 (nextMI[3] >> 5) ^ (nextMI[4] >> 2) ^ (nextMI[6] >> 6)) &
+                0x01;
+
+        // shift all the list elements, except the last one
+        for (i = 0; i < 7; i++) {
+
+            // grab high bit from the next element and use it as our low bit
+            nextMI[i] = ((nextMI[i] & 0x7F) << 1) | (nextMI[i + 1] >> 7);
+        }
+
+        // shift last element, then copy the bit 0 we calculated in
+        nextMI[7] = ((nextMI[i] & 0x7F) << 1) | carry;
     }
 }

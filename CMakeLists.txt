@@ -346,10 +346,19 @@ else ()
     message(CHECK_PASS "no")
 endif (CROSS_COMPILE_RPI_ARM)
 
-option(WITH_ASIO "Specifies the location for the ASIO library" off)
+option(WITH_ASIO "Manually specify the location for the ASIO library" off)
 if (WITH_ASIO)
     set(ASIO_INCLUDE_DIR ${WITH_ASIO}/include)
     message(CHECK_START "With ASIO: ${ASIO_INCLUDE_DIR}")
+else()
+    message("-- Cloning ASIO")
+    Include(FetchContent)
+    FetchContent_Declare(
+        ASIO
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    )
+    FetchContent_MakeAvailable(ASIO)
+    set(ASIO_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/asio-src/asio/include)
 endif (WITH_ASIO)
 
 # Standard CMake options
@@ -379,14 +388,13 @@ add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 project(dvmhost)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
-if (NOT WITH_ASIO)
-    find_package(ASIO REQUIRED)
-else()
-    add_library(asio::asio INTERFACE IMPORTED)
-    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
-    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
-    target_link_libraries(asio::asio INTERFACE Threads::Threads)
-endif ()
+
+# add ASIO
+add_library(asio::asio INTERFACE IMPORTED)
+target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+target_link_libraries(asio::asio INTERFACE Threads::Threads)
+
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE src)
 target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
@@ -419,13 +427,12 @@ include(CPack)
 project(dvmcmd)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
-if (NOT WITH_ASIO)
-    find_package(ASIO REQUIRED)
-else()
-    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
-    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
-    target_link_libraries(asio::asio INTERFACE Threads::Threads)
-endif ()
+
+# add ASIO
+target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+target_link_libraries(asio::asio INTERFACE Threads::Threads)
+
 add_executable(dvmcmd ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE src)
@@ -446,13 +453,12 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 find_package(Threads REQUIRED)
-if (NOT WITH_ASIO)
-    find_package(ASIO REQUIRED)
-else()
-    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
-    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
-    target_link_libraries(asio::asio INTERFACE Threads::Threads)
-endif ()
+
+# add ASIO
+target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+target_link_libraries(asio::asio INTERFACE Threads::Threads)
+
 add_executable(dvmtests ${dvmhost_SRC} ${dvmtests_SRC})
 target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
 target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain asio::asio Threads::Threads util)

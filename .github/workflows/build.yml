@@ -31,7 +31,7 @@ permissions:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       APPNAME: ${{ steps.get_appname.outputs.APPNAME }}
       DATE: ${{ steps.get_date.outputs.DATE }}
@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
@@ -77,8 +77,7 @@ jobs:
           fi
 
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
-            git clone https://github.com/chriskohlhoff/asio.git
-            cmake $(echo $build_args) -DCROSS_COMPILE_RPI_ARM=1 -DWITH_ASIO='asio/asio' .
+            cmake $(echo $build_args) -DCROSS_COMPILE_RPI_ARM=1 .
           else
             cmake $(echo $build_args) \
               -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
@@ -100,7 +99,7 @@ jobs:
     if: ${{ github.event == 'push' }}
     name: Create Release
     needs: [setup, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
@@ -120,7 +119,7 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64", "arm", "aarch64", "armhf"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
       DEBIAN_FRONTEND: noninteractive
