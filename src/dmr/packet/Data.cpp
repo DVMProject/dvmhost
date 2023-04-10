@@ -374,7 +374,7 @@ void Data::processNetwork(const data::Data& dmrData)
             m_slot->m_slotNo, float(m_slot->m_netFrames) / 16.667F, (m_slot->m_netLost * 100U) / m_slot->m_netFrames, float(m_slot->m_netErrs * 100U) / float(m_slot->m_netBits));
 
         m_slot->m_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
-        
+
         m_slot->writeEndNet();
     }
     else if (dataType == DT_DATA_HEADER) {

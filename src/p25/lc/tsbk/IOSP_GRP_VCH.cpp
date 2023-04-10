@@ -65,7 +65,7 @@ bool IOSP_GRP_VCH::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_emergency = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                   // Emergency Flag
     m_encrypted = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                   // Encryption Flag
     m_priority = (((tsbkValue >> 56) & 0xFFU) & 0x07U);                             // Priority

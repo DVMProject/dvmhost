@@ -110,7 +110,7 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
         break;
     }
 
-    return nullptr;    
+    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ std::unique_ptr<TDULC> TDULCFactory::createTDULC(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="tdulc"></param>
 /// <param name="data"></param>

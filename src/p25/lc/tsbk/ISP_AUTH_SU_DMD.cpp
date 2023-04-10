@@ -65,7 +65,7 @@ bool ISP_AUTH_SU_DMD::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;

@@ -112,7 +112,7 @@ typedef unsigned long long  ulong64_t;
 #define __VER__ "D03.00.00 (" __GIT_VER__ ")"
 #define __BUILD__ __DATE__ " " __TIME__
 
-#define HOST_SW_API 
+#define HOST_SW_API
 
 #if defined(_WIN32) || defined(_WIN64)
 #define DEFAULT_CONF_FILE "config.yml"
@@ -265,7 +265,7 @@ inline std::string strtoupper(const std::string value) {
             buffer[0U + offset] = (val >> 24) & 0xFFU;  \
             buffer[1U + offset] = (val >> 16) & 0xFFU;  \
             buffer[2U + offset] = (val >> 8) & 0xFFU;   \
-            buffer[3U + offset] = (val >> 0) & 0xFFU;          
+            buffer[3U + offset] = (val >> 0) & 0xFFU;
 #define __GET_UINT32(buffer, offset)                    \
             (buffer[offset + 0U] << 24)     |           \
                 (buffer[offset + 1U] << 16) |           \
@@ -274,7 +274,7 @@ inline std::string strtoupper(const std::string value) {
 #define __SET_UINT16(val, buffer, offset)               \
             buffer[0U + offset] = (val >> 16) & 0xFFU;  \
             buffer[1U + offset] = (val >> 8) & 0xFFU;   \
-            buffer[2U + offset] = (val >> 0) & 0xFFU;          
+            buffer[2U + offset] = (val >> 0) & 0xFFU;
 #define __GET_UINT16(buffer, offset)                    \
             (buffer[offset + 0U] << 16)     |           \
                 (buffer[offset + 1U] << 8)  |           \

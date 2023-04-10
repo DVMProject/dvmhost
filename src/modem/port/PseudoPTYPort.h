@@ -47,7 +47,7 @@ namespace modem
         //      PTY serial port.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API PseudoPTYPort : public UARTPort 
+        class HOST_SW_API PseudoPTYPort : public UARTPort
         {
         public:
             /// <summary>Initializes a new instance of the PseudoPTYPort class.</summary>

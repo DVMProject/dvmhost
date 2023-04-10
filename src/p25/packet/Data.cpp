@@ -106,7 +106,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             m_rfPDUCount = 0U;
             m_rfPDUBits = 0U;
 
-            ::memset(m_rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);            
+            ::memset(m_rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
 
             m_p25->m_rfState = RS_RF_DATA;
 
@@ -143,7 +143,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
-                    m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(), 
+                    m_rfDataHeader.getAckNeeded(), m_rfDataHeader.getOutbound(), m_rfDataHeader.getFormat(), m_rfDataHeader.getMFId(), m_rfDataHeader.getSAP(), m_rfDataHeader.getFullMessage(),
                     m_rfDataHeader.getBlocksToFollow(), m_rfDataHeader.getPadCount(), m_rfDataHeader.getNs(), m_rfDataHeader.getFSN(), m_rfDataHeader.getLastFragment(),
                     m_rfDataHeader.getHeaderOffset());
             }
@@ -329,7 +329,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                     case PDU_SAP_TRUNK_CTRL:
                     {
                         if (m_verbose) {
-                            LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u", 
+                            LogMessage(LOG_RF, P25_PDU_STR ", PDU_SAP_TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u",
                                 m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
@@ -758,7 +758,7 @@ void Data::writeNet_PDU_Buffered()
 
         m_netSecondHeader.encode(block);
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
-        
+
         offset += P25_PDU_FEC_LENGTH_BITS;
         blocksToFollow--;
     }
@@ -808,7 +808,7 @@ void Data::writeRF_PDU_Buffered()
 
         m_rfSecondHeader.encode(block);
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
-        
+
         offset += P25_PDU_FEC_LENGTH_BITS;
         blocksToFollow--;
     }

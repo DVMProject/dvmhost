@@ -200,7 +200,7 @@ namespace yaml
     //  Class Declaration
     //      Internal exception class.
     // ---------------------------------------------------------------------------
-    
+
     class HOST_SW_API InternalException : public Exception {
     public:
         /// <summary>Initializes a new instance of the InternalException class.</summary>
@@ -382,7 +382,7 @@ namespace yaml
         size_t size() const;
 
         // Sequence operators
-        /// <summary>Insert sequence item at given index. Converts node to sequence type if needed. 
+        /// <summary>Insert sequence item at given index. Converts node to sequence type if needed.
         /// Adding new item to end of sequence if index is larger than sequence size.</summary>
         Node& insert(const size_t index);
         /// <summary>Add new sequence index to back. Converts node to sequence type if needed.</summary>

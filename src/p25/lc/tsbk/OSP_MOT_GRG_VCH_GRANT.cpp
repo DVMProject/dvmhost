@@ -58,7 +58,7 @@ bool OSP_MOT_GRG_VCH_GRANT::decode(const uint8_t* data, bool rawTSBK)
     assert(data != NULL);
 
     /* stub */
-    
+
     return true;
 }
 

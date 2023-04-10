@@ -57,7 +57,7 @@ namespace network
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup);
         /// <summary>Sets metadata configuration settings from the modem.</summary>
-        void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz, 
+        void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
         /// <summary>Sets REST API configuration settings from the modem.</summary>
         void setRESTAPIData(const std::string& password, uint16_t port);

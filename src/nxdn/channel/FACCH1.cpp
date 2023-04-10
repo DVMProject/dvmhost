@@ -56,9 +56,9 @@ const uint32_t INTERLEAVE_TABLE[] = {
     7U, 16U, 25U, 34U, 43U, 52U, 61U, 70U, 79U, 88U, 97U, 106U, 115U, 124U, 133U, 142U,
     8U, 17U, 26U, 35U, 44U, 53U, 62U, 71U, 80U, 89U, 98U, 107U, 116U, 125U, 134U, 143U };
 
-const uint32_t PUNCTURE_LIST[] = {  
-    1U,   5U,   9U,  13U,  17U,  21U,  25U,  29U,  33U,  37U, 
-    41U,  45U,  49U,  53U,  57U,  61U,  65U,  69U,  73U,  77U, 
+const uint32_t PUNCTURE_LIST[] = {
+    1U,   5U,   9U,  13U,  17U,  21U,  25U,  29U,  33U,  37U,
+    41U,  45U,  49U,  53U,  57U,  61U,  65U,  69U,  73U,  77U,
     81U,  85U,  89U,  93U,  97U, 101U, 105U, 109U, 113U, 117U,
     121U, 125U, 129U, 133U, 137U, 141U, 145U, 149U, 153U, 157U,
     161U, 165U, 169U, 173U, 177U, 181U, 185U, 189U };

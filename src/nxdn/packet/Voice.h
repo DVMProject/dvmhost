@@ -43,7 +43,7 @@ namespace nxdn
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Data; }
     class HOST_SW_API Control;
 

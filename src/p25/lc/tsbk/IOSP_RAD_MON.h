@@ -56,7 +56,7 @@ namespace p25
                 /// <summary>Radio Unit Monitor.</summary>
                 __PROPERTY(uint8_t, txMult, TxMult);
 
-                __COPY(IOSP_RAD_MON);      
+                __COPY(IOSP_RAD_MON);
             };
         } // namespace tsbk
     } // namespace lc

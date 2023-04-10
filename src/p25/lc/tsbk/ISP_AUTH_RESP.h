@@ -51,7 +51,7 @@ namespace p25
                 virtual bool decode(const uint8_t* data, bool rawTSBK = false);
                 /// <summary>Encode a trunking signalling block.</summary>
                 virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
-            
+
                 /** Authentication data */
                 /// <summary>Gets the authentication result.</summary>
                 void getAuthRes(uint8_t* res) const;

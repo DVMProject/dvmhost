@@ -54,7 +54,7 @@ namespace p25
                 /// <summary>SNDCP Data Service Options</summary>
                 __PROPERTY(uint8_t, dataServiceOptions, DataServiceOptions);
                 /// <summary>SNDCP grant channel number.</summary>
-                __PROPERTY(uint32_t, dataChannelNo, DataChnNo);                
+                __PROPERTY(uint32_t, dataChannelNo, DataChnNo);
 
                 __COPY(OSP_SNDCP_CH_GNT);
             };

@@ -65,7 +65,7 @@ bool CSBK_CALL_ALRT::decode(const uint8_t* data)
         return false;
 
     ulong64_t csbkValue = CSBK::toValue(csbk);
-    
+
     m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                          // Group/Individual Flag
     m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address

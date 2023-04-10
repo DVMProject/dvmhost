@@ -54,7 +54,7 @@ namespace p25
 
                 /// <summary>Sets the TSBK to encode.</summary>
                 void setTSBK(const uint8_t* tsbk);
-            
+
             private:
                 uint8_t* m_tsbk;
             };

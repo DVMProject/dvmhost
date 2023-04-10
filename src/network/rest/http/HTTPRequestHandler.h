@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -41,11 +41,11 @@
 
 #include <string>
 
-namespace network 
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
 
             // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ namespace network
             // ---------------------------------------------------------------------------
 
             struct HTTPPayload;
-        
+
             // ---------------------------------------------------------------------------
             //  Class Declaration
             //      This class implements the common handler for all incoming requests.
@@ -68,7 +68,7 @@ namespace network
                 HTTPRequestHandler(const HTTPRequestHandler&) = delete;
                 /// <summary></summary>
                 HTTPRequestHandler(HTTPRequestHandler&&) = default;
-                
+
                 /// <summary></summary>
                 HTTPRequestHandler& operator=(const HTTPRequestHandler&) = delete;
                 /// <summary></summary>

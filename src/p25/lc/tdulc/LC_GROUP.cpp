@@ -64,7 +64,7 @@ bool LC_GROUP::decode(const uint8_t* data)
         return false;
 
     ulong64_t rsValue = TDULC::toValue(rs);
-    
+
     m_mfId = rs[1U];                                                                // Mfg Id.
     m_group = true;
     m_emergency = (rs[2U] & 0x80U) == 0x80U;                                        // Emergency Flag

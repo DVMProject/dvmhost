@@ -54,8 +54,8 @@ using namespace nxdn::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
-// Don't process RF frames if the network isn't in a idle state and the RF destination 
-// is the network destination and stop network frames from processing -- RF wants to 
+// Don't process RF frames if the network isn't in a idle state and the RF destination
+// is the network destination and stop network frames from processing -- RF wants to
 // transmit on a different talkgroup
 #define CHECK_TRAFFIC_COLLISION(_SRC_ID, _DST_ID)                                       \
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
@@ -78,7 +78,7 @@ using namespace nxdn::packet;
         }                                                                               \
     }
 
-// Don't process network frames if the destination ID's don't match and the network TG hang 
+// Don't process network frames if the destination ID's don't match and the network TG hang
 // timer is running, and don't process network frames if the RF modem isn't in a listening state
 #define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
     if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
@@ -290,16 +290,16 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         if (data[0U] == modem::TAG_EOT) {
             m_rfFrames++;
             if (m_nxdn->m_rssi != 0U) {
-                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm", 
-                    float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits), m_nxdn->m_minRSSI, m_nxdn->m_maxRSSI, 
+                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
+                    float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits), m_nxdn->m_minRSSI, m_nxdn->m_maxRSSI,
                     m_nxdn->m_aveRSSI / m_nxdn->m_rssiCount);
             }
             else {
-                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%", 
+                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
                     float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
-            LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+            LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
                 m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
             m_nxdn->writeEndRF();
@@ -309,7 +309,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_rfBits = 1U;
             m_nxdn->m_rfTimeout.start();
             m_nxdn->m_rfState = RS_RF_AUDIO;
-            
+
             m_nxdn->m_minRSSI = m_nxdn->m_rssi;
             m_nxdn->m_maxRSSI = m_nxdn->m_rssi;
             m_nxdn->m_aveRSSI = m_nxdn->m_rssi;
@@ -500,7 +500,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         // regenerate the audio and interpret the FACCH1 data
         if (option == NXDN_LICH_STEAL_NONE) {
             edac::AMBEFEC ambe;
-            
+
             uint32_t errors = 0U;
 
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
@@ -536,7 +536,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
-            
+
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
 
@@ -550,10 +550,10 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", exceeded lost audio threshold, filling in");
             }
-            
+
             m_rfErrs += errors;
             m_rfBits += 94U;
-            
+
             if (m_verbose) {
                 LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
             }
@@ -561,7 +561,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
-            
+
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
 
@@ -575,7 +575,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", exceeded lost audio threshold, filling in");
             }
-            
+
             m_rfErrs += errors;
             m_rfBits += 94U;
 
@@ -634,7 +634,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
-        
+
         resetRF();
         resetNet();
     }
@@ -727,7 +727,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 
         if (data[0U] == modem::TAG_EOT) {
             m_netFrames++;
-            ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds", 
+            ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds",
                 float(m_netFrames) / 12.5F);
 
             LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", m_netFrames);
@@ -909,7 +909,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         // regenerate the audio and interpret the FACCH1 data
         if (option == NXDN_LICH_STEAL_NONE) {
             edac::AMBEFEC ambe;
-            
+
             uint32_t errors = 0U;
 
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
@@ -932,13 +932,13 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
-            
+
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
-            
+
             m_rfErrs += errors;
             m_rfBits += 94U;
-            
+
             if (m_verbose) {
                 LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
             }
@@ -946,10 +946,10 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             edac::AMBEFEC ambe;
 
             uint32_t errors = 0U;
-            
+
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES);
             errors += ambe.regenerateNXDN(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
-            
+
             m_rfErrs += errors;
             m_rfBits += 94U;
 

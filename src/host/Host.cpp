@@ -570,7 +570,7 @@ int Host::run()
         }
 
         nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
+            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi,
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
         nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
 
@@ -974,7 +974,7 @@ int Host::run()
                         // if the state is P25; write P25 data
                         if (m_state == STATE_P25) {
                             m_modem->writeP25Data(data, len);
-                            
+
                             INTERRUPT_DMR_BEACON;
 
                             // if there is a NXDN CC running; halt the CC
@@ -983,7 +983,7 @@ int Host::run()
                                     INTERRUPT_NXDN_CONTROL;
                                 }
                             }
-                            
+
                             m_modeTimer.start();
                         }
                     }
@@ -994,7 +994,7 @@ int Host::run()
             }
 
             if (nextLen == 0U) {
-                // if we have no P25 data, and we're either idle or P25 state, check if we 
+                // if we have no P25 data, and we're either idle or P25 state, check if we
                 // need to be starting the CC running flag or writing end of voice call data
                 if (m_state == STATE_IDLE || m_state == STATE_P25) {
                     if (p25->getCCHalted()) {
@@ -1052,9 +1052,9 @@ int Host::run()
                     // if the state is NXDN; write NXDN data
                     if (m_state == STATE_NXDN) {
                         m_modem->writeNXDNData(data, len);
-                        
+
                         INTERRUPT_DMR_BEACON;
-                        
+
                         // if there is a P25 CC running; halt the CC
                         if (p25 != nullptr) {
                             if (p25->getCCRunning() && !p25->getCCHalted()) {
@@ -1096,9 +1096,9 @@ int Host::run()
                         if (ret) {
                             m_modeTimer.setTimeout(m_rfModeHang);
                             setState(STATE_DMR);
-                            
+
                             START_DMR_DUPLEX_IDLE(true);
-                            
+
                             INTERRUPT_DMR_BEACON;
                             INTERRUPT_P25_CONTROL;
                             INTERRUPT_NXDN_CONTROL;
@@ -1597,7 +1597,7 @@ int Host::run()
                         m_modem->clearDMRData1();
                         m_modem->clearDMRData2();
                     }
-                    
+
                     dmr->setCCRunning(false);
                     dmr->setCCHalted(true);
 
@@ -1712,7 +1712,7 @@ bool Host::readParams()
     if (!systemConf["modeHang"].isNone()) {
         m_rfModeHang = m_netModeHang = systemConf["modeHang"].as<uint32_t>();
     }
-    
+
     m_activeTickDelay = (uint8_t)systemConf["activeTickDelay"].as<uint32_t>(5U);
     if (m_activeTickDelay < 1U)
         m_activeTickDelay = 1U;
@@ -1957,7 +1957,7 @@ bool Host::createModem()
     }
     if (dmrQueueSize > 100U) {
         LogWarning(LOG_HOST, "DMR queue size must be less then 100 frames, defaulting to 100 frames!");
-        dmrQueueSize = 100U; 
+        dmrQueueSize = 100U;
     }
     if (dmrQueueSize > 60U) {
         LogWarning(LOG_HOST, "DMR queue size is excessive, >60 frames!");
@@ -1975,7 +1975,7 @@ bool Host::createModem()
     }
     if (p25QueueSize > 50U) {
         LogWarning(LOG_HOST, "P25 queue size must be less then 50 frames, defaulting to 50 frames!");
-        p25QueueSize = 50U; 
+        p25QueueSize = 50U;
     }
     if (p25QueueSize > 30U) {
         LogWarning(LOG_HOST, "P25 queue size is excessive, >30 frames!");
@@ -1993,7 +1993,7 @@ bool Host::createModem()
     }
     if (nxdnQueueSize > 50U) {
         LogWarning(LOG_HOST, "NXDN queue size must be less then 50 frames, defaulting to 50 frames!");
-        nxdnQueueSize = 50U; 
+        nxdnQueueSize = 50U;
     }
 
     m_nxdnQueueSizeBytes = nxdnQueueSize * nxdn::NXDN_FRAME_LENGTH_BYTES;
@@ -2007,7 +2007,7 @@ bool Host::createModem()
 #else
     m_useDFSI = false;
 #endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
-    
+
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
@@ -2209,14 +2209,14 @@ bool Host::createModem()
         LogInfo("    Debug: yes");
     }
 
-    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount, 
+    m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
         m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
         m_modem->setLevels(rxLevel, cwIdTXLevel, dmrTXLevel, p25TXLevel, nxdnTXLevel);
         m_modem->setSymbolAdjust(dmrSymLevel3Adj, dmrSymLevel1Adj, p25SymLevel3Adj, p25SymLevel1Adj, nxdnSymLevel3Adj, nxdnSymLevel1Adj);
         m_modem->setDCOffsetParams(txDCOffset, rxDCOffset);
-        m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj, 
+        m_modem->setRFParams(m_rxFrequency, m_txFrequency, rxTuning, txTuning, rfPower, dmrDiscBWAdj, p25DiscBWAdj, nxdnDiscBWAdj, dmrPostBWAdj,
             p25PostBWAdj, nxdnPostBWAdj, adfGainMode, afcEnable, afcKI, afcKP, afcRange);
         m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
         m_modem->setDMRColorCode(m_dmrColorCode);
@@ -2512,7 +2512,7 @@ void Host::setState(uint8_t state)
                 m_modem->writeDMRStart(false);
                 m_dmrTXTimer.stop();
             }
-            
+
             m_state = HOST_STATE_ERROR;
             m_modeTimer.stop();
             m_cwIdTimer.stop();
@@ -2527,7 +2527,7 @@ void Host::setState(uint8_t state)
                 m_modem->writeDMRStart(false);
                 m_dmrTXTimer.stop();
             }
-            
+
             m_modem->setState(STATE_IDLE);
 
             m_modem->clearDMRData1();

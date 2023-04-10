@@ -456,10 +456,10 @@ namespace json
     GET(int,
         (type_ == number_type && (const_cast<value *>(this)->type_ = int32_type, (const_cast<value *>(this)->u_.int32_ = u_.number_)),
             u_.int32_))
-    GET(uint32_t, 
+    GET(uint32_t,
         (type_ == number_type && (const_cast<value *>(this)->type_ = uint32_type, (const_cast<value *>(this)->u_.uint32_ = u_.number_)),
             u_.uint32_))
-    GET(uint16_t, 
+    GET(uint16_t,
         (type_ == number_type && (const_cast<value *>(this)->type_ = uint16_type, (const_cast<value *>(this)->u_.uint16_ = u_.number_)),
             u_.uint16_))
     GET(uint8_t,
@@ -744,7 +744,7 @@ namespace json
         case string_type:
             serialize_str(*u_.string_, oi);
             break;
-        case array_type: 
+        case array_type:
             {
                 *oi++ = '[';
                 if (indent != -1) {
@@ -773,13 +773,13 @@ namespace json
                 *oi++ = ']';
                 break;
             }
-        case object_type: 
+        case object_type:
             {
                 *oi++ = '{';
                 if (indent != -1) {
                     ++indent;
                 }
-    
+
                 for (object::const_iterator i = u_.object_->begin(); i != u_.object_->end(); ++i) {
                     if (i != u_.object_->begin()) {
                         *oi++ = ',';
@@ -1021,7 +1021,7 @@ namespace json
         if (!ctx.parse_array_start()) {
             return false;
         }
-        
+
         size_t idx = 0;
         if (in.expect(']')) {
             return ctx.parse_array_stop(idx);

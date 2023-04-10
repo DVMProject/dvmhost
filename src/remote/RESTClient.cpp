@@ -279,7 +279,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         }
         return ERRNO_INTERNAL_ERROR;
     }
-    
+
     return ret;
 }
 
@@ -288,7 +288,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="request"></param>
 /// <param name="reply"></param>
@@ -299,12 +299,12 @@ void RESTClient::responseHandler(const HTTPPayload& request, HTTPPayload& reply)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 bool RESTClient::wait()
 {
     m_responseAvailable = false;
-    
+
     int timeout = 500;
     while (!m_responseAvailable && timeout > 0) {
         timeout--;

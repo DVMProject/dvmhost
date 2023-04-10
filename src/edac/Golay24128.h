@@ -37,7 +37,7 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements Golay (23,12,7) and Golay (24,12,8) forward error 
+    //      Implements Golay (23,12,7) and Golay (24,12,8) forward error
     //      correction.
     // ---------------------------------------------------------------------------
 

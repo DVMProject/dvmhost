@@ -82,7 +82,7 @@ private:
     modem::port::IModemPort* m_modemRemotePort;
 
     uint8_t m_state;
-    
+
     Timer m_modeTimer;
     Timer m_dmrTXTimer;
     Timer m_cwIdTimer;
@@ -114,7 +114,7 @@ private:
     uint32_t m_txFrequency;
     uint8_t m_channelId;
     uint32_t m_channelNo;
-    
+
     std::vector<uint32_t> m_voiceChNo;
     std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
 
@@ -161,7 +161,7 @@ private:
     bool createModem();
     /// <summary>Initializes network connectivity.</summary>
     bool createNetwork();
-    
+
     /// <summary>Modem port open callback.</summary>
     bool rmtPortModemOpen(modem::Modem* modem);
     /// <summary>Modem port close callback.</summary>

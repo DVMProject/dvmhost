@@ -508,7 +508,7 @@ int HostSetup::run()
             printStatus();
         }
         break;
-        
+
         case 'a':
         {
             rfssConfig = m_conf["system"]["config"];

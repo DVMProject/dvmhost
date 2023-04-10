@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -71,7 +71,7 @@ void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& 
     }
 
     // request path must be absolute and not contain "..".
-    if (requestPath.empty() || requestPath[0] != '/' || 
+    if (requestPath.empty() || requestPath[0] != '/' ||
         requestPath.find("..") != std::string::npos) {
         reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
         return;
@@ -100,7 +100,7 @@ void HTTPRequestHandler::handleRequest(const HTTPPayload& request, HTTPPayload& 
 
     // fill out the reply to be sent to the client
     reply.status = HTTPPayload::OK;
-    
+
     char buf[512];
     while (is.read(buf, sizeof(buf)).gcount() > 0)
         reply.content.append(buf, is.gcount());
@@ -144,6 +144,6 @@ bool HTTPRequestHandler::urlDecode(const std::string& in, std::string& out)
             out += in[i];
         }
     }
-    
+
     return true;
 }

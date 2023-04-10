@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -404,7 +404,7 @@ HTTPPayload HTTPPayload::statusPayload(HTTPPayload::StatusType status, const std
         rep.content = stock_replies::to_string(status, contentType);
         rep.ensureDefaultHeaders(contentType);
     }
-    
+
     return rep;
 }
 

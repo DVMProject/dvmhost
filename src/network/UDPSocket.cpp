@@ -331,7 +331,7 @@ void UDPSocket::close(const uint32_t index)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 void UDPSocket::startup()
 {
@@ -345,7 +345,7 @@ void UDPSocket::startup()
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 void UDPSocket::shutdown()
 {

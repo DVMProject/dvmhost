@@ -238,7 +238,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         break;
     }
 
-    return nullptr;    
+    return nullptr;
 }
 
 /// <summary>
@@ -323,9 +323,9 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader,
     default:
         LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
         break;
-    }    
+    }
 
-    return nullptr;    
+    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,7 +333,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader,
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="tsbk"></param>
 /// <param name="data"></param>
@@ -352,7 +352,7 @@ std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool 
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="ambt"></param>
 /// <param name="dataHeader"></param>

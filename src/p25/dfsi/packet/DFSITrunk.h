@@ -36,7 +36,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Trunk; }
     class HOST_SW_API Control;
 

@@ -55,7 +55,7 @@ namespace nxdn
             void start();
             /// <summary></summary>
             uint32_t chainback(uint8_t* out, uint32_t nBits);
-            
+
             /// <summary></summary>
             bool decode(uint8_t s0, uint8_t s1);
             /// <summary></summary>

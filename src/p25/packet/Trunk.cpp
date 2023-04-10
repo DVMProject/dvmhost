@@ -2069,7 +2069,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
             if (m_debug) {
                 LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_SYNC_BCAST (Synchronization Broadcast)");
             }
-            
+
             // transmit sync broadcast
             std::unique_ptr<OSP_SYNC_BCAST> osp = new_unique(OSP_SYNC_BCAST);
             osp->setMicroslotCount(m_microslotCount);
@@ -2082,7 +2082,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
                 if (m_debug) {
                     LogMessage(LOG_RF , P25_TSDU_STR ", TSBK_OSP_TIME_DATE_ANN (Time and Date Announcement)");
                 }
-                
+
                 // transmit time/date announcement
                 std::unique_ptr<OSP_TIME_DATE_ANN> osp = new_unique(OSP_TIME_DATE_ANN);
                 tsbk = std::move(osp);

@@ -67,7 +67,7 @@ bool ISP_SNDCP_CH_REQ::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_dataServiceOptions = (uint8_t)((tsbkValue >> 56) & 0xFFU);                    // Data Service Options
     m_dataAccessControl = (uint32_t)((tsbkValue >> 40) & 0xFFFFFFFFU);              // Data Access Control
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address

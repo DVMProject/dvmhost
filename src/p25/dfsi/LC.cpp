@@ -551,7 +551,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE12:
             {
                 m_mi[0U] = data[1U];                                                // Message Indicator
-                m_mi[1U] = data[2U];    
+                m_mi[1U] = data[2U];
                 m_mi[2U] = data[3U];
                 ::memcpy(imbe, data + 5U, P25_RAW_IMBE_LENGTH_BYTES);               // IMBE
             }
@@ -559,7 +559,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE13:
             {
                 m_mi[3U] = data[1U];                                                // Message Indicator
-                m_mi[4U] = data[2U];    
+                m_mi[4U] = data[2U];
                 m_mi[5U] = data[3U];
                 ::memcpy(imbe, data + 5U, P25_RAW_IMBE_LENGTH_BYTES);               // IMBE
             }
@@ -567,7 +567,7 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE14:
             {
                 m_mi[6U] = data[1U];                                                // Message Indicator
-                m_mi[7U] = data[2U];    
+                m_mi[7U] = data[2U];
                 m_mi[8U] = data[3U];
                 m_control->setMI(m_mi);
                 ::memcpy(imbe, data + 5U, P25_RAW_IMBE_LENGTH_BYTES);               // IMBE

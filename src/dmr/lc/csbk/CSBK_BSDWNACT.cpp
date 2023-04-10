@@ -65,7 +65,7 @@ bool CSBK_BSDWNACT::decode(const uint8_t* data)
         return false;
 
     ulong64_t csbkValue = CSBK::toValue(csbk);
-    
+
     m_bsId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                             // Base Station Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
 

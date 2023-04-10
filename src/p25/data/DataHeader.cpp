@@ -280,7 +280,7 @@ void DataHeader::reset()
     m_rspClass = PDU_ACK_CLASS_NACK;
     m_rspType = PDU_ACK_TYPE_NACK_ILLEGAL;
     m_rspStatus = 0U;
-    
+
     m_ambtOpcode = 0U;
     m_ambtField8 = 0U;
     m_ambtField9 = 0U;

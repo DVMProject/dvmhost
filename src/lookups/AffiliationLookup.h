@@ -149,7 +149,7 @@ namespace lookups
         virtual bool isGranted(uint32_t dstId) const;
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
         virtual uint32_t getGrantedCh(uint32_t dstId);
-        /// <summary>Helper to get the source ID granted for the given destination ID.</summary>        
+        /// <summary>Helper to get the source ID granted for the given destination ID.</summary>
         virtual uint32_t getGrantedSrcId(uint32_t srcId);
 
         /// <summary>Helper to set RF channel data.</summary>

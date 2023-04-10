@@ -101,7 +101,7 @@ namespace lookups
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements a threading lookup table class that contains the bandplan 
+    //      Implements a threading lookup table class that contains the bandplan
     //      identity table.
     // ---------------------------------------------------------------------------
 

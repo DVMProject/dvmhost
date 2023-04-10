@@ -29,7 +29,7 @@
 */
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2014, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -38,43 +38,43 @@
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The
  * c++/ezpwd/rs_base file is redistributed under the terms of the LGPL, regardless of the overall
  * licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
- * 
+ *
  * The core Reed-Solomon codec implementation in c++/ezpwd/rs_base is by Phil Karn, converted to C++
  * by Perry Kundert (perry@hardconsulting.com), and may be used under the terms of the LGPL.  Here
  * is the terms from Phil's README file (see phil-karn/fec-3.0.1/README):
- * 
+ *
  *     COPYRIGHT
- * 
+ *
  *     This package is copyright 2006 by Phil Karn, KA9Q. It may be used
  *     under the terms of the GNU Lesser General Public License (LGPL). See
  *     the file "lesser.txt" in this package for license details.
- * 
+ *
  * The c++/ezpwd/rs_base file is, therefore, redistributed under the terms of the LGPL, while the
  * rest of Ezpwd Reed-Solomon is distributed under either the GPL or Commercial licenses.
  * Therefore, even if you have obtained Ezpwd Reed-Solomon under a Commercial license, you must make
  * available the source code of the c++/ezpwd/rs_base file with your product.  One simple way to
  * accomplish this is to include the following URL in your code or documentation:
- * 
+ *
  *     https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/c++/ezpwd/rs_base
- * 
- * 
+ *
+ *
  * The Linux 3.15.1 version of lib/reed_solomon was also consulted as a cross-reference, which (in
  * turn) is basically verbatim copied from Phil Karn's LGPL implementation, to ensure that no new
  * defects had been found and fixed; there were no meaningful changes made to Phil's implementation.
  * I've personally been using Phil's implementation for years in a heavy industrial use, and it is
  * rock-solid.
- * 
+ *
  * However, both Phil's and the Linux kernel's (copy of Phil's) implementation will return a
  * "corrected" decoding with impossible error positions, in some cases where the error load
  * completely overwhelms the R-S encoding.  These cases, when detected, are rejected in this
  * implementation.  This could be considered a defect in Phil's (and hence the Linux kernel's)
  * implementations, which results in them accepting clearly incorrect R-S decoded values as valid
  * (corrected) R-S codewords.  We chose the report failure on these attempts.
- * 
+ *
  */
 #if !defined(__RS_H__)
 #define __RS_H__
@@ -91,14 +91,14 @@
 #include <type_traits>
 #include <vector>
 
-// 
+//
 // Preprocessor defines available:
-// 
+//
 // EZPWD_NO_EXCEPTS -- define to use no exceptions; return -1, or abort on catastrophic failures
 // EZPWD_NO_MOD_TAB -- define to force no "modnn" Galois modulo table acceleration
 // EZPWD_ARRAY_SAFE -- define to force usage of bounds-checked arrays for most tabular data
 // EZPWD_ARRAY_TEST -- define to force erroneous sizing of some arrays for non-production testing
-// 
+//
 
 #if defined(EZPWD_NO_EXCEPTS)
     #include <cstdio>
@@ -114,7 +114,7 @@
 
 namespace edac
 {
-    namespace rs 
+    namespace rs
     {
         // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
         template <size_t N, size_t B = 2> struct log_{ enum { value = 1 + log_<N / B, B>::value }; };
@@ -147,27 +147,27 @@ namespace edac
             /// <summary></summary>
             virtual std::ostream &output(std::ostream &lhs) const { return lhs << "RS(" << this->size() << "," << this->load() << ")"; }
 
-            // 
+            //
             // {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded container
-            // 
+            //
             //     The encoded parity symbols may be included in 'data' (len includes nroots() parity
             // symbols), or may (optionally) supplied separately in (at least nroots()-sized)
-            // 'parity'.  
-            // 
+            // 'parity'.
+            //
             //     For decode, optionally specify some known erasure positions (up to nroots()).  If
             // non-empty 'erasures' is provided, it contains the positions of each erasure.  If a
             // non-zero pointer to a 'position' vector is provided, its capacity will be increased to
             // be capable of storing up to 'nroots()' ints; the actual deduced error locations will be
             // returned.
-            //  
+            //
             // RETURN VALUE
-            // 
+            //
             //     Return -1 on error.  The encode returns the number of parity symbols produced;
             // decode returns the number of symbols corrected.  Both errors and erasures are included,
             // so long as they are actually different than the deduced value.  In other words, if a
             // symbol is marked as an erasure but it actually turns out to be correct, it's index will
             // NOT be included in the returned count, nor the modified erasure vector!
-            // 
+            //
 
             int encode(std::string &data) const
             {
@@ -180,7 +180,7 @@ namespace edac
             int encode(const std::string &data, std::string &parity) const
             {
                 typedef uint8_t uT;
-                typedef std::pair<const uT*, const uT*> cuTpair;  
+                typedef std::pair<const uT*, const uT*> cuTpair;
                 typedef std::pair<uT*, uT*> uTpair;
                 parity.resize(nroots());
                 return encode(cuTpair((const uT*)&data.front(), (const uT*)&data.front() + data.size()),
@@ -195,10 +195,10 @@ namespace edac
                 return encode(uTpair((uT*)&data.front(), (uT*)&data.front() + data.size()));
             }
 
-            template<typename T> int encode(const std::vector<T>&data, std::vector<T> &parity) const 
+            template<typename T> int encode(const std::vector<T>&data, std::vector<T> &parity) const
             {
                 typedef typename std::make_unsigned<T>::type uT;
-                typedef std::pair<const uT*, const uT*> cuTpair;    
+                typedef std::pair<const uT*, const uT*> cuTpair;
                 typedef std::pair<uT*, uT*> uTpair;
                 parity.resize(nroots());
                 return encode(cuTpair((uT*)&data.front(), (uT*)&data.front() + data.size()),
@@ -213,8 +213,8 @@ namespace edac
             }
 
             virtual int	encode(const std::pair<uint8_t*, uint8_t*> &data) const = 0;
-            
-            virtual int	encode(const std::pair<const uint8_t*, const uint8_t*> &data, 
+
+            virtual int	encode(const std::pair<const uint8_t*, const uint8_t*> &data,
                 const std::pair<uint8_t*, uint8_t*> &parity) const = 0;
             virtual int	encode(const std::pair<uint16_t*, uint16_t*> &data) const = 0;
             virtual int	encode(const std::pair<const uint16_t*, const uint16_t*> &data,
@@ -223,7 +223,7 @@ namespace edac
             virtual int	encode(const std::pair<const uint32_t*, const uint32_t*> &data,
                         const std::pair<uint32_t*, uint32_t*> &parity) const = 0;
 
-            int	decode(std::string &data, const std::vector<int> &erasure = std::vector<int>(), 
+            int	decode(std::string &data, const std::vector<int> &erasure = std::vector<int>(),
                 std::vector<int>* position = 0) const
             {
                 typedef uint8_t uT;
@@ -231,16 +231,16 @@ namespace edac
                 return decode(uTpair((uT*)&data.front(), (uT*)&data.front() + data.size()), erasure, position);
             }
 
-            int	decode(std::string &data, std::string	&parity, const std::vector<int> &erasure = std::vector<int>(), 
+            int	decode(std::string &data, std::string	&parity, const std::vector<int> &erasure = std::vector<int>(),
                 std::vector<int>* position = 0) const
             {
                 typedef uint8_t uT;
                 typedef std::pair<uT*, uT*> uTpair;
-                return decode(uTpair((uT*)&data.front(), (uT*)&data.front() + data.size()), 
+                return decode(uTpair((uT*)&data.front(), (uT*)&data.front() + data.size()),
                     uTpair((uT*)&parity.front(), (uT*)&parity.front() + parity.size()), erasure, position);
             }
 
-            template<typename T> int decode(std::vector<T> &data, const std::vector<int> &erasure = std::vector<int>(), 
+            template<typename T> int decode(std::vector<T> &data, const std::vector<int> &erasure = std::vector<int>(),
                 std::vector<int>* position = 0) const
             {
                 typedef typename std::make_unsigned<T>::type uT;
@@ -248,7 +248,7 @@ namespace edac
                 return decode(uTpair((uT*)&data.front(), (uT*)&data.front() + data.size()), erasure, position);
             }
 
-            template<typename T> int decode(std::vector<T> &data, std::vector<T> &parity, 
+            template<typename T> int decode(std::vector<T> &data, std::vector<T> &parity,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
             {
                 typedef typename std::make_unsigned<T>::type uT;
@@ -257,7 +257,7 @@ namespace edac
                     uTpair((uT*)&parity.front(), (uT*)&parity.front() + parity.size()), erasure, position);
             }
 
-            template<typename T, size_t N> int decode(std::array<T,N> &data, int pad = 0, 
+            template<typename T, size_t N> int decode(std::array<T,N> &data, int pad = 0,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
             {
                 typedef typename std::make_unsigned<T>::type uT;
@@ -269,21 +269,21 @@ namespace edac
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const = 0;
             virtual int	decode(const std::pair<uint8_t*, uint8_t*> &data, const std::pair<uint8_t*, uint8_t*> &parity,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const = 0;
-            virtual int decode(const std::pair<uint16_t*, uint16_t*> &data, 
+            virtual int decode(const std::pair<uint16_t*, uint16_t*> &data,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const = 0;
-            virtual int	decode(const std::pair<uint16_t*, uint16_t*> &data, const std::pair<uint16_t*, uint16_t*> &parity, 
+            virtual int	decode(const std::pair<uint16_t*, uint16_t*> &data, const std::pair<uint16_t*, uint16_t*> &parity,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const = 0;
             virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data,
                 const std::vector<int> &erasure	= std::vector<int>(), std::vector<int>* position = 0) const = 0;
-            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data, const std::pair<uint32_t*, uint32_t*> &parity, 
+            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data, const std::pair<uint32_t*, uint32_t*> &parity,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position= 0 ) const = 0;
         };
 
-        // 
+        //
         // std::ostream << edac::rs::reed_solomon<...>
-        // 
+        //
         //     Output a R-S codec description in standard form eg. RS(255,253)
-        // 
+        //
         inline std::ostream &operator<<(std::ostream &lhs, const edac::rs::reed_solomon_base &rhs) { return rhs.output(lhs); }
 
         // ---------------------------------------------------------------------------
@@ -306,7 +306,7 @@ namespace edac
                 return sr;
             }
         };
-        
+
         // ---------------------------------------------------------------------------
         //  Class Declaration
         //      R-S tables common to all RS(NN,*) with same SYM, PRM and PLY.
@@ -324,7 +324,7 @@ namespace edac
             static const int SIZE = (1 << SYM) - 1;	        // maximum symbols in field
             static const int NN	= SIZE;
             static const int A0	= SIZE;
-            
+
             // modulo table: 1/2 the symbol size squared, up to 4k
             static const int MODS = SYM > 8 ? (1 << 12) : (1 << SYM << SYM / 2);
 
@@ -351,7 +351,7 @@ namespace edac
                 // Generate Galois field lookup tables
                 index_of[0] = A0; // log(zero) = -inf
                 alpha_to[A0] = 0; // alpha**-inf = 0
-                
+
                 PLY	poly;
                 int	sr = poly(0);
                 for (int i = 0; i < NN; i++) {
@@ -380,7 +380,7 @@ namespace edac
             /// <summary>Finalizes a instance of the reed_solomon_tabs class.</summary>
             virtual ~reed_solomon_tabs() { /* stub */ }
 
-            // 
+            //
             // modnn -- modulo replacement for galois field arithmetics, optionally w/ table acceleration
             //
             //  @x:		the value to reduce (will never be -'ve)
@@ -407,7 +407,7 @@ namespace edac
                     x -= NN;
                     x = (x >> MM) + (x & NN);
                 }
-            
+
                 if ( MODS && x >= NN) {
                     x = mod_of[x - NN];
                 }
@@ -415,7 +415,7 @@ namespace edac
             }
         };
 
-        
+
         // ---------------------------------------------------------------------------
         //  Class Declaration
         //      Reed-Solomon codec.
@@ -436,7 +436,7 @@ namespace edac
         //     All reed_solomon<T, ...> instances with the same template type parameters share a common
         // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
         // initializes the tables.
-        // 
+        //
         //     Each specialized type of reed_solomon implements a specific encode/decode method
         // appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
         // access via "safe" (size specifying) containers or iterators is available.
@@ -480,7 +480,7 @@ namespace edac
 #if DEBUG_RS
                 LogDebug(LOG_HOST, "reed_solomon::reed_solomon() RS(%d,%d): initialized for %d roots", SIZE, LOAD, NROOTS);
 #endif
-        
+
                 std::array<TYP, NROOTS + 1> tmppoly; // uninitialized
 
                 // Form RS code generator polynomial from its roots.  Only lower-index entries are
@@ -488,7 +488,7 @@ namespace edac
                 tmppoly[0] = 1;
                 for (int i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM) {
                     tmppoly[i + 1] = 1;
-                    
+
                     // Multiply tmppoly[] by  @**(root + x)
                     for (int j = i; j > 0; j--) {
                         if (tmppoly[j] != 0) {
@@ -497,7 +497,7 @@ namespace edac
                             tmppoly[j]	= tmppoly[j - 1];
                         }
                     }
-                    
+
                     // tmppoly[0] can never be zero
                     tmppoly[0] = alpha_to[modnn(index_of[tmppoly[0]] + root)];
                 }
@@ -524,18 +524,18 @@ namespace edac
 
             using reed_solomon_base::encode;
             virtual int encode(const std::pair<uint8_t*, uint8_t*> &data) const { return encode_mask(data.first, data.second - data.first - NROOTS, data.second - NROOTS); }
-            virtual int encode(const std::pair<const uint8_t*, const uint8_t*> &data, 
+            virtual int encode(const std::pair<const uint8_t*, const uint8_t*> &data,
                 const std::pair<uint8_t*, uint8_t*> &parity) const
             {
                 if (parity.second - parity.first != NROOTS) {
                     EZPWD_RAISE_OR_RETURN(std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1);
                 }
-    
+
                 return encode_mask(data.first, data.second - data.first, parity.first);
             }
 
             virtual int encode(const std::pair<uint16_t*, uint16_t*> &data) const { return encode_mask(data.first, data.second - data.first - NROOTS, data.second - NROOTS); }
-            virtual int encode(const std::pair<const uint16_t*, const uint16_t*> &data, 
+            virtual int encode(const std::pair<const uint16_t*, const uint16_t*> &data,
                 const std::pair<uint16_t*, uint16_t*> &parity) const
             {
                 if (parity.second - parity.first != NROOTS) {
@@ -546,7 +546,7 @@ namespace edac
             }
 
             virtual int encode(const std::pair<uint32_t*, uint32_t*> &data) const { return encode_mask(data.first, data.second - data.first - NROOTS, data.second - NROOTS); }
-            virtual int encode(const std::pair<const uint32_t*, const uint32_t*> &data, 
+            virtual int encode(const std::pair<const uint32_t*, const uint32_t*> &data,
                 const std::pair<uint32_t*, uint32_t*> &parity) const
             {
                 if (parity.second - parity.first != NROOTS) {
@@ -574,7 +574,7 @@ namespace edac
                     if (SYMBOL > INPUT) {
                         EZPWD_RAISE_OR_RETURN(std::runtime_error, "reed-solomon: output data type too small to contain symbols", -1);
                     }
-                    
+
                     std::array<TYP, SIZE> tmp;
                     TYP msk	= static_cast<TYP>(~0UL << SYMBOL);
                     for (int i = 0; i < len; ++i) {
@@ -600,7 +600,7 @@ namespace edac
 
                 return NROOTS;
             }
-            
+
             using reed_solomon_base::decode;
             virtual int decode(const std::pair<uint8_t*, uint8_t*> &data,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
@@ -608,7 +608,7 @@ namespace edac
                 return decode_mask(data.first, data.second - data.first, (uint8_t*)0, erasure, position);
             }
 
-            virtual int	decode(const std::pair<uint8_t*, uint8_t*> &data, const std::pair<uint8_t*, uint8_t*> &parity, 
+            virtual int	decode(const std::pair<uint8_t*, uint8_t*> &data, const std::pair<uint8_t*, uint8_t*> &parity,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
             {
                 if (parity.second - parity.first != NROOTS) {
@@ -618,7 +618,7 @@ namespace edac
                 return decode_mask(data.first, data.second - data.first, parity.first, erasure, position);
             }
 
-            virtual int decode(const std::pair<uint16_t*, uint16_t*> &data, 
+            virtual int decode(const std::pair<uint16_t*, uint16_t*> &data,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
             {
                 return decode_mask(data.first, data.second - data.first, (uint16_t*)0, erasure, position);
@@ -634,13 +634,13 @@ namespace edac
                 return decode_mask(data.first, data.second - data.first, parity.first, erasure, position);
             }
 
-            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data, 
+            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data,
                 const std::vector<int> &erasure = std::vector<int>(), std::vector<int>* position = 0) const
             {
                 return decode_mask(data.first, data.second - data.first, (uint32_t*)0, erasure, position);
             }
 
-            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data, const std::pair<uint32_t*, uint32_t*> &parity, 
+            virtual int	decode(const std::pair<uint32_t*, uint32_t*> &data, const std::pair<uint32_t*, uint32_t*> &parity,
                 const std::vector<int> &erasure	= std::vector<int>(), std::vector<int>* position= 0 ) const
             {
                 if (parity.second - parity.first != NROOTS) {
@@ -650,14 +650,14 @@ namespace edac
                 return decode_mask(data.first, data.second - data.first, parity.first, erasure, position);
             }
 
-            // 
+            //
             // decode_mask	-- mask INP data into valid SYMBOL data
-            // 
+            //
             //     Incoming data may be in a variety of sizes, and may contain information beyond the
             // R-S symbol capacity.  For example, we might use a 6-bit R-S symbol to correct the lower
             // 6 bits of an 8-bit data character.  This would allow us to correct common substitution
             // errors (such as '2' for '3', 'R' for 'T', 'n' for 'm').
-            // 
+            //
 
             template<typename INP>
             int decode_mask(INP *data, int len, INP *parity	= 0, const std::vector<int> &erasure = std::vector<int>(),
@@ -870,7 +870,7 @@ namespace edac
 #if DEBUG_RS
                 // Test code that verifies the erasure locator polynomial just constructed
                 // Needed only for decoder debugging.
-            
+
                 // find roots of the erasure location polynomial
                 for (int i = 1; i<= no_eras; i++) {
                     reg[i] = index_of[lambda[i]];
@@ -955,7 +955,7 @@ namespace edac
 
                         if (2 * el <= r + no_eras - 1) {
                             el = r + no_eras - el;
-                            
+
                             // 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
                             for (int i = 0; i <= NROOTS; i++) {
                                 b[i] = ((lambda[i] == 0) ? A0 : modnn(index_of[lambda[i]] - discr_r + NN));
@@ -1067,7 +1067,7 @@ namespace edac
                             // correction location outside of the data and parity we've been provided!
 #if DEBUG_RS
                             std::stringstream ss;
-                            ss << "reed_solomon::decode(): ERROR: RS(" << SIZE <<"," << LOAD << ") computed error location: " << loc[j] << 
+                            ss << "reed_solomon::decode(): ERROR: RS(" << SIZE <<"," << LOAD << ") computed error location: " << loc[j] <<
                                 " within " << pad << " pad symbols, not within " << LOAD - pad << " data or " << NROOTS << " parity";
                             LogDebug(LOG_HOST, "%s", ss.str().c_str());
 #endif
@@ -1113,7 +1113,7 @@ finish:
                         errors[2 * (eras_pos[i]) + 0] = 'e';
                         errors[2 * (eras_pos[i]) + 1] = 'e';
                     }
-                    
+
                     std::stringstream ss;
                     ss << "reed_solomon::decode(): e)rase, E)rror; count = " << count << ": " << std::endl << errors;
                     LogDebug(LOG_HOST, "%s", ss.str().c_str());
@@ -1129,12 +1129,12 @@ finish:
             }
         };
 
-        // 
+        //
         // Define the static reed_solomon...<...> members; allowed in header for template types.
-        // 
+        //
         //     The reed_solomon_tags<...>::iprim < 0 is used to indicate to the first instance that the
         // static tables require initialization.
-        // 
+        //
         template<typename TYP, int SYM, int PRM, class PLY> int	reed_solomon_tabs<TYP, SYM, PRM, PLY>::iprim = -1;
         template<typename TYP, int SYM, int PRM, class PLY> std::array<TYP, reed_solomon_tabs<TYP, SYM, PRM, PLY>::NN + 1> reed_solomon_tabs<TYP, SYM, PRM, PLY>::alpha_to;
         template<typename TYP, int SYM, int PRM, class PLY> std::array<TYP, reed_solomon_tabs<TYP, SYM, PRM, PLY>::NN + 1> reed_solomon_tabs<TYP, SYM, PRM, PLY>::index_of;
@@ -1142,5 +1142,5 @@ finish:
         template<typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY> std::array<TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY>::NROOTS + 1> reed_solomon<TYP, SYM, RTS, FCR, PRM, PLY>::genpoly;
     } // namespace rs
 } // namespace edac
-    
+
 #endif // __RS_H__

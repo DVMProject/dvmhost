@@ -61,7 +61,7 @@ bool OSP_TIME_DATE_ANN::decode(const uint8_t* data, bool rawTSBK)
     assert(data != NULL);
 
     /* stub */
-    
+
     return true;
 }
 
@@ -90,7 +90,7 @@ void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tmS |= 59U;
     } else {
         tmS |= i;
-    }    
+    }
 
 #if DEBUG_P25_TSBK
     LogDebug(LOG_P25, "TSBK_OSP_TIME_DATE_ANN, tmM = %u / %u, tmY = %u / %u", local_tm.tm_mon, tmM, local_tm.tm_year, tmY);

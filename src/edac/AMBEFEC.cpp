@@ -102,8 +102,8 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
         if (READ_BIT(bytes, b2Pos))
             b2 |= MASK;
         if (READ_BIT(bytes, b3Pos))
-            b3 |= MASK;            
-    }    
+            b3 |= MASK;
+    }
 
 	MASK = 0x1000000U;
 	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
@@ -209,8 +209,8 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
         if (READ_BIT(bytes, b2Pos))
             b2 |= MASK;
         if (READ_BIT(bytes, b3Pos))
-            b3 |= MASK;            
-    }    
+            b3 |= MASK;
+    }
 
 	MASK = 0x1000000U;
 	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {

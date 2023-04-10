@@ -256,7 +256,7 @@ namespace modem
         /// <remarks>If the response handler returns true, processing will stop, otherwise it will continue.</remarks>
         void setResponseHandler(std::function<MODEM_RESP_HANDLER> handler);
         /// <summary>Sets a custom modem open port handler.</summary>
-        /// <remarks>If the open handler is set, it is the responsibility of the handler to complete air interface 
+        /// <remarks>If the open handler is set, it is the responsibility of the handler to complete air interface
         /// initialization (i.e. write configuration, etc).</remarks>
         void setOpenHandler(std::function<MODEM_OC_PORT_HANDLER> handler);
         /// <summary>Sets a custom modem close port handler.</summary>
@@ -288,10 +288,10 @@ namespace modem
         bool hasP25Space(uint32_t length) const;
         /// <summary>Helper to test if the NXDN ring buffer has free space.</summary>
         bool hasNXDNSpace() const;
-        
+
         /// <summary>Helper to test if the modem is a hotspot.</summary>
         bool isHotspot() const;
-        
+
         /// <summary>Helper to test if the modem is in P25 DFSI data mode.</summary>
         bool isP25DFSI() const;
 
@@ -401,7 +401,7 @@ namespace modem
         int m_txTuning;                 // hotspot modem - Tx Frequency Offset
         uint8_t m_rfPower;              // hotspot modem - RF power
 
-        int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment    
+        int8_t m_dmrDiscBWAdj;          // hotspot modem - DMR discriminator BW adjustment
         int8_t m_p25DiscBWAdj;          // hotspot modem - P25 discriminator BW adjustment
         int8_t m_nxdnDiscBWAdj;         // hotspot modem - NXDN discriminator BW adjustment
         int8_t m_dmrPostBWAdj;          // hotspot modem - DMR post demod BW adjustment

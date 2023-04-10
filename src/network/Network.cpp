@@ -209,7 +209,7 @@ void Network::clock(uint32_t ms)
         }
 
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {
-#if defined(ENABLE_DMR)            
+#if defined(ENABLE_DMR)
             if (m_enabled && m_dmrEnabled) {
                 if (m_debug)
                     Utils::dump(1U, "Network Received, DMR", m_buffer, length);
@@ -285,7 +285,7 @@ void Network::clock(uint32_t ms)
                 for (uint8_t i = 0; i < len; i++) {
                     uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
                     uint8_t slot = (m_buffer[14U + j]);
-                    
+
                     lookups::TalkgroupId tid = m_tidLookup->find(id);
                     if (tid.tgEnabled() == false && tid.tgDefault() == true) {
                         LogMessage(LOG_NET, "Activated TG %u TS %u in TGID table", id, slot);

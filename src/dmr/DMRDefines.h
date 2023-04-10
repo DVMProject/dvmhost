@@ -132,7 +132,7 @@ namespace dmr
 
     const uint8_t   DMR_ALOHA_VER_151 = 0x00U;
     const uint8_t   DMR_CHNULL = 0x00U;
-    
+
     const uint16_t  DMR_LOGICAL_CH_ABSOLUTE = 0xFFFU;
 
     const uint8_t   DEFAULT_NRAND_WAIT = 8U;

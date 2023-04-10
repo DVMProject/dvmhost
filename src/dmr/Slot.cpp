@@ -193,15 +193,15 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
     if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
+            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%", 
+            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%",
                 m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits));
         }
 
-        LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%", 
+        LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
             m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
@@ -440,7 +440,7 @@ void Slot::clock()
                         if ((m_dmr->m_tsccCnt % 2) == 0) {
                             setShortLC_Payload(m_siteData, m_dmr->m_tsccCnt);
                         }
-                    } 
+                    }
                     else {
                         setShortLC_TSCC(m_siteData, m_dmr->m_tsccCnt);
                     }
@@ -514,7 +514,7 @@ void Slot::clock()
             if (m_netState == RS_NET_AUDIO) {
                 // We've received the voice header haven't we?
                 m_netFrames += 1U;
-                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%", 
+                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%",
                     m_slotNo, float(m_netFrames) / 16.667F, (m_netLost * 100U) / m_netFrames, float(m_netErrs * 100U) / float(m_netBits));
                 writeEndNet(true);
             }
@@ -605,7 +605,7 @@ void Slot::setTSCC(bool enable, bool dedicated)
 /// <param name="srcId"></param>
 /// <param name="group"></param>
 /// <param name="voice"></param>
-void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice) 
+void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     m_tsccPayloadDstId = dstId;
     m_tsccPayloadGroup = group;
@@ -658,7 +658,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_colorCode = colorCode;
 
     m_siteData = siteData;
-    
+
     m_embeddedLCOnly = embeddedLCOnly;
     m_dumpTAData = dumpTAData;
 
@@ -673,7 +673,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_affiliations = new dmr::lookups::DMRAffiliationLookup(verbose);
 
     // set the grant release callback
-    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
+    m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         Slot* tscc = m_dmr->getTSCCSlot();
         if (tscc != nullptr) {
             if (chNo == tscc->m_channelNo) {

@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -37,7 +37,7 @@
 #if !defined(__REST_HTTP__SERVER_CONNECTION_H__)
 #define __REST_HTTP__SERVER_CONNECTION_H__
 
-#include "Defines.h" 
+#include "Defines.h"
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
 #include "Utils.h"
@@ -47,12 +47,12 @@
 #include <utility>
 #include <iterator>
 #include <asio.hpp>
- 
-namespace network 
+
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
             // ---------------------------------------------------------------------------
             //  Class Prototypes
@@ -64,7 +64,7 @@ namespace network
             //  Class Declaration
             //      This class represents a single connection from a client.
             // ---------------------------------------------------------------------------
-            
+
             template <typename RequestHandlerType>
             class ServerConnection : public std::enable_shared_from_this<ServerConnection<RequestHandlerType>>
             {
@@ -73,7 +73,7 @@ namespace network
                 typedef ServerConnectionManager<selfTypePtr> ConnectionManagerType;
             public:
                 /// <summary>Initializes a new instance of the ServerConnection class.</summary>
-                explicit ServerConnection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler, 
+                explicit ServerConnection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
                     bool persistent = false) :
                     m_socket(std::move(socket)),
                     m_connectionManager(manager),
@@ -85,19 +85,19 @@ namespace network
                 }
                 /// <summary>Initializes a copy instance of the ServerConnection class.</summary>
                 ServerConnection(const ServerConnection&) = delete;
-                
+
                 /// <summary></summary>
                 ServerConnection& operator=(const ServerConnection&) = delete;
 
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
                 /// <summary>Stop all asynchronous operations associated with the connection.</summary>
-                void stop() 
+                void stop()
                 {
                     try
                     {
                         if (m_socket.is_open()) {
-                            m_socket.close(); 
+                            m_socket.close();
                         }
                     }
                     catch(const std::exception&) { /* ignore */ }
@@ -143,7 +143,7 @@ namespace network
                         }
                     });
                 }
-        
+
                 /// <summary>Perform an asynchronous write operation.</summary>
                 void write()
                 {
@@ -169,7 +169,7 @@ namespace network
                                 asio::error_code ignored_ec;
                                 m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
                             }
-                    
+
                             if (ec != asio::error::operation_aborted) {
                                 m_connectionManager.stop(this->shared_from_this());
                             }
@@ -193,5 +193,5 @@ namespace network
         } // namespace http
     } // namespace rest
 } // namespace network
- 
+
 #endif // __REST_HTTP__SERVER_CONNECTION_H__

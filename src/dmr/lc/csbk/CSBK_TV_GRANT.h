@@ -54,7 +54,7 @@ namespace dmr
                 /// <summary>Flag indicating whether the grant is a late entry.</summary>
                 __PROPERTY(bool, lateEntry, LateEntry);
 
-                __COPY(CSBK_TV_GRANT);      
+                __COPY(CSBK_TV_GRANT);
             };
         } // namespace csbk
     } // namespace lc

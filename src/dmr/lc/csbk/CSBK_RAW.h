@@ -54,7 +54,7 @@ namespace dmr
 
                 /// <summary>Sets the CSBK to encode.</summary>
                 void setCSBK(const uint8_t* csbk);
-            
+
             private:
                 uint8_t* m_csbk;
             };

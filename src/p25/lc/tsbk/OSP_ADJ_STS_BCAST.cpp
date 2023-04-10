@@ -77,7 +77,7 @@ bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
     m_adjSiteId = (uint8_t)((tsbkValue >> 24) & 0xFFU);                             // Site ID
     m_adjChannelId = (uint8_t)((tsbkValue >> 20) & 0xFU);                           // Site Channel ID
     m_adjChannelNo = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                         // Site Channel Number
-    m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                               // Site Service Class    
+    m_adjServiceClass = (uint8_t)(tsbkValue & 0xFFU);                               // Site Service Class
 
     return true;
 }

@@ -595,16 +595,16 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_rfState == RS_RF_AUDIO) {
                 if (m_p25->m_rssi != 0U) {
-                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm", 
-                        float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits), m_p25->m_minRSSI, m_p25->m_maxRSSI, 
+                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
+                        float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits), m_p25->m_minRSSI, m_p25->m_maxRSSI,
                         m_p25->m_aveRSSI / m_p25->m_rssiCount);
                 }
                 else {
-                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%", 
+                    ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
                         float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits));
                 }
 
-                LogMessage(LOG_RF, P25_TDU_STR " DFSI, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+                LogMessage(LOG_RF, P25_TDU_STR " DFSI, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
                     m_rfFrames, m_rfBits, m_rfUndecodableLC, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
                 if (m_p25->m_dedicatedControl) {
@@ -1127,10 +1127,10 @@ void DFSIVoice::writeNet_LDU1()
         // Generate Voice Frame
         m_netDFSILC.setFrameType(i);
         m_netDFSILC.encodeLDU1(buffer + 2U, m_netLDU1 + n);
-        
+
         buffer[0U] = modem::TAG_DATA;
         buffer[1U] = 0x00U;
-        
+
         m_p25->addFrame(buffer, len + 2U, true);
     }
 

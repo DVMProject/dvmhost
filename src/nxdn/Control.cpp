@@ -214,7 +214,7 @@ void Control::reset()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
     const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
     uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
@@ -248,7 +248,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_NXDN, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
         m_voice->m_silenceThreshold = nxdn::MAX_NXDN_VOICE_ERRORS;
     }
-    
+
     bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
     if (m_control) {
@@ -277,7 +277,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_affiliations.setRFChData(chData);
 
     // set the grant release callback
-    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
+    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_affiliations.getRFChData(chNo);
@@ -345,15 +345,15 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     if (type == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm", 
+            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
         }
         else {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%", 
+            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%",
                 float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
         }
 
-        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         if (m_control) {
@@ -801,12 +801,12 @@ bool Control::writeRF_ControlData()
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
-        
+
         m_ccSeq++;
         if (m_ccSeq == maxSeq) {
             m_ccFrameCnt++;
         }
-        
+
         return true;
     }
 

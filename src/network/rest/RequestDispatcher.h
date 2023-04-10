@@ -29,35 +29,35 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPPayload.h"
 #include "Log.h"
- 
+
 #include <functional>
 #include <map>
 #include <string>
 #include <regex>
 #include <memory>
- 
-namespace network 
+
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //      
+        //
         // ---------------------------------------------------------------------------
 
-        struct RequestMatch : std::smatch 
+        struct RequestMatch : std::smatch
         {
             /// <summary>Initializes a new instance of the RequestMatch structure.</summary>
             RequestMatch(const std::smatch& m, const std::string& c) : std::smatch(m), content(c) { /* stub */ }
-            
+
             std::string content;
         };
 
         // ---------------------------------------------------------------------------
         //  Structure Declaration
-        //      
+        //
         // ---------------------------------------------------------------------------
-        
+
         template<typename Request, typename Reply>
         struct RequestMatcher {
             typedef std::function<void(const Request&, Reply&, const RequestMatch&)> RequestHandlerType;
@@ -103,7 +103,7 @@ namespace network
                     handler(request, reply, match);
                 }
             }
-        
+
         private:
             std::string m_expression;
             bool m_isRegEx;
@@ -127,7 +127,7 @@ namespace network
             RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
             /// <summary></summary>
-            MatcherType& match(const std::string& expression, bool regex = false) 
+            MatcherType& match(const std::string& expression, bool regex = false)
             {
                 MatcherTypePtr& p = m_matchers[expression];
                 if (!p) {
@@ -146,7 +146,7 @@ namespace network
             }
 
             /// <summary></summary>
-            void handleRequest(const Request& request, Reply& reply) 
+            void handleRequest(const Request& request, Reply& reply)
             {
                 for (const auto& matcher : m_matchers) {
                     std::smatch what;
@@ -175,7 +175,7 @@ namespace network
                 ::LogError(LOG_REST, "unknown endpoint, uri = %s", request.uri.c_str());
                 reply = http::HTTPPayload::statusPayload(http::HTTPPayload::BAD_REQUEST, "application/json");
             }
-        
+
         private:
             typedef std::shared_ptr<MatcherType> MatcherTypePtr;
 
@@ -201,7 +201,7 @@ namespace network
             BasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
 
             /// <summary></summary>
-            void handleRequest(const Request& request, Reply& reply) 
+            void handleRequest(const Request& request, Reply& reply)
             {
                 if (m_handler) {
                     m_handler(request, reply);
@@ -224,7 +224,7 @@ namespace network
             DebugRequestDispatcher() { /* stub */ }
 
             /// <summary></summary>
-            void handleRequest(const Request& request, Reply& reply) 
+            void handleRequest(const Request& request, Reply& reply)
             {
                 for (auto header : request.headers.headers())
                     ::LogDebug(LOG_REST, "DebugRequestDispatcher::handleRequest() header = %s, value = %s", header.name.c_str(), header.value.c_str());
@@ -233,8 +233,8 @@ namespace network
             }
         };
 
-        typedef RequestDispatcher<http::HTTPPayload, http::HTTPPayload> DefaultRequestDispatcher;        
+        typedef RequestDispatcher<http::HTTPPayload, http::HTTPPayload> DefaultRequestDispatcher;
     } // namespace rest
 } // namespace network
-  
-#endif // __REST__DISPATCHER_H__ 
+
+#endif // __REST__DISPATCHER_H__

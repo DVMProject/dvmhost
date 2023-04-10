@@ -281,7 +281,7 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_transmissionMode = (data[2U] & 0x07U);                                    // Transmission Mode
         m_srcId = (uint16_t)((data[3U] << 8) | data[4U]) & 0xFFFFU;                 // Source Radio Address
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
-    
+
         m_rsp = PacketInformation();
         m_rsp.decode(m_messageType, data + 7U);                                     // Response
         break;

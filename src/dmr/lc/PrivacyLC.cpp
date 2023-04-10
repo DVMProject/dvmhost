@@ -53,7 +53,7 @@ PrivacyLC::PrivacyLC(const uint8_t* data) :
     assert(data != nullptr);
 
     m_mi = new uint8_t[DMR_MI_LENGTH_BYTES];
-    
+
     m_group = (data[0U] & 0x20U) == 0x20U;
     m_algId = data[0U] & 7;                                                     // Algorithm ID
 

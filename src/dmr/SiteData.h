@@ -121,7 +121,7 @@ namespace dmr
             break;
             case SITE_MODEL_HUGE:
             {
-                value = (value << 2) + (m_netId & 0x03U); 
+                value = (value << 2) + (m_netId & 0x03U);
                 value = (value << 10) + (m_siteId & 0x3FFU);
             }
             break;

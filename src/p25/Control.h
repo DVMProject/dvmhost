@@ -57,7 +57,7 @@ namespace p25
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Voice; }
     namespace dfsi { namespace packet { class HOST_SW_API DFSIVoice; } }
     namespace packet { class HOST_SW_API Data; }
@@ -84,10 +84,10 @@ namespace p25
         void reset();
 
         /// <summary>Helper to set P25 configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
-            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
+        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
+            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
             uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
-        
+
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
         /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
@@ -197,7 +197,7 @@ namespace p25
 
         uint32_t m_hangCount;
         uint32_t m_tduPreambleCount;
-        
+
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;
 

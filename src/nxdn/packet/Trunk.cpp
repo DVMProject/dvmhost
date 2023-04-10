@@ -378,7 +378,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
         }
 
         switch (n)
-        {            
+        {
         case 0:
             writeRF_CC_Message_Site_Info();
             break;
@@ -624,7 +624,7 @@ void Trunk::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason,
     rcch->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u", 
+        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
             service, srcId, dstId);
     }
 

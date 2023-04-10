@@ -224,7 +224,7 @@ void DFSITrunk::writeRF_DFSI_Start(uint8_t type)
 {
     uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
-    
+
     // Generate Start/Stop
     m_rfDFSILC.setFrameType(P25_DFSI_START_STOP);
     m_rfDFSILC.setStartStop(P25_DFSI_START_FLAG);
@@ -247,7 +247,7 @@ void DFSITrunk::writeRF_DSFI_Stop(uint8_t type)
 {
     uint8_t buffer[P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES + 2U);
-    
+
     // Generate Start/Stop
     m_rfDFSILC.setFrameType(P25_DFSI_START_STOP);
     m_rfDFSILC.setStartStop(P25_DFSI_STOP_FLAG);

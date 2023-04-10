@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -41,21 +41,21 @@
 
 #include <set>
 #include <mutex>
- 
-namespace network 
+
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
-    
+
             // ---------------------------------------------------------------------------
             //  Class Declaration
             //      Manages open connections so that they may be cleanly stopped when the server
             //      needs to shut down.
             // ---------------------------------------------------------------------------
 
-            template<typename ConnectionPtr>   
+            template<typename ConnectionPtr>
             class ServerConnectionManager
             {
             public:
@@ -66,7 +66,7 @@ namespace network
 
                 /// <summary></summary>
                 ServerConnectionManager& operator=(const ServerConnectionManager&) = delete;
-            
+
                 /// <summary>Add the specified connection to the manager and start it.</summary>
                 void start(ConnectionPtr c)
                 {
@@ -76,7 +76,7 @@ namespace network
                     }
                     c->start();
                 }
-                
+
                 /// <summary>Stop the specified connection.</summary>
                 void stop(ConnectionPtr c)
                 {
@@ -86,7 +86,7 @@ namespace network
                     }
                     c->stop();
                 }
-                
+
                 /// <summary>Stop all connections.</summary>
                 void stopAll()
                 {
@@ -96,7 +96,7 @@ namespace network
                     std::lock_guard<std::mutex> guard(m_lock);
                     m_connections.clear();
                 }
-            
+
             private:
                 std::set<ConnectionPtr> m_connections;
                 std::mutex m_lock;
@@ -106,4 +106,3 @@ namespace network
 } // namespace network
 
 #endif // __REST_HTTP__SERVER_CONNECTION_MANAGER_H__
- 

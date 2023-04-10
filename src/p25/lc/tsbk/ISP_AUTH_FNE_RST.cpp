@@ -67,7 +67,7 @@ bool ISP_AUTH_FNE_RST::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_authSuccess = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 // Authentication Success Flag
     m_authStandalone = (((tsbkValue >> 56) & 0xFFU) & 0x01U) == 0x01U;              // Authentication Standalone Flag
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address

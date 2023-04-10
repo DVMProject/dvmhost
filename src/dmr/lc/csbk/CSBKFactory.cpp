@@ -120,7 +120,7 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
         break;
     }
 
-    return nullptr;    
+    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="csbk"></param>
 /// <param name="data"></param>

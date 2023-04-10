@@ -221,8 +221,8 @@ void Control::reset()
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
-    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId, 
+void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
+    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
     uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
@@ -278,7 +278,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", p25::MAX_P25_VOICE_ERRORS);
         m_voice->m_silenceThreshold = p25::MAX_P25_VOICE_ERRORS;
     }
-    
+
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
     bool disableCompositeFlag = p25Protocol["disableCompositeFlag"].as<bool>(false);
@@ -321,7 +321,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_affiliations.setRFChData(chData);
 
     // set the grant release callback
-    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) { 
+    m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_affiliations.getRFChData(chNo);

@@ -113,7 +113,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
 
             // if this is extended addressing and the first block decode the SAP and LLId
             if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
-                count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;                
+                count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
 
                 m_sap = buffer[5U] & 0x3FU;                                              // Service Access Point
                 m_llId = (buffer[2U] << 16) + (buffer[3U] << 8) + buffer[4U];            // Logical Link ID
@@ -275,7 +275,7 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
     if (m_fmt == PDU_FMT_CONFIRMED) {
         ::memcpy(buffer, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-    } 
+    }
     else if (m_fmt == PDU_FMT_UNCONFIRMED || m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
         ::memcpy(buffer, m_data, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
         return P25_PDU_UNCONFIRMED_LENGTH_BYTES;

@@ -2011,7 +2011,7 @@ void HostCal::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
     uint8_t dmrSeq = seq & 0x0FU;
     if (dmrSeq > 5U)
         dmrSeq = 5U;
-    
+
     errs = 0U;
     for (uint32_t i = 0U; i < 33U; i++)
         errs += countErrs(buffer[i], VOICE_1K[i]);
@@ -2068,7 +2068,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
         else {
             LogMessage(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
-        
+
         m_berBits = 0U;
         m_berErrs = 0U;
         m_berFrames = 0U;
@@ -2098,7 +2098,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u", 
+            LogMessage(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
@@ -2150,7 +2150,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X", 
+            LogMessage(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
@@ -2216,7 +2216,7 @@ void HostCal::processP25BER(const uint8_t* buffer)
         }
         else {
             LogMessage(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
-                dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(), 
+                dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
                 dataHeader.getBlocksToFollow(), dataHeader.getPadCount(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
                 dataHeader.getHeaderOffset());
         }
@@ -2477,7 +2477,7 @@ bool HostCal::writeConfig(uint8_t modeOverride)
 
     m_conf["system"]["modem"]["dmrRxDelay"] = __INT_STR(m_modem->m_dmrRxDelay);
     buffer[10U] = m_modem->m_dmrRxDelay;
-    
+
     uint32_t nac = 0xF7EU;
     buffer[11U] = (nac >> 4) & 0xFFU;
     buffer[12U] = (nac << 4) & 0xF0U;
@@ -2821,7 +2821,7 @@ bool HostCal::eraseFlash()
 
     m_updateConfigFromModem = false;
     LogMessage(LOG_CAL, " - Erased configuration area on modem");
-    
+
     m_modem->clock(0U);
     return true;
 }
@@ -2868,7 +2868,7 @@ bool HostCal::writeFlash()
 
     buffer[16U] = (uint8_t)(m_modem->m_txDCOffset + 128);
     buffer[17U] = (uint8_t)(m_modem->m_rxDCOffset + 128);
-    
+
     // RF parameters
     buffer[20U] = (uint8_t)(m_modem->m_dmrDiscBWAdj + 128);
     buffer[21U] = (uint8_t)(m_modem->m_p25DiscBWAdj + 128);
@@ -3025,7 +3025,7 @@ void HostCal::printStatus()
         if (!m_isHotspot) {
             LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
                 m_modem->m_dmrSymLevel3Adj, m_modem->m_dmrSymLevel1Adj, m_modem->m_p25SymLevel3Adj, m_modem->m_p25SymLevel1Adj);
-            
+
             // are we on a protocol version 3 firmware?
             if (m_modem->getVersion() >= 3U) {
                 LogMessage(LOG_CAL, " - NXDN Symbol +/- 3 Level Adj.: %d, NXDN Symbol +/- 1 Level Adj.: %d",

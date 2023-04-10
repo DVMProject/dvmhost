@@ -318,7 +318,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         else {
             ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
         }
-    } 
+    }
     else {
         if (module != nullptr) {
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
@@ -340,7 +340,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         else {
             ::sprintf(buffer, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LEVELS[level], tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
         }
-    } 
+    }
     else {
         if (module != nullptr) {
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);

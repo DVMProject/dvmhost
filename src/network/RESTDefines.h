@@ -73,7 +73,7 @@
 #define GET_DMR_DEBUG_BASE              "/dmr/debug/"
 #define GET_DMR_DEBUG                   GET_DMR_DEBUG_BASE"(\\d+)/(\\d+)"
 #define GET_DMR_DUMP_CSBK_BASE          "/dmr/dump-csbk/"
-#define GET_DMR_DUMP_CSBK               GET_DMR_DUMP_CSBK_BASE"(\\d+)" 
+#define GET_DMR_DUMP_CSBK               GET_DMR_DUMP_CSBK_BASE"(\\d+)"
 #define PUT_DMR_RID                     "/dmr/rid"
 #define GET_DMR_CC_DEDICATED            "/dmr/cc-enable"
 #define GET_DMR_CC_BCAST                "/dmr/cc-broadcast"

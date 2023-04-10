@@ -52,7 +52,7 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Voice; }
     namespace packet { class HOST_SW_API ControlSignaling; }
     class HOST_SW_API Slot;

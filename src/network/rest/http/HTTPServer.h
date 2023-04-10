@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -49,12 +49,12 @@
 #include <signal.h>
 #include <utility>
 #include <memory>
- 
-namespace network 
+
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
 
             // ---------------------------------------------------------------------------
@@ -67,10 +67,10 @@ namespace network
             public:
                 /// <summary>Initializes a new instance of the HTTPServer class.</summary>
                 explicit HTTPServer(const std::string& address, uint16_t port) :
-                    m_ioService(), 
-                    m_acceptor(m_ioService), 
+                    m_ioService(),
+                    m_acceptor(m_ioService),
                     m_connectionManager(),
-                    m_socket(m_ioService), 
+                    m_socket(m_ioService),
                     m_requestHandler()
                 {
                     // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
@@ -82,12 +82,12 @@ namespace network
                     m_acceptor.set_option(asio::socket_base::keep_alive(true));
                     m_acceptor.bind(endpoint);
                     m_acceptor.listen();
-                
+
                     accept();
                 }
                 /// <summary>Initializes a copy instance of the HTTPServer class.</summary>
                 HTTPServer(const HTTPServer&) = delete;
-    
+
                 /// <summary></summary>
                 HTTPServer& operator=(const HTTPServer&) = delete;
 
@@ -117,7 +117,7 @@ namespace network
                     m_acceptor.close();
                     m_connectionManager.stopAll();
                 }
-                
+
             private:
                 /// <summary>Perform an asynchronous accept operation.</summary>
                 void accept()
@@ -128,29 +128,29 @@ namespace network
                         if (!m_acceptor.is_open()) {
                             return;
                         }
-                    
+
                         if (!ec) {
                             m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler));
                         }
-                    
+
                         accept();
                     });
                 }
-                
+
                 typedef ConnectionImpl<RequestHandlerType> ConnectionType;
                 typedef std::shared_ptr<ConnectionType> ConnectionTypePtr;
-                
+
                 asio::io_service m_ioService;
                 asio::ip::tcp::acceptor m_acceptor;
-                
+
                 ServerConnectionManager<ConnectionTypePtr> m_connectionManager;
-                
+
                 asio::ip::tcp::socket m_socket;
-                
+
                 RequestHandlerType m_requestHandler;
             };
         } // namespace http
     } // namespace rest
 } // namespace network
- 
+
 #endif // __REST_HTTP__HTTP_SERVER_H__

@@ -66,7 +66,7 @@ bool IOSP_STS_UPDT::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_statusValue = (uint8_t)((tsbkValue >> 56) & 0xFFU);                           // Status Value
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address

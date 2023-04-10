@@ -53,7 +53,7 @@ using namespace lookups;
 /// <param name="filename">Full-path to the radio ID table file.</param>
 /// <param name="reloadTime">Interval of time to reload the radio ID table.</param>
 /// <param name="ridAcl">Flag indicating whether radio ID access control is enabled.</param>
-RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime), 
+RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
     m_acl(ridAcl)
 {
     /* stub */

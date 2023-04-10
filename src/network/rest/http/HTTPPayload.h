@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -37,7 +37,7 @@
 #if !defined(__REST_HTTP__HTTP_REPLY_H__)
 #define __REST_HTTP__HTTP_REPLY_H__
 
-#include "Defines.h" 
+#include "Defines.h"
 #include "network/json/json.h"
 #include "network/rest/http/HTTPHeaders.h"
 
@@ -46,11 +46,11 @@
 
 #include <asio.hpp>
 
-namespace network 
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
 
             // ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      This struct implements a model of a payload to be sent to a 
+            //      This struct implements a model of a payload to be sent to a
             //      HTTP client/server.
             // ---------------------------------------------------------------------------
 

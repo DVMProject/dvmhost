@@ -118,7 +118,7 @@ namespace network
 
         uint32_t m_af[UDP_SOCKET_MAX];
         int m_fd[UDP_SOCKET_MAX];
-        
+
         uint32_t m_counter;
     };
 } // namespace network

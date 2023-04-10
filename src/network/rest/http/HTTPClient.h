@@ -9,9 +9,9 @@
 /*
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -46,11 +46,11 @@
 #include <memory>
 #include <mutex>
 
-namespace network 
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
 
             // ---------------------------------------------------------------------------
@@ -66,22 +66,22 @@ namespace network
                     m_address(address),
                     m_port(port),
                     m_connection(nullptr),
-                    m_ioContext(), 
-                    m_socket(m_ioContext), 
-                    m_requestHandler() 
-                { 
-                    /* stub */ 
+                    m_ioContext(),
+                    m_socket(m_ioContext),
+                    m_requestHandler()
+                {
+                    /* stub */
                 }
                 /// <summary>Initializes a copy instance of the HTTPClient class.</summary>
                 HTTPClient(const HTTPClient&) = delete;
                 /// <summary>Finalizes a instance of the HTTPClient class.</summary>
-                ~HTTPClient() 
+                ~HTTPClient()
                 {
                     if (m_connection != nullptr) {
                         close();
                     }
                 }
-    
+
                 /// <summary></summary>
                 HTTPClient& operator=(const HTTPClient&) = delete;
 
@@ -150,7 +150,7 @@ namespace network
                     // the entry() call will block until all asynchronous operations
                     // have finished
                     m_ioContext.run();
-                
+
                     if (m_connection != nullptr) {
                         m_connection->stop();
                     }
@@ -175,7 +175,7 @@ namespace network
                 asio::io_context m_ioContext;
 
                 asio::ip::tcp::socket m_socket;
-                
+
                 RequestHandlerType m_requestHandler;
 
                 std::mutex m_lock;
@@ -183,5 +183,5 @@ namespace network
         } // namespace http
     } // namespace rest
 } // namespace network
- 
+
 #endif // __REST_HTTP__HTTP_CLIENT_H__

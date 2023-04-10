@@ -90,7 +90,7 @@ namespace edac
 
         /// <summary></summary>
         void init();
-        /// <summary>Process the remaining bytes in the internal buffer and the usual prolog according to 
+        /// <summary>Process the remaining bytes in the internal buffer and the usual prolog according to
         /// the standard and write the result to the buffer.</summary>
         void conclude();
     };

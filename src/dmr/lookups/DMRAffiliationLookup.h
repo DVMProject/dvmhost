@@ -72,6 +72,6 @@ namespace dmr
             uint8_t m_tsccSlot;
         };
     } // namespace lookups
-} // namespace dmr 
+} // namespace dmr
 
 #endif // __DMR_AFFILIATION_LOOKUP_H__

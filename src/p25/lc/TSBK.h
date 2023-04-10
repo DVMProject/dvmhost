@@ -71,7 +71,7 @@ namespace p25
             TSBK();
             /// <summary>Finalizes a instance of the TSBK class.</summary>
             virtual ~TSBK();
-            
+
             /// <summary>Decode a trunking signalling block.</summary>
             virtual bool decode(const uint8_t* data, bool rawTSBK = false) = 0;
             /// <summary>Encode a trunking signalling block.</summary>

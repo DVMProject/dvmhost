@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -43,11 +43,11 @@
 #include <string>
 #include <vector>
 
-namespace network 
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
 
             // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ namespace network
 
             // ---------------------------------------------------------------------------
             //  Structure Declaration
-            //      
+            //
             // ---------------------------------------------------------------------------
 
             struct HTTPHeaders
@@ -81,7 +81,7 @@ namespace network
                 /// <summary>Clears the list of HTTP headers.</summary>
                 void clearHeaders() { m_headers = std::vector<Header>(); }
                 /// <summary>Helper to add a HTTP header.</summary>
-                void add(const std::string& name, const std::string& value) 
+                void add(const std::string& name, const std::string& value)
                 {
                     //::LogDebug(LOG_REST, "HTTPHeaders::add(), header = %s, value = %s", name.c_str(), value.c_str());
                     for (auto& header : m_headers) {
@@ -91,12 +91,12 @@ namespace network
                         }
                     }
 
-                    m_headers.push_back(Header(name, value)); 
+                    m_headers.push_back(Header(name, value));
                     //for (auto header : m_headers)
                     //    ::LogDebug(LOG_REST, "HTTPHeaders::add() m_headers.header = %s, m_headers.value = %s", header.name.c_str(), header.value.c_str());
                 }
                 /// <summary>Helper to add a HTTP header.</summary>
-                void remove(const std::string headerName) 
+                void remove(const std::string headerName)
                 {
                     auto header = std::find_if(m_headers.begin(), m_headers.end(), [&](const Header& h) {
                         return ::strtolower(h.name) == ::strtolower(headerName);

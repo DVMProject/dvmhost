@@ -52,8 +52,8 @@ using namespace nxdn::packet;
 //  Macros
 // ---------------------------------------------------------------------------
 
-// Don't process RF frames if the network isn't in a idle state and the RF destination 
-// is the network destination and stop network frames from processing -- RF wants to 
+// Don't process RF frames if the network isn't in a idle state and the RF destination
+// is the network destination and stop network frames from processing -- RF wants to
 // transmit on a different talkgroup
 #define CHECK_TRAFFIC_COLLISION(_SRC_ID, _DST_ID)                                       \
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
@@ -76,7 +76,7 @@ using namespace nxdn::packet;
         }                                                                               \
     }
 
-// Don't process network frames if the destination ID's don't match and the network TG hang 
+// Don't process network frames if the destination ID's don't match and the network TG hang
 // timer is running, and don't process network frames if the RF modem isn't in a listening state
 #define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
     if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
@@ -269,7 +269,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "RF ended RF data transmission");
 
-        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", 
+        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_rfFrames);
 
         m_nxdn->writeEndRF();
@@ -292,7 +292,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         m_nxdn->m_queue.clear();
-        
+
         resetRF();
         resetNet();
     }
@@ -374,7 +374,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "network ended RF data transmission");
 
-        LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", 
+        LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_netFrames);
 
         m_nxdn->writeEndNet();

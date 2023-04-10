@@ -191,7 +191,7 @@ namespace nxdn
     const uint8_t   NXDN_LOC_CAT_GLOBAL = 0x00U;
     const uint8_t   NXDN_LOC_CAT_LOCAL = 0x01U;
     const uint8_t   NXDN_LOC_CAT_REGIONAL = 0x02U;
-    
+
     const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_NETWORK = 0x51U;
     const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_TEMP = 0x52U;
     const uint8_t   NXDN_CAUSE_RSRC_NOT_AVAIL_QUEUED = 0x53U;

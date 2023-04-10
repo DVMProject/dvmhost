@@ -61,7 +61,7 @@ bool OSP_SYNC_BCAST::decode(const uint8_t* data, bool rawTSBK)
     assert(data != NULL);
 
     /* stub */
-    
+
     return true;
 }
 
@@ -117,7 +117,7 @@ void OSP_SYNC_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     tsbkValue = (tsbkValue << 7) + (tmY & 0x7FU);                                   // Number of Years Past 2000
     tsbkValue = (tsbkValue << 4) + (tmM & 0x0FU);                                   // Month
     tsbkValue = (tsbkValue << 5) + (local_tm.tm_mday & 0x1FU);                      // Day of Month
-    
+
     // Time
     tsbkValue = (tsbkValue << 5) + (local_tm.tm_hour & 0x1FU);                      // Hour
     tsbkValue = (tsbkValue << 6) + (local_tm.tm_min & 0x3FU);                       // Minute

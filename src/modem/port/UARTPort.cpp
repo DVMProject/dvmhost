@@ -258,7 +258,7 @@ void UARTPort::close()
 /// <param name="device">Serial port device.</param>
 /// <param name="speed">Serial port speed.</param>
 /// <param name="assertRTS"></param>
-UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) : 
+UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_device(device),
     m_speed(speed),
@@ -500,7 +500,7 @@ int UARTPort::readNonblock(uint8_t* buffer, uint32_t length)
 ///
 /// </summary>
 /// <returns></returns>
-bool UARTPort::canWrite() 
+bool UARTPort::canWrite()
 {
 #if defined(__APPLE__)
     fd_set wset;

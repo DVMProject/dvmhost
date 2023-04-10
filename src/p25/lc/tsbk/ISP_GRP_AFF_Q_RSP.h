@@ -49,7 +49,7 @@ namespace p25
                 virtual bool decode(const uint8_t* data, bool rawTSBK = false);
                 /// <summary>Encode a trunking signalling block.</summary>
                 virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
-            
+
             public:
                 /// <summary>Announcement group.</summary>
                 __PROPERTY(uint32_t, announceGroup, AnnounceGroup);

@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -51,7 +51,7 @@ using namespace network::rest::http;
 /// Initializes a new instance of the HTTPLexer class.
 /// </summary>
 /// <param name="clientLexer"></param>
-HTTPLexer::HTTPLexer(bool clientLexer) : 
+HTTPLexer::HTTPLexer(bool clientLexer) :
     m_headers(),
     m_clientLexer(clientLexer),
     m_state(METHOD_START)
@@ -395,7 +395,7 @@ HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
         } else {
             return BAD;
         }
-    
+
     default:
         return BAD;
     }

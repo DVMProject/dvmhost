@@ -58,7 +58,7 @@ bool OSP_SYS_SRV_BCAST::decode(const uint8_t* data, bool rawTSBK)
     assert(data != NULL);
 
     /* stub */
-    
+
     return true;
 }
 

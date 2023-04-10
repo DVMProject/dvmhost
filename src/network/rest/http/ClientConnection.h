@@ -14,9 +14,9 @@
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
-*   Permission is hereby granted, free of charge, to any person or organization 
-*   obtaining a copy of the software and accompanying documentation covered by 
-*   this license (the “Software”) to use, reproduce, display, distribute, execute, 
+*   Permission is hereby granted, free of charge, to any person or organization
+*   obtaining a copy of the software and accompanying documentation covered by
+*   this license (the “Software”) to use, reproduce, display, distribute, execute,
 *   and transmit the Software, and to prepare derivative works of the Software, and
 *   to permit third-parties to whom the Software is furnished to do so, all subject
 *   to the following:
@@ -37,7 +37,7 @@
 #if !defined(__REST_HTTP__CLIENT_CONNECTION_H__)
 #define __REST_HTTP__CLIENT_CONNECTION_H__
 
-#include "Defines.h" 
+#include "Defines.h"
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
 #include "Utils.h"
@@ -47,18 +47,18 @@
 #include <utility>
 #include <iterator>
 #include <asio.hpp>
- 
-namespace network 
+
+namespace network
 {
-    namespace rest 
+    namespace rest
     {
-        namespace http 
+        namespace http
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
             //      This class represents a single connection from a client.
             // ---------------------------------------------------------------------------
-            
+
             template <typename RequestHandlerType>
             class ClientConnection
             {
@@ -73,29 +73,29 @@ namespace network
                 }
                 /// <summary>Initializes a copy instance of the ClientConnection class.</summary>
                 ClientConnection(const ClientConnection&) = delete;
-                
+
                 /// <summary></summary>
                 ClientConnection& operator=(const ClientConnection&) = delete;
 
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
                 /// <summary>Stop all asynchronous operations associated with the connection.</summary>
-                void stop() 
+                void stop()
                 {
                     try
                     {
                         if (m_socket.is_open()) {
-                            m_socket.close(); 
+                            m_socket.close();
                         }
                     }
                     catch(const std::exception&) { /* ignore */ }
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
-                void send(HTTPPayload request) 
+                void send(HTTPPayload request)
                 {
                     request.attachHostHeader(m_socket.remote_endpoint());
-                    write(request); 
+                    write(request);
                 }
             private:
                 /// <summary>Perform an asynchronous read operation.</summary>
@@ -166,5 +166,5 @@ namespace network
         } // namespace http
     } // namespace rest
 } // namespace network
- 
+
 #endif // __REST_HTTP__CLIENT_CONNECTION_H__

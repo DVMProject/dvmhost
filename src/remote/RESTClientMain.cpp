@@ -501,7 +501,7 @@ int main(int argc, char** argv)
         else if (rcom == RCD_DMR_DEBUG) {
             if (argCnt < 2U) {
                 retCode = client->send(HTTP_GET, GET_DMR_DEBUG_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
@@ -511,12 +511,12 @@ int main(int argc, char** argv)
         else if (rcom == RCD_DMR_DUMP_CSBK) {
             if (argCnt < 1U) {
                 retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
                 retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE + std::to_string(verbose), json::object());
             }
-        }        
+        }
         else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_PAGE));
@@ -574,7 +574,7 @@ int main(int argc, char** argv)
         else if (rcom == RCD_P25_DEBUG) {
             if (argCnt < 2U) {
                 retCode = client->send(HTTP_GET, GET_P25_DEBUG_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
@@ -584,7 +584,7 @@ int main(int argc, char** argv)
         else if (rcom == RCD_P25_DUMP_TSBK) {
             if (argCnt < 1U) {
                 retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
                 retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE + std::to_string(verbose), json::object());
@@ -673,7 +673,7 @@ int main(int argc, char** argv)
         else if (rcom == RCD_NXDN_DEBUG) {
             if (argCnt < 2U) {
                 retCode = client->send(HTTP_GET, GET_NXDN_DEBUG_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
@@ -683,12 +683,12 @@ int main(int argc, char** argv)
         else if (rcom == RCD_NXDN_DUMP_RCCH) {
             if (argCnt < 1U) {
                 retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE, json::object());
-            } 
+            }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
                 retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE + std::to_string(verbose), json::object());
             }
-        }        
+        }
         else if (rcom == RCD_NXDN_CC_DEDICATED) {
             retCode = client->send(HTTP_GET, GET_NXDN_CC_DEDICATED, json::object());
         }

@@ -450,13 +450,13 @@ namespace nxdn
         0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U,
         0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U };
 
-    const uint32_t A_TABLE[] = {  
+    const uint32_t A_TABLE[] = {
         0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
         48U, 52U, 56U, 60U, 64U, 68U,  1U,  5U,  9U, 13U, 17U, 21U };
-    const uint32_t B_TABLE[] = { 
+    const uint32_t B_TABLE[] = {
         25U, 29U, 33U, 37U, 41U, 45U, 49U, 53U, 57U, 61U, 65U, 69U,
         2U,  6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U };
-    const uint32_t C_TABLE[] = { 
+    const uint32_t C_TABLE[] = {
         46U, 50U, 54U, 58U, 62U, 66U, 70U,  3U,  7U, 11U, 15U, 19U,
         23U, 27U, 31U, 35U, 39U, 43U, 47U, 51U, 55U, 59U, 63U, 67U, 71U };
 

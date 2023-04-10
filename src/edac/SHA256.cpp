@@ -61,9 +61,9 @@ using namespace edac;
 //  Constants
 // ---------------------------------------------------------------------------
 
-/* 
+/*
  * This array contains the bytes used to pad the buffer to the next 64-byte
- * boundary.  
+ * boundary.
  */
 static const uint8_t fillbuf[64] = { 0x80, 0 /* , 0, 0, ...  */ };
 

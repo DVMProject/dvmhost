@@ -451,7 +451,7 @@ namespace edac
         0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U,
         0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U };
 
-    const uint32_t AMBE_A_TABLE[] = { 
+    const uint32_t AMBE_A_TABLE[] = {
         0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
         48U, 52U, 56U, 60U, 64U, 68U,  1U,  5U,  9U, 13U, 17U, 21U };
     const uint32_t AMBE_B_TABLE[] = {

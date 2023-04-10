@@ -56,7 +56,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_verbose(verbose)
 {
     m_rfChTable.clear();
- 
+
     m_unitRegTable.clear();
     m_grpAffTable.clear();
 

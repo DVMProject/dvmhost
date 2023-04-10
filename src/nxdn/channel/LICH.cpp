@@ -198,7 +198,7 @@ void LICH::copy(const LICH& data)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <returns></returns>
 bool LICH::getParity() const

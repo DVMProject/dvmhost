@@ -85,7 +85,7 @@ void CSBK_EXT_FNCT::encode(uint8_t* data)
 
     ulong64_t csbkValue = 0U;
 
-    csbkValue = 
+    csbkValue =
         (m_GI ? 0x40U : 0x00U) +                                                    // Group or Invididual
         (m_dataContent ? 0x80U : 0x00U);
     csbkValue = (csbkValue << 8) + m_extendedFunction;                              // Function

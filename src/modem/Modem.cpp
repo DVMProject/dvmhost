@@ -2189,7 +2189,7 @@ void Modem::processFlashConfig(const uint8_t *buffer)
 
     int rxDCOffset = int(buffer[17U]) - 128;
     FLASH_VALUE_CHECK(m_rxDCOffset, rxDCOffset, 0, "rxDCOffset");
-    
+
     // RF parameters
     int8_t dmrDiscBWAdj = int8_t(buffer[20U]) - 128;
     FLASH_VALUE_CHECK(m_dmrDiscBWAdj, dmrDiscBWAdj, 0, "dmrDiscBWAdj");
@@ -2270,7 +2270,7 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 
         Utils::dump(1U, "Modem Debug Dump", data, len);
         return;
-    } 
+    }
     else {
         if (m_rspDoubleLength) {
             LogError(LOG_MODEM, "Invalid debug data received from the modem, len = %u", len);
@@ -2308,7 +2308,7 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
         ::memset(data, 0x00U, 255U);
         ::memcpy(data, buffer, len);
 
-        Utils::dump(1U, "Modem Debug Dump", data, len);        
+        Utils::dump(1U, "Modem Debug Dump", data, len);
     }
 }
 

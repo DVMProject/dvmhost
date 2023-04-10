@@ -55,7 +55,7 @@ namespace dmr
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     class HOST_SW_API Control;
     namespace packet { class HOST_SW_API Voice; }
     namespace packet { class HOST_SW_API Data; }
@@ -117,7 +117,7 @@ namespace dmr
             network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
             ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
-        static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, 
+        static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
             uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
         /// <summary>Sets TSCC Aloha configuration.</summary>
         static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);

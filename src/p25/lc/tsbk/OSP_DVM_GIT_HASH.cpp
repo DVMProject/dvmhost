@@ -60,7 +60,7 @@ bool OSP_DVM_GIT_HASH::decode(const uint8_t* data, bool rawTSBK)
     assert(data != NULL);
 
     /* stub */
-    
+
     return true;
 }
 

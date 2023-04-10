@@ -75,11 +75,11 @@ std::string string_format(const std::string& format, FormatArgs ... args)
     std::unique_ptr<char[]> buf(new char[ size ]);
     std::snprintf(buf.get(), size, format.c_str(), args ...);
 
-    return std::string(buf.get(), buf.get() + size - 1); 
+    return std::string(buf.get(), buf.get() + size - 1);
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="obj"></param>
 void setResponseDefaultStatus(json::object& obj)
@@ -89,7 +89,7 @@ void setResponseDefaultStatus(json::object& obj)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="reply"></param>
 /// <param name="message"></param>
@@ -267,7 +267,7 @@ void RESTAPI::entry()
 void RESTAPI::initializeEndpoints()
 {
     m_dispatcher.match(PUT_AUTHENTICATE).put(REST_API_BIND(RESTAPI::restAPI_PutAuth, this));
-    
+
     m_dispatcher.match(GET_VERSION).get(REST_API_BIND(RESTAPI::restAPI_GetVersion, this));
     m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
     m_dispatcher.match(GET_VOICE_CH).get(REST_API_BIND(RESTAPI::restAPI_GetVoiceCh, this));
@@ -426,7 +426,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     }
 
     if (m_debug) {
-        Utils::dump("Password Hash", passwordHash, 32U);    
+        Utils::dump("Password Hash", passwordHash, 32U);
     }
 
     // compare hashes
@@ -532,7 +532,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
             modemInfo["dmrSymLevel1Adj"].set<int>(m_host->m_modem->m_dmrSymLevel1Adj);
             modemInfo["p25SymLevel3Adj"].set<int>(m_host->m_modem->m_p25SymLevel3Adj);
             modemInfo["p25SymLevel1Adj"].set<int>(m_host->m_modem->m_p25SymLevel1Adj);
-            
+
             // are we on a protocol version 3 firmware?
             if (m_host->m_modem->getVersion() >= 3U) {
                 modemInfo["nxdnSymLevel3Adj"].set<int>(m_host->m_modem->m_nxdnSymLevel3Adj);
@@ -577,7 +577,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         modemInfo["fdmaPreambles"].set<uint8_t>(m_host->m_modem->m_fdmaPreamble);
         modemInfo["dmrRxDelay"].set<uint8_t>(m_host->m_modem->m_dmrRxDelay);
         modemInfo["p25CorrCount"].set<uint8_t>(m_host->m_modem->m_p25CorrCount);
-        
+
         modemInfo["rxFrequency"].set<uint32_t>(m_host->m_modem->m_rxFrequency);
         modemInfo["txFrequency"].set<uint32_t>(m_host->m_modem->m_txFrequency);
         modemInfo["rxTuning"].set<int>(m_host->m_modem->m_rxTuning);
@@ -606,7 +606,7 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply,
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-    
+
     json::array channels = json::array();
     if (m_host->m_voiceChData.size() > 0) {
         for (auto entry : m_host->m_voiceChData) {
@@ -1172,7 +1172,7 @@ void RESTAPI::restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& r
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     uint32_t srcId = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
+
     if (srcId != 0U) {
         m_ridLookup->toggleEntry(srcId, true);
     }
@@ -1200,7 +1200,7 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& r
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     uint32_t srcId = (uint32_t)::strtoul(match.str(1).c_str(), NULL, 10);
-   
+
     if (srcId != 0U) {
         m_ridLookup->toggleEntry(srcId, false);
     }
@@ -1268,7 +1268,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply
 
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
-        
+
             reply.payload(response);
             return;
         }
@@ -1276,7 +1276,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply
             if (match.size() == 3) {
                 uint8_t debug = (uint8_t)::strtoul(match.str(1).c_str(), NULL, 10);
                 uint8_t verbose = (uint8_t)::strtoul(match.str(2).c_str(), NULL, 10);
-                m_dmr->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);                
+                m_dmr->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
             }
         }
     }
@@ -1310,7 +1310,7 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& re
             bool csbkDump = m_dmr->getCSBKVerbose();
 
             response["verbose"].set<bool>(csbkDump);
-        
+
             reply.payload(response);
             return;
         }
@@ -1435,7 +1435,7 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
         }
         else {
             errorPayload(reply, "DMR control data is not enabled!");
-        }        
+        }
     }
     else {
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1619,7 +1619,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
 
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
-        
+
             reply.payload(response);
             return;
         }
@@ -1627,7 +1627,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
             if (match.size() == 3) {
                 uint8_t debug = (uint8_t)::strtoul(match.str(1).c_str(), NULL, 10);
                 uint8_t verbose = (uint8_t)::strtoul(match.str(2).c_str(), NULL, 10);
-                m_p25->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);                
+                m_p25->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
             }
         }
     }
@@ -1661,7 +1661,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
             bool tsbkDump = m_p25->trunk()->getTSBKVerbose();
 
             response["verbose"].set<bool>(tsbkDump);
-        
+
             reply.payload(response);
             return;
         }
@@ -1726,7 +1726,7 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
             return;
         }
     }
-    
+
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (::strtolower(command) == RID_CMD_P25_SET_MFID) {
@@ -1810,13 +1810,13 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& re
             m_host->m_p25CtrlChannel = !m_host->m_p25CtrlChannel;
             m_host->m_p25CtrlBroadcast = true;
             g_fireP25Control = true;
-            m_p25->setCCHalted(false);        
+            m_p25->setCCHalted(false);
 
             errorPayload(reply, string_format("P25 CC is %s", m_host->m_p25CtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
         }
         else {
             errorPayload(reply, "P25 control data is not enabled!");
-        }        
+        }
     }
     else {
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1857,7 +1857,7 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
         }
         else {
             errorPayload(reply, "P25 control data is not enabled!");
-        }        
+        }
     }
     else {
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1919,7 +1919,7 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     }
 
     if (m_debug) {
-        Utils::dump("Raw TSBK", tsbk, p25::P25_TSBK_LENGTH_BYTES);    
+        Utils::dump("Raw TSBK", tsbk, p25::P25_TSBK_LENGTH_BYTES);
     }
 
     m_p25->trunk()->writeRF_TSDU_Raw(tsbk);
@@ -1987,7 +1987,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
 
             response["debug"].set<bool>(debug);
             response["verbose"].set<bool>(verbose);
-        
+
             reply.payload(response);
             return;
         }
@@ -1995,7 +1995,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
             if (match.size() == 3) {
                 uint8_t debug = (uint8_t)::strtoul(match.str(1).c_str(), NULL, 10);
                 uint8_t verbose = (uint8_t)::strtoul(match.str(2).c_str(), NULL, 10);
-                m_nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);                
+                m_nxdn->setDebugVerbose((debug == 1U) ? true : false, (verbose == 1U) ? true : false);
             }
         }
     }
@@ -2029,7 +2029,7 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
             bool rcchDump = m_nxdn->getRCCHVerbose();
 
             response["verbose"].set<bool>(rcchDump);
-        
+
             reply.payload(response);
             return;
         }
@@ -2083,7 +2083,7 @@ void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& r
         }
         else {
             errorPayload(reply, "NXDN control data is not enabled!");
-        }        
+        }
     }
     else {
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);

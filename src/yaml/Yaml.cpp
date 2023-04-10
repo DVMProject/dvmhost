@@ -169,7 +169,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class TypeImp {
@@ -223,7 +223,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class SequenceImp : public TypeImp {
@@ -360,7 +360,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class MapImp : public TypeImp {
@@ -460,7 +460,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class ScalarImp : public TypeImp {
@@ -548,7 +548,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class NodeImp {
@@ -621,7 +621,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class IteratorImp {
@@ -653,7 +653,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class SequenceIteratorImp : public IteratorImp {
@@ -701,7 +701,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class MapIteratorImp : public IteratorImp {
@@ -749,7 +749,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class SequenceConstIteratorImp : public IteratorImp {
@@ -797,7 +797,7 @@ namespace yaml
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class MapConstIteratorImp : public IteratorImp {
@@ -1139,7 +1139,7 @@ namespace yaml
     bool ConstIterator::operator == (const ConstIterator& it)
     {
         if (m_Type != it.m_Type) {
-            return false; 
+            return false;
         }
 
         switch (m_Type) {
@@ -1261,7 +1261,7 @@ namespace yaml
     }
 
     /// <summary>
-    /// Insert sequence item at given index. Converts node to sequence type if needed. 
+    /// Insert sequence item at given index. Converts node to sequence type if needed.
     /// Adding new item to end of sequence if index is larger than sequence size.
     /// </summary>
     /// <param name="index"></param>
@@ -1480,7 +1480,7 @@ namespace yaml
     // Reader implementations
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      
+    //
     // ---------------------------------------------------------------------------
 
     class ReaderLine {
@@ -2544,7 +2544,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Global Functions
     // ---------------------------------------------------------------------------
-    
+
     std::string ExceptionMessage(const std::string& message, ReaderLine& line)
     {
         return message + std::string(" Line ") + std::to_string(line.No) + std::string(": ") + line.Data;

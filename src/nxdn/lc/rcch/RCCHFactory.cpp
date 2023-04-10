@@ -95,7 +95,7 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
         return nullptr;
     }
 
-    return nullptr;    
+    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="rcch"></param>
 /// <param name="data"></param>

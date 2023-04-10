@@ -64,7 +64,7 @@ bool CSBK_PRECCSBK::decode(const uint8_t* data)
         return false;
 
     ulong64_t csbkValue = CSBK::toValue(csbk);
-    
+
     m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                          // Group/Individual Flag
     m_dataContent = (((csbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                 //
     m_CBF = (uint8_t)((csbkValue >> 48) & 0xFFU);                                   // Blocks to Follow

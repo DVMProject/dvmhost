@@ -89,7 +89,7 @@ void MESSAGE_TYPE_VCALL_ASSGN::encode(uint8_t* data, uint32_t length, uint32_t o
 
     rcch[7U] = (m_grpVchNo >> 10) & 0x03U;                                          // Channel
     rcch[8U] = (m_grpVchNo & 0xFFU);                                                // ...
-    
+
     rcch[10U] = (m_siteData.locId() >> 8) & 0xFFU;                                  // Location ID
     rcch[11U] = (m_siteData.locId() >> 0) & 0xFFU;                                  // ...
 

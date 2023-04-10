@@ -66,11 +66,11 @@ bool OSP_DVM_LC_CALL_TERM::decode(const uint8_t* data, bool rawTSBK)
         return false;
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
-    
+
     m_grpVchId = ((tsbkValue >> 52) & 0x0FU);                                       // Channel ID
     m_grpVchNo = ((tsbkValue >> 40) & 0xFFFU);                                      // Channel Number
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
-    m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address    
+    m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;
 }

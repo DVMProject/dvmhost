@@ -445,7 +445,7 @@ void LC::encodeLDU2(uint8_t* data)
 
     // encode RS (24,16,9) FEC
     m_rs.encode24169(rs);
-    
+
 #if DEBUG_P25_LDU2
     Utils::dump(2U, "LC::encodeLDU2(), LDU2 RS", rs, P25_LDU_LC_LENGTH_BYTES);
 #endif
@@ -572,7 +572,7 @@ bool LC::decodeLC(const uint8_t* rs)
 
     m_protect = (rs[0U] & 0x80U) == 0x80U;                                          // Protect Flag
     m_lco = rs[0U] & 0x3FU;                                                         // LCO
-    
+
     m_mfId = rs[1U];                                                                // Mfg Id.
 
     // Motorola P25 vendor opcodes (these are just detected for passthru)

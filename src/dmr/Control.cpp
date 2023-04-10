@@ -97,7 +97,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
     Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
-    
+
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
 
@@ -185,7 +185,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
         LogWarning(LOG_DMR, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
         silenceThreshold = dmr::MAX_DMR_VOICE_ERRORS;
     }
-    
+
     m_slot1->setSilenceThreshold(silenceThreshold);
     m_slot2->setSilenceThreshold(silenceThreshold);
 

@@ -58,7 +58,7 @@ namespace nxdn
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
-    
+
     namespace packet { class HOST_SW_API Voice; }
     namespace packet { class HOST_SW_API Trunk; }
     namespace packet { class HOST_SW_API Data; }
@@ -71,7 +71,7 @@ namespace nxdn
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang, 
+        Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
             modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpRCCHData, bool debug, bool verbose);
@@ -82,10 +82,10 @@ namespace nxdn
         void reset();
 
         /// <summary>Helper to set NXDN configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo, 
+        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
             const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
             uint8_t channelId, uint32_t channelNo, bool printOptions);
-        
+
         /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
         /// <summary>Sets a flag indicating whether the NXDN control channel is running.</summary>
@@ -180,7 +180,7 @@ namespace nxdn
         Timer m_networkWatchdog;
 
         Timer m_ccPacketInterval;
-        
+
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;
 

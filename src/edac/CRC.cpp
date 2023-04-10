@@ -474,7 +474,7 @@ uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
 #if DEBUG_CRC_CHECK
     LogDebug(LOG_HOST, "CRC::crc9(), crc = $%03X, bitlen = %u", crc, bitLength);
 #endif
-    
+
     return crc;
 }
 
@@ -717,7 +717,7 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
@@ -740,7 +740,7 @@ uint8_t CRC::createCRC6(const uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
@@ -763,7 +763,7 @@ uint16_t CRC::createCRC12(const uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
@@ -786,7 +786,7 @@ uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>
