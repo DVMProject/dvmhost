@@ -152,7 +152,7 @@ The steps above can be done by the following commands:
 
 ```shell
 sudo systemctl disable bluetooth.service serial-getty@ttyAMA0.service
-grep -E 'dtoverlay=disable-bt' /boot/config.txt || echo 'dtoverlay=disable-bt' | sudo tee /boot/config.txt
+grep '^dtoverlay=disable-bt' /boot/config.txt || echo 'dtoverlay=disable-bt' | sudo tee -a /boot/config.txt
 sudo sed -i 's/^console=serial0,115200 *//' /boot/cmdline.txt
 ```
 
