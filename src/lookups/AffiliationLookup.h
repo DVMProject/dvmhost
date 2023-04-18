@@ -150,7 +150,7 @@ namespace lookups
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
         virtual uint32_t getGrantedCh(uint32_t dstId);
         /// <summary>Helper to get the source ID granted for the given destination ID.</summary>
-        virtual uint32_t getGrantedSrcId(uint32_t srcId);
+        virtual uint32_t getGrantedSrcId(uint32_t dstId);
 
         /// <summary>Helper to set RF channel data.</summary>
         void setRFChData(const std::unordered_map<uint32_t, VoiceChData>& chData) { m_rfChDataTable = chData; }
