@@ -1508,7 +1508,7 @@ void Voice::writeNet_LDU2()
 /// Helper to insert IMBE silence frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-void Voice::insertMissingAudio(uint8_t* data)
+void Voice::insertMissingAudio(uint8_t *data)
 {
     if (data[10U] == 0x00U) {
         ::memcpy(data + 10U, m_lastIMBE, 11U);
@@ -1587,7 +1587,7 @@ void Voice::insertMissingAudio(uint8_t* data)
 /// Helper to insert IMBE null frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-void Voice::insertNullAudio(uint8_t* data)
+void Voice::insertNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
         ::memcpy(data + 10U, P25_NULL_IMBE, 11U);
@@ -1630,8 +1630,7 @@ void Voice::insertNullAudio(uint8_t* data)
 /// Helper to insert encrypted IMBE null frames for missing audio.
 /// </summary>
 /// <param name="data"></param>
-
-void Voice::insertEncryptedNullAudio(uint8_t* data)
+void Voice::insertEncryptedNullAudio(uint8_t *data)
 {
     if (data[0U] == 0x00U) {
         ::memcpy(data + 10U, P25_ENCRYPTED_NULL_IMBE, 11U);
@@ -1675,7 +1674,6 @@ void Voice::insertEncryptedNullAudio(uint8_t* data)
 /// </summary>
 /// <param name="lastMI"></param>
 /// <param name="nextMI"></param>
-
 void Voice::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
 {
     uint8_t carry, i;
