@@ -109,6 +109,8 @@ namespace dmr
         void setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice);
         /// <summary>Sets a flag indicating whether the slot has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
+        /// <summary>Sets a flag indicating whether the slot has will perform source ID checks before issuing a grant.</summary>
+        void setDisableSourceIDGrantCheck(bool disableSourceIdGrant) { m_disableGrantSrcIdCheck = disableSourceIdGrant; }
         /// <summary>Helper to set the voice error silence threshold.</summary>
         void setSilenceThreshold(uint32_t threshold);
 
@@ -195,6 +197,8 @@ namespace dmr
         uint32_t m_tsccPayloadDstId;
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
+
+        bool m_disableGrantSrcIdCheck;
 
         uint32_t m_lastLateEntry;
 

@@ -318,6 +318,7 @@ Trunk::Trunk(Control* nxdn, network::BaseNetwork* network, bool debug, bool verb
     m_rcchIterateCnt(2U),
     m_verifyAff(false),
     m_verifyReg(false),
+    m_disableGrantSrcIdCheck(false),
     m_lastRejectId(0U),
     m_verbose(verbose),
     m_debug(debug)
@@ -536,19 +537,21 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             }
         }
         else {
-            // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
-            // different source from the original grant
-            uint32_t grantedSrcId = m_nxdn->m_affiliations.getGrantedSrcId(dstId);
-            if (srcId != grantedSrcId) {
-                if (!net) {
-                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " denied, traffic in progress, dstId = %u", dstId);
-                    writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
+            if (!m_disableGrantSrcIdCheck) {
+                // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
+                // different source from the original grant
+                uint32_t grantedSrcId = m_nxdn->m_affiliations.getGrantedSrcId(dstId);
+                if (srcId != grantedSrcId) {
+                    if (!net) {
+                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " denied, traffic in progress, dstId = %u", dstId);
+                        writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
 
-                    ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
-                    m_nxdn->m_rfState = RS_RF_REJECTED;
+                        ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                        m_nxdn->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
                 }
-
-                return false;
             }
 
             chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);

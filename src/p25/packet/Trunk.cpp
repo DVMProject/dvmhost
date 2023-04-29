@@ -1217,6 +1217,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_ctrlTimeDateAnn(false),
     m_ctrlTSDUMBF(true),
     m_sndcpChGrant(false),
+    m_disableGrantSrcIdCheck(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -2227,19 +2228,21 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
         }
         else {
-            // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
-            // different source from the original grant
-            uint32_t grantedSrcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
-            if (srcId != grantedSrcId) {
-                if (!net) {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
-                    writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+            if (!m_disableGrantSrcIdCheck) {
+                // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
+                // different source from the original grant
+                uint32_t grantedSrcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+                if (srcId != grantedSrcId) {
+                    if (!net) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
+                        writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
-                    ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
-                    m_p25->m_rfState = RS_RF_REJECTED;
+                        ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
                 }
-
-                return false;
             }
 
             chNo = m_p25->m_affiliations.getGrantedCh(dstId);

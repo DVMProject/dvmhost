@@ -867,21 +867,22 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
-            // different source from the original grant
-            uint32_t grantedSrcId = m_tscc->m_affiliations->getGrantedSrcId(dstId);
-            if (srcId != grantedSrcId) {
-                if (!net) {
-                    LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
-                    writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
+            if (!m_tscc->m_disableGrantSrcIdCheck) {
+                // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
+                // different source from the original grant
+                uint32_t grantedSrcId = m_tscc->m_affiliations->getGrantedSrcId(dstId);
+                if (srcId != grantedSrcId) {
+                    if (!net) {
+                        LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", m_tscc->m_slotNo, dstId);
+                        writeRF_CSBK_ACK_RSP(srcId, TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                    ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
-                    m_slot->m_rfState = RS_RF_REJECTED;
+                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", m_tscc->m_slotNo, srcId, dstId);
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
                 }
-
-                return false;
             }
-
 
             chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
             slot = m_tscc->m_affiliations->getGrantedSlot(dstId);

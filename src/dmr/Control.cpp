@@ -155,16 +155,20 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
     Slot::setSiteData(voiceChNo, voiceChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
+    bool disableGrantSourceIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+
     if (enableTSCC) {
         m_tsccSlotNo = (uint8_t)control["slot"].as<uint32_t>(0U);
         switch (m_tsccSlotNo) {
         case 1U:
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot1->setSupervisor(m_supervisor);
+            m_slot1->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
             m_slot2->setSupervisor(m_supervisor);
+            m_slot2->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             break;
         default:
             LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
@@ -173,6 +177,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
     }
 
     m_enableTSCC = enableTSCC;
+    
 
     uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
     if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {
@@ -194,6 +199,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
             LogInfo("    TSCC Slot: %u", m_tsccSlotNo);
             LogInfo("    TSCC Aloha Random Access Wait: %u", nRandWait);
             LogInfo("    TSCC Aloha Backoff: %u", backOff);
+            if (disableGrantSourceIdCheck) {
+                LogInfo("    TSCC Disable Grant Source ID Check: yes");
+            }
         }
 
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);

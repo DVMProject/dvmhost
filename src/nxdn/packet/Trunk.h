@@ -82,6 +82,8 @@ namespace nxdn
             bool m_verifyAff;
             bool m_verifyReg;
 
+            bool m_disableGrantSrcIdCheck;
+
             uint16_t m_lastRejectId;
 
             bool m_verbose;

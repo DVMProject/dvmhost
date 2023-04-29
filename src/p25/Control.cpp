@@ -345,12 +345,17 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
 
+    m_trunk->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
             LogInfo("    Ack Requests: %s", m_ackTSBKRequests ? "yes" : "no");
+            if (m_trunk->m_disableGrantSrcIdCheck) {
+                LogInfo("    Disable Grant Source ID Check: yes");
+            }
         }
 
         LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");

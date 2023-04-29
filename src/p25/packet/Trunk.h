@@ -150,6 +150,7 @@ namespace p25
             bool m_ctrlTSDUMBF;
 
             bool m_sndcpChGrant;
+            bool m_disableGrantSrcIdCheck;
 
             bool m_dumpTSBK;
 

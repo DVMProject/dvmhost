@@ -100,6 +100,8 @@ protocols:
             enable: false
             # DMR slot number to transmit TSCC data on.
             slot: 1
+            # Flag indicating whether or not the source ID validation before granting disabled.
+            disableGrantSourceIdCheck: false
         
         # Flag indicating whether or not received RF embedded LC data only should be transmitted.
         embeddedLCOnly: false
@@ -161,6 +163,8 @@ protocols:
             disableTSDUMBF: false
             # Flag to enable optional TIME_DATE_ANNC TSBK during a CC broadcast.
             enableTimeDateAnn: false
+            # Flag indicating whether or not the source ID validation before granting disabled.
+            disableGrantSourceIdCheck: false
 
         # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
@@ -228,6 +232,8 @@ protocols:
             interval: 300
             # Amount of time to transmit non-dedicated CC broadcasts. (seconds)
             duration: 1
+            # Flag indicating whether or not the source ID validation before granting disabled.
+            disableGrantSourceIdCheck: false
 
         # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false

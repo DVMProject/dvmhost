@@ -309,11 +309,16 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     }
 
+    m_trunk->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
+            if (m_trunk->m_disableGrantSrcIdCheck) {
+                LogInfo("    Disable Grant Source ID Check: yes");
+            }
         }
 
         LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
