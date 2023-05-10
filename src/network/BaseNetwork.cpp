@@ -1131,6 +1131,8 @@ bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nx
     uint32_t dstId = lc.getDstId();                                             // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
+    __SET_UINT32(id, buffer, 11U);                                              // Peer ID
+
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
     __SET_UINT32(streamId, buffer, 16U);                                        // Stream ID
@@ -1166,7 +1168,32 @@ bool BaseNetwork::write(const uint8_t* data, uint32_t length)
 
     bool ret = m_socket.write(data, length, m_addr, m_addrLen);
     if (!ret) {
-        LogError(LOG_NET, "Socket has failed when writing data to the peer, retrying connection");
+        LogError(LOG_NET, "Socket has failed when writing data to the peer!");
+        return false;
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Writes data to the network.
+/// </summary>
+/// <param name="buffer">Buffer to write to the network.</param>
+/// <param name="length">Length of buffer to write.</param>
+/// <param name="addr"></param>
+/// <param name="addrLen"></param>
+/// <returns>True, if buffer is written to the network, otherwise false.</returns>
+bool BaseNetwork::write(const uint8_t* data, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
+{
+    assert(data != nullptr);
+    assert(length > 0U);
+
+    // if (m_debug)
+    //    Utils::dump(1U, "Network Transmitted", data, length);
+
+    bool ret = m_socket.write(data, length, addr, addrLen);
+    if (!ret) {
+        LogError(LOG_NET, "Socket has failed when writing data to the peer!");
         return false;
     }
 

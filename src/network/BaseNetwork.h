@@ -236,6 +236,8 @@ namespace network
 
         /// <summary>Writes data to the network.</summary>
         virtual bool write(const uint8_t* data, uint32_t length);
+        /// <summary>Writes data to the network.</summary>
+        virtual bool write(const uint8_t* data, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
     };
 } // namespace network
 

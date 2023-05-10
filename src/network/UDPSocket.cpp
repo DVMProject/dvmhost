@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2020,2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -486,6 +486,37 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
     }
 
     return address;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="addr"></param>
+/// <returns></returns>
+uint16_t UDPSocket::port(const sockaddr_storage& addr)
+{
+    uint16_t port = 0U;
+
+    switch (addr.ss_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in* in;
+        in = (struct sockaddr_in*) & addr;
+        port = ntohs(in->sin_port);
+    }
+    break;
+    case AF_INET6:
+    {
+        struct sockaddr_in6* in6;
+        in6 = (struct sockaddr_in6*) & addr;
+        port = ntohs(in6->sin6_port);
+    }
+    break;
+    default:
+        break;
+    }
+
+    return port;
 }
 
 /// <summary>

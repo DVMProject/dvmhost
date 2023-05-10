@@ -98,6 +98,8 @@ file(GLOB dvmhost_SRC
     "src/host/calibrate/*.cpp"
     "src/host/setup/*.h"
     "src/host/setup/*.cpp"
+    "src/host/fne/*.h"
+    "src/host/fne/*.cpp"
     "src/lookups/*.h"
     "src/lookups/*.cpp"
     "src/modem/*.h"

@@ -33,6 +33,7 @@
 #include "host/Host.h"
 #include "host/calibrate/HostCal.h"
 #include "host/setup/HostSetup.h"
+#include "host/fne/HostFNE.h"
 #include "Log.h"
 
 using namespace network;
@@ -84,6 +85,7 @@ using namespace lookups;
 int g_signal = 0;
 bool g_calibrate = false;
 bool g_setup = false;
+bool g_fne = false;
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
 std::string g_lockFile = std::string(DEFAULT_LOCK_FILE);
@@ -140,10 +142,15 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
+    ::fprintf(stdout, "usage: %s [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
+        "  -v        show version information\n"
+        "  -h        show this screen\n"
         "  -f        foreground mode\n"
+        "\n"
         "  --cal     calibration mode\n"
         "  --setup   setup mode\n"
+        "\n"
+        "  --fne     fixed network equipment mode\n"
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
@@ -151,8 +158,6 @@ void usage(const char* message, const char* arg)
         "  -a        remote modem command address\n"
         "  -p        remote modem command port\n"
         "\n"
-        "  -v        show version information\n"
-        "  -h        show this screen\n"
         "  --        stop handling options\n",
         g_progExe.c_str());
     exit(EXIT_FAILURE);
@@ -184,6 +189,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("--setup")) {
             g_setup = true;
+        }
+        else if (IS("--fne")) {
+            g_fne = true;
         }
         else if (IS("-c")) {
             if (argc-- <= 0)
@@ -281,22 +289,29 @@ int main(int argc, char** argv)
     do {
         g_signal = 0;
 
-        if (g_calibrate || g_setup) {
-            if (g_setup) {
-                HostSetup* setup = new HostSetup(g_iniFile);
-                ret = setup->run();
-                delete setup;
-            }
-            else {
-                HostCal* cal = new HostCal(g_iniFile);
-                ret = cal->run();
-                delete cal;
-            }
+        if (g_fne) {
+            HostFNE *fne = new HostFNE(g_iniFile);
+            ret = fne->run();
+            delete fne;
         }
         else {
-            Host* host = new Host(g_iniFile);
-            ret = host->run();
-            delete host;
+            if (g_calibrate || g_setup) {
+                if (g_setup) {
+                    HostSetup* setup = new HostSetup(g_iniFile);
+                    ret = setup->run();
+                    delete setup;
+                }
+                else {
+                    HostCal* cal = new HostCal(g_iniFile);
+                    ret = cal->run();
+                    delete cal;
+                }
+            }
+            else {
+                Host* host = new Host(g_iniFile);
+                ret = host->run();
+                delete host;
+            }
         }
 
         if (g_signal == 2)

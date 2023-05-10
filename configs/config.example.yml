@@ -506,9 +506,9 @@ system:
     # Radio ID ACL Configuration
     #
     radio_id:
-        # Full path to the identity table file.
+        # Full path to the RID ACL file.
         file: rid_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Amount of time between updates of RID ACL file. (minutes)
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
@@ -517,9 +517,9 @@ system:
     # Talkgroupd ID ACL Configuration
     #
     talkgroup_id:
-        # Full path to the identity table file.
+        # Full path to the TGID ACL file.
         file: tg_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Amount of time between updates of TGID ACL file. (minutes)
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false

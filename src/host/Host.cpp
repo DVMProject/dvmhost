@@ -2552,15 +2552,6 @@ void Host::setState(uint8_t state)
                     delete m_modem;
                 }
 
-                if (m_tidLookup != nullptr) {
-                    m_tidLookup->stop();
-                    delete m_tidLookup;
-                }
-                if (m_ridLookup != nullptr) {
-                    m_ridLookup->stop();
-                    delete m_ridLookup;
-                }
-
                 if (m_network != nullptr) {
                     m_network->close();
                     delete m_network;
@@ -2569,6 +2560,15 @@ void Host::setState(uint8_t state)
                 if (m_RESTAPI != nullptr) {
                     m_RESTAPI->close();
                     delete m_RESTAPI;
+                }
+
+                if (m_tidLookup != nullptr) {
+                    m_tidLookup->stop();
+                    delete m_tidLookup;
+                }
+                if (m_ridLookup != nullptr) {
+                    m_ridLookup->stop();
+                    delete m_ridLookup;
                 }
             }
             else {

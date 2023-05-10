@@ -109,7 +109,7 @@ typedef unsigned long long  ulong64_t;
 #define __PROG_NAME__ "Digital Voice Modem (DVM) Host"
 #define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ "dvmhost"
-#define __VER__ "D03.00.00 (" __GIT_VER__ ")"
+#define __VER__ "D03.50.00 (" __GIT_VER__ ")"
 #define __BUILD__ __DATE__ " " __TIME__
 
 #define HOST_SW_API

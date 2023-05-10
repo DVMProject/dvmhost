@@ -1,0 +1,188 @@
+#
+# Digital Voice Modem - Talkgroup Routing Rules
+#
+# @package DVM / Host Software
+#
+
+# Total time in seconds to "hang" on a TG.
+groupHangTime: 5
+# Flag indicating this configuration block is for a master.
+master: true
+# Flag indicating the TGID information for this master will be sent to its peers.
+sendTalkgroups: true
+
+# 
+# Talkgroup Rules
+#
+groupVoice:
+    # Textual name of the talkgroup.
+  - name: Talkgroup 1
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether this talkgroup is routable to other masters/peers.
+      routable: false
+      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
+      ignored:
+          - 0
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 1
+      # DMR slot number.
+      slot: 1
+    #
+    # Destination(s) Configuration
+    #
+    destination:
+        # Textual name of network to route traffic to.
+      - network: SKYNET
+        # Numerical talkgroup ID number.
+        tgid: 1
+        # DMR slot number.
+        slot: 1
+
+    # Textual name of the talkgroup.
+  - name: Parrot
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether this talkgroup is routable to other masters/peers.
+      routable: true
+      # Flag indicating whether or not this talkgroup is a parrot talkgroup.
+      parrot: true
+      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
+      ignored:
+          - 0
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 9990
+      # DMR slot number.
+      slot: 1
+    #
+    # Destination(s) Configuration
+    #
+    destination:
+        # Textual name of network to route traffic to.
+      - network: PARROT
+        # Numerical talkgroup ID number.
+        tgid: 9990
+        # DMR slot number.
+        slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide P25
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether this talkgroup is routable to other masters/peers.
+      routable: false
+      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
+      ignored:
+          - 0
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 65535
+      # DMR slot number.
+      slot: 1
+    #
+    # Destination(s) Configuration
+    #
+    destination:
+        # Textual name of network to route traffic to.
+      - network: SKYNET
+        # Numerical talkgroup ID number.
+        tgid: 65535
+        # DMR slot number.
+        slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide DMR TS1
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether this talkgroup is routable to other masters/peers.
+      routable: false
+      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
+      ignored:
+          - 0
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 16777215
+      # DMR slot number.
+      slot: 1
+    #
+    # Destination(s) Configuration
+    #
+    destination:
+        # Textual name of network to route traffic to.
+      - network: SKYNET
+        # Numerical talkgroup ID number.
+        tgid: 16777215
+        # DMR slot number.
+        slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide DMR TS2
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether this talkgroup is routable to other masters/peers.
+      routable: false
+      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
+      ignored:
+          - 0
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 16777215
+      # DMR slot number.
+      slot: 2
+    #
+    # Destination(s) Configuration
+    #
+    destination:
+        # Textual name of network to route traffic to.
+      - network: SKYNET
+        # Numerical talkgroup ID number.
+        tgid: 16777215
+        # DMR slot number.
+        slot: 2
