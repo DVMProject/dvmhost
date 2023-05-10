@@ -27,12 +27,16 @@
 #include "edac/SHA256.h"
 #include "host/fne/HostFNE.h"
 #include "network/FNENetwork.h"
+#include "network/fne/TagDMRData.h"
+#include "network/fne/TagP25Data.h"
+#include "network/fne/TagNXDNData.h"
 #include "network/json/json.h"
 #include "Log.h"
 #include "StopWatch.h"
 #include "Utils.h"
 
 using namespace network;
+using namespace network::fne;
 
 #include <cstdio>
 #include <cassert>
@@ -56,9 +60,14 @@ using namespace network;
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="pingTime"></param>
+/// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
-    bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime) :
+    bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
+    uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(0U, 0U, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
+    m_tagDMR(nullptr),
+    m_tagP25(nullptr),
+    m_tagNXDN(nullptr),
     m_host(host),
     m_address(address),
     m_port(port),
@@ -70,12 +79,17 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ridLookup(nullptr),
     m_routingLookup(nullptr),
     m_peers(),
-    m_maintainenceTimer(1000U, pingTime)
+    m_maintainenceTimer(1000U, pingTime),
+    m_updateLookupTimer(1000U, (updateLookupTime * 60U))
 {
     assert(host != nullptr);
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+
+    m_tagDMR = new TagDMRData(this);
+    m_tagP25 = new TagP25Data(this);
+    m_tagNXDN = new TagNXDNData(this);
 }
 
 /// <summary>
@@ -83,7 +97,9 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
 /// </summary>
 FNENetwork::~FNENetwork()
 {
-    /* stub */
+    delete m_tagDMR;
+    delete m_tagP25;
+    delete m_tagNXDN;
 }
 
 /// <summary>
@@ -141,6 +157,17 @@ void FNENetwork::clock(uint32_t ms)
         m_maintainenceTimer.start();
     }
 
+    m_updateLookupTimer.clock(ms);
+    if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
+        writeWhitelistRIDs();
+        writeBlacklistRIDs();
+
+        writeTGIDs();
+        writeDeactiveTGIDs();
+
+        m_updateLookupTimer.start();
+    }
+
     sockaddr_storage address;
     uint32_t addrLen;
     int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, addrLen);
@@ -159,16 +186,25 @@ void FNENetwork::clock(uint32_t ms)
         }
 
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {                        // Encapsulated DMR data frame
-            // TODO TODO TODO
-            // TODO: handle DMR data
+            if (m_dmrEnabled) {
+                if (m_tagDMR != nullptr) {
+                    m_tagDMR->processFrame(m_buffer, length);
+                }
+            }
         }
         else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {                   // Encapsulated P25 data frame
-            // TODO TODO TODO
-            // TODO: handle P25 data
+            if (m_p25Enabled) {
+                if (m_tagP25 != nullptr) {
+                    m_tagP25->processFrame(m_buffer, length);
+                }
+            }
         }
         else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {                  // Encapsulated NXDN data frame
-            // TODO TODO TODO
-            // TODO: handle NXDN data
+            if (m_nxdnEnabled) {
+                if (m_tagNXDN != nullptr) {
+                    m_tagNXDN->processFrame(m_buffer, length);
+                }
+            }
         }
         else if (::memcmp(m_buffer, TAG_REPEATER_LOGIN, 4U) == 0) {             // Repeater Login
             uint32_t peerId = __GET_UINT32(m_buffer, 4U);
@@ -306,8 +342,11 @@ void FNENetwork::clock(uint32_t ms)
                             writePeerACK(peerId);
                             LogInfo(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
 
-                            // TODO TODO TODO
-                            // TODO: handle peer connected
+                            writeWhitelistRIDs(peerId);
+                            writeBlacklistRIDs(peerId);
+
+                            writeTGIDs(peerId);
+                            writeDeactiveTGIDs(peerId);
                         }
                     }
                 }
@@ -333,9 +372,6 @@ void FNENetwork::clock(uint32_t ms)
                 // validate peer (simple validation really)
                 if (connection.connected() && connection.address() == ip) {
                     LogInfo(LOG_NET, "PEER %u is closing down", peerId);
-
-                    // TODO TODO TODO
-                    // TODO: handle peer disconnected
 
                     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
                     if (it != m_peers.end()) {
@@ -495,6 +531,192 @@ void FNENetwork::close()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to send the list of whitelisted RIDs to the specified peer.
+/// </summary>
+/// <param name="peerId"></param>
+void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
+{
+    // send radio ID white/black lists
+    std::vector<uint32_t> ridWhitelist;
+
+    auto ridLookups = m_ridLookup->table();
+    for (auto entry : ridLookups) {
+        uint32_t id = entry.first;
+        if (entry.second.radioEnabled()) {
+            ridWhitelist.push_back(id);
+        }
+    }
+
+    if (ridWhitelist.size() == 0U) {
+        return;
+    }
+
+    // build dataset
+    uint8_t payload[4U + (ridWhitelist.size() * 4U)];
+    ::memset(payload, 0x00U, 4U + (ridWhitelist.size() * 4U));
+
+    __SET_UINT32(ridWhitelist.size(), payload, 0U);
+
+    // write whitelisted IDs to whitelist payload
+    uint32_t offs = 4U;
+    for (uint32_t id : ridWhitelist) {
+        __SET_UINT32(id, payload, offs);
+        offs += 4U;
+    }
+
+    writePeerTagged(peerId, TAG_MASTER_WL_RID, payload, 4U + (ridWhitelist.size() * 4U));
+}
+
+/// <summary>
+/// Helper to send the list of whitelisted RIDs to connected peers.
+/// </summary>
+void FNENetwork::writeWhitelistRIDs()
+{
+    for (auto peer : m_peers) {
+        writeWhitelistRIDs(peer.first);
+    }
+}
+
+/// <summary>
+/// Helper to send the list of whitelisted RIDs to the specified peer.
+/// </summary>
+/// <param name="peerId"></param>
+void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
+{
+    // send radio ID blacklist
+    std::vector<uint32_t> ridBlacklist;
+
+    auto ridLookups = m_ridLookup->table();
+    for (auto entry : ridLookups) {
+        uint32_t id = entry.first;
+        if (!entry.second.radioEnabled()) {
+            ridBlacklist.push_back(id);
+        }
+    }
+
+    if (ridBlacklist.size() == 0U) {
+        return;
+    }
+
+    // build dataset
+    uint8_t payload[4U + (ridBlacklist.size() * 4U)];
+    ::memset(payload, 0x00U, 4U + (ridBlacklist.size() * 4U));
+
+    __SET_UINT32(ridBlacklist.size(), payload, 0U);
+
+    // write blacklisted IDs to blacklist payload
+    uint32_t offs = 4U;
+    for (uint32_t id : ridBlacklist) {
+        __SET_UINT32(id, payload, offs);
+        offs += 4U;
+    }
+
+    writePeerTagged(peerId, TAG_MASTER_BL_RID, payload, 4U + (ridBlacklist.size() * 4U));
+}
+
+/// <summary>
+/// Helper to send the list of whitelisted RIDs to connected peers.
+/// </summary>
+void FNENetwork::writeBlacklistRIDs()
+{
+    for (auto peer : m_peers) {
+        writeBlacklistRIDs(peer.first);
+    }
+}
+
+/// <summary>
+/// Helper to send the list of active TGIDs to the specified peer.
+/// </summary>
+/// <param name="peerId"></param>
+void FNENetwork::writeTGIDs(uint32_t peerId)
+{
+    if (!m_routingLookup->sendTalkgroups()) {
+        return;
+    }
+
+    std::vector<uint32_t> tgidList;
+    auto groupVoice = m_routingLookup->groupVoice();
+    for (auto entry : groupVoice) {
+        if (entry.config().active()) {
+            tgidList.push_back(entry.source().tgId());
+        }
+    }
+
+    // build dataset
+    uint8_t payload[4U + (tgidList.size() * 5U)];
+    ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
+
+    __SET_UINT32(tgidList.size(), payload, 0U);
+
+    // write whitelisted IDs to whitelist payload
+    uint32_t offs = 4U;
+    for (uint32_t id : tgidList) {
+        __SET_UINT32(id, payload, offs);
+        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::RoutingRuleGroupVoice x) { return x.source().tgId() == id; });
+        payload[offs + 4U] = entry->source().tgSlot();
+        offs += 5U;
+    }
+
+    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U));
+}
+
+/// <summary>
+/// Helper to send the list of active TGIDs to connected peers.
+/// </summary>
+void FNENetwork::writeTGIDs()
+{
+    for (auto peer : m_peers) {
+        writeTGIDs(peer.first);
+    }
+}
+
+/// <summary>
+/// Helper to send the list of deactivated TGIDs to the specified peer.
+/// </summary>
+/// <param name="peerId"></param>
+void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
+{
+    if (!m_routingLookup->sendTalkgroups()) {
+        return;
+    }
+
+    std::vector<uint32_t> tgidList;
+    auto groupVoice = m_routingLookup->groupVoice();
+    for (auto entry : groupVoice) {
+        if (!entry.config().active()) {
+            tgidList.push_back(entry.source().tgId());
+        }
+    }
+
+    // build dataset
+    uint8_t payload[4U + (tgidList.size() * 5U)];
+    ::memset(payload, 0x00U, 4U + (tgidList.size() * 5U));
+
+    __SET_UINT32(tgidList.size(), payload, 0U);
+
+    // write whitelisted IDs to whitelist payload
+    uint32_t offs = 4U;
+    for (uint32_t id : tgidList) {
+        __SET_UINT32(id, payload, offs);
+        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::RoutingRuleGroupVoice x) { return x.source().tgId() == id; });
+        payload[offs + 4U] = entry->source().tgSlot();
+        offs += 5U;
+    }
+
+    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U));
+}
+
+/// <summary>
+/// Helper to send the list of deactivated TGIDs to connected peers.
+/// </summary>
+void FNENetwork::writeDeactiveTGIDs()
+{
+    for (auto peer : m_peers) {
+        writeDeactiveTGIDs(peer.first);
+    }
+}
 
 /// <summary>
 /// Helper to send a raw message to the specified peer.

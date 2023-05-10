@@ -72,6 +72,7 @@ private:
 
     uint32_t m_pingTime;
     uint32_t m_maxMissedPings;
+    uint32_t m_updateLookupTime;
 
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;

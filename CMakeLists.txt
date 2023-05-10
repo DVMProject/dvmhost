@@ -108,6 +108,8 @@ file(GLOB dvmhost_SRC
     "src/modem/port/*.cpp"
     "src/network/*.h"
     "src/network/*.cpp"
+    "src/network/fne/*.h"
+    "src/network/fne/*.cpp"
     "src/network/json/*.h"
     "src/network/rest/*.h"
     "src/network/rest/*.cpp"

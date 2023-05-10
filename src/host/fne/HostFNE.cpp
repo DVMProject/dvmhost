@@ -76,6 +76,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
+    m_updateLookupTime(10U),
     m_allowActivityTransfer(false),
     m_allowDiagnosticTransfer(false)
 {
@@ -272,6 +273,19 @@ bool HostFNE::readParams()
     yaml::Node systemConf = m_conf["system"];
     m_pingTime = systemConf["pingTime"].as<uint32_t>(5U);
     m_maxMissedPings = systemConf["maxMissedPings"].as<uint32_t>(5U);
+    m_updateLookupTime = systemConf["routingRuleUpdateTime"].as<uint32_t>(10U);
+
+    if (m_pingTime == 0U) {
+        m_pingTime = 5U;
+    }
+
+    if (m_maxMissedPings == 0U) {
+        m_maxMissedPings = 5U;
+    }
+
+    if (m_updateLookupTime == 0U) {
+        m_updateLookupTime = 10U;
+    }
 
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
@@ -279,6 +293,7 @@ bool HostFNE::readParams()
     LogInfo("General Parameters");
     LogInfo("    Peer Ping Time: %us", m_pingTime);
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
+    LogInfo("    Routing Rule Update Time: %u mins", m_updateLookupTime);
 
     LogInfo("    Allow Activity Log Transfer: %s", m_allowActivityTransfer ? "yes" : "no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
@@ -338,7 +353,8 @@ bool HostFNE::createMasterNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime);
+        m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
+            m_pingTime, m_updateLookupTime);
 
         m_network->setLookups(m_ridLookup, m_routingLookup);
 

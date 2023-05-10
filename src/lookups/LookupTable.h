@@ -151,6 +151,10 @@ namespace lookups
         /// <returns>Table entry.</returns>
         virtual T find(uint32_t id) = 0;
 
+        /// <summary>Helper to return the lookup table.</summary>
+        /// <returns>Table.</returns>
+        virtual std::unordered_map<uint32_t, T> table() { return m_table; }
+
     protected:
         std::string m_filename;
         uint32_t m_reloadTime;

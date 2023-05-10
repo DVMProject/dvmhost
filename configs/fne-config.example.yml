@@ -118,6 +118,9 @@ system:
     # Maximum number of missable pings before a peer is considered disconnected.
     maxMissedPings: 5
 
+    # Time in minutes between pings to peers.
+    routingRuleUpdateTime: 10
+
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.

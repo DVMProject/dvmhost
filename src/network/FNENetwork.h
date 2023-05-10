@@ -42,6 +42,9 @@
 // ---------------------------------------------------------------------------
 
 class HOST_SW_API HostFNE;
+namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
+namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
+namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
 
 namespace network
 {
@@ -148,7 +151,8 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
-            bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime);
+            bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
+            uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
 
@@ -170,6 +174,13 @@ namespace network
         void close();
 
     private:
+        friend class TagDMRData;
+        fne::TagDMRData* m_tagDMR;
+        friend class TagP25Data;
+        fne::TagP25Data* m_tagP25;
+        friend class TagNXDNData;
+        fne::TagNXDNData* m_tagNXDN;
+        
         HostFNE* m_host;
 
         std::string m_address;
@@ -190,6 +201,25 @@ namespace network
         std::unordered_map<uint32_t, FNEPeerConnection> m_peers;
 
         Timer m_maintainenceTimer;
+        Timer m_updateLookupTimer;
+
+        /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
+        void writeWhitelistRIDs(uint32_t peerId);
+        /// <summary>Helper to send the list of whitelisted RIDs to connected peers.</summary>
+        void writeWhitelistRIDs();
+        /// <summary>Helper to send the list of blacklisted RIDs to the specified peer.</summary>
+        void writeBlacklistRIDs(uint32_t peerId);
+        /// <summary>Helper to send the list of blacklisted RIDs to connected peers.</summary>
+        void writeBlacklistRIDs();
+
+        /// <summary>Helper to send the list of active TGIDs to the specified peer.</summary>
+        void writeTGIDs(uint32_t peerId);
+        /// <summary>Helper to send the list of active TGIDs to connected peers.</summary>
+        void writeTGIDs();
+        /// <summary>Helper to send the list of deactivated TGIDs to the specified peer.</summary>
+        void writeDeactiveTGIDs(uint32_t peerId);
+        /// <summary>Helper to send the list of deactivated TGIDs to connected peers.</summary>
+        void writeDeactiveTGIDs();
 
         /// <summary>Helper to send a raw message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, const uint8_t* data, uint32_t length);
