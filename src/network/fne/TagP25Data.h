@@ -65,8 +65,6 @@ namespace network
             bool isPeerIgnored(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
             /// <summary>Helper to validate the P25 call stream.</summary>
             bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
-            /// <summary>Helper to handle final frame handling and routing.</summary>
-            void route(uint32_t peerId, const uint8_t* frame, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

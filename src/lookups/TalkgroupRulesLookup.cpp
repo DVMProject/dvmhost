@@ -23,7 +23,7 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "lookups/RoutingRulesLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "Log.h"
 #include "Timer.h"
 
@@ -42,11 +42,11 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the RoutingRulesLookup class.
+/// Initializes a new instance of the TalkgroupRulesLookup class.
 /// </summary>
 /// <param name="filename">Full-path to the routing rules file.</param>
 /// <param name="reloadTime">Interval of time to reload the routing rules.</param>
-RoutingRulesLookup::RoutingRulesLookup(const std::string& filename, uint32_t reloadTime) : Thread(),
+TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
     m_groupHangTime(5U),
@@ -57,9 +57,9 @@ RoutingRulesLookup::RoutingRulesLookup(const std::string& filename, uint32_t rel
 }
 
 /// <summary>
-/// Finalizes a instance of the RoutingRulesLookup class.
+/// Finalizes a instance of the TalkgroupRulesLookup class.
 /// </summary>
-RoutingRulesLookup::~RoutingRulesLookup()
+TalkgroupRulesLookup::~TalkgroupRulesLookup()
 {
     /* stub */
 }
@@ -67,7 +67,7 @@ RoutingRulesLookup::~RoutingRulesLookup()
 /// <summary>
 ///
 /// </summary>
-void RoutingRulesLookup::entry()
+void TalkgroupRulesLookup::entry()
 {
     if (m_reloadTime == 0U) {
         return;
@@ -90,7 +90,7 @@ void RoutingRulesLookup::entry()
 /// <summary>
 /// Stops and unloads this lookup table.
 /// </summary>
-void RoutingRulesLookup::stop()
+void TalkgroupRulesLookup::stop()
 {
     if (m_reloadTime == 0U) {
         delete this;
@@ -106,7 +106,7 @@ void RoutingRulesLookup::stop()
 /// Reads the lookup table from the specified lookup table file.
 /// </summary>
 /// <returns>True, if lookup table was read, otherwise false.</returns>
-bool RoutingRulesLookup::read()
+bool TalkgroupRulesLookup::read()
 {
     bool ret = load();
 
@@ -119,7 +119,7 @@ bool RoutingRulesLookup::read()
 /// <summary>
 /// Clears all entries from the lookup table.
 /// </summary>
-void RoutingRulesLookup::clear()
+void TalkgroupRulesLookup::clear()
 {
     m_mutex.lock();
     {
@@ -136,7 +136,7 @@ void RoutingRulesLookup::clear()
 /// Loads the table from the passed lookup table file.
 /// </summary>
 /// <returns>True, if lookup table was loaded, otherwise false.</returns>
-bool RoutingRulesLookup::load()
+bool TalkgroupRulesLookup::load()
 {
     if (m_rulesFile.length() <= 0) {
         return false;
@@ -170,11 +170,11 @@ bool RoutingRulesLookup::load()
         }
 
         for (size_t i = 0; i < groupVoiceList.size(); i++) {
-            RoutingRuleGroupVoice groupVoice = RoutingRuleGroupVoice(groupVoiceList[i]);
+            TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
             m_groupVoice.push_back(groupVoice);
 
-            ::LogInfoEx(LOG_HOST, "Rule (%s) NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u ROUTABLE: %u AFFILIATED: %u", groupVoice.name(), groupVoice.source().tgId(), groupVoice.source().tgSlot(),
-                groupVoice.config().active(), groupVoice.config().routable(), groupVoice.config().affiliated());
+            ::LogInfoEx(LOG_HOST, "Rule (%s) NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u", groupVoice.name(), groupVoice.source().tgId(), groupVoice.source().tgSlot(),
+                groupVoice.config().active(), groupVoice.config().affiliated());
         }
     }
     m_mutex.unlock();

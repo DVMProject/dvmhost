@@ -115,7 +115,7 @@ usage: ./dvmhost [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--r
   --cal     calibration mode
   --setup   setup mode
 
-  --fne     fixed network equipment mode
+  --fne     fixed network equipment mode (conference bridge)
 
   -c <file> specifies the configuration file to use
 
@@ -125,6 +125,12 @@ usage: ./dvmhost [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--r
 
   --        stop handling options
 ```
+
+## Embedded FNE Mode
+
+DVMHost contains an "embedded" conference bridge FNE mode that can be activated using the `--fne` command line option. It is important to note the "embedded" FNE mode does not use the standard configuration file and uses an alternate configuration file (see `fne-config.example.yml`). 
+
+The "embedded" conference bridge FNE is essentially just manages calls for multiple defined talkgroups for multiple defined modes simultaneously. It contains logic for handling distribution of radio ID ACL lists, and talkgroup ACL lists to connected DVMHost instances. The embedded FNE is meant for small installations and does not perform any routing like the standalone FNE.
 
 ## Build Notes
 

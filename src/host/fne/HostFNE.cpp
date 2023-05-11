@@ -71,8 +71,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_p25Enabled(false),
     m_nxdnEnabled(false),
     m_ridLookup(nullptr),
-    m_routingLookup(nullptr),
-    m_peerRoutingLookups(),
+    m_tidLookup(nullptr),
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
@@ -241,17 +240,9 @@ int HostFNE::run()
     }
     m_peerNetworks.clear();
 
-    for (auto routingLookup : m_peerRoutingLookups) {
-        RoutingRulesLookup* routing = routingLookup.second;
-        if (routing != nullptr) {
-            routing->stop();
-        }
-    }
-    m_peerRoutingLookups.clear();
-
-    if (m_routingLookup != nullptr) {
-        m_routingLookup->stop();
-        delete m_routingLookup;
+    if (m_tidLookup != nullptr) {
+        m_tidLookup->stop();
+        delete m_tidLookup;
     }
     if (m_ridLookup != nullptr) {
         m_ridLookup->stop();
@@ -300,17 +291,17 @@ bool HostFNE::readParams()
 
     // attempt to load and populate routing rules
     yaml::Node masterConf = m_conf["master"];
-    yaml::Node routingRules = masterConf["routing_rules"];
-    std::string routingConfig = routingRules["file"].as<std::string>();
-    uint32_t routingConfigReload = routingRules["time"].as<uint32_t>(30U);
+    yaml::Node talkgroupRules = masterConf["talkgroup_rules"];
+    std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
+    uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
-    LogInfo("Routing Rule Lookups");
-    LogInfo("    File: %s", routingConfig.length() > 0U ? routingConfig.c_str() : "None");
-    if (routingConfigReload > 0U)
-        LogInfo("    Reload: %u mins", routingConfigReload);
+    LogInfo("Talkgroup Rule Lookups");
+    LogInfo("    File: %s", talkgroupConfig.length() > 0U ? talkgroupConfig.c_str() : "None");
+    if (talkgroupConfigReload > 0U)
+        LogInfo("    Reload: %u mins", talkgroupConfigReload);
 
-    m_routingLookup = new RoutingRulesLookup(routingConfig, routingConfigReload);
-    m_routingLookup->read();
+    m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload);
+    m_tidLookup->read();
 
     return true;
 }
@@ -359,7 +350,7 @@ bool HostFNE::createMasterNetwork()
         m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
             repeat, m_pingTime, m_updateLookupTime);
 
-        m_network->setLookups(m_ridLookup, m_routingLookup);
+        m_network->setLookups(m_ridLookup, m_tidLookup);
 
         bool ret = m_network->open();
         if (!ret) {
@@ -408,14 +399,6 @@ bool HostFNE::createPeerNetworks()
             std::string location = peerConf["location"].as<std::string>();
 
             ::LogInfoEx(LOG_HOST, "Peer Id %u Master Address %s Master Port %u Identity %s", id, masterAddress.c_str(), masterPort, identity.c_str());
-
-            // attempt to load and populate routing rules
-            yaml::Node routingRules = peerConf["routing_rules"];
-            std::string routingConfig = routingRules["file"].as<std::string>();
-            uint32_t routingConfigReload = routingRules["time"].as<uint32_t>(30U);
-
-            m_peerRoutingLookups[identity] = new RoutingRulesLookup(routingConfig, routingConfigReload);
-            m_peerRoutingLookups[identity]->read();
 
             // initialize networking
             network::Network* network = new Network(address, port, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);

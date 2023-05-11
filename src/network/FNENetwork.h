@@ -31,7 +31,7 @@
 #include "network/Network.h"
 #include "network/json/json.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/RoutingRulesLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 
 #include <string>
 #include <cstdint>
@@ -156,8 +156,8 @@ namespace network
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
 
-        /// <summary>Sets the instances of the Radio ID and Routing Rules lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::RoutingRulesLookup* routingLookup);
+        /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /// <summary>Gets the current status of the network.</summary>
         uint8_t getStatus();
 
@@ -197,7 +197,7 @@ namespace network
         bool m_trafficRepeat;
 
         lookups::RadioIdLookup* m_ridLookup;
-        lookups::RoutingRulesLookup* m_routingLookup;
+        lookups::TalkgroupRulesLookup* m_tidLookup;
 
         typedef std::pair<const unsigned int, network::FNEPeerConnection> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection> m_peers;

@@ -1,5 +1,5 @@
 #
-# Digital Voice Modem - Host Software Configuration (FNE Mode)
+# Digital Voice Modem - Host Software Configuration (FNE Conference Bridge Mode)
 #
 # @package DVM / Host Software
 #
@@ -56,11 +56,11 @@ master:
     allowNXDNTraffic: true
 
     #
-    # Routing Rules Configuration
+    # Talkgroup Rules Configuration
     #
-    routing_rules:
+    talkgroup_rules:
         # Full path to the routing rules file.
-        file: fne-routing_rules.yml
+        file: fne-talkgroup_rules.yml
         # Amount of time between updates of routing rules file. (minutes)
         time: 30
 
@@ -100,15 +100,6 @@ peers:
       # Flag indicating whether or not verbose debug logging is enabled.
       debug: false
 
-      #
-      # Routing Rules Configuration
-      #
-      routing_rules:
-          # Full path to the routing rules file.
-          file: fne-routing_rules.yml
-          # Amount of time between updates of routing rules file. (minutes)
-          time: 30
-
 #
 # System Configuration
 #
@@ -118,8 +109,8 @@ system:
     # Maximum number of missable pings before a peer is considered disconnected.
     maxMissedPings: 5
 
-    # Time in minutes between pings to peers.
-    routingRuleUpdateTime: 10
+    # Time in minutes between updates of the talkgroup rules.
+    tgRuleUpdateTime: 10
 
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true

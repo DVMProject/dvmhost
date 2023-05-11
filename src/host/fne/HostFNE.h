@@ -31,7 +31,7 @@
 #include "network/FNENetwork.h"
 #include "Timer.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/RoutingRulesLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "yaml/Yaml.h"
 
 #include <string>
@@ -65,9 +65,8 @@ private:
     bool m_nxdnEnabled;
 
     lookups::RadioIdLookup* m_ridLookup;
-    lookups::RoutingRulesLookup* m_routingLookup;
+    lookups::TalkgroupRulesLookup* m_tidLookup;
 
-    std::unordered_map<std::string, lookups::RoutingRulesLookup*> m_peerRoutingLookups;
     std::unordered_map<std::string, network::Network*> m_peerNetworks;
 
     uint32_t m_pingTime;

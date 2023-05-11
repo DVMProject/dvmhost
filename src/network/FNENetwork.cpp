@@ -79,7 +79,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_nxdnEnabled(nxdn),
     m_trafficRepeat(true),
     m_ridLookup(nullptr),
-    m_routingLookup(nullptr),
+    m_tidLookup(nullptr),
     m_peers(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U))
@@ -105,14 +105,14 @@ FNENetwork::~FNENetwork()
 }
 
 /// <summary>
-/// Sets the instances of the Radio ID and Routing Rules lookup tables.
+/// Sets the instances of the Radio ID and Talkgroup Rules lookup tables.
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="routingLookup">Routing Rules Lookup Table Instance</param>
-void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::RoutingRulesLookup* routingLookup)
+/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
-    m_routingLookup = routingLookup;
+    m_tidLookup = tidLookup;
 }
 
 /// <summary>
@@ -634,12 +634,12 @@ void FNENetwork::writeBlacklistRIDs()
 /// <param name="peerId"></param>
 void FNENetwork::writeTGIDs(uint32_t peerId)
 {
-    if (!m_routingLookup->sendTalkgroups()) {
+    if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
 
     std::vector<uint32_t> tgidList;
-    auto groupVoice = m_routingLookup->groupVoice();
+    auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
         if (entry.config().active()) {
             tgidList.push_back(entry.source().tgId());
@@ -656,7 +656,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
     uint32_t offs = 4U;
     for (uint32_t id : tgidList) {
         __SET_UINT32(id, payload, offs);
-        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::RoutingRuleGroupVoice x) { return x.source().tgId() == id; });
+        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::TalkgroupRuleGroupVoice x) { return x.source().tgId() == id; });
         payload[offs + 4U] = entry->source().tgSlot();
         offs += 5U;
     }
@@ -680,12 +680,12 @@ void FNENetwork::writeTGIDs()
 /// <param name="peerId"></param>
 void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
 {
-    if (!m_routingLookup->sendTalkgroups()) {
+    if (!m_tidLookup->sendTalkgroups()) {
         return;
     }
 
     std::vector<uint32_t> tgidList;
-    auto groupVoice = m_routingLookup->groupVoice();
+    auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
         if (!entry.config().active()) {
             tgidList.push_back(entry.source().tgId());
@@ -702,7 +702,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
     uint32_t offs = 4U;
     for (uint32_t id : tgidList) {
         __SET_UINT32(id, payload, offs);
-        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::RoutingRuleGroupVoice x) { return x.source().tgId() == id; });
+        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::TalkgroupRuleGroupVoice x) { return x.source().tgId() == id; });
         payload[offs + 4U] = entry->source().tgSlot();
         offs += 5U;
     }

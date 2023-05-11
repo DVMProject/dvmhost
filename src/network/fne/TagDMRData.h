@@ -59,8 +59,6 @@ namespace network
             bool isPeerIgnored(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
             /// <summary>Helper to validate the DMR call stream.</summary>
             bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
-            /// <summary>Helper to handle final frame handling and routing.</summary>
-            void route(uint32_t peerId, const uint8_t* frame, dmr::data::Data& data, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

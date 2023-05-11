@@ -158,8 +158,6 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
                     }
                 }
 
-                // perform any finalization and routing actions
-                route(peerId, data, control, duid, streamId);
                 return true;
             }
         }
@@ -198,17 +196,4 @@ bool TagP25Data::validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, u
 {
     // TODO TODO TODO
     return true;
-}
-
-/// <summary>
-/// Helper to handle final frame handling and routing.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="frame"></param>
-/// <param name="control"></param>
-/// <param name="duid"></param>
-/// <param name="streamId"></param>
-void TagP25Data::route(uint32_t peerId, const uint8_t* frame, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
-{
-    // TODO TODO TODO
 }

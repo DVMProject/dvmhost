@@ -140,8 +140,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
                     }
                 }
 
-                // perform any finalization and routing actions
-                route(peerId, data, dmrData, streamId);
                 return true;
             }
         }
@@ -178,16 +176,4 @@ bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t strea
 {
     // TODO TODO TODO
     return true;
-}
-
-/// <summary>
-/// Helper to handle final frame handling and routing.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="frame"></param>
-/// <param name="data"></param>
-/// <param name="streamId"></param>
-void TagDMRData::route(uint32_t peerId, const uint8_t* frame, dmr::data::Data& data, uint32_t streamId)
-{
-    // TODO TODO TODO
 }

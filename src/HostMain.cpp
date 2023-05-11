@@ -150,7 +150,7 @@ void usage(const char* message, const char* arg)
         "  --cal     calibration mode\n"
         "  --setup   setup mode\n"
         "\n"
-        "  --fne     fixed network equipment mode\n"
+        "  --fne     fixed network equipment mode (conference bridge)\n"
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"

@@ -59,8 +59,6 @@ namespace network
             bool isPeerIgnored(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId);
             /// <summary>Helper to validate the NXDN call stream.</summary>
             bool validate(uint32_t peerId, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
-            /// <summary>Helper to handle final frame handling and routing.</summary>
-            void route(uint32_t peerId, const uint8_t* frame, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

@@ -118,8 +118,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
                     }
                 }
 
-                // perform any finalization and routing actions
-                route(peerId, data, lc, messageType, streamId);
                 return true;
             }
         }
@@ -158,17 +156,4 @@ bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageT
 {
     // TODO TODO TODO
     return true;
-}
-
-/// <summary>
-/// Helper to handle final frame handling and routing.
-/// </summary>
-/// <param name="peerId"></param>
-/// <param name="frame"></param>
-/// <param name="lc"></param>
-/// <param name="messageType"></param>
-/// <param name="streamId"></param>
-void TagNXDNData::route(uint32_t peerId, const uint8_t* frame, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
-{
-    // TODO TODO TODO
 }
