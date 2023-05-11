@@ -127,9 +127,8 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
 
     uint8_t seqNo = m_buffer[4U];
 
-    uint32_t srcId = (m_buffer[5U] << 16) | (m_buffer[6U] << 8) | (m_buffer[7U] << 0);
-
-    uint32_t dstId = (m_buffer[8U] << 16) | (m_buffer[9U] << 8) | (m_buffer[10U] << 0);
+    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
+    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
 
     uint8_t flco = (m_buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
 
@@ -189,7 +188,7 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
 /// <param name="frameType"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& len)
+uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
         ret = false;
@@ -207,9 +206,8 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 
     uint8_t lco = m_buffer[4U];
 
-    uint32_t srcId = (m_buffer[5U] << 16) | (m_buffer[6U] << 8) | (m_buffer[7U] << 0);
-
-    uint32_t dstId = (m_buffer[8U] << 16) | (m_buffer[9U] << 8) | (m_buffer[10U] << 0);
+    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
+    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
 
     uint8_t MFId = m_buffer[15U];
 
@@ -245,7 +243,7 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU MI decoded from network", mi, p25::P25_MI_LENGTH_BYTES);
+                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
             }
 
             control.setAlgId(algId);
@@ -263,21 +261,21 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
     lsd.setLSD2(lsd2);
 
     uint8_t* data = nullptr;
-    len = m_buffer[23U];
+    frameLength = m_buffer[23U];
     if (duid == p25::P25_DUID_PDU) {
         data = new uint8_t[length];
         ::memset(data, 0x00U, length);
         ::memcpy(data, m_buffer, length);
     }
     else {
-        if (len <= 24) {
-            data = new uint8_t[len];
-            ::memset(data, 0x00U, len);
+        if (frameLength <= 24) {
+            data = new uint8_t[frameLength];
+            ::memset(data, 0x00U, frameLength);
         }
         else {
-            data = new uint8_t[len];
-            ::memset(data, 0x00U, len);
-            ::memcpy(data, m_buffer + 24U, len);
+            data = new uint8_t[frameLength];
+            ::memset(data, 0x00U, frameLength);
+            ::memcpy(data, m_buffer + 24U, frameLength);
         }
     }
 
@@ -292,7 +290,7 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 /// <param name="lc"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len)
+uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
         ret = false;
@@ -310,9 +308,12 @@ uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len)
 
     uint8_t messageType = m_buffer[4U];
 
-    uint32_t srcId = (m_buffer[5U] << 16) | (m_buffer[6U] << 8) | (m_buffer[7U] << 0);
+    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
+    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
 
-    uint32_t dstId = (m_buffer[8U] << 16) | (m_buffer[9U] << 8) | (m_buffer[10U] << 0);
+    if (m_debug) {
+        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+    }
 
     lc.setMessageType(messageType);
     lc.setSrcId((uint16_t)srcId & 0xFFFFU);
@@ -322,16 +323,16 @@ uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len)
     lc.setGroup(group);
 
     uint8_t* data = nullptr;
-    len = m_buffer[23U];
+    frameLength = m_buffer[23U];
 
-    if (len <= 24) {
-        data = new uint8_t[len];
-        ::memset(data, 0x00U, len);
+    if (frameLength <= 24) {
+        data = new uint8_t[frameLength];
+        ::memset(data, 0x00U, frameLength);
     }
     else {
-        data = new uint8_t[len];
-        ::memset(data, 0x00U, len);
-        ::memcpy(data, m_buffer + 24U, len);
+        data = new uint8_t[frameLength];
+        ::memset(data, 0x00U, frameLength);
+        ::memcpy(data, m_buffer + 24U, frameLength);
     }
 
     ret = true;

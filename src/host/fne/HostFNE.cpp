@@ -337,6 +337,8 @@ bool HostFNE::createMasterNetwork()
     m_p25Enabled = masterConf["allowP25Traffic"].as<bool>(true);
     m_nxdnEnabled = masterConf["allowNXDNTraffic"].as<bool>(true);
 
+    bool repeat = masterConf["repeat"].as<bool>(true);
+
     LogInfo("Network Parameters");
     LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
@@ -345,6 +347,7 @@ bool HostFNE::createMasterNetwork()
         LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
         LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
         LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
+        LogInfo("    Repeat Traffic: %s", repeat ? "yes" : "no");
 
         if (debug) {
             LogInfo("    Debug: yes");
@@ -354,7 +357,7 @@ bool HostFNE::createMasterNetwork()
     // initialize networking
     if (netEnable) {
         m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
-            m_pingTime, m_updateLookupTime);
+            repeat, m_pingTime, m_updateLookupTime);
 
         m_network->setLookups(m_ridLookup, m_routingLookup);
 

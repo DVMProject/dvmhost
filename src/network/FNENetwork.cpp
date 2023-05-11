@@ -59,11 +59,12 @@ using namespace network::fne;
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
+/// <param name="trafficRepeat">Flag indicating if traffic should be repeated from this master.</param>
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
     bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
-    uint32_t pingTime, uint32_t updateLookupTime) :
+    bool trafficRepeat, uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(0U, 0U, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
@@ -76,6 +77,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_trafficRepeat(true),
     m_ridLookup(nullptr),
     m_routingLookup(nullptr),
     m_peers(),
@@ -87,9 +89,9 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     assert(port > 0U);
     assert(!password.empty());
 
-    m_tagDMR = new TagDMRData(this);
-    m_tagP25 = new TagP25Data(this);
-    m_tagNXDN = new TagNXDNData(this);
+    m_tagDMR = new TagDMRData(this, debug);
+    m_tagP25 = new TagP25Data(this, debug);
+    m_tagNXDN = new TagNXDNData(this, debug);
 }
 
 /// <summary>
@@ -188,21 +190,21 @@ void FNENetwork::clock(uint32_t ms)
         if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {                        // Encapsulated DMR data frame
             if (m_dmrEnabled) {
                 if (m_tagDMR != nullptr) {
-                    m_tagDMR->processFrame(m_buffer, length);
+                    m_tagDMR->processFrame(m_buffer, length, address);
                 }
             }
         }
         else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {                   // Encapsulated P25 data frame
             if (m_p25Enabled) {
                 if (m_tagP25 != nullptr) {
-                    m_tagP25->processFrame(m_buffer, length);
+                    m_tagP25->processFrame(m_buffer, length, address);
                 }
             }
         }
         else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {                  // Encapsulated NXDN data frame
             if (m_nxdnEnabled) {
                 if (m_tagNXDN != nullptr) {
-                    m_tagNXDN->processFrame(m_buffer, length);
+                    m_tagNXDN->processFrame(m_buffer, length, address);
                 }
             }
         }

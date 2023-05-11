@@ -27,12 +27,14 @@
 #define __FNE__TAG_DMR_DATA_H__
 
 #include "Defines.h"
+#include "dmr/DMRDefines.h"
+#include "dmr/data/Data.h"
 #include "network/FNENetwork.h"
 
 namespace network
 {
     namespace fne
-    {
+    {  
         // ---------------------------------------------------------------------------
         //  Class Declaration
         //      Implements the DMR data FNE networking logic.
@@ -41,15 +43,24 @@ namespace network
         class HOST_SW_API TagDMRData {
         public:
             /// <summary>Initializes a new instance of the TagDMRData class.</summary>
-            TagDMRData(FNENetwork* network);
+            TagDMRData(FNENetwork* network, bool debug);
             /// <summary>Finalizes a instance of the TagDMRData class.</summary>
             ~TagDMRData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(uint8_t* data, uint32_t len);
+            bool processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address);
 
         private:
             FNENetwork* m_network;
+
+            bool m_debug;
+
+            /// <summary>Helper to determine if the peer is being ignored.</summary>
+            bool isPeerIgnored(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
+            /// <summary>Helper to validate the DMR call stream.</summary>
+            bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
+            /// <summary>Helper to handle final frame handling and routing.</summary>
+            void route(uint32_t peerId, const uint8_t* frame, dmr::data::Data& data, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

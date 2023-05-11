@@ -28,6 +28,14 @@
 
 #include "Defines.h"
 #include "network/FNENetwork.h"
+#include "p25/P25Defines.h"
+#include "p25/data/DataHeader.h"
+#include "p25/data/LowSpeedData.h"
+#include "p25/dfsi/DFSIDefines.h"
+#include "p25/dfsi/LC.h"
+#include "p25/lc/LC.h"
+#include "p25/lc/TSBK.h"
+#include "p25/lc/TDULC.h"
 
 namespace network
 {
@@ -41,15 +49,24 @@ namespace network
         class HOST_SW_API TagP25Data {
         public:
             /// <summary>Initializes a new instance of the TagP25Data class.</summary>
-            TagP25Data(FNENetwork* network);
+            TagP25Data(FNENetwork* network, bool debug);
             /// <summary>Finalizes a instance of the TagP25Data class.</summary>
             ~TagP25Data();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(uint8_t* data, uint32_t len);
+            bool processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address);
 
         private:
             FNENetwork* m_network;
+
+            bool m_debug;
+
+            /// <summary>Helper to determine if the peer is being ignored.</summary>
+            bool isPeerIgnored(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
+            /// <summary>Helper to validate the P25 call stream.</summary>
+            bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
+            /// <summary>Helper to handle final frame handling and routing.</summary>
+            void route(uint32_t peerId, const uint8_t* frame, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

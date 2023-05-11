@@ -47,8 +47,10 @@ using namespace network::fne;
 /// Initializes a new instance of the TagNXDNData class.
 /// </summary>
 /// <param name="network"></param>
-TagNXDNData::TagNXDNData(FNENetwork* network) :
-    m_network(network)
+/// <param name="debug"></param>
+TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
+    m_network(network),
+    m_debug(debug)
 {
     assert(network != nullptr);
 }
@@ -61,8 +63,112 @@ TagNXDNData::~TagNXDNData()
     /* stub */
 }
 
-/// <summary>Process a data frame from the network.</summary>
-bool TagNXDNData::processFrame(uint8_t* data, uint32_t len)
+/// <summary>
+/// Process a data frame from the network.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <param name="address"></param>
+/// <returns></returns>
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address)
 {
+    uint32_t peerId = __GET_UINT32(data, 11U);
+    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+        FNEPeerConnection connection = m_network->m_peers[peerId];
+        std::string ip = UDPSocket::address(address);
+
+        // validate peer (simple validation really)
+        if (connection.connected() && connection.address() == ip) {
+            uint8_t messageType = data[4U];
+
+            uint32_t srcId = __GET_UINT16(data, 5U);
+            uint32_t dstId = __GET_UINT16(data, 8U);
+
+            uint32_t streamId = __GET_UINT32(data, 16U);
+
+            nxdn::lc::RTCH lc;
+
+            lc.setMessageType(messageType);
+            lc.setSrcId((uint16_t)srcId & 0xFFFFU);
+            lc.setDstId((uint16_t)dstId & 0xFFFFU);
+
+            bool group = (data[15U] & 0x40U) == 0x40U ? false : true;
+            lc.setGroup(group);
+
+            // is the stream valid?
+            if (validate(peerId, lc, messageType, streamId)) {
+                // is this peer ignored?
+                if (isPeerIgnored(peerId, lc, messageType, streamId)) {
+                    return false;
+                }
+
+                // are we repeating to connected peers?
+                if (m_network->m_trafficRepeat) {
+                    for (auto peer : m_network->m_peers) {
+                        if (peerId != peer.first) {
+                            // is this peer ignored?
+                            if (isPeerIgnored(peer.first, lc, messageType, streamId)) {
+                                continue;
+                            }
+
+                            m_network->writePeer(peer.first, data, len);
+                            LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
+                                peerId, peer.first, messageType, srcId, dstId, len);
+                        }
+                    }
+                }
+
+                // perform any finalization and routing actions
+                route(peerId, data, lc, messageType, streamId);
+                return true;
+            }
+        }
+    }
+
     return false;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to determine if the peer is being ignored.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="lc"></param>
+/// <param name="messageType"></param>
+/// <param name="streamId"></param>
+/// <returns></returns>
+bool TagNXDNData::isPeerIgnored(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Helper to validate the DMR call stream.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="lc"></param>
+/// <param name="messageType"></param>
+/// <param name="streamId"></param>
+/// <returns></returns>
+bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Helper to handle final frame handling and routing.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="frame"></param>
+/// <param name="lc"></param>
+/// <param name="messageType"></param>
+/// <param name="streamId"></param>
+void TagNXDNData::route(uint32_t peerId, const uint8_t* frame, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+{
+    // TODO TODO TODO
 }

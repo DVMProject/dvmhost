@@ -28,6 +28,8 @@
 
 #include "Defines.h"
 #include "network/FNENetwork.h"
+#include "nxdn/NXDNDefines.h"
+#include "nxdn/lc/RTCH.h"
 
 namespace network
 {
@@ -41,15 +43,24 @@ namespace network
         class HOST_SW_API TagNXDNData {
         public:
             /// <summary>Initializes a new instance of the TagNXDNData class.</summary>
-            TagNXDNData(FNENetwork* network);
+            TagNXDNData(FNENetwork* network, bool debug);
             /// <summary>Finalizes a instance of the TagNXDNData class.</summary>
             ~TagNXDNData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(uint8_t* data, uint32_t len);
+            bool processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address);
 
         private:
             FNENetwork* m_network;
+
+            bool m_debug;
+
+            /// <summary>Helper to determine if the peer is being ignored.</summary>
+            bool isPeerIgnored(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId);
+            /// <summary>Helper to validate the NXDN call stream.</summary>
+            bool validate(uint32_t peerId, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
+            /// <summary>Helper to handle final frame handling and routing.</summary>
+            void route(uint32_t peerId, const uint8_t* frame, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

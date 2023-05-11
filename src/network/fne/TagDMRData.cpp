@@ -24,7 +24,6 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "dmr/DMRDefines.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagDMRData.h"
 #include "Log.h"
@@ -47,8 +46,10 @@ using namespace network::fne;
 /// Initializes a new instance of the TagDMRData class.
 /// </summary>
 /// <param name="network"></param>
-TagDMRData::TagDMRData(FNENetwork* network) :
-    m_network(network)
+/// <param name="debug"></param>
+TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
+    m_network(network),
+    m_debug(debug)
 {
     assert(network != nullptr);
 }
@@ -61,8 +62,132 @@ TagDMRData::~TagDMRData()
     /* stub */
 }
 
-/// <summary>Process a data frame from the network.</summary>
-bool TagDMRData::processFrame(uint8_t* data, uint32_t len)
+/// <summary>
+/// Process a data frame from the network.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="len"></param>
+/// <param name="address"></param>
+/// <returns></returns>
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address)
 {
+    uint32_t peerId = __GET_UINT32(data, 11U);
+    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+        FNEPeerConnection connection = m_network->m_peers[peerId];
+        std::string ip = UDPSocket::address(address);
+
+        // validate peer (simple validation really)
+        if (connection.connected() && connection.address() == ip) {
+            uint8_t seqNo = data[4U];
+
+            uint32_t srcId = __GET_UINT16(data, 5U);
+            uint32_t dstId = __GET_UINT16(data, 8U);
+
+            uint8_t flco = (data[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+
+            uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+            dmr::data::Data dmrData;
+            dmrData.setSeqNo(seqNo);
+            dmrData.setSlotNo(slotNo);
+            dmrData.setSrcId(srcId);
+            dmrData.setDstId(dstId);
+            dmrData.setFLCO(flco);
+
+            bool dataSync = (data[15U] & 0x20U) == 0x20U;
+            bool voiceSync = (data[15U] & 0x10U) == 0x10U;
+
+            uint32_t streamId = __GET_UINT32(data, 16U);
+
+            if (dataSync) {
+                uint8_t dataType = data[15U] & 0x0FU;
+                dmrData.setData(data + 20U);
+                dmrData.setDataType(dataType);
+                dmrData.setN(0U);
+            }
+            else if (voiceSync) {
+                dmrData.setData(data + 20U);
+                dmrData.setDataType(dmr::DT_VOICE_SYNC);
+                dmrData.setN(0U);
+            }
+            else {
+                uint8_t n = data[15U] & 0x0FU;
+                dmrData.setData(data + 20U);
+                dmrData.setDataType(dmr::DT_VOICE);
+                dmrData.setN(n);
+            }
+
+            // is the stream valid?
+            if (validate(peerId, dmrData, streamId)) {
+                // is this peer ignored?
+                if (isPeerIgnored(peerId, dmrData, streamId)) {
+                    return false;
+                }
+
+                // are we repeating to connected peers?
+                if (m_network->m_trafficRepeat) {
+                    for (auto peer : m_network->m_peers) {
+                        if (peerId != peer.first) {
+                            // is this peer ignored?
+                            if (isPeerIgnored(peer.first, dmrData, streamId)) {
+                                continue;
+                            }
+
+                            m_network->writePeer(peer.first, data, len);
+                            LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
+                                peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
+                        }
+                    }
+                }
+
+                // perform any finalization and routing actions
+                route(peerId, data, dmrData, streamId);
+                return true;
+            }
+        }
+    }
+
     return false;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to determine if the peer is being ignored.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="data"></param>
+/// <param name="streamId"></param>
+/// <returns></returns>
+bool TagDMRData::isPeerIgnored(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Helper to validate the DMR call stream.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="data"></param>
+/// <param name="streamId"></param>
+/// <returns></returns>
+bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
+{
+    // TODO TODO TODO
+    return true;
+}
+
+/// <summary>
+/// Helper to handle final frame handling and routing.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="frame"></param>
+/// <param name="data"></param>
+/// <param name="streamId"></param>
+void TagDMRData::route(uint32_t peerId, const uint8_t* frame, dmr::data::Data& data, uint32_t streamId)
+{
+    // TODO TODO TODO
 }

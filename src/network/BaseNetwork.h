@@ -135,9 +135,9 @@ namespace network
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& len);
+        virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& frameLength);
         /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        virtual uint8_t* readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& len);
+        virtual uint8_t* readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& frameLength);
 
         /// <summary>Writes DMR frame data to the network.</summary>
         virtual bool writeDMR(const dmr::data::Data& data);
