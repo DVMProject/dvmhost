@@ -106,11 +106,16 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 ## Command Line Parameters
 
 ```
-usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
+  -v        show version information
+  -h        show this screen
   -f        foreground mode
+
   --cal     calibration mode
   --setup   setup mode
+
+  --fne     fixed network equipment mode
 
   -c <file> specifies the configuration file to use
 
@@ -118,8 +123,6 @@ usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remot
   -a        remote modem command address
   -p        remote modem command port
 
-  -v        show version information
-  -h        show this screen
   --        stop handling options
 ```
 
