@@ -91,6 +91,7 @@ namespace lookups
         TalkgroupRuleConfig() :
             m_active(false),
             m_affiliated(false),
+            m_parrot(false),
             m_inclusion(),
             m_exclusion()
         {
@@ -105,6 +106,7 @@ namespace lookups
         {
             m_active = node["active"].as<bool>(false);
             m_affiliated = node["affiliated"].as<bool>(false);
+            m_parrot = node["parrot"].as<bool>(false);
 
             yaml::Node& inclusionList = node["inclusion"];
             if (inclusionList.size() > 0U) {
@@ -129,6 +131,7 @@ namespace lookups
             if (this != &data) {
                 m_active = data.m_active;
                 m_affiliated = data.m_affiliated;
+                m_parrot = data.m_parrot;
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
             }
@@ -141,6 +144,8 @@ namespace lookups
         __PROPERTY_PLAIN(bool, active, active);
         /// <summary>Flag indicating whether or not affiliations are requires to repeat traffic.</summary>
         __PROPERTY_PLAIN(bool, affiliated, affiliated);
+        /// <summary>Flag indicating whether or not the talkgroup is a parrot.</summary>
+        __PROPERTY_PLAIN(bool, parrot, parrot);
         /// <summary>List of peer IDs included by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion, inclusion);
         /// <summary>List of peer IDs excluded by this rule.</summary>
