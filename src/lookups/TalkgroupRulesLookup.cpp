@@ -195,8 +195,13 @@ bool TalkgroupRulesLookup::load()
             TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
             m_groupVoice.push_back(groupVoice);
 
-            ::LogInfoEx(LOG_HOST, "Rule (%s) NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u", groupVoice.name(), groupVoice.source().tgId(), groupVoice.source().tgSlot(),
-                groupVoice.config().active(), groupVoice.config().affiliated());
+            std::string groupName = groupVoice.name();
+            uint32_t tgId = groupVoice.source().tgId();
+            uint8_t tgSlot = groupVoice.source().tgSlot();
+            bool active = groupVoice.config().active();
+            bool affiliated = groupVoice.config().affiliated();
+
+            ::LogInfoEx(LOG_HOST, "Rule (%s) NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u", groupName.c_str(), tgId, tgSlot, active, affiliated);
         }
     }
     m_mutex.unlock();
