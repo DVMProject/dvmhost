@@ -142,6 +142,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
                     return false;
                 }
 
+                // TODO TODO TODO
+                // TODO: handle checking if this is a parrot group and properly implement parrot
+
                 for (auto peer : m_network->m_peers) {
                     if (peerId != peer.first) {
                         // is this peer ignored?
