@@ -152,7 +152,7 @@ namespace network
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
             bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
-            bool trafficRepeat, uint32_t pingTime, uint32_t updateLookupTime);
+            uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
 
@@ -193,8 +193,6 @@ namespace network
         bool m_dmrEnabled;
         bool m_p25Enabled;
         bool m_nxdnEnabled;
-
-        bool m_trafficRepeat;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;

@@ -6,8 +6,6 @@
 
 # Total time in seconds to "hang" on a TG.
 groupHangTime: 5
-# Flag indicating this configuration block is for a master.
-master: true
 # Flag indicating the TGID information for this master will be sent to its peers.
 sendTalkgroups: true
 
@@ -25,9 +23,11 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
       affiliated: false
-      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
-      ignored:
-          - 0
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
     #
     # Source Configuration
     #
@@ -49,9 +49,11 @@ groupVoice:
       affiliated: false
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
-      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
-      ignored:
-          - 0
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
     #
     # Source Configuration
     #
@@ -71,9 +73,11 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
       affiliated: false
-      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
-      ignored:
-          - 0
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
     #
     # Source Configuration
     #
@@ -93,9 +97,11 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
       affiliated: false
-      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
-      ignored:
-          - 0
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
     #
     # Source Configuration
     #
@@ -115,9 +121,11 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
       affiliated: false
-      # List of ignored peer IDs for this talkgroup (peers listed here will be ignored for routing).
-      ignored:
-          - 0
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
     #
     # Source Configuration
     #

@@ -33,10 +33,6 @@ log:
 # Master
 #
 master:
-    # Flag indicating whether or not the master is enabled.
-    enable: true
-    # Flag indicating whether traffic is being repeated on this master.
-    repeat: true
     # Hostname/IP address to listen on (blank for all).
     address: 0.0.0.0
     # Port number to listen on.

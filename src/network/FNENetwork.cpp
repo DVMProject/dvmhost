@@ -64,7 +64,7 @@ using namespace network::fne;
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
     bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
-    bool trafficRepeat, uint32_t pingTime, uint32_t updateLookupTime) :
+    uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(0U, 0U, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
@@ -77,7 +77,6 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
-    m_trafficRepeat(true),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_peers(),

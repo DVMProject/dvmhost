@@ -98,23 +98,20 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
             // is the stream valid?
             if (validate(peerId, lc, messageType, streamId)) {
                 // is this peer ignored?
-                if (isPeerIgnored(peerId, lc, messageType, streamId)) {
+                if (!isPeerPermitted(peerId, lc, messageType, streamId)) {
                     return false;
                 }
 
-                // are we repeating to connected peers?
-                if (m_network->m_trafficRepeat) {
-                    for (auto peer : m_network->m_peers) {
-                        if (peerId != peer.first) {
-                            // is this peer ignored?
-                            if (isPeerIgnored(peer.first, lc, messageType, streamId)) {
-                                continue;
-                            }
-
-                            m_network->writePeer(peer.first, data, len);
-                            LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
-                                peerId, peer.first, messageType, srcId, dstId, len);
+                for (auto peer : m_network->m_peers) {
+                    if (peerId != peer.first) {
+                        // is this peer ignored?
+                        if (!isPeerPermitted(peer.first, lc, messageType, streamId)) {
+                            continue;
                         }
+
+                        m_network->writePeer(peer.first, data, len);
+                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
+                            peerId, peer.first, messageType, srcId, dstId, len);
                     }
                 }
 
@@ -131,14 +128,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Helper to determine if the peer is being ignored.
+/// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="lc"></param>
 /// <param name="messageType"></param>
 /// <param name="streamId"></param>
 /// <returns></returns>
-bool TagNXDNData::isPeerIgnored(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
     // TODO TODO TODO
     return true;

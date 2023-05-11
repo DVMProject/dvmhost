@@ -61,8 +61,8 @@ namespace network
 
             bool m_debug;
 
-            /// <summary>Helper to determine if the peer is being ignored.</summary>
-            bool isPeerIgnored(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
+            /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
+            bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
             /// <summary>Helper to validate the P25 call stream.</summary>
             bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
         };

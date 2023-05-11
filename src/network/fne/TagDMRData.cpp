@@ -120,23 +120,20 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
             // is the stream valid?
             if (validate(peerId, dmrData, streamId)) {
                 // is this peer ignored?
-                if (isPeerIgnored(peerId, dmrData, streamId)) {
+                if (!isPeerPermitted(peerId, dmrData, streamId)) {
                     return false;
                 }
 
-                // are we repeating to connected peers?
-                if (m_network->m_trafficRepeat) {
-                    for (auto peer : m_network->m_peers) {
-                        if (peerId != peer.first) {
-                            // is this peer ignored?
-                            if (isPeerIgnored(peer.first, dmrData, streamId)) {
-                                continue;
-                            }
-
-                            m_network->writePeer(peer.first, data, len);
-                            LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
-                                peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
+                for (auto peer : m_network->m_peers) {
+                    if (peerId != peer.first) {
+                        // is this peer ignored?
+                        if (!isPeerPermitted(peer.first, dmrData, streamId)) {
+                            continue;
                         }
+
+                        m_network->writePeer(peer.first, data, len);
+                        LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
+                            peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
                     }
                 }
 
@@ -153,13 +150,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Helper to determine if the peer is being ignored.
+/// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="data"></param>
 /// <param name="streamId"></param>
 /// <returns></returns>
-bool TagDMRData::isPeerIgnored(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
+bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
 {
     // TODO TODO TODO
     return true;

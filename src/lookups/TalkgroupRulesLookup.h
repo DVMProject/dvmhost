@@ -91,7 +91,8 @@ namespace lookups
         TalkgroupRuleConfig() :
             m_active(false),
             m_affiliated(false),
-            m_ignored()
+            m_inclusion(),
+            m_exclusion()
         {
             /* stub */
         }
@@ -105,11 +106,19 @@ namespace lookups
             m_active = node["active"].as<bool>(false);
             m_affiliated = node["affiliated"].as<bool>(false);
 
-            yaml::Node& ignoredList = node["ignored"];
-            if (ignoredList.size() > 0U) {
-                for (size_t i = 0; i < ignoredList.size(); i++) {
-                    uint32_t peerId = ignoredList[i].as<uint32_t>(0U);
-                    m_ignored.push_back(peerId);
+            yaml::Node& inclusionList = node["inclusion"];
+            if (inclusionList.size() > 0U) {
+                for (size_t i = 0; i < inclusionList.size(); i++) {
+                    uint32_t peerId = inclusionList[i].as<uint32_t>(0U);
+                    m_inclusion.push_back(peerId);
+                }
+            }
+
+            yaml::Node& exclusionList = node["exclusion"];
+            if (exclusionList.size() > 0U) {
+                for (size_t i = 0; i < exclusionList.size(); i++) {
+                    uint32_t peerId = exclusionList[i].as<uint32_t>(0U);
+                    m_exclusion.push_back(peerId);
                 }
             }
         }
@@ -120,7 +129,8 @@ namespace lookups
             if (this != &data) {
                 m_active = data.m_active;
                 m_affiliated = data.m_affiliated;
-                m_ignored = data.m_ignored;
+                m_inclusion = data.m_inclusion;
+                m_exclusion = data.m_exclusion;
             }
 
             return *this;
@@ -131,8 +141,10 @@ namespace lookups
         __PROPERTY_PLAIN(bool, active, active);
         /// <summary>Flag indicating whether or not affiliations are requires to repeat traffic.</summary>
         __PROPERTY_PLAIN(bool, affiliated, affiliated);
-        /// <summary>List of peer IDs ignored by this rule.</summary>
-        __PROPERTY_PLAIN(std::vector<uint32_t>, ignored, ignored);
+        /// <summary>List of peer IDs included by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion, inclusion);
+        /// <summary>List of peer IDs excluded by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion, exclusion);
     };
 
     // ---------------------------------------------------------------------------

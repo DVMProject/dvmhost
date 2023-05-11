@@ -138,23 +138,20 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
             // is the stream valid?
             if (validate(peerId, control, duid, streamId)) {
                 // is this peer ignored?
-                if (isPeerIgnored(peerId, control, duid, streamId)) {
+                if (!isPeerPermitted(peerId, control, duid, streamId)) {
                     return false;
                 }
 
-                // are we repeating to connected peers?
-                if (m_network->m_trafficRepeat) {
-                    for (auto peer : m_network->m_peers) {
-                        if (peerId != peer.first) {
-                            // is this peer ignored?
-                            if (isPeerIgnored(peer.first, control, duid, streamId)) {
-                                continue;
-                            }
-
-                            m_network->writePeer(peer.first, data, len);
-                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
-                                peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
+                for (auto peer : m_network->m_peers) {
+                    if (peerId != peer.first) {
+                        // is this peer ignored?
+                        if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                            continue;
                         }
+
+                        m_network->writePeer(peer.first, data, len);
+                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
+                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
                     }
                 }
 
@@ -171,14 +168,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Helper to determine if the peer is being ignored.
+/// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="control"></param>
 /// <param name="duid"></param>
 /// <param name="streamId"></param>
 /// <returns></returns>
-bool TagP25Data::isPeerIgnored(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
+bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
 {
     // TODO TODO TODO
     return true;

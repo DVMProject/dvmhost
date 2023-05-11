@@ -264,7 +264,7 @@ bool HostFNE::readParams()
     yaml::Node systemConf = m_conf["system"];
     m_pingTime = systemConf["pingTime"].as<uint32_t>(5U);
     m_maxMissedPings = systemConf["maxMissedPings"].as<uint32_t>(5U);
-    m_updateLookupTime = systemConf["routingRuleUpdateTime"].as<uint32_t>(10U);
+    m_updateLookupTime = systemConf["tgRuleUpdateTime"].as<uint32_t>(10U);
 
     if (m_pingTime == 0U) {
         m_pingTime = 5U;
@@ -284,7 +284,7 @@ bool HostFNE::readParams()
     LogInfo("General Parameters");
     LogInfo("    Peer Ping Time: %us", m_pingTime);
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
-    LogInfo("    Routing Rule Update Time: %u mins", m_updateLookupTime);
+    LogInfo("    Talkgroup Rule Update Time: %u mins", m_updateLookupTime);
 
     LogInfo("    Allow Activity Log Transfer: %s", m_allowActivityTransfer ? "yes" : "no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
@@ -328,8 +328,6 @@ bool HostFNE::createMasterNetwork()
     m_p25Enabled = masterConf["allowP25Traffic"].as<bool>(true);
     m_nxdnEnabled = masterConf["allowNXDNTraffic"].as<bool>(true);
 
-    bool repeat = masterConf["repeat"].as<bool>(true);
-
     LogInfo("Network Parameters");
     LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
@@ -338,7 +336,6 @@ bool HostFNE::createMasterNetwork()
         LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
         LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
         LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
-        LogInfo("    Repeat Traffic: %s", repeat ? "yes" : "no");
 
         if (debug) {
             LogInfo("    Debug: yes");
@@ -348,7 +345,7 @@ bool HostFNE::createMasterNetwork()
     // initialize networking
     if (netEnable) {
         m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
-            repeat, m_pingTime, m_updateLookupTime);
+            m_pingTime, m_updateLookupTime);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);
 
