@@ -177,7 +177,44 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 /// <returns></returns>
 bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
 {
+    // private calls are always permitted
+    if (control.getLCO() == p25::LC_PRIVATE) {
+        return true;
+    }
+
+    // always permit a TSDU or PDU
+    if (duid == p25::P25_DUID_TSDU || duid == p25::P25_DUID_PDU)
+        return true;
+
+    // always permit a terminator
+    if (duid == p25::P25_DUID_TDU || duid == p25::P25_DUID_TDULC)
+        return true;
+
+    // is this a group call?
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+
+    std::vector<uint32_t> inclusion = tg.config().inclusion();
+    std::vector<uint32_t> exclusion = tg.config().exclusion();
+
+    // peer inclusion lists take priority over exclusion lists
+    if (inclusion.size() > 0) {
+        auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
+        if (it == inclusion.end()) {
+            return false;
+        }
+    }
+    else {
+        if (exclusion.size() > 0) {
+            auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+            if (it != inclusion.end()) {
+                return false;
+            }
+        }
+    }
+
     // TODO TODO TODO
+    // TODO: handle checking group affiliations if affiliation option is enabled
+
     return true;
 }
 
@@ -191,6 +228,42 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t 
 /// <returns></returns>
 bool TagP25Data::validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
 {
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(control.getSrcId());
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    // always validate a TSDU or PDU if the source is valid
+    if (duid == p25::P25_DUID_TSDU || duid == p25::P25_DUID_PDU)
+        return true;
+
+    // always validate a terminator if the source is valid
+    if (duid == p25::P25_DUID_TDU || duid == p25::P25_DUID_TDULC)
+        return true;
+
+    // is this a private call?
+    if (control.getLCO() == p25::LC_PRIVATE) {
+        // is the destination ID a blacklisted ID?
+        lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+        if (!rid.radioDefault()) {
+            if (!rid.radioEnabled()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+    if (!tg.config().active()) {
+        return false;
+    }
+
     // TODO TODO TODO
+    // TODO: handle checking group affiliations if affiliation option is enabled
+
     return true;
 }

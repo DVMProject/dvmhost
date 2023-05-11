@@ -128,6 +128,28 @@ void TalkgroupRulesLookup::clear()
     m_mutex.unlock();
 }
 
+/// <summary>
+/// Finds a table entry in this lookup table.
+/// </summary>
+/// <param name="id">Unique identifier for table entry.</param>
+/// <returns>Table entry.</returns>
+TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id)
+{
+    TalkgroupRuleGroupVoice entry;
+
+    m_mutex.lock();
+    {
+        try {
+            entry = m_groupVoice.at(id);
+        } catch (...) {
+            entry = TalkgroupRuleGroupVoice();
+        }
+    }
+    m_mutex.unlock();
+
+    return entry;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

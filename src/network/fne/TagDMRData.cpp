@@ -87,6 +87,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
+            uint8_t dataType = data[15U] & 0x0FU;
+
             dmr::data::Data dmrData;
             dmrData.setSeqNo(seqNo);
             dmrData.setSlotNo(slotNo);
@@ -100,7 +102,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
             uint32_t streamId = __GET_UINT32(data, 16U);
 
             if (dataSync) {
-                uint8_t dataType = data[15U] & 0x0FU;
                 dmrData.setData(data + 20U);
                 dmrData.setDataType(dataType);
                 dmrData.setN(0U);
@@ -158,7 +159,38 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 /// <returns></returns>
 bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
 {
-    // TODO TODO TODO
+    // private calls are always permitted
+    if (data.getDataType() == dmr::FLCO_PRIVATE) {
+        return true;
+    }
+
+    // is this a group call?
+    if (data.getDataType() == dmr::FLCO_GROUP) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
+
+        std::vector<uint32_t> inclusion = tg.config().inclusion();
+        std::vector<uint32_t> exclusion = tg.config().exclusion();
+
+        // peer inclusion lists take priority over exclusion lists
+        if (inclusion.size() > 0) {
+            auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
+            if (it == inclusion.end()) {
+                return false;
+            }
+        }
+        else {
+            if (exclusion.size() > 0) {
+                auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                if (it != inclusion.end()) {
+                    return false;
+                }
+            }
+        }
+
+        // TODO TODO TODO
+        // TODO: handle checking group affiliations if affiliation option is enabled
+    }
+
     return true;
 }
 
@@ -171,6 +203,45 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_
 /// <returns></returns>
 bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
 {
-    // TODO TODO TODO
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(data.getSrcId());
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    // always validate a terminator if the source is valid
+    if (data.getDataType() == dmr::DT_TERMINATOR_WITH_LC)
+        return true;
+
+    // is this a private call?
+    if (data.getDataType() == dmr::FLCO_PRIVATE) {
+        // is the destination ID a blacklisted ID?
+        lookups::RadioId rid = m_network->m_ridLookup->find(data.getDstId());
+        if (!rid.radioDefault()) {
+            if (!rid.radioEnabled()) {
+                return false;
+            }
+        }
+    }
+
+    // is this a group call?
+    if (data.getDataType() == dmr::FLCO_GROUP) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
+
+        // check the DMR slot number
+        if (tg.source().tgSlot() != data.getSlotNo()) {
+            return false;
+        }
+
+        if (!tg.config().active()) {
+            return false;
+        }
+
+        // TODO TODO TODO
+        // TODO: handle checking group affiliations if affiliation option is enabled
+    }
+
     return true;
 }

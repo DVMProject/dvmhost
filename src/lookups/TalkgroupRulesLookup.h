@@ -217,6 +217,9 @@ namespace lookups
         /// <summary>Clears all entries from the lookup table.</summary>
         void clear();
 
+        /// <summary>Finds a table entry in this lookup table.</summary>
+        virtual TalkgroupRuleGroupVoice find(uint32_t id);
+
     private:
         const std::string& m_rulesFile;
         uint32_t m_reloadTime;

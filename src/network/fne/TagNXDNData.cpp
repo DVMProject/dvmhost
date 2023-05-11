@@ -137,7 +137,38 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
 /// <returns></returns>
 bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
-    // TODO TODO TODO
+    // private calls are always permitted
+    if (!lc.getGroup()) {
+        return true;
+    }
+
+    // is this a group call?
+    if (lc.getGroup()) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(lc.getDstId());
+
+        std::vector<uint32_t> inclusion = tg.config().inclusion();
+        std::vector<uint32_t> exclusion = tg.config().exclusion();
+
+        // peer inclusion lists take priority over exclusion lists
+        if (inclusion.size() > 0) {
+            auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
+            if (it == inclusion.end()) {
+                return false;
+            }
+        }
+        else {
+            if (exclusion.size() > 0) {
+                auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                if (it != inclusion.end()) {
+                    return false;
+                }
+            }
+        }
+
+        // TODO TODO TODO
+        // TODO: handle checking group affiliations if affiliation option is enabled
+    }
+
     return true;
 }
 
@@ -151,6 +182,38 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t m
 /// <returns></returns>
 bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(lc.getSrcId());
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    // always validate a terminator if the source is valid
+    if (messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL || messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX)
+        return true;
+
+    // is this a private call?
+    if (!lc.getGroup()) {
+        // is the destination ID a blacklisted ID?
+        lookups::RadioId rid = m_network->m_ridLookup->find(lc.getDstId());
+        if (!rid.radioDefault()) {
+            if (!rid.radioEnabled()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(lc.getDstId());
+    if (!tg.config().active()) {
+        return false;
+    }
+
     // TODO TODO TODO
+    // TODO: handle checking group affiliations if affiliation option is enabled
+
     return true;
 }
