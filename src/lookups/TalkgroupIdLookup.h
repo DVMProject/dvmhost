@@ -34,7 +34,6 @@
 #include "Defines.h"
 #include "lookups/LookupTable.h"
 #include "Thread.h"
-#include "Mutex.h"
 
 #include <string>
 #include <unordered_map>
