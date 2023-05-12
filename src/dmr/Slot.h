@@ -43,7 +43,7 @@
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "RingBuffer.h"
 #include "StopWatch.h"
 #include "Timer.h"
@@ -116,7 +116,7 @@ namespace dmr
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-            network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+            network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
             ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
         static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
@@ -226,7 +226,7 @@ namespace dmr
 
         static ::lookups::IdenTableLookup* m_idenTable;
         static ::lookups::RadioIdLookup* m_ridLookup;
-        static ::lookups::TalkgroupIdLookup* m_tidLookup;
+        static ::lookups::TalkgroupRulesLookup* m_tidLookup;
         static lookups::DMRAffiliationLookup* m_affiliations;
 
         static ::lookups::IdenTable m_idenEntry;

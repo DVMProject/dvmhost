@@ -34,7 +34,7 @@
 #include "Defines.h"
 #include "network/BaseNetwork.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 
 #include <string>
 #include <cstdint>
@@ -55,7 +55,7 @@ namespace network
         ~Network();
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /// <summary>Sets metadata configuration settings from the modem.</summary>
         void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
@@ -91,7 +91,7 @@ namespace network
         bool m_updateLookup;
 
         lookups::RadioIdLookup* m_ridLookup;
-        lookups::TalkgroupIdLookup* m_tidLookup;
+        lookups::TalkgroupRulesLookup* m_tidLookup;
 
         /** station metadata */
         std::string m_identity;

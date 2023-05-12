@@ -46,9 +46,12 @@ using namespace lookups;
 /// </summary>
 /// <param name="filename">Full-path to the routing rules file.</param>
 /// <param name="reloadTime">Interval of time to reload the routing rules.</param>
-TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime) : Thread(),
+/// <param name="acl"></param>
+TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
+    m_rules(),
+    m_acl(false),
     m_groupHangTime(5U),
     m_sendTalkgroups(false),
     m_groupVoice()
@@ -129,25 +132,145 @@ void TalkgroupRulesLookup::clear()
 }
 
 /// <summary>
+/// Adds a new entry to the lookup table by the specified unique ID.
+/// </summary>
+/// <param name="id">Unique ID to add.</param>
+/// <param name="slot">DMR slot this talkgroup is valid on.</param>
+/// <param name="enabled">Flag indicating if talkgroup ID is enabled or not.</param>
+void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled)
+{
+    TalkgroupRuleGroupVoiceSource source;
+    TalkgroupRuleConfig config;
+    source.tgId(id);
+    source.tgSlot(slot);
+    config.active(enabled);
+
+    m_mutex.lock();
+    {
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
+            [&](TalkgroupRuleGroupVoice x) 
+            { 
+                if (slot != 0U) {
+                    return x.source().tgId() == id && x.source().tgSlot() == slot;
+                }
+
+                return x.source().tgId() == id; 
+            });
+        if (it != m_groupVoice.end()) {
+            source = it->source();
+            source.tgId(id);
+            source.tgSlot(slot);
+            
+            config = it->config();
+            config.active(enabled);
+
+            TalkgroupRuleGroupVoice entry = *it;
+            entry.config(config);
+            entry.source(source);
+
+            m_groupVoice[it - m_groupVoice.begin()] = entry;
+        }
+        else {
+            TalkgroupRuleGroupVoice entry;
+            entry.config(config);
+            entry.source(source);
+
+            m_groupVoice.push_back(entry);
+        }
+    }
+    m_mutex.unlock();
+}
+
+/// <summary>
+/// Adds a new entry to the lookup table by the specified unique ID.
+/// </summary>
+/// <param name="groupVoice"></param>
+void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
+{
+    if (groupVoice.isInvalid())
+        return;
+
+    TalkgroupRuleGroupVoice entry = groupVoice;
+    uint32_t id = entry.source().tgId();
+    uint8_t slot = entry.source().tgSlot();
+
+    m_mutex.lock();
+    {
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
+            [&](TalkgroupRuleGroupVoice x) 
+            { 
+                if (slot != 0U) {
+                    return x.source().tgId() == id && x.source().tgSlot() == slot;
+                }
+
+                return x.source().tgId() == id; 
+            });
+        if (it != m_groupVoice.end()) {
+            m_groupVoice[it - m_groupVoice.begin()] = entry;
+        }
+        else {
+            m_groupVoice.push_back(entry);
+        }
+    }
+    m_mutex.unlock();
+}
+
+/// <summary>
+/// Erases an existing entry from the lookup table by the specified unique ID.
+/// </summary>
+/// <param name="id">Unique ID to erase.</param>
+/// <param name="slot">DMR slot this talkgroup is valid on.</param>
+void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
+{
+    m_mutex.lock();
+    {
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), [&](TalkgroupRuleGroupVoice x) { return x.source().tgId() == id && x.source().tgSlot() == slot; });
+        if (it != m_groupVoice.end()) {
+            m_groupVoice.erase(it);
+        }
+    }
+    m_mutex.unlock();
+}
+
+/// <summary>
 /// Finds a table entry in this lookup table.
 /// </summary>
 /// <param name="id">Unique identifier for table entry.</param>
+/// <param name="slot">DMR slot this talkgroup is valid on.</param>
 /// <returns>Table entry.</returns>
-TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id)
+TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
 
     m_mutex.lock();
     {
-        try {
-            entry = m_groupVoice.at(id);
-        } catch (...) {
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
+            [&](TalkgroupRuleGroupVoice x) 
+            { 
+                if (slot != 0U) {
+                    return x.source().tgId() == id && x.source().tgSlot() == slot;
+                }
+
+                return x.source().tgId() == id; 
+            });
+        if (it != m_groupVoice.end()) {
+            entry = *it;
+        } else {
             entry = TalkgroupRuleGroupVoice();
         }
     }
     m_mutex.unlock();
 
     return entry;
+}
+
+/// <summary>
+/// Flag indicating whether talkgroup ID access control is enabled or not.
+/// </summary>
+/// <returns>True, if talkgroup ID access control is enabled, otherwise false.</returns>
+bool TalkgroupRulesLookup::getACL()
+{
+    return m_acl;
 }
 
 // ---------------------------------------------------------------------------

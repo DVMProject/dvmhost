@@ -39,8 +39,6 @@
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "RingBuffer.h"
-#include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
 #include "StopWatch.h"
 #include "Timer.h"
 

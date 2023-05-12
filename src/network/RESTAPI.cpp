@@ -208,8 +208,8 @@ RESTAPI::~RESTAPI()
 /// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup ID Lookup Table Instance</param>
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup)
+/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;

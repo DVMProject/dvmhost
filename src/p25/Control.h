@@ -41,7 +41,7 @@
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "p25/lookups/P25AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "RingBuffer.h"
@@ -75,7 +75,7 @@ namespace p25
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
-            ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
+            ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
@@ -169,7 +169,7 @@ namespace p25
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
-        ::lookups::TalkgroupIdLookup* m_tidLookup;
+        ::lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::P25AffiliationLookup m_affiliations;
 
         ::lookups::IdenTable m_idenEntry;

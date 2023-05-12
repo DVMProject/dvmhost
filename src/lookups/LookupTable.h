@@ -34,12 +34,12 @@
 #include "Log.h"
 #include "Thread.h"
 #include "Timer.h"
-#include "Mutex.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
+#include <mutex>
 #include <unordered_map>
 
 namespace lookups
@@ -159,7 +159,7 @@ namespace lookups
         std::string m_filename;
         uint32_t m_reloadTime;
         std::unordered_map<uint32_t, T> m_table;
-        Mutex m_mutex;
+        std::mutex m_mutex;
         bool m_stop;
 
         bool m_acl;

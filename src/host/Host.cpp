@@ -314,13 +314,13 @@ int Host::run()
     uint32_t tidReloadTime = systemConf["talkgroup_id"]["time"].as<uint32_t>(0U);
     bool tidAcl = systemConf["talkgroup_id"]["acl"].as<bool>(false);
 
-    LogInfo("Talkgroup Id Lookups");
+    LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", tidLookupFile.length() > 0U ? tidLookupFile.c_str() : "None");
     if (tidReloadTime > 0U)
         LogInfo("    Reload: %u mins", tidReloadTime);
     LogInfo("    ACL: %s", tidAcl ? "yes" : "no");
 
-    m_tidLookup = new TalkgroupIdLookup(tidLookupFile, tidReloadTime, tidAcl);
+    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl);
     m_tidLookup->read();
 
     // initialize networking

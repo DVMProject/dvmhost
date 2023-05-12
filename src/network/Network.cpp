@@ -106,8 +106,8 @@ Network::~Network()
 /// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
-/// <param name="tidLookup">Talkgroup ID Lookup Table Instance</param>
-void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup)
+/// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
+void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
@@ -291,12 +291,16 @@ void Network::clock(uint32_t ms)
                         uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
                         uint8_t slot = (m_buffer[14U + j]);
 
-                        lookups::TalkgroupId tid = m_tidLookup->find(id);
-                        if (tid.tgEnabled() == false && tid.tgDefault() == true) {
+                        lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                        if (tid.isInvalid()) {
+                            if (!tid.config().active()) {
+                                m_tidLookup->eraseEntry(id, slot);
+                            }
+                            
                             LogMessage(LOG_NET, "Activated TG %u TS %u in TGID table", id, slot);
+                            m_tidLookup->addEntry(id, slot, true);
                         }
 
-                        m_tidLookup->addEntry(id, slot, true);
                         j += 5U;
                     }
                 }
@@ -307,20 +311,22 @@ void Network::clock(uint32_t ms)
                 if (m_debug)
                     Utils::dump(1U, "Network Received, DEACTIVE TGS", m_buffer, length);
 
-                // update TGID lists
-                uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
-                uint32_t j = 0U;
-                for (uint8_t i = 0; i < len; i++) {
-                    uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
-                    uint8_t slot = (m_buffer[14U + j]);
+                if (m_tidLookup != nullptr) {
+                    // update TGID lists
+                    uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
+                    uint32_t j = 0U;
+                    for (uint8_t i = 0; i < len; i++) {
+                        uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
+                        uint8_t slot = (m_buffer[14U + j]);
 
-                    lookups::TalkgroupId tid = m_tidLookup->find(id);
-                    if (tid.tgEnabled() == true && tid.tgDefault() == false) {
-                        LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
-                        m_tidLookup->addEntry(id, slot, false);
+                        lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                        if (!tid.isInvalid()) {
+                            LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
+                            m_tidLookup->eraseEntry(id, slot);
+                        }
+
+                        j += 5U;
                     }
-
-                    j += 5U;
                 }
             }
         }

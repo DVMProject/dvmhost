@@ -23,16 +23,16 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__ROUTING_RULES_LOOKUP_H__)
-#define __ROUTING_RULES_LOOKUP_H__
+#if !defined(__TALKGROUP_RULES_LOOKUP_H__)
+#define __TALKGROUP_RULES_LOOKUP_H__
 
 #include "Defines.h"
 #include "lookups/LookupTable.h"
 #include "Thread.h"
-#include "Mutex.h"
 #include "yaml/Yaml.h"
 
 #include <string>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -189,6 +189,14 @@ namespace lookups
             return *this;
         }
 
+        /// <summary>Helper to quickly determine if a group voice entry is valid.</summary>
+        bool isInvalid() const
+        {
+            if (m_source.tgId() == 0U)
+                return true;
+            return false;
+        }
+
     public:
         /// <summary>Textual name for the routing rule.</summary>
         __PROPERTY_PLAIN(std::string, name, name);
@@ -207,7 +215,7 @@ namespace lookups
     class HOST_SW_API TalkgroupRulesLookup : public Thread {
     public:
         /// <summary>Initializes a new instance of the TalkgroupRulesLookup class.</summary>
-        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime);
+        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl);
         /// <summary>Finalizes a instance of the TalkgroupRulesLookup class.</summary>
         virtual ~TalkgroupRulesLookup();
 
@@ -222,15 +230,26 @@ namespace lookups
         /// <summary>Clears all entries from the lookup table.</summary>
         void clear();
 
+        /// <summary>Adds a new entry to the lookup table.</summary>
+        void addEntry(uint32_t id, uint8_t slot, bool enabled);
+        /// <summary>Adds a new entry to the lookup table.</summary>
+        void addEntry(TalkgroupRuleGroupVoice groupVoice);
+        /// <summary>Adds a new entry to the lookup table.</summary>
+        void eraseEntry(uint32_t id, uint8_t slot);
         /// <summary>Finds a table entry in this lookup table.</summary>
-        virtual TalkgroupRuleGroupVoice find(uint32_t id);
+        virtual TalkgroupRuleGroupVoice find(uint32_t id, uint8_t slot = 0U);
+
+        /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
+        bool getACL();
 
     private:
         const std::string& m_rulesFile;
         uint32_t m_reloadTime;
         yaml::Node m_rules;
 
-        Mutex m_mutex;
+        bool m_acl;
+
+        std::mutex m_mutex;
         bool m_stop;
 
         /// <summary>Loads the table from the passed lookup table file.</summary>
@@ -247,4 +266,4 @@ namespace lookups
     };
 } // namespace lookups
 
-#endif // __ROUTING_RULES_LOOKUP_H__
+#endif // __TALKGROUP_RULES_LOOKUP_H__

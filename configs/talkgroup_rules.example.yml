@@ -1,13 +1,8 @@
 #
-# Digital Voice Modem - Talkgroup Rules (FNE Conference Bridge Mode)
+# Digital Voice Modem - Talkgroup Rules
 #
 # @package DVM / Host Software
 #
-
-# Total time in seconds to "hang" on a TG.
-groupHangTime: 5
-# Flag indicating the TGID information for this master will be sent to its peers.
-sendTalkgroups: true
 
 # 
 # Talkgroup Rules

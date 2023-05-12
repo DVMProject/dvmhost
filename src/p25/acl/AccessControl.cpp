@@ -43,14 +43,14 @@ using namespace p25::acl;
 // ---------------------------------------------------------------------------
 
 RadioIdLookup* AccessControl::m_ridLookup;
-TalkgroupIdLookup* AccessControl::m_tidLookup;
+TalkgroupRulesLookup* AccessControl::m_tidLookup;
 
 /// <summary>
 /// Initializes the P25 access control.
 /// </summary>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
-void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupIdLookup* tidLookup)
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
+void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
@@ -99,8 +99,11 @@ bool AccessControl::validateTGId(uint32_t id)
     }
 
     // lookup TID and perform test for validity
-    TalkgroupId tid = m_tidLookup->find(id);
-    if (!tid.tgEnabled())
+    TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+    if (tid.isInvalid())
+        return false;
+
+    if (!tid.config().active())
         return false;
 
     return true;

@@ -43,7 +43,7 @@
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "lookups/AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "RingBuffer.h"
@@ -73,7 +73,7 @@ namespace nxdn
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
             modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
-            lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+            lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpRCCHData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
@@ -158,7 +158,7 @@ namespace nxdn
 
         lookups::IdenTableLookup* m_idenTable;
         lookups::RadioIdLookup* m_ridLookup;
-        lookups::TalkgroupIdLookup* m_tidLookup;
+        lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::AffiliationLookup m_affiliations;
 
         lookups::IdenTable m_idenEntry;

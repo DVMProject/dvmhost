@@ -38,8 +38,6 @@
 #include "dmr/lc/PrivacyLC.h"
 #include "edac/AMBEFEC.h"
 #include "network/BaseNetwork.h"
-#include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
 
 #include <vector>
 

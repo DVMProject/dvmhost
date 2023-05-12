@@ -39,7 +39,7 @@
 #include "lookups/AffiliationLookup.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "yaml/Yaml.h"
 
 #include <string>
@@ -120,7 +120,7 @@ private:
 
     lookups::IdenTableLookup* m_idenTable;
     lookups::RadioIdLookup* m_ridLookup;
-    lookups::TalkgroupIdLookup* m_tidLookup;
+    lookups::TalkgroupRulesLookup* m_tidLookup;
 
     bool m_dmrBeacons;
     bool m_dmrTSCCData;

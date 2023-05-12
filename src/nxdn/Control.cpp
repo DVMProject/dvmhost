@@ -82,7 +82,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="dumpRCCHData">Flag indicating whether RCCH data is dumped to the log.</param>
@@ -90,7 +90,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
     modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
-    lookups::TalkgroupIdLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
+    lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(nullptr),
     m_data(nullptr),

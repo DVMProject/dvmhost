@@ -68,7 +68,7 @@ bool Slot::m_duplex = true;
 
 ::lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
 ::lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
-::lookups::TalkgroupIdLookup* Slot::m_tidLookup = nullptr;
+::lookups::TalkgroupRulesLookup* Slot::m_tidLookup = nullptr;
 dmr::lookups::DMRAffiliationLookup *Slot::m_affiliations = nullptr;
 
 ::lookups::IdenTable Slot::m_idenEntry = ::lookups::IdenTable();
@@ -636,13 +636,13 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-    network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+    network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
     ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
     assert(dmr != nullptr);

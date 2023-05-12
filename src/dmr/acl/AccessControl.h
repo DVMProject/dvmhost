@@ -33,7 +33,7 @@
 
 #include "Defines.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 
 namespace dmr
 {
@@ -49,7 +49,7 @@ namespace dmr
         class HOST_SW_API AccessControl {
         public:
             /// <summary>Initializes the DMR access control.</summary>
-            static void init(RadioIdLookup* ridLookup, TalkgroupIdLookup* tidLookup);
+            static void init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup);
 
             /// <summary>Helper to validate a source radio ID.</summary>
             static bool validateSrcId(uint32_t id);
@@ -58,7 +58,7 @@ namespace dmr
 
         private:
             static RadioIdLookup* m_ridLookup;
-            static TalkgroupIdLookup* m_tidLookup;
+            static TalkgroupRulesLookup* m_tidLookup;
         };
     } // namespace acl
 } // namespace dmr

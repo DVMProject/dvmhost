@@ -32,7 +32,7 @@
 #include "network/rest/RequestDispatcher.h"
 #include "network/rest/http/HTTPServer.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "Thread.h"
 
 #include <vector>
@@ -61,7 +61,7 @@ public:
     ~RESTAPI();
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
-    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup);
+    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup);
     /// <summary>Sets the instances of the digital radio protocols.</summary>
     void setProtocols(dmr::Control* dmr, p25::Control* p25, nxdn::Control* nxdn);
 
@@ -91,7 +91,7 @@ private:
     nxdn::Control* m_nxdn;
 
     ::lookups::RadioIdLookup* m_ridLookup;
-    ::lookups::TalkgroupIdLookup* m_tidLookup;
+    ::lookups::TalkgroupRulesLookup* m_tidLookup;
 
     typedef std::unordered_map<std::string, uint64_t>::value_type AuthTokenValueType;
     std::unordered_map<std::string, uint64_t> m_authTokens;

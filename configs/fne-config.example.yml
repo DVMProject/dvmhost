@@ -39,8 +39,8 @@ master:
     port: 62031
     # FNE access password.
     password: RPT1234
-    #
-    groupHangtime: 5
+    # Flag indicating the TGID information for this master will be sent to its peers.
+    sendTalkgroups: true
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
@@ -55,8 +55,8 @@ master:
     # Talkgroup Rules Configuration
     #
     talkgroup_rules:
-        # Full path to the routing rules file.
-        file: fne-talkgroup_rules.yml
+        # Full path to the talkgroup rules file.
+        file: talkgroup_rules.yml
         # Amount of time between updates of routing rules file. (minutes)
         time: 30
 

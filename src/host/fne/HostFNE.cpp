@@ -300,7 +300,7 @@ bool HostFNE::readParams()
     if (talkgroupConfigReload > 0U)
         LogInfo("    Reload: %u mins", talkgroupConfigReload);
 
-    m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload);
+    m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload, true);
     m_tidLookup->read();
 
     return true;

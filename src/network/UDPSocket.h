@@ -73,7 +73,7 @@ namespace network
         UDPSocket(const std::string& address, uint16_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
         UDPSocket(uint16_t port = 0U);
-        /// <summary>Initializes a new instance of the UDPSocket class.</summary>
+        /// <summary>Finalizes a instance of the UDPSocket class.</summary>
         ~UDPSocket();
 
         /// <summary>Opens UDP socket connection.</summary>
