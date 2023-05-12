@@ -30,6 +30,8 @@
 #include "p25/P25Defines.h"
 #include "p25/P25Utils.h"
 
+#include <random>
+
 namespace p25
 {
     // ---------------------------------------------------------------------------
@@ -114,6 +116,24 @@ namespace p25
 
             m_netId = netId;
             m_sysId = sysId;
+
+            uint32_t valueTest = (m_netId >> 8);
+            if (valueTest == 0xBEE) {
+                std::random_device rd;
+                std::mt19937 mt(rd());
+
+                std::uniform_int_distribution<uint32_t> dist(0x01, P25_WACN_STD_DEFAULT);
+                m_netId = dist(mt);
+
+                // netId clamping
+                netId = P25Utils::netId(netId);
+
+                dist = std::uniform_int_distribution<uint32_t>(0x01, 0xFFEU);
+                m_sysId = dist(mt);
+
+                // sysId clamping
+                sysId = P25Utils::sysId(sysId);
+            }
 
             m_rfssId = rfssId;
             m_siteId = siteId;
