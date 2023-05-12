@@ -498,13 +498,13 @@ endif (ENABLE_TESTS)
 #
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-install(FILES configs/config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/tg_acl.example.dat DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+install(FILES configs/config.example.yml configs/fne-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/iden_table.dat/' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: rid_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/rid_acl.dat/' /usr/local/etc/config.example.yml\")")
-install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: tg_acl.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/tg_acl.dat/' /usr/local/etc/config.example.yml\")")
+install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: talkgroup_rules.yml/file: \\\\/usr\\\\/local\\\\/etc\\\\/talkgroup_rules.yml/' /usr/local/etc/config.example.yml\")")
 
 #
 # Helper target to force strip binaries.
@@ -532,7 +532,7 @@ add_custom_target(tarball
     COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
     COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
     COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-    COMMAND cp -v ../configs/config*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+    COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
     COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
     COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
     COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
@@ -552,10 +552,11 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
+    COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
     COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
-    COMMAND install -m 644 ../configs/tg_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/tg_acl.dat
+    COMMAND install -m 644 ../configs/talkgroup_rules.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
@@ -572,10 +573,11 @@ add_custom_target(old_install-service
     COMMAND useradd --user-group -M --system dvmhost --shell /bin/false || true
     COMMAND usermod --groups dialout --append dvmhost || true
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
-    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/tg_acl.dat
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/talkgroup_rules.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/log
     COMMAND cp ../linux/dvmhost.service /lib/systemd/system/
     COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/bin/\\\\/opt\\\\/dvm\\\\/bin/' /lib/systemd/system/dvmhost.service\"
