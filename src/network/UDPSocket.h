@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
+*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -33,6 +34,7 @@
 #include "Defines.h"
 
 #include <string>
+#include <vector>
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <netdb.h>
@@ -60,6 +62,9 @@ enum IPMATCHTYPE {
 
 namespace network
 {
+    /* Vector of buffers that contain a full frames */
+    typedef std::vector<std::pair<size_t, uint8_t*>> BufferVector;
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     //      This class implements low-level routines to communicate over a UDP
@@ -72,7 +77,7 @@ namespace network
         UDPSocket(const std::string& address, uint16_t port = 0U);
         /// <summary>Initializes a new instance of the UDPSocket class.</summary>
         UDPSocket(uint16_t port = 0U);
-        /// <summary>Initializes a new instance of the UDPSocket class.</summary>
+        /// <summary>Finalizes a instance of the UDPSocket class.</summary>
         ~UDPSocket();
 
         /// <summary>Opens UDP socket connection.</summary>
@@ -85,7 +90,9 @@ namespace network
         /// <summary>Read data from the UDP socket.</summary>
         int read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen);
+        bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
+        /// <summary>Write data to the UDP socket.</summary>
+        bool write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();
@@ -106,6 +113,8 @@ namespace network
         static bool match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type = IMT_ADDRESS_AND_PORT);
         /// <summary></summary>
         static std::string address(const sockaddr_storage& addr);
+        /// <summary></summary>
+        static uint16_t port(const sockaddr_storage& addr);
 
         /// <summary></summary>
         static bool isNone(const sockaddr_storage& addr);

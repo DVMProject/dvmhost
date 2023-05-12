@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2020 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2020,2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -40,6 +40,12 @@
 #endif
 
 using namespace network;
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define MAX_BUFFER_COUNT 256
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -266,8 +272,9 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
 /// <param name="length">Length of data to write.</param>
 /// <param name="address">IP address to write data to.</param>
 /// <param name="addrLen"></param>
+/// <param name="lenWritten">Total number of bytes written.</param>
 /// <returns>Actual length of data written to remote UDP socket.</returns>
-bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen)
+bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten)
 {
     assert(buffer != nullptr);
     assert(length > 0U);
@@ -279,26 +286,118 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
             continue;
 
 #if defined(_WIN32) || defined(_WIN64)
-        int ret = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
+        int sent = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
 #else
-        ssize_t ret = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
+        ssize_t sent = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
 #endif
 
-        if (ret < 0) {
+        if (sent < 0) {
 #if defined(_WIN32) || defined(_WIN64)
             LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
 #else
             LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
 #endif
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
         }
         else {
 #if defined(_WIN32) || defined(_WIN64)
-            if (ret == int(length))
+            if (sent == int(length))
                 result = true;
 #else
-            if (ret == ssize_t(length))
+            if (sent == ssize_t(length))
                 result = true;
 #endif
+            if (lenWritten != nullptr) {
+                *lenWritten = sent;
+            }
+        }
+    }
+
+    return result;
+}
+
+/// <summary>
+/// Write data to the UDP socket.
+/// </summary>
+/// <param name="buffers">Vector of buffers to write to socket.</param>
+/// <param name="address">IP address to write data to.</param>
+/// <param name="addrLen"></param>
+/// <param name="lenWritten">Total number of bytes written.</param>
+/// <returns>Actual length of data written to remote UDP socket.</returns>
+bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten)
+{
+    bool result = false;
+
+#if defined(_WIN32) || defined(_WIN64)
+    DWORD sent = 0;
+
+    if (buffers.size() > UINT16_MAX) {
+        // LOG_ERROR("Trying to send too large buffer");
+        return RTP_INVALID_VALUE;
+    }
+#else
+    int sent = 0;
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+    WSABUF wsaBuffers[MAX_BUFFER_COUNT];
+
+    // create WSABUFs from input buffers and send them at once
+    for (size_t i = 0; i < buffers.size(); ++i) {
+        wsaBuffers[i].len = (ULONG)buffers.at(i).first;
+        wsaBuffers[i].buf = (char*)buffers.at(i).second;
+    }
+#else
+    struct mmsghdr header;
+    struct iovec chunks[MAX_BUFFER_COUNT];
+    for (size_t i = 0; i < buffers.size(); ++i) {
+        chunks[i].iov_len = buffers.at(i).first;
+        chunks[i].iov_base = buffers.at(i).second;
+        sent += buffers.at(i).first;
+    }
+
+    header.msg_hdr.msg_name = (void *)&address;
+    header.msg_hdr.msg_namelen = addrLen;
+    header.msg_hdr.msg_iov = chunks;
+    header.msg_hdr.msg_iovlen = buffers.size();
+    header.msg_hdr.msg_control = 0;
+    header.msg_hdr.msg_controllen = 0;
+#endif
+
+    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
+        if (m_fd[i] < 0 || m_af[i] != address.ss_family)
+            continue;
+
+#if defined(_WIN32) || defined(_WIN64)
+        int success = WSASendTo(m_fd[i], wsaBuffers, (DWORD)wsaBuffers.size(), &sent, 0, 
+            (SOCKADDR *)&address, addrLen, nullptr, nullptr);
+        if (success != 0) {
+            LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
+        }
+#else
+        if (sendmmsg(m_fd[i], &header, 1, 0) < 0) {
+            LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
+        }
+#endif
+
+        if (sent < 0) {
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
+        }
+        else {
+            result = true;
+            if (lenWritten != nullptr) {
+                *lenWritten = sent;
+            }
         }
     }
 
@@ -486,6 +585,37 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
     }
 
     return address;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="addr"></param>
+/// <returns></returns>
+uint16_t UDPSocket::port(const sockaddr_storage& addr)
+{
+    uint16_t port = 0U;
+
+    switch (addr.ss_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in* in;
+        in = (struct sockaddr_in*) & addr;
+        port = ntohs(in->sin_port);
+    }
+    break;
+    case AF_INET6:
+    {
+        struct sockaddr_in6* in6;
+        in6 = (struct sockaddr_in6*) & addr;
+        port = ntohs(in6->sin6_port);
+    }
+    break;
+    default:
+        break;
+    }
+
+    return port;
 }
 
 /// <summary>
