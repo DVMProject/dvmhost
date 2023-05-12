@@ -98,6 +98,8 @@ file(GLOB dvmhost_SRC
     "src/host/calibrate/*.cpp"
     "src/host/setup/*.h"
     "src/host/setup/*.cpp"
+    "src/host/fne/*.h"
+    "src/host/fne/*.cpp"
     "src/lookups/*.h"
     "src/lookups/*.cpp"
     "src/modem/*.h"
@@ -106,6 +108,8 @@ file(GLOB dvmhost_SRC
     "src/modem/port/*.cpp"
     "src/network/*.h"
     "src/network/*.cpp"
+    "src/network/fne/*.h"
+    "src/network/fne/*.cpp"
     "src/network/json/*.h"
     "src/network/rest/*.h"
     "src/network/rest/*.cpp"
@@ -400,6 +404,24 @@ add_library(asio::asio INTERFACE IMPORTED)
 target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
 target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
 target_link_libraries(asio::asio INTERFACE Threads::Threads)
+
+# Check if platform-specific functions exist
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(sendmsg sys/socket.h HAVE_SENDMSG)
+check_cxx_symbol_exists(sendmmsg sys/socket.h HAVE_SENDMMSG)
+
+if(HAVE_SENDMSG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_SENDMSG=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_SENDMSG=1")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DHAVE_SENDMSG=1")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DHAVE_SENDMSG=1")
+endif()
+if(HAVE_SENDMMSG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_SENDMMSG=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_SENDMMSG=1")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DHAVE_SENDMMSG=1")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DHAVE_SENDMMSG=1")
+endif()
 
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE src)
