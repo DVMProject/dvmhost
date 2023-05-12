@@ -1887,6 +1887,9 @@ bool Host::readParams()
         m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
+        if (m_p25NetId == 0xBEE00) {
+            ::fatal("error 4\n");
+        }
 
         m_sysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
         m_sysId = p25::P25Utils::sysId(m_sysId);
