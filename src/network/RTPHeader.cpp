@@ -43,7 +43,8 @@ std::chrono::time_point<std::chrono::high_resolution_clock> RTPHeader::m_wcStart
 /// <summary>
 /// Initializes a new instance of the RTPHeader class.
 /// </summary>
-RTPHeader::RTPHeader() :
+/// <param name="noIncrement">Disables setting and incrementing the sequence value.</param>
+RTPHeader::RTPHeader(bool noIncrement) :
     m_version(2U),
     m_padding(false),
     m_extension(false),
@@ -57,6 +58,14 @@ RTPHeader::RTPHeader() :
     std::random_device rd;
     std::mt19937 mt(rd());
     m_random = mt;
+
+    if (!noIncrement) {
+        m_seq = m_currentSequence;
+        ++m_currentSequence;
+        if (m_currentSequence > UINT16_MAX) {
+            m_currentSequence = 0U;
+        }
+    }
 }
 
 /// <summary>
@@ -108,15 +117,6 @@ void RTPHeader::encode(uint8_t* data)
         (m_cc & 0x0FU);                                                         // CSRC Count
     data[1U] = (m_marker ? 0x80 : 0x00U) +                                      // Marker Flag
         (m_payloadType & 0x7FU);                                                // Payload Type
-
-    // automatically set and increment sequence number
-    m_seq = m_currentSequence;
-    ++m_currentSequence;
-
-    if (m_currentSequence > UINT16_MAX) {
-        m_currentSequence = 0U;
-    }
-
     data[2U] = (m_seq >> 8) & 0xFFU;                                            // Sequence MSB
     data[3U] = (m_seq >> 0) & 0xFFU;                                            // Sequence LSB
 

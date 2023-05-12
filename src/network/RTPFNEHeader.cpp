@@ -24,6 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "modem/Modem.h"
 #include "network/RTPFNEHeader.h"
 
 using namespace network::frame;
@@ -40,7 +41,8 @@ RTPFNEHeader::RTPFNEHeader() :
     RTPExtensionHeader(),
     m_crc16(0U),
     m_streamId(0U),
-    m_peerId(0U)
+    m_peerId(0U),
+    m_messageLength(0U)
 {
     /* stub */
 }
@@ -62,13 +64,18 @@ bool RTPFNEHeader::decode(const uint8_t* data)
     assert(data != nullptr);
 
     RTPExtensionHeader::decode(data);
-    if (m_payloadLength != RTP_FNE_HEADER_LENGTH_BYTES) {
+    if (m_payloadLength != RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES) {
         return false;
     }
 
-    m_crc16 = (data[4U] << 8) | (data[5U] << 0);                                // Payload Type
+    if (m_payloadType != modem::DVM_FRAME_START) {
+        return false;
+    }
+
+    m_crc16 = (data[4U] << 8) | (data[5U] << 0);                                // CRC-16
     m_streamId = __GET_UINT32(data, 6U);                                        // Stream ID
     m_peerId = __GET_UINT32(data, 10U);                                         // Peer ID
+    m_messageLength = __GET_UINT32(data, 14U);                                  // Message Length
 
     return true;
 }
@@ -81,9 +88,14 @@ void RTPFNEHeader::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
+    m_payloadType = modem::DVM_FRAME_START;
+    m_payloadLength = RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES;
+    RTPExtensionHeader::encode(data);
+
     data[4U] = (m_crc16 >> 8) & 0xFFU;                                          // CRC-16 MSB
     data[5U] = (m_crc16 >> 0) & 0xFFU;                                          // CRC-16 LSB
 
     __SET_UINT32(m_streamId, data, 6U);                                         // Stream ID
     __SET_UINT32(m_peerId, data, 10U);                                          // Peer ID
+    __SET_UINT32(m_messageLength, data, 14U);                                   // Message Length
 }

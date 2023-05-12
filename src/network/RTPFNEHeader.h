@@ -37,7 +37,7 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define RTP_FNE_HEADER_LENGTH_BYTES 8
+#define RTP_FNE_HEADER_LENGTH_BYTES 14
 
 namespace network
 {
@@ -67,6 +67,8 @@ namespace network
             __PROPERTY(uint32_t, streamId, StreamId);
             /// <summary>Traffic Peer ID.</summary>
             __PROPERTY(uint32_t, peerId, PeerId);
+            /// <summary>Traffic Message Length.</summary>
+            __PROPERTY(uint32_t, messageLength, MessageLength);
         };
     } // namespace frame
 } // namespace network

@@ -88,6 +88,9 @@ namespace edac
         /// <summary>Encode 16-bit CRC CCITT-162 w/ initial generator of 1.</summary>
         static uint16_t addCRC16(uint8_t* in, uint32_t bitLength);
 
+        /// <summary></summary>
+        static uint16_t createCRC16(const uint8_t* in, uint32_t bitLength);
+
     private:
         /// <summary></summary>
         static uint8_t createCRC6(const uint8_t* in, uint32_t bitLength);
@@ -95,8 +98,6 @@ namespace edac
         static uint16_t createCRC12(const uint8_t* in, uint32_t bitLength);
         /// <summary></summary>
         static uint16_t createCRC15(const uint8_t* in, uint32_t bitLength);
-        /// <summary></summary>
-        static uint16_t createCRC16(const uint8_t* in, uint32_t bitLength);
     };
 } // namespace edac
 

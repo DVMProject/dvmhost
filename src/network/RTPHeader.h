@@ -53,7 +53,7 @@ namespace network
         class RTPHeader {
         public:
             /// <summary>Initializes a new instance of the RTPHeader class.</summary>
-            RTPHeader();
+            RTPHeader(bool noIncrement = false);
             /// <summary>Finalizes a instance of the RTPHeader class.</summary>
             ~RTPHeader();
 

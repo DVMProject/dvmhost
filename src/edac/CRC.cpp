@@ -712,6 +712,29 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
     return crc;
 }
 
+/// <summary>
+///
+/// </summary>
+/// <param name="in">Input byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
+/// <returns></returns>
+uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
+{
+    uint16_t crc = 0xFFFFU;
+
+    for (uint32_t i = 0U; i < bitLength; i++) {
+        bool bit1 = READ_BIT(in, i) != 0x00U;
+        bool bit2 = (crc & 0x8000U) == 0x8000U;
+
+        crc <<= 1;
+
+        if (bit1 ^ bit2)
+            crc ^= 0x1021U;
+    }
+
+    return crc & 0xFFFFU;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
@@ -783,27 +806,4 @@ uint16_t CRC::createCRC15(const uint8_t* in, uint32_t bitLength)
     }
 
     return crc & 0x7FFFU;
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns></returns>
-uint16_t CRC::createCRC16(const uint8_t* in, uint32_t bitLength)
-{
-    uint16_t crc = 0xFFFFU;
-
-    for (uint32_t i = 0U; i < bitLength; i++) {
-        bool bit1 = READ_BIT(in, i) != 0x00U;
-        bool bit2 = (crc & 0x8000U) == 0x8000U;
-
-        crc <<= 1;
-
-        if (bit1 ^ bit2)
-            crc ^= 0x1021U;
-    }
-
-    return crc & 0xFFFFU;
 }
