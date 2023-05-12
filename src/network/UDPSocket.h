@@ -34,6 +34,7 @@
 #include "Defines.h"
 
 #include <string>
+#include <vector>
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <netdb.h>
@@ -61,6 +62,9 @@ enum IPMATCHTYPE {
 
 namespace network
 {
+    /* Vector of buffers that contain a full frames */
+    typedef std::vector<std::pair<size_t, uint8_t*>> BufferVector;
+
     // ---------------------------------------------------------------------------
     //  Class Declaration
     //      This class implements low-level routines to communicate over a UDP
@@ -86,7 +90,9 @@ namespace network
         /// <summary>Read data from the UDP socket.</summary>
         int read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen);
+        bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
+        /// <summary>Write data to the UDP socket.</summary>
+        bool write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();
