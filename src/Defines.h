@@ -129,6 +129,12 @@ typedef unsigned long long  ulong64_t;
 #define __forceinline __attribute__((always_inline))
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__GNUC__) || defined(__GNUG__)
+#define PACK(decl) decl __attribute__((__packed__))
+#else
+#define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
+#endif
+
 #define NULL_PORT "null"
 #define UART_PORT "uart"
 #define PTY_PORT "pty"

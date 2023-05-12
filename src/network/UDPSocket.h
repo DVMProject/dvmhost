@@ -62,6 +62,29 @@ enum IPMATCHTYPE {
 
 namespace network
 {
+#if defined(HAVE_SENDMSG) && !defined(HAVE_SENDMMSG)
+    struct mmsghdr {
+        struct msghdr msg_hdr;
+        unsigned int msg_len;
+    };
+
+    static inline int sendmmsg(int sockfd, struct mmsghdr* msgvec, unsigned int vlen, int flags)
+    {
+        ssize_t n = 0;
+        for (unsigned int i = 0; i < vlen; i++) {
+            ssize_t ret = sendmsg(sockfd, &msgvec[i].msg_hdr, flags);
+            if (ret < 0)
+                break;
+            n += ret;
+        }
+
+        if (n == 0)
+            return -1;
+
+        return int(n);
+    }
+#endif
+
     /* Vector of buffers that contain a full frames */
     typedef std::vector<std::pair<size_t, uint8_t*>> BufferVector;
 
