@@ -31,6 +31,8 @@
 #include "Defines.h"
 #include "edac/SHA256.h"
 #include "network/Network.h"
+#include "network/RTPHeader.h"
+#include "network/RTPFNEHeader.h"
 #include "network/json/json.h"
 #include "Log.h"
 #include "StopWatch.h"
@@ -52,7 +54,7 @@ using namespace network;
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="local"></param>
-/// <param name="id">Unique ID of this modem on the network.</param>
+/// <param name="peerId">Unique ID on the network.</param>
 /// <param name="password">Network authentication password.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
@@ -63,9 +65,9 @@ using namespace network;
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
-Network::Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
+Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
-    BaseNetwork(local, id, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer),
+    BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
     m_address(address),
     m_port(port),
     m_password(password),
@@ -74,6 +76,12 @@ Network::Network(const std::string& address, uint16_t port, uint16_t local, uint
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
     m_updateLookup(updateLookup),
+    m_ridLookup(nullptr),
+    m_tidLookup(nullptr),
+    m_status(NET_STAT_INVALID),
+    m_salt(nullptr),
+    m_retryTimer(1000U, 10U),
+    m_timeoutTimer(1000U, 60U),
     m_identity(),
     m_rxFrequency(0U),
     m_txFrequency(0U),
@@ -92,6 +100,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t local, uint
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+
+    m_salt = new uint8_t[sizeof(uint32_t)];
 }
 
 /// <summary>
@@ -99,7 +109,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t local, uint
 /// </summary>
 Network::~Network()
 {
-    /* stub */
+    delete[] m_salt;
 }
 
 /// <summary>
@@ -159,15 +169,6 @@ void Network::setRESTAPIData(const std::string& password, uint16_t port)
 }
 
 /// <summary>
-/// Gets the current status of the network.
-/// </summary>
-/// <returns></returns>
-uint8_t Network::getStatus()
-{
-    return m_status;
-}
-
-/// <summary>
 /// Updates the timer by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
@@ -176,14 +177,16 @@ void Network::clock(uint32_t ms)
     if (m_status == NET_STAT_WAITING_CONNECT) {
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
-            bool ret = m_socket.open(m_addr.ss_family);
-            if (ret) {
-                ret = writeLogin();
-                if (!ret)
-                    return;
+            if (m_enabled) {
+                bool ret = m_socket.open(m_addr.ss_family);
+                if (ret) {
+                    ret = writeLogin();
+                    if (!ret)
+                        return;
 
-                m_status = NET_STAT_WAITING_LOGIN;
-                m_timeoutTimer.start();
+                    m_status = NET_STAT_WAITING_LOGIN;
+                    m_timeoutTimer.start();
+                }
             }
 
             m_retryTimer.start();
@@ -194,7 +197,11 @@ void Network::clock(uint32_t ms)
 
     sockaddr_storage address;
     uint32_t addrLen;
-    int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, addrLen);
+
+    frame::RTPHeader rtpHeader = frame::RTPHeader(true);
+    frame::RTPFNEHeader fneHeader;
+    int length = 0U;
+    UInt8Array buffer = m_frameQueue.read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length < 0) {
         LogError(LOG_NET, "Socket has failed, retrying connection to the master");
         close();
@@ -208,88 +215,89 @@ void Network::clock(uint32_t ms)
             return;
         }
 
-        if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {                        // Encapsulated DMR data frame
+        // process incoming message frame opcodes
+        if (::memcmp(buffer.get(), TAG_DMR_DATA, 4U) == 0) {                    // Encapsulated DMR data frame
 #if defined(ENABLE_DMR)
             if (m_enabled && m_dmrEnabled) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, DMR", m_buffer, length);
+                    Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
 
                 uint8_t len = length;
                 m_rxDMRData.addData(&len, 1U);
-                m_rxDMRData.addData(m_buffer, len);
+                m_rxDMRData.addData(buffer.get(), len);
             }
-#endif
+#endif // defined(ENABLE_DMR)
         }
-        else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {                   // Encapsulated P25 data frame
+        else if (::memcmp(buffer.get(), TAG_P25_DATA, 4U) == 0) {               // Encapsulated P25 data frame
 #if defined(ENABLE_P25)
             if (m_enabled && m_p25Enabled) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, P25", m_buffer, length);
+                    Utils::dump(1U, "Network Received, P25", buffer.get(), length);
 
                 uint8_t len = length;
                 m_rxP25Data.addData(&len, 1U);
-                m_rxP25Data.addData(m_buffer, len);
+                m_rxP25Data.addData(buffer.get(), len);
             }
-#endif
+#endif // defined(ENABLE_P25)
         }
-        else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {                  // Encapsulated NXDN data frame
+        else if (::memcmp(buffer.get(), TAG_NXDN_DATA, 4U) == 0) {              // Encapsulated NXDN data frame
 #if defined(ENABLE_NXDN)
             if (m_enabled && m_nxdnEnabled) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, NXDN", m_buffer, length);
+                    Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
 
                 uint8_t len = length;
                 m_rxNXDNData.addData(&len, 1U);
-                m_rxNXDNData.addData(m_buffer, len);
+                m_rxNXDNData.addData(buffer.get(), len);
             }
-#endif
+#endif // defined(ENABLE_NXDN)
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_WL_RID, 7U) == 0) {              // Radio ID Whitelist
+        else if (::memcmp(buffer.get(), TAG_MASTER_WL_RID, 7U) == 0) {          // Radio ID Whitelist
             if (m_enabled && m_updateLookup) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, WL RID", m_buffer, length);
+                    Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
 
                 if (m_ridLookup != nullptr) {
                     // update RID lists
-                    uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
+                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
+                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
                         m_ridLookup->toggleEntry(id, true);
                         j += 4U;
                     }
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_BL_RID, 7U) == 0) {              // Radio ID Blacklist
+        else if (::memcmp(buffer.get(), TAG_MASTER_BL_RID, 7U) == 0) {          // Radio ID Blacklist
             if (m_enabled && m_updateLookup) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, BL RID", m_buffer, length);
+                    Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
 
                 if (m_ridLookup != nullptr) {
                     // update RID lists
-                    uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
+                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
+                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
                         m_ridLookup->toggleEntry(id, false);
                         j += 4U;
                     }
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_ACTIVE_TGS, 6U) == 0) {          // Talkgroup Active IDs
+        else if (::memcmp(buffer.get(), TAG_MASTER_ACTIVE_TGS, 6U) == 0) {      // Talkgroup Active IDs
             if (m_enabled && m_updateLookup) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, ACTIVE TGS", m_buffer, length);
+                    Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
 
                 if (m_tidLookup != nullptr) {
                     // update TGID lists
-                    uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
+                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
-                        uint8_t slot = (m_buffer[14U + j]);
+                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint8_t slot = (buffer[14U + j]);
 
                         lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
                         if (tid.isInvalid()) {
@@ -306,18 +314,18 @@ void Network::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_DEACTIVE_TGS, 7U) == 0) {        // Talkgroup Deactivated IDs
+        else if (::memcmp(buffer.get(), TAG_MASTER_DEACTIVE_TGS, 7U) == 0) {    // Talkgroup Deactivated IDs
             if (m_enabled && m_updateLookup) {
                 if (m_debug)
-                    Utils::dump(1U, "Network Received, DEACTIVE TGS", m_buffer, length);
+                    Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
 
                 if (m_tidLookup != nullptr) {
                     // update TGID lists
-                    uint32_t len = (m_buffer[7U] << 16) | (m_buffer[8U] << 8) | (m_buffer[9U] << 0);
+                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (m_buffer[11U + j] << 16) | (m_buffer[12U + j] << 8) | (m_buffer[13U + j] << 0);
-                        uint8_t slot = (m_buffer[14U + j]);
+                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint8_t slot = (buffer[14U + j]);
 
                         lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
                         if (!tid.isInvalid()) {
@@ -330,7 +338,7 @@ void Network::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_NAK, 6U) == 0) {                 // Master Negative Ack
+        else if (::memcmp(buffer.get(), TAG_MASTER_NAK, 6U) == 0) {             // Master Negative Ack
             if (m_status == NET_STAT_RUNNING) {
                 LogWarning(LOG_NET, "Master returned a NAK; attemping to relogin ...");
                 m_status = NET_STAT_WAITING_LOGIN;
@@ -344,11 +352,11 @@ void Network::clock(uint32_t ms)
                 return;
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_ACK, 6U) == 0) {               // Repeater Ack
+        else if (::memcmp(buffer.get(), TAG_REPEATER_ACK, 6U) == 0) {           // Repeater Ack
             switch (m_status) {
                 case NET_STAT_WAITING_LOGIN:
                     LogDebug(LOG_NET, "Sending authorisation");
-                    ::memcpy(m_salt, m_buffer + 6U, sizeof(uint32_t));
+                    ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
                     writeAuthorisation();
                     m_status = NET_STAT_WAITING_AUTHORISATION;
                     m_timeoutTimer.start();
@@ -371,16 +379,16 @@ void Network::clock(uint32_t ms)
                     break;
             }
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_CLOSING, 5U) == 0) {             // Master Shutdown
+        else if (::memcmp(buffer.get(), TAG_MASTER_CLOSING, 5U) == 0) {         // Master Shutdown
             LogError(LOG_NET, "Master is closing down");
             close();
             open();
         }
-        else if (::memcmp(m_buffer, TAG_MASTER_PONG, 7U) == 0) {                // Master Ping Response
+        else if (::memcmp(buffer.get(), TAG_MASTER_PONG, 7U) == 0) {            // Master Ping Response
             m_timeoutTimer.start();
         }
         else {
-            Utils::dump("Unknown packet from the master", m_buffer, length);
+            Utils::dump("Unknown packet from the master", buffer.get(), length);
         }
     }
 
@@ -455,8 +463,10 @@ void Network::close()
     if (m_status == NET_STAT_RUNNING) {
         uint8_t buffer[9U];
         ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
-        __SET_UINT32(m_id, buffer, 5U);
-        write(buffer, 9U);
+        __SET_UINT32(m_peerId, buffer, 5U);                                         // Peer ID
+
+        m_frameQueue.enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
+        m_frameQueue.flushQueue(m_addr, m_addrLen);
     }
 
     m_socket.close();
@@ -477,15 +487,20 @@ void Network::close()
 /// <returns></returns>
 bool Network::writeLogin()
 {
+    if (!m_enabled) {
+        return false;
+    }
+
     uint8_t buffer[8U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);
-    __SET_UINT32(m_id, buffer, 4U);
+    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, Login", buffer, 8U);
+        Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
-    return write(buffer, 8U);
+    m_frameQueue.enqueueMessage(buffer, 8U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -503,7 +518,7 @@ bool Network::writeAuthorisation()
 
     uint8_t out[40U];
     ::memcpy(out + 0U, TAG_REPEATER_AUTH, 4U);
-    __SET_UINT32(m_id, out, 4U);
+    __SET_UINT32(m_peerId, out, 4U);                                                // Peer ID
 
     edac::SHA256 sha256;
     sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
@@ -511,9 +526,10 @@ bool Network::writeAuthorisation()
     delete[] in;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, Authorisation", out, 40U);
+        Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    return write(out, 40U);
+    m_frameQueue.enqueueMessage(out, 40U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -563,14 +579,15 @@ bool Network::writeConfig()
     char buffer[json.length() + 8U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
-    __SET_UINT32(m_id, buffer, 4U);
+    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
     ::sprintf(buffer + 8U, "%s", json.c_str());
 
     if (m_debug) {
-        Utils::dump(1U, "Network Transmitted, Configuration", (uint8_t*)buffer, json.length() + 8U);
+        Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    return write((uint8_t*)buffer, json.length() + 8U);
+    m_frameQueue.enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -581,10 +598,11 @@ bool Network::writePing()
     uint8_t buffer[11U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_PING, 7U);
-    __SET_UINT32(m_id, buffer, 7U);
+    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, Ping", buffer, 11U);
+        Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    return write(buffer, 11U);
+    m_frameQueue.enqueueMessage(buffer, 11U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }

@@ -83,7 +83,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
     ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
@@ -1045,7 +1045,7 @@ void Control::processNetwork()
 
     uint32_t length = 100U;
     bool ret = false;
-    uint8_t* data = m_network->readP25(ret, control, lsd, duid, frameType, length);
+    UInt8Array data = m_network->readP25(ret, length, control, lsd, duid, frameType);
     if (!ret)
         return;
     if (length == 0U)
@@ -1058,37 +1058,35 @@ void Control::processNetwork()
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *P25 Network Frame", data, length);
+        Utils::dump(2U, "!!! *P25 Network Frame", data.get(), length);
     }
 
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
-            ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+            ret = m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
-            m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+            m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_PDU:
             if (!m_dedicatedControl)
-                ret = m_data->processNetwork(data, length, control, lsd, duid);
+                ret = m_data->processNetwork(data.get(), length, control, lsd, duid);
             else {
                 if (m_voiceOnControl) {
-                    ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+                    ret = m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
                 }
             }
             break;
 
         case P25_DUID_TSDU:
-            m_trunk->processNetwork(data, length, control, lsd, duid);
+            m_trunk->processNetwork(data.get(), length, control, lsd, duid);
             break;
     }
-
-    delete data;
 }
 
 /// <summary>

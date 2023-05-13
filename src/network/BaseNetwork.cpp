@@ -35,6 +35,7 @@
 #include "Utils.h"
 
 using namespace network;
+using namespace network::frame;
 
 #include <cstdio>
 #include <cassert>
@@ -47,16 +48,16 @@ using namespace network;
 /// <summary>
 /// Initializes a new instance of the BaseNetwork class.
 /// </summary>
-/// <param name="localPort">Local port used to listen for incoming data.</param>
-/// <param name="id">Unique ID of this modem on the network.</param>
+/// <param name="peerId">Unique ID of this modem on the network.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="debug"></param>
 /// <param name="slot1">Flag indicating whether DMR slot 1 is enabled for network traffic.</param>
 /// <param name="slot2">Flag indicating whether DMR slot 2 is enabled for network traffic.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer) :
-    m_id(id),
+/// <param name="localPort">Local port used to listen for incoming data.</param>
+BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, uint16_t localPort) :
+    m_peerId(peerId),
     m_slot1(slot1),
     m_slot2(slot2),
     m_allowActivityTransfer(allowActivityTransfer),
@@ -66,12 +67,8 @@ BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debu
     m_addr(),
     m_addrLen(0U),
     m_socket(localPort),
-    m_status(NET_STAT_INVALID),
-    m_retryTimer(1000U, 10U),
-    m_timeoutTimer(1000U, 60U),
-    m_buffer(nullptr),
-    m_salt(nullptr),
-    m_streamId(nullptr),
+    m_frameQueue(m_socket, peerId, debug),
+    m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
     m_rxDMRData(4000U, "DMR Net Buffer"),
@@ -81,21 +78,17 @@ BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debu
     m_audio(),
     m_random()
 {
-    assert(id > 1000U);
-
-    m_buffer = new uint8_t[DATA_PACKET_LENGTH];
-    m_salt = new uint8_t[sizeof(uint32_t)];
-    m_streamId = new uint32_t[2U];
+    assert(peerId > 1000U);
 
     std::random_device rd;
     std::mt19937 mt(rd());
     m_random = mt;
 
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-    m_p25StreamId = dist(m_random);
-    m_nxdnStreamId = dist(m_random);
-    m_streamId[0U] = dist(m_random);
-    m_streamId[1U] = dist(m_random);
+    m_dmrStreamId = new uint32_t[2U];
+    m_dmrStreamId[0U] = createStreamId();
+    m_dmrStreamId[1U] = createStreamId();
+    m_p25StreamId = createStreamId();
+    m_nxdnStreamId = createStreamId();
 }
 
 /// <summary>
@@ -103,9 +96,7 @@ BaseNetwork::BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debu
 /// </summary>
 BaseNetwork::~BaseNetwork()
 {
-    delete[] m_buffer;
-    delete[] m_salt;
-    delete[] m_streamId;
+    delete[] m_dmrStreamId;
 }
 
 /// <summary>
@@ -115,24 +106,26 @@ BaseNetwork::~BaseNetwork()
 /// <returns></returns>
 bool BaseNetwork::readDMR(dmr::data::Data& data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     if (m_rxDMRData.isEmpty())
         return false;
 
     uint8_t length = 0U;
     m_rxDMRData.getData(&length, 1U);
-    m_rxDMRData.getData(m_buffer, length);
+    if (length == 0U)
+        return false;
 
-    uint8_t seqNo = m_buffer[4U];
+    uint8_t buffer[length];
+    ::memset(buffer, 0x00U, length);
+    m_rxDMRData.getData(buffer, length);
 
-    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
-    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
+    uint8_t seqNo = buffer[4U];
 
-    uint8_t flco = (m_buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-    uint32_t slotNo = (m_buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+    uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+
+    uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
     // DMO mode slot disabling
     if (slotNo == 1U && !m_duplex)
@@ -150,27 +143,27 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
     data.setDstId(dstId);
     data.setFLCO(flco);
 
-    bool dataSync = (m_buffer[15U] & 0x20U) == 0x20U;
-    bool voiceSync = (m_buffer[15U] & 0x10U) == 0x10U;
+    bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
+    bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
 
     if (m_debug) {
         LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
     }
 
     if (dataSync) {
-        uint8_t dataType = m_buffer[15U] & 0x0FU;
-        data.setData(m_buffer + 20U);
+        uint8_t dataType = buffer[15U] & 0x0FU;
+        data.setData(buffer + 20U);
         data.setDataType(dataType);
         data.setN(0U);
     }
     else if (voiceSync) {
-        data.setData(m_buffer + 20U);
+        data.setData(buffer + 20U);
         data.setDataType(dmr::DT_VOICE_SYNC);
         data.setN(0U);
     }
     else {
-        uint8_t n = m_buffer[15U] & 0x0FU;
-        data.setData(m_buffer + 20U);
+        uint8_t n = buffer[15U] & 0x0FU;
+        data.setData(buffer + 20U);
         data.setDataType(dmr::DT_VOICE);
         data.setN(n);
     }
@@ -179,22 +172,55 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
 }
 
 /// <summary>
+/// Writes DMR frame data to the network.
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+bool BaseNetwork::writeDMR(const dmr::data::Data& data)
+{
+    uint32_t slotNo = data.getSlotNo();
+
+    // individual slot disabling
+    if (slotNo == 1U && !m_slot1)
+        return false;
+    if (slotNo == 2U && !m_slot2)
+        return false;
+
+    uint8_t dataType = data.getDataType();
+
+    uint32_t slotIndex = slotNo - 1U;
+
+    if (dataType == dmr::DT_VOICE_LC_HEADER) {
+        m_dmrStreamId[slotIndex] = createStreamId();
+    }
+
+    if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
+        m_dmrStreamId[slotIndex] = createStreamId();
+    }
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = createDMR_Message(messageLength, m_dmrStreamId[slotIndex], data);
+    if (message == nullptr) {
+        return false;
+    }
+
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_dmrStreamId[slotIndex], m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+}
+
+/// <summary>
 /// Reads P25 frame data from the P25 ring buffer.
 /// </summary>
 /// <param name="ret"></param>
+/// <param name="frameLength"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <param name="frameType"></param>
-/// <param name="len"></param>
 /// <returns></returns>
-uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& frameLength)
+UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& control, p25::data::LowSpeedData& lsd, 
+    uint8_t& duid, uint8_t& frameType)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
-        ret = false;
-        return nullptr;
-    }
-
     if (m_rxP25Data.isEmpty()) {
         ret = false;
         return nullptr;
@@ -202,19 +228,26 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 
     uint8_t length = 0U;
     m_rxP25Data.getData(&length, 1U);
-    m_rxP25Data.getData(m_buffer, length);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
+    }
 
-    uint8_t lco = m_buffer[4U];
+    uint8_t buffer[length];
+    ::memset(buffer, 0x00U, length);
+    m_rxP25Data.getData(buffer, length);
 
-    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
-    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
+    uint8_t lco = buffer[4U];
 
-    uint8_t MFId = m_buffer[15U];
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-    uint8_t lsd1 = m_buffer[20U];
-    uint8_t lsd2 = m_buffer[21U];
+    uint8_t MFId = buffer[15U];
 
-    duid = m_buffer[22U];
+    uint8_t lsd1 = buffer[20U];
+    uint8_t lsd2 = buffer[21U];
+
+    duid = buffer[22U];
     frameType = p25::P25_FT_DATA_UNIT;
 
     if (m_debug) {
@@ -223,22 +256,22 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
 
     // is this a LDU1, is this the first of a call?
     if (duid == p25::P25_DUID_LDU1) {
-        frameType = m_buffer[180U];
+        frameType = buffer[180U];
 
         if (m_debug) {
             LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
         }
 
         if (frameType == p25::P25_FT_HDU_VALID) {
-            uint8_t algId = m_buffer[181U];
-            uint32_t kid = (m_buffer[182U] << 8) | (m_buffer[183U] << 0);
+            uint8_t algId = buffer[181U];
+            uint32_t kid = (buffer[182U] << 8) | (buffer[183U] << 0);
 
             // copy MI data
             uint8_t mi[p25::P25_MI_LENGTH_BYTES];
             ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
 
             for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
-                mi[i] = m_buffer[184U + i];
+                mi[i] = buffer[184U + i];
             }
 
             if (m_debug) {
@@ -260,117 +293,27 @@ uint8_t* BaseNetwork::readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpe
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    uint8_t* data = nullptr;
-    frameLength = m_buffer[23U];
+    UInt8Array data;
+    frameLength = buffer[23U];
     if (duid == p25::P25_DUID_PDU) {
-        data = new uint8_t[length];
-        ::memset(data, 0x00U, length);
-        ::memcpy(data, m_buffer, length);
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+        ::memset(data.get(), 0x00U, length);
+        ::memcpy(data.get(), buffer, length);
     }
     else {
         if (frameLength <= 24) {
-            data = new uint8_t[frameLength];
-            ::memset(data, 0x00U, frameLength);
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
         }
         else {
-            data = new uint8_t[frameLength];
-            ::memset(data, 0x00U, frameLength);
-            ::memcpy(data, m_buffer + 24U, frameLength);
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+            ::memcpy(data.get(), buffer + 24U, frameLength);
         }
     }
 
     ret = true;
     return data;
-}
-
-/// <summary>
-/// Reads NXDN frame data from the NXDN ring buffer.
-/// </summary>
-/// <param name="ret"></param>
-/// <param name="lc"></param>
-/// <param name="len"></param>
-/// <returns></returns>
-uint8_t* BaseNetwork::readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& frameLength)
-{
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING) {
-        ret = false;
-        return nullptr;
-    }
-
-    if (m_rxNXDNData.isEmpty()) {
-        ret = false;
-        return nullptr;
-    }
-
-    uint8_t length = 0U;
-    m_rxNXDNData.getData(&length, 1U);
-    m_rxNXDNData.getData(m_buffer, length);
-
-    uint8_t messageType = m_buffer[4U];
-
-    uint32_t srcId = __GET_UINT16(m_buffer, 5U);
-    uint32_t dstId = __GET_UINT16(m_buffer, 8U);
-
-    if (m_debug) {
-        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
-    }
-
-    lc.setMessageType(messageType);
-    lc.setSrcId((uint16_t)srcId & 0xFFFFU);
-    lc.setDstId((uint16_t)dstId & 0xFFFFU);
-
-    bool group = (m_buffer[15U] & 0x40U) == 0x40U ? false : true;
-    lc.setGroup(group);
-
-    uint8_t* data = nullptr;
-    frameLength = m_buffer[23U];
-
-    if (frameLength <= 24) {
-        data = new uint8_t[frameLength];
-        ::memset(data, 0x00U, frameLength);
-    }
-    else {
-        data = new uint8_t[frameLength];
-        ::memset(data, 0x00U, frameLength);
-        ::memcpy(data, m_buffer + 24U, frameLength);
-    }
-
-    ret = true;
-    return data;
-}
-
-/// <summary>
-/// Writes DMR frame data to the network.
-/// </summary>
-/// <param name="data"></param>
-/// <returns></returns>
-bool BaseNetwork::writeDMR(const dmr::data::Data& data)
-{
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    uint32_t slotNo = data.getSlotNo();
-
-    // individual slot disabling
-    if (slotNo == 1U && !m_slot1)
-        return false;
-    if (slotNo == 2U && !m_slot2)
-        return false;
-
-    uint8_t dataType = data.getDataType();
-
-    uint32_t slotIndex = slotNo - 1U;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-    if (dataType == dmr::DT_VOICE_LC_HEADER) {
-        m_streamId[slotIndex] = dist(m_random);
-    }
-
-    if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
-        m_streamId[slotIndex] = dist(m_random);
-    }
-
-    return writeDMR(m_id, m_streamId[slotIndex], data);
 }
 
 /// <summary>
@@ -383,16 +326,17 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 /// <returns></returns>
 bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = dist(m_random);
+        m_p25StreamId = createStreamId();
 
-    m_streamId[0] = m_p25StreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, data, frameType);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeP25LDU1(m_id, m_p25StreamId, control, lsd, data, frameType);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -404,16 +348,17 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 /// <returns></returns>
 bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = dist(m_random);
+        m_p25StreamId = createStreamId();
 
-    m_streamId[0] = m_p25StreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, data);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeP25LDU2(m_id, m_p25StreamId, control, lsd, data);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -424,16 +369,17 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
 /// <returns></returns>
 bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = dist(m_random);
+        m_p25StreamId = createStreamId();
 
-    m_streamId[0] = m_p25StreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_TDUMessage(messageLength, control, lsd);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeP25TDU(m_id, m_p25StreamId, control, lsd);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -444,16 +390,17 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
 /// <returns></returns>
 bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = dist(m_random);
+        m_p25StreamId = createStreamId();
 
-    m_streamId[0] = m_p25StreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_TSDUMessage(messageLength, control, data);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeP25TSDU(m_id, m_p25StreamId, control, data);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -468,16 +415,74 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
     const uint8_t* data, const uint32_t len)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_p25StreamId == 0U)
-        m_p25StreamId = dist(m_random);
+        m_p25StreamId = createStreamId();
 
-    m_streamId[0] = m_p25StreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25_PDUMessage(messageLength, header, secHeader, currentBlock, data, len);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeP25PDU(m_id, m_p25StreamId, header, secHeader, currentBlock, data, len);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+}
+
+/// <summary>
+/// Reads NXDN frame data from the NXDN ring buffer.
+/// </summary>
+/// <param name="ret"></param>
+/// <param name="frameLength"></param>
+/// <param name="lc"></param>
+/// <returns></returns>
+UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc)
+{
+    if (m_rxNXDNData.isEmpty()) {
+        ret = false;
+        return nullptr;
+    }
+
+    uint8_t length = 0U;
+    m_rxNXDNData.getData(&length, 1U);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
+    }
+
+    uint8_t buffer[length];
+    ::memset(buffer, 0x00U, length);
+    m_rxNXDNData.getData(buffer, length);
+
+    uint8_t messageType = buffer[4U];
+
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+    }
+
+    lc.setMessageType(messageType);
+    lc.setSrcId((uint16_t)srcId & 0xFFFFU);
+    lc.setDstId((uint16_t)dstId & 0xFFFFU);
+
+    bool group = (buffer[15U] & 0x40U) == 0x40U ? false : true;
+    lc.setGroup(group);
+
+    UInt8Array data;
+    frameLength = buffer[23U];
+    if (frameLength <= 24) {
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+    }
+    else {
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+    }
+
+    ret = true;
+    return data;
 }
 
 /// <summary>
@@ -489,16 +494,17 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 /// <returns></returns>
 bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (m_nxdnStreamId == 0U)
-        m_nxdnStreamId = dist(m_random);
+        m_nxdnStreamId = createStreamId();
 
-    m_streamId[0] = m_nxdnStreamId;
+    uint32_t messageLength = 0U;
+    UInt8Array message = createNXDN_Message(messageLength, lc, data, len);
+    if (message == nullptr) {
+        return false;
+    }
 
-    return writeNXDN(m_id, m_nxdnStreamId, lc, data, len);
+    m_frameQueue.enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -512,14 +518,11 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 /// <returns></returns>
 bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
-    __SET_UINT32(m_id, buffer, 7U);
+    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
 
     __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
     __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
@@ -530,7 +533,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    return write((uint8_t*)buffer, 21U);
+    m_frameQueue.enqueueMessage(buffer, 21U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -542,8 +546,6 @@ bool BaseNetwork::writeActLog(const char* message)
 {
     if (!m_allowActivityTransfer)
         return false;
-    if (m_status != NET_STAT_RUNNING)
-        return false;
 
     assert(message != nullptr);
 
@@ -551,10 +553,11 @@ bool BaseNetwork::writeActLog(const char* message)
     uint32_t len = ::strlen(message);
 
     ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
-    __SET_UINT32(m_id, buffer, 7U);
+    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
     ::strcpy(buffer + 11U, message);
 
-    return write((uint8_t*)buffer, (uint32_t)len + 12U);
+    m_frameQueue.enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -566,8 +569,6 @@ bool BaseNetwork::writeDiagLog(const char* message)
 {
     if (!m_allowDiagnosticTransfer)
         return false;
-    if (m_status != NET_STAT_RUNNING)
-        return false;
 
     assert(message != nullptr);
 
@@ -575,10 +576,11 @@ bool BaseNetwork::writeDiagLog(const char* message)
     uint32_t len = ::strlen(message);
 
     ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
-    __SET_UINT32(m_id, buffer, 8U);
+    __SET_UINT32(m_peerId, buffer, 8U);                                             // Peer ID
     ::strcpy(buffer + 12U, message);
 
-    return write((uint8_t*)buffer, (uint32_t)len + 13U);
+    m_frameQueue.enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId);
+    return m_frameQueue.flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -589,12 +591,11 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
 {
     assert(slotNo == 1U || slotNo == 2U);
 
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     if (slotNo == 1U) {
-        m_streamId[0U] = dist(m_random);
+        m_dmrStreamId[0U] = createStreamId();
     }
     else {
-        m_streamId[1U] = dist(m_random);
+        m_dmrStreamId[1U] = createStreamId();
     }
 
     m_rxDMRData.clear();
@@ -605,10 +606,7 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
 /// </summary>
 void BaseNetwork::resetP25()
 {
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-    m_p25StreamId = dist(m_random);
-    m_streamId[0] = m_p25StreamId;
-
+    m_p25StreamId = createStreamId();
     m_rxP25Data.clear();
 }
 
@@ -617,10 +615,7 @@ void BaseNetwork::resetP25()
 /// </summary>
 void BaseNetwork::resetNXDN()
 {
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-    m_nxdnStreamId = dist(m_random);
-    m_streamId[0] = m_nxdnStreamId;
-
+    m_nxdnStreamId = createStreamId();
     m_rxNXDNData.clear();
 }
 
@@ -629,17 +624,14 @@ void BaseNetwork::resetNXDN()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Writes DMR frame data to the network.
+/// Creates an DMR frame message.
 /// </summary>
-/// <param name="id"></param>
+/// <param name="length"></param>
 /// <param name="streamId"></param>
 /// <param name="data"></param>
 /// <returns></returns>
-bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr::data::Data& data)
+UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
@@ -651,22 +643,20 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
     uint32_t dstId = data.getDstId();                                               // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     uint32_t slotNo = data.getSlotNo();
 
     // Individual slot disabling
     if (slotNo == 1U && !m_slot1)
-        return false;
+        return nullptr;
     if (slotNo == 2U && !m_slot2)
-        return false;
+        return nullptr;
 
     buffer[15U] = slotNo == 1U ? 0x00U : 0x80U;                                     // Slot Number
 
     uint8_t flco = data.getFLCO();
     buffer[15U] |= flco == dmr::FLCO_GROUP ? 0x00U : 0x40U;                         // Group
-
-    uint32_t count = 1U;
 
     uint8_t dataType = data.getDataType();
     if (dataType == dmr::DT_VOICE_SYNC) {
@@ -676,14 +666,6 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
         buffer[15U] |= data.getN();
     }
     else {
-        if (dataType == dmr::DT_VOICE_LC_HEADER) {
-            count = 2U;
-        }
-
-        if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
-            count = 1U;
-        }
-
         buffer[15U] |= (0x20U | dataType);
     }
 
@@ -697,30 +679,24 @@ bool BaseNetwork::writeDMR(const uint32_t id, const uint32_t streamId, const dmr
     buffer[54U] = data.getRSSI();                                                   // RSSI
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, DMR", buffer, (DMR_PACKET_SIZE + PACKET_PAD));
+        Utils::dump(1U, "Network Message, DMR", buffer, (DMR_PACKET_SIZE + PACKET_PAD));
 
-    for (uint32_t i = 0U; i < count; i++)
-        write(buffer, (DMR_PACKET_SIZE + PACKET_PAD));
-
-    return true;
+    length = (DMR_PACKET_SIZE + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
-/// Writes P25 LDU1 frame data to the network.
+/// Creates an P25 LDU1 frame message.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="data"></param>
 /// <param name="frameType"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data, uint8_t frameType)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -738,11 +714,11 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -825,28 +801,23 @@ bool BaseNetwork::writeP25LDU1(const uint32_t id, const uint32_t streamId, const
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 LDU1", buffer, (count + 15U + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 LDU1", buffer, (count + 15U + PACKET_PAD));
 
-    write(buffer, (count + 15U + PACKET_PAD));
-
-    return true;
+    length = (count + 15U + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
-/// Writes P25 LDU2 frame data to the network.
+/// Creates an P25 LDU2 frame message.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="data"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
     const uint8_t* data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     assert(data != nullptr);
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
@@ -864,11 +835,11 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -926,26 +897,21 @@ bool BaseNetwork::writeP25LDU2(const uint32_t id, const uint32_t streamId, const
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 LDU2", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 LDU2", buffer, (count + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
-
-    return true;
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
-/// Writes P25 TDU frame data to the network.
+/// Creates an P25 TDU frame message.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25TDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
+UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
@@ -959,11 +925,11 @@ bool BaseNetwork::writeP25TDU(const uint32_t id, const uint32_t streamId, const 
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -974,26 +940,21 @@ bool BaseNetwork::writeP25TDU(const uint32_t id, const uint32_t streamId, const 
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 TDU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 TDU", buffer, (count + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
-
-    return true;
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
-/// Writes P25 TSDU frame data to the network.
+/// Creates an P25 TSDU frame message.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="data"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const uint8_t* data)
+UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     assert(data != nullptr);
 
     uint8_t buffer[DATA_PACKET_LENGTH];
@@ -1009,11 +970,11 @@ bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     buffer[15U] = control.getMFId();                                                // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = 0U;                                                               // Reserved (LSD 1)
     buffer[21U] = 0U;                                                               // Reserved (LSD 2)
@@ -1028,30 +989,25 @@ bool BaseNetwork::writeP25TSDU(const uint32_t id, const uint32_t streamId, const
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 TDSU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 TDSU", buffer, (count + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
-
-    return true;
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
 /// Writes P25 PDU frame data to the network.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="header"></param>
 /// <param name="secHeader"></param>
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
+UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
     const uint8_t currentBlock, const uint8_t* data, const uint32_t len)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     bool useSecondHeader = false;
 
     // process second header if we're using enhanced addressing
@@ -1077,11 +1033,11 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
 
     __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
 
-    __SET_UINT32(id, buffer, 11U);                                                  // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
 
     buffer[15U] = header.getMFId();                                                 // MFId
 
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
+    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = header.getBlocksToFollow();                                       // Blocks To Follow
     buffer[21U] = currentBlock;                                                     // Current Block
@@ -1096,27 +1052,22 @@ bool BaseNetwork::writeP25PDU(const uint32_t id, const uint32_t streamId, const 
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, P25 PDU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 PDU", buffer, (count + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
-
-    return true;
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
 }
 
 /// <summary>
 /// Writes NXDN frame data to the network.
 /// </summary>
-/// <param name="id"></param>
-/// <param name="streamId"></param>
+/// <param name="length"></param>
 /// <param name="lc"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
+UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
     assert(data != nullptr);
 
     uint8_t buffer[DATA_PACKET_LENGTH];
@@ -1132,11 +1083,11 @@ bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nx
     uint32_t dstId = lc.getDstId();                                             // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(id, buffer, 11U);                                              // Peer ID
+    __SET_UINT32(m_peerId, buffer, 11U);                                        // Peer ID
 
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
-    __SET_UINT32(streamId, buffer, 16U);                                        // Stream ID
+    __SET_UINT32(m_nxdnStreamId, buffer, 16U);                                  // Stream ID
 
     uint32_t count = 24U;
 
@@ -1146,57 +1097,8 @@ bool BaseNetwork::writeNXDN(const uint32_t id, const uint32_t streamId, const nx
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Transmitted, NXDN", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, NXDN", buffer, (count + PACKET_PAD));
 
-    write(buffer, (count + PACKET_PAD));
-
-    return true;
-}
-
-/// <summary>
-/// Writes data to the network.
-/// </summary>
-/// <param name="buffer">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <returns>True, if buffer is written to the network, otherwise false.</returns>
-bool BaseNetwork::write(const uint8_t* data, uint32_t length)
-{
-    assert(data != nullptr);
-    assert(length > 0U);
-
-    // if (m_debug)
-    //    Utils::dump(1U, "Network Transmitted", data, length);
-
-    bool ret = m_socket.write(data, length, m_addr, m_addrLen);
-    if (!ret) {
-        LogError(LOG_NET, "Socket has failed when writing data to the peer!");
-        return false;
-    }
-
-    return true;
-}
-
-/// <summary>
-/// Writes data to the network.
-/// </summary>
-/// <param name="buffer">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="addr"></param>
-/// <param name="addrLen"></param>
-/// <returns>True, if buffer is written to the network, otherwise false.</returns>
-bool BaseNetwork::write(const uint8_t* data, uint32_t length, sockaddr_storage& addr, uint32_t addrLen)
-{
-    assert(data != nullptr);
-    assert(length > 0U);
-
-    // if (m_debug)
-    //    Utils::dump(1U, "Network Transmitted", data, length);
-
-    bool ret = m_socket.write(data, length, addr, addrLen);
-    if (!ret) {
-        LogError(LOG_NET, "Socket has failed when writing data to the peer!");
-        return false;
-    }
-
-    return true;
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
 }

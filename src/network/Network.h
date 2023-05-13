@@ -49,10 +49,13 @@ namespace network
     class HOST_SW_API Network : public BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the Network class.</summary>
-        Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
+        Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
+
+        /// <summary>Gets the current status of the network.</summary>
+        NET_CONN_STATUS getStatus() { return m_status; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
@@ -61,8 +64,6 @@ namespace network
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
         /// <summary>Sets REST API configuration settings from the modem.</summary>
         void setRESTAPIData(const std::string& password, uint16_t port);
-        /// <summary>Gets the current status of the network.</summary>
-        uint8_t getStatus();
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -92,6 +93,13 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+
+        NET_CONN_STATUS m_status;
+
+        uint8_t* m_salt;
+
+        Timer m_retryTimer;
+        Timer m_timeoutTimer;
 
         /** station metadata */
         std::string m_identity;

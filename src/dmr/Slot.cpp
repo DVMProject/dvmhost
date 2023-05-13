@@ -62,7 +62,7 @@ bool Slot::m_embeddedLCOnly = false;
 bool Slot::m_dumpTAData = true;
 
 modem::Modem* Slot::m_modem = nullptr;
-network::BaseNetwork* Slot::m_network = nullptr;
+network::Network* Slot::m_network = nullptr;
 
 bool Slot::m_duplex = true;
 
@@ -642,7 +642,7 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-    network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
+    network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
     ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
     assert(dmr != nullptr);

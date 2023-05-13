@@ -293,6 +293,13 @@ inline std::string strtoupper(const std::string value) {
         std::unique_ptr<type[]> name = std::unique_ptr<type[]>(new type[length]);       \
         ::memset(name.get(), 0x00U, length);
 
+typedef std::unique_ptr<uint8_t[]> UInt8Array;
+
+/// <summary>Creates a named uint8_t array buffer.</summary>
+#define __UNIQUE_UINT8_ARRAY(name, length)                                              \
+        UInt8Array name = UInt8Array(new uint8_t[length]);                              \
+        ::memset(name.get(), 0x00U, length);
+
 /**
  * Class Copy Code Pattern
  */

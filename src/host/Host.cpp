@@ -2274,7 +2274,7 @@ bool Host::createNetwork()
     uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
     std::string restApiPassword = networkConf["restPassword"].as<std::string>();
     bool restApiDebug = networkConf["restDebug"].as<bool>(false);
-    uint32_t id = networkConf["id"].as<uint32_t>(0U);
+    uint32_t id = networkConf["id"].as<uint32_t>(1001U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
@@ -2301,7 +2301,7 @@ bool Host::createNetwork()
     LogInfo("Network Parameters");
     LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
-        LogInfo("    Peer Id: %u", id);
+        LogInfo("    Peer ID: %u", id);
         LogInfo("    Address: %s", address.c_str());
         LogInfo("    Port: %u", port);
         if (local > 0U)

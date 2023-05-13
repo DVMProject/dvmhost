@@ -36,7 +36,7 @@
 #include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/Slot.h"
 #include "modem/Modem.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
@@ -61,7 +61,7 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
-            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
+            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex,
             ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
@@ -134,7 +134,7 @@ namespace dmr
         uint32_t m_colorCode;
 
         modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        network::Network* m_network;
 
         Slot* m_slot1;
         Slot* m_slot2;

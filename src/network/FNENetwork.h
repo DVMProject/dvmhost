@@ -58,6 +58,7 @@ namespace network
         /// <summary>Initializes a new insatnce of the FNEPeerConnection class.</summary>
         FNEPeerConnection() :
             m_id(0U),
+            m_currStreamId(0U),
             m_socketStorage(),
             m_sockStorageLen(0U),
             m_address(),
@@ -76,6 +77,7 @@ namespace network
         /// <param name="sockStorageLen"></param>
         FNEPeerConnection(uint32_t id, sockaddr_storage& socketStorage, uint32_t sockStorageLen) :
             m_id(id),
+            m_currStreamId(0U),
             m_socketStorage(socketStorage),
             m_sockStorageLen(sockStorageLen),
             m_address(UDPSocket::address(socketStorage)),
@@ -97,6 +99,7 @@ namespace network
         {
             if (this != &data) {
                 m_id = data.m_id;
+                m_currStreamId = data.m_currStreamId;
                 m_socketStorage = data.m_socketStorage;
                 m_sockStorageLen = data.m_sockStorageLen;
                 m_address = data.m_address;
@@ -114,6 +117,9 @@ namespace network
     public:
         /// <summary>Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, id, id);
+
+        /// <summary>Current Stream ID.</summary>
+        __PROPERTY_PLAIN(uint32_t, currStreamId, currStreamId);
 
         /// <summary></<summary>
         __PROPERTY_PLAIN(sockaddr_storage, socketStorage, socketStorage);
@@ -150,16 +156,17 @@ namespace network
     class HOST_SW_API FNENetwork : public BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
-        FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
+        FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
             bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
             uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
 
+        /// <summary>Gets the current status of the network.</summary>
+        NET_CONN_STATUS getStatus() { return m_status; }
+
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
-        /// <summary>Gets the current status of the network.</summary>
-        uint8_t getStatus();
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -196,6 +203,8 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+
+        NET_CONN_STATUS m_status;
 
         typedef std::pair<const unsigned int, network::FNEPeerConnection> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection> m_peers;

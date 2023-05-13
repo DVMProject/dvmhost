@@ -45,13 +45,14 @@ using namespace network::frame;
 /// Initializes a new instance of the FrameQueue class.
 /// </FrameQueue>
 /// <param name="socket">Local port used to listen for incoming data.</param>
-/// <param name="id">Unique ID of this modem on the network.</param>
-FrameQueue::FrameQueue(UDPSocket socket, uint32_t id) :
-    m_id(id),
+/// <param name="peerId">Unique ID of this modem on the network.</param>
+FrameQueue::FrameQueue(UDPSocket socket, uint32_t peerId, bool debug) :
+    m_peerId(peerId),
     m_socket(socket),
-    m_buffers()
+    m_buffers(),
+    m_debug(debug)
 {
-    assert(id > 1000U);
+    assert(peerId > 1000U);
 }
 
 /// <summary>
@@ -65,47 +66,46 @@ FrameQueue::~FrameQueue()
 /// <summary>
 /// Read message from the UDP socket.
 /// </summary>
-/// <param name="message">Buffer to read message into.</param>
+/// <param name="messageLength">Actual length of message read from remote UDP socket.</param>
 /// <param name="address">IP address to read message from.</param>
 /// <param name="addrLen"></param>
 /// <param name="rtpHeader">RTP Header.</param>
 /// <param name="fneHeader">FNE Header.</param>
-/// <returns>Actual length of message read from remote UDP socket.</returns>
-int FrameQueue::read(uint8_t* message, sockaddr_storage& address, uint32_t& addrLen,
+/// <returns>Buffer containing message read.</returns>
+UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
-    assert(message != nullptr);
-
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     RTPHeader _rtpHeader = RTPHeader(true);
     RTPFNEHeader _fneHeader = RTPFNEHeader();
 
+    messageLength = -1;
     int length = m_socket.read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length > 0) {
         if (length < RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES) {
             LogError(LOG_NET, "FrameQueue::read(), message received from network is malformed! %u bytes != %u bytes", 
                 RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES, length);
-            return -1;
+            return nullptr;
         }
 
         // decode RTP header
         if (!_rtpHeader.decode(buffer)) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP packet received from network");
-            return -1;
+            return nullptr;
         }
 
         // ensure the RTP header has extension header (otherwise abort)
         if (!_rtpHeader.getExtension()) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP header received from network");
-            return -1;
+            return nullptr;
         }
 
         // ensure payload type is correct
         if (_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP payload type received from network");
-            return -1;
+            return nullptr;
         }
 
         if (rtpHeader != nullptr) {
@@ -115,7 +115,7 @@ int FrameQueue::read(uint8_t* message, sockaddr_storage& address, uint32_t& addr
         // decode FNE RTP header
         if (!_fneHeader.decode(buffer + RTP_HEADER_LENGTH_BYTES)) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP packet received from network");
-            return -1;
+            return nullptr;
         }
 
         if (fneHeader != nullptr) {
@@ -123,22 +123,21 @@ int FrameQueue::read(uint8_t* message, sockaddr_storage& address, uint32_t& addr
         }
 
         // copy message
-        uint32_t messageLen = _fneHeader.getMessageLength();
-        message = new uint8_t[messageLen];
-        ::memset(message, 0x00U, messageLen);
-        ::memcpy(message, buffer + (RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES), messageLen);
+        messageLength = _fneHeader.getMessageLength();
+        __UNIQUE_UINT8_ARRAY(message, messageLength);
+        ::memcpy(message.get(), buffer + (RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES), messageLength);
 
-        uint16_t calc = edac::CRC::createCRC16(message, messageLen * 8U);
+        uint16_t calc = edac::CRC::createCRC16(message.get(), messageLength * 8U);
         if (calc != _fneHeader.getCRC()) {
             LogError(LOG_NET, "FrameQueue::read(), failed CRC CCITT-162 check");
-            delete[] message;
-            return -1;
+            messageLength = -1;
+            return nullptr;
         }
 
-        return messageLen;
+        return message;
     }
 
-    return -1;
+    return nullptr;
 }
 
 /// <summary>
@@ -174,6 +173,9 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     fneHeader.encode(buffer + RTP_HEADER_LENGTH_BYTES);
 
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
+
+    if (m_debug)
+        Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 
     m_buffers.push_back({ bufferLen, buffer });
 }
@@ -214,6 +216,9 @@ bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32
 
         ::memcpy(_buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, buffer.second, length);
 
+        if (m_debug)
+            Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", _buffer, bufferLen);
+
         m_buffers.push_back({ bufferLen, _buffer });
     }
 
@@ -236,8 +241,10 @@ bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
     }
 
     for (auto& buffer : m_buffers) {
-        if (buffer.second != nullptr) {
-            delete buffer.second;
+        uint8_t* bufPtr = buffer.second;
+        if (bufPtr != nullptr) {
+            delete bufPtr;
+            bufPtr = nullptr;
         }
     }
     m_buffers.clear();

@@ -45,6 +45,7 @@
 #include "p25/lc/TDULC.h"
 #include "p25/Audio.h"
 #include "nxdn/lc/RTCH.h"
+#include "network/FrameQueue.h"
 #include "network/UDPSocket.h"
 #include "RingBuffer.h"
 #include "Timer.h"
@@ -92,7 +93,6 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
-    const uint32_t DATA_PACKET_LENGTH = 8192U;
     const uint32_t DMR_PACKET_SIZE = 55U;
     const uint32_t PACKET_PAD = 8U;
 
@@ -125,24 +125,24 @@ namespace network
     class HOST_SW_API BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the BaseNetwork class.</summary>
-        BaseNetwork(uint16_t localPort, uint32_t id, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer);
+        BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
+            uint16_t localPort = 0U);
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 
-        /// <summary>Gets the current status of the network.</summary>
-        NET_CONN_STATUS getStatus() { return m_status; }
-
+        /** Digital Mobile Radio */
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
-        /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        virtual uint8_t* readP25(bool& ret, p25::lc::LC& control, p25::data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType, uint32_t& frameLength);
-        /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        virtual uint8_t* readNXDN(bool& ret, nxdn::lc::RTCH& lc, uint32_t& frameLength);
-
         /// <summary>Writes DMR frame data to the network.</summary>
         virtual bool writeDMR(const dmr::data::Data& data);
+
+        /** Project 25 */
+        /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
+        virtual UInt8Array readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& control, p25::data::LowSpeedData& lsd, 
+            uint8_t& duid, uint8_t& frameType);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
-        virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType);
+        virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
+            uint8_t frameType);
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>
@@ -150,9 +150,12 @@ namespace network
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
         virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
-        virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
-            const uint8_t* data, const uint32_t len);
+        virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
+            const uint8_t currentBlock, const uint8_t* data, const uint32_t len);
 
+        /** Next Generation Digital Narrowband */
+        /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
+        virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc);
         /// <summary>Writes NXDN frame data to the network.</summary>
         virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
 
@@ -182,7 +185,7 @@ namespace network
         virtual void resetNXDN();
 
     protected:
-        uint32_t m_id;
+        uint32_t m_peerId;
 
         bool m_slot1;
         bool m_slot2;
@@ -196,15 +199,9 @@ namespace network
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
         UDPSocket m_socket;
-        NET_CONN_STATUS m_status;
+        FrameQueue m_frameQueue;
 
-        Timer m_retryTimer;
-        Timer m_timeoutTimer;
-
-        uint8_t* m_buffer;
-        uint8_t* m_salt;
-
-        uint32_t* m_streamId;
+        uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;
         uint32_t m_nxdnStreamId;
 
@@ -218,26 +215,31 @@ namespace network
 
         std::mt19937 m_random;
 
-        /// <summary>Writes DMR frame data to the network.</summary>
-        bool writeDMR(const uint32_t id, const uint32_t streamId, const dmr::data::Data& data);
-        /// <summary>Writes P25 LDU1 frame data to the network.</summary>
-        bool writeP25LDU1(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType);
-        /// <summary>Writes P25 LDU2 frame data to the network.</summary>
-        bool writeP25LDU2(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
-        /// <summary>Writes P25 TDU frame data to the network.</summary>
-        bool writeP25TDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
-        /// <summary>Writes P25 TSDU frame data to the network.</summary>
-        bool writeP25TSDU(const uint32_t id, const uint32_t streamId, const p25::lc::LC& control, const uint8_t* data);
-        /// <summary>Writes P25 PDU frame data to the network.</summary>
-        bool writeP25PDU(const uint32_t id, const uint32_t streamId, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
-            const uint8_t* data, const uint32_t len);
-        /// <summary>Writes NXDN frame data to the network.</summary>
-        bool writeNXDN(const uint32_t id, const uint32_t streamId, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
+        /// <summary>Generates a new stream ID.</summary>
+        uint32_t createStreamId() { std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX); return dist(m_random); }
 
-        /// <summary>Writes data to the network.</summary>
-        virtual bool write(const uint8_t* data, uint32_t length);
-        /// <summary>Writes data to the network.</summary>
-        virtual bool write(const uint8_t* data, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
+        /// <summary>Creates an DMR frame message.</summary>
+        UInt8Array createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data);
+
+        /// <summary>Creates an P25 LDU1 frame message.</summary>
+        UInt8Array createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
+            const uint8_t* data, uint8_t frameType);
+        /// <summary>Creates an P25 LDU2 frame message.</summary>
+        UInt8Array createP25_LDU2Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
+            const uint8_t* data);
+
+        /// <summary>Creates an P25 TDU frame message.</summary>
+        UInt8Array createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
+
+        /// <summary>Creates an P25 TSDU frame message.</summary>
+        UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
+
+        /// <summary>Creates an P25 PDU frame message.</summary>
+        UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
+            const uint8_t currentBlock, const uint8_t* data, const uint32_t len);
+        
+        /// <summary>Creates an NXDN frame message.</summary>
+        UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
     };
 } // namespace network
 

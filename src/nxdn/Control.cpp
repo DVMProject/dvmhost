@@ -89,7 +89,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
-    modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
+    modem::Modem* modem, network::Network* network, bool duplex, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(nullptr),
@@ -739,7 +739,7 @@ void Control::processNetwork()
 
     uint32_t length = 100U;
     bool ret = false;
-    uint8_t* data = m_network->readNXDN(ret, lc, length);
+    UInt8Array data = m_network->readNXDN(ret, length, lc);
     if (!ret)
         return;
     if (length == 0U)
@@ -752,13 +752,13 @@ void Control::processNetwork()
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *NXDN Network Frame", data, length);
+        Utils::dump(2U, "!!! *NXDN Network Frame", data.get(), length);
     }
 
-    NXDNUtils::scrambler(data + 2U);
+    NXDNUtils::scrambler(data.get() + 2U);
 
     channel::LICH lich;
-    bool valid = lich.decode(data + 2U);
+    bool valid = lich.decode(data.get() + 2U);
 
     if (valid)
         m_rfLastLICH = lich;
@@ -768,14 +768,12 @@ void Control::processNetwork()
 
     switch (usc) {
         case NXDN_LICH_USC_UDCH:
-            ret = m_data->processNetwork(option, lc, data, length);
+            ret = m_data->processNetwork(option, lc, data.get(), length);
             break;
         default:
-            ret = m_voice->processNetwork(usc, option, lc, data, length);
+            ret = m_voice->processNetwork(usc, option, lc, data.get(), length);
             break;
     }
-
-    delete data;
 }
 
 /// <summary>

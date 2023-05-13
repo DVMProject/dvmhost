@@ -39,7 +39,7 @@
 #include "nxdn/packet/Trunk.h"
 #include "nxdn/packet/Data.h"
 #include "nxdn/SiteData.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
@@ -72,7 +72,7 @@ namespace nxdn
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
-            modem::Modem* modem, network::BaseNetwork* network, bool duplex, lookups::RadioIdLookup* ridLookup,
+            modem::Modem* modem, network::Network* network, bool duplex, lookups::RadioIdLookup* ridLookup,
             lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
             bool dumpRCCHData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
@@ -140,7 +140,7 @@ namespace nxdn
         uint32_t m_timeout;
 
         modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        network::Network* m_network;
 
         bool m_duplex;
         bool m_control;

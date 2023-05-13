@@ -200,10 +200,8 @@ int HostFNE::run()
     StopWatch stopWatch;
     stopWatch.start();
 
-    bool killed = false;
-
     // main execution loop
-    while (!killed) {
+    while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 
         ms = stopWatch.elapsed();
@@ -321,6 +319,7 @@ bool HostFNE::createMasterNetwork()
 
     std::string address = masterConf["address"].as<std::string>();
     uint16_t port = (uint16_t)masterConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
+    uint32_t id = masterConf["peerId"].as<uint32_t>(1001U);
     std::string password = masterConf["password"].as<std::string>();
     bool debug = masterConf["debug"].as<bool>(false);
 
@@ -331,6 +330,7 @@ bool HostFNE::createMasterNetwork()
     LogInfo("Network Parameters");
     LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
+        LogInfo("    Peer ID: %u", id);
         LogInfo("    Address: %s", address.c_str());
         LogInfo("    Port: %u", port);
         LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
@@ -344,7 +344,7 @@ bool HostFNE::createMasterNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new FNENetwork(this, address, port, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
+        m_network = new FNENetwork(this, address, port, id, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
             m_pingTime, m_updateLookupTime);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);
@@ -380,12 +380,13 @@ bool HostFNE::createPeerNetworks()
                 continue;
             }
 
+            bool enabled = peerConf["enabled"].as<bool>(false);
             std::string address = peerConf["address"].as<std::string>();
             uint16_t port = (uint16_t)peerConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
             std::string masterAddress = peerConf["masterAddress"].as<std::string>();
             uint16_t masterPort = (uint16_t)peerConf["masterPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
             std::string password = peerConf["password"].as<std::string>();
-            uint32_t id = peerConf["peerId"].as<uint32_t>(0U);
+            uint32_t id = peerConf["peerId"].as<uint32_t>(1001U);
             bool debug = peerConf["debug"].as<bool>(false);
 
             std::string identity = peerConf["identity"].as<std::string>();
@@ -395,7 +396,7 @@ bool HostFNE::createPeerNetworks()
             float longitude = peerConf["longitude"].as<float>(0.0F);
             std::string location = peerConf["location"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Peer Id %u Master Address %s Master Port %u Identity %s", id, masterAddress.c_str(), masterPort, identity.c_str());
+            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled);
 
             // initialize networking
             network::Network* network = new Network(address, port, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
@@ -409,7 +410,7 @@ bool HostFNE::createPeerNetworks()
                 return false;
             }
 
-            network->enable(true);
+            network->enable(enabled);
             m_peerNetworks[identity] = network;
         }
     }

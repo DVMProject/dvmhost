@@ -39,7 +39,7 @@
 #include "dmr/packet/Data.h"
 #include "dmr/packet/Voice.h"
 #include "modem/Modem.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
@@ -116,7 +116,7 @@ namespace dmr
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-            network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
+            network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
             ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
         static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
@@ -220,7 +220,7 @@ namespace dmr
         static bool m_dumpTAData;
 
         static modem::Modem* m_modem;
-        static network::BaseNetwork* m_network;
+        static network::Network* m_network;
 
         static bool m_duplex;
 

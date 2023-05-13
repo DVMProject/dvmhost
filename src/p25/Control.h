@@ -37,7 +37,7 @@
 #include "p25/packet/Data.h"
 #include "p25/packet/Voice.h"
 #include "p25/packet/Trunk.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
@@ -73,7 +73,7 @@ namespace p25
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+        Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
             ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
@@ -154,7 +154,7 @@ namespace p25
         uint32_t m_timeout;
 
         modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        network::Network* m_network;
 
         bool m_inhibitIllegal;
         bool m_legacyGroupGrnt;

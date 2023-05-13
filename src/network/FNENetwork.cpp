@@ -53,6 +53,7 @@ using namespace network::fne;
 /// <param name="host"></param>
 /// <param name="address">Network Hostname/IP address to listen on.</param>
 /// <param name="port">Network port number.</param>
+/// <param name="peerId">Unique ID on the network.</param>
 /// <param name="password">Network authentication password.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
@@ -62,10 +63,10 @@ using namespace network::fne;
 /// <param name="trafficRepeat">Flag indicating if traffic should be repeated from this master.</param>
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
-FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, const std::string& password,
+FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
     bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
     uint32_t pingTime, uint32_t updateLookupTime) :
-    BaseNetwork(0U, 0U, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
+    BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
     m_tagNXDN(nullptr),
@@ -79,6 +80,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_nxdnEnabled(nxdn),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_status(NET_STAT_INVALID),
     m_peers(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U))
@@ -112,15 +114,6 @@ void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::Talkgrou
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
-}
-
-/// <summary>
-/// Gets the current status of the network.
-/// </summary>
-/// <returns></returns>
-uint8_t FNENetwork::getStatus()
-{
-    return m_status;
 }
 
 /// <summary>
@@ -171,44 +164,64 @@ void FNENetwork::clock(uint32_t ms)
 
     sockaddr_storage address;
     uint32_t addrLen;
-    int length = m_socket.read(m_buffer, DATA_PACKET_LENGTH, address, addrLen);
+    frame::RTPHeader rtpHeader = frame::RTPHeader(true);
+    frame::RTPFNEHeader fneHeader;
+    int length = 0U;
+    UInt8Array buffer = m_frameQueue.read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (!m_enabled) {
             return;
         }
 
         if (m_debug)
-            Utils::dump(1U, "Network Received", m_buffer, length);
+            Utils::dump(1U, "Network Received", buffer.get(), length);
 
         if (length < 4) {
             LogWarning(LOG_NET, "Malformed packet (from %s:%s)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
-            Utils::dump(1U, "Network Received", m_buffer, length);
+            Utils::dump(1U, "Network Received", buffer.get(), length);
             return;
         }
 
-        if (::memcmp(m_buffer, TAG_DMR_DATA, 4U) == 0) {                        // Encapsulated DMR data frame
+        uint32_t peerId = fneHeader.getPeerId();
+
+        // update current peer stream ID
+        if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
+            FNEPeerConnection connection = m_peers[peerId];            
+            
+            uint32_t streamId = fneHeader.getStreamId();
+            connection.currStreamId(streamId);
+            m_peers[peerId] = connection;
+        }
+
+        // process incoming message frame opcodes
+        if (::memcmp(buffer.get(), TAG_DMR_DATA, 4U) == 0) {                    // Encapsulated DMR data frame
+#if defined(ENABLE_DMR)
             if (m_dmrEnabled) {
                 if (m_tagDMR != nullptr) {
-                    m_tagDMR->processFrame(m_buffer, length, address);
+                    m_tagDMR->processFrame(buffer.get(), length, address);
                 }
             }
+#endif // defined(ENABLE_DMR)
         }
-        else if (::memcmp(m_buffer, TAG_P25_DATA, 4U) == 0) {                   // Encapsulated P25 data frame
+        else if (::memcmp(buffer.get(), TAG_P25_DATA, 4U) == 0) {               // Encapsulated P25 data frame
+#if defined(ENABLE_P25)
             if (m_p25Enabled) {
                 if (m_tagP25 != nullptr) {
-                    m_tagP25->processFrame(m_buffer, length, address);
+                    m_tagP25->processFrame(buffer.get(), length, address);
                 }
             }
+#endif // defined(ENABLE_P25)
         }
-        else if (::memcmp(m_buffer, TAG_NXDN_DATA, 4U) == 0) {                  // Encapsulated NXDN data frame
+        else if (::memcmp(buffer.get(), TAG_NXDN_DATA, 4U) == 0) {              // Encapsulated NXDN data frame
+#if defined(ENABLE_NXDN)        
             if (m_nxdnEnabled) {
                 if (m_tagNXDN != nullptr) {
-                    m_tagNXDN->processFrame(m_buffer, length, address);
+                    m_tagNXDN->processFrame(buffer.get(), length, address);
                 }
             }
+#endif // defined(ENABLE_NXDN)
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_LOGIN, 4U) == 0) {             // Repeater Login
-            uint32_t peerId = __GET_UINT32(m_buffer, 4U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_LOGIN, 4U) == 0) {         // Repeater Login
             if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
                 FNEPeerConnection connection = FNEPeerConnection(peerId, address, addrLen);
 
@@ -223,7 +236,9 @@ void FNENetwork::clock(uint32_t ms)
 
                 ::memcpy(buffer + 0U, TAG_REPEATER_ACK, 6U);
                 __SET_UINT32(connection.salt(), buffer, 6U);
-                write(buffer, 10U, address, addrLen);
+                
+                m_frameQueue.enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
+                m_frameQueue.flushQueue(address, addrLen);
 
                 connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
                 m_peers[peerId] = connection;
@@ -234,8 +249,7 @@ void FNENetwork::clock(uint32_t ms)
                 writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_AUTH, 4U) == 0) {              // Repeater Authentication
-            uint32_t peerId = __GET_UINT32(m_buffer, 4U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_AUTH, 4U) == 0) {          // Repeater Authentication
             if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                 FNEPeerConnection connection = m_peers[peerId];
                 connection.lastPing(now);
@@ -244,12 +258,16 @@ void FNENetwork::clock(uint32_t ms)
                     // get the hash from the frame message
                     uint8_t hash[length - 8U];
                     ::memset(hash, 0x00U, length - 8U);
-                    ::memcpy(hash, m_buffer + 8U, length - 8U);
+                    ::memcpy(hash, buffer.get() + 8U, length - 8U);
 
                     // generate our own hash
+                    uint8_t salt[4U];
+                    ::memset(salt, 0x00U, 4U);
+                    __SET_UINT32(connection.salt(), salt, 0U);
+
                     size_t size = m_password.size();
                     uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
-                    ::memcpy(in, m_salt, sizeof(uint32_t));
+                    ::memcpy(in, salt, sizeof(uint32_t));
                     for (size_t i = 0U; i < size; i++)
                         in[i + sizeof(uint32_t)] = m_password.at(i);
 
@@ -299,8 +317,7 @@ void FNENetwork::clock(uint32_t ms)
                 writePeerNAK(peerId, TAG_REPEATER_AUTH, address, addrLen);
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_CONFIG, 4U) == 0) {            // Repeater Configuration
-            uint32_t peerId = __GET_UINT32(m_buffer, 4U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_CONFIG, 4U) == 0) {        // Repeater Configuration
             if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                 FNEPeerConnection connection = m_peers[peerId];
                 connection.lastPing(now);
@@ -308,7 +325,7 @@ void FNENetwork::clock(uint32_t ms)
                 if (connection.connectionState() == NET_STAT_WAITING_CONFIG) {
                     uint8_t rawPayload[length - 8U];
                     ::memset(rawPayload, 0x00U, length - 8U);
-                    ::memcpy(rawPayload, m_buffer + 8U, length - 8U);
+                    ::memcpy(rawPayload, buffer.get() + 8U, length - 8U);
                     std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
                     // parse JSON body
@@ -364,8 +381,7 @@ void FNENetwork::clock(uint32_t ms)
                 writePeerNAK(peerId, TAG_REPEATER_CONFIG, address, addrLen);
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_CLOSING, 5U) == 0) {           // Repeater Closing (Disconnect)
-            uint32_t peerId = __GET_UINT32(m_buffer, 5U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_CLOSING, 5U) == 0) {       // Repeater Closing (Disconnect)
             if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                 FNEPeerConnection connection = m_peers[peerId];
                 std::string ip = UDPSocket::address(address);
@@ -381,8 +397,7 @@ void FNENetwork::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_PING, 7U) == 0) {              // Repeater Ping
-            uint32_t peerId = __GET_UINT32(m_buffer, 7U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_PING, 7U) == 0) {          // Repeater Ping
             if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                 FNEPeerConnection connection = m_peers[peerId];
                 std::string ip = UDPSocket::address(address);
@@ -404,8 +419,7 @@ void FNENetwork::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_REPEATER_GRANT, 7U) == 0) {             // Repeater Grant Request
-            uint32_t peerId = __GET_UINT32(m_buffer, 7U);
+        else if (::memcmp(buffer.get(), TAG_REPEATER_GRANT, 7U) == 0) {         // Repeater Grant Request
             if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                 FNEPeerConnection connection = m_peers[peerId];
                 std::string ip = UDPSocket::address(address);
@@ -420,9 +434,8 @@ void FNENetwork::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_TRANSFER_ACT_LOG, 8U) == 0) {           // Peer Activity Log Transfer
+        else if (::memcmp(buffer.get(), TAG_TRANSFER_ACT_LOG, 8U) == 0) {       // Peer Activity Log Transfer
             if (m_allowActivityTransfer) {
-                uint32_t peerId = __GET_UINT32(m_buffer, 8U);
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection connection = m_peers[peerId];
                     std::string ip = UDPSocket::address(address);
@@ -431,7 +444,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (connection.connected() && connection.address() == ip) {
                         uint8_t rawPayload[length - 11U];
                         ::memset(rawPayload, 0x00U, length - 11U);
-                        ::memcpy(rawPayload, m_buffer + 11U, length - 11U);
+                        ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
                         std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
                         std::stringstream ss;
@@ -445,9 +458,8 @@ void FNENetwork::clock(uint32_t ms)
                 }
             }
         }
-        else if (::memcmp(m_buffer, TAG_TRANSFER_DIAG_LOG, 8U) == 0) {          // Peer Diagnostic Log Transfer
+        else if (::memcmp(buffer.get(), TAG_TRANSFER_DIAG_LOG, 8U) == 0) {      // Peer Diagnostic Log Transfer
             if (m_allowDiagnosticTransfer) {
-                uint32_t peerId = __GET_UINT32(m_buffer, 8U);
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection connection = m_peers[peerId];
                     std::string ip = UDPSocket::address(address);
@@ -456,7 +468,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (connection.connected() && connection.address() == ip) {
                         uint8_t rawPayload[length - 11U];
                         ::memset(rawPayload, 0x00U, length - 11U);
-                        ::memcpy(rawPayload, m_buffer + 11U, length - 11U);
+                        ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
                         std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
                         // TODO TODO TODO
@@ -469,7 +481,7 @@ void FNENetwork::clock(uint32_t ms)
             }
         }
         else {
-            Utils::dump("Unknown packet from the peer", m_buffer, length);
+            Utils::dump("Unknown packet from the peer", buffer.get(), length);
         }
     }
 
@@ -514,19 +526,20 @@ void FNENetwork::close()
     if (m_debug)
         LogMessage(LOG_NET, "Closing Network");
 
-    if (m_status == NET_STAT_RUNNING) {
+    if (m_status == NET_STAT_MST_RUNNING) {
         uint8_t buffer[9U];
-        ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
-        __SET_UINT32(m_id, buffer, 5U);
-        write(buffer, 9U);
+        ::memcpy(buffer + 0U, TAG_MASTER_CLOSING, 5U);
+
+        m_frameQueue.enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
+        m_frameQueue.flushQueue(m_addr, m_addrLen);
     }
 
     m_socket.close();
 
-    m_retryTimer.stop();
-    m_timeoutTimer.stop();
+    m_maintainenceTimer.stop();
+    m_updateLookupTimer.stop();
 
-    m_status = NET_STAT_WAITING_CONNECT;
+    m_status = NET_STAT_INVALID;
 }
 
 // ---------------------------------------------------------------------------
@@ -729,9 +742,12 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
-        sockaddr_storage address = m_peers[peerId].socketStorage();
+        uint32_t streamId = m_peers[peerId].currStreamId();
+        sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
-        return write(data, length, address, addrLen);
+
+        m_frameQueue.enqueueMessage(data, length, streamId, peerId/*m_peerId*/);
+        return m_frameQueue.flushQueue(addr, addrLen);
     }
 
     return false;
@@ -818,7 +834,9 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
-    return write(buffer, 10U, addr, addrLen);
+    
+    m_frameQueue.enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
+    return m_frameQueue.flushQueue(addr, addrLen);
 }
 
 /// <summary>

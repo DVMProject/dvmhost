@@ -38,9 +38,8 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
-    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0xEFU;
-
     const uint32_t DATA_PACKET_LENGTH = 8192U;
+    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0xEFU;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -50,12 +49,12 @@ namespace network
     class HOST_SW_API FrameQueue {
     public:
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
-        FrameQueue(UDPSocket socket, uint32_t id);
+        FrameQueue(UDPSocket socket, uint32_t peerId, bool debug);
         /// <summary>Finalizes a instance of the FrameQueue class.</summary>
         virtual ~FrameQueue();
 
         /// <summary>Read message from the UDP socket.</summary>
-        int read(uint8_t* message, sockaddr_storage& address, uint32_t& addrLen,
+        UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
                 frame::RTPHeader* rtpHeader = nullptr, frame::RTPFNEHeader* fneHeader = nullptr);
 
         /// <summary>Cache "message" to frame queue.</summary>
@@ -67,13 +66,15 @@ namespace network
         bool flushQueue(sockaddr_storage& addr, uint32_t addrLen);
 
     private:
-        uint32_t m_id;
+        uint32_t m_peerId;
 
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
         UDPSocket m_socket;
 
         BufferVector m_buffers;
+
+        bool m_debug;
     };
 } // namespace network
 
