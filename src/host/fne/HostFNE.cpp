@@ -373,13 +373,6 @@ bool HostFNE::createPeerNetworks()
         for (size_t i = 0; i < peerList.size(); i++) {
             yaml::Node& peerConf = peerList[i];
 
-            bool netEnable = peerConf["enable"].as<bool>(true);
-
-            // dump out if networking is disabled
-            if (!netEnable) {
-                continue;
-            }
-
             bool enabled = peerConf["enabled"].as<bool>(false);
             std::string address = peerConf["address"].as<std::string>();
             uint16_t port = (uint16_t)peerConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
@@ -402,15 +395,16 @@ bool HostFNE::createPeerNetworks()
             network::Network* network = new Network(address, port, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
 
-            bool ret = network->open();
-            if (!ret) {
-                delete network;
-                network = nullptr;
-                LogError(LOG_HOST, "failed to initialize traffic networking!");
-                return false;
+            network->enable(enabled);
+            if (enabled) {
+                bool ret = network->open();
+                if (!ret) {
+                    LogError(LOG_HOST, "failed to initialize traffic networking for PEER %u", id);
+                    network->enable(false);
+                    network->close();
+                }
             }
 
-            network->enable(enabled);
             m_peerNetworks[identity] = network;
         }
     }

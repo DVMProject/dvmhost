@@ -2340,6 +2340,7 @@ bool Host::createNetwork()
             m_network->setRESTAPIData(restApiPassword, restApiPort);
         }
 
+        m_network->enable(true);
         bool ret = m_network->open();
         if (!ret) {
             delete m_network;
@@ -2348,7 +2349,6 @@ bool Host::createNetwork()
             return false;
         }
 
-        m_network->enable(true);
         ::LogSetNetwork(m_network);
     }
 

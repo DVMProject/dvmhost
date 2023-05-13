@@ -68,6 +68,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_addrLen(0U),
     m_socket(localPort),
     m_frameQueue(m_socket, peerId, debug),
+    m_status(NET_STAT_INVALID),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
@@ -106,6 +107,9 @@ BaseNetwork::~BaseNetwork()
 /// <returns></returns>
 bool BaseNetwork::readDMR(dmr::data::Data& data)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_rxDMRData.isEmpty())
         return false;
 
@@ -178,6 +182,9 @@ bool BaseNetwork::readDMR(dmr::data::Data& data)
 /// <returns></returns>
 bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     uint32_t slotNo = data.getSlotNo();
 
     // individual slot disabling
@@ -221,6 +228,9 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& control, p25::data::LowSpeedData& lsd, 
     uint8_t& duid, uint8_t& frameType)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return nullptr;
+
     if (m_rxP25Data.isEmpty()) {
         ret = false;
         return nullptr;
@@ -326,6 +336,9 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& c
 /// <returns></returns>
 bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, uint8_t frameType)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_p25StreamId == 0U)
         m_p25StreamId = createStreamId();
 
@@ -348,6 +361,9 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
 /// <returns></returns>
 bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_p25StreamId == 0U)
         m_p25StreamId = createStreamId();
 
@@ -369,6 +385,9 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
 /// <returns></returns>
 bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_p25StreamId == 0U)
         m_p25StreamId = createStreamId();
 
@@ -390,6 +409,9 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
 /// <returns></returns>
 bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_p25StreamId == 0U)
         m_p25StreamId = createStreamId();
 
@@ -415,6 +437,9 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
     const uint8_t* data, const uint32_t len)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_p25StreamId == 0U)
         m_p25StreamId = createStreamId();
 
@@ -437,6 +462,9 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 /// <returns></returns>
 UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return nullptr;
+
     if (m_rxNXDNData.isEmpty()) {
         ret = false;
         return nullptr;
@@ -494,6 +522,9 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTC
 /// <returns></returns>
 bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (m_nxdnStreamId == 0U)
         m_nxdnStreamId = createStreamId();
 
@@ -518,6 +549,9 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 /// <returns></returns>
 bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
@@ -544,6 +578,9 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 /// <returns></returns>
 bool BaseNetwork::writeActLog(const char* message)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (!m_allowActivityTransfer)
         return false;
 
@@ -567,6 +604,9 @@ bool BaseNetwork::writeActLog(const char* message)
 /// <returns></returns>
 bool BaseNetwork::writeDiagLog(const char* message)
 {
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
     if (!m_allowDiagnosticTransfer)
         return false;
 

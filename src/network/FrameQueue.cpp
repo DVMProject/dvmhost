@@ -154,7 +154,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     assert(length > 0U);
 
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
-    uint8_t buffer[bufferLen];
+    uint8_t* buffer = new uint8_t[bufferLen];
     ::memset(buffer, 0x00U, bufferLen);
 
     RTPHeader header = RTPHeader();
@@ -196,7 +196,7 @@ bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32
     for (auto& buffer : buffers) {
         uint32_t length = buffer.first;
         uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
-        uint8_t _buffer[bufferLen];
+        uint8_t* _buffer = new uint8_t[bufferLen];
         ::memset(_buffer, 0x00U, bufferLen);
 
         RTPHeader header = RTPHeader();
@@ -241,10 +241,11 @@ bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
     }
 
     for (auto& buffer : m_buffers) {
-        uint8_t* bufPtr = buffer.second;
-        if (bufPtr != nullptr) {
-            delete bufPtr;
-            bufPtr = nullptr;
+        // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer.second, buffer.first);
+        if (buffer.second != nullptr) {
+            delete buffer.second;
+            buffer.first = 0;
+            buffer.second = nullptr;
         }
     }
     m_buffers.clear();

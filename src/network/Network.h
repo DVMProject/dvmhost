@@ -54,9 +54,6 @@ namespace network
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
 
-        /// <summary>Gets the current status of the network.</summary>
-        NET_CONN_STATUS getStatus() { return m_status; }
-
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /// <summary>Sets metadata configuration settings from the modem.</summary>
@@ -93,8 +90,6 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
-
-        NET_CONN_STATUS m_status;
 
         uint8_t* m_salt;
 

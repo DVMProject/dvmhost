@@ -130,6 +130,9 @@ namespace network
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 
+        /// <summary>Gets the current status of the network.</summary>
+        NET_CONN_STATUS getStatus() { return m_status; }
+
         /** Digital Mobile Radio */
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
@@ -200,6 +203,8 @@ namespace network
         uint32_t m_addrLen;
         UDPSocket m_socket;
         FrameQueue m_frameQueue;
+
+        NET_CONN_STATUS m_status;
 
         uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;

@@ -78,7 +78,6 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_updateLookup(updateLookup),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
-    m_status(NET_STAT_INVALID),
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
@@ -192,6 +191,11 @@ void Network::clock(uint32_t ms)
             m_retryTimer.start();
         }
 
+        return;
+    }
+
+    // if we aren't enabled -- bail
+    if (!m_enabled) {
         return;
     }
 
@@ -428,6 +432,8 @@ void Network::clock(uint32_t ms)
 /// <returns></returns>
 bool Network::open()
 {
+    if (!m_enabled)
+        return false;
     if (m_debug)
         LogMessage(LOG_NET, "Opening Network");
 

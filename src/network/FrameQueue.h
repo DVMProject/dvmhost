@@ -39,7 +39,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     const uint32_t DATA_PACKET_LENGTH = 8192U;
-    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0xEFU;
+    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x6BU;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
