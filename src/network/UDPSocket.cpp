@@ -335,7 +335,7 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
 
     if (buffers.size() > UINT16_MAX) {
         // LOG_ERROR("Trying to send too large buffer");
-        return RTP_INVALID_VALUE;
+        return false;
     }
 #else
     int sent = 0;
