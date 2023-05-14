@@ -59,7 +59,7 @@ master:
     talkgroup_rules:
         # Full path to the talkgroup rules file.
         file: talkgroup_rules.yml
-        # Amount of time between updates of routing rules file. (minutes)
+        # Amount of time between updates of talkgroup rules file. (minutes)
         time: 30
 
 #

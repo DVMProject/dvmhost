@@ -90,11 +90,11 @@ bool RTPHeader::decode(const uint8_t* data)
     }
 
     m_version = (data[0U] >> 6) & 0x03U;                                        // RTP Version
-    m_padding = ((data[0U] & 0x20) == 0x20U);                                   // Padding Flag
-    m_extension = ((data[0U] & 0x10) == 0x10U);                                 // Extension Header Flag
-    m_cc = (data[0U] & 0x0F);                                                   // CSRC Count
-    m_marker = ((data[1U] & 0x80) == 0x80U);                                    // Marker Flag
-    m_payloadType = (data[1U] & 0x7F);                                          // Payload Type
+    m_padding = ((data[0U] & 0x20U) == 0x20U);                                  // Padding Flag
+    m_extension = ((data[0U] & 0x10U) == 0x10U);                                // Extension Header Flag
+    m_cc = (data[0U] & 0x0FU);                                                  // CSRC Count
+    m_marker = ((data[1U] & 0x80U) == 0x80U);                                   // Marker Flag
+    m_payloadType = (data[1U] & 0x7FU);                                         // Payload Type
     m_seq = (data[2U] << 8) | (data[3U] << 0);                                  // Sequence
 
     m_timestamp = __GET_UINT32(data, 4U);                                       // Timestamp
@@ -115,7 +115,7 @@ void RTPHeader::encode(uint8_t* data)
         (m_padding ? 0x20U : 0x00U) +                                           // Padding Flag
         (m_extension ? 0x10U : 0x00U) +                                         // Extension Header Flag
         (m_cc & 0x0FU);                                                         // CSRC Count
-    data[1U] = (m_marker ? 0x80 : 0x00U) +                                      // Marker Flag
+    data[1U] = (m_marker ? 0x80U : 0x00U) +                                     // Marker Flag
         (m_payloadType & 0x7FU);                                                // Payload Type
     data[2U] = (m_seq >> 8) & 0xFFU;                                            // Sequence MSB
     data[3U] = (m_seq >> 0) & 0xFFU;                                            // Sequence LSB
