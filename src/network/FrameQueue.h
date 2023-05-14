@@ -54,7 +54,7 @@ namespace network
         virtual ~FrameQueue();
 
         /// <summary>Read message from the received UDP packet.</summary>
-        UInt8Array read(int& messageLength, const uint8_t* buffer, int length,
+        UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
                 frame::RTPHeader* rtpHeader = nullptr, frame::RTPFNEHeader* fneHeader = nullptr);
 
         /// <summary>Cache "message" to frame queue.</summary>

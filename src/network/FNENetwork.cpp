@@ -167,16 +167,8 @@ void FNENetwork::clock(uint32_t ms)
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
-    // read message from socket
-    uint8_t pkt[DATA_PACKET_LENGTH];
-    ::memset(pkt, 0x00U, DATA_PACKET_LENGTH);
-    length = m_socket->read(pkt, DATA_PACKET_LENGTH, address, addrLen);
-    if (length < 0) {
-        LogError(LOG_NET, "Failed reading data from the network");
-        return;
-    }
-
-    UInt8Array buffer = m_frameQueue->read(length, pkt, length, &rtpHeader, &fneHeader);
+    // read message
+    UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Message", buffer.get(), length);
@@ -506,6 +498,13 @@ bool FNENetwork::open()
     m_maintainenceTimer.start();
 
     m_socket = new UDPSocket(m_address, m_port);
+
+    // reinitialize the frame queue
+    if (m_frameQueue != nullptr) {
+        delete m_frameQueue;
+        m_frameQueue = new FrameQueue(m_socket, m_peerId, m_debug);
+    }
+
     bool ret = m_socket->open();
     if (!ret) {
         m_status = NET_STAT_INVALID;

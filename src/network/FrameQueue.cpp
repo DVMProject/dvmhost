@@ -67,21 +67,28 @@ FrameQueue::~FrameQueue()
 /// Read message from the received UDP packet.
 /// </summary>
 /// <param name="messageLength">Actual length of message read from packet.</param>
-/// <param name="buffer">Packet Buffer.</param>
-/// <param name="length">Length of packet buffer.</param>
+/// <param name="address">IP address data read from.</param>
+/// <param name="addrLen"></param>
 /// <param name="rtpHeader">RTP Header.</param>
 /// <param name="fneHeader">FNE Header.</param>
 /// <returns>Buffer containing message read.</returns>
-UInt8Array FrameQueue::read(int& messageLength, const uint8_t* buffer, int length,
+UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
-    assert(buffer != nullptr);
-    assert(length > 0U);
-
     RTPHeader _rtpHeader = RTPHeader(true);
     RTPFNEHeader _fneHeader = RTPFNEHeader();
 
     messageLength = -1;
+
+    // read message from socket
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
+    if (length < 0) {
+        LogError(LOG_NET, "Failed reading data from the network");
+        return nullptr;
+    }
+
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);

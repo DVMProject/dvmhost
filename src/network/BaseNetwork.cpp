@@ -67,6 +67,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_addr(),
     m_addrLen(0U),
     m_socket(nullptr),
+    m_frameQueue(nullptr),
     m_status(NET_STAT_INVALID),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
@@ -99,8 +100,14 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
 /// </summary>
 BaseNetwork::~BaseNetwork()
 {
-    delete m_frameQueue;
-    delete m_socket;
+    if (m_frameQueue != nullptr) {
+        delete m_frameQueue;
+    }
+
+    if (m_socket != nullptr) {
+        delete m_socket;
+    }
+
     delete[] m_dmrStreamId;
 }
 

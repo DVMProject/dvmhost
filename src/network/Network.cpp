@@ -208,18 +208,8 @@ void Network::clock(uint32_t ms)
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
-    // read message from socket
-    uint8_t pkt[DATA_PACKET_LENGTH];
-    ::memset(pkt, 0x00U, DATA_PACKET_LENGTH);
-    length = m_socket->read(pkt, DATA_PACKET_LENGTH, address, addrLen);
-    if (length < 0) {
-        LogError(LOG_NET, "Failed reading network, retrying connection to the master");
-        close();
-        open();
-        return;
-    }
-
-    UInt8Array buffer = m_frameQueue->read(length, pkt, length, &rtpHeader, &fneHeader);
+    // read message
+    UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (!UDPSocket::match(m_addr, address)) {
             LogError(LOG_NET, "Packet received from an invalid source");

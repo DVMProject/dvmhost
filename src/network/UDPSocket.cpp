@@ -179,7 +179,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 /// </summary>
 /// <param name="buffer">Buffer to read data into.</param>
 /// <param name="length">Length of data to read.</param>
-/// <param name="address">IP address to read data from.</param>
+/// <param name="address">IP address data read from.</param>
 /// <param name="addrLen"></param>
 /// <returns>Actual length of data read from remote UDP socket.</returns>
 int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen)
