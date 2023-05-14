@@ -96,6 +96,38 @@ namespace network
     const uint32_t DMR_PACKET_SIZE = 55U;
     const uint32_t PACKET_PAD = 8U;
 
+    const uint8_t   NET_SUBFUNC_NOP = 0xFFU;                                    // No Operation Sub-Function
+
+    const uint8_t   NET_FUNC_PROTOCOL = 0x00U;                                  // Network Protocol Function
+    const uint8_t   NET_PROTOCOL_SUBFUNC_DMR = 0x00U;                           // DMR
+    const uint8_t   NET_PROTOCOL_SUBFUNC_P25 = 0x01U;                           // P25
+    const uint8_t   NET_PROTOCOL_SUBFUNC_NXDN = 0x02U;                          // NXDN
+
+    const uint8_t   NET_FUNC_MASTER = 0x01U;                                    // Network Master Function
+    const uint8_t   NET_MASTER_SUBFUNC_WL_RID = 0x00U;                          // Whitelist RIDs
+    const uint8_t   NET_MASTER_SUBFUNC_BL_RID = 0x01U;                          // Blacklist RIDs
+    const uint8_t   NET_MASTER_SUBFUNC_ACTIVE_TGS = 0x02U;                      // Active TGIDs
+    const uint8_t   NET_MASTER_SUBFUNC_DEACTIVE_TGS = 0x03U;                    // Deactive TGIDs
+
+    const uint8_t   NET_FUNC_RPTL = 0x60U;                                      // Repeater Login
+    const uint8_t   NET_FUNC_RPTK = 0x61U;                                      // Repeater Authorisation
+    const uint8_t   NET_FUNC_RPTC = 0x62U;                                      // Repeater Configuration
+    
+    const uint8_t   NET_FUNC_RPT_CLOSING = 0x70U;                               // Repeater Closing
+    const uint8_t   NET_FUNC_MST_CLOSING = 0x71U;                               // Master Closing
+
+    const uint8_t   NET_FUNC_PING = 0x74U;                                      // Ping
+    const uint8_t   NET_FUNC_PONG = 0x75U;                                      // Pong
+
+    const uint8_t   NET_FUNC_GRANT = 0x7AU;                                     // Grant Request
+
+    const uint8_t   NET_FUNC_ACK = 0x7EU;                                       // Packet Acknowledge
+    const uint8_t   NET_FUNC_NAK = 0x7FU;                                       // Packet Negative Acknowledge
+
+    const uint8_t   NET_FUNC_TRANSFER = 0x90U;                                  // Network Transfer Function
+    const uint8_t   NET_TRANSFER_SUBFUNC_ACTIVITY = 0x01U;                      // Activity Log Transfer
+    const uint8_t   NET_TRANSFER_SUBFUNC_DIAG = 0x02U;                          // Diagnostic Log Transfer
+
     // ---------------------------------------------------------------------------
     //  Network Peer Connection Status
     // ---------------------------------------------------------------------------
