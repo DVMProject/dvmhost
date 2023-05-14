@@ -64,6 +64,10 @@ namespace network
         public:
             /// <summary>Traffic payload packet CRC-16.</summary>
             __PROPERTY(uint16_t, crc16, CRC);
+            /// <summary>Function.</summary>
+            __PROPERTY(uint8_t, func, Function);
+            /// <summary>Sub-function.</summary>
+            __PROPERTY(uint8_t, subFunc, SubFunction);
             /// <summary>Traffic Stream ID.</summary>
             __PROPERTY(uint32_t, streamId, StreamId);
             /// <summary>Traffic Peer ID.</summary>
