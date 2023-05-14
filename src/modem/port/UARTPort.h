@@ -38,11 +38,6 @@
 
 #include <string>
 
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
 namespace modem
 {
     namespace port
@@ -102,22 +97,13 @@ namespace modem
             std::string m_device;
             SERIAL_SPEED m_speed;
             bool m_assertRTS;
-#if defined(_WIN32) || defined(_WIN64)
-            HANDLE m_handle;
-#else
             int m_fd;
-#endif
 
-#if defined(_WIN32) || defined(_WIN64)
-            /// <summary></summary>
-            int readNonblock(uint8_t * buffer, uint32_t length);
-#else
             /// <summary></summary>
             bool canWrite();
 
             /// <summary></summary>
             bool setTermios();
-#endif
         }; // class HOST_SW_API UARTPort : public ISerialPort, public IModemPort
     } // namespace port
 } // namespace Modem

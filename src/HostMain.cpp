@@ -44,13 +44,11 @@ using namespace lookups;
 #include <cstdarg>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //	Constants
@@ -107,7 +105,7 @@ uint8_t* g_gitHashBytes = nullptr;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-#if !defined(_WIN32) && !defined(_WIN64) && !defined(CATCH2_TEST_COMPILATION)
+#if !defined(CATCH2_TEST_COMPILATION)
 static void sigHandler(int signum)
 {
     g_killed = true;
@@ -290,11 +288,9 @@ int main(int argc, char** argv)
         }
     }
 
-#if !defined(_WIN32) && !defined(_WIN64)
     ::signal(SIGINT, sigHandler);
     ::signal(SIGTERM, sigHandler);
     ::signal(SIGHUP, sigHandler);
-#endif
 
     int ret = 0;
 

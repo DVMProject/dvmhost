@@ -31,12 +31,7 @@
 #include "Log.h"
 #include "network/Network.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <sys/time.h>
-#endif
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
@@ -53,11 +48,7 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-#define EOL    "\n"
-#else
 #define EOL    "\r\n"
-#endif
 
 const uint32_t ACT_LOG_BUFFER_LEN = 501U;
 const uint32_t LOG_BUFFER_LEN = 4096U;
@@ -116,11 +107,8 @@ static bool LogOpen()
     }
 
     char filename[200U];
-#if defined(_WIN32) || defined(_WIN64)
-    ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#else
     ::sprintf(filename, "%s/%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#endif
+
     m_fpLog = ::fopen(filename, "a+t");
     m_tm = *tm;
 
@@ -148,11 +136,8 @@ static bool ActivityLogOpen()
     }
 
     char filename[200U];
-#if defined(_WIN32) || defined(_WIN64)
-    ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.activity.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#else
     ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#endif
+
     m_actFpLog = ::fopen(filename, "a+t");
     m_actTm = *tm;
 
@@ -217,17 +202,6 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     assert(msg != nullptr);
 
     char buffer[ACT_LOG_BUFFER_LEN];
-#if defined(_WIN32) || defined(_WIN64)
-    SYSTEMTIME st;
-    ::GetSystemTime(&st);
-
-    if (strcmp(mode, "") == 0) {
-        ::sprintf(buffer, "A: %04u-%02u-%02u %02u:%02u:%02u.%03u ", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-    }
-    else {
-        ::sprintf(buffer, "A: %04u-%02u-%02u %02u:%02u:%02u.%03u %s %s ", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, mode, (sourceRf) ? "RF" : "Net");
-    }
-#else
     struct timeval now;
     ::gettimeofday(&now, NULL);
 
@@ -239,7 +213,6 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     else {
         ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
     }
-#endif
 
     va_list vl;
     va_start(vl, msg);
@@ -317,27 +290,6 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     m_disableTimeDisplay = true;
 #endif
     char buffer[LOG_BUFFER_LEN];
-#if defined(_WIN32) || defined(_WIN64)
-    if (!m_disableTimeDisplay) {
-        SYSTEMTIME st;
-        ::GetSystemTime(&st);
-
-        if (module != nullptr) {
-            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u (%s) ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, module);
-        }
-        else {
-            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-        }
-    }
-    else {
-        if (module != nullptr) {
-            ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
-        }
-        else {
-            ::sprintf(buffer, "%c: ", LEVELS[level]);
-        }
-    }
-#else
     if (!m_disableTimeDisplay) {
         struct timeval now;
         ::gettimeofday(&now, NULL);
@@ -359,7 +311,6 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             ::sprintf(buffer, "%c: ", LEVELS[level]);
         }
     }
-#endif
 
     va_list vl;
     va_start(vl, fmt);

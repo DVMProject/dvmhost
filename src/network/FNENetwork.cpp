@@ -166,13 +166,23 @@ void FNENetwork::clock(uint32_t ms)
     frame::RTPHeader rtpHeader = frame::RTPHeader(true);
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
-    UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
+
+    // read message from socket
+    uint8_t pkt[DATA_PACKET_LENGTH];
+    ::memset(pkt, 0x00U, DATA_PACKET_LENGTH);
+    length = m_socket->read(pkt, DATA_PACKET_LENGTH, address, addrLen);
+    if (length < 0) {
+        LogError(LOG_NET, "Failed reading data from the network");
+        return;
+    }
+
+    UInt8Array buffer = m_frameQueue->read(length, pkt, length, &rtpHeader, &fneHeader);
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Message", buffer.get(), length);
 
         if (length < 4) {
-            LogWarning(LOG_NET, "Malformed message (from %s:%s)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
+            LogWarning(LOG_NET, "Malformed message (from %s:%u)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
             Utils::dump(1U, "Network Message", buffer.get(), length);
             return;
         }
@@ -515,9 +525,7 @@ void FNENetwork::close()
     if (m_status == NET_STAT_MST_RUNNING) {
         uint8_t buffer[9U];
         ::memcpy(buffer + 0U, TAG_MASTER_CLOSING, 5U);
-
-        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
-        m_frameQueue->flushQueue(m_addr, m_addrLen);
+        writePeers(buffer, 9U);
     }
 
     m_socket->close();

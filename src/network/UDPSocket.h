@@ -36,7 +36,6 @@
 #include <string>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <netdb.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -46,10 +45,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #if !defined(UDP_SOCKET_MAX)
 #define UDP_SOCKET_MAX	1
@@ -124,11 +119,6 @@ namespace network
 
         /// <summary>Flag indicating the UDP socket(s) are open.</summary>
         bool isOpen() const { return m_isOpen; }
-
-        /// <summary></summary>
-        static void startup();
-        /// <summary></summary>
-        static void shutdown();
 
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
         static int lookup(const std::string& hostName, uint16_t port, sockaddr_storage& address, uint32_t& addrLen);

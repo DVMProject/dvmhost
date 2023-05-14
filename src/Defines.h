@@ -114,16 +114,8 @@ typedef unsigned long long  ulong64_t;
 
 #define HOST_SW_API
 
-#if defined(_WIN32) || defined(_WIN64)
 #define DEFAULT_CONF_FILE "config.yml"
-#else
-#define DEFAULT_CONF_FILE "/opt/dvm/config.yml"
-#endif // defined(_WIN32) || defined(_WIN64)
-#if defined(_WIN32) || defined(_WIN64)
-#define DEFAULT_LOCK_FILE "dvm.lock"
-#else
 #define DEFAULT_LOCK_FILE "/tmp/dvm.lock"
-#endif // defined(_WIN32) || defined(_WIN64)
 
 #if defined(__GNUC__) || defined(__GNUG__)
 #define __forceinline __attribute__((always_inline))

@@ -53,8 +53,8 @@ namespace network
         /// <summary>Finalizes a instance of the FrameQueue class.</summary>
         virtual ~FrameQueue();
 
-        /// <summary>Read message from the UDP socket.</summary>
-        UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
+        /// <summary>Read message from the received UDP packet.</summary>
+        UInt8Array read(int& messageLength, const uint8_t* buffer, int length,
                 frame::RTPHeader* rtpHeader = nullptr, frame::RTPFNEHeader* fneHeader = nullptr);
 
         /// <summary>Cache "message" to frame queue.</summary>

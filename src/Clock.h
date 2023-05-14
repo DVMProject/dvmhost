@@ -23,12 +23,7 @@
 
 #include "Defines.h"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
 #include <sys/time.h>
-#endif
-
 #include <chrono>
 
 namespace system_clock 
@@ -67,11 +62,6 @@ namespace system_clock
     uint64_t msToJiffies(uint64_t ms);
     /// <summary></summary>
     uint64_t jiffiesToMs(uint64_t jiffies);
-
-#ifdef _WIN32
-    /// <summary></summary>
-    int gettimeofday(struct timeval *tp, struct timezone *tzp);
-#endif
 } // namespace system_clock
 
 #endif // __CLOCK_H__

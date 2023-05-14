@@ -32,12 +32,7 @@
 
 #include "Defines.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -64,19 +59,10 @@ public:
     static void sleep(uint32_t ms);
 
 private:
-#if defined(_WIN32) || defined(_WIN64)
-    HANDLE m_handle;
-#else
     pthread_t m_thread;
-#endif
 
-#if defined(_WIN32) || defined(_WIN64)
-    /// <summary></summary>
-    static DWORD __stdcall helper(LPVOID arg);
-#else
     /// <summary></summary>
     static void* helper(void* arg);
-#endif
 };
 
 #endif // __THREAD_H__

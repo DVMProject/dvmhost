@@ -41,13 +41,11 @@ using namespace lookups;
 #include <functional>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -79,7 +77,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_allowActivityTransfer(false),
     m_allowDiagnosticTransfer(false)
 {
-    UDPSocket::startup();
+    /* stub */
 }
 
 /// <summary>
@@ -87,7 +85,7 @@ HostFNE::HostFNE(const std::string& confFile) :
 /// </summary>
 HostFNE::~HostFNE()
 {
-    UDPSocket::shutdown();
+    /* stub */
 }
 
 /// <summary>
@@ -124,7 +122,6 @@ int HostFNE::run()
         ::fatal("unable to open the activity log file\n");
     }
 
-#if !defined(_WIN32) && !defined(_WIN64)
     // handle POSIX process forking
     if (m_daemon) {
         // create new process
@@ -161,7 +158,6 @@ int HostFNE::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
-#endif // !defined(_WIN32) && !defined(_WIN64)
 
     getHostVersion();
     ::LogInfo(">> Fixed Network Equipment");

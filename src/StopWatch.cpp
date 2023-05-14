@@ -29,75 +29,13 @@
 */
 #include "StopWatch.h"
 
-#if !defined(_WIN32) || !defined(_WIN64)
 #include <cstdio>
 #include <ctime>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-/// Initializes a new instance of the StopWatch class.
-/// </summary>
-StopWatch::StopWatch() :
-    m_frequencyS(),
-    m_frequencyMS(),
-    m_start()
-{
-    ::QueryPerformanceFrequency(&m_frequencyS);
-
-    m_frequencyMS.QuadPart = m_frequencyS.QuadPart / 1000ULL;
-}
-
-/// <summary>
-/// Finalizes a instance of the StopWatch class.
-/// </summary>
-StopWatch::~StopWatch()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Gets the current running time.
-/// </summary>
-/// <returns></returns>
-ulong64_t StopWatch::time() const
-{
-    LARGE_INTEGER now;
-    ::QueryPerformanceCounter(&now);
-
-    return (ulong64_t)(now.QuadPart / m_frequencyMS.QuadPart);
-}
-
-/// <summary>
-/// Starts the stopwatch.
-/// </summary>
-/// <returns></returns>
-ulong64_t StopWatch::start()
-{
-    ::QueryPerformanceCounter(&m_start);
-
-    return (ulong64_t)(m_start.QuadPart / m_frequencyS.QuadPart);
-}
-
-/// <summary>
-/// Gets the elpased time since the stopwatch started.
-/// </summary>
-/// <returns></returns>
-uint32_t StopWatch::elapsed()
-{
-    LARGE_INTEGER now;
-    ::QueryPerformanceCounter(&now);
-
-    LARGE_INTEGER temp;
-    temp.QuadPart = (now.QuadPart - m_start.QuadPart) * 1000;
-
-    return (uint32_t)(temp.QuadPart / m_frequencyS.QuadPart);
-}
-#else
 /// <summary>
 /// Initializes a new instance of the StopWatch class.
 /// </summary>
@@ -154,4 +92,3 @@ uint32_t StopWatch::elapsed()
 
     return nowMS - m_startMS;
 }
-#endif

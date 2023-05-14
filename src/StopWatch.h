@@ -32,12 +32,7 @@
 
 #include "Defines.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <sys/time.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -60,13 +55,7 @@ public:
     uint32_t elapsed();
 
 private:
-#if defined(_WIN32) || defined(_WIN64)
-    LARGE_INTEGER m_frequencyS;
-    LARGE_INTEGER m_frequencyMS;
-    LARGE_INTEGER m_start;
-#else
     ulong64_t m_startMS;
-#endif
 };
 
 #endif // __STOPWATCH_H__

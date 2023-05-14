@@ -29,62 +29,12 @@
 */
 #include "Thread.h"
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-/// Initializes a new instance of the Thread class.
-/// </summary>
-Thread::Thread() :
-    m_handle()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Finalizes a instance of the Thread class.
-/// </summary>
-Thread::~Thread()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Starts the thread execution.
-/// </summary>
-/// <returns>True, if thread started, otherwise false.</returns>
-bool Thread::run()
-{
-    m_handle = ::CreateThread(NULL, 0, &helper, this, 0, NULL);
-
-    return m_handle != nullptr;
-}
-
-/// <summary>
-///
-/// </summary>
-void Thread::wait()
-{
-    ::WaitForSingleObject(m_handle, INFINITE);
-
-    ::CloseHandle(m_handle);
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="ms"></param>
-void Thread::sleep(uint32_t ms)
-{
-    ::Sleep(ms);
-}
-#else
 /// <summary>
 /// Initializes a new instance of the Thread class.
 /// </summary>
@@ -127,27 +77,11 @@ void Thread::sleep(uint32_t ms)
 {
     ::usleep(ms * 1000);
 }
-#endif
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-///
-/// </summary>
-/// <param name="arg"></param>
-/// <returns></returns>
-DWORD Thread::helper(LPVOID arg)
-{
-    Thread* p = (Thread*)arg;
-
-    p->entry();
-
-    return 0UL;
-}
-#else
 /// <summary>
 ///
 /// </summary>
@@ -161,4 +95,3 @@ void* Thread::helper(void* arg)
 
     return nullptr;
 }
-#endif

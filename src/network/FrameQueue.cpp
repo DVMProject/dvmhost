@@ -64,25 +64,24 @@ FrameQueue::~FrameQueue()
 }
 
 /// <summary>
-/// Read message from the UDP socket.
+/// Read message from the received UDP packet.
 /// </summary>
-/// <param name="messageLength">Actual length of message read from remote UDP socket.</param>
-/// <param name="address">IP address to read message from.</param>
-/// <param name="addrLen"></param>
+/// <param name="messageLength">Actual length of message read from packet.</param>
+/// <param name="buffer">Packet Buffer.</param>
+/// <param name="length">Length of packet buffer.</param>
 /// <param name="rtpHeader">RTP Header.</param>
 /// <param name="fneHeader">FNE Header.</param>
 /// <returns>Buffer containing message read.</returns>
-UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
+UInt8Array FrameQueue::read(int& messageLength, const uint8_t* buffer, int length,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    assert(buffer != nullptr);
+    assert(length > 0U);
 
     RTPHeader _rtpHeader = RTPHeader(true);
     RTPFNEHeader _fneHeader = RTPFNEHeader();
 
     messageLength = -1;
-    int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);
@@ -142,7 +141,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
         __UNIQUE_UINT8_ARRAY(message, length);
         ::memcpy(message.get(), buffer, messageLength);
 #endif // !defined(USE_LEGACY_NETWORK)
-        LogDebug(LOG_NET, "message buffer, addr %p len %u", message.get(), messageLength);
+        // LogDebug(LOG_NET, "message buffer, addr %p len %u", message.get(), messageLength);
         return message;
     }
 
@@ -251,7 +250,7 @@ bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
 
     bool ret = true;
     if (!m_socket->write(m_buffers, addr, addrLen)) {
-        LogError(LOG_NET, "Socket has failed when writing data to the network!");
+        LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
 

@@ -54,9 +54,7 @@ using namespace lookups;
 #include <cstdio>
 #include <algorithm>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -2649,11 +2647,7 @@ bool HostCal::writeSymbolAdjust()
 /// <param name="ms">Milliseconds to sleep.</param>
 void HostCal::sleep(uint32_t ms)
 {
-#if defined(_WIN32) || defined(_WIN64)
-    ::Sleep(ms);
-#else
     ::usleep(ms * 1000);
-#endif
 }
 
 /// <summary>

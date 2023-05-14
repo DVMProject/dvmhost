@@ -58,13 +58,11 @@ using namespace lookups;
 #include <functional>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -145,7 +143,7 @@ Host::Host(const std::string& confFile) :
     m_idleTickDelay(5U),
     m_RESTAPI(nullptr)
 {
-    UDPSocket::startup();
+    /* stub */
 }
 
 /// <summary>
@@ -153,7 +151,7 @@ Host::Host(const std::string& confFile) :
 /// </summary>
 Host::~Host()
 {
-    UDPSocket::shutdown();
+    /* stub */
 }
 
 /// <summary>
@@ -190,7 +188,6 @@ int Host::run()
         ::fatal("unable to open the activity log file\n");
     }
 
-#if !defined(_WIN32) && !defined(_WIN64)
     // handle POSIX process forking
     if (m_daemon) {
         // create new process
@@ -227,7 +224,6 @@ int Host::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
-#endif // !defined(_WIN32) && !defined(_WIN64)
 
     getHostVersion();
     ::LogInfo(">> Modem Controller");
@@ -2128,14 +2124,9 @@ bool Host::createModem()
         }
 
         if (portType == PTY_PORT) {
-#if !defined(_WIN32) && !defined(_WIN64)
             modemPort = new port::UARTPort(uartPort, serialSpeed, false);
             LogInfo("    PTY Port: %s", uartPort.c_str());
             LogInfo("    PTY Speed: %u", uartSpeed);
-#else
-            LogError(LOG_HOST, "Pseudo PTY is not supported on Windows!");
-            return false;
-#endif // !defined(_WIN32) && !defined(_WIN64)
         }
         else {
             modemPort = new port::UARTPort(uartPort, serialSpeed, true);

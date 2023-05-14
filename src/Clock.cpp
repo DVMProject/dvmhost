@@ -70,11 +70,7 @@ static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 uint64_t ntp::now()
 {
     struct timeval tv;
-#ifdef _WIN32
     gettimeofday(&tv, NULL);
-#else
-    gettimeofday(&tv, NULL);
-#endif
 
     uint64_t tv_ntp = tv.tv_sec + EPOCH;
     uint64_t tv_usecs = (uint64_t)((float)(NTP_SCALE_FRAC * tv.tv_usec) / 1000000.f);
@@ -172,41 +168,3 @@ uint64_t jiffiesToMs(uint64_t jiffies)
 {
     return (uint64_t)(((double)jiffies / 65536) * 1000);
 }
-
-#ifdef _WIN32
-/// <summary>
-///
-/// </summary>
-/// <param name="tp"></param>
-/// <param name="tzp"></param>
-/// <returns></returns>
-int gettimeofday(struct timeval* tp, struct timezone* tzp)
-{
-    if (tzp != nullptr) {
-        // LOG_ERROR("Timezone not supported");
-        return -1;
-    }
-
-    // https://stackoverflow.com/questions/10905892/equivalent-of-gettimeday-for-windows
-
-    // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
-    // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-    // until 00:00:00 January 1, 1970
-    static const uint64_t epoch = ((uint64_t) 116444736000000000ULL);
-
-    // TODO: Why do we have two epochs defined?
-
-    SYSTEMTIME system_time;
-    FILETIME file_time;
-    uint64_t time;
-
-    GetSystemTime(&system_time);
-    SystemTimeToFileTime(&system_time, &file_time);
-    time = ((uint64_t)file_time.dwLowDateTime);
-    time += ((uint64_t)file_time.dwHighDateTime) << 32;
-
-    tp->tv_sec = (long)((time - epoch) / 10000000L);
-    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
-    return 0;
-}
-#endif
