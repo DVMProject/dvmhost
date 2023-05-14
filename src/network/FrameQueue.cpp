@@ -209,54 +209,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 }
 
 /// <summary>
-/// Cache all messages in "buffers" in order to frame queue.
-/// </summary>
-/// <param name="buffers">List of buffers to enqueue.</param>
-/// <param name="streamId"></param>
-/// <param name="peerId"></param>
-/// <returns></returns>
-bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32_t peerId)
-{
-    if (!buffers.size()) {
-        return false;
-    }
-
-    for (auto& buffer : buffers) {
-        uint32_t length = buffer->length;
-        uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
-        uint8_t* _buffer = new uint8_t[bufferLen];
-        ::memset(_buffer, 0x00U, bufferLen);
-
-        RTPHeader header = RTPHeader();
-        header.setExtension(true);
-        header.setPayloadType(DVM_RTP_PAYLOAD_TYPE);
-        header.setSSRC(streamId);
-
-        header.encode(_buffer);
-
-        RTPFNEHeader fneHeader = RTPFNEHeader();
-        fneHeader.setCRC(edac::CRC::createCRC16(buffer->buffer, length * 8U));
-        fneHeader.setStreamId(streamId);
-        fneHeader.setPeerId(peerId);
-        fneHeader.setMessageLength(length);
-
-        fneHeader.encode(_buffer + RTP_HEADER_LENGTH_BYTES);
-
-        ::memcpy(_buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, buffer->buffer, length);
-
-        if (m_debug)
-            Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", _buffer, bufferLen);
-
-        delete buffer->buffer;
-        buffer->buffer = _buffer;
-
-        m_buffers.push_back(buffer);
-    }
-
-    return true;
-}
-
-/// <summary>
 /// Flush the message queue.
 /// </summary>
 /// <returns></returns>
