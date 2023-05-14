@@ -234,8 +234,9 @@ void FNENetwork::clock(uint32_t ms)
                 ::memcpy(buffer + 0U, TAG_REPEATER_ACK, 6U);
                 __SET_UINT32(connection.salt(), buffer, 6U);
                 
-                m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
-                m_frameQueue->flushQueue(address, addrLen);
+                m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/,
+                    address, addrLen);
+                m_frameQueue->flushQueue();
 
                 connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
                 m_peers[peerId] = connection;
@@ -739,8 +740,8 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/);
-        return m_frameQueue->flushQueue(addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/, addr, addrLen);
+        return m_frameQueue->flushQueue();
     }
 
     return false;
@@ -828,8 +829,9 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
     
-    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
-    return m_frameQueue->flushQueue(addr, addrLen);
+    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/,
+        addr, addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -841,11 +843,14 @@ void FNENetwork::writePeers(const uint8_t* data, uint32_t length)
 {
     for (auto peer : m_peers) {
         uint32_t peerId = peer.first;
-        bool ret = writePeer(peerId, data, length);
-        if (!ret) {
-            LogError(LOG_NET, "Failed to write data to PEER %u", peerId);
-        }
+        uint32_t streamId = peer.second.currStreamId();
+        sockaddr_storage addr = peer.second.socketStorage();
+        uint32_t addrLen = peer.second.sockStorageLen();
+
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/, addr, addrLen);
     }
+
+    m_frameQueue->flushQueue();
 }
 
 /// <summary>

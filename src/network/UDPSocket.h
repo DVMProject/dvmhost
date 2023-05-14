@@ -80,8 +80,22 @@ namespace network
     }
 #endif
 
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    //      This structure represents a container for a network buffer.
+    // ---------------------------------------------------------------------------
+
+    struct UDPDatagram {
+        uint8_t* buffer;
+        size_t length;
+
+        sockaddr_storage address;
+        uint32_t addrLen;
+
+    };
+
     /* Vector of buffers that contain a full frames */
-    typedef std::vector<std::pair<size_t, uint8_t*>> BufferVector;
+    typedef std::vector<UDPDatagram*> BufferVector;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -110,7 +124,7 @@ namespace network
         /// <summary>Write data to the UDP socket.</summary>
         bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
+        bool write(BufferVector& buffers, int* lenWritten = nullptr);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();

@@ -222,8 +222,8 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_dmrStreamId[slotIndex], m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_dmrStreamId[slotIndex], m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -359,8 +359,8 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -384,8 +384,8 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -408,8 +408,8 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -432,8 +432,8 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -460,8 +460,8 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -545,8 +545,8 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -578,8 +578,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    m_frameQueue->enqueueMessage(buffer, 21U, createStreamId(), m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 21U, createStreamId(), m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -604,8 +604,9 @@ bool BaseNetwork::writeActLog(const char* message)
     __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
     ::strcpy(buffer + 11U, message);
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId, 
+        m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>
@@ -630,8 +631,9 @@ bool BaseNetwork::writeDiagLog(const char* message)
     __SET_UINT32(m_peerId, buffer, 8U);                                             // Peer ID
     ::strcpy(buffer + 12U, message);
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId);
-    return m_frameQueue->flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId, 
+        m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
 }
 
 /// <summary>

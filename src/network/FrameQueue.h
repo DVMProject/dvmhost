@@ -58,12 +58,13 @@ namespace network
                 frame::RTPHeader* rtpHeader = nullptr, frame::RTPFNEHeader* fneHeader = nullptr);
 
         /// <summary>Cache "message" to frame queue.</summary>
-        void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId);
+        void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+            sockaddr_storage& addr, uint32_t addrLen);
         /// <summary>Cache all messages in "buffers" in order to frame queue.</summary>
         bool enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32_t peerId);
 
         /// <summary>Flush the message queue.</summary>
-        bool flushQueue(sockaddr_storage& addr, uint32_t addrLen);
+        bool flushQueue();
 
     private:
         uint32_t m_peerId;

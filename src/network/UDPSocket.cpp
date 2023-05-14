@@ -287,7 +287,7 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
 /// <param name="addrLen"></param>
 /// <param name="lenWritten">Total number of bytes written.</param>
 /// <returns>True if messages were sent, otherwise false.</returns>
-bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten)
+bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
 {
     bool result = false;
     if (buffers.empty()) {
@@ -307,13 +307,19 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
     struct iovec chunks[MAX_BUFFER_COUNT];
 
     // create mmsghdrs from input buffers and send them at once
+    int size = buffers.size();
     for (size_t i = 0; i < buffers.size(); ++i) {
-        chunks[i].iov_len = buffers.at(i).first;
-        chunks[i].iov_base = buffers.at(i).second;
-        sent += buffers.at(i).first;
+        if (buffers.at(i) == nullptr) {
+            --size;
+            continue;
+        }
 
-        headers[i].msg_hdr.msg_name = (void *)&address;
-        headers[i].msg_hdr.msg_namelen = addrLen;
+        chunks[i].iov_len = buffers.at(i)->length;
+        chunks[i].iov_base = buffers.at(i)->buffer;
+        sent += buffers.at(i)->length;
+
+        headers[i].msg_hdr.msg_name = (void*)&buffers.at(i)->address;
+        headers[i].msg_hdr.msg_namelen = buffers.at(i)->addrLen;
         headers[i].msg_hdr.msg_iov = &chunks[i];
         headers[i].msg_hdr.msg_iovlen = 1;
         headers[i].msg_hdr.msg_control = 0;
@@ -321,10 +327,20 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
     }
 
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
-        if (m_fd[i] < 0 || m_af[i] != address.ss_family)
+        if (m_fd[i] < 0)
             continue;
 
-        if (sendmmsg(m_fd[i], headers, buffers.size(), 0) < 0) {
+        bool skip = false;
+        for (auto& buffer : buffers) {
+            if (m_af[i] != buffer->address.ss_family) {
+                skip = true;
+                break;
+            }
+        }
+        if (skip)
+            continue;
+
+        if (sendmmsg(m_fd[i], headers, size, 0) < 0) {
             LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
             if (lenWritten != nullptr) {
                 *lenWritten = -1;

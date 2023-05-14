@@ -163,7 +163,8 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 /// <param name="streamId"></param>
 /// <param name="peerId"></param>
 /// <returns></returns>
-void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId)
+void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+    sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
     assert(length > 0U);
@@ -197,7 +198,13 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     if (m_debug)
         Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 
-    m_buffers.push_back({ bufferLen, buffer });
+    UDPDatagram* dgram = new UDPDatagram;
+    dgram->buffer = buffer;
+    dgram->length = bufferLen;
+    dgram->address = addr;
+    dgram->addrLen = addrLen;
+
+    m_buffers.push_back(dgram);
 }
 
 /// <summary>
@@ -214,7 +221,7 @@ bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32
     }
 
     for (auto& buffer : buffers) {
-        uint32_t length = buffer.first;
+        uint32_t length = buffer->length;
         uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
         uint8_t* _buffer = new uint8_t[bufferLen];
         ::memset(_buffer, 0x00U, bufferLen);
@@ -227,19 +234,22 @@ bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32
         header.encode(_buffer);
 
         RTPFNEHeader fneHeader = RTPFNEHeader();
-        fneHeader.setCRC(edac::CRC::createCRC16(buffer.second, length * 8U));
+        fneHeader.setCRC(edac::CRC::createCRC16(buffer->buffer, length * 8U));
         fneHeader.setStreamId(streamId);
         fneHeader.setPeerId(peerId);
         fneHeader.setMessageLength(length);
 
         fneHeader.encode(_buffer + RTP_HEADER_LENGTH_BYTES);
 
-        ::memcpy(_buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, buffer.second, length);
+        ::memcpy(_buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, buffer->buffer, length);
 
         if (m_debug)
             Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", _buffer, bufferLen);
 
-        m_buffers.push_back({ bufferLen, _buffer });
+        delete buffer->buffer;
+        buffer->buffer = _buffer;
+
+        m_buffers.push_back(buffer);
     }
 
     return true;
@@ -249,24 +259,29 @@ bool FrameQueue::enqueueMessage(BufferVector& buffers, uint32_t streamId, uint32
 /// Flush the message queue.
 /// </summary>
 /// <returns></returns>
-bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
+bool FrameQueue::flushQueue()
 {
     if (m_buffers.empty()) {
         return false;
     }
 
     bool ret = true;
-    if (!m_socket->write(m_buffers, addr, addrLen)) {
+    if (!m_socket->write(m_buffers)) {
         LogError(LOG_NET, "Failed writing data to the network");
         ret = false;
     }
 
     for (auto& buffer : m_buffers) {
-        // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer.second, buffer.first);
-        if (buffer.second != nullptr) {
-            delete buffer.second;
-            buffer.first = 0;
-            buffer.second = nullptr;
+        if (buffer != nullptr) {
+            LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
+            if (buffer->buffer != nullptr) {
+                delete buffer->buffer;
+                buffer->length = 0;
+                buffer->buffer = nullptr;
+            }
+
+            delete buffer;
+            buffer = nullptr;
         }
     }
     m_buffers.clear();
