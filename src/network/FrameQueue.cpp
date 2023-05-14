@@ -169,11 +169,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     assert(message != nullptr);
     assert(length > 0U);
 
-
-    if (m_debug)
-        Utils::dump(1U, "FrameQueue::enqueueMessage() Raw Message", message, length);
-
-
 #if !defined(USE_LEGACY_NETWORK)
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
     uint8_t* buffer = new uint8_t[bufferLen];
@@ -279,7 +274,7 @@ bool FrameQueue::flushQueue()
 
     for (auto& buffer : m_buffers) {
         if (buffer != nullptr) {
-            LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
+            // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
             if (buffer->buffer != nullptr) {
                 delete buffer->buffer;
                 buffer->length = 0;
