@@ -201,8 +201,8 @@ namespace network
 
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
-        UDPSocket m_socket;
-        FrameQueue m_frameQueue;
+        UDPSocket* m_socket;
+        FrameQueue* m_frameQueue;
 
         NET_CONN_STATUS m_status;
 

@@ -290,12 +290,12 @@ bool TalkgroupRulesLookup::load()
     try {
         bool ret = yaml::Parse(m_rules, m_rulesFile.c_str());
         if (!ret) {
-            LogError(LOG_HOST, "Cannot open the lookup file - %s", m_rulesFile.c_str());
+            LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s", m_rulesFile.c_str());
             return false;
         }
     }
     catch (yaml::OperationException const& e) {
-        LogError(LOG_HOST, "Cannot open the lookup file - %s", e.message());
+        LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s (%s)", m_rulesFile.c_str(), e.message());
         return false;
     }
 
@@ -323,8 +323,16 @@ bool TalkgroupRulesLookup::load()
             uint8_t tgSlot = groupVoice.source().tgSlot();
             bool active = groupVoice.config().active();
             bool affiliated = groupVoice.config().affiliated();
+            bool parrot = groupVoice.config().parrot();
 
-            ::LogInfoEx(LOG_HOST, "Rule (%s) NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u", groupName.c_str(), tgId, tgSlot, active, affiliated);
+            uint32_t incCount = groupVoice.config().inclusion().size();
+            uint32_t excCount = groupVoice.config().exclusion().size();
+
+            if (incCount > 0 && excCount > 0) {
+                ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
+            }
+
+            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u", groupName.c_str(), tgId, tgSlot, active, affiliated, parrot, incCount, excCount);
         }
     }
     m_mutex.unlock();

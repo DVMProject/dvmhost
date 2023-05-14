@@ -39,7 +39,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     const uint32_t DATA_PACKET_LENGTH = 8192U;
-    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x6BU;
+    const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x56U;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -49,7 +49,7 @@ namespace network
     class HOST_SW_API FrameQueue {
     public:
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
-        FrameQueue(UDPSocket socket, uint32_t peerId, bool debug);
+        FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug);
         /// <summary>Finalizes a instance of the FrameQueue class.</summary>
         virtual ~FrameQueue();
 
@@ -70,7 +70,7 @@ namespace network
 
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
-        UDPSocket m_socket;
+        UDPSocket* m_socket;
 
         BufferVector m_buffers;
 

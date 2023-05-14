@@ -46,7 +46,7 @@ using namespace network::frame;
 /// </FrameQueue>
 /// <param name="socket">Local port used to listen for incoming data.</param>
 /// <param name="peerId">Unique ID of this modem on the network.</param>
-FrameQueue::FrameQueue(UDPSocket socket, uint32_t peerId, bool debug) :
+FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) :
     m_peerId(peerId),
     m_socket(socket),
     m_buffers(),
@@ -82,8 +82,11 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
     RTPFNEHeader _fneHeader = RTPFNEHeader();
 
     messageLength = -1;
-    int length = m_socket.read(buffer, DATA_PACKET_LENGTH, address, addrLen);
+    int length = m_socket->read(buffer, DATA_PACKET_LENGTH, address, addrLen);
     if (length > 0) {
+        if (m_debug)
+            Utils::dump(1U, "Network Packet", buffer, length);
+#if !defined(USE_LEGACY_NETWORK)
         if (length < RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES) {
             LogError(LOG_NET, "FrameQueue::read(), message received from network is malformed! %u bytes != %u bytes", 
                 RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES, length);
@@ -133,7 +136,13 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             messageLength = -1;
             return nullptr;
         }
-
+#else
+        // copy message
+        messageLength = length;
+        __UNIQUE_UINT8_ARRAY(message, length);
+        ::memcpy(message.get(), buffer, messageLength);
+#endif // !defined(USE_LEGACY_NETWORK)
+        LogDebug(LOG_NET, "message buffer, addr %p len %u", message.get(), messageLength);
         return message;
     }
 
@@ -152,7 +161,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 {
     assert(message != nullptr);
     assert(length > 0U);
-
+#if !defined(USE_LEGACY_NETWORK)
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
     uint8_t* buffer = new uint8_t[bufferLen];
     ::memset(buffer, 0x00U, bufferLen);
@@ -173,7 +182,12 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     fneHeader.encode(buffer + RTP_HEADER_LENGTH_BYTES);
 
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
-
+#else
+    uint32_t bufferLen = length;
+    uint8_t* buffer = new uint8_t[bufferLen];
+    ::memset(buffer, 0x00U, bufferLen);
+    ::memcpy(buffer, message, length);
+#endif // !defined(USE_LEGACY_NETWORK)
     if (m_debug)
         Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 
@@ -235,9 +249,10 @@ bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
         return false;
     }
 
-    if (m_socket.write(m_buffers, addr, addrLen)) {
+    bool ret = true;
+    if (!m_socket->write(m_buffers, addr, addrLen)) {
         LogError(LOG_NET, "Socket has failed when writing data to the network!");
-        return false;
+        ret = false;
     }
 
     for (auto& buffer : m_buffers) {
@@ -250,5 +265,5 @@ bool FrameQueue::flushQueue(sockaddr_storage& addr, uint32_t addrLen)
     }
     m_buffers.clear();
 
-    return true;
+    return ret;
 }

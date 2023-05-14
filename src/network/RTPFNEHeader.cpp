@@ -64,7 +64,7 @@ bool RTPFNEHeader::decode(const uint8_t* data)
     assert(data != nullptr);
 
     RTPExtensionHeader::decode(data);
-    if (m_payloadLength != RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES) {
+    if (m_payloadLength != RTP_FNE_HEADER_LENGTH_EXT_LEN) {
         return false;
     }
 
@@ -73,9 +73,9 @@ bool RTPFNEHeader::decode(const uint8_t* data)
     }
 
     m_crc16 = (data[4U] << 8) | (data[5U] << 0);                                // CRC-16
-    m_streamId = __GET_UINT32(data, 6U);                                        // Stream ID
-    m_peerId = __GET_UINT32(data, 10U);                                         // Peer ID
-    m_messageLength = __GET_UINT32(data, 14U);                                  // Message Length
+    m_streamId = __GET_UINT32(data, 8U);                                        // Stream ID
+    m_peerId = __GET_UINT32(data, 12U);                                         // Peer ID
+    m_messageLength = __GET_UINT32(data, 16U);                                  // Message Length
 
     return true;
 }
@@ -89,13 +89,13 @@ void RTPFNEHeader::encode(uint8_t* data)
     assert(data != nullptr);
 
     m_payloadType = modem::DVM_FRAME_START;
-    m_payloadLength = RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES;
+    m_payloadLength = RTP_FNE_HEADER_LENGTH_EXT_LEN;
     RTPExtensionHeader::encode(data);
 
     data[4U] = (m_crc16 >> 8) & 0xFFU;                                          // CRC-16 MSB
     data[5U] = (m_crc16 >> 0) & 0xFFU;                                          // CRC-16 LSB
 
-    __SET_UINT32(m_streamId, data, 6U);                                         // Stream ID
-    __SET_UINT32(m_peerId, data, 10U);                                          // Peer ID
-    __SET_UINT32(m_messageLength, data, 14U);                                   // Message Length
+    __SET_UINT32(m_streamId, data, 8U);                                         // Stream ID
+    __SET_UINT32(m_peerId, data, 12U);                                          // Peer ID
+    __SET_UINT32(m_messageLength, data, 16U);                                   // Message Length
 }

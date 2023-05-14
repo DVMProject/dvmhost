@@ -74,7 +74,6 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_address(address),
     m_port(port),
     m_password(password),
-    m_enabled(false),
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
@@ -167,18 +166,14 @@ void FNENetwork::clock(uint32_t ms)
     frame::RTPHeader rtpHeader = frame::RTPHeader(true);
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
-    UInt8Array buffer = m_frameQueue.read(length, address, addrLen, &rtpHeader, &fneHeader);
+    UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
-        if (!m_enabled) {
-            return;
-        }
-
         if (m_debug)
-            Utils::dump(1U, "Network Received", buffer.get(), length);
+            Utils::dump(1U, "Network Message", buffer.get(), length);
 
         if (length < 4) {
-            LogWarning(LOG_NET, "Malformed packet (from %s:%s)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
-            Utils::dump(1U, "Network Received", buffer.get(), length);
+            LogWarning(LOG_NET, "Malformed message (from %s:%s)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
+            Utils::dump(1U, "Network Message", buffer.get(), length);
             return;
         }
 
@@ -237,8 +232,8 @@ void FNENetwork::clock(uint32_t ms)
                 ::memcpy(buffer + 0U, TAG_REPEATER_ACK, 6U);
                 __SET_UINT32(connection.salt(), buffer, 6U);
                 
-                m_frameQueue.enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
-                m_frameQueue.flushQueue(address, addrLen);
+                m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
+                m_frameQueue->flushQueue(address, addrLen);
 
                 connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
                 m_peers[peerId] = connection;
@@ -500,22 +495,13 @@ bool FNENetwork::open()
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
 
-    m_socket = UDPSocket(m_address, m_port);
-    bool ret = m_socket.open();
+    m_socket = new UDPSocket(m_address, m_port);
+    bool ret = m_socket->open();
     if (!ret) {
         m_status = NET_STAT_INVALID;
     }
 
     return ret;
-}
-
-/// <summary>
-/// Sets flag enabling network communication.
-/// </summary>
-/// <param name="enabled"></param>
-void FNENetwork::enable(bool enabled)
-{
-    m_enabled = enabled;
 }
 
 /// <summary>
@@ -530,11 +516,11 @@ void FNENetwork::close()
         uint8_t buffer[9U];
         ::memcpy(buffer + 0U, TAG_MASTER_CLOSING, 5U);
 
-        m_frameQueue.enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
-        m_frameQueue.flushQueue(m_addr, m_addrLen);
+        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
+        m_frameQueue->flushQueue(m_addr, m_addrLen);
     }
 
-    m_socket.close();
+    m_socket->close();
 
     m_maintainenceTimer.stop();
     m_updateLookupTimer.stop();
@@ -746,8 +732,8 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
 
-        m_frameQueue.enqueueMessage(data, length, streamId, peerId/*m_peerId*/);
-        return m_frameQueue.flushQueue(addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/);
+        return m_frameQueue->flushQueue(addr, addrLen);
     }
 
     return false;
@@ -835,8 +821,8 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
     
-    m_frameQueue.enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
-    return m_frameQueue.flushQueue(addr, addrLen);
+    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/);
+    return m_frameQueue->flushQueue(addr, addrLen);
 }
 
 /// <summary>

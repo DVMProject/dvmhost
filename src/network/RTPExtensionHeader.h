@@ -62,7 +62,7 @@ namespace network
         public:
             /// <summary>Format of the extension header payload contained within the packet.</summary>
             __PROTECTED_PROPERTY(uint16_t, payloadType, PayloadType);
-            /// <summary>Length of the extension header payload.</summary>
+            /// <summary>Length of the extension header payload (in 32-bit units).</summary>
             __PROTECTED_READONLY_PROPERTY(uint16_t, payloadLength, PayloadLength);
         };
     } // namespace frame

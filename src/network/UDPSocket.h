@@ -122,6 +122,9 @@ namespace network
         /// <summary>Closes the UDP socket connection.</summary>
         void close(const uint32_t index);
 
+        /// <summary>Flag indicating the UDP socket(s) are open.</summary>
+        bool isOpen() const { return m_isOpen; }
+
         /// <summary></summary>
         static void startup();
         /// <summary></summary>
@@ -147,6 +150,8 @@ namespace network
         uint16_t m_port_save;
         std::string m_address[UDP_SOCKET_MAX];
         uint16_t m_port[UDP_SOCKET_MAX];
+
+        bool m_isOpen;
 
         uint32_t m_af[UDP_SOCKET_MAX];
         int m_fd[UDP_SOCKET_MAX];

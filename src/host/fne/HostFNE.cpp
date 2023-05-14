@@ -104,7 +104,7 @@ int HostFNE::run()
         }
     }
     catch (yaml::OperationException const& e) {
-        ::fatal("cannot read the configuration file, %s", e.message());
+        ::fatal("cannot read the configuration file - %s (%s)", m_confFile.c_str(), e.message());
     }
 
     bool m_daemon = m_conf["daemon"].as<bool>(false);
@@ -310,13 +310,6 @@ bool HostFNE::readParams()
 bool HostFNE::createMasterNetwork()
 {
     yaml::Node masterConf = m_conf["master"];
-    bool netEnable = masterConf["enable"].as<bool>(true);
-
-    // dump out if networking is disabled
-    if (!netEnable) {
-        return true;
-    }
-
     std::string address = masterConf["address"].as<std::string>();
     uint16_t port = (uint16_t)masterConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint32_t id = masterConf["peerId"].as<uint32_t>(1001U);
@@ -328,36 +321,29 @@ bool HostFNE::createMasterNetwork()
     m_nxdnEnabled = masterConf["allowNXDNTraffic"].as<bool>(true);
 
     LogInfo("Network Parameters");
-    LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
-    if (netEnable) {
-        LogInfo("    Peer ID: %u", id);
-        LogInfo("    Address: %s", address.c_str());
-        LogInfo("    Port: %u", port);
-        LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
-        LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
-        LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
+    LogInfo("    Peer ID: %u", id);
+    LogInfo("    Address: %s", address.c_str());
+    LogInfo("    Port: %u", port);
+    LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
+    LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
+    LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
 
-        if (debug) {
-            LogInfo("    Debug: yes");
-        }
+    if (debug) {
+        LogInfo("    Debug: yes");
     }
 
     // initialize networking
-    if (netEnable) {
-        m_network = new FNENetwork(this, address, port, id, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
-            m_pingTime, m_updateLookupTime);
+    m_network = new FNENetwork(this, address, port, id, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
+        m_pingTime, m_updateLookupTime);
 
-        m_network->setLookups(m_ridLookup, m_tidLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup);
 
-        bool ret = m_network->open();
-        if (!ret) {
-            delete m_network;
-            m_network = nullptr;
-            LogError(LOG_HOST, "failed to initialize traffic networking!");
-            return false;
-        }
-
-        m_network->enable(true);
+    bool ret = m_network->open();
+    if (!ret) {
+        delete m_network;
+        m_network = nullptr;
+        LogError(LOG_HOST, "failed to initialize traffic networking!");
+        return false;
     }
 
     return true;

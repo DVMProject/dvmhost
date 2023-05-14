@@ -54,12 +54,11 @@ namespace lookups
         }
         /// <summary>Initializes a new insatnce of the TalkgroupRuleGroupVoiceSource class.</summary>
         /// <param name="node"></param>
-        /// <param name="tgSlot"></param>
         TalkgroupRuleGroupVoiceSource(yaml::Node& node) :
             TalkgroupRuleGroupVoiceSource()
         {
             m_tgId = node["tgid"].as<uint32_t>(0U);
-            m_tgSlot = node["slot"].as<uint8_t>(0U);
+            m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleGroupVoiceSource to another TalkgroupRuleGroupVoiceSource.</summary>
@@ -99,8 +98,6 @@ namespace lookups
         }
         /// <summary>Initializes a new insatnce of the TalkgroupRuleConfig class.</summary>
         /// <param name="node"></param>
-        /// <param name="affilated"></param>
-        /// <param name="routable"></param>
         TalkgroupRuleConfig(yaml::Node& node) :
             TalkgroupRuleConfig()
         {

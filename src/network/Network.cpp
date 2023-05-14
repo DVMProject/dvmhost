@@ -177,11 +177,13 @@ void Network::clock(uint32_t ms)
         m_retryTimer.clock(ms);
         if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
             if (m_enabled) {
-                bool ret = m_socket.open(m_addr.ss_family);
+                bool ret = m_socket->open(m_addr.ss_family);
                 if (ret) {
                     ret = writeLogin();
-                    if (!ret)
+                    if (!ret) {
+                        m_retryTimer.start();
                         return;
+                    }
 
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
@@ -199,13 +201,15 @@ void Network::clock(uint32_t ms)
         return;
     }
 
+    return;
+
     sockaddr_storage address;
     uint32_t addrLen;
 
     frame::RTPHeader rtpHeader = frame::RTPHeader(true);
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
-    UInt8Array buffer = m_frameQueue.read(length, address, addrLen, &rtpHeader, &fneHeader);
+    UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length < 0) {
         LogError(LOG_NET, "Socket has failed, retrying connection to the master");
         close();
@@ -471,11 +475,11 @@ void Network::close()
         ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
         __SET_UINT32(m_peerId, buffer, 5U);                                         // Peer ID
 
-        m_frameQueue.enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
-        m_frameQueue.flushQueue(m_addr, m_addrLen);
+        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId);
+        m_frameQueue->flushQueue(m_addr, m_addrLen);
     }
 
-    m_socket.close();
+    m_socket->close();
 
     m_retryTimer.stop();
     m_timeoutTimer.stop();
@@ -505,8 +509,8 @@ bool Network::writeLogin()
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
-    m_frameQueue.enqueueMessage(buffer, 8U, createStreamId(), m_peerId);
-    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 8U, createStreamId(), m_peerId);
+    return m_frameQueue->flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -534,8 +538,8 @@ bool Network::writeAuthorisation()
     if (m_debug)
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    m_frameQueue.enqueueMessage(out, 40U, createStreamId(), m_peerId);
-    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(out, 40U, createStreamId(), m_peerId);
+    return m_frameQueue->flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -592,8 +596,8 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    m_frameQueue.enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId);
-    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId);
+    return m_frameQueue->flushQueue(m_addr, m_addrLen);
 }
 
 /// <summary>
@@ -609,6 +613,6 @@ bool Network::writePing()
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    m_frameQueue.enqueueMessage(buffer, 11U, createStreamId(), m_peerId);
-    return m_frameQueue.flushQueue(m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId);
+    return m_frameQueue->flushQueue(m_addr, m_addrLen);
 }

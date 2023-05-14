@@ -170,7 +170,7 @@ int Host::run()
         }
     }
     catch (yaml::OperationException const& e) {
-        ::fatal("cannot read the configuration file, %s", e.message());
+        ::fatal("cannot read the configuration file - %s (%s)", m_confFile.c_str(), e.message());
     }
 
     bool m_daemon = m_conf["daemon"].as<bool>(false);

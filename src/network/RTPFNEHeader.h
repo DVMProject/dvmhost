@@ -37,7 +37,8 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define RTP_FNE_HEADER_LENGTH_BYTES 14
+#define RTP_FNE_HEADER_LENGTH_BYTES 16
+#define RTP_FNE_HEADER_LENGTH_EXT_LEN 4
 
 namespace network
 {

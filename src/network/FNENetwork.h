@@ -174,9 +174,6 @@ namespace network
         /// <summary>Opens connection to the network.</summary>
         bool open();
 
-        /// <summary>Sets flag enabling network communication.</summary>
-        void enable(bool enabled);
-
         /// <summary>Closes connection to the network.</summary>
         void close();
 
@@ -194,8 +191,6 @@ namespace network
         uint16_t m_port;
 
         std::string m_password;
-
-        bool m_enabled;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;

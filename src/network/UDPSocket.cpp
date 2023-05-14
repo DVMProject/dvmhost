@@ -31,6 +31,7 @@
 #include "Defines.h"
 #include "network/UDPSocket.h"
 #include "Log.h"
+#include "Utils.h"
 
 #include <cassert>
 
@@ -58,6 +59,7 @@ using namespace network;
 UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
     m_address_save(address),
     m_port_save(port),
+    m_isOpen(false),
     m_counter(0U)
 {
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
@@ -75,6 +77,7 @@ UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
 UDPSocket::UDPSocket(uint16_t port) :
     m_address_save(),
     m_port_save(port),
+    m_isOpen(false),
     m_counter(0U)
 {
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
@@ -135,6 +138,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
     int err = lookup(address, port, addr, addrlen, hints);
     if (err != 0) {
         LogError(LOG_NET, "The local address is invalid - %s", address.c_str());
+        m_isOpen = false;
         return false;
     }
 
@@ -147,6 +151,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 #else
         LogError(LOG_NET, "Cannot create the UDP socket, err: %d", errno);
 #endif
+        m_isOpen = false;
         return false;
     }
 
@@ -163,6 +168,7 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 #else
             LogError(LOG_NET, "Cannot set the UDP socket option, err: %d", errno);
 #endif
+            m_isOpen = false;
             return false;
         }
 
@@ -172,12 +178,14 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 #else
             LogError(LOG_NET, "Cannot bind the UDP address, err: %d", errno);
 #endif
+            m_isOpen = false;
             return false;
         }
 
         LogInfoEx(LOG_NET, "Opening UDP port on %u", port);
     }
 
+    m_isOpen = true;
     return true;
 }
 
@@ -290,7 +298,6 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
 #else
         ssize_t sent = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
 #endif
-
         if (sent < 0) {
 #if defined(_WIN32) || defined(_WIN64)
             LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
@@ -330,13 +337,18 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
 {
     bool result = false;
 
-#if defined(_WIN32) || defined(_WIN64)
-    DWORD sent = 0;
-
-    if (buffers.size() > UINT16_MAX) {
-        // LOG_ERROR("Trying to send too large buffer");
+    if (buffers.empty()) {
+        LogError(LOG_NET, "Trying to send empty buffers?");
         return false;
     }
+
+    if (buffers.size() > UINT16_MAX) {
+        LogError(LOG_NET, "Trying to send too many buffers?");
+        return false;
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+    DWORD sent = 0;
 #else
     int sent = 0;
 #endif
@@ -350,20 +362,23 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
         wsaBuffers[i].buf = (char*)buffers.at(i).second;
     }
 #else
-    struct mmsghdr header;
+    struct mmsghdr headers[MAX_BUFFER_COUNT];
     struct iovec chunks[MAX_BUFFER_COUNT];
+
+    // create mmsghdrs from input buffers and send them at once
     for (size_t i = 0; i < buffers.size(); ++i) {
         chunks[i].iov_len = buffers.at(i).first;
         chunks[i].iov_base = buffers.at(i).second;
         sent += buffers.at(i).first;
+
+        headers[i].msg_hdr.msg_name = (void *)&address;
+        headers[i].msg_hdr.msg_namelen = addrLen;
+        headers[i].msg_hdr.msg_iov = &chunks[i];
+        headers[i].msg_hdr.msg_iovlen = 1;
+        headers[i].msg_hdr.msg_control = 0;
+        headers[i].msg_hdr.msg_controllen = 0;
     }
 
-    header.msg_hdr.msg_name = (void *)&address;
-    header.msg_hdr.msg_namelen = addrLen;
-    header.msg_hdr.msg_iov = chunks;
-    header.msg_hdr.msg_iovlen = buffers.size();
-    header.msg_hdr.msg_control = 0;
-    header.msg_hdr.msg_controllen = 0;
 #endif
 
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
@@ -371,7 +386,7 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
             continue;
 
 #if defined(_WIN32) || defined(_WIN64)
-        int success = WSASendTo(m_fd[i], wsaBuffers, (DWORD)wsaBuffers.size(), &sent, 0, 
+        int success = WSASendTo(m_fd[i], wsaBuffers, (DWORD)buffers.size(), &sent, 0, 
             (SOCKADDR *)&address, addrLen, nullptr, nullptr);
         if (success != 0) {
             LogError(LOG_NET, "Error returned from sendto, err: %lu", ::GetLastError());
@@ -380,7 +395,7 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
             }
         }
 #else
-        if (sendmmsg(m_fd[i], &header, 1, 0) < 0) {
+        if (sendmmsg(m_fd[i], headers, buffers.size(), 0) < 0) {
             LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
             if (lenWritten != nullptr) {
                 *lenWritten = -1;
@@ -389,6 +404,7 @@ bool UDPSocket::write(BufferVector& buffers, const sockaddr_storage& address, ui
 #endif
 
         if (sent < 0) {
+            LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
             if (lenWritten != nullptr) {
                 *lenWritten = -1;
             }
@@ -411,6 +427,7 @@ void UDPSocket::close()
 {
     for (int i = 0; i < UDP_SOCKET_MAX; i++)
         close(i);
+    m_isOpen = false;
 }
 
 /// <summary>

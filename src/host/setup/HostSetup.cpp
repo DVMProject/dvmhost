@@ -75,9 +75,15 @@ HostSetup::~HostSetup()
 /// <returns>Zero if successful, otherwise error occurred.</returns>
 int HostSetup::run()
 {
-    bool ret = yaml::Parse(m_conf, m_confFile.c_str());
-    if (!ret) {
-        ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
+    bool ret = false;
+    try {
+        ret = yaml::Parse(m_conf, m_confFile.c_str());
+        if (!ret) {
+            ::fatal("cannot read the configuration file, %s\n", m_confFile.c_str());
+        }
+    }
+    catch (yaml::OperationException const& e) {
+        ::fatal("cannot read the configuration file - %s (%s)", m_confFile.c_str(), e.message());
     }
 
     // initialize system logging
