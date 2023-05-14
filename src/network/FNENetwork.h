@@ -208,29 +208,29 @@ namespace network
         Timer m_updateLookupTimer;
 
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
-        void writeWhitelistRIDs(uint32_t peerId);
+        void writeWhitelistRIDs(uint32_t peerId, bool queueOnly = false);
         /// <summary>Helper to send the list of whitelisted RIDs to connected peers.</summary>
         void writeWhitelistRIDs();
         /// <summary>Helper to send the list of blacklisted RIDs to the specified peer.</summary>
-        void writeBlacklistRIDs(uint32_t peerId);
+        void writeBlacklistRIDs(uint32_t peerId, bool queueOnly = false);
         /// <summary>Helper to send the list of blacklisted RIDs to connected peers.</summary>
         void writeBlacklistRIDs();
 
         /// <summary>Helper to send the list of active TGIDs to the specified peer.</summary>
-        void writeTGIDs(uint32_t peerId);
+        void writeTGIDs(uint32_t peerId, bool queueOnly = false);
         /// <summary>Helper to send the list of active TGIDs to connected peers.</summary>
         void writeTGIDs();
         /// <summary>Helper to send the list of deactivated TGIDs to the specified peer.</summary>
-        void writeDeactiveTGIDs(uint32_t peerId);
+        void writeDeactiveTGIDs(uint32_t peerId, bool queueOnly = false);
         /// <summary>Helper to send the list of deactivated TGIDs to connected peers.</summary>
         void writeDeactiveTGIDs();
 
         /// <summary>Helper to send a raw message to the specified peer.</summary>
-        bool writePeer(uint32_t peerId, const uint8_t* data, uint32_t length);
+        bool writePeer(uint32_t peerId, const uint8_t* data, uint32_t length, bool queueOnly = false);
         /// <summary>Helper to send a tagged message to the specified peer.</summary>
-        bool writePeerTagged(uint32_t peerId, const char* tag, const uint8_t* data, uint32_t length);
+        bool writePeerTagged(uint32_t peerId, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, bool queueOnly = false);
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
-        bool writePeerACK(uint32_t peerId);
+        bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>

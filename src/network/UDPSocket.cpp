@@ -43,7 +43,7 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define MAX_BUFFER_COUNT 256
+#define MAX_BUFFER_COUNT 16384
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

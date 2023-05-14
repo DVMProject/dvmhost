@@ -152,12 +152,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
                             continue;
                         }
 
-                        m_network->writePeer(peer.first, data, len);
+                        m_network->writePeer(peer.first, data, len, true);
                         LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
                             peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
                     }
                 }
 
+                m_network->m_frameQueue->flushQueue();
                 return true;
             }
         }

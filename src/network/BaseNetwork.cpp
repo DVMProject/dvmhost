@@ -685,7 +685,7 @@ void BaseNetwork::resetNXDN()
 /// <returns></returns>
 UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
 {
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_DMR_DATA, 4U);
@@ -754,7 +754,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
@@ -875,7 +875,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
@@ -965,7 +965,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 /// <returns></returns>
 UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
 {
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
@@ -1010,7 +1010,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 {
     assert(data != nullptr);
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
@@ -1071,7 +1071,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 
     assert(data != nullptr);
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
@@ -1123,7 +1123,7 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 {
     assert(data != nullptr);
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);

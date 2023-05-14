@@ -112,12 +112,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
                             continue;
                         }
 
-                        m_network->writePeer(peer.first, data, len);
+                        m_network->writePeer(peer.first, data, len, true);
                         LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
                             peerId, peer.first, messageType, srcId, dstId, len);
                     }
                 }
 
+                m_network->m_frameQueue->flushQueue();
                 return true;
             }
         }

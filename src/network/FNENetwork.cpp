@@ -137,7 +137,7 @@ void FNENetwork::clock(uint32_t ms)
 
             uint64_t dt = peerConn.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
             if (dt < now) {
-                LogInfo(LOG_NET, "PEER %u timed out", id);
+                LogInfoEx(LOG_NET, "PEER %u timed out", id);
                 peersToRemove.push_back(id);
             }
         }
@@ -154,9 +154,11 @@ void FNENetwork::clock(uint32_t ms)
     if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
         writeWhitelistRIDs();
         writeBlacklistRIDs();
+        m_frameQueue->flushQueue();
 
         writeTGIDs();
         writeDeactiveTGIDs();
+        m_frameQueue->flushQueue();
 
         m_updateLookupTimer.start();
     }
@@ -182,7 +184,7 @@ void FNENetwork::clock(uint32_t ms)
         uint32_t peerId = fneHeader.getPeerId();
 
         // update current peer stream ID
-        if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
+        if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
             FNEPeerConnection connection = m_peers[peerId];            
             
             uint32_t streamId = fneHeader.getStreamId();
@@ -225,23 +227,19 @@ void FNENetwork::clock(uint32_t ms)
                 std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
                 connection.salt(dist(m_random));
 
-                LogInfo(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection.address().c_str(), connection.port());
-
-                // transmit salt to peer
-                uint8_t buffer[DATA_PACKET_LENGTH];
-                ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
-
-                ::memcpy(buffer + 0U, TAG_REPEATER_ACK, 6U);
-                __SET_UINT32(connection.salt(), buffer, 6U);
-                
-                m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/,
-                    address, addrLen);
-                m_frameQueue->flushQueue();
+                LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection.address().c_str(), connection.port());
 
                 connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
                 m_peers[peerId] = connection;
 
-                LogInfo(LOG_NET, "Challenge response send to PEER %u for login", peerId);
+
+                // transmit salt to peer
+                uint8_t salt[4U];
+                ::memset(salt, 0x00U, 4U);
+                __SET_UINT32(connection.salt(), salt, 0U);
+
+                writePeerACK(peerId, salt, 4U);
+                LogInfoEx(LOG_NET, "Challenge response send to PEER %u for login", peerId);
             }
             else {
                 writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
@@ -289,7 +287,8 @@ void FNENetwork::clock(uint32_t ms)
 
                     if (valid) {
                         connection.connectionState(NET_STAT_WAITING_CONFIG);
-                        LogInfo(LOG_NET, "PEER %u has completed the login exchange", peerId);
+                        writePeerACK(peerId);
+                        LogInfoEx(LOG_NET, "PEER %u has completed the login exchange", peerId);
                     }
                     else {
                         LogWarning(LOG_NET, "PEER %u has failed the login exchange", peerId);
@@ -356,13 +355,16 @@ void FNENetwork::clock(uint32_t ms)
                             m_peers[peerId] = connection;
 
                             writePeerACK(peerId);
-                            LogInfo(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
+                            LogInfoEx(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
 
-                            writeWhitelistRIDs(peerId);
-                            writeBlacklistRIDs(peerId);
+                            // queue final update messages and flush
+                            writeWhitelistRIDs(peerId, true);
+                            writeBlacklistRIDs(peerId, true);
+                            m_frameQueue->flushQueue();
 
-                            writeTGIDs(peerId);
-                            writeDeactiveTGIDs(peerId);
+                            writeTGIDs(peerId, true);
+                            writeDeactiveTGIDs(peerId, true);
+                            m_frameQueue->flushQueue();
                         }
                     }
                 }
@@ -386,7 +388,7 @@ void FNENetwork::clock(uint32_t ms)
 
                 // validate peer (simple validation really)
                 if (connection.connected() && connection.address() == ip) {
-                    LogInfo(LOG_NET, "PEER %u is closing down", peerId);
+                    LogInfoEx(LOG_NET, "PEER %u is closing down", peerId);
 
                     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
                     if (it != m_peers.end()) {
@@ -407,6 +409,7 @@ void FNENetwork::clock(uint32_t ms)
                     connection.lastPing(now);
 
                     m_peers[peerId] = connection;
+                    writePeerTagged(peerId, TAG_MASTER_PONG);
 
                     if (m_debug) {
                         LogDebug(LOG_NET, "PEER %u ping received and answered", peerId);
@@ -544,7 +547,8 @@ void FNENetwork::close()
 /// Helper to send the list of whitelisted RIDs to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
+/// <param name="queueOnly"></param>
+void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool queueOnly)
 {
     // send radio ID white/black lists
     std::vector<uint32_t> ridWhitelist;
@@ -574,7 +578,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
         offs += 4U;
     }
 
-    writePeerTagged(peerId, TAG_MASTER_WL_RID, payload, 4U + (ridWhitelist.size() * 4U));
+    writePeerTagged(peerId, TAG_MASTER_WL_RID, payload, 4U + (ridWhitelist.size() * 4U), queueOnly);
 }
 
 /// <summary>
@@ -583,7 +587,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 void FNENetwork::writeWhitelistRIDs()
 {
     for (auto peer : m_peers) {
-        writeWhitelistRIDs(peer.first);
+        writeWhitelistRIDs(peer.first, true);
     }
 }
 
@@ -591,7 +595,8 @@ void FNENetwork::writeWhitelistRIDs()
 /// Helper to send the list of whitelisted RIDs to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
+/// <param name="queueOnly"></param>
+void FNENetwork::writeBlacklistRIDs(uint32_t peerId, bool queueOnly)
 {
     // send radio ID blacklist
     std::vector<uint32_t> ridBlacklist;
@@ -621,7 +626,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
         offs += 4U;
     }
 
-    writePeerTagged(peerId, TAG_MASTER_BL_RID, payload, 4U + (ridBlacklist.size() * 4U));
+    writePeerTagged(peerId, TAG_MASTER_BL_RID, payload, 4U + (ridBlacklist.size() * 4U), queueOnly);
 }
 
 /// <summary>
@@ -630,7 +635,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 void FNENetwork::writeBlacklistRIDs()
 {
     for (auto peer : m_peers) {
-        writeBlacklistRIDs(peer.first);
+        writeBlacklistRIDs(peer.first, true);
     }
 }
 
@@ -638,7 +643,8 @@ void FNENetwork::writeBlacklistRIDs()
 /// Helper to send the list of active TGIDs to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-void FNENetwork::writeTGIDs(uint32_t peerId)
+/// <param name="queueOnly"></param>
+void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
@@ -667,7 +673,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
         offs += 5U;
     }
 
-    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U));
+    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U), queueOnly);
 }
 
 /// <summary>
@@ -676,7 +682,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
 void FNENetwork::writeTGIDs()
 {
     for (auto peer : m_peers) {
-        writeTGIDs(peer.first);
+        writeTGIDs(peer.first, true);
     }
 }
 
@@ -684,7 +690,8 @@ void FNENetwork::writeTGIDs()
 /// Helper to send the list of deactivated TGIDs to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
+/// <param name="queueOnly"></param>
+void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
 {
     if (!m_tidLookup->sendTalkgroups()) {
         return;
@@ -713,7 +720,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
         offs += 5U;
     }
 
-    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U));
+    writePeerTagged(peerId, TAG_MASTER_ACTIVE_TGS, payload, 4U + (tgidList.size() * 5U), queueOnly);
 }
 
 /// <summary>
@@ -722,7 +729,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
 void FNENetwork::writeDeactiveTGIDs()
 {
     for (auto peer : m_peers) {
-        writeDeactiveTGIDs(peer.first);
+        writeDeactiveTGIDs(peer.first, true);
     }
 }
 
@@ -730,9 +737,10 @@ void FNENetwork::writeDeactiveTGIDs()
 /// Helper to send a raw message to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-/// <param name="buffer">Buffer to write to the network.</param>
+/// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
-bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length)
+/// <param name="queueOnly"></param>
+bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length, bool queueOnly)
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
@@ -741,6 +749,8 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
 
         m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/, addr, addrLen);
+        if (queueOnly)
+            return true;
         return m_frameQueue->flushQueue();
     }
 
@@ -752,9 +762,10 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="tag"></param>
-/// <param name="buffer">Buffer to write to the network.</param>
+/// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
-bool FNENetwork::writePeerTagged(uint32_t peerId, const char* tag, const uint8_t* data, uint32_t length)
+/// <param name="queueOnly"></param>
+bool FNENetwork::writePeerTagged(uint32_t peerId, const char* tag, const uint8_t* data, uint32_t length, bool queueOnly)
 {
     assert(peerId > 0);
     assert(tag != nullptr);
@@ -767,26 +778,35 @@ bool FNENetwork::writePeerTagged(uint32_t peerId, const char* tag, const uint8_t
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, tag, strlen(tag));
+    __SET_UINT32(peerId, buffer, strlen(tag));                                  // Peer ID
 
-    ::memcpy(buffer + strlen(tag), data, length);
+    if (data != nullptr && length > 0U) {
+        ::memcpy(buffer + strlen(tag), data, length);
+    }
 
-    uint32_t len = length + strlen(tag);
-    return writePeer(peerId, buffer, len);
+    uint32_t len = length + (strlen(tag) + 4U);
+    return writePeer(peerId, buffer, len, queueOnly);
 }
 
 /// <summary>
 /// Helper to send a ACK response to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
-bool FNENetwork::writePeerACK(uint32_t peerId)
+/// <param name="data">Buffer to write to the network.</param>
+/// <param name="length">Length of buffer to write.</param>
+bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t length)
 {
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_ACK, 6U);
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
-    
-    return writePeer(peerId, buffer, 10U);
+
+    if (data != nullptr && length > 0U) {
+        ::memcpy(buffer + 6U, data, length);
+    }
+
+    return writePeer(peerId, buffer, 10U + length);
 }
 
 /// <summary>
@@ -837,7 +857,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
 /// <summary>
 /// Helper to send a raw message to the connected peers.
 /// </summary>
-/// <param name="buffer">Buffer to write to the network.</param>
+/// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
 void FNENetwork::writePeers(const uint8_t* data, uint32_t length)
 {
@@ -857,7 +877,7 @@ void FNENetwork::writePeers(const uint8_t* data, uint32_t length)
 /// Helper to send a tagged message to the connected peers.
 /// </summary>
 /// <param name="tag"></param>
-/// <param name="buffer">Buffer to write to the network.</param>
+/// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
 void FNENetwork::writePeersTagged(const char* tag, const uint8_t* data, uint32_t length)
 {
