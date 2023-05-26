@@ -181,7 +181,7 @@ ulong64_t TSBK::toValue(const uint8_t* tsbk)
 /// <returns></returns>
 UInt8Array TSBK::fromValue(const ulong64_t tsbkValue)
 {
-    __UNIQUE_BUFFER(tsbk, uint8_t, P25_TSBK_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(tsbk, P25_TSBK_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
     tsbk[2U] = (uint8_t)((tsbkValue >> 56) & 0xFFU);
