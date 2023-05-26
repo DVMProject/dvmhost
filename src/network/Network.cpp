@@ -275,10 +275,10 @@ void Network::clock(uint32_t ms)
 
                 if (m_ridLookup != nullptr) {
                     // update RID lists
-                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
+                    uint32_t len = __GET_UINT16(buffer, 7U);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint32_t id = __GET_UINT16(buffer, 11U + j);
                         m_ridLookup->toggleEntry(id, true);
                         j += 4U;
                     }
@@ -292,10 +292,10 @@ void Network::clock(uint32_t ms)
 
                 if (m_ridLookup != nullptr) {
                     // update RID lists
-                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
+                    uint32_t len = __GET_UINT16(buffer, 7U);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint32_t id = __GET_UINT16(buffer, 11U + j);
                         m_ridLookup->toggleEntry(id, false);
                         j += 4U;
                     }
@@ -309,10 +309,10 @@ void Network::clock(uint32_t ms)
 
                 if (m_tidLookup != nullptr) {
                     // update TGID lists
-                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
+                    uint32_t len = __GET_UINT16(buffer, 7U);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint32_t id = __GET_UINT16(buffer, 11U + j);
                         uint8_t slot = (buffer[14U + j]);
 
                         lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
@@ -337,10 +337,10 @@ void Network::clock(uint32_t ms)
 
                 if (m_tidLookup != nullptr) {
                     // update TGID lists
-                    uint32_t len = (buffer[7U] << 16) | (buffer[8U] << 8) | (buffer[9U] << 0);
+                    uint32_t len = __GET_UINT16(buffer, 7U);
                     uint32_t j = 0U;
                     for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = (buffer[11U + j] << 16) | (buffer[12U + j] << 8) | (buffer[13U + j] << 0);
+                        uint32_t id = __GET_UINT16(buffer, 11U + j);
                         uint8_t slot = (buffer[14U + j]);
 
                         lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
