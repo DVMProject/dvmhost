@@ -304,9 +304,6 @@ bool TalkgroupRulesLookup::load()
 
     m_mutex.lock();
     {
-        m_groupHangTime = m_rules["groupHangTime"].as<uint32_t>(5U);
-        m_sendTalkgroups = m_rules["sendTalkgroups"].as<bool>(false);
-
         yaml::Node& groupVoiceList = m_rules["groupVoice"];
 
         if (groupVoiceList.size() == 0U) {

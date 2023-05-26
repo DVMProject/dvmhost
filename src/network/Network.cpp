@@ -82,7 +82,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
     m_pktLastSeq(0U),
-    m_pktNextSeq(1U),
+    m_pktNextSeq(0U),
     m_pktSeq(0U),
     m_identity(),
     m_rxFrequency(0U),
@@ -222,7 +222,7 @@ void Network::clock(uint32_t ms)
         m_pktSeq = rtpHeader.getSequence();
 
         if (m_pktSeq != m_pktNextSeq) {
-            LogWarning(LOG_NET, "Packet out-of-sequence; %u != %u", m_pktSeq, rtpHeader.getSequence());
+            LogWarning(LOG_NET, "Packet out-of-sequence; %u != %u", m_pktNextSeq, rtpHeader.getSequence());
         }
 
         m_pktLastSeq = m_pktSeq;
@@ -326,7 +326,7 @@ void Network::clock(uint32_t ms)
                                 uint32_t id = __GET_UINT16(buffer, 11U + j);
                                 uint8_t slot = (buffer[14U + j]);
 
-                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
                                 if (tid.isInvalid()) {
                                     if (!tid.config().active()) {
                                         m_tidLookup->eraseEntry(id, slot);
@@ -354,7 +354,7 @@ void Network::clock(uint32_t ms)
                                 uint32_t id = __GET_UINT16(buffer, 11U + j);
                                 uint8_t slot = (buffer[14U + j]);
 
-                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
                                 if (!tid.isInvalid()) {
                                     LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
                                     m_tidLookup->eraseEntry(id, slot);

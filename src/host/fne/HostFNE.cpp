@@ -259,6 +259,7 @@ bool HostFNE::readParams()
     m_pingTime = systemConf["pingTime"].as<uint32_t>(5U);
     m_maxMissedPings = systemConf["maxMissedPings"].as<uint32_t>(5U);
     m_updateLookupTime = systemConf["tgRuleUpdateTime"].as<uint32_t>(10U);
+    bool sendTalkgroups = systemConf["sendTalkgroups"].as<bool>(true);
 
     if (m_pingTime == 0U) {
         m_pingTime = 5U;
@@ -280,6 +281,8 @@ bool HostFNE::readParams()
     LogInfo("    Maximum Missed Pings: %u", m_maxMissedPings);
     LogInfo("    Talkgroup Rule Update Time: %u mins", m_updateLookupTime);
 
+    LogInfo("    Send Talkgroups: %s", sendTalkgroups ? "yes" : "no");
+
     LogInfo("    Allow Activity Log Transfer: %s", m_allowActivityTransfer ? "yes" : "no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
 
@@ -295,6 +298,7 @@ bool HostFNE::readParams()
         LogInfo("    Reload: %u mins", talkgroupConfigReload);
 
     m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload, true);
+    m_tidLookup->sendTalkgroups(sendTalkgroups);
     m_tidLookup->read();
 
     return true;

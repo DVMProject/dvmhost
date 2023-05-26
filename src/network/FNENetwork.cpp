@@ -626,6 +626,9 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool queueOnly)
     // write whitelisted IDs to whitelist payload
     uint32_t offs = 4U;
     for (uint32_t id : ridWhitelist) {
+        if (m_debug)
+            LogDebug(LOG_NET, "PEER %u Whitelisting RID %u", peerId, id);
+
         __SET_UINT32(id, payload, offs);
         offs += 4U;
     }
@@ -639,6 +642,10 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool queueOnly)
 /// </summary>
 void FNENetwork::writeWhitelistRIDs()
 {
+    if (m_ridLookup->table().size() == 0U) {
+        return;
+    }
+
     for (auto peer : m_peers) {
         writeWhitelistRIDs(peer.first, true);
     }
@@ -675,6 +682,9 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, bool queueOnly)
     // write blacklisted IDs to blacklist payload
     uint32_t offs = 4U;
     for (uint32_t id : ridBlacklist) {
+        if (m_debug)
+            LogDebug(LOG_NET, "PEER %u Blacklisting RID %u", peerId, id);
+
         __SET_UINT32(id, payload, offs);
         offs += 4U;
     }
@@ -688,6 +698,10 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, bool queueOnly)
 /// </summary>
 void FNENetwork::writeBlacklistRIDs()
 {
+    if (m_ridLookup->table().size() == 0U) {
+        return;
+    }
+
     for (auto peer : m_peers) {
         writeBlacklistRIDs(peer.first, true);
     }
@@ -704,11 +718,11 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
         return;
     }
 
-    std::vector<uint32_t> tgidList;
+    std::vector<std::pair<uint32_t, uint8_t>> tgidList;
     auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
         if (entry.config().active()) {
-            tgidList.push_back(entry.source().tgId());
+            tgidList.push_back({ entry.source().tgId(), entry.source().tgSlot() });
         }
     }
 
@@ -718,12 +732,13 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
 
     __SET_UINT32(tgidList.size(), payload, 0U);
 
-    // write whitelisted IDs to whitelist payload
+    // write talkgroup IDs to active TGID payload
     uint32_t offs = 4U;
-    for (uint32_t id : tgidList) {
-        __SET_UINT32(id, payload, offs);
-        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::TalkgroupRuleGroupVoice x) { return x.source().tgId() == id; });
-        payload[offs + 4U] = entry->source().tgSlot();
+    for (std::pair<uint32_t, uint8_t> tg : tgidList) {
+        if (m_debug)
+            LogDebug(LOG_NET, "PEER %u Activating TGID %u TS %u", peerId, tg.first, tg.second);
+        __SET_UINT32(tg.first, payload, offs);
+        payload[offs + 4U] = tg.second;
         offs += 5U;
     }
 
@@ -752,11 +767,11 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
         return;
     }
 
-    std::vector<uint32_t> tgidList;
+    std::vector<std::pair<uint32_t, uint8_t>> tgidList;
     auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
         if (!entry.config().active()) {
-            tgidList.push_back(entry.source().tgId());
+            tgidList.push_back({ entry.source().tgId(), entry.source().tgSlot() });
         }
     }
 
@@ -766,12 +781,13 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
 
     __SET_UINT32(tgidList.size(), payload, 0U);
 
-    // write whitelisted IDs to whitelist payload
+    // write talkgroup IDs to deactive TGID payload
     uint32_t offs = 4U;
-    for (uint32_t id : tgidList) {
-        __SET_UINT32(id, payload, offs);
-        auto entry = std::find_if(groupVoice.begin(), groupVoice.end(), [&](lookups::TalkgroupRuleGroupVoice x) { return x.source().tgId() == id; });
-        payload[offs + 4U] = entry->source().tgSlot();
+    for (std::pair<uint32_t, uint8_t> tg : tgidList) {
+        if (m_debug)
+            LogDebug(LOG_NET, "PEER %u Deactivating TGID %u TS %u", peerId, tg.first, tg.second);
+        __SET_UINT32(tg.first, payload, offs);
+        payload[offs + 4U] = tg.second;
         offs += 5U;
     }
 
