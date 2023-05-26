@@ -43,7 +43,7 @@ namespace network
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the core networking logic.
+    //      Implements the core peer networking logic.
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API Network : public BaseNetwork {
@@ -95,6 +95,10 @@ namespace network
 
         Timer m_retryTimer;
         Timer m_timeoutTimer;
+
+        uint16_t m_pktLastSeq;
+        uint16_t m_pktNextSeq;
+        uint16_t m_pktSeq;
 
         /** station metadata */
         std::string m_identity;

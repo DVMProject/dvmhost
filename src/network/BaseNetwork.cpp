@@ -112,6 +112,129 @@ BaseNetwork::~BaseNetwork()
 }
 
 /// <summary>
+/// Writes grant request to the network.
+/// </summary>
+/// <param name="mode"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="slot"></param>
+/// <param name="unitToUnit"></param>
+/// <returns></returns>
+bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
+    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
+
+    __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
+    __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
+    buffer[19U] = slot;                                                             // Slot Number
+
+    if (unitToUnit)
+        buffer[19U] |= 0x80U;
+
+    buffer[20U] = mode;                                                             // DVM Mode State
+
+    m_frameQueue->enqueueMessage(buffer, 21U, createStreamId(), m_peerId, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
+}
+
+/// <summary>
+/// Writes the local activity log to the network.
+/// </summary>
+/// <param name="message"></param>
+/// <returns></returns>
+bool BaseNetwork::writeActLog(const char* message)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    if (!m_allowActivityTransfer)
+        return false;
+
+    assert(message != nullptr);
+
+    char buffer[DATA_PACKET_LENGTH];
+    uint32_t len = ::strlen(message);
+
+    ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
+    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
+    ::strcpy(buffer + 11U, message);
+
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId, 
+        m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
+}
+
+/// <summary>
+/// Writes the local diagnostics log to the network.
+/// </summary>
+/// <param name="message"></param>
+/// <returns></returns>
+bool BaseNetwork::writeDiagLog(const char* message)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    if (!m_allowDiagnosticTransfer)
+        return false;
+
+    assert(message != nullptr);
+
+    char buffer[DATA_PACKET_LENGTH];
+    uint32_t len = ::strlen(message);
+
+    ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
+    __SET_UINT32(m_peerId, buffer, 8U);                                             // Peer ID
+    ::strcpy(buffer + 12U, message);
+
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId, 
+        m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
+}
+
+/// <summary>
+/// Resets the DMR ring buffer for the given slot.
+/// </summary>
+/// <param name="slotNo">DMR slot ring buffer to reset.</param>
+void BaseNetwork::resetDMR(uint32_t slotNo)
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    if (slotNo == 1U) {
+        m_dmrStreamId[0U] = createStreamId();
+    }
+    else {
+        m_dmrStreamId[1U] = createStreamId();
+    }
+
+    m_rxDMRData.clear();
+}
+
+/// <summary>
+/// Resets the P25 ring buffer.
+/// </summary>
+void BaseNetwork::resetP25()
+{
+    m_p25StreamId = createStreamId();
+    m_rxP25Data.clear();
+}
+
+/// <summary>
+/// Resets the NXDN ring buffer.
+/// </summary>
+void BaseNetwork::resetNXDN()
+{
+    m_nxdnStreamId = createStreamId();
+    m_rxNXDNData.clear();
+}
+
+/// <summary>
 /// Reads DMR frame data from the DMR ring buffer.
 /// </summary>
 /// <param name="data"></param>
@@ -547,129 +670,6 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Writes grant request to the network.
-/// </summary>
-/// <param name="mode"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-/// <param name="slot"></param>
-/// <param name="unitToUnit"></param>
-/// <returns></returns>
-bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
-{
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
-
-    ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
-    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
-
-    __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
-    __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
-    buffer[19U] = slot;                                                             // Slot Number
-
-    if (unitToUnit)
-        buffer[19U] |= 0x80U;
-
-    buffer[20U] = mode;                                                             // DVM Mode State
-
-    m_frameQueue->enqueueMessage(buffer, 21U, createStreamId(), m_peerId, m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Writes the local activity log to the network.
-/// </summary>
-/// <param name="message"></param>
-/// <returns></returns>
-bool BaseNetwork::writeActLog(const char* message)
-{
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    if (!m_allowActivityTransfer)
-        return false;
-
-    assert(message != nullptr);
-
-    char buffer[DATA_PACKET_LENGTH];
-    uint32_t len = ::strlen(message);
-
-    ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
-    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
-    ::strcpy(buffer + 11U, message);
-
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId, 
-        m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Writes the local diagnostics log to the network.
-/// </summary>
-/// <param name="message"></param>
-/// <returns></returns>
-bool BaseNetwork::writeDiagLog(const char* message)
-{
-    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
-
-    if (!m_allowDiagnosticTransfer)
-        return false;
-
-    assert(message != nullptr);
-
-    char buffer[DATA_PACKET_LENGTH];
-    uint32_t len = ::strlen(message);
-
-    ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
-    __SET_UINT32(m_peerId, buffer, 8U);                                             // Peer ID
-    ::strcpy(buffer + 12U, message);
-
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId, 
-        m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Resets the DMR ring buffer for the given slot.
-/// </summary>
-/// <param name="slotNo">DMR slot ring buffer to reset.</param>
-void BaseNetwork::resetDMR(uint32_t slotNo)
-{
-    assert(slotNo == 1U || slotNo == 2U);
-
-    if (slotNo == 1U) {
-        m_dmrStreamId[0U] = createStreamId();
-    }
-    else {
-        m_dmrStreamId[1U] = createStreamId();
-    }
-
-    m_rxDMRData.clear();
-}
-
-/// <summary>
-/// Resets the P25 ring buffer.
-/// </summary>
-void BaseNetwork::resetP25()
-{
-    m_p25StreamId = createStreamId();
-    m_rxP25Data.clear();
-}
-
-/// <summary>
-/// Resets the NXDN ring buffer.
-/// </summary>
-void BaseNetwork::resetNXDN()
-{
-    m_nxdnStreamId = createStreamId();
-    m_rxNXDNData.clear();
 }
 
 // ---------------------------------------------------------------------------

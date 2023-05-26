@@ -748,7 +748,7 @@ bool FNENetwork::writePeer(uint32_t peerId, const uint8_t* data, uint32_t length
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/, addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, addr, addrLen);
         if (queueOnly)
             return true;
         return m_frameQueue->flushQueue();
@@ -849,7 +849,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
     
-    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId/*m_peerId*/,
+    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId,
         addr, addrLen);
     return m_frameQueue->flushQueue();
 }
@@ -867,7 +867,7 @@ void FNENetwork::writePeers(const uint8_t* data, uint32_t length)
         sockaddr_storage addr = peer.second.socketStorage();
         uint32_t addrLen = peer.second.sockStorageLen();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId/*m_peerId*/, addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, addr, addrLen);
     }
 
     m_frameQueue->flushQueue();

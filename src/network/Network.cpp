@@ -81,6 +81,9 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
+    m_pktLastSeq(0U),
+    m_pktNextSeq(1U),
+    m_pktSeq(0U),
     m_identity(),
     m_rxFrequency(0U),
     m_txFrequency(0U),
@@ -215,6 +218,15 @@ void Network::clock(uint32_t ms)
             LogError(LOG_NET, "Packet received from an invalid source");
             return;
         }
+
+        m_pktSeq = rtpHeader.getSequence();
+
+        if (m_pktSeq != m_pktNextSeq) {
+            LogWarning(LOG_NET, "Packet out-of-sequence; %u != %u", m_pktSeq, rtpHeader.getSequence());
+        }
+
+        m_pktLastSeq = m_pktSeq;
+        m_pktNextSeq = rtpHeader.getSequence() + 1;
 
         // process incoming message frame opcodes
         if (::memcmp(buffer.get(), TAG_DMR_DATA, 4U) == 0) {                    // Encapsulated DMR data frame

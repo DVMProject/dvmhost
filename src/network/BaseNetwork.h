@@ -165,6 +165,31 @@ namespace network
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
 
+        /// <summary>Writes a grant request to the network.</summary>
+        virtual bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
+
+        /// <summary>Writes the local activity log to the network.</summary>
+        virtual bool writeActLog(const char* message);
+
+        /// <summary>Writes the local diagnostic logs to the network.</summary>
+        virtual bool writeDiagLog(const char* message);
+
+        /// <summary>Updates the timer by the passed number of milliseconds.</summary>
+        virtual void clock(uint32_t ms) = 0;
+
+        /// <summary>Opens connection to the network.</summary>
+        virtual bool open() = 0;
+
+        /// <summary>Closes connection to the network.</summary>
+        virtual void close() = 0;
+
+        /// <summary>Resets the DMR ring buffer for the given slot.</summary>
+        virtual void resetDMR(uint32_t slotNo);
+        /// <summary>Resets the P25 ring buffer.</summary>
+        virtual void resetP25();
+        /// <summary>Resets the NXDN ring buffer.</summary>
+        virtual void resetNXDN();
+
         /** Digital Mobile Radio */
         /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
         virtual bool readDMR(dmr::data::Data& data);
@@ -193,31 +218,6 @@ namespace network
         virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc);
         /// <summary>Writes NXDN frame data to the network.</summary>
         virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
-
-        /// <summary>Writes a grant request to the network.</summary>
-        virtual bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
-
-        /// <summary>Writes the local activity log to the network.</summary>
-        virtual bool writeActLog(const char* message);
-
-        /// <summary>Writes the local diagnostic logs to the network.</summary>
-        virtual bool writeDiagLog(const char* message);
-
-        /// <summary>Updates the timer by the passed number of milliseconds.</summary>
-        virtual void clock(uint32_t ms) = 0;
-
-        /// <summary>Opens connection to the network.</summary>
-        virtual bool open() = 0;
-
-        /// <summary>Closes connection to the network.</summary>
-        virtual void close() = 0;
-
-        /// <summary>Resets the DMR ring buffer for the given slot.</summary>
-        virtual void resetDMR(uint32_t slotNo);
-        /// <summary>Resets the P25 ring buffer.</summary>
-        virtual void resetP25();
-        /// <summary>Resets the NXDN ring buffer.</summary>
-        virtual void resetNXDN();
 
     protected:
         uint32_t m_peerId;
