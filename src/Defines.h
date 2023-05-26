@@ -288,9 +288,7 @@ inline std::string strtoupper(const std::string value) {
 typedef std::unique_ptr<uint8_t[]> UInt8Array;
 
 /// <summary>Creates a named uint8_t array buffer.</summary>
-#define __UNIQUE_UINT8_ARRAY(name, length)                                              \
-        UInt8Array name = UInt8Array(new uint8_t[length]);                              \
-        ::memset(name.get(), 0x00U, length);
+#define __UNIQUE_UINT8_ARRAY(name, length) __UNIQUE_BUFFER(name, uint8_t, length)
 
 /**
  * Class Copy Code Pattern
