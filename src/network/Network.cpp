@@ -232,179 +232,202 @@ void Network::clock(uint32_t ms)
         }
 
         // process incoming message frame opcodes
-        if (::memcmp(buffer.get(), TAG_DMR_DATA, 4U) == 0) {                    // Encapsulated DMR data frame
+        switch (fneHeader.getFunction()) {
+        case NET_FUNC_PROTOCOL:
+            {
+                if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
 #if defined(ENABLE_DMR)
-            if (m_enabled && m_dmrEnabled) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
+                    if (m_enabled && m_dmrEnabled) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
 
-                uint8_t len = length;
-                m_rxDMRData.addData(&len, 1U);
-                m_rxDMRData.addData(buffer.get(), len);
-            }
+                        uint8_t len = length;
+                        m_rxDMRData.addData(&len, 1U);
+                        m_rxDMRData.addData(buffer.get(), len);
+                    }
 #endif // defined(ENABLE_DMR)
-        }
-        else if (::memcmp(buffer.get(), TAG_P25_DATA, 4U) == 0) {               // Encapsulated P25 data frame
+                }
+                else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
 #if defined(ENABLE_P25)
-            if (m_enabled && m_p25Enabled) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, P25", buffer.get(), length);
+                    if (m_enabled && m_p25Enabled) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, P25", buffer.get(), length);
 
-                uint8_t len = length;
-                m_rxP25Data.addData(&len, 1U);
-                m_rxP25Data.addData(buffer.get(), len);
-            }
+                        uint8_t len = length;
+                        m_rxP25Data.addData(&len, 1U);
+                        m_rxP25Data.addData(buffer.get(), len);
+                    }
 #endif // defined(ENABLE_P25)
-        }
-        else if (::memcmp(buffer.get(), TAG_NXDN_DATA, 4U) == 0) {              // Encapsulated NXDN data frame
+                }
+                else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
 #if defined(ENABLE_NXDN)
-            if (m_enabled && m_nxdnEnabled) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
+                    if (m_enabled && m_nxdnEnabled) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
 
-                uint8_t len = length;
-                m_rxNXDNData.addData(&len, 1U);
-                m_rxNXDNData.addData(buffer.get(), len);
-            }
+                        uint8_t len = length;
+                        m_rxNXDNData.addData(&len, 1U);
+                        m_rxNXDNData.addData(buffer.get(), len);
+                    }
 #endif // defined(ENABLE_NXDN)
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_WL_RID, 7U) == 0) {          // Radio ID Whitelist
-            if (m_enabled && m_updateLookup) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
-
-                if (m_ridLookup != nullptr) {
-                    // update RID lists
-                    uint32_t len = __GET_UINT16(buffer, 7U);
-                    uint32_t j = 0U;
-                    for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = __GET_UINT16(buffer, 11U + j);
-                        m_ridLookup->toggleEntry(id, true);
-                        j += 4U;
-                    }
+                }
+                else {
+                    Utils::dump("Unknown protocol opcode from the master", buffer.get(), length);
                 }
             }
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_BL_RID, 7U) == 0) {          // Radio ID Blacklist
-            if (m_enabled && m_updateLookup) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
+            break;
 
-                if (m_ridLookup != nullptr) {
-                    // update RID lists
-                    uint32_t len = __GET_UINT16(buffer, 7U);
-                    uint32_t j = 0U;
-                    for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = __GET_UINT16(buffer, 11U + j);
-                        m_ridLookup->toggleEntry(id, false);
-                        j += 4U;
-                    }
-                }
-            }
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_ACTIVE_TGS, 6U) == 0) {      // Talkgroup Active IDs
-            if (m_enabled && m_updateLookup) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+        case NET_FUNC_MASTER:
+            {
+                if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_WL_RID) {          // Radio ID Whitelist
+                    if (m_enabled && m_updateLookup) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
 
-                if (m_tidLookup != nullptr) {
-                    // update TGID lists
-                    uint32_t len = __GET_UINT16(buffer, 7U);
-                    uint32_t j = 0U;
-                    for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = __GET_UINT16(buffer, 11U + j);
-                        uint8_t slot = (buffer[14U + j]);
-
-                        lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
-                        if (tid.isInvalid()) {
-                            if (!tid.config().active()) {
-                                m_tidLookup->eraseEntry(id, slot);
+                        if (m_ridLookup != nullptr) {
+                            // update RID lists
+                            uint32_t len = __GET_UINT16(buffer, 7U);
+                            uint32_t j = 0U;
+                            for (uint8_t i = 0; i < len; i++) {
+                                uint32_t id = __GET_UINT16(buffer, 11U + j);
+                                m_ridLookup->toggleEntry(id, true);
+                                j += 4U;
                             }
-                            
-                            LogMessage(LOG_NET, "Activated TG %u TS %u in TGID table", id, slot);
-                            m_tidLookup->addEntry(id, slot, true);
                         }
-
-                        j += 5U;
                     }
                 }
-            }
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_DEACTIVE_TGS, 7U) == 0) {    // Talkgroup Deactivated IDs
-            if (m_enabled && m_updateLookup) {
-                if (m_debug)
-                    Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_BL_RID) {     // Radio ID Blacklist
+                    if (m_enabled && m_updateLookup) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
 
-                if (m_tidLookup != nullptr) {
-                    // update TGID lists
-                    uint32_t len = __GET_UINT16(buffer, 7U);
-                    uint32_t j = 0U;
-                    for (uint8_t i = 0; i < len; i++) {
-                        uint32_t id = __GET_UINT16(buffer, 11U + j);
-                        uint8_t slot = (buffer[14U + j]);
-
-                        lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
-                        if (!tid.isInvalid()) {
-                            LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
-                            m_tidLookup->eraseEntry(id, slot);
+                        if (m_ridLookup != nullptr) {
+                            // update RID lists
+                            uint32_t len = __GET_UINT16(buffer, 7U);
+                            uint32_t j = 0U;
+                            for (uint8_t i = 0; i < len; i++) {
+                                uint32_t id = __GET_UINT16(buffer, 11U + j);
+                                m_ridLookup->toggleEntry(id, false);
+                                j += 4U;
+                            }
                         }
-
-                        j += 5U;
                     }
                 }
+                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_ACTIVE_TGS) { // Talkgroup Active IDs
+                    if (m_enabled && m_updateLookup) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
+
+                        if (m_tidLookup != nullptr) {
+                            // update TGID lists
+                            uint32_t len = __GET_UINT16(buffer, 7U);
+                            uint32_t j = 0U;
+                            for (uint8_t i = 0; i < len; i++) {
+                                uint32_t id = __GET_UINT16(buffer, 11U + j);
+                                uint8_t slot = (buffer[14U + j]);
+
+                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                                if (tid.isInvalid()) {
+                                    if (!tid.config().active()) {
+                                        m_tidLookup->eraseEntry(id, slot);
+                                    }
+                                    
+                                    LogMessage(LOG_NET, "Activated TG %u TS %u in TGID table", id, slot);
+                                    m_tidLookup->addEntry(id, slot, true);
+                                }
+
+                                j += 5U;
+                            }
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_DEACTIVE_TGS) { // Talkgroup Deactivated IDs
+                    if (m_enabled && m_updateLookup) {
+                        if (m_debug)
+                            Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
+
+                        if (m_tidLookup != nullptr) {
+                            // update TGID lists
+                            uint32_t len = __GET_UINT16(buffer, 7U);
+                            uint32_t j = 0U;
+                            for (uint8_t i = 0; i < len; i++) {
+                                uint32_t id = __GET_UINT16(buffer, 11U + j);
+                                uint8_t slot = (buffer[14U + j]);
+
+                                lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+                                if (!tid.isInvalid()) {
+                                    LogMessage(LOG_NET, "Deactivated TG %u TS %u in TGID table", id, slot);
+                                    m_tidLookup->eraseEntry(id, slot);
+                                }
+
+                                j += 5U;
+                            }
+                        }
+                    }
+                }
+                else {
+                    Utils::dump("Unknown master control opcode from the master", buffer.get(), length);
+                }
             }
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_NAK, 6U) == 0) {             // Master Negative Ack
-            if (m_status == NET_STAT_RUNNING) {
-                LogWarning(LOG_NET, "Master returned a NAK; attemping to relogin ...");
-                m_status = NET_STAT_WAITING_LOGIN;
-                m_timeoutTimer.start();
-                m_retryTimer.start();
+            break;
+
+        case NET_FUNC_NAK:                                                              // Master Negative Ack
+            {
+                if (m_status == NET_STAT_RUNNING) {
+                    LogWarning(LOG_NET, "Master returned a NAK; attemping to relogin ...");
+                    m_status = NET_STAT_WAITING_LOGIN;
+                    m_timeoutTimer.start();
+                    m_retryTimer.start();
+                }
+                else {
+                    LogError(LOG_NET, "Master returned a NAK; network reconnect ...");
+                    close();
+                    open();
+                    return;
+                }
             }
-            else {
-                LogError(LOG_NET, "Master returned a NAK; network reconnect ...");
+            break;
+        case NET_FUNC_ACK:                                                              // Repeater Ack
+            {
+                switch (m_status) {
+                    case NET_STAT_WAITING_LOGIN:
+                        LogDebug(LOG_NET, "Sending authorisation");
+                        ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
+                        writeAuthorisation();
+                        m_status = NET_STAT_WAITING_AUTHORISATION;
+                        m_timeoutTimer.start();
+                        m_retryTimer.start();
+                        break;
+                    case NET_STAT_WAITING_AUTHORISATION:
+                        LogDebug(LOG_NET, "Sending configuration");
+                        writeConfig();
+                        m_status = NET_STAT_WAITING_CONFIG;
+                        m_timeoutTimer.start();
+                        m_retryTimer.start();
+                        break;
+                    case NET_STAT_WAITING_CONFIG:
+                        LogMessage(LOG_NET, "Logged into the master successfully");
+                        m_status = NET_STAT_RUNNING;
+                        m_timeoutTimer.start();
+                        m_retryTimer.start();
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case NET_FUNC_MST_CLOSING:                                                      // Master Shutdown
+            {
+                LogError(LOG_NET, "Master is closing down");
                 close();
                 open();
-                return;
             }
-        }
-        else if (::memcmp(buffer.get(), TAG_REPEATER_ACK, 6U) == 0) {           // Repeater Ack
-            switch (m_status) {
-                case NET_STAT_WAITING_LOGIN:
-                    LogDebug(LOG_NET, "Sending authorisation");
-                    ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
-                    writeAuthorisation();
-                    m_status = NET_STAT_WAITING_AUTHORISATION;
-                    m_timeoutTimer.start();
-                    m_retryTimer.start();
-                    break;
-                case NET_STAT_WAITING_AUTHORISATION:
-                    LogDebug(LOG_NET, "Sending configuration");
-                    writeConfig();
-                    m_status = NET_STAT_WAITING_CONFIG;
-                    m_timeoutTimer.start();
-                    m_retryTimer.start();
-                    break;
-                case NET_STAT_WAITING_CONFIG:
-                    LogMessage(LOG_NET, "Logged into the master successfully");
-                    m_status = NET_STAT_RUNNING;
-                    m_timeoutTimer.start();
-                    m_retryTimer.start();
-                    break;
-                default:
-                    break;
-            }
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_CLOSING, 5U) == 0) {         // Master Shutdown
-            LogError(LOG_NET, "Master is closing down");
-            close();
-            open();
-        }
-        else if (::memcmp(buffer.get(), TAG_MASTER_PONG, 7U) == 0) {            // Master Ping Response
+            break;
+        case NET_FUNC_PONG:                                                             // Master Ping Response
             m_timeoutTimer.start();
-        }
-        else {
-            Utils::dump("Unknown packet from the master", buffer.get(), length);
+            break;
+        default:
+            Utils::dump("Unknown opcode from the master", buffer.get(), length);
         }
     }
 
@@ -481,7 +504,6 @@ void Network::close()
     if (m_status == NET_STAT_RUNNING) {
         uint8_t buffer[9U];
         ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
-        __SET_UINT32(m_peerId, buffer, 5U);                                         // Peer ID
 
         m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, 
             { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
@@ -513,7 +535,6 @@ bool Network::writeLogin()
     uint8_t buffer[8U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);
-    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
 
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
@@ -600,7 +621,6 @@ bool Network::writeConfig()
     char buffer[json.length() + 8U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
-    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
     ::sprintf(buffer + 8U, "%s", json.c_str());
 
     if (m_debug) {
@@ -620,7 +640,6 @@ bool Network::writePing()
     uint8_t buffer[11U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_PING, 7U);
-    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
 
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);

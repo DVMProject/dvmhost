@@ -67,9 +67,10 @@ TagDMRData::~TagDMRData()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="len"></param>
+/// <param name="streamId"></param>
 /// <param name="address"></param>
 /// <returns></returns>
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t streamId, sockaddr_storage& address)
 {
     uint32_t peerId = __GET_UINT32(data, 11U);
     if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
@@ -98,8 +99,6 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
 
             bool dataSync = (data[15U] & 0x20U) == 0x20U;
             bool voiceSync = (data[15U] & 0x10U) == 0x10U;
-
-            uint32_t streamId = __GET_UINT32(data, 16U);
 
             if (dataSync) {
                 dmrData.setData(data + 20U);

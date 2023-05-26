@@ -129,7 +129,6 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
-    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
 
     __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
     __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
@@ -164,7 +163,7 @@ bool BaseNetwork::writeActLog(const char* message)
     uint32_t len = ::strlen(message);
 
     ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
-    __SET_UINT32(m_peerId, buffer, 7U);                                             // Peer ID
+
     ::strcpy(buffer + 11U, message);
 
     m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId, 
@@ -191,7 +190,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
     uint32_t len = ::strlen(message);
 
     ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
-    __SET_UINT32(m_peerId, buffer, 8U);                                             // Peer ID
+
     ::strcpy(buffer + 12U, message);
 
     m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId, 
@@ -704,8 +703,6 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     uint32_t dstId = data.getDstId();                                               // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     uint32_t slotNo = data.getSlotNo();
 
     // Individual slot disabling
@@ -731,8 +728,6 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     }
 
     buffer[4U] = data.getSeqNo();                                                   // Sequence Number
-
-    __SET_UINT32(streamId, buffer, 16U);                                            // Stream ID
 
     data.getData(buffer + 20U);
 
@@ -775,11 +770,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     buffer[15U] = control.getMFId();                                                // MFId
-
-    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -896,11 +887,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     buffer[15U] = control.getMFId();                                                // MFId
-
-    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -986,11 +973,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     buffer[15U] = control.getMFId();                                                // MFId
-
-    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = lsd.getLSD1();                                                    // LSD 1
     buffer[21U] = lsd.getLSD2();                                                    // LSD 2
@@ -1031,11 +1014,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     buffer[15U] = control.getMFId();                                                // MFId
-
-    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = 0U;                                                               // Reserved (LSD 1)
     buffer[21U] = 0U;                                                               // Reserved (LSD 2)
@@ -1094,11 +1073,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 
     __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                            // Peer ID
-
     buffer[15U] = header.getMFId();                                                 // MFId
-
-    __SET_UINT32(m_p25StreamId, buffer, 16U);                                       // Stream ID
 
     buffer[20U] = header.getBlocksToFollow();                                       // Blocks To Follow
     buffer[21U] = currentBlock;                                                     // Current Block
@@ -1144,11 +1119,7 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     uint32_t dstId = lc.getDstId();                                             // Target Address
     __SET_UINT16(dstId, buffer, 8U);
 
-    __SET_UINT32(m_peerId, buffer, 11U);                                        // Peer ID
-
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
-
-    __SET_UINT32(m_nxdnStreamId, buffer, 16U);                                  // Stream ID
 
     uint32_t count = 24U;
 

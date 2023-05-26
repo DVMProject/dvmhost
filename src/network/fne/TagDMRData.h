@@ -48,7 +48,7 @@ namespace network
             ~TagDMRData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t streamId, sockaddr_storage& address);
 
         private:
             FNENetwork* m_network;

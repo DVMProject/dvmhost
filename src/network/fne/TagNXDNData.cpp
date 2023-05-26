@@ -68,9 +68,10 @@ TagNXDNData::~TagNXDNData()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="len"></param>
+/// <param name="streamId"></param>
 /// <param name="address"></param>
 /// <returns></returns>
-bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storage& address)
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t streamId, sockaddr_storage& address)
 {
     uint32_t peerId = __GET_UINT32(data, 11U);
     if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
@@ -83,8 +84,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, sockaddr_stora
 
             uint32_t srcId = __GET_UINT16(data, 5U);
             uint32_t dstId = __GET_UINT16(data, 8U);
-
-            uint32_t streamId = __GET_UINT32(data, 16U);
 
             nxdn::lc::RTCH lc;
 
