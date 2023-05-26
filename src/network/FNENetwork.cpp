@@ -189,6 +189,20 @@ void FNENetwork::clock(uint32_t ms)
             
             uint32_t streamId = fneHeader.getStreamId();
             connection.currStreamId(streamId);
+
+            uint16_t pktSeq = rtpHeader.getSequence();
+            connection.pktSeq(pktSeq);
+
+            if (pktSeq != connection.pktNextSeq()) {
+                LogWarning(LOG_NET, "PEER %u Packet out-of-sequence; %u != %u", peerId, pktSeq, rtpHeader.getSequence());
+            }
+
+            connection.pktLastSeq(pktSeq);
+            connection.pktNextSeq(pktSeq + 1);
+            if (connection.pktNextSeq() > UINT16_MAX) {
+                connection.pktNextSeq(0U);
+            }
+
             m_peers[peerId] = connection;
         }
 

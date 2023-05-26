@@ -67,7 +67,10 @@ namespace network
             m_connected(false),
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
-            m_config()
+            m_config(),
+            m_pktLastSeq(0U),
+            m_pktNextSeq(1U),
+            m_pktSeq(0U)
         {
             /* stub */
         }
@@ -86,7 +89,10 @@ namespace network
             m_connected(false),
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
-            m_config()
+            m_config(),
+            m_pktLastSeq(0U),
+            m_pktNextSeq(1U),
+            m_pktSeq(0U)
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
@@ -109,6 +115,9 @@ namespace network
                 m_connectionState = data.m_connectionState;
                 m_pingsReceived = data.m_pingsReceived;
                 m_config = data.m_config;
+                m_pktLastSeq = data.m_pktLastSeq;
+                m_pktNextSeq = data.m_pktNextSeq;
+                m_pktSeq = data.m_pktSeq;
             }
 
             return *this;
@@ -146,6 +155,13 @@ namespace network
 
         /// <summary>JSON objecting containing peer configuration information.</summary>
         __PROPERTY_PLAIN(json::object, config, config);
+
+        /// <summary>Last received RTP sequence.</summary>
+        __PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
+        /// <summary>Calculated next RTP sequence.</summary>
+        __PROPERTY_PLAIN(uint16_t, pktNextSeq, pktNextSeq);
+        /// <summary>RTP sequence.</summary>
+        __PROPERTY_PLAIN(uint16_t, pktSeq, pktSeq);
     };
 
     // ---------------------------------------------------------------------------
