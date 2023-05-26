@@ -131,6 +131,11 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             *fneHeader = _fneHeader;
         }
 
+        // ensure payload type is correct
+        if (_rtpHeader.getSSRC() != _fneHeader.getStreamId()) {
+            LogWarning(LOG_NET, "FrameQueue::read(), RTP header and FNE header do not agree on stream ID? %u != %u", _rtpHeader.getSSRC(), _fneHeader.getStreamId());
+        }
+
         // copy message
         messageLength = _fneHeader.getMessageLength();
         __UNIQUE_UINT8_ARRAY(message, messageLength);
