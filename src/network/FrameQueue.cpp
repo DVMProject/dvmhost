@@ -155,11 +155,14 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 /// </summary>
 /// <param name="message">Message buffer to frame and queue.</param>
 /// <param name="length">Length of message.</param>
-/// <param name="streamId"></param>
-/// <param name="peerId"></param>
+/// <param name="streamId">Message stream ID.</param>
+/// <param name="peerId">Peer ID.</param>
+/// <param name="opcode">Opcode.</param>
+/// <param name="addr">IP address to write data to.</param>
+/// <param name="addrLen"></param>
 /// <returns></returns>
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-    sockaddr_storage& addr, uint32_t addrLen)
+    OpcodePair opcode, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
     assert(length > 0U);
@@ -180,6 +183,9 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     fneHeader.setStreamId(streamId);
     fneHeader.setPeerId(peerId);
     fneHeader.setMessageLength(length);
+
+    fneHeader.setFunction(opcode.first);
+    fneHeader.setSubFunction(opcode.second);
 
     fneHeader.encode(buffer + RTP_HEADER_LENGTH_BYTES);
 

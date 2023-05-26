@@ -217,7 +217,7 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        typedef std::pair<const unsigned int, network::FNEPeerConnection> PeerMapPair;
+        typedef std::pair<const uint32_t, network::FNEPeerConnection> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection> m_peers;
 
         Timer m_maintainenceTimer;
@@ -242,9 +242,9 @@ namespace network
         void writeDeactiveTGIDs();
 
         /// <summary>Helper to send a raw message to the specified peer.</summary>
-        bool writePeer(uint32_t peerId, const uint8_t* data, uint32_t length, bool queueOnly = false);
+        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly = false);
         /// <summary>Helper to send a tagged message to the specified peer.</summary>
-        bool writePeerTagged(uint32_t peerId, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, bool queueOnly = false);
+        bool writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, bool queueOnly = false);
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
@@ -253,9 +253,9 @@ namespace network
         bool writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage& addr, uint32_t addrLen);
 
         /// <summary>Helper to send a raw message to the connected peers.</summary>
-        void writePeers(const uint8_t* data, uint32_t length);
+        void writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length);
         /// <summary>Helper to send a tagged message to the connected peers.</summary>
-        void writePeersTagged(const char* tag, const uint8_t* data, uint32_t length);
+        void writePeersTagged(FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data, uint32_t length);
     };
 } // namespace network
 

@@ -47,6 +47,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API FrameQueue {
+    public: typedef std::pair<const uint8_t, const uint8_t> OpcodePair;
     public:
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
         FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug);
@@ -59,7 +60,7 @@ namespace network
 
         /// <summary>Cache "message" to frame queue.</summary>
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-            sockaddr_storage& addr, uint32_t addrLen);
+            OpcodePair opcode, sockaddr_storage& addr, uint32_t addrLen);
 
         /// <summary>Flush the message queue.</summary>
         bool flushQueue();

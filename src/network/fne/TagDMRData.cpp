@@ -135,7 +135,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, sockaddr_storag
                             continue;
                         }
 
-                        m_network->writePeer(peer.first, data, len, true);
+                        m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, true);
                         LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
                             peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
                     }

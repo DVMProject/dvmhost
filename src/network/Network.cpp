@@ -483,7 +483,8 @@ void Network::close()
         ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
         __SET_UINT32(m_peerId, buffer, 5U);                                         // Peer ID
 
-        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, m_addr, m_addrLen);
+        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, 
+            { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
         m_frameQueue->flushQueue();
     }
 
@@ -517,7 +518,8 @@ bool Network::writeLogin()
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
-    m_frameQueue->enqueueMessage(buffer, 8U, createStreamId(), m_peerId, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 8U, createStreamId(), m_peerId, 
+        { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -546,7 +548,8 @@ bool Network::writeAuthorisation()
     if (m_debug)
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    m_frameQueue->enqueueMessage(out, 40U, createStreamId(), m_peerId, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(out, 40U, createStreamId(), m_peerId, 
+        { NET_FUNC_RPTK, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -605,7 +608,7 @@ bool Network::writeConfig()
     }
 
     m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId, 
-        m_addr, m_addrLen);
+        { NET_FUNC_RPTC, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -622,6 +625,7 @@ bool Network::writePing()
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId, 
+        { NET_FUNC_PING, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
