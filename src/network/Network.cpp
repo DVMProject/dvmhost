@@ -227,6 +227,9 @@ void Network::clock(uint32_t ms)
 
         m_pktLastSeq = m_pktSeq;
         m_pktNextSeq = rtpHeader.getSequence() + 1;
+        if (m_pktNextSeq > UINT16_MAX) {
+            m_pktNextSeq = 0U;
+        }
 
         // process incoming message frame opcodes
         if (::memcmp(buffer.get(), TAG_DMR_DATA, 4U) == 0) {                    // Encapsulated DMR data frame
