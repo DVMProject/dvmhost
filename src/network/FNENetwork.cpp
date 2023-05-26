@@ -175,12 +175,6 @@ void FNENetwork::clock(uint32_t ms)
         if (m_debug)
             Utils::dump(1U, "Network Message", buffer.get(), length);
 
-        if (length < 4) {
-            LogWarning(LOG_NET, "Malformed message (from %s:%u)", UDPSocket::address(address).c_str(), UDPSocket::port(address));
-            Utils::dump(1U, "Network Message", buffer.get(), length);
-            return;
-        }
-
         uint32_t peerId = fneHeader.getPeerId();
         uint32_t streamId = fneHeader.getStreamId();
 
