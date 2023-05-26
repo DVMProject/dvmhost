@@ -92,7 +92,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
     if (length > 0) {
         if (m_debug)
             Utils::dump(1U, "Network Packet", buffer, length);
-#if !defined(USE_LEGACY_NETWORK)
+
         if (length < RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES) {
             LogError(LOG_NET, "FrameQueue::read(), message received from network is malformed! %u bytes != %u bytes", 
                 RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES, length);
@@ -142,12 +142,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             messageLength = -1;
             return nullptr;
         }
-#else
-        // copy message
-        messageLength = length;
-        __UNIQUE_UINT8_ARRAY(message, length);
-        ::memcpy(message.get(), buffer, messageLength);
-#endif // !defined(USE_LEGACY_NETWORK)
+
         // LogDebug(LOG_NET, "message buffer, addr %p len %u", message.get(), messageLength);
         return message;
     }
@@ -169,7 +164,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     assert(message != nullptr);
     assert(length > 0U);
 
-#if !defined(USE_LEGACY_NETWORK)
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
     uint8_t* buffer = new uint8_t[bufferLen];
     ::memset(buffer, 0x00U, bufferLen);
@@ -190,12 +184,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     fneHeader.encode(buffer + RTP_HEADER_LENGTH_BYTES);
 
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
-#else
-    uint32_t bufferLen = length;
-    uint8_t* buffer = new uint8_t[bufferLen];
-    ::memset(buffer, 0x00U, bufferLen);
-    ::memcpy(buffer, message, length);
-#endif // !defined(USE_LEGACY_NETWORK)
+
     if (m_debug)
         Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 

@@ -143,9 +143,7 @@ void usage(const char* message, const char* arg)
     ::fprintf(stdout, 
         "usage: %s [-vhf]"
         "[--cal | --setup]"
-#if !defined(USE_LEGACY_NETWORK)
         "[--fne]"
-#endif // !defined(USE_LEGACY_NETWORK)
         "[-c <configuration file>]"
         "[--remote [-a <address>] [-p <port>]]"
         "\n\n"
@@ -156,10 +154,8 @@ void usage(const char* message, const char* arg)
         "  --cal     calibration mode\n"
         "  --setup   setup mode\n"
         "\n"
-#if !defined(USE_LEGACY_NETWORK)
         "  --fne     fixed network equipment mode (conference bridge)\n"
         "\n"
-#endif // !defined(USE_LEGACY_NETWORK)
         "  -c <file> specifies the configuration file to use\n"
         "\n"
         "  --remote  remote modem mode\n"
@@ -198,11 +194,9 @@ int checkArgs(int argc, char* argv[])
         else if (IS("--setup")) {
             g_setup = true;
         }
-#if !defined(USE_LEGACY_NETWORK)
         else if (IS("--fne")) {
             g_fne = true;
         }
-#endif // !defined(USE_LEGACY_NETWORK)
         else if (IS("-c")) {
             if (argc-- <= 0)
                 usage("error: %s", "must specify the configuration file to use");
