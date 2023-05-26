@@ -175,7 +175,7 @@ ulong64_t CSBK::toValue(const uint8_t* csbk)
 /// </summary>
 /// <param name="csbkValue"></param>
 /// <returns></returns>
-std::unique_ptr<uint8_t[]> CSBK::fromValue(const ulong64_t csbkValue)
+UInt8Array CSBK::fromValue(const ulong64_t csbkValue)
 {
     __UNIQUE_BUFFER(csbk, uint8_t, DMR_CSBK_LENGTH_BYTES);
 

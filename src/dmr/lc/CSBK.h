@@ -144,7 +144,7 @@ namespace dmr
             /// <summary>Internal helper to convert CSBK bytes to a 64-bit long value.</summary>
             static ulong64_t toValue(const uint8_t* Csbk);
             /// <summary>Internal helper to convert a 64-bit long value to CSBK bytes.</summary>
-            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t csbkValue);
+            static UInt8Array fromValue(const ulong64_t csbkValue);
 
             /// <summary>Internal helper to decode a control signalling block.</summary>
             bool decode(const uint8_t* data, uint8_t* csbk);

@@ -124,7 +124,7 @@ namespace p25
             /// <summary>Internal helper to convert RS bytes to a 64-bit long value.</summary>
             static ulong64_t toValue(const uint8_t* rs);
             /// <summary>Internal helper to convert a 64-bit long value to RS bytes.</summary>
-            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t rsValue);
+            static UInt8Array fromValue(const ulong64_t rsValue);
 
             /// <summary>Internal helper to decode terminator data unit w/ link control.</summary>
             bool decode(const uint8_t* data, uint8_t* rs);

@@ -179,7 +179,7 @@ ulong64_t TSBK::toValue(const uint8_t* tsbk)
 /// </summary>
 /// <param name="tsbkValue"></param>
 /// <returns></returns>
-std::unique_ptr<uint8_t[]> TSBK::fromValue(const ulong64_t tsbkValue)
+UInt8Array TSBK::fromValue(const ulong64_t tsbkValue)
 {
     __UNIQUE_BUFFER(tsbk, uint8_t, P25_TSBK_LENGTH_BYTES);
 
