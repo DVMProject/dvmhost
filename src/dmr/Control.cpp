@@ -648,7 +648,6 @@ void Control::processNetwork()
             data.setN(n);
         }
 
-        uint32_t slotNo = data.getSlotNo();
         switch (slotNo) {
             case 1U:
                 m_slot1->processNetwork(data);
