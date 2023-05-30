@@ -1038,53 +1038,127 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
-    lc::LC control;
-    data::LowSpeedData lsd;
-    uint8_t duid;
-    uint8_t frameType;
-
-    uint32_t length = 100U;
+    uint32_t length = 0U;
     bool ret = false;
-    UInt8Array data = m_network->readP25(ret, length, control, lsd, duid, frameType);
+    UInt8Array buffer = m_network->readP25(ret, length);
     if (!ret)
         return;
     if (length == 0U)
         return;
-    if (data == nullptr) {
+    if (buffer == nullptr) {
         m_network->resetP25();
         return;
+    }
+
+    uint8_t lco = buffer[4U];
+
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+    uint8_t MFId = buffer[15U];
+
+    uint8_t lsd1 = buffer[20U];
+    uint8_t lsd2 = buffer[21U];
+
+    uint8_t duid = buffer[22U];
+    uint8_t frameType = p25::P25_FT_DATA_UNIT;
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+    }
+
+    lc::LC control;
+    data::LowSpeedData lsd;
+
+    // is this a LDU1, is this the first of a call?
+    if (duid == p25::P25_DUID_LDU1) {
+        frameType = buffer[180U];
+
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
+        }
+
+        if (frameType == p25::P25_FT_HDU_VALID) {
+            uint8_t algId = buffer[181U];
+            uint32_t kid = (buffer[182U] << 8) | (buffer[183U] << 0);
+
+            // copy MI data
+            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+
+            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+                mi[i] = buffer[184U + i];
+            }
+
+            if (m_debug) {
+                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
+            }
+
+            control.setAlgId(algId);
+            control.setKId(kid);
+            control.setMI(mi);
+        }
+    }
+
+    control.setLCO(lco);
+    control.setSrcId(srcId);
+    control.setDstId(dstId);
+    control.setMFId(MFId);
+
+    lsd.setLSD1(lsd1);
+    lsd.setLSD2(lsd2);
+
+    UInt8Array data;
+    uint8_t frameLength = buffer[23U];
+    if (duid == p25::P25_DUID_PDU) {
+        frameLength = length;
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+        ::memset(data.get(), 0x00U, length);
+        ::memcpy(data.get(), buffer.get(), length);
+    }
+    else {
+        if (frameLength <= 24) {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+        }
+        else {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+            ::memcpy(data.get(), buffer.get() + 24U, frameLength);
+        }
     }
 
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *P25 Network Frame", data.get(), length);
+        Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
     }
 
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
-            ret = m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
+            ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
-            m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
+            m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_PDU:
             if (!m_dedicatedControl)
-                ret = m_data->processNetwork(data.get(), length, control, lsd, duid);
+                ret = m_data->processNetwork(data.get(), frameLength, control, lsd, duid);
             else {
                 if (m_voiceOnControl) {
-                    ret = m_voice->processNetwork(data.get(), length, control, lsd, duid, frameType);
+                    ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
                 }
             }
             break;
 
         case P25_DUID_TSDU:
-            m_trunk->processNetwork(data.get(), length, control, lsd, duid);
+            m_trunk->processNetwork(data.get(), frameLength, control, lsd, duid);
             break;
     }
 }

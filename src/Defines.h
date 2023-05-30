@@ -326,6 +326,10 @@ typedef std::unique_ptr<uint8_t[]> UInt8Array;
 #define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
+/// <summary>Creates a read-only get property, does not use "get"/"set".</summary>
+#define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName, propName)               \
+        protected: type m_##variableName;                                               \
+        public: __forceinline type propName(void) const { return m_##variableName; }
 /// <summary>Creates a read-only get property, does not use "get".</summary>
 #define __READONLY_PROPERTY_PLAIN(type, variableName, propName)                         \
         private: type m_##variableName;                                                 \

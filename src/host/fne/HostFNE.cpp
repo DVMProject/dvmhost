@@ -24,6 +24,9 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "network/fne/TagDMRData.h"
+#include "network/fne/TagP25Data.h"
+#include "network/fne/TagNXDNData.h"
 #include "network/UDPSocket.h"
 #include "host/fne/HostFNE.h"
 #include "HostMain.h"
@@ -214,8 +217,12 @@ int HostFNE::run()
         // clock peers
         for (auto network : m_peerNetworks) {
             network::Network* peerNetwork = network.second;
-            if (peerNetwork != nullptr)
+            if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
+
+                // process peer network traffic
+                processPeer(peerNetwork);
+            }
         }
 
         if (ms < 2U)
@@ -396,4 +403,56 @@ bool HostFNE::createPeerNetworks()
     }
 
     return true;
+}
+
+/// <summary>
+/// Processes any peer network traffic.
+/// </summary>
+/// <param name="peerNetwork"></param>
+void HostFNE::processPeer(network::Network* peerNetwork)
+{
+    if (peerNetwork == nullptr)
+        return; // this shouldn't happen...
+    if (peerNetwork->getStatus() != NET_STAT_RUNNING)
+        return;
+
+    // process DMR data
+    if (peerNetwork->hasDMRData()) {
+        uint32_t length = 100U;
+        bool ret = false;
+        UInt8Array data = peerNetwork->readDMR(ret, length);
+        if (ret) {
+            uint32_t peerId = peerNetwork->getPeerId();
+            uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
+            uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
+
+            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+        }
+    }
+
+    // process P25 data
+    if (peerNetwork->hasP25Data()) {
+        uint32_t length = 100U;
+        bool ret = false;
+        UInt8Array data = peerNetwork->readP25(ret, length);
+        if (ret) {
+            uint32_t peerId = peerNetwork->getPeerId();
+            uint32_t streamId = peerNetwork->getP25StreamId();
+
+            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+        }
+    }
+
+    // process NXDN data
+    if (peerNetwork->hasNXDNData()) {
+        uint32_t length = 100U;
+        bool ret = false;
+        UInt8Array data = peerNetwork->readNXDN(ret, length);
+        if (ret) {
+            uint32_t peerId = peerNetwork->getPeerId();
+            uint32_t streamId = peerNetwork->getNXDNStreamId();
+
+            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+        }
+    }
 }

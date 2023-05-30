@@ -735,24 +735,51 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
-    lc::RTCH lc;
-
-    uint32_t length = 100U;
+    uint32_t length = 0U;
     bool ret = false;
-    UInt8Array data = m_network->readNXDN(ret, length, lc);
+    UInt8Array buffer = m_network->readNXDN(ret, length);
     if (!ret)
         return;
     if (length == 0U)
         return;
-    if (data == nullptr) {
+    if (buffer == nullptr) {
         m_network->resetNXDN();
         return;
+    }
+
+    uint8_t messageType = buffer[4U];
+
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+    }
+
+    lc::RTCH lc;
+    lc.setMessageType(messageType);
+    lc.setSrcId((uint16_t)srcId & 0xFFFFU);
+    lc.setDstId((uint16_t)dstId & 0xFFFFU);
+
+    bool group = (buffer[15U] & 0x40U) == 0x40U ? false : true;
+    lc.setGroup(group);
+
+    UInt8Array data;
+    uint8_t frameLength = buffer[23U];
+    if (frameLength <= 24) {
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+    }
+    else {
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer.get() + 24U, frameLength);
     }
 
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *NXDN Network Frame", data.get(), length);
+        Utils::dump(2U, "!!! *NXDN Network Frame", data.get(), frameLength);
     }
 
     NXDNUtils::scrambler(data.get() + 2U);
@@ -768,10 +795,10 @@ void Control::processNetwork()
 
     switch (usc) {
         case NXDN_LICH_USC_UDCH:
-            ret = m_data->processNetwork(option, lc, data.get(), length);
+            ret = m_data->processNetwork(option, lc, data.get(), frameLength);
             break;
         default:
-            ret = m_voice->processNetwork(usc, option, lc, data.get(), length);
+            ret = m_voice->processNetwork(usc, option, lc, data.get(), frameLength);
             break;
     }
 }

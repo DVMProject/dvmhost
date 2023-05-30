@@ -130,9 +130,9 @@ namespace network
         /// <summary>Current Stream ID.</summary>
         __PROPERTY_PLAIN(uint32_t, currStreamId, currStreamId);
 
-        /// <summary></<summary>
+        /// <summary>Unix socket storage containing the connected address.</summary>
         __PROPERTY_PLAIN(sockaddr_storage, socketStorage, socketStorage);
-        /// <summary></<summary>
+        /// <summary>Length of the sockaddr_storage structure.</summary>
         __PROPERTY_PLAIN(uint32_t, sockStorageLen, sockStorageLen);
 
         /// <summary>IP address peer connected with.</<summary>
@@ -180,6 +180,13 @@ namespace network
 
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
+
+        /// <summary>Gets the instance of the DMR traffic handler.</summary>
+        fne::TagDMRData* dmrTrafficHandler() const { return m_tagDMR; }
+        /// <summary>Gets the instance of the P25 traffic handler.</summary>
+        fne::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
+        /// <summary>Gets the instance of the NXDN traffic handler.</summary>
+        fne::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);

@@ -162,8 +162,8 @@ namespace network
         /// <summary>Finalizes a instance of the BaseNetwork class.</summary>
         virtual ~BaseNetwork();
 
-        /// <summary>Gets the current status of the network.</summary>
-        NET_CONN_STATUS getStatus() { return m_status; }
+        /// <summary>Gets the frame queue for the network.</summary>
+        FrameQueue* getFrameQueue() const { return m_frameQueue; }
 
         /// <summary>Writes a grant request to the network.</summary>
         virtual bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
@@ -190,16 +190,25 @@ namespace network
         /// <summary>Resets the NXDN ring buffer.</summary>
         virtual void resetNXDN();
 
+        /// <summary>Gets the current DMR stream ID.</summary>
+        uint32_t getDMRStreamId(uint32_t slotNo) const;
+        /// <summary>Gets the current P25 stream ID.</summary>
+        uint32_t getP25StreamId() const { return m_p25StreamId; }
+        /// <summary>Gets the current NXDN stream ID.</summary>
+        uint32_t getNXDNStreamId() const { return m_nxdnStreamId; }
+
         /** Digital Mobile Radio */
-        /// <summary>Reads DMR frame data from the DMR ring buffer.</summary>
-        virtual bool readDMR(dmr::data::Data& data);
+        /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>
+        virtual UInt8Array readDMR(bool& ret, uint32_t& frameLength);
         /// <summary>Writes DMR frame data to the network.</summary>
         virtual bool writeDMR(const dmr::data::Data& data);
 
+        /// <summary>Helper to test if the DMR ring buffer has data.</summary>
+        bool hasDMRData() const;
+
         /** Project 25 */
-        /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        virtual UInt8Array readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& control, p25::data::LowSpeedData& lsd, 
-            uint8_t& duid, uint8_t& frameType);
+        /// <summary>Reads P25 raw frame data from the P25 ring buffer.</summary>
+        virtual UInt8Array readP25(bool& ret, uint32_t& frameLength);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
         virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
             uint8_t frameType);
@@ -213,30 +222,45 @@ namespace network
         virtual bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
             const uint8_t currentBlock, const uint8_t* data, const uint32_t len);
 
+        /// <summary>Helper to test if the P25 ring buffer has data.</summary>
+        bool hasP25Data() const;
+
         /** Next Generation Digital Narrowband */
-        /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc);
+        /// <summary>Reads NXDN raw frame data from the NXDN ring buffer.</summary>
+        virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength);
         /// <summary>Writes NXDN frame data to the network.</summary>
         virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
 
+        /// <summary>Helper to test if the NXDN ring buffer has data.</summary>
+        bool hasNXDNData() const;
+
+    public:
+        /// <summary>Gets the peer ID of the network.</summary>
+        __PROTECTED_READONLY_PROPERTY(uint32_t, peerId, PeerId);
+        /// <summary>Gets the current status of the network.</summary>
+        __PROTECTED_READONLY_PROPERTY(NET_CONN_STATUS, status, Status);
+
+        /// <summary>Unix socket storage containing the connected address.</summary>
+        __PROTECTED_READONLY_PROPERTY_PLAIN(sockaddr_storage, addr, addr);
+        /// <summary>Length of the sockaddr_storage structure.</summary>
+        __PROTECTED_READONLY_PROPERTY_PLAIN(uint32_t, addrLen, addrLen);
+
+        /// <summary>Flag indicating whether network DMR slot 1 traffic is permitted.</summary>
+        __PROTECTED_READONLY_PROPERTY(bool, slot1, DMRSlot1);
+        /// <summary>Flag indicating whether network DMR slot 2 traffic is permitted.</summary>
+        __PROTECTED_READONLY_PROPERTY(bool, slot2, DMRSlot2);
+
+        /// <summary>Flag indicating whether network traffic is duplex.</summary>
+        __PROTECTED_READONLY_PROPERTY(bool, duplex, Duplex);
+
     protected:
-        uint32_t m_peerId;
-
-        bool m_slot1;
-        bool m_slot2;
-
         bool m_allowActivityTransfer;
         bool m_allowDiagnosticTransfer;
 
-        bool m_duplex;
         bool m_debug;
 
-        sockaddr_storage m_addr;
-        uint32_t m_addrLen;
         UDPSocket* m_socket;
         FrameQueue* m_frameQueue;
-
-        NET_CONN_STATUS m_status;
 
         uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;

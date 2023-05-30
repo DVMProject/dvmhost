@@ -205,35 +205,53 @@ void FNENetwork::clock(uint32_t ms)
             {
                 if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection connection = m_peers[peerId];
+                        std::string ip = UDPSocket::address(address);
+
+                        // validate peer (simple validation really)
+                        if (connection.connected() && connection.address() == ip) {
 #if defined(ENABLE_DMR)
-                        if (m_dmrEnabled) {
-                            if (m_tagDMR != nullptr) {
-                                m_tagDMR->processFrame(buffer.get(), length, streamId, address);
+                            if (m_dmrEnabled) {
+                                if (m_tagDMR != nullptr) {
+                                    m_tagDMR->processFrame(buffer.get(), length, peerId, streamId);
+                                }
                             }
-                        }
 #endif // defined(ENABLE_DMR)
+                        }
                     }
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection connection = m_peers[peerId];
+                        std::string ip = UDPSocket::address(address);
+
+                        // validate peer (simple validation really)
+                        if (connection.connected() && connection.address() == ip) {
 #if defined(ENABLE_P25)
-                        if (m_p25Enabled) {
-                            if (m_tagP25 != nullptr) {
-                                m_tagP25->processFrame(buffer.get(), length, streamId, address);
+                            if (m_p25Enabled) {
+                                if (m_tagP25 != nullptr) {
+                                    m_tagP25->processFrame(buffer.get(), length, peerId, streamId);
+                                }
                             }
-                        }
 #endif // defined(ENABLE_P25)
+                        }
                     }
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection connection = m_peers[peerId];
+                        std::string ip = UDPSocket::address(address);
+
+                        // validate peer (simple validation really)
+                        if (connection.connected() && connection.address() == ip) {
 #if defined(ENABLE_NXDN)        
-                        if (m_nxdnEnabled) {
-                            if (m_tagNXDN != nullptr) {
-                                m_tagNXDN->processFrame(buffer.get(), length, streamId, address);
+                            if (m_nxdnEnabled) {
+                                if (m_tagNXDN != nullptr) {
+                                    m_tagNXDN->processFrame(buffer.get(), length, peerId, streamId);
+                                }
                             }
-                        }
 #endif // defined(ENABLE_NXDN)
+                        }
                     }
                 }
                 else {
@@ -511,8 +529,7 @@ void FNENetwork::clock(uint32_t ms)
                                 ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
                                 std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
-                                // TODO TODO TODO
-                                // TODO: handle diag log xfer
+                                ::LogInfo("PEER %u %s", peerId, payload.c_str());
                             }
                             else {
                                 writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);
