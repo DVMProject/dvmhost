@@ -297,8 +297,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     uint32_t valueTest = (netId >> 8);
-    if (valueTest == 0xBEE) {
-        if (valueTest != 0xBEEEF){
+    if (netId != 0xBEEEF){
+        if (valueTest == 0xBEE){
         ::fatal("error 8\n");
         }
     }
