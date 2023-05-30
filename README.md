@@ -128,9 +128,11 @@ usage: ./dvmhost [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--r
 
 ## Embedded FNE Mode
 
-DVMHost contains an "embedded" conference bridge FNE mode that can be activated using the `--fne` command line option. It is important to note the "embedded" FNE mode does not use the standard configuration file and uses an alternate configuration file (see `fne-config.example.yml`). 
+DVMHost contains its own "embedded FNE" or "mini-FNE", which is a simple conference bridge style FNE that can be activated using the `--fne` command line options. This FNE mode does not use the standard DVMHost configuration file and uses its own configuration file (see `fne-config.example.yml`). 
 
-The "embedded" conference bridge FNE is essentially just manages calls for multiple defined talkgroups for multiple defined modes simultaneously. It contains logic for handling distribution of radio ID ACL lists, and talkgroup ACL lists to connected DVMHost instances. The embedded FNE is meant for small installations and does not perform any routing like the standalone FNE.
+The "embedded FNE" is a simplistic FNE, meant for simple single-master small-scale deployments. It, like the full-scale FNE, defines rules for available talkgroups and manages calls. Unlike the full-scale FNE, the "embedded FNE" does not have multi-system routing or support multiple masters. It can peer to other FNEs, however, unlike full-scale FNE the "embedded FNE" does not have provisioning for talkgroup mutuation (i.e. talkgroup number rewriting, where on System A TG123 routes to System B TG456), all TGs must be one to one across peers. 
+
+The "embedded FNE" is meant as an easier alternative to a full-scale FNE where complex routing or multiple masters are not required.
 
 ## Build Notes
 
