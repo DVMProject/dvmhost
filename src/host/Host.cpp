@@ -1813,9 +1813,8 @@ bool Host::readParams()
         m_rxFrequency = (uint32_t)(m_txFrequency + calcTxOffset);
 
         if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
-            ::LogError(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), all frequencies must be higher then the base frequency.", m_channelId, m_channelNo,
+            ::LogWarning(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), this may result in incorrect trunking behavior.", m_channelId, m_channelNo,
                 m_rxFrequency, entry.baseFrequency());
-            return false;
         }
 
         if (!m_duplex && simplexSameFreq) {

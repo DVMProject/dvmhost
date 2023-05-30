@@ -58,17 +58,17 @@ using namespace network::frame;
 /// <param name="localPort">Local port used to listen for incoming data.</param>
 BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, uint16_t localPort) :
     m_peerId(peerId),
-    m_slot1(slot1),
-    m_slot2(slot2),
-    m_allowActivityTransfer(allowActivityTransfer),
-    m_allowDiagnosticTransfer(allowDiagnosticTransfer),
-    m_duplex(duplex),
-    m_debug(debug),
+    m_status(NET_STAT_INVALID),
     m_addr(),
     m_addrLen(0U),
+    m_slot1(slot1),
+    m_slot2(slot2),
+    m_duplex(duplex),
+    m_allowActivityTransfer(allowActivityTransfer),
+    m_allowDiagnosticTransfer(allowDiagnosticTransfer),
+    m_debug(debug),
     m_socket(nullptr),
     m_frameQueue(nullptr),
-    m_status(NET_STAT_INVALID),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
@@ -235,78 +235,52 @@ void BaseNetwork::resetNXDN()
 }
 
 /// <summary>
-/// Reads DMR frame data from the DMR ring buffer.
+/// Gets the current DMR stream ID.
 /// </summary>
-/// <param name="data"></param>
+/// <param name="slotNo">DMR slot to get stream ID for.</param>
+/// <returns>Stream ID for the given DMR slot.<returns>
+uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    if (slotNo == 1U) {
+        return m_dmrStreamId[0U];
+    }
+    else {
+        return m_dmrStreamId[1U];
+    }
+}
+
+/// <summary>
+/// Reads DMR raw frame data from the DMR ring buffer.
+/// </summary>
+/// <param name="ret"></param>
+/// <param name="length"></param>
 /// <returns></returns>
-bool BaseNetwork::readDMR(dmr::data::Data& data)
+UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
-        return false;
+        return nullptr;
 
-    if (m_rxDMRData.isEmpty())
-        return false;
+    if (m_rxDMRData.isEmpty()) {
+        ret = false;
+        return nullptr;
+    }
 
     uint8_t length = 0U;
     m_rxDMRData.getData(&length, 1U);
-    if (length == 0U)
-        return false;
-
-    uint8_t buffer[length];
-    ::memset(buffer, 0x00U, length);
-    m_rxDMRData.getData(buffer, length);
-
-    uint8_t seqNo = buffer[4U];
-
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
-
-    uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
-
-    uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
-
-    // DMO mode slot disabling
-    if (slotNo == 1U && !m_duplex)
-        return false;
-
-    // Individual slot disabling
-    if (slotNo == 1U && !m_slot1)
-        return false;
-    if (slotNo == 2U && !m_slot2)
-        return false;
-
-    data.setSeqNo(seqNo);
-    data.setSlotNo(slotNo);
-    data.setSrcId(srcId);
-    data.setDstId(dstId);
-    data.setFLCO(flco);
-
-    bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
-    bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
-
-    if (m_debug) {
-        LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
     }
 
-    if (dataSync) {
-        uint8_t dataType = buffer[15U] & 0x0FU;
-        data.setData(buffer + 20U);
-        data.setDataType(dataType);
-        data.setN(0U);
-    }
-    else if (voiceSync) {
-        data.setData(buffer + 20U);
-        data.setDataType(dmr::DT_VOICE_SYNC);
-        data.setN(0U);
-    }
-    else {
-        uint8_t n = buffer[15U] & 0x0FU;
-        data.setData(buffer + 20U);
-        data.setDataType(dmr::DT_VOICE);
-        data.setN(n);
-    }
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxDMRData.getData(buffer.get(), length);
 
-    return true;
+    return buffer;
 }
 
 /// <summary>
@@ -351,17 +325,24 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 }
 
 /// <summary>
-/// Reads P25 frame data from the P25 ring buffer.
+/// Helper to test if the DMR ring buffer has data.
+/// </summary>
+/// <returns>True if ring buffer contains data, otherwise false.</returns>
+bool BaseNetwork::hasDMRData() const
+{
+    if (m_rxDMRData.isEmpty())
+        return false;
+
+    return true;
+}
+
+/// <summary>
+/// Reads P25 raw frame data from the P25 ring buffer.
 /// </summary>
 /// <param name="ret"></param>
-/// <param name="frameLength"></param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="duid"></param>
-/// <param name="frameType"></param>
+/// <param name="length"></param>
 /// <returns></returns>
-UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& control, p25::data::LowSpeedData& lsd, 
-    uint8_t& duid, uint8_t& frameType)
+UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return nullptr;
@@ -378,87 +359,13 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength, p25::lc::LC& c
         return nullptr;
     }
 
-    uint8_t buffer[length];
-    ::memset(buffer, 0x00U, length);
-    m_rxP25Data.getData(buffer, length);
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxP25Data.getData(buffer.get(), length);
 
-    uint8_t lco = buffer[4U];
-
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
-
-    uint8_t MFId = buffer[15U];
-
-    uint8_t lsd1 = buffer[20U];
-    uint8_t lsd2 = buffer[21U];
-
-    duid = buffer[22U];
-    frameType = p25::P25_FT_DATA_UNIT;
-
-    if (m_debug) {
-        LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
-    }
-
-    // is this a LDU1, is this the first of a call?
-    if (duid == p25::P25_DUID_LDU1) {
-        frameType = buffer[180U];
-
-        if (m_debug) {
-            LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
-        }
-
-        if (frameType == p25::P25_FT_HDU_VALID) {
-            uint8_t algId = buffer[181U];
-            uint32_t kid = (buffer[182U] << 8) | (buffer[183U] << 0);
-
-            // copy MI data
-            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
-
-            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
-                mi[i] = buffer[184U + i];
-            }
-
-            if (m_debug) {
-                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
-            }
-
-            control.setAlgId(algId);
-            control.setKId(kid);
-            control.setMI(mi);
-        }
-    }
-
-    control.setLCO(lco);
-    control.setSrcId(srcId);
-    control.setDstId(dstId);
-    control.setMFId(MFId);
-
-    lsd.setLSD1(lsd1);
-    lsd.setLSD2(lsd2);
-
-    UInt8Array data;
-    frameLength = buffer[23U];
-    if (duid == p25::P25_DUID_PDU) {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
-        ::memset(data.get(), 0x00U, length);
-        ::memcpy(data.get(), buffer, length);
-    }
-    else {
-        if (frameLength <= 24) {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-        }
-        else {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-            ::memcpy(data.get(), buffer + 24U, frameLength);
-        }
-    }
-
-    ret = true;
-    return data;
+    return buffer;
 }
 
 /// <summary>
@@ -594,13 +501,24 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
 }
 
 /// <summary>
-/// Reads NXDN frame data from the NXDN ring buffer.
+/// Helper to test if the P25 ring buffer has data.
+/// </summary>
+/// <returns>True if ring buffer contains data, otherwise false.</returns>
+bool BaseNetwork::hasP25Data() const
+{
+    if (m_rxP25Data.isEmpty())
+        return false;
+
+    return true;
+}
+
+/// <summary>
+/// Reads NXDN raw frame data from the NXDN ring buffer.
 /// </summary>
 /// <param name="ret"></param>
-/// <param name="frameLength"></param>
-/// <param name="lc"></param>
+/// <param name="length"></param>
 /// <returns></returns>
-UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTCH& lc)
+UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return nullptr;
@@ -617,40 +535,13 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength, nxdn::lc::RTC
         return nullptr;
     }
 
-    uint8_t buffer[length];
-    ::memset(buffer, 0x00U, length);
-    m_rxNXDNData.getData(buffer, length);
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxNXDNData.getData(buffer.get(), length);
 
-    uint8_t messageType = buffer[4U];
-
-    uint32_t srcId = __GET_UINT16(buffer, 5U);
-    uint32_t dstId = __GET_UINT16(buffer, 8U);
-
-    if (m_debug) {
-        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
-    }
-
-    lc.setMessageType(messageType);
-    lc.setSrcId((uint16_t)srcId & 0xFFFFU);
-    lc.setDstId((uint16_t)dstId & 0xFFFFU);
-
-    bool group = (buffer[15U] & 0x40U) == 0x40U ? false : true;
-    lc.setGroup(group);
-
-    UInt8Array data;
-    frameLength = buffer[23U];
-    if (frameLength <= 24) {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-    }
-    else {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
-    }
-
-    ret = true;
-    return data;
+    return buffer;
 }
 
 /// <summary>
@@ -677,6 +568,18 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId, 
         { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
+}
+
+/// <summary>
+/// Helper to test if the NXDN ring buffer has data.
+/// </summary>
+/// <returns>True if ring buffer contains data, otherwise false.</returns>
+bool BaseNetwork::hasNXDNData() const
+{
+    if (m_rxNXDNData.isEmpty())
+        return false;
+
+    return true;
 }
 
 // ---------------------------------------------------------------------------

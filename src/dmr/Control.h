@@ -156,6 +156,9 @@ namespace dmr
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
+
+        /// <summary>Process a data frames from the network.</summary>
+        void processNetwork();
     };
 } // namespace dmr
 

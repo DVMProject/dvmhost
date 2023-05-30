@@ -65,102 +65,93 @@ TagP25Data::~TagP25Data()
 /// <summary>
 /// Process a data frame from the network.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <param name="streamId"></param>
-/// <param name="address"></param>
+/// <param name="data">Network data buffer.</param>
+/// <param name="len">Length of data.</param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t streamId, sockaddr_storage& address)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t streamId)
 {
-    uint32_t peerId = __GET_UINT32(data, 11U);
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        FNEPeerConnection connection = m_network->m_peers[peerId];
-        std::string ip = UDPSocket::address(address);
+    uint8_t lco = data[4U];
 
-        // validate peer (simple validation really)
-        if (connection.connected() && connection.address() == ip) {
-            uint8_t lco = data[4U];
+    uint32_t srcId = __GET_UINT16(data, 5U);
+    uint32_t dstId = __GET_UINT16(data, 8U);
 
-            uint32_t srcId = __GET_UINT16(data, 5U);
-            uint32_t dstId = __GET_UINT16(data, 8U);
+    uint8_t MFId = data[15U];
 
-            uint8_t MFId = data[15U];
+    uint8_t lsd1 = data[20U];
+    uint8_t lsd2 = data[21U];
 
-            uint8_t lsd1 = data[20U];
-            uint8_t lsd2 = data[21U];
+    uint8_t duid = data[22U];
+    uint8_t frameType = p25::P25_FT_DATA_UNIT;
 
-            uint8_t duid = data[22U];
-            uint8_t frameType = p25::P25_FT_DATA_UNIT;
+    p25::lc::LC control;
+    p25::data::LowSpeedData lsd;
 
-            p25::lc::LC control;
-            p25::data::LowSpeedData lsd;
+    // is this a LDU1, is this the first of a call?
+    if (duid == p25::P25_DUID_LDU1) {
+        frameType = data[180U];
 
-            // is this a LDU1, is this the first of a call?
-            if (duid == p25::P25_DUID_LDU1) {
-                frameType = data[180U];
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
+        }
 
-                if (m_debug) {
-                    LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
-                }
+        if (frameType == p25::P25_FT_HDU_VALID) {
+            uint8_t algId = data[181U];
+            uint32_t kid = (data[182U] << 8) | (data[183U] << 0);
 
-                if (frameType == p25::P25_FT_HDU_VALID) {
-                    uint8_t algId = data[181U];
-                    uint32_t kid = (data[182U] << 8) | (data[183U] << 0);
+            // copy MI data
+            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
 
-                    // copy MI data
-                    uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-                    ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
-
-                    for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
-                        mi[i] = data[184U + i];
-                    }
-
-                    if (m_debug) {
-                        LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
-                        Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
-                    }
-
-                    control.setAlgId(algId);
-                    control.setKId(kid);
-                    control.setMI(mi);
-                }
+            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+                mi[i] = data[184U + i];
             }
 
-            control.setLCO(lco);
-            control.setSrcId(srcId);
-            control.setDstId(dstId);
-            control.setMFId(MFId);
+            if (m_debug) {
+                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
+            }
 
-            lsd.setLSD1(lsd1);
-            lsd.setLSD2(lsd2);
+            control.setAlgId(algId);
+            control.setKId(kid);
+            control.setMI(mi);
+        }
+    }
 
-            // is the stream valid?
-            if (validate(peerId, control, duid, streamId)) {
+    control.setLCO(lco);
+    control.setSrcId(srcId);
+    control.setDstId(dstId);
+    control.setMFId(MFId);
+
+    lsd.setLSD1(lsd1);
+    lsd.setLSD2(lsd2);
+
+    // is the stream valid?
+    if (validate(peerId, control, duid, streamId)) {
+        // is this peer ignored?
+        if (!isPeerPermitted(peerId, control, duid, streamId)) {
+            return false;
+        }
+
+        // TODO TODO TODO
+        // TODO: handle checking if this is a parrot group and properly implement parrot
+
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
                 // is this peer ignored?
-                if (!isPeerPermitted(peerId, control, duid, streamId)) {
-                    return false;
+                if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                    continue;
                 }
 
-                // TODO TODO TODO
-                // TODO: handle checking if this is a parrot group and properly implement parrot
-
-                for (auto peer : m_network->m_peers) {
-                    if (peerId != peer.first) {
-                        // is this peer ignored?
-                        if (!isPeerPermitted(peer.first, control, duid, streamId)) {
-                            continue;
-                        }
-
-                        m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, true);
-                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
-                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
-                    }
-                }
-
-                m_network->m_frameQueue->flushQueue();
-                return true;
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, true);
+                LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
+                    peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
             }
         }
+
+        m_network->m_frameQueue->flushQueue();
+        return true;
     }
 
     return false;
@@ -173,10 +164,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t stream
 /// <summary>
 /// Helper to determine if the peer is permitted for traffic.
 /// </summary>
-/// <param name="peerId"></param>
+/// <param name="peerId">Peer ID</param>
 /// <param name="control"></param>
 /// <param name="duid"></param>
-/// <param name="streamId"></param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
 bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
 {
@@ -224,10 +215,10 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t 
 /// <summary>
 /// Helper to validate the DMR call stream.
 /// </summary>
-/// <param name="peerId"></param>
+/// <param name="peerId">Peer ID</param>
 /// <param name="control"></param>
 /// <param name="duid"></param>
-/// <param name="streamId"></param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
 bool TagP25Data::validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId)
 {

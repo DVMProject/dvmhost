@@ -165,10 +165,10 @@ bool IdenTableLookup::load()
 
                 if (chSpaceKhz == 0.0F)
                     chSpaceKhz = chBandwidthKhz / 2;
-                if (chSpaceKhz < 2.5F)    // clamp to 2.5
-                    chSpaceKhz = 2.5F;
-                if (chSpaceKhz > 6.25F)   // clamp to 6.25
-                    chSpaceKhz = 6.25F;
+                if (chSpaceKhz < 0.125F)    // clamp to 125 Hz
+                    chSpaceKhz = 0.125F;
+                if (chSpaceKhz > 125000.0F)   // clamp to 125 kHz
+                    chSpaceKhz = 125000.0F;                    
 
                 IdenTable entry = IdenTable(channelId, baseFrequency, chSpaceKhz, txOffsetMhz, chBandwidthKhz);
 

@@ -65,85 +65,76 @@ TagDMRData::~TagDMRData()
 /// <summary>
 /// Process a data frame from the network.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="len"></param>
-/// <param name="streamId"></param>
-/// <param name="address"></param>
+/// <param name="data">Network data buffer.</param>
+/// <param name="len">Length of data.</param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t streamId, sockaddr_storage& address)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t streamId)
 {
-    uint32_t peerId = __GET_UINT32(data, 11U);
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        FNEPeerConnection connection = m_network->m_peers[peerId];
-        std::string ip = UDPSocket::address(address);
+    uint8_t seqNo = data[4U];
 
-        // validate peer (simple validation really)
-        if (connection.connected() && connection.address() == ip) {
-            uint8_t seqNo = data[4U];
+    uint32_t srcId = __GET_UINT16(data, 5U);
+    uint32_t dstId = __GET_UINT16(data, 8U);
 
-            uint32_t srcId = __GET_UINT16(data, 5U);
-            uint32_t dstId = __GET_UINT16(data, 8U);
+    uint8_t flco = (data[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
 
-            uint8_t flco = (data[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+    uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
-            uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
+    uint8_t dataType = data[15U] & 0x0FU;
 
-            uint8_t dataType = data[15U] & 0x0FU;
+    dmr::data::Data dmrData;
+    dmrData.setSeqNo(seqNo);
+    dmrData.setSlotNo(slotNo);
+    dmrData.setSrcId(srcId);
+    dmrData.setDstId(dstId);
+    dmrData.setFLCO(flco);
 
-            dmr::data::Data dmrData;
-            dmrData.setSeqNo(seqNo);
-            dmrData.setSlotNo(slotNo);
-            dmrData.setSrcId(srcId);
-            dmrData.setDstId(dstId);
-            dmrData.setFLCO(flco);
+    bool dataSync = (data[15U] & 0x20U) == 0x20U;
+    bool voiceSync = (data[15U] & 0x10U) == 0x10U;
 
-            bool dataSync = (data[15U] & 0x20U) == 0x20U;
-            bool voiceSync = (data[15U] & 0x10U) == 0x10U;
+    if (dataSync) {
+        dmrData.setData(data + 20U);
+        dmrData.setDataType(dataType);
+        dmrData.setN(0U);
+    }
+    else if (voiceSync) {
+        dmrData.setData(data + 20U);
+        dmrData.setDataType(dmr::DT_VOICE_SYNC);
+        dmrData.setN(0U);
+    }
+    else {
+        uint8_t n = data[15U] & 0x0FU;
+        dmrData.setData(data + 20U);
+        dmrData.setDataType(dmr::DT_VOICE);
+        dmrData.setN(n);
+    }
 
-            if (dataSync) {
-                dmrData.setData(data + 20U);
-                dmrData.setDataType(dataType);
-                dmrData.setN(0U);
-            }
-            else if (voiceSync) {
-                dmrData.setData(data + 20U);
-                dmrData.setDataType(dmr::DT_VOICE_SYNC);
-                dmrData.setN(0U);
-            }
-            else {
-                uint8_t n = data[15U] & 0x0FU;
-                dmrData.setData(data + 20U);
-                dmrData.setDataType(dmr::DT_VOICE);
-                dmrData.setN(n);
-            }
+    // is the stream valid?
+    if (validate(peerId, dmrData, streamId)) {
+        // is this peer ignored?
+        if (!isPeerPermitted(peerId, dmrData, streamId)) {
+            return false;
+        }
 
-            // is the stream valid?
-            if (validate(peerId, dmrData, streamId)) {
+        // TODO TODO TODO
+        // TODO: handle checking if this is a parrot group and properly implement parrot
+
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
                 // is this peer ignored?
-                if (!isPeerPermitted(peerId, dmrData, streamId)) {
-                    return false;
+                if (!isPeerPermitted(peer.first, dmrData, streamId)) {
+                    continue;
                 }
 
-                // TODO TODO TODO
-                // TODO: handle checking if this is a parrot group and properly implement parrot
-
-                for (auto peer : m_network->m_peers) {
-                    if (peerId != peer.first) {
-                        // is this peer ignored?
-                        if (!isPeerPermitted(peer.first, dmrData, streamId)) {
-                            continue;
-                        }
-
-                        m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, true);
-                        LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
-                            peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
-                    }
-                }
-
-                m_network->m_frameQueue->flushQueue();
-                return true;
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, true);
+                LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
+                    peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
             }
         }
+
+        m_network->m_frameQueue->flushQueue();
+        return true;
     }
 
     return false;
@@ -156,9 +147,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t stream
 /// <summary>
 /// Helper to determine if the peer is permitted for traffic.
 /// </summary>
-/// <param name="peerId"></param>
+/// <param name="peerId">Peer ID</param>
 /// <param name="data"></param>
-/// <param name="streamId"></param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
 bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
 {
@@ -200,9 +191,9 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_
 /// <summary>
 /// Helper to validate the DMR call stream.
 /// </summary>
-/// <param name="peerId"></param>
+/// <param name="peerId">Peer ID</param>
 /// <param name="data"></param>
-/// <param name="streamId"></param>
+/// <param name="streamId">Stream ID</param>
 /// <returns></returns>
 bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
 {

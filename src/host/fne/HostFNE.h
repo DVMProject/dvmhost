@@ -82,6 +82,9 @@ private:
     bool createMasterNetwork();
     /// <summary>Initializes peer FNE network connectivity.</summary>
     bool createPeerNetworks();
+
+    /// <summary>Processes any peer network traffic.</summary>
+    void processPeer(network::Network* peerNetwork);
 };
 
 #endif // __HOST_FNE_H__

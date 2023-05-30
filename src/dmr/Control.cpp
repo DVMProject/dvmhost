@@ -346,22 +346,7 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 void Control::clock(uint32_t ms)
 {
     if (m_network != nullptr) {
-        data::Data data;
-        bool ret = m_network->readDMR(data);
-        if (ret) {
-            uint32_t slotNo = data.getSlotNo();
-            switch (slotNo) {
-                case 1U:
-                    m_slot1->processNetwork(data);
-                    break;
-                case 2U:
-                    m_slot2->processNetwork(data);
-                    break;
-                default:
-                    LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
-                    break;
-            }
-        }
+        processNetwork();
     }
 
     m_tsccCntInterval.clock(ms);
@@ -596,4 +581,83 @@ void Control::setCSBKVerbose(bool verbose)
 {
     m_dumpCSBKData = verbose;
     lc::CSBK::setVerbose(verbose);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Process a data frames from the network.
+/// </summary>
+void Control::processNetwork()
+{
+    uint32_t length = 0U;
+    bool ret = false;
+    UInt8Array buffer = m_network->readDMR(ret, length);
+    if (ret) {
+        data::Data data;
+
+        uint8_t seqNo = buffer[4U];
+
+        uint32_t srcId = __GET_UINT16(buffer, 5U);
+        uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+        uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+
+        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+        // DMO mode slot disabling
+        if (slotNo == 1U && !m_network->getDuplex())
+            return;
+
+        // Individual slot disabling
+        if (slotNo == 1U && !m_network->getDMRSlot1())
+            return;
+        if (slotNo == 2U && !m_network->getDMRSlot2())
+            return;
+
+        data.setSeqNo(seqNo);
+        data.setSlotNo(slotNo);
+        data.setSrcId(srcId);
+        data.setDstId(dstId);
+        data.setFLCO(flco);
+
+        bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
+        bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
+
+        if (m_debug) {
+            LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
+        }
+
+        if (dataSync) {
+            uint8_t dataType = buffer[15U] & 0x0FU;
+            data.setData(buffer.get() + 20U);
+            data.setDataType(dataType);
+            data.setN(0U);
+        }
+        else if (voiceSync) {
+            data.setData(buffer.get() + 20U);
+            data.setDataType(dmr::DT_VOICE_SYNC);
+            data.setN(0U);
+        }
+        else {
+            uint8_t n = buffer[15U] & 0x0FU;
+            data.setData(buffer.get() + 20U);
+            data.setDataType(dmr::DT_VOICE);
+            data.setN(n);
+        }
+
+        switch (slotNo) {
+            case 1U:
+                m_slot1->processNetwork(data);
+                break;
+            case 2U:
+                m_slot2->processNetwork(data);
+                break;
+            default:
+                LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+                break;
+        }
+    }
 }
