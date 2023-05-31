@@ -291,9 +291,14 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
 {
     bool result = false;
     if (buffers.empty()) {
-        LogError(LOG_NET, "Trying to send empty buffers?");
         return false;
     }
+
+    if (buffers.size() == 0U) {
+        return false;
+    }
+
+    // LogDebug(LOG_NET, "buffers len = %u", buffers.size());
 
     if (buffers.size() > UINT16_MAX) {
         LogError(LOG_NET, "Trying to send too many buffers?");

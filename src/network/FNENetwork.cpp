@@ -524,12 +524,12 @@ void FNENetwork::clock(uint32_t ms)
 
                             // validate peer (simple validation really)
                             if (connection.connected() && connection.address() == ip) {
-                                uint8_t rawPayload[length - 11U];
-                                ::memset(rawPayload, 0x00U, length - 11U);
-                                ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
+                                uint8_t rawPayload[length - 12U];
+                                ::memset(rawPayload, 0x00U, length - 12U);
+                                ::memcpy(rawPayload, buffer.get() + 12U, length - 12U);
                                 std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
-                                ::LogInfo("PEER %u %s", peerId, payload.c_str());
+                                ::LogInfo("%u %s", peerId, payload.c_str());
                             }
                             else {
                                 writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);

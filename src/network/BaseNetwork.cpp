@@ -262,6 +262,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return nullptr;
 
+    ret = true;
     if (m_rxDMRData.isEmpty()) {
         ret = false;
         return nullptr;
@@ -347,6 +348,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return nullptr;
 
+    ret = true;
     if (m_rxP25Data.isEmpty()) {
         ret = false;
         return nullptr;
@@ -523,6 +525,7 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return nullptr;
 
+    ret = true;
     if (m_rxNXDNData.isEmpty()) {
         ret = false;
         return nullptr;

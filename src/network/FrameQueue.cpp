@@ -218,6 +218,8 @@ bool FrameQueue::flushQueue()
         return false;
     }
 
+    // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
+
     bool ret = true;
     if (!m_socket->write(m_buffers)) {
         LogError(LOG_NET, "Failed writing data to the network");
