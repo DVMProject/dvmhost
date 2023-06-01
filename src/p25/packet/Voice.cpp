@@ -721,6 +721,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             else {
                 m_p25->m_tailOnIdle = true;
+                m_p25->m_trunk->writeNet_TSDU_Call_Term(m_rfLC.getSrcId(), m_rfLC.getDstId());
             }
         }
 

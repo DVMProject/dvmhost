@@ -434,6 +434,8 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
         }
 
+        m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
+
         writeRF_TDU(false);
         m_voice->m_lastDUID = P25_DUID_TDU;
         m_voice->writeNetwork(data + 2U, P25_DUID_TDU);
