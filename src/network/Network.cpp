@@ -69,7 +69,7 @@ using namespace network;
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
-    m_lastPeerId(0U),
+    m_pktLastSeq(0U),
     m_address(address),
     m_port(port),
     m_password(password),
@@ -83,7 +83,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_salt(nullptr),
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
-    m_pktLastSeq(0U),
+    m_pktSeq(0U),
     m_loginStreamId(0U),
     m_identity(),
     m_rxFrequency(0U),
@@ -105,6 +105,12 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     assert(!password.empty());
 
     m_salt = new uint8_t[sizeof(uint32_t)];
+
+    m_rxDMRStreamId = new uint32_t[2U];
+    m_rxDMRStreamId[0U] = 0U;
+    m_rxDMRStreamId[1U] = 0U;
+    m_rxP25StreamId = 0U;
+    m_rxNXDNStreamId = 0U;
 }
 
 /// <summary>
@@ -113,6 +119,42 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
 Network::~Network()
 {
     delete[] m_salt;
+    delete[] m_rxDMRStreamId;
+}
+
+/// <summary>
+/// Resets the DMR ring buffer for the given slot.
+/// </summary>
+/// <param name="slotNo">DMR slot ring buffer to reset.</param>
+void Network::resetDMR(uint32_t slotNo)
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    BaseNetwork::resetDMR(slotNo);
+    if (slotNo == 1U) {
+        m_rxDMRStreamId[0U] = 0U;
+    }
+    else {
+        m_rxDMRStreamId[1U] = 0U;
+    }
+}
+
+/// <summary>
+/// Resets the P25 ring buffer.
+/// </summary>
+void Network::resetP25()
+{
+    BaseNetwork::resetP25();
+    m_rxP25StreamId = 0U;
+}
+
+/// <summary>
+/// Resets the NXDN ring buffer.
+/// </summary>
+void Network::resetNXDN()
+{
+    BaseNetwork::resetNXDN();
+    m_rxNXDNStreamId = 0U;
 }
 
 /// <summary>
@@ -208,7 +250,7 @@ void Network::clock(uint32_t ms)
     sockaddr_storage address;
     uint32_t addrLen;
 
-    frame::RTPHeader rtpHeader = frame::RTPHeader();
+    frame::RTPHeader rtpHeader;
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
@@ -220,26 +262,49 @@ void Network::clock(uint32_t ms)
             return;
         }
 
-        // uint32_t peerId = fneHeader.getPeerId();
-        uint32_t streamId = fneHeader.getStreamId();
+        if (m_debug) {
+            LogDebug(LOG_NET, "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
+                fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
+        }
+
+        // is this RTP packet destined for us?
+        uint32_t peerId = fneHeader.getPeerId();
+        if (m_peerId != peerId) {
+            LogError(LOG_NET, "Packet received was not destined for us? peerId = %u", peerId);
+            return;
+        }
 
         // peer connections should never encounter no stream ID
+        uint32_t streamId = fneHeader.getStreamId();
         if (streamId == 0U) {
             LogWarning(LOG_NET, "BUGBUG: strange RTP packet with no stream ID?");
         }
 
-        m_pktLastSeq = rtpHeader.getSequence();
-
-        // TODO: maybe validate the packet sequence coming from the FNE?
+        m_pktSeq = rtpHeader.getSequence();
 
         // process incoming message frame opcodes
         switch (fneHeader.getFunction()) {
         case NET_FUNC_PROTOCOL:
             {
                 if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
-                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_DMR)
                     if (m_enabled && m_dmrEnabled) {
+                        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+                        if (m_rxDMRStreamId[slotNo] == 0U) {
+                            m_rxDMRStreamId[slotNo] = streamId;
+                        }
+                        else {
+                            if (m_rxDMRStreamId[slotNo] == streamId) {
+                                if (m_pktLastSeq != 0U && m_pktSeq != m_pktLastSeq + 1) {
+                                    LogWarning(LOG_NET, "Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                }
+                            }
+                            else {
+                                m_rxDMRStreamId[slotNo] = streamId;
+                            }
+                        }
+                        m_pktLastSeq = m_pktSeq;
+                       
                         if (m_debug)
                             Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
 
@@ -250,9 +315,23 @@ void Network::clock(uint32_t ms)
 #endif // defined(ENABLE_DMR)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
-                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_P25)
                     if (m_enabled && m_p25Enabled) {
+                        if (m_rxP25StreamId == 0U) {
+                            m_rxP25StreamId = streamId;
+                        }
+                        else {
+                            if (m_rxP25StreamId == streamId) {
+                                if (m_pktLastSeq != 0U && m_pktSeq != m_pktLastSeq + 1) {
+                                    LogWarning(LOG_NET, "Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                }
+                            }
+                            else {
+                                m_rxP25StreamId = streamId;
+                            }
+                        }
+                        m_pktLastSeq = m_pktSeq;
+
                         if (m_debug)
                             Utils::dump(1U, "Network Received, P25", buffer.get(), length);
 
@@ -263,9 +342,23 @@ void Network::clock(uint32_t ms)
 #endif // defined(ENABLE_P25)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
-                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_NXDN)
                     if (m_enabled && m_nxdnEnabled) {
+                        if (m_rxNXDNStreamId == 0U) {
+                            m_rxNXDNStreamId = streamId;
+                        }
+                        else {
+                            if (m_rxNXDNStreamId == streamId) {
+                                if (m_pktLastSeq != 0U && m_pktSeq != m_pktLastSeq + 1) {
+                                    LogWarning(LOG_NET, "Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
+                                }
+                            }
+                            else {
+                                m_rxNXDNStreamId = streamId;
+                            }
+                        }
+                        m_pktLastSeq = m_pktSeq;
+
                         if (m_debug)
                             Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
 

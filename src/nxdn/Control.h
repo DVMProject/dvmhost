@@ -193,8 +193,6 @@ namespace nxdn
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
-        uint32_t m_lastPeerId;
-
         bool m_dumpRCCH;
 
         bool m_verbose;

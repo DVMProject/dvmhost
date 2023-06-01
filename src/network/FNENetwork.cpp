@@ -136,12 +136,12 @@ void FNENetwork::clock(uint32_t ms)
         std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
-            FNEPeerConnection peerConn = peer.second;
+            FNEPeerConnection connection = peer.second;
 
-            if (peerConn.connected()) {
-                uint64_t dt = peerConn.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
+            if (connection.connected()) {
+                uint64_t dt = connection.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
                 if (dt < now) {
-                    LogInfoEx(LOG_NET, "PEER %u timed out", id);
+                    LogInfoEx(LOG_NET, "PEER %u timed out, dt = %u, now = %u", id, dt, now);
                     peersToRemove.push_back(id);
                 }
             }
@@ -170,7 +170,7 @@ void FNENetwork::clock(uint32_t ms)
 
     sockaddr_storage address;
     uint32_t addrLen;
-    frame::RTPHeader rtpHeader = frame::RTPHeader();
+    frame::RTPHeader rtpHeader;
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
@@ -224,7 +224,7 @@ void FNENetwork::clock(uint32_t ms)
 #if defined(ENABLE_DMR)
                             if (m_dmrEnabled) {
                                 if (m_tagDMR != nullptr) {
-                                    m_tagDMR->processFrame(buffer.get(), length, peerId, streamId);
+                                    m_tagDMR->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
 #endif // defined(ENABLE_DMR)
@@ -241,7 +241,7 @@ void FNENetwork::clock(uint32_t ms)
 #if defined(ENABLE_P25)
                             if (m_p25Enabled) {
                                 if (m_tagP25 != nullptr) {
-                                    m_tagP25->processFrame(buffer.get(), length, peerId, streamId);
+                                    m_tagP25->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
 #endif // defined(ENABLE_P25)
@@ -258,7 +258,7 @@ void FNENetwork::clock(uint32_t ms)
 #if defined(ENABLE_NXDN)        
                             if (m_nxdnEnabled) {
                                 if (m_tagNXDN != nullptr) {
-                                    m_tagNXDN->processFrame(buffer.get(), length, peerId, streamId);
+                                    m_tagNXDN->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
 #endif // defined(ENABLE_NXDN)
@@ -275,6 +275,7 @@ void FNENetwork::clock(uint32_t ms)
             {
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
                     FNEPeerConnection connection = FNEPeerConnection(peerId, address, addrLen);
+                    connection.lastPing(now);
                     connection.currStreamId(streamId);
 
                     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
@@ -838,9 +839,9 @@ void FNENetwork::writeDeactiveTGIDs()
 /// <param name="opcode">Opcode.</param>
 /// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
+/// <param name="pktSeq"></param>
 /// <param name="queueOnly"></param>
-/// <param name="incPktSeq"></param>
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly, bool incPktSeq)
+bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, bool queueOnly)
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
@@ -848,15 +849,34 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
         
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
+        if (queueOnly)
+            return true;
+        return m_frameQueue->flushQueue();
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Helper to send a raw message to the specified peer.
+/// </summary>
+/// <param name="peerId">Peer ID.</param>
+/// <param name="opcode">Opcode.</param>
+/// <param name="data">Buffer to write to the network.</param>
+/// <param name="length">Length of buffer to write.</param>
+/// <param name="queueOnly"></param>
+/// <param name="incPktSeq"></param>
+bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly, bool incPktSeq)
+{
+    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+    if (it != m_peers.end()) {
         if (incPktSeq) {
             m_peers[peerId].pktLastSeq(m_peers[peerId].pktLastSeq() + 1);
         }
         uint16_t pktSeq = m_peers[peerId].pktLastSeq();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
-        if (queueOnly)
-            return true;
-        return m_frameQueue->flushQueue();
+        return writePeer(peerId, opcode, data, length, pktSeq, queueOnly);
     }
 
     return false;

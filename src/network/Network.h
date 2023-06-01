@@ -54,6 +54,13 @@ namespace network
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
 
+        /// <summary>Resets the DMR ring buffer for the given slot.</summary>
+        virtual void resetDMR(uint32_t slotNo);
+        /// <summary>Resets the P25 ring buffer.</summary>
+        virtual void resetP25();
+        /// <summary>Resets the NXDN ring buffer.</summary>
+        virtual void resetNXDN();
+
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /// <summary>Sets metadata configuration settings from the modem.</summary>
@@ -73,10 +80,10 @@ namespace network
 
         /// <summary>Closes connection to the network.</summary>
         void close();
-    
+
     public:
-        /// <summary>Gets the last received peer ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, lastPeerId, lastPeerId);
+        /// <summary>Last received RTP sequence number.</summary>
+        __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
 
     private:
         std::string m_address;
@@ -100,7 +107,11 @@ namespace network
         Timer m_retryTimer;
         Timer m_timeoutTimer;
 
-        uint16_t m_pktLastSeq;
+        uint32_t* m_rxDMRStreamId;
+        uint32_t m_rxP25StreamId;
+        uint32_t m_rxNXDNStreamId;
+
+        uint16_t m_pktSeq;
         uint32_t m_loginStreamId;
 
         /** station metadata */

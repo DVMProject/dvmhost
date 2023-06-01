@@ -85,7 +85,6 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_tsccPayloadActive(false),
     m_ccRunning(false),
     m_ccHalted(false),
-    m_lastPeerId(0U),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -604,8 +603,6 @@ void Control::processNetwork()
         return;
     }
 
-    m_lastPeerId = m_network->lastPeerId();
-
     data::Data data;
 
     uint8_t seqNo = buffer[4U];
@@ -648,7 +645,7 @@ void Control::processNetwork()
     bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
 
     if (m_debug) {
-        LogDebug(LOG_NET, "DMR, peerId = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", m_lastPeerId, seqNo, srcId, dstId, flco, slotNo, length);
+        LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
     }
 
     if (dataSync) {

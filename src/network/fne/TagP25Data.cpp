@@ -68,9 +68,10 @@ TagP25Data::~TagP25Data()
 /// <param name="data">Network data buffer.</param>
 /// <param name="len">Length of data.</param>
 /// <param name="peerId">Peer ID</param>
+/// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t streamId)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     uint8_t lco = data[4U];
 
@@ -144,10 +145,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, true);
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, pktSeq, true);
                 if (m_network->m_verbose) {
-                    LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", 
-                        peerId, peer.first, duid, lco, MFId, srcId, dstId, len);
+                    LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
                 }
             }
         }

@@ -212,8 +212,6 @@ namespace p25
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
-        uint32_t m_lastPeerId;
-
         bool m_verbose;
         bool m_debug;
 

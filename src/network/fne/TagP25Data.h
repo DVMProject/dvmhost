@@ -54,7 +54,7 @@ namespace network
             ~TagP25Data();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t streamId);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
         private:
             FNENetwork* m_network;

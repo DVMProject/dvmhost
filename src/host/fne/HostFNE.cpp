@@ -431,7 +431,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
             uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
 
-            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 
@@ -444,7 +444,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getP25StreamId();
 
-            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 
@@ -457,7 +457,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getNXDNStreamId();
 
-            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, streamId);
+            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 }

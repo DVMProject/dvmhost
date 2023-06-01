@@ -68,9 +68,10 @@ TagDMRData::~TagDMRData()
 /// <param name="data">Network data buffer.</param>
 /// <param name="len">Length of data.</param>
 /// <param name="peerId">Peer ID</param>
+/// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t streamId)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     uint8_t seqNo = data[4U];
 
@@ -127,10 +128,10 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, true);
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, true);
                 if (m_network->m_verbose) {
-                    LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, stream = %u", 
-                        peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, streamId);
+                    LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
+                        peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId);
                 }
             }
         }

@@ -103,16 +103,25 @@ namespace network
         {
             if (this != &data) {
                 m_id = data.m_id;
+
                 m_currStreamId = data.m_currStreamId;
+
                 m_socketStorage = data.m_socketStorage;
                 m_sockStorageLen = data.m_sockStorageLen;
+
                 m_address = data.m_address;
                 m_port = data.m_port;
+
                 m_salt = data.m_salt;
+
                 m_connected = data.m_connected;
                 m_connectionState = data.m_connectionState;
+
                 m_pingsReceived = data.m_pingsReceived;
+                m_lastPing = data.m_lastPing;
+
                 m_config = data.m_config;
+
                 m_pktLastSeq = data.m_pktLastSeq;
                 m_pktNextSeq = data.m_pktNextSeq;
             }
@@ -246,7 +255,11 @@ namespace network
         void writeDeactiveTGIDs();
 
         /// <summary>Helper to send a raw message to the specified peer.</summary>
-        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly = false, bool incPktSeq = false);
+        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+            uint16_t pktSeq, bool queueOnly = false);
+        /// <summary>Helper to send a raw message to the specified peer.</summary>
+        bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+            bool queueOnly = false, bool incPktSeq = false);
         /// <summary>Helper to send a tagged message to the specified peer.</summary>
         bool writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, 
             bool queueOnly = false, bool incPktSeq = false);
