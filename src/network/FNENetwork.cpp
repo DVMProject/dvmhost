@@ -188,7 +188,7 @@ void FNENetwork::clock(uint32_t ms)
             uint16_t pktSeq = rtpHeader.getSequence();
 
             if ((connection.currStreamId() == streamId) && (pktSeq != connection.pktNextSeq())) {
-                LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, rtpHeader.getSequence());
+                LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection.pktNextSeq());
             }
 
             connection.currStreamId(streamId);
