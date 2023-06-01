@@ -484,6 +484,24 @@ void FNENetwork::clock(uint32_t ms)
             }
             break;
 
+        case NET_FUNC_GRANT:                                                            // Repeater Grant Request
+            {
+                if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                    FNEPeerConnection connection = m_peers[peerId];
+                    std::string ip = UDPSocket::address(address);
+
+                    // validate peer (simple validation really)
+                    if (connection.connected() && connection.address() == ip) {
+                        // TODO TODO TODO
+                        // TODO: handle repeater grant request
+                    }
+                    else {
+                        writePeerNAK(peerId, TAG_REPEATER_GRANT);
+                    }
+                }
+            }
+            break;
+
         case NET_FUNC_TRANSFER:
             {
                 if (fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_ACTIVITY) {      // Peer Activity Log Transfer
