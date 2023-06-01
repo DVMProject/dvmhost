@@ -25,6 +25,7 @@
 */
 #include "Defines.h"
 #include "edac/CRC.h"
+#include "network/BaseNetwork.h"
 #include "network/FrameQueue.h"
 #include "Log.h"
 #include "Utils.h"
@@ -112,7 +113,8 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
         }
 
         // ensure payload type is correct
-        if (_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) {
+        if ((_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) &&
+            (_rtpHeader.getPayloadType() != DVM_CTRL_RTP_PAYLOAD_TYPE)) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP payload type received from network");
             return nullptr;
         }
@@ -179,9 +181,17 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
     RTPHeader header = RTPHeader();
     header.setExtension(true);
+
     header.setPayloadType(DVM_RTP_PAYLOAD_TYPE);
     header.setSequence(rtpSeq);
     header.setSSRC(streamId);
+
+    // properly flag control opcodes
+    if ((opcode.first == NET_FUNC_TRANSFER) || (opcode.first == NET_FUNC_GRANT)) {
+        header.setPayloadType(DVM_CTRL_RTP_PAYLOAD_TYPE);
+        header.setSequence(0U);
+        header.setSSRC(0U);
+    }
 
     header.encode(buffer);
 

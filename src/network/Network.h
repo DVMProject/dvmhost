@@ -101,6 +101,7 @@ namespace network
         Timer m_timeoutTimer;
 
         uint16_t m_pktLastSeq;
+        uint32_t m_loginStreamId;
 
         /** station metadata */
         std::string m_identity;

@@ -72,7 +72,6 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_rxDMRData(4000U, "DMR Net Buffer"),
     m_rxP25Data(4000U, "P25 Net Buffer"),
     m_rxNXDNData(4000U, "NXDN Net Buffer"),
-    m_rxGrantData(4000U, "Grant Net Buffer"),
     m_random(),
     m_dmrStreamId(nullptr),
     m_p25StreamId(0U),
@@ -140,9 +139,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    m_pktSeq = 0U;
-    m_frameQueue->enqueueMessage(buffer, 21U, createStreamId(), m_peerId, 
-        { NET_FUNC_GRANT, NET_SUBFUNC_NOP }, m_pktSeq, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage(buffer, 21U, 0U, m_peerId, 
+        { NET_FUNC_GRANT, NET_SUBFUNC_NOP }, 0U, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -168,9 +166,8 @@ bool BaseNetwork::writeActLog(const char* message)
 
     ::strcpy(buffer + 11U, message);
 
-    m_pktSeq = 0U;
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, createStreamId(), m_peerId, 
-        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, m_pktSeq, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, 0U, m_peerId, 
+        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, 0U, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -196,9 +193,8 @@ bool BaseNetwork::writeDiagLog(const char* message)
 
     ::strcpy(buffer + 12U, message);
 
-    m_pktSeq = 0U;
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, createStreamId(), m_peerId, 
-        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, m_pktSeq, m_addr, m_addrLen);
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, 0U, m_peerId, 
+        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, 0U, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -313,13 +309,14 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
 
     uint32_t slotIndex = slotNo - 1U;
 
+    bool resetSeq = false;
     if (dataType == dmr::DT_VOICE_LC_HEADER) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_dmrStreamId[slotIndex] = createStreamId();
     }
 
     if (dataType == dmr::DT_CSBK || dataType == dmr::DT_DATA_HEADER) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_dmrStreamId[slotIndex] = createStreamId();
     }
 
@@ -330,7 +327,7 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_dmrStreamId[slotIndex], m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -392,8 +389,9 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -404,7 +402,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -420,8 +418,9 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -432,7 +431,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -447,8 +446,9 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -459,7 +459,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -474,8 +474,9 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -486,7 +487,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -505,8 +506,9 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_p25StreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_p25StreamId = createStreamId();
     }
 
@@ -517,7 +519,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -578,8 +580,9 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    bool resetSeq = false;
     if (m_nxdnStreamId == 0U) {
-        m_pktSeq = 0U;
+        resetSeq = true;
         m_nxdnStreamId = createStreamId();
     }
 
@@ -590,7 +593,7 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
     }
 
     m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, pktSeq(), m_addr, m_addrLen);
+        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, pktSeq(resetSeq), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -619,7 +622,6 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 {
     if (reset) {
         m_pktSeq = 0U;
-        return m_pktSeq;
     }
 
     uint16_t curr = m_pktSeq;

@@ -138,10 +138,12 @@ void FNENetwork::clock(uint32_t ms)
             uint32_t id = peer.first;
             FNEPeerConnection peerConn = peer.second;
 
-            uint64_t dt = peerConn.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
-            if (dt < now) {
-                LogInfoEx(LOG_NET, "PEER %u timed out", id);
-                peersToRemove.push_back(id);
+            if (peerConn.connected()) {
+                uint64_t dt = peerConn.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
+                if (dt < now) {
+                    LogInfoEx(LOG_NET, "PEER %u timed out", id);
+                    peersToRemove.push_back(id);
+                }
             }
         }
 
@@ -181,8 +183,8 @@ void FNENetwork::clock(uint32_t ms)
         uint32_t peerId = fneHeader.getPeerId();
         uint32_t streamId = fneHeader.getStreamId();
 
-        // update current peer stream ID
-        if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+        // update current peer packet sequence and stream ID
+        if (peerId > 0 && (m_peers.find(peerId) != m_peers.end()) && streamId != 0U) {
             FNEPeerConnection connection = m_peers[peerId];
 
             uint16_t pktSeq = rtpHeader.getSequence();
@@ -199,6 +201,13 @@ void FNENetwork::clock(uint32_t ms)
             }
 
             m_peers[peerId] = connection;
+        }
+
+        // if we don't have a stream ID and are receiving call data -- throw an error and discard
+        if (streamId == 0 && fneHeader.getFunction() == NET_FUNC_PROTOCOL)
+        {
+            LogError(LOG_NET, "PEER %u Malformed packet (no stream ID for a call?)", peerId);
+            return;
         }
 
         // process incoming message frame opcodes
@@ -266,6 +275,7 @@ void FNENetwork::clock(uint32_t ms)
             {
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
                     FNEPeerConnection connection = FNEPeerConnection(peerId, address, addrLen);
+                    connection.currStreamId(streamId);
 
                     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
                     connection.salt(dist(m_random));
@@ -274,7 +284,6 @@ void FNENetwork::clock(uint32_t ms)
 
                     connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
                     m_peers[peerId] = connection;
-
 
                     // transmit salt to peer
                     uint8_t salt[4U];
@@ -459,6 +468,7 @@ void FNENetwork::clock(uint32_t ms)
                         uint32_t pingsRx = connection.pingsReceived();
                         connection.pingsReceived(pingsRx++);
                         connection.lastPing(now);
+                        connection.pktLastSeq(connection.pktLastSeq() + 1);
 
                         m_peers[peerId] = connection;
                         writePeerTagged(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP }, TAG_MASTER_PONG);
@@ -469,24 +479,6 @@ void FNENetwork::clock(uint32_t ms)
                     }
                     else {
                         writePeerNAK(peerId, TAG_REPEATER_PING);
-                    }
-                }
-            }
-            break;
-
-        case NET_FUNC_GRANT:                                                            // Repeater Grant Request
-            {
-                if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    std::string ip = UDPSocket::address(address);
-
-                    // validate peer (simple validation really)
-                    if (connection.connected() && connection.address() == ip) {
-                        // TODO TODO TODO
-                        // TODO: handle repeater grant request
-                    }
-                    else {
-                        writePeerNAK(peerId, TAG_REPEATER_GRANT);
                     }
                 }
             }
@@ -650,7 +642,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool queueOnly)
     }
 
     writePeerTagged(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_WL_RID }, TAG_MASTER_WL_RID, 
-        payload, 4U + (ridWhitelist.size() * 4U), queueOnly);
+        payload, 4U + (ridWhitelist.size() * 4U), queueOnly, true);
 }
 
 /// <summary>
@@ -706,7 +698,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, bool queueOnly)
     }
 
     writePeerTagged(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_BL_RID }, TAG_MASTER_BL_RID, 
-        payload, 4U + (ridBlacklist.size() * 4U), queueOnly);
+        payload, 4U + (ridBlacklist.size() * 4U), queueOnly, true);
 }
 
 /// <summary>
@@ -759,7 +751,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
     }
 
     writePeerTagged(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_ACTIVE_TGS }, TAG_MASTER_ACTIVE_TGS, 
-        payload, 4U + (tgidList.size() * 5U), queueOnly);
+        payload, 4U + (tgidList.size() * 5U), queueOnly, true);
 }
 
 /// <summary>
@@ -808,7 +800,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
     }
 
     writePeerTagged(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_DEACTIVE_TGS }, TAG_MASTER_DEACTIVE_TGS, 
-        payload, 4U + (tgidList.size() * 5U), queueOnly);
+        payload, 4U + (tgidList.size() * 5U), queueOnly, true);
 }
 
 /// <summary>
@@ -829,13 +821,18 @@ void FNENetwork::writeDeactiveTGIDs()
 /// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
 /// <param name="queueOnly"></param>
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly)
+/// <param name="incPktSeq"></param>
+bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly, bool incPktSeq)
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
         uint32_t streamId = m_peers[peerId].currStreamId();
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
+        
+        if (incPktSeq) {
+            m_peers[peerId].pktLastSeq(m_peers[peerId].pktLastSeq() + 1);
+        }
         uint16_t pktSeq = m_peers[peerId].pktLastSeq();
 
         m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
@@ -856,8 +853,9 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
 /// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
 /// <param name="queueOnly"></param>
+/// <param name="incPktSeq"></param>
 bool FNENetwork::writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, 
-    const uint8_t* data, uint32_t length, bool queueOnly)
+    const uint8_t* data, uint32_t length, bool queueOnly, bool incPktSeq)
 {
     assert(peerId > 0);
     assert(tag != nullptr);
@@ -877,7 +875,7 @@ bool FNENetwork::writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode,
     }
 
     uint32_t len = length + (strlen(tag) + 4U);
-    return writePeer(peerId, opcode, buffer, len, queueOnly);
+    return writePeer(peerId, opcode, buffer, len, queueOnly, incPktSeq);
 }
 
 /// <summary>
@@ -898,7 +896,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, 10U + length);
+    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, 10U + length, false, true);
 }
 
 /// <summary>
@@ -918,7 +916,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
-    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U);
+    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, false, true);
 }
 
 /// <summary>

@@ -266,8 +266,6 @@ namespace network
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_rxNXDNData;
 
-        RingBuffer<uint8_t> m_rxGrantData;
-
         std::mt19937 m_random;
 
         /// <summary>Helper to update the RTP packet sequence.</summary>

@@ -84,6 +84,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
     m_pktLastSeq(0U),
+    m_loginStreamId(0U),
     m_identity(),
     m_rxFrequency(0U),
     m_txFrequency(0U),
@@ -217,6 +218,14 @@ void Network::clock(uint32_t ms)
         if (!UDPSocket::match(m_addr, address)) {
             LogError(LOG_NET, "Packet received from an invalid source");
             return;
+        }
+
+        // uint32_t peerId = fneHeader.getPeerId();
+        uint32_t streamId = fneHeader.getStreamId();
+
+        // peer connections should never encounter no stream ID
+        if (streamId == 0U) {
+            LogWarning(LOG_NET, "BUGBUG: strange RTP packet with no stream ID?");
         }
 
         m_pktLastSeq = rtpHeader.getSequence();
@@ -402,6 +411,8 @@ void Network::clock(uint32_t ms)
                         break;
                     case NET_STAT_WAITING_CONFIG:
                         LogMessage(LOG_NET, "Logged into the master successfully");
+                        m_loginStreamId = 0U;
+                        pktSeq(true);
                         m_status = NET_STAT_RUNNING;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
@@ -534,7 +545,8 @@ bool Network::writeLogin()
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
-    m_frameQueue->enqueueMessage(buffer, 8U, createStreamId(), m_peerId, 
+    m_loginStreamId = createStreamId();
+    m_frameQueue->enqueueMessage(buffer, 8U, m_loginStreamId, m_peerId, 
         { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
@@ -545,6 +557,11 @@ bool Network::writeLogin()
 /// <returns></returns>
 bool Network::writeAuthorisation()
 {
+    if (m_loginStreamId == 0U) {
+        LogWarning(LOG_NET, "BUGBUG: tried to write network authorisation with no stream ID?");
+        return false;
+    }
+
     size_t size = m_password.size();
 
     uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
@@ -564,7 +581,7 @@ bool Network::writeAuthorisation()
     if (m_debug)
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    m_frameQueue->enqueueMessage(out, 40U, createStreamId(), m_peerId, 
+    m_frameQueue->enqueueMessage(out, 40U, m_loginStreamId, m_peerId, 
         { NET_FUNC_RPTK, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
@@ -575,6 +592,11 @@ bool Network::writeAuthorisation()
 /// <returns></returns>
 bool Network::writeConfig()
 {
+    if (m_loginStreamId == 0U) {
+        LogWarning(LOG_NET, "BUGBUG: tried to write network authorisation with no stream ID?");
+        return false;
+    }
+
     const char* software = __NET_NAME__;
 
     json::object config = json::object();
@@ -622,7 +644,7 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId, 
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, m_loginStreamId, m_peerId, 
         { NET_FUNC_RPTC, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }

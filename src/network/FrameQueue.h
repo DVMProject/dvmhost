@@ -39,7 +39,9 @@ namespace network
     // ---------------------------------------------------------------------------
 
     const uint32_t DATA_PACKET_LENGTH = 8192U;
+    
     const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x56U;
+    const uint8_t DVM_CTRL_RTP_PAYLOAD_TYPE = 0x57U; // these are still RTP, but do not carry stream IDs or sequence data
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
