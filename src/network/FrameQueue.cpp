@@ -75,7 +75,7 @@ FrameQueue::~FrameQueue()
 UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
     RTPHeader* rtpHeader, RTPFNEHeader* fneHeader)
 {
-    RTPHeader _rtpHeader = RTPHeader(true);
+    RTPHeader _rtpHeader = RTPHeader();
     RTPFNEHeader _fneHeader = RTPFNEHeader();
 
     messageLength = -1;
@@ -163,11 +163,12 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 /// <param name="streamId">Message stream ID.</param>
 /// <param name="peerId">Peer ID.</param>
 /// <param name="opcode">Opcode.</param>
+/// <param name="rtpSeq">RTP Sequence.</param>
 /// <param name="addr">IP address to write data to.</param>
 /// <param name="addrLen"></param>
 /// <returns></returns>
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-    OpcodePair opcode, sockaddr_storage& addr, uint32_t addrLen)
+    OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(message != nullptr);
     assert(length > 0U);
@@ -179,6 +180,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     RTPHeader header = RTPHeader();
     header.setExtension(true);
     header.setPayloadType(DVM_RTP_PAYLOAD_TYPE);
+    header.setSequence(rtpSeq);
     header.setSSRC(streamId);
 
     header.encode(buffer);
@@ -215,6 +217,12 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 bool FrameQueue::flushQueue()
 {
     if (m_buffers.empty()) {
+        return false;
+    }
+
+    // bryanb: this is the same as above -- but for some assinine reason prevents
+    // weirdness
+    if (m_buffers.size() == 0U) {
         return false;
     }
 

@@ -60,7 +60,7 @@ namespace network
 
         /// <summary>Cache "message" to frame queue.</summary>
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
-            OpcodePair opcode, sockaddr_storage& addr, uint32_t addrLen);
+            OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
         /// <summary>Flush the message queue.</summary>
         bool flushQueue();

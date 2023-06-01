@@ -57,6 +57,7 @@ using namespace network;
 /// <param name="peerId">Unique ID on the network.</param>
 /// <param name="password">Network authentication password.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="debug">Flag indicating whether network debug is enabled.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
@@ -68,6 +69,7 @@ using namespace network;
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
+    m_lastPeerId(0U),
     m_address(address),
     m_port(port),
     m_password(password),
@@ -82,8 +84,6 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_retryTimer(1000U, 10U),
     m_timeoutTimer(1000U, 60U),
     m_pktLastSeq(0U),
-    m_pktNextSeq(0U),
-    m_pktSeq(0U),
     m_identity(),
     m_rxFrequency(0U),
     m_txFrequency(0U),
@@ -207,7 +207,7 @@ void Network::clock(uint32_t ms)
     sockaddr_storage address;
     uint32_t addrLen;
 
-    frame::RTPHeader rtpHeader = frame::RTPHeader(true);
+    frame::RTPHeader rtpHeader = frame::RTPHeader();
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
@@ -219,23 +219,16 @@ void Network::clock(uint32_t ms)
             return;
         }
 
-        m_pktSeq = rtpHeader.getSequence();
+        m_pktLastSeq = rtpHeader.getSequence();
 
-        if (m_pktSeq != m_pktNextSeq) {
-            LogWarning(LOG_NET, "Packet out-of-sequence; %u != %u", m_pktNextSeq, rtpHeader.getSequence());
-        }
-
-        m_pktLastSeq = m_pktSeq;
-        m_pktNextSeq = rtpHeader.getSequence() + 1;
-        if (m_pktNextSeq > UINT16_MAX) {
-            m_pktNextSeq = 0U;
-        }
+        // TODO: maybe validate the packet sequence coming from the FNE?
 
         // process incoming message frame opcodes
         switch (fneHeader.getFunction()) {
         case NET_FUNC_PROTOCOL:
             {
                 if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
+                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_DMR)
                     if (m_enabled && m_dmrEnabled) {
                         if (m_debug)
@@ -248,6 +241,7 @@ void Network::clock(uint32_t ms)
 #endif // defined(ENABLE_DMR)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
+                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_P25)
                     if (m_enabled && m_p25Enabled) {
                         if (m_debug)
@@ -260,6 +254,7 @@ void Network::clock(uint32_t ms)
 #endif // defined(ENABLE_P25)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
+                    m_lastPeerId = fneHeader.getPeerId();
 #if defined(ENABLE_NXDN)
                     if (m_enabled && m_nxdnEnabled) {
                         if (m_debug)
@@ -506,7 +501,7 @@ void Network::close()
         ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
 
         m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, 
-            { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
+            { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
         m_frameQueue->flushQueue();
     }
 
@@ -540,7 +535,7 @@ bool Network::writeLogin()
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
     m_frameQueue->enqueueMessage(buffer, 8U, createStreamId(), m_peerId, 
-        { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
+        { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -570,7 +565,7 @@ bool Network::writeAuthorisation()
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
     m_frameQueue->enqueueMessage(out, 40U, createStreamId(), m_peerId, 
-        { NET_FUNC_RPTK, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
+        { NET_FUNC_RPTK, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -628,7 +623,7 @@ bool Network::writeConfig()
     }
 
     m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, createStreamId(), m_peerId, 
-        { NET_FUNC_RPTC, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
+        { NET_FUNC_RPTC, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -645,6 +640,6 @@ bool Network::writePing()
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
     m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId, 
-        { NET_FUNC_PING, NET_SUBFUNC_NOP }, m_addr, m_addrLen);
+        { NET_FUNC_PING, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }

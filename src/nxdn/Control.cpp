@@ -137,6 +137,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_lastPeerId(0U),
     m_dumpRCCH(dumpRCCHData),
     m_verbose(verbose),
     m_debug(debug)
@@ -747,13 +748,15 @@ void Control::processNetwork()
         return;
     }
 
+    m_lastPeerId = m_network->lastPeerId();
+
     uint8_t messageType = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
     if (m_debug) {
-        LogDebug(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
+        LogDebug(LOG_NET, "NXDN, peerId = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", m_lastPeerId, messageType, srcId, dstId, length);
     }
 
     lc::RTCH lc;

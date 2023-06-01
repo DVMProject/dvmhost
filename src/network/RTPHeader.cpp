@@ -34,7 +34,6 @@ using namespace network::frame;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-uint16_t RTPHeader::m_currentSequence = 0;
 std::chrono::time_point<std::chrono::high_resolution_clock> RTPHeader::m_wcStart = std::chrono::time_point<std::chrono::high_resolution_clock>();
 
 // ---------------------------------------------------------------------------
@@ -43,8 +42,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> RTPHeader::m_wcStart
 /// <summary>
 /// Initializes a new instance of the RTPHeader class.
 /// </summary>
-/// <param name="noIncrement">Disables setting and incrementing the sequence value.</param>
-RTPHeader::RTPHeader(bool noIncrement) :
+RTPHeader::RTPHeader() :
     m_version(2U),
     m_padding(false),
     m_extension(false),
@@ -58,14 +56,6 @@ RTPHeader::RTPHeader(bool noIncrement) :
     std::random_device rd;
     std::mt19937 mt(rd());
     m_random = mt;
-
-    if (!noIncrement) {
-        m_seq = m_currentSequence;
-        ++m_currentSequence;
-        if (m_currentSequence > UINT16_MAX) {
-            m_currentSequence = 0U;
-        }
-    }
 }
 
 /// <summary>

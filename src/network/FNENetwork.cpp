@@ -55,6 +55,8 @@ using namespace network::fne;
 /// <param name="port">Network port number.</param>
 /// <param name="peerId">Unique ID on the network.</param>
 /// <param name="password">Network authentication password.</param>
+/// <param name="debug">Flag indicating whether network debug is enabled.</param>
+/// <param name="verbose">Flag indicating whether network verbose logging is enabled.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
@@ -64,7 +66,7 @@ using namespace network::fne;
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
+    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
     uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
@@ -82,7 +84,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_maintainenceTimer(1000U, pingTime),
-    m_updateLookupTimer(1000U, (updateLookupTime * 60U))
+    m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
+    m_verbose(verbose)
 {
     assert(host != nullptr);
     assert(!address.empty());
@@ -165,7 +168,7 @@ void FNENetwork::clock(uint32_t ms)
 
     sockaddr_storage address;
     uint32_t addrLen;
-    frame::RTPHeader rtpHeader = frame::RTPHeader(true);
+    frame::RTPHeader rtpHeader = frame::RTPHeader();
     frame::RTPFNEHeader fneHeader;
     int length = 0U;
 
@@ -181,15 +184,14 @@ void FNENetwork::clock(uint32_t ms)
         // update current peer stream ID
         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
             FNEPeerConnection connection = m_peers[peerId];
-            connection.currStreamId(streamId);
 
             uint16_t pktSeq = rtpHeader.getSequence();
-            connection.pktSeq(pktSeq);
 
-            if (pktSeq != connection.pktNextSeq()) {
-                LogWarning(LOG_NET, "PEER %u Packet out-of-sequence; %u != %u", peerId, pktSeq, rtpHeader.getSequence());
+            if ((connection.currStreamId() == streamId) && (pktSeq != connection.pktNextSeq())) {
+                LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, rtpHeader.getSequence());
             }
 
+            connection.currStreamId(streamId);
             connection.pktLastSeq(pktSeq);
             connection.pktNextSeq(pktSeq + 1);
             if (connection.pktNextSeq() > UINT16_MAX) {
@@ -529,7 +531,10 @@ void FNENetwork::clock(uint32_t ms)
                                 ::memcpy(rawPayload, buffer.get() + 12U, length - 12U);
                                 std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
 
-                                ::LogInfo("%u %s", peerId, payload.c_str());
+                                bool currState = g_disableTimeDisplay;
+                                g_disableTimeDisplay = true;
+                                ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
+                                g_disableTimeDisplay = currState;
                             }
                             else {
                                 writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);
@@ -831,8 +836,9 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
         uint32_t streamId = m_peers[peerId].currStreamId();
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
+        uint16_t pktSeq = m_peers[peerId].pktLastSeq();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
         if (queueOnly)
             return true;
         return m_frameQueue->flushQueue();
@@ -936,7 +942,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
     
     m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId,
-        { NET_FUNC_NAK, NET_SUBFUNC_NOP }, addr, addrLen);
+        { NET_FUNC_NAK, NET_SUBFUNC_NOP }, 0U, addr, addrLen);
     return m_frameQueue->flushQueue();
 }
 
@@ -952,8 +958,9 @@ void FNENetwork::writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, 
         uint32_t streamId = peer.second.currStreamId();
         sockaddr_storage addr = peer.second.socketStorage();
         uint32_t addrLen = peer.second.sockStorageLen();
+        uint16_t pktSeq = peer.second.pktLastSeq();
 
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, addr, addrLen);
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
     }
 
     m_frameQueue->flushQueue();

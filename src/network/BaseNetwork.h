@@ -262,19 +262,16 @@ namespace network
         UDPSocket* m_socket;
         FrameQueue* m_frameQueue;
 
-        uint32_t* m_dmrStreamId;
-        uint32_t m_p25StreamId;
-        uint32_t m_nxdnStreamId;
-
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
         RingBuffer<uint8_t> m_rxNXDNData;
 
         RingBuffer<uint8_t> m_rxGrantData;
 
-        p25::Audio m_audio;
-
         std::mt19937 m_random;
+
+        /// <summary>Helper to update the RTP packet sequence.</summary>
+        uint16_t pktSeq(bool reset = false);
 
         /// <summary>Generates a new stream ID.</summary>
         uint32_t createStreamId() { std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX); return dist(m_random); }
@@ -301,6 +298,15 @@ namespace network
         
         /// <summary>Creates an NXDN frame message.</summary>
         UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
+    
+    private:
+        uint32_t* m_dmrStreamId;
+        uint32_t m_p25StreamId;
+        uint32_t m_nxdnStreamId;
+
+        uint16_t m_pktSeq;
+
+        p25::Audio m_audio;
     };
 } // namespace network
 

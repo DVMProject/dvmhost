@@ -69,7 +69,7 @@ static FILE* m_fpLog = nullptr;
 static FILE* m_actFpLog = nullptr;
 
 static uint32_t m_displayLevel = 2U;
-static bool m_disableTimeDisplay = false;
+bool g_disableTimeDisplay = false;
 
 static struct tm m_tm;
 static struct tm m_actTm;
@@ -261,7 +261,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
     m_fileRoot = fileRoot;
     m_fileLevel = fileLevel;
     m_displayLevel = displayLevel;
-    m_disableTimeDisplay = disableTimeDisplay;
+    g_disableTimeDisplay = disableTimeDisplay;
     return ::LogOpen();
 }
 
@@ -282,15 +282,15 @@ void LogFinalise()
 /// </summary>
 /// <param name="level">Log level.</param>
 /// <param name="module">Module name the log entry was genearted from.</param>
-/// <param name="msg">Formatted string to write to activity log.</param>
+/// <param name="fmt">Formatted string to write to the log.</param>
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != nullptr);
 #if defined(CATCH2_TEST_COMPILATION)
-    m_disableTimeDisplay = true;
+    g_disableTimeDisplay = true;
 #endif
     char buffer[LOG_BUFFER_LEN];
-    if (!m_disableTimeDisplay) {
+    if (!g_disableTimeDisplay) {
         struct timeval now;
         ::gettimeofday(&now, NULL);
 
@@ -308,7 +308,12 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
         }
         else {
-            ::sprintf(buffer, "%c: ", LEVELS[level]);
+            if (level >= 9999U) {
+                ::sprintf(buffer, "U: ");
+            }
+            else {
+                ::sprintf(buffer, "%c: ", LEVELS[level]);
+            }
         }
     }
 
@@ -345,7 +350,8 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         ::fflush(stdout);
     }
 
-    if (level >= 6U) {        // Fatal
+    // fatal error (specially allow any log levels above 9999)
+    if (level >= 6U && level < 9999U) {
         ::fclose(m_fpLog);
         exit(1);
     }

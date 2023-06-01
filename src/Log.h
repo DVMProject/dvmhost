@@ -63,6 +63,12 @@
 #define LogFatal(_module, fmt, ...)     Log(6U, _module, fmt, ##__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
+//  Externs
+// ---------------------------------------------------------------------------
+
+extern bool g_disableTimeDisplay;
+
+// ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
 /// <summary>Sets the instance of the Network class to transfer the activity log with.</summary>

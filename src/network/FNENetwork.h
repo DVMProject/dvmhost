@@ -69,8 +69,7 @@ namespace network
             m_pingsReceived(0U),
             m_config(),
             m_pktLastSeq(0U),
-            m_pktNextSeq(1U),
-            m_pktSeq(0U)
+            m_pktNextSeq(1U)
         {
             /* stub */
         }
@@ -91,8 +90,7 @@ namespace network
             m_pingsReceived(0U),
             m_config(),
             m_pktLastSeq(0U),
-            m_pktNextSeq(1U),
-            m_pktSeq(0U)
+            m_pktNextSeq(1U)
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
@@ -117,7 +115,6 @@ namespace network
                 m_config = data.m_config;
                 m_pktLastSeq = data.m_pktLastSeq;
                 m_pktNextSeq = data.m_pktNextSeq;
-                m_pktSeq = data.m_pktSeq;
             }
 
             return *this;
@@ -160,8 +157,6 @@ namespace network
         __PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
         /// <summary>Calculated next RTP sequence.</summary>
         __PROPERTY_PLAIN(uint16_t, pktNextSeq, pktNextSeq);
-        /// <summary>RTP sequence.</summary>
-        __PROPERTY_PLAIN(uint16_t, pktSeq, pktSeq);
     };
 
     // ---------------------------------------------------------------------------
@@ -173,7 +168,7 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
+            bool debug, bool verbose, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
             uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
@@ -229,6 +224,8 @@ namespace network
 
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;
+
+        bool m_verbose;
 
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
         void writeWhitelistRIDs(uint32_t peerId, bool queueOnly = false);

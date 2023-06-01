@@ -73,6 +73,10 @@ namespace network
 
         /// <summary>Closes connection to the network.</summary>
         void close();
+    
+    public:
+        /// <summary>Gets the last received peer ID.</summary>
+        __READONLY_PROPERTY_PLAIN(uint32_t, lastPeerId, lastPeerId);
 
     private:
         std::string m_address;
@@ -97,8 +101,6 @@ namespace network
         Timer m_timeoutTimer;
 
         uint16_t m_pktLastSeq;
-        uint16_t m_pktNextSeq;
-        uint16_t m_pktSeq;
 
         /** station metadata */
         std::string m_identity;

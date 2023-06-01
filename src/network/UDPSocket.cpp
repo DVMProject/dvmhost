@@ -294,6 +294,8 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
         return false;
     }
 
+    // bryanb: this is the same as above -- but for some assinine reason prevents
+    // weirdness
     if (buffers.size() == 0U) {
         return false;
     }

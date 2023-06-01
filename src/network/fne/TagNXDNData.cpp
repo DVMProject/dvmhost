@@ -105,8 +105,10 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 }
 
                 m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, data, len, true);
-                LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
-                    peerId, peer.first, messageType, srcId, dstId, len);
+                if (m_network->m_verbose) {
+                    LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u", 
+                        peerId, peer.first, messageType, srcId, dstId, len);
+                }
             }
         }
 

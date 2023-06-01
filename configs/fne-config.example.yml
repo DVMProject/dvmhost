@@ -41,6 +41,8 @@ master:
     port: 62031
     # FNE access password.
     password: RPT1234
+    # Flag indicating whether or not verbose logging is enabled.
+    verbose: true
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 

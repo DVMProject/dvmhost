@@ -53,7 +53,7 @@ namespace network
         class RTPHeader {
         public:
             /// <summary>Initializes a new instance of the RTPHeader class.</summary>
-            RTPHeader(bool noIncrement = false);
+            RTPHeader();
             /// <summary>Finalizes a instance of the RTPHeader class.</summary>
             ~RTPHeader();
 
@@ -76,14 +76,13 @@ namespace network
             /// <summary>Format of the payload contained within the packet.</summary>
             __PROPERTY(uint8_t, payloadType, PayloadType);
             /// <summary>Sequence number for the RTP packet.</summary>
-            __READONLY_PROPERTY(uint16_t, seq, Sequence);
+            __PROPERTY(uint16_t, seq, Sequence);
             /// <summary>RTP packet timestamp.</summary>
             __PROPERTY(uint32_t, timestamp, Timestamp);
             /// <summary>Synchronization Source ID.</summary>
             __PROPERTY(uint32_t, ssrc, SSRC);
         
         private:
-            static uint16_t m_currentSequence;
             static std::chrono::time_point<std::chrono::high_resolution_clock> m_wcStart;
 
             std::mt19937 m_random;

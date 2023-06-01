@@ -138,6 +138,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_lastPeerId(0U),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1050,6 +1051,8 @@ void Control::processNetwork()
         return;
     }
 
+    m_lastPeerId = m_network->lastPeerId();
+
     uint8_t lco = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
@@ -1064,7 +1067,7 @@ void Control::processNetwork()
     uint8_t frameType = p25::P25_FT_DATA_UNIT;
 
     if (m_debug) {
-        LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+        LogDebug(LOG_NET, "P25, peerId = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", m_lastPeerId, duid, lco, MFId, srcId, dstId, length);
     }
 
     lc::LC control;
@@ -1091,7 +1094,7 @@ void Control::processNetwork()
             }
 
             if (m_debug) {
-                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+                LogDebug(LOG_NET, "P25, peerId = %u, HDU algId = $%02X, kId = $%02X", m_lastPeerId, algId, kid);
                 Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
             }
 

@@ -85,6 +85,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_tsccPayloadActive(false),
     m_ccRunning(false),
     m_ccHalted(false),
+    m_lastPeerId(0U),
     m_dumpCSBKData(dumpCSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -595,69 +596,85 @@ void Control::processNetwork()
     uint32_t length = 0U;
     bool ret = false;
     UInt8Array buffer = m_network->readDMR(ret, length);
-    if (ret) {
-        data::Data data;
+    if (!ret)
+        return;
+    if (length == 0U)
+        return;
+    if (buffer == nullptr) {
+        return;
+    }
 
-        uint8_t seqNo = buffer[4U];
+    m_lastPeerId = m_network->lastPeerId();
 
-        uint32_t srcId = __GET_UINT16(buffer, 5U);
-        uint32_t dstId = __GET_UINT16(buffer, 8U);
+    data::Data data;
 
-        uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+    uint8_t seqNo = buffer[4U];
 
-        uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-        // DMO mode slot disabling
-        if (slotNo == 1U && !m_network->getDuplex())
-            return;
+    uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
 
-        // Individual slot disabling
-        if (slotNo == 1U && !m_network->getDMRSlot1())
-            return;
-        if (slotNo == 2U && !m_network->getDMRSlot2())
-            return;
+    uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
-        data.setSeqNo(seqNo);
-        data.setSlotNo(slotNo);
-        data.setSrcId(srcId);
-        data.setDstId(dstId);
-        data.setFLCO(flco);
+    if (slotNo > 3U) {
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        return;
+    }
 
-        bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
-        bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
+    // DMO mode slot disabling
+    if (slotNo == 1U && !m_network->getDuplex()) {
+        LogError(LOG_DMR, "DMR/DMO, invalid slot, slotNo = %u", slotNo);
+        return;
+    }
 
-        if (m_debug) {
-            LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
-        }
+    // Individual slot disabling
+    if (slotNo == 1U && !m_network->getDMRSlot1()) {
+        LogError(LOG_DMR, "DMR, invalid slot, slot 1 disabled, slotNo = %u", slotNo);
+        return;
+    }
+    if (slotNo == 2U && !m_network->getDMRSlot2()) {
+        LogError(LOG_DMR, "DMR, invalid slot, slot 2 disabled, slotNo = %u", slotNo);
+        return;
+    }
 
-        if (dataSync) {
-            uint8_t dataType = buffer[15U] & 0x0FU;
-            data.setData(buffer.get() + 20U);
-            data.setDataType(dataType);
-            data.setN(0U);
-        }
-        else if (voiceSync) {
-            data.setData(buffer.get() + 20U);
-            data.setDataType(dmr::DT_VOICE_SYNC);
-            data.setN(0U);
-        }
-        else {
-            uint8_t n = buffer[15U] & 0x0FU;
-            data.setData(buffer.get() + 20U);
-            data.setDataType(dmr::DT_VOICE);
-            data.setN(n);
-        }
+    data.setSeqNo(seqNo);
+    data.setSlotNo(slotNo);
+    data.setSrcId(srcId);
+    data.setDstId(dstId);
+    data.setFLCO(flco);
 
-        switch (slotNo) {
-            case 1U:
-                m_slot1->processNetwork(data);
-                break;
-            case 2U:
-                m_slot2->processNetwork(data);
-                break;
-            default:
-                LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
-                break;
-        }
+    bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
+    bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "DMR, peerId = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", m_lastPeerId, seqNo, srcId, dstId, flco, slotNo, length);
+    }
+
+    if (dataSync) {
+        uint8_t dataType = buffer[15U] & 0x0FU;
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dataType);
+        data.setN(0U);
+    }
+    else if (voiceSync) {
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dmr::DT_VOICE_SYNC);
+        data.setN(0U);
+    }
+    else {
+        uint8_t n = buffer[15U] & 0x0FU;
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dmr::DT_VOICE);
+        data.setN(n);
+    }
+
+    switch (slotNo) {
+        case 1U:
+            m_slot1->processNetwork(data);
+            break;
+        case 2U:
+            m_slot2->processNetwork(data);
+            break;
     }
 }

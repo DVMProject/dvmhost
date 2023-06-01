@@ -153,6 +153,8 @@ namespace dmr
         bool m_ccRunning;
         bool m_ccHalted;
 
+        uint32_t m_lastPeerId;
+
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;

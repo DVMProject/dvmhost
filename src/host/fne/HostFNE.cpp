@@ -321,6 +321,7 @@ bool HostFNE::createMasterNetwork()
     uint16_t port = (uint16_t)masterConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
     uint32_t id = masterConf["peerId"].as<uint32_t>(1001U);
     std::string password = masterConf["password"].as<std::string>();
+    bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
 
     m_dmrEnabled = masterConf["allowDMRTraffic"].as<bool>(true);
@@ -335,12 +336,16 @@ bool HostFNE::createMasterNetwork()
     LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
     LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
 
+    if (verbose) {
+        LogInfo("    Verbose: yes");
+    }
+
     if (debug) {
         LogInfo("    Debug: yes");
     }
 
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
+    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, m_allowActivityTransfer, m_allowDiagnosticTransfer, 
         m_pingTime, m_updateLookupTime);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
