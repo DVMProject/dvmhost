@@ -755,6 +755,6 @@ bool Network::writePing()
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
     m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId, 
-        { NET_FUNC_PING, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
+        { NET_FUNC_PING, NET_SUBFUNC_NOP }, 0U, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
