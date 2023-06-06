@@ -176,10 +176,10 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_openPortHandler(nullptr),
     m_closePortHandler(nullptr),
     m_rspHandler(nullptr),
-    m_rxDMRData1(dmrQueueSize, "Modem RX DMR1"),
-    m_rxDMRData2(dmrQueueSize, "Modem RX DMR2"),
-    m_rxP25Data(p25QueueSize, "Modem RX P25"),
-    m_rxNXDNData(nxdnQueueSize, "Modem RX NXDN"),
+    m_rxDMRQueue1(dmrQueueSize, "Modem RX DMR1"),
+    m_rxDMRQueue2(dmrQueueSize, "Modem RX DMR2"),
+    m_rxP25Queue(p25QueueSize, "Modem RX P25"),
+    m_rxNXDNQueue(nxdnQueueSize, "Modem RX NXDN"),
     m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 4U),
@@ -604,15 +604,15 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = m_length - 2U;
-            m_rxDMRData1.addData(&data, 1U);
+            m_rxDMRQueue1.addData(&data, 1U);
 
             if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
                 data = TAG_EOT;
             else
                 data = TAG_DATA;
-            m_rxDMRData1.addData(&data, 1U);
+            m_rxDMRQueue1.addData(&data, 1U);
 
-            m_rxDMRData1.addData(m_buffer + 3U, m_length - 3U);
+            m_rxDMRQueue1.addData(m_buffer + 3U, m_length - 3U);
 #endif // defined(ENABLE_DMR)
         }
         break;
@@ -629,15 +629,15 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = m_length - 2U;
-            m_rxDMRData2.addData(&data, 1U);
+            m_rxDMRQueue2.addData(&data, 1U);
 
             if (m_buffer[3U] == (dmr::DMR_SYNC_DATA | dmr::DT_TERMINATOR_WITH_LC))
                 data = TAG_EOT;
             else
                 data = TAG_DATA;
-            m_rxDMRData2.addData(&data, 1U);
+            m_rxDMRQueue2.addData(&data, 1U);
 
-            m_rxDMRData2.addData(m_buffer + 3U, m_length - 3U);
+            m_rxDMRQueue2.addData(m_buffer + 3U, m_length - 3U);
 #endif // defined(ENABLE_DMR)
         }
         break;
@@ -654,10 +654,10 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = 1U;
-            m_rxDMRData1.addData(&data, 1U);
+            m_rxDMRQueue1.addData(&data, 1U);
 
             data = TAG_LOST;
-            m_rxDMRData1.addData(&data, 1U);
+            m_rxDMRQueue1.addData(&data, 1U);
 #endif // defined(ENABLE_DMR)
         }
         break;
@@ -674,10 +674,10 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = 1U;
-            m_rxDMRData2.addData(&data, 1U);
+            m_rxDMRQueue2.addData(&data, 1U);
 
             data = TAG_LOST;
-            m_rxDMRData2.addData(&data, 1U);
+            m_rxDMRQueue2.addData(&data, 1U);
 #endif // defined(ENABLE_DMR)
         }
         break;
@@ -695,12 +695,12 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = m_length - 2U;
-            m_rxP25Data.addData(&data, 1U);
+            m_rxP25Queue.addData(&data, 1U);
 
             data = TAG_DATA;
-            m_rxP25Data.addData(&data, 1U);
+            m_rxP25Queue.addData(&data, 1U);
 
-            m_rxP25Data.addData(m_buffer + 3U, m_length - 3U);
+            m_rxP25Queue.addData(m_buffer + 3U, m_length - 3U);
 #endif // defined(ENABLE_P25)
         }
         break;
@@ -717,10 +717,10 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = 1U;
-            m_rxP25Data.addData(&data, 1U);
+            m_rxP25Queue.addData(&data, 1U);
 
             data = TAG_LOST;
-            m_rxP25Data.addData(&data, 1U);
+            m_rxP25Queue.addData(&data, 1U);
 #endif // defined(ENABLE_P25)
         }
         break;
@@ -738,12 +738,12 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = m_length - 2U;
-            m_rxNXDNData.addData(&data, 1U);
+            m_rxNXDNQueue.addData(&data, 1U);
 
             data = TAG_DATA;
-            m_rxNXDNData.addData(&data, 1U);
+            m_rxNXDNQueue.addData(&data, 1U);
 
-            m_rxNXDNData.addData(m_buffer + 3U, m_length - 3U);
+            m_rxNXDNQueue.addData(m_buffer + 3U, m_length - 3U);
 #endif // defined(ENABLE_NXDN)
         }
         break;
@@ -760,10 +760,10 @@ void Modem::clock(uint32_t ms)
             }
 
             uint8_t data = 1U;
-            m_rxNXDNData.addData(&data, 1U);
+            m_rxNXDNQueue.addData(&data, 1U);
 
             data = TAG_LOST;
-            m_rxNXDNData.addData(&data, 1U);
+            m_rxNXDNQueue.addData(&data, 1U);
 #endif // defined(ENABLE_NXDN)
         }
         break;
@@ -856,8 +856,8 @@ void Modem::clock(uint32_t ms)
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, isHotspot = %u, dmr = %u / %u, p25 = %u / %u, nxdn = %u / %u, modemState = %u, tx = %u, adcOverflow = %u, rxOverflow = %u, txOverflow = %u, dacOverflow = %u, dmrSpace1 = %u, dmrSpace2 = %u, p25Space = %u, nxdnSpace = %u",
                     m_isHotspot, dmrEnable, m_dmrEnabled, p25Enable, m_p25Enabled, nxdnEnable, m_nxdnEnabled, m_modemState, m_tx, adcOverflow, rxOverflow, txOverflow, dacOverflow, m_dmrSpace1, m_dmrSpace2, m_p25Space, m_nxdnSpace);
                 LogDebug(LOG_MODEM, "Modem::clock(), CMD_GET_STATUS, rxDMRData1 size = %u, len = %u, free = %u; rxDMRData2 size = %u, len = %u, free = %u, rxP25Data size = %u, len = %u, free = %u, rxNXDNData size = %u, len = %u, free = %u",
-                    m_rxDMRData1.length(), m_rxDMRData1.dataSize(), m_rxDMRData1.freeSpace(), m_rxDMRData2.length(), m_rxDMRData2.dataSize(), m_rxDMRData2.freeSpace(),
-                    m_rxP25Data.length(), m_rxP25Data.dataSize(), m_rxP25Data.freeSpace(), m_rxNXDNData.length(), m_rxNXDNData.dataSize(), m_rxNXDNData.freeSpace());
+                    m_rxDMRQueue1.length(), m_rxDMRQueue1.dataSize(), m_rxDMRQueue1.freeSpace(), m_rxDMRQueue2.length(), m_rxDMRQueue2.dataSize(), m_rxDMRQueue2.freeSpace(),
+                    m_rxP25Queue.length(), m_rxP25Queue.dataSize(), m_rxP25Queue.freeSpace(), m_rxNXDNQueue.length(), m_rxNXDNQueue.dataSize(), m_rxNXDNQueue.freeSpace());
             }
 
             m_inactivityTimer.start();
@@ -914,16 +914,16 @@ void Modem::close()
 /// </summary>
 /// <param name="data">Buffer to write frame data to.</param>
 /// <returns>Length of data read from ring buffer.</returns>
-uint32_t Modem::readDMRData1(uint8_t* data)
+uint32_t Modem::readDMRFrame1(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_rxDMRData1.isEmpty())
+    if (m_rxDMRQueue1.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_rxDMRData1.getData(&len, 1U);
-    m_rxDMRData1.getData(data, len);
+    m_rxDMRQueue1.getData(&len, 1U);
+    m_rxDMRQueue1.getData(data, len);
 
     return len;
 }
@@ -933,16 +933,16 @@ uint32_t Modem::readDMRData1(uint8_t* data)
 /// </summary>
 /// <param name="data">Buffer to write frame data to.</param>
 /// <returns>Length of data read from ring buffer.</returns>
-uint32_t Modem::readDMRData2(uint8_t* data)
+uint32_t Modem::readDMRFrame2(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_rxDMRData2.isEmpty())
+    if (m_rxDMRQueue2.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_rxDMRData2.getData(&len, 1U);
-    m_rxDMRData2.getData(data, len);
+    m_rxDMRQueue2.getData(&len, 1U);
+    m_rxDMRQueue2.getData(data, len);
 
     return len;
 }
@@ -952,16 +952,16 @@ uint32_t Modem::readDMRData2(uint8_t* data)
 /// </summary>
 /// <param name="data">Buffer to write frame data to.</param>
 /// <returns>Length of data read from ring buffer.</returns>
-uint32_t Modem::readP25Data(uint8_t* data)
+uint32_t Modem::readP25Frame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_rxP25Data.isEmpty())
+    if (m_rxP25Queue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_rxP25Data.getData(&len, 1U);
-    m_rxP25Data.getData(data, len);
+    m_rxP25Queue.getData(&len, 1U);
+    m_rxP25Queue.getData(data, len);
 
     return len;
 }
@@ -971,16 +971,16 @@ uint32_t Modem::readP25Data(uint8_t* data)
 /// </summary>
 /// <param name="data">Buffer to write frame data to.</param>
 /// <returns>Length of data read from ring buffer.</returns>
-uint32_t Modem::readNXDNData(uint8_t* data)
+uint32_t Modem::readNXDNFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_rxNXDNData.isEmpty())
+    if (m_rxNXDNQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_rxNXDNData.getData(&len, 1U);
-    m_rxNXDNData.getData(data, len);
+    m_rxNXDNQueue.getData(&len, 1U);
+    m_rxNXDNQueue.getData(data, len);
 
     return len;
 }
@@ -1079,7 +1079,7 @@ bool Modem::hasError() const
 /// <summary>
 /// Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.
 /// </summary>
-void Modem::clearDMRData1()
+void Modem::clearDMRFrame1()
 {
     // TODO -- implement modem side buffer clear
 }
@@ -1087,7 +1087,7 @@ void Modem::clearDMRData1()
 /// <summary>
 /// Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.
 /// </summary>
-void Modem::clearDMRData2()
+void Modem::clearDMRFrame2()
 {
     // TODO -- implement modem side buffer clear
 }
@@ -1095,7 +1095,7 @@ void Modem::clearDMRData2()
 /// <summary>
 /// Clears any buffered P25 frame data to be sent to the air interface modem.
 /// </summary>
-void Modem::clearP25Data()
+void Modem::clearP25Frame()
 {
     uint8_t buffer[3U];
 
@@ -1111,7 +1111,7 @@ void Modem::clearP25Data()
 /// <summary>
 /// Clears any buffered NXDN frame data to be sent to the air interface modem.
 /// </summary>
-void Modem::clearNXDNData()
+void Modem::clearNXDNFrame()
 {
     // TODO -- implement modem side buffer clear
 }
@@ -1121,7 +1121,7 @@ void Modem::clearNXDNData()
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
+void Modem::injectDMRFrame1(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1136,14 +1136,14 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
         Utils::dump(1U, "Injected DMR Slot 1 Data", data, length);
 
     uint8_t val = length;
-    m_rxDMRData1.addData(&val, 1U);
+    m_rxDMRQueue1.addData(&val, 1U);
 
     val = TAG_DATA;
-    m_rxDMRData1.addData(&val, 1U);
+    m_rxDMRQueue1.addData(&val, 1U);
     val = dmr::DMR_SYNC_VOICE & dmr::DMR_SYNC_DATA;    // valid sync
-    m_rxDMRData1.addData(&val, 1U);
+    m_rxDMRQueue1.addData(&val, 1U);
 
-    m_rxDMRData1.addData(data, length);
+    m_rxDMRQueue1.addData(data, length);
 #endif // defined(ENABLE_DMR)
 }
 
@@ -1152,7 +1152,7 @@ void Modem::injectDMRData1(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
+void Modem::injectDMRFrame2(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1167,14 +1167,14 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
         Utils::dump(1U, "Injected DMR Slot 2 Data", data, length);
 
     uint8_t val = length;
-    m_rxDMRData2.addData(&val, 1U);
+    m_rxDMRQueue2.addData(&val, 1U);
 
     val = TAG_DATA;
-    m_rxDMRData2.addData(&val, 1U);
+    m_rxDMRQueue2.addData(&val, 1U);
     val = dmr::DMR_SYNC_VOICE & dmr::DMR_SYNC_DATA;    // valid sync
-    m_rxDMRData2.addData(&val, 1U);
+    m_rxDMRQueue2.addData(&val, 1U);
 
-    m_rxDMRData2.addData(data, length);
+    m_rxDMRQueue2.addData(data, length);
 #endif // defined(ENABLE_DMR)
 }
 
@@ -1183,7 +1183,7 @@ void Modem::injectDMRData2(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-void Modem::injectP25Data(const uint8_t* data, uint32_t length)
+void Modem::injectP25Frame(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_P25)
     assert(data != nullptr);
@@ -1193,14 +1193,14 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
         Utils::dump(1U, "Injected P25 Data", data, length);
 
     uint8_t val = length;
-    m_rxP25Data.addData(&val, 1U);
+    m_rxP25Queue.addData(&val, 1U);
 
     val = TAG_DATA;
-    m_rxP25Data.addData(&val, 1U);
+    m_rxP25Queue.addData(&val, 1U);
     val = 0x01U;    // valid sync
-    m_rxP25Data.addData(&val, 1U);
+    m_rxP25Queue.addData(&val, 1U);
 
-    m_rxP25Data.addData(data, length);
+    m_rxP25Queue.addData(data, length);
 #endif // defined(ENABLE_P25)
 }
 
@@ -1209,7 +1209,7 @@ void Modem::injectP25Data(const uint8_t* data, uint32_t length)
 /// </summary>
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
-void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
+void Modem::injectNXDNFrame(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_NXDN)
     assert(data != nullptr);
@@ -1219,14 +1219,14 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
         Utils::dump(1U, "Injected NXDN Data", data, length);
 
     uint8_t val = length;
-    m_rxNXDNData.addData(&val, 1U);
+    m_rxNXDNQueue.addData(&val, 1U);
 
     val = TAG_DATA;
-    m_rxNXDNData.addData(&val, 1U);
+    m_rxNXDNQueue.addData(&val, 1U);
     val = 0x01U;    // valid sync
-    m_rxNXDNData.addData(&val, 1U);
+    m_rxNXDNQueue.addData(&val, 1U);
 
-    m_rxNXDNData.addData(data, length);
+    m_rxNXDNQueue.addData(data, length);
 #endif // defined(ENABLE_NXDN)
 }
 
@@ -1236,7 +1236,7 @@ void Modem::injectNXDNData(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1293,7 +1293,7 @@ bool Modem::writeDMRData1(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
@@ -1350,7 +1350,7 @@ bool Modem::writeDMRData2(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
+bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_P25)
     assert(data != nullptr);
@@ -1407,7 +1407,7 @@ bool Modem::writeP25Data(const uint8_t* data, uint32_t length)
 /// <param name="data">Data to write to ring buffer.</param>
 /// <param name="length">Length of data to write.</param>
 /// <returns>True, if data is written, otherwise false.</returns>
-bool Modem::writeNXDNData(const uint8_t* data, uint32_t length)
+bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
 {
 #if defined(ENABLE_NXDN)
     assert(data != nullptr);

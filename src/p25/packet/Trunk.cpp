@@ -182,7 +182,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
             m_p25->m_rfState = RS_RF_DATA;
         }
 
-        m_p25->m_queue.clear();
+        m_p25->m_txQueue.clear();
 
         if (preDecodedTSBK == nullptr) {
             tsbk = TSBKFactory::createTSBK(data + 2U);
@@ -1645,8 +1645,8 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
         }
 
         if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Data();
-            m_p25->m_queue.clear();
+            m_p25->m_modem->clearP25Frame();
+            m_p25->m_txQueue.clear();
         }
     }
 
@@ -1789,8 +1789,8 @@ void Trunk::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
         data[1U] = 0x00U;
 
         if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Data();
-            m_p25->m_queue.clear();
+            m_p25->m_modem->clearP25Frame();
+            m_p25->m_txQueue.clear();
         }
 
         m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);

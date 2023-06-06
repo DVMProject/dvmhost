@@ -111,7 +111,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_tidLookup(tidLookup),
     m_affiliations(this, verbose),
     m_idenEntry(),
-    m_queue(queueSize, "P25 Frame"),
+    m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -202,7 +202,7 @@ void Control::reset()
         m_data->resetRF();
     }
 
-    m_queue.clear();
+    m_txQueue.clear();
 }
 
 /// <summary>
@@ -447,7 +447,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_tailOnIdle = true;
 
         m_rfTimeout.stop();
-        m_queue.clear();
+        m_txQueue.clear();
 
         if (m_network != nullptr)
             m_network->resetP25();
@@ -465,7 +465,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_data->resetRF();
 
         m_rfTimeout.stop();
-        m_queue.clear();
+        m_txQueue.clear();
 
         return false;
     }
@@ -597,11 +597,11 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::peekFrameLength()
 {
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.peek(&len, 1U);
+    m_txQueue.peek(&len, 1U);
 
     return len;
 }
@@ -615,12 +615,12 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.getData(&len, 1U);
-    m_queue.getData(data, len);
+    m_txQueue.getData(&len, 1U);
+    m_txQueue.getData(data, len);
 
     return len;
 }
@@ -777,7 +777,7 @@ void Control::clock(uint32_t ms)
 
     // reset states if we're in a rejected state
     if (m_rfState == RS_RF_REJECTED) {
-        m_queue.clear();
+        m_txQueue.clear();
 
         m_voice->resetRF();
         m_voice->resetNet();
@@ -855,12 +855,12 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             return;
     }
 
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (length + 1U)) {
         if (!net) {
-            uint32_t queueLen = m_queue.length();
-            m_queue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
-            LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
+            uint32_t queueLen = m_txQueue.length();
+            m_txQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
+            LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txQueue.length());
             return;
         }
         else {
@@ -874,8 +874,8 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
     }
 
     uint8_t len = length;
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
+    m_txQueue.addData(&len, 1U);
+    m_txQueue.addData(data, len);
 }
 
 #if ENABLE_DFSI_SUPPORT
@@ -1181,7 +1181,7 @@ bool Control::writeRF_ControlData()
 
     // don't add any frames if the queue is full
     uint8_t len = (P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 2U) + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return false;
     }
@@ -1214,7 +1214,7 @@ bool Control::writeRF_ControlEnd()
     if (!m_control)
         return false;
 
-    m_queue.clear();
+    m_txQueue.clear();
     m_ccPacketInterval.stop();
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {

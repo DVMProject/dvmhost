@@ -159,8 +159,8 @@ void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBefor
 
     if (!force) {
         if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Data();
-            m_p25->m_queue.clear();
+            m_p25->m_modem->clearP25Frame();
+            m_p25->m_txQueue.clear();
         }
     }
 

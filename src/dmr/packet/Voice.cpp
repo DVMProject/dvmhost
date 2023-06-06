@@ -192,7 +192,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_rssiCount = 1U;
 
             if (m_slot->m_duplex) {
-                m_slot->m_queue.clear();
+                m_slot->m_txQueue.clear();
                 m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
 
                 for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
@@ -549,7 +549,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_slot->m_rssiCount = 1U;
 
                 if (m_slot->m_duplex) {
-                    m_slot->m_queue.clear();
+                    m_slot->m_txQueue.clear();
                     m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
 
                     for (uint32_t i = 0U; i < NO_HEADERS_DUPLEX; i++)
@@ -700,7 +700,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->m_voice->m_netTalkerId = TALKER_ID_NONE;
 
         if (m_slot->m_duplex) {
-            m_slot->m_queue.clear();
+            m_slot->m_txQueue.clear();
             m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
         }
 
@@ -746,7 +746,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netTimeout = false;
 
             if (m_slot->m_duplex) {
-                m_slot->m_queue.clear();
+                m_slot->m_txQueue.clear();
                 m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
             }
 
@@ -846,7 +846,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netTimeout = false;
 
             if (m_slot->m_duplex) {
-                m_slot->m_queue.clear();
+                m_slot->m_txQueue.clear();
                 m_slot->m_modem->writeDMRAbort(m_slot->m_slotNo);
             }
 

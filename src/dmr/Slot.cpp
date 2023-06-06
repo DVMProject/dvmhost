@@ -113,7 +113,7 @@ uint8_t Slot::m_alohaBackOff = 1U;
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
     bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
-    m_queue(queueSize, "DMR Slot Frame"),
+    m_txQueue(queueSize, "DMR Slot Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -325,12 +325,12 @@ uint32_t Slot::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.getData(&len, 1U);
-    m_queue.getData(data, len);
+    m_txQueue.getData(&len, 1U);
+    m_txQueue.getData(data, len);
 
     return len;
 }
@@ -422,7 +422,7 @@ void Slot::clock()
             if (!m_ccRunning) {
                 m_ccHalted = false;
                 m_ccPrevRunning = m_ccRunning;
-                m_queue.clear(); // clear the frame buffer
+                m_txQueue.clear(); // clear the frame buffer
             }
         }
         else {
@@ -456,7 +456,7 @@ void Slot::clock()
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
-            m_queue.clear(); // clear the frame buffer
+            m_txQueue.clear(); // clear the frame buffer
             m_ccPrevRunning = m_ccRunning;
         }
     }
@@ -543,7 +543,7 @@ void Slot::clock()
 
     if (m_rfState == RS_RF_REJECTED) {
         if (!m_enableTSCC) {
-            m_queue.clear();
+            m_txQueue.clear();
         }
 
         m_rfFrames = 0U;
@@ -799,12 +799,12 @@ void Slot::addFrame(const uint8_t *data, bool net)
     }
 
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         if (!net) {
-            uint32_t queueLen = m_queue.length();
-            m_queue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
-            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_queue.length());
+            uint32_t queueLen = m_txQueue.length();
+            m_txQueue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
             return;
         }
         else {
@@ -817,8 +817,8 @@ void Slot::addFrame(const uint8_t *data, bool net)
         Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
     }
 
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
+    m_txQueue.addData(&len, 1U);
+    m_txQueue.addData(data, len);
 }
 
 /// <summary>
@@ -1002,7 +1002,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         m_ccSeq--;
         if (m_ccSeq < 0U)

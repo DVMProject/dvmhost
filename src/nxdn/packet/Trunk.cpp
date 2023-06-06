@@ -147,7 +147,7 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         m_nxdn->m_rfState = RS_RF_DATA;
     }
 
-    m_nxdn->m_queue.clear();
+    m_nxdn->m_txQueue.clear();
 
     // the layer3 data will only be correct if valid is true
     uint8_t buffer[NXDN_FRAME_LENGTH_BYTES];
@@ -242,7 +242,7 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         return false;
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
-        m_nxdn->m_queue.clear();
+        m_nxdn->m_txQueue.clear();
     }
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
@@ -367,7 +367,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_nxdn->m_queue.freeSpace();
+    uint32_t space = m_nxdn->m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return;
     }
@@ -441,8 +441,8 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (clearBeforeWrite) {
-        m_nxdn->m_modem->clearNXDNData();
-        m_nxdn->m_queue.clear();
+        m_nxdn->m_modem->clearNXDNFrame();
+        m_nxdn->m_txQueue.clear();
     }
 
     if (m_nxdn->m_duplex) {

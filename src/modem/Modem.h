@@ -272,13 +272,13 @@ namespace modem
         void close();
 
         /// <summary>Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer.</summary>
-        uint32_t readDMRData1(uint8_t* data);
+        uint32_t readDMRFrame1(uint8_t* data);
         /// <summary>Reads DMR Slot 2 frame data from the DMR Slot 1 ring buffer.</summary>
-        uint32_t readDMRData2(uint8_t* data);
+        uint32_t readDMRFrame2(uint8_t* data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        uint32_t readP25Data(uint8_t* data);
+        uint32_t readP25Frame(uint8_t* data);
         /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        uint32_t readNXDNData(uint8_t* data);
+        uint32_t readNXDNFrame(uint8_t* data);
 
         /// <summary>Helper to test if the DMR Slot 1 ring buffer has free space.</summary>
         bool hasDMRSpace1() const;
@@ -306,31 +306,31 @@ namespace modem
         bool hasError() const;
 
         /// <summary>Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.</summary>
-        void clearDMRData1();
+        void clearDMRFrame1();
         /// <summary>Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.</summary>
-        void clearDMRData2();
+        void clearDMRFrame2();
         /// <summary>Clears any buffered P25 frame data to be sent to the air interface modem.</summary>
-        void clearP25Data();
+        void clearP25Frame();
         /// <summary>Clears any buffered NXDN frame data to be sent to the air interface modem.</summary>
-        void clearNXDNData();
+        void clearNXDNFrame();
 
         /// <summary>Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.</summary>
-        void injectDMRData1(const uint8_t* data, uint32_t length);
+        void injectDMRFrame1(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject DMR Slot 2 frame data as if it came from the air interface modem.</summary>
-        void injectDMRData2(const uint8_t* data, uint32_t length);
+        void injectDMRFrame2(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject P25 frame data as if it came from the air interface modem.</summary>
-        void injectP25Data(const uint8_t* data, uint32_t length);
+        void injectP25Frame(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject NXDN frame data as if it came from the air interface modem.</summary>
-        void injectNXDNData(const uint8_t* data, uint32_t length);
+        void injectNXDNFrame(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
-        bool writeDMRData1(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame1(const uint8_t* data, uint32_t length);
         /// <summary>Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.</summary>
-        bool writeDMRData2(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame2(const uint8_t* data, uint32_t length);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
-        bool writeP25Data(const uint8_t* data, uint32_t length);
+        bool writeP25Frame(const uint8_t* data, uint32_t length);
         /// <summary>Writes NXDN frame data to the NXDN ring buffer.</summary>
-        bool writeNXDNData(const uint8_t* data, uint32_t length);
+        bool writeNXDNFrame(const uint8_t* data, uint32_t length);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
         bool writeDMRStart(bool tx);
@@ -445,10 +445,10 @@ namespace modem
         std::function<MODEM_OC_PORT_HANDLER> m_closePortHandler;
         std::function<MODEM_RESP_HANDLER> m_rspHandler;
 
-        RingBuffer<uint8_t> m_rxDMRData1;
-        RingBuffer<uint8_t> m_rxDMRData2;
-        RingBuffer<uint8_t> m_rxP25Data;
-        RingBuffer<uint8_t> m_rxNXDNData;
+        RingBuffer<uint8_t> m_rxDMRQueue1;
+        RingBuffer<uint8_t> m_rxDMRQueue2;
+        RingBuffer<uint8_t> m_rxP25Queue;
+        RingBuffer<uint8_t> m_rxNXDNQueue;
 
         bool m_useDFSI;
 

@@ -132,9 +132,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             if (!m_p25->m_dedicatedControl) {
-                m_p25->m_modem->clearP25Data();
+                m_p25->m_modem->clearP25Frame();
             }
-            m_p25->m_queue.clear();
+            m_p25->m_txQueue.clear();
             resetRF();
             resetNet();
         }
@@ -213,9 +213,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // if this is a late entry call, clear states
             if (m_rfLastHDU.getDstId() == 0U) {
                 if (!m_p25->m_dedicatedControl) {
-                    m_p25->m_modem->clearP25Data();
+                    m_p25->m_modem->clearP25Frame();
                 }
-                m_p25->m_queue.clear();
+                m_p25->m_txQueue.clear();
                 resetRF();
                 resetNet();
             }
@@ -876,9 +876,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     if (!m_p25->m_voiceOnControl) {
-                        m_p25->m_modem->clearP25Data();
+                        m_p25->m_modem->clearP25Frame();
                     }
-                    m_p25->m_queue.clear();
+                    m_p25->m_txQueue.clear();
 
                     resetRF();
                     resetNet();

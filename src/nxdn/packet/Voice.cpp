@@ -633,7 +633,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
     assert(data != nullptr);
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
-        m_nxdn->m_queue.clear();
+        m_nxdn->m_txQueue.clear();
 
         resetRF();
         resetNet();

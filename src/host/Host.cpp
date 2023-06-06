@@ -875,7 +875,7 @@ int Host::run()
                     if (m_state == STATE_DMR) {
                         START_DMR_DUPLEX_IDLE(true);
 
-                        m_modem->writeDMRData1(data, len);
+                        m_modem->writeDMRFrame1(data, len);
 
                         // if there is no DMR CC running; run the interrupt macro to stop
                         // any running DMR beacon
@@ -920,7 +920,7 @@ int Host::run()
                     if (m_state == STATE_DMR) {
                         START_DMR_DUPLEX_IDLE(true);
 
-                        m_modem->writeDMRData2(data, len);
+                        m_modem->writeDMRFrame2(data, len);
 
                         // if there is no DMR CC running; run the interrupt macro to stop
                         // any running DMR beacon
@@ -967,9 +967,9 @@ int Host::run()
                             setState(STATE_P25);
                         }
 
-                        // if the state is P25; write P25 data
+                        // if the state is P25; write P25 frame data
                         if (m_state == STATE_P25) {
-                            m_modem->writeP25Data(data, len);
+                            m_modem->writeP25Frame(data, len);
 
                             INTERRUPT_DMR_BEACON;
 
@@ -1047,7 +1047,7 @@ int Host::run()
 
                     // if the state is NXDN; write NXDN data
                     if (m_state == STATE_NXDN) {
-                        m_modem->writeNXDNData(data, len);
+                        m_modem->writeNXDNFrame(data, len);
 
                         INTERRUPT_DMR_BEACON;
 
@@ -1083,7 +1083,7 @@ int Host::run()
         if (dmr != nullptr) {
             // read DMR slot 1 frames from the modem, and if there is any
             // write those frames to the DMR controller
-            len = m_modem->readDMRData1(data);
+            len = m_modem->readDMRFrame1(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
@@ -1144,7 +1144,7 @@ int Host::run()
 
             // read DMR slot 2 frames from the modem, and if there is any
             // write those frames to the DMR controller
-            len = m_modem->readDMRData2(data);
+            len = m_modem->readDMRFrame2(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
@@ -1209,7 +1209,7 @@ int Host::run()
         // read P25 frames from modem, and if there are frames
         // write those frames to the P25 controller
         if (p25 != nullptr) {
-            len = m_modem->readP25Data(data);
+            len = m_modem->readP25Frame(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // process P25 frames
@@ -1283,7 +1283,7 @@ int Host::run()
         // write those frames to the NXDN controller
 #if defined(ENABLE_NXDN)
         if (nxdn != nullptr) {
-            len = m_modem->readNXDNData(data);
+            len = m_modem->readNXDNFrame(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // process NXDN frames
@@ -1590,8 +1590,8 @@ int Host::run()
             if (dmr != nullptr) {
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearDMRData1();
-                        m_modem->clearDMRData2();
+                        m_modem->clearDMRFrame1();
+                        m_modem->clearDMRFrame2();
                     }
 
                     dmr->setCCRunning(false);
@@ -1607,7 +1607,7 @@ int Host::run()
             if (p25 != nullptr) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearP25Data();
+                        m_modem->clearP25Frame();
                         p25->reset();
                     }
 
@@ -1623,7 +1623,7 @@ int Host::run()
             if (nxdn != nullptr) {
                 if (m_nxdnCtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearNXDNData();
+                        m_modem->clearNXDNFrame();
                         nxdn->reset();
                     }
 
@@ -2523,9 +2523,9 @@ void Host::setState(uint8_t state)
 
             m_modem->setState(STATE_IDLE);
 
-            m_modem->clearDMRData1();
-            m_modem->clearDMRData2();
-            m_modem->clearP25Data();
+            m_modem->clearDMRFrame1();
+            m_modem->clearDMRFrame2();
+            m_modem->clearP25Frame();
 
             if (m_state == HOST_STATE_ERROR) {
                 m_modem->sendCWId(m_cwCallsign);

@@ -174,7 +174,7 @@ namespace p25
 
         ::lookups::IdenTable m_idenEntry;
 
-        RingBuffer<uint8_t> m_queue;
+        RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;

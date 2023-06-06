@@ -115,7 +115,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_tidLookup(tidLookup),
     m_affiliations("NXDN Affiliations", verbose),
     m_idenEntry(),
-    m_queue(queueSize, "NXDN Frame"),
+    m_txQueue(queueSize, "NXDN Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -190,7 +190,7 @@ void Control::reset()
         m_data->resetRF();
     }
 
-    m_queue.clear();
+    m_txQueue.clear();
 
     m_rfMask = 0x00U;
     m_rfLC.reset();
@@ -504,12 +504,12 @@ uint32_t Control::getFrame(uint8_t* data)
 {
 	assert(data != nullptr);
 
-	if (m_queue.isEmpty())
+	if (m_txQueue.isEmpty())
 		return 0U;
 
 	uint8_t len = 0U;
-	m_queue.getData(&len, 1U);
-	m_queue.getData(data, len);
+	m_txQueue.getData(&len, 1U);
+	m_txQueue.getData(data, len);
 
 	return len;
 }
@@ -559,7 +559,7 @@ void Control::clock(uint32_t ms)
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
-            m_queue.clear();
+            m_txQueue.clear();
             m_ccPacketInterval.stop();
             m_ccPrevRunning = m_ccRunning;
         }
@@ -619,7 +619,7 @@ void Control::clock(uint32_t ms)
 
     // reset states if we're in a rejected state
     if (m_rfState == RS_RF_REJECTED) {
-        m_queue.clear();
+        m_txQueue.clear();
 
         m_voice->resetRF();
         m_voice->resetNet();
@@ -704,12 +704,12 @@ void Control::addFrame(const uint8_t *data, uint32_t length, bool net)
             return;
     }
 
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (length + 1U)) {
         if (!net) {
-            uint32_t queueLen = m_queue.length();
-            m_queue.resize(queueLen + NXDN_FRAME_LENGTH_BYTES);
-            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
+            uint32_t queueLen = m_txQueue.length();
+            m_txQueue.resize(queueLen + NXDN_FRAME_LENGTH_BYTES);
+            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txQueue.length());
             return;
         }
         else {
@@ -723,8 +723,8 @@ void Control::addFrame(const uint8_t *data, uint32_t length, bool net)
     }
 
     uint8_t len = length;
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
+    m_txQueue.addData(&len, 1U);
+    m_txQueue.addData(data, len);
 }
 
 /// <summary>
@@ -818,7 +818,7 @@ bool Control::writeRF_ControlData()
 
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return false;
     }

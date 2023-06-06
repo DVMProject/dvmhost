@@ -697,7 +697,7 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite)
 {
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_slot->m_queue.freeSpace();
+    uint32_t space = m_slot->m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return;
     }
@@ -725,10 +725,10 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite)
 
     if (clearBeforeWrite) {
         if (m_slot->m_slotNo == 1U)
-            m_slot->m_modem->clearDMRData1();
+            m_slot->m_modem->clearDMRFrame1();
         if (m_slot->m_slotNo == 2U)
-            m_slot->m_modem->clearDMRData2();
-        m_slot->m_queue.clear();
+            m_slot->m_modem->clearDMRFrame2();
+        m_slot->m_txQueue.clear();
     }
 
     if (m_slot->m_duplex)
