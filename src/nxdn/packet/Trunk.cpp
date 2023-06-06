@@ -400,7 +400,8 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// <param name="rcch"></param>
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
-void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
+/// <param name="imm"></param>
+void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, bool imm)
 {
     if (!m_nxdn->m_control)
         return;
@@ -446,7 +447,7 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
     }
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, imm);
     }
 }
 
@@ -615,7 +616,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
     }
 
     // transmit group grant
-    writeRF_Message(rcch.get(), net, true);
+    writeRF_Message_Imm(rcch.get(), net);
     return true;
 }
 
@@ -647,7 +648,7 @@ void Trunk::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason,
             service, srcId, dstId);
     }
 
-    writeRF_Message(rcch.get(), false);
+    writeRF_Message_Imm(rcch.get(), false);
 }
 
 /// <summary>
@@ -708,7 +709,7 @@ bool Trunk::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t
         m_nxdn->m_affiliations.groupAff(srcId, dstId);
     }
 
-    writeRF_Message(rcch.get(), false);
+    writeRF_Message_Imm(rcch.get(), false);
     return ret;
 }
 
@@ -751,7 +752,7 @@ void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
     rcch->setSrcId(srcId);
     rcch->setDstId(srcId);
 
-    writeRF_Message(rcch.get(), true);
+    writeRF_Message_Imm(rcch.get(), true);
 }
 
 /// <summary>

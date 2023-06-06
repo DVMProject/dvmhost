@@ -177,8 +177,10 @@ namespace p25
             /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
             void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
+            /// <summary>Helper to write a immediate single-block P25 TSDU packet.</summary>
+            virtual void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, false, true); }
             /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-            virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false);
+            virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false, bool imm = false);
             /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
             virtual void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>

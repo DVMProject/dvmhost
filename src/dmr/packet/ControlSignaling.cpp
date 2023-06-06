@@ -693,7 +693,8 @@ ControlSignaling::~ControlSignaling()
 /// </summary>
 /// <param name="csbk"></param>
 /// <param name="clearBeforeWrite"></param>
-void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite)
+/// <param name="imm"></param>
+void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool imm)
 {
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
@@ -732,7 +733,7 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite)
     }
 
     if (m_slot->m_duplex)
-        m_slot->addFrame(data);
+        m_slot->addFrame(data, false, imm);
 }
 
 /// <summary>
@@ -749,7 +750,7 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     csbk->setSrcId(DMR_WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
-    writeRF_CSBK(csbk.get());
+    writeRF_CSBK_Imm(csbk.get());
 }
 
 /// <summary>
@@ -766,7 +767,7 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
     csbk->setSrcId(DMR_WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
-    writeRF_CSBK(csbk.get());
+    writeRF_CSBK_Imm(csbk.get());
 }
 
 /// <summary>
@@ -943,7 +944,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         // transmit group grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
-            writeRF_CSBK(csbk.get());
+            writeRF_CSBK_Imm(csbk.get());
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -1018,7 +1019,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         // transmit private grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
-            writeRF_CSBK(csbk.get());
+            writeRF_CSBK_Imm(csbk.get());
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -1176,7 +1177,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         // transmit group grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
-            writeRF_CSBK(csbk.get());
+            writeRF_CSBK_Imm(csbk.get());
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -1223,7 +1224,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         // transmit private grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
-            writeRF_CSBK(csbk.get());
+            writeRF_CSBK_Imm(csbk.get());
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
@@ -1303,7 +1304,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
     csbk->setSrcId(DMR_WUID_REGI);
     csbk->setDstId(srcId);
 
-    writeRF_CSBK(csbk.get());
+    writeRF_CSBK_Imm(csbk.get());
 }
 
 /// <summary>

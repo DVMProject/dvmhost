@@ -1596,7 +1596,8 @@ void Trunk::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="force"></param>
-void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force)
+/// <param name="imm"></param>
+void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force, bool imm)
 {
     if (!m_p25->m_control)
         return;
@@ -1633,6 +1634,11 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
 
+    // bryanb: hack-o-ramma, for now -- we will force any immediate TSDUs as single-block
+    if (imm) {
+        force = true;
+    }
+
     if (!force) {
         if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
             writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
@@ -1654,10 +1660,9 @@ void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWri
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+        m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
     }
 }
-
 
 /// <summary>
 /// Helper to write a network single-block P25 TSDU packet.
@@ -2299,7 +2304,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit group grant
-            writeRF_TSDU_SBF(iosp.get(), net);
+            writeRF_TSDU_SBF_Imm(iosp.get(), net);
         }
         else {
             if (!net) {
@@ -2349,7 +2354,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
             }
 
             // transmit private grant
-            writeRF_TSDU_SBF(iosp.get(), net);
+            writeRF_TSDU_SBF_Imm(iosp.get(), net);
         }
     }
 
@@ -2449,7 +2454,7 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
         LogMessage(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Request), srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), false);
 }
 
 /// <summary>
@@ -2474,7 +2479,7 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
             iosp->getAIV(), iosp->getEX(), iosp->getService(), srcId);
     }
 
-    writeRF_TSDU_SBF(iosp.get(), noNetwork);
+    writeRF_TSDU_SBF_Imm(iosp.get(), noNetwork);
 }
 
 /// <summary>
@@ -2498,7 +2503,7 @@ void Trunk::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, ui
             osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
     }
 
-    writeRF_TSDU_SBF(osp.get(), false);
+    writeRF_TSDU_SBF_Imm(osp.get(), false);
 }
 
 /// <summary>
@@ -2556,7 +2561,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         m_p25->m_affiliations.groupAff(srcId, dstId);
     }
 
-    writeRF_TSDU_SBF(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), false);
     return ret;
 }
 
@@ -2600,7 +2605,7 @@ void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
         }
     }
 
-    writeRF_TSDU_SBF(iosp.get(), true);
+    writeRF_TSDU_SBF_Imm(iosp.get(), true);
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
@@ -2631,7 +2636,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
         osp->setSrcId(P25_WUID_FNE);
         osp->setDstId(srcId);
 
-        writeRF_TSDU_SBF(osp.get(), false);
+        writeRF_TSDU_SBF_Imm(osp.get(), false);
     }
 }
 
@@ -2656,7 +2661,7 @@ void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, u
             osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
     }
 
-    writeRF_TSDU_SBF(osp.get(), false);
+    writeRF_TSDU_SBF_Imm(osp.get(), false);
 }
 
 /// <summary>
@@ -2713,7 +2718,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
         ret = true;
     }
 
-    writeRF_TSDU_SBF(osp.get(), false);
+    writeRF_TSDU_SBF_Imm(osp.get(), false);
     return ret;
 }
 
