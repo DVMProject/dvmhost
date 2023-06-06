@@ -174,6 +174,7 @@ namespace p25
 
         ::lookups::IdenTable m_idenEntry;
 
+        RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
@@ -216,7 +217,7 @@ namespace p25
         bool m_debug;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false);
+        void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
 #if ENABLE_DFSI_SUPPORT
         /// <summary>Process a DFSI data frame from the RF interface.</summary>

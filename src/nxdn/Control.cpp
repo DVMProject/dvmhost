@@ -115,6 +115,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_tidLookup(tidLookup),
     m_affiliations("NXDN Affiliations", verbose),
     m_idenEntry(),
+    m_txImmQueue(queueSize, "NXDN Imm Frame"),
     m_txQueue(queueSize, "NXDN Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
@@ -504,12 +505,20 @@ uint32_t Control::getFrame(uint8_t* data)
 {
 	assert(data != nullptr);
 
-	if (m_txQueue.isEmpty())
+	if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
 		return 0U;
 
 	uint8_t len = 0U;
-	m_txQueue.getData(&len, 1U);
-	m_txQueue.getData(data, len);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.getData(&len, 1U);
+        m_txImmQueue.getData(data, len);
+    }
+    else {
+        m_txQueue.getData(&len, 1U);
+        m_txQueue.getData(data, len);
+    }
 
 	return len;
 }
@@ -689,10 +698,10 @@ void Control::setRCCHVerbose(bool verbose)
 /// <summary>
 /// Add data frame to the data ring buffer.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="net"></param>
-void Control::addFrame(const uint8_t *data, uint32_t length, bool net)
+/// <param name="data">Frame data to add to Tx queue.</param>
+/// <param name="net">Flag indicating whether the data came from the network or not</param>
+/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+void Control::addFrame(const uint8_t *data, bool net, bool imm)
 {
 	assert(data != nullptr);
 
@@ -704,25 +713,47 @@ void Control::addFrame(const uint8_t *data, uint32_t length, bool net)
             return;
     }
 
+    uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
+    if (m_debug) {
+        Utils::symbols("!!! *Tx NXDN", data + 2U, len - 2U);
+    }
+
+    // is this immediate data?
+    if (imm) {
+        // resize immediate queue if necessary (this shouldn't really ever happen)
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (len + 1U)) {
+            if (!net) {
+                uint32_t queueLen = m_txImmQueue.length();
+                m_txImmQueue.resize(queueLen + len);
+                LogError(LOG_P25, "overflow in the NXDN queue while writing imm data; queue free is %u, needed %u; resized was %u is %u", space, len, queueLen, m_txImmQueue.length());
+                return;
+            }
+            else {
+                LogError(LOG_P25, "overflow in the NXDN queue while writing imm network data; queue free is %u, needed %u", space, len);
+                return;
+            }
+        }
+
+        m_txImmQueue.addData(&len, 1U);
+        m_txImmQueue.addData(data, len);
+        return;
+    }
+
     uint32_t space = m_txQueue.freeSpace();
-    if (space < (length + 1U)) {
+    if (space < (len + 1U)) {
         if (!net) {
             uint32_t queueLen = m_txQueue.length();
-            m_txQueue.resize(queueLen + NXDN_FRAME_LENGTH_BYTES);
-            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txQueue.length());
+            m_txQueue.resize(queueLen + len);
+            LogError(LOG_NXDN, "overflow in the NXDN queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, len, queueLen, m_txQueue.length());
             return;
         }
         else {
-            LogError(LOG_NXDN, "overflow in the NXDN queue while writing network data; queue free is %u, needed %u", space, length);
+            LogError(LOG_NXDN, "overflow in the NXDN queue while writing network data; queue free is %u, needed %u", space, len);
             return;
         }
     }
 
-    if (m_debug) {
-        Utils::symbols("!!! *Tx NXDN", data + 2U, length - 2U);
-    }
-
-    uint8_t len = length;
     m_txQueue.addData(&len, 1U);
     m_txQueue.addData(data, len);
 }

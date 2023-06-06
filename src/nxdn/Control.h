@@ -163,6 +163,7 @@ namespace nxdn
 
         lookups::IdenTable m_idenEntry;
 
+        RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
@@ -199,7 +200,7 @@ namespace nxdn
         bool m_debug;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false);
+        void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();

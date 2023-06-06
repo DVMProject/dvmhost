@@ -111,6 +111,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_tidLookup(tidLookup),
     m_affiliations(this, verbose),
     m_idenEntry(),
+    m_txImmQueue(queueSize, "P25 Imm Frame"),
     m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
@@ -202,6 +203,7 @@ void Control::reset()
         m_data->resetRF();
     }
 
+    m_txImmQueue.clear();
     m_txQueue.clear();
 }
 
@@ -597,11 +599,18 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::peekFrameLength()
 {
-    if (m_txQueue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_txQueue.peek(&len, 1U);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.peek(&len, 1U);
+    }
+    else {
+        m_txQueue.peek(&len, 1U);
+    }
 
     return len;
 }
@@ -615,12 +624,20 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_txQueue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_txQueue.getData(&len, 1U);
-    m_txQueue.getData(data, len);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.getData(&len, 1U);
+        m_txImmQueue.getData(data, len);
+    }
+    else {
+        m_txQueue.getData(&len, 1U);
+        m_txQueue.getData(data, len);
+    }
 
     return len;
 }
@@ -840,10 +857,11 @@ void Control::setDebugVerbose(bool debug, bool verbose)
 /// <summary>
 /// Add data frame to the data ring buffer.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="net"></param>
-void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
+/// <param name="data">Frame data to add to Tx queue.</param>
+/// <param name="length">Length of data to add.</param>
+/// <param name="net">Flag indicating whether the data came from the network or not</param>
+/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
 
@@ -855,6 +873,34 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             return;
     }
 
+    if (m_debug) {
+        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
+    }
+
+    // is this immediate data?
+    if (imm) {
+        // resize immediate queue if necessary (this shouldn't really ever happen)
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (length + 1U)) {
+            if (!net) {
+                uint32_t queueLen = m_txImmQueue.length();
+                m_txImmQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
+                LogError(LOG_P25, "overflow in the P25 queue while writing imm data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txImmQueue.length());
+                return;
+            }
+            else {
+                LogError(LOG_P25, "overflow in the P25 queue while writing imm network data; queue free is %u, needed %u", space, length);
+                return;
+            }
+        }
+
+        uint8_t len = length;
+        m_txImmQueue.addData(&len, 1U);
+        m_txImmQueue.addData(data, len);
+        return;
+    }
+
+    // resize immediate queue if necessary (this shouldn't really ever happen)
     uint32_t space = m_txQueue.freeSpace();
     if (space < (length + 1U)) {
         if (!net) {
@@ -867,10 +913,6 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             LogError(LOG_P25, "overflow in the P25 queue while writing network data; queue free is %u, needed %u", space, length);
             return;
         }
-    }
-
-    if (m_debug) {
-        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
     }
 
     uint8_t len = length;

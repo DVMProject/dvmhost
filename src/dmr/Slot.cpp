@@ -113,6 +113,7 @@ uint8_t Slot::m_alohaBackOff = 1U;
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
     bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
+    m_txImmQueue(queueSize, "DMR Imm Slot Frame"),
     m_txQueue(queueSize, "DMR Slot Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
@@ -325,12 +326,20 @@ uint32_t Slot::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_txQueue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_txQueue.getData(&len, 1U);
-    m_txQueue.getData(data, len);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.getData(&len, 1U);
+        m_txImmQueue.getData(data, len);
+    }
+    else {
+        m_txQueue.getData(&len, 1U);
+        m_txQueue.getData(data, len);
+    }
 
     return len;
 }
@@ -787,9 +796,10 @@ void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 /// <summary>
 /// Add data frame to the data ring buffer.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="net"></param>
-void Slot::addFrame(const uint8_t *data, bool net)
+/// <param name="data">Frame data to add to Tx queue.</param>
+/// <param name="net">Flag indicating whether the data came from the network or not</param>
+/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 {
     assert(data != nullptr);
 
@@ -799,6 +809,32 @@ void Slot::addFrame(const uint8_t *data, bool net)
     }
 
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
+    if (m_debug) {
+        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
+    }
+
+    // is this immediate data?
+    if (imm) {
+        // resize immediate queue if necessary (this shouldn't really ever happen)
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (len + 1U)) {
+            if (!net) {
+                uint32_t queueLen = m_txImmQueue.length();
+                m_txImmQueue.resize(queueLen + len);
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
+                return;
+            }
+            else {
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
+                return;
+            }
+        }
+
+        m_txImmQueue.addData(&len, 1U);
+        m_txImmQueue.addData(data, len);
+        return;
+    }
+
     uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         if (!net) {
@@ -811,10 +847,6 @@ void Slot::addFrame(const uint8_t *data, bool net)
             LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
             return;
         }
-    }
-
-    if (m_debug) {
-        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
     }
 
     m_txQueue.addData(&len, 1U);

@@ -135,6 +135,7 @@ namespace dmr
 
         uint32_t m_slotNo;
 
+        RingBuffer<uint8_t> m_txImmQueue;
         RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
@@ -254,7 +255,7 @@ namespace dmr
         static uint8_t m_alohaBackOff;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
-        void addFrame(const uint8_t* data, bool net = false);
+        void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
         /// <summary>Write data frame to the network.</summary>
         void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);
