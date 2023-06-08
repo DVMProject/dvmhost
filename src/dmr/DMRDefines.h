@@ -33,17 +33,6 @@
 
 #include "Defines.h"
 
-// Data Type ID String(s)
-#define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
-#define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
-#define DMR_DT_RATE_12_DATA "DMR_DT_RATE_12_DATA (1/2-rate Data)"
-#define DMR_DT_RATE_34_DATA "DMR_DT_RATE_34_DATA (3/4-rate Data)"
-#define DMR_DT_RATE_1_DATA "DMR_DT_RATE_1_DATA (1-rate Data)"
-#define DMR_DT_VOICE_LC_HEADER "DMR_DT_VOICE_LC_HEADER (Voice Header with Link Control)"
-#define DMR_DT_VOICE_PI_HEADER "DMR_DT_VOICE_PI_HEADER (Voice Header with Privacy Indicator)"
-#define DMR_DT_VOICE_SYNC "DMR_DT_VOICE_SYNC (Voice Data with Sync)"
-#define DMR_DT_VOICE "DMR_DT_VOICE (Voice Data)"
-
 namespace dmr
 {
     // ---------------------------------------------------------------------------
@@ -197,18 +186,29 @@ namespace dmr
 
     // Data Type(s)
     const uint8_t   DT_VOICE_PI_HEADER = 0x00U;
+#define DMR_DT_VOICE_PI_HEADER "DMR_DT_VOICE_PI_HEADER (Voice Header with Privacy Indicator)"
     const uint8_t   DT_VOICE_LC_HEADER = 0x01U;
+#define DMR_DT_VOICE_LC_HEADER "DMR_DT_VOICE_LC_HEADER (Voice Header with Link Control)"
     const uint8_t   DT_TERMINATOR_WITH_LC = 0x02U;
+#define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
     const uint8_t   DT_CSBK = 0x03U;
     const uint8_t   DT_DATA_HEADER = 0x06U;
+#define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
     const uint8_t   DT_RATE_12_DATA = 0x07U;
+#define DMR_DT_RATE_12_DATA "DMR_DT_RATE_12_DATA (1/2-rate Data)"
     const uint8_t   DT_RATE_34_DATA = 0x08U;
+#define DMR_DT_RATE_34_DATA "DMR_DT_RATE_34_DATA (3/4-rate Data)"
     const uint8_t   DT_IDLE = 0x09U;
     const uint8_t   DT_RATE_1_DATA = 0x0AU;
+#define DMR_DT_RATE_1_DATA "DMR_DT_RATE_1_DATA (1-rate Data)"
 
-    // Dummy values
+    /*
+    ** Internal Data Type(s)
+    */
     const uint8_t   DT_VOICE_SYNC = 0xF0U;
+#define DMR_DT_VOICE_SYNC "DMR_DT_VOICE_SYNC (Voice Data with Sync)"
     const uint8_t   DT_VOICE = 0xF1U;
+#define DMR_DT_VOICE "DMR_DT_VOICE (Voice Data)"
 
     // Site Models
     const uint8_t   SITE_MODEL_TINY = 0x00U;
