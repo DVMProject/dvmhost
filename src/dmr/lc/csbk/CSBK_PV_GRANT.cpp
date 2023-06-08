@@ -82,3 +82,12 @@ void CSBK_PV_GRANT::encode(uint8_t* data)
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_PV_GRANT::toString()
+{
+    return std::string("CSBKO_PV_GRANT (Private Voice Channel Grant)");
+}

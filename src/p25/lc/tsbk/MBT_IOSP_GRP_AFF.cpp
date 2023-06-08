@@ -87,3 +87,16 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 
     return;
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_IOSP_GRP_AFF::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
+    else    
+        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+}

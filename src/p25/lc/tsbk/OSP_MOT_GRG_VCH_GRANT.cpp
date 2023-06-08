@@ -92,6 +92,16 @@ void OSP_MOT_GRG_VCH_GRANT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_MOT_GRG_VCH_GRANT::toString(bool isp)
+{
+    return std::string("TSBK_OSP_MOT_GRG_VCH_GRANT (Group Regroup Voice Channel Grant)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

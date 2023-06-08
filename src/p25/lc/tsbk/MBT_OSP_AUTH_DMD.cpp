@@ -124,6 +124,16 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
     AMBT::encode(dataHeader, pduUserData);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_OSP_AUTH_DMD::toString(bool isp)
+{
+    return std::string("TSBK_OSP_AUTH_DMD (Authentication Demand)");
+}
+
 /// <summary>Sets the authentication random seed.</summary>
 /// <param name="mi"></param>
 void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)

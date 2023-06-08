@@ -112,6 +112,16 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
     AMBT::encode(dataHeader, pduUserData);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_OSP_ADJ_STS_BCAST::toString(bool isp)
+{
+    return std::string("TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast - Explicit)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

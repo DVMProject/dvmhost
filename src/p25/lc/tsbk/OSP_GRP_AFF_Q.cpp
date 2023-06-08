@@ -80,3 +80,13 @@ void OSP_GRP_AFF_Q::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_GRP_AFF_Q::toString(bool isp)
+{
+    return std::string("TSBK_OSP_GRP_AFF_Q (Group Affiliation Query)");
+}

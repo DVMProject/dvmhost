@@ -84,3 +84,12 @@ void CSBK_DVM_GIT_HASH::encode(uint8_t* data)
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_DVM_GIT_HASH::toString()
+{
+    return std::string("CSBKO_DVM_GIT_HASH (DVM Git Hash Identifier)");
+}

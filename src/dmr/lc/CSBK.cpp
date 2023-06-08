@@ -102,6 +102,15 @@ CSBK::~CSBK()
 }
 
 /// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK::toString()
+{
+    return std::string("CSBKO_UNKWN (Unknown CSBK)");
+}
+
+/// <summary>
 /// Regenerate a DMR CSBK without decoding.
 /// </summary>
 /// <param name="data"></param>

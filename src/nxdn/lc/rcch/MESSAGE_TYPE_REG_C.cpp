@@ -88,3 +88,14 @@ void MESSAGE_TYPE_REG_C::encode(uint8_t* data, uint32_t length, uint32_t offset)
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_REG_C::toString(bool isp)
+{
+    if (isp) return std::string("RCCH_MESSAGE_TYPE_REG_C (Registration Clear Request)");
+    else return std::string("RCCH_MESSAGE_TYPE_REG_C (Registration Clear Response)");
+}

@@ -127,6 +127,16 @@ TSBK::~TSBK()
 }
 
 /// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string TSBK::toString(bool isp)
+{
+    return std::string("TSBK_IOSP_UNKWN (Unknown TSBK)");
+}
+
+/// <summary>
 /// Sets the callsign.
 /// </summary>
 /// <param name="callsign">Callsign.</param>

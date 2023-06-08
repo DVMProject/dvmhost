@@ -81,3 +81,12 @@ void CSBK_UU_ANS_RSP::encode(uint8_t* data)
 
     /* stub */
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_UU_ANS_RSP::toString()
+{
+    return std::string("CSBKO_UU_ANS_RSP (Unit-to-Unit Answer Response)");
+}

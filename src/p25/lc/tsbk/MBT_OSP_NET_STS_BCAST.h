@@ -49,6 +49,9 @@ namespace p25
                 virtual bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
                 /// <summary>Encode a alternate trunking signalling block.</summary>
                 virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
+
+                /// <summary>Returns a string that represents the current TSBK.</summary>
+                virtual std::string toString(bool isp = false);
             };
         } // namespace tsbk
     } // namespace lc

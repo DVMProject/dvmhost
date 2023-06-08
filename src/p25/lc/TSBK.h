@@ -77,6 +77,9 @@ namespace p25
             /// <summary>Encode a trunking signalling block.</summary>
             virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) = 0;
 
+            /// <summary>Returns a string that represents the current TSBK.</summary>
+            virtual std::string toString(bool isp = false);
+
             /// <summary>Sets the flag indicating verbose log output.</summary>
             static void setVerbose(bool verbose) { m_verbose = verbose; }
             /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>

@@ -50,6 +50,9 @@ namespace dmr
                 /// <summary>Encode a control signalling block.</summary>
                 virtual void encode(uint8_t* data);
 
+                /// <summary>Returns a string that represents the current CSBK.</summary>
+                virtual std::string toString();
+
             public:
                 /// <summary>Broadcast Announcment Type.</summary>
                 __PROPERTY(uint8_t, anncType, AnncType);

@@ -99,6 +99,16 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_AUTH_FNE_RESP::toString(bool isp)
+{
+    return std::string("TSBK_OSP_AUTH_FNE_RESP (Authentication FNE Response)");
+}
+
 /// <summary>Sets the authentication result.</summary>
 /// <param name="mi"></param>
 void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)

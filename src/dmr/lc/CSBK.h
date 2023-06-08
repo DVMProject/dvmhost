@@ -59,6 +59,9 @@ namespace dmr
             /// <summary>Encodes a DMR CSBK.</summary>
             virtual void encode(uint8_t* data) = 0;
 
+            /// <summary>Returns a string that represents the current CSBK.</summary>
+            virtual std::string toString();
+
             /// <summary>Regenerate a DMR CSBK without decoding.</summary>
             /// <remarks>This is because the DMR archeticture allows fall-thru of unsupported CSBKs.</remarks>
             static bool regenerate(uint8_t* data);

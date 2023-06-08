@@ -89,3 +89,16 @@ void MBT_IOSP_ACK_RSP::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 
     return;
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_IOSP_ACK_RSP::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
+    else    
+        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
+}

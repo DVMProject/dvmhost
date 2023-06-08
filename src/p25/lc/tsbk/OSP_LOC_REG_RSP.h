@@ -49,6 +49,9 @@ namespace p25
                 virtual bool decode(const uint8_t* data, bool rawTSBK = false);
                 /// <summary>Encode a trunking signalling block.</summary>
                 virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+
+                /// <summary>Returns a string that represents the current TSBK.</summary>
+                virtual std::string toString(bool isp = false);
             };
         } // namespace tsbk
     } // namespace lc

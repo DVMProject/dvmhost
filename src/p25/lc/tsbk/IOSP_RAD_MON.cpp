@@ -95,6 +95,19 @@ void IOSP_RAD_MON::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string IOSP_RAD_MON::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_RAD_MON (Radio Unit Monitor Request)");
+    else    
+        return std::string("TSBK_IOSP_RAD_MON (Radio Unit Monitor Command)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

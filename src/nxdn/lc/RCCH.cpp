@@ -97,6 +97,16 @@ RCCH::~RCCH()
 }
 
 /// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string RCCH::toString(bool isp)
+{
+    return std::string("MESSAGE_TYPE_UNKWN (Unknown RCCH)");
+}
+
+/// <summary>
 /// Sets the callsign.
 /// </summary>
 /// <param name="callsign">Callsign.</param>

@@ -52,6 +52,9 @@ namespace p25
                 /// <summary>Encode a trunking signalling block.</summary>
                 virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
 
+                /// <summary>Returns a string that represents the current TSBK.</summary>
+                virtual std::string toString(bool isp = false);
+
                 /** Authentication data */
                 /// <summary>Sets the authentication result.</summary>
                 void setAuthRes(const uint8_t* res);

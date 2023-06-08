@@ -49,6 +49,9 @@ namespace dmr
                 virtual bool decode(const uint8_t* data);
                 /// <summary>Encode a control signalling block.</summary>
                 virtual void encode(uint8_t* data);
+
+                /// <summary>Returns a string that represents the current CSBK.</summary>
+                virtual std::string toString();
             };
         } // namespace csbk
     } // namespace lc

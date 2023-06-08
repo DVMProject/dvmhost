@@ -277,9 +277,9 @@ namespace dmr
     const uint8_t   BCAST_ANNC_VOTE_NOW = 0x02U;            // Vote Now Advice
     const uint8_t   BCAST_ANNC_LOCAL_TIME = 0x03U;          // Broadcast Local Time
     const uint8_t   BCAST_ANNC_MASS_REG = 0x04U;            // Mass Registration
-    const uint8_t   BCAST_ANNC_CHAN_FREQ = 0x05U;           // Announce a logical channel/frequency relationship
-    const uint8_t   BCAST_ANNC_ADJ_SITE = 0x06U;            // Adjacent Site information
-    const uint8_t   BCAST_ANNC_SITE_PARMS = 0x07U;          // General Site Parameters information
+    const uint8_t   BCAST_ANNC_CHAN_FREQ = 0x05U;           // Logical Channel/Frequency
+    const uint8_t   BCAST_ANNC_ADJ_SITE = 0x06U;            // Adjacent Site Information
+    const uint8_t   BCAST_ANNC_SITE_PARMS = 0x07U;          // General Site Parameters
 
     // Full-Link Control Opcode(s)
     const uint8_t   FLCO_GROUP = 0x00U;                     // GRP VCH USER - Group Voice Channel User
@@ -293,15 +293,15 @@ namespace dmr
     // Control Signalling Block Opcode(s)
     const uint8_t   CSBKO_NONE = 0x00U;                     //
     const uint8_t   CSBKO_UU_V_REQ = 0x04U;                 // UU VCH REQ - Unit-to-Unit Voice Channel Request
-    const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit to Unit Answer Response
+    const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit-to-Unit Answer Response
     const uint8_t   CSBKO_CTCSBK = 0x07U;                   // CT CSBK - Channel Timing CSBK
-    const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDUs for the random access protocol
+    const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDU for Random Access
     const uint8_t   CSBKO_AHOY = 0x1CU;                     // AHOY - Enquiry from TSCC
     const uint8_t   CSBKO_RAND = 0x1FU;                     // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
-    const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDUs
+    const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDU
     const uint8_t   CSBKO_P_CLEAR = 0x2EU;                  // P_CLEAR - Payload Channel Clear
     const uint8_t   CSBKO_PV_GRANT = 0x30U;                 // PV_GRANT - Private Voice Channel Grant
     const uint8_t   CSBKO_TV_GRANT = 0x31U;                 // TV_GRANT - Talkgroup Voice Channel Grant
@@ -311,7 +311,7 @@ namespace dmr
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
 
-    const uint8_t   CSBKO_DVM_GIT_HASH = 0xFBU;             //
+    const uint8_t   CSBKO_DVM_GIT_HASH = 0x3FU;             //
 
     const uint8_t   TALKER_ID_NONE = 0x00U;
     const uint8_t   TALKER_ID_HEADER = 0x01U;

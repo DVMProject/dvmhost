@@ -96,6 +96,15 @@ void CSBK_NACK_RSP::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_NACK_RSP::toString()
+{
+    return std::string("CSBKO_NACK_RSP (Negative Acknowledgement Response)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

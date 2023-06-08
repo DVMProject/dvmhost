@@ -50,6 +50,9 @@ namespace nxdn
                 /// <summary>Encode layer 3 data.</summary>
                 virtual void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
 
+                /// <summary>Returns a string that represents the current RCCH.</summary>
+                virtual std::string toString(bool isp = false);
+
             public:
                 /** Channel Structure Data */
                 /// <summary>Count of BCCH frames per RCCH superframe.</summary>

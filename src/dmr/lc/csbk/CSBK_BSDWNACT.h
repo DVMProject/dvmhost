@@ -50,6 +50,9 @@ namespace dmr
                 /// <summary>Encode a control signalling block.</summary>
                 virtual void encode(uint8_t* data);
 
+                /// <summary>Returns a string that represents the current CSBK.</summary>
+                virtual std::string toString();
+
             public:
                 /// <summary>Base Station ID.</summary>
                 __READONLY_PROPERTY(uint32_t, bsId, BSId);

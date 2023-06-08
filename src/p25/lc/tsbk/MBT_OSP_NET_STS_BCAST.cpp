@@ -90,3 +90,13 @@ void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 
     AMBT::encode(dataHeader, pduUserData);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_OSP_NET_STS_BCAST::toString(bool isp)
+{
+    return std::string("TSBK_OSP_NET_STS_BCAST (Network Status Broadcast - Explicit)");
+}

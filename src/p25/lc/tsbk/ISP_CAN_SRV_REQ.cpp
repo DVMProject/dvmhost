@@ -87,3 +87,13 @@ void ISP_CAN_SRV_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     /* stub */
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string ISP_CAN_SRV_REQ::toString(bool isp)
+{
+    return std::string("TSBK_ISP_CAN_SRV_REQ (Cancel Service Request)");
+}
