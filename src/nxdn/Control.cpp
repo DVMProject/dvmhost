@@ -648,6 +648,10 @@ void Control::permittedTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogDebug(LOG_NXDN, "non-authoritative TG permit, dstId = %u", dstId);
+    }
+    
     m_permittedDstId = dstId;
 }
 
