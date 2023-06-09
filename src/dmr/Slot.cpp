@@ -579,6 +579,10 @@ void Slot::permittedTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogDebug(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+    }
+
     m_permittedDstId = dstId;
 }
 

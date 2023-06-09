@@ -827,6 +827,10 @@ void Control::permittedTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogDebug(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+    }
+
     m_permittedDstId = dstId;
 }
 
