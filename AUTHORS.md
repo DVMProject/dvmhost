@@ -1,14 +1,7 @@
 # Digital Voice Modem Host
 
-## Project Technical Leads
-
 - Bryan Biedenkapp (https://github.com/gatekeep)
-
-## Developers
-
 - Natalie Moore (https://github.com/jelimoore)
-
-## All other contributors and their affiliations
 
 - Build Chain and Helper Tools
   - K4YT3X (https://github.com/k4yt3x)
