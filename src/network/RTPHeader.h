@@ -78,7 +78,7 @@ namespace network
             /// <summary>Sequence number for the RTP packet.</summary>
             __PROPERTY(uint16_t, seq, Sequence);
             /// <summary>RTP packet timestamp.</summary>
-            __PROPERTY(uint32_t, timestamp, Timestamp);
+            __READONLY_PROPERTY(uint32_t, timestamp, Timestamp);
             /// <summary>Synchronization Source ID.</summary>
             __PROPERTY(uint32_t, ssrc, SSRC);
         

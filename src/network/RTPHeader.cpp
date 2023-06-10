@@ -25,7 +25,9 @@
 */
 #include "Defines.h"
 #include "network/RTPHeader.h"
+#include "Clock.h"
 
+using namespace system_clock;
 using namespace network::frame;
 
 #include <cassert>
@@ -34,7 +36,7 @@ using namespace network::frame;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::chrono::time_point<std::chrono::high_resolution_clock> RTPHeader::m_wcStart = std::chrono::time_point<std::chrono::high_resolution_clock>();
+hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -110,18 +112,9 @@ void RTPHeader::encode(uint8_t* data)
     data[2U] = (m_seq >> 8) & 0xFFU;                                            // Sequence MSB
     data[3U] = (m_seq >> 0) & 0xFFU;                                            // Sequence LSB
 
-    if (m_timestamp == INVALID_TS) {
-        auto t1 = std::chrono::high_resolution_clock::now();
-        std::chrono::microseconds timeSinceStart = 
-            std::chrono::duration_cast<std::chrono::microseconds>(t1 - m_wcStart);
-
-        std::uniform_int_distribution<uint32_t> dist(std::numeric_limits<uint32_t>::min(), 
-            std::numeric_limits<uint32_t>::max());
-        uint32_t ts = dist(m_random);
-
-        uint64_t microSeconds = timeSinceStart.count() * RTP_GENERIC_CLOCK_RATE;
-        m_timestamp = ts + uint32_t(microSeconds / 1000000);
-    }
+    uint64_t timeSinceStart = hrc::diffNow(m_wcStart);
+    uint64_t microSeconds = timeSinceStart * RTP_GENERIC_CLOCK_RATE;
+    m_timestamp = uint32_t(microSeconds / 1000000);
 
     __SET_UINT32(m_timestamp, data, 4U);                                        // Timestamp
     __SET_UINT32(m_ssrc, data, 8U);                                             // Synchronization Source Identifier
