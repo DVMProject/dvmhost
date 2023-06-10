@@ -177,8 +177,8 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool verbose, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
-            uint32_t pingTime, uint32_t updateLookupTime);
+            bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool allowActivityTransfer,
+            bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork();
 
@@ -222,6 +222,8 @@ namespace network
         bool m_dmrEnabled;
         bool m_p25Enabled;
         bool m_nxdnEnabled;
+
+        uint32_t m_parrotDelay;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
@@ -272,6 +274,8 @@ namespace network
 
         /// <summary>Helper to send a raw message to the connected peers.</summary>
         void writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length);
+        /// <summary>Helper to send a raw message to the connected peers.</summary>
+        void writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq);
         /// <summary>Helper to send a tagged message to the connected peers.</summary>
         void writePeersTagged(FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data, uint32_t length);
     };

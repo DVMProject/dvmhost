@@ -154,9 +154,9 @@ uint64_t hrc::diffNowUS(hrc::hrc_t& then)
 /// </summary>
 /// <param name="ms"></param>
 /// <returns></returns>
-uint64_t msToJiffies(uint64_t ms)
+uint64_t system_clock::msToJiffies(uint64_t ms)
 {
-    return (uint64_t)(((double)ms/1000)* 65536);
+    return (uint64_t)(((double)ms / 1000) * 65536);
 }
 
 /// <summary>
@@ -164,7 +164,7 @@ uint64_t msToJiffies(uint64_t ms)
 /// </summary>
 /// <param name="ms"></param>
 /// <returns></returns>
-uint64_t jiffiesToMs(uint64_t jiffies)
+uint64_t system_clock::jiffiesToMs(uint64_t jiffies)
 {
     return (uint64_t)(((double)jiffies / 65536) * 1000);
 }

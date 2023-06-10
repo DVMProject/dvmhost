@@ -27,14 +27,17 @@
 #define __FNE__TAG_DMR_DATA_H__
 
 #include "Defines.h"
+#include "Clock.h"
 #include "dmr/DMRDefines.h"
 #include "dmr/data/Data.h"
 #include "network/FNENetwork.h"
 
+#include <deque>
+
 namespace network
 {
     namespace fne
-    {  
+    {
         // ---------------------------------------------------------------------------
         //  Class Declaration
         //      Implements the DMR data FNE networking logic.
@@ -50,8 +53,27 @@ namespace network
             /// <summary>Process a data frame from the network.</summary>
             bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
+            /// <summary>Helper to playback a parrot frame to the network.</summary>
+            void playbackParrot();
+            /// <summary>Helper to determine if there are stored parrot frames.</summary>
+            bool hasParrotFrames() const { return m_parrotFramesReady && !m_parrotFrames.empty(); }
+
         private:
             FNENetwork* m_network;
+
+            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t>> m_parrotFrames;
+            bool m_parrotFramesReady;
+
+            class RxStatus {
+            public:
+                system_clock::hrc::hrc_t callStartTime;
+                uint32_t srcId;
+                uint32_t dstId;
+                uint8_t slotNo;
+                uint32_t streamId;
+            };
+            typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
+            std::unordered_map<uint32_t, RxStatus> m_status;
 
             bool m_debug;
 

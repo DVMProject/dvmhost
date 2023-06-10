@@ -60,13 +60,14 @@ using namespace network::fne;
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
+/// <param name="parrotDelay">Delay for end of call to parrot TG playback.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="trafficRepeat">Flag indicating if traffic should be repeated from this master.</param>
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, bool allowActivityTransfer, bool allowDiagnosticTransfer,
+    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool allowActivityTransfer, bool allowDiagnosticTransfer,
     uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
@@ -79,6 +80,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_dmrEnabled(dmr),
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
+    m_parrotDelay(parrotDelay),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_status(NET_STAT_INVALID),
@@ -167,6 +169,27 @@ void FNENetwork::clock(uint32_t ms)
 
         m_updateLookupTimer.start();
     }
+
+#if defined(ENABLE_DMR)
+    // if the DMR handler has parrot frames to playback, playback a frame
+    if (m_tagDMR->hasParrotFrames()) {
+        m_tagDMR->playbackParrot();
+    }
+#endif // defined(ENABLE_DMR)
+
+#if defined(ENABLE_P25)
+    // if the P25 handler has parrot frames to playback, playback a frame
+    if (m_tagP25->hasParrotFrames()) {
+        m_tagP25->playbackParrot();
+    }
+#endif // defined(ENABLE_P25)
+
+#if defined(ENABLE_NXDN)
+    // if the NXDN handler has parrot frames to playback, playback a frame
+    if (m_tagNXDN->hasParrotFrames()) {
+        m_tagNXDN->playbackParrot();
+    }
+#endif // defined(ENABLE_NXDN)
 
     sockaddr_storage address;
     uint32_t addrLen;
@@ -995,6 +1018,26 @@ void FNENetwork::writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, 
         sockaddr_storage addr = peer.second.socketStorage();
         uint32_t addrLen = peer.second.sockStorageLen();
         uint16_t pktSeq = peer.second.pktLastSeq();
+
+        m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
+    }
+
+    m_frameQueue->flushQueue();
+}
+
+/// <summary>
+/// Helper to send a raw message to the connected peers.
+/// </summary>
+/// <param name="data">Buffer to write to the network.</param>
+/// <param name="length">Length of buffer to write.</param>
+/// <param name="pktSeq"></param>
+void FNENetwork::writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq)
+{
+    for (auto peer : m_peers) {
+        uint32_t peerId = peer.first;
+        uint32_t streamId = peer.second.currStreamId();
+        sockaddr_storage addr = peer.second.socketStorage();
+        uint32_t addrLen = peer.second.sockStorageLen();
 
         m_frameQueue->enqueueMessage(data, length, streamId, peerId, opcode, pktSeq, addr, addrLen);
     }

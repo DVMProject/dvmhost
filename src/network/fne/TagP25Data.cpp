@@ -26,10 +26,13 @@
 #include "Defines.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagP25Data.h"
+#include "Clock.h"
 #include "Log.h"
 #include "StopWatch.h"
+#include "Thread.h"
 #include "Utils.h"
 
+using namespace system_clock;
 using namespace network;
 using namespace network::fne;
 
@@ -49,6 +52,9 @@ using namespace network::fne;
 /// <param name="debug"></param>
 TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_network(network),
+    m_parrotFrames(),
+    m_parrotFramesReady(false),
+    m_status(),
     m_debug(debug)
 {
     assert(network != nullptr);
@@ -73,6 +79,8 @@ TagP25Data::~TagP25Data()
 /// <returns></returns>
 bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
+    hrc::hrc_t pktTime = hrc::now();
+
     uint8_t lco = data[4U];
 
     uint32_t srcId = __GET_UINT16(data, 5U);
@@ -135,9 +143,79 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return false;
         }
 
-        // TODO TODO TODO
-        // TODO: handle checking if this is a parrot group and properly implement parrot
+        // specifically only check the following logic for end of call or voice frames
+        if (duid != p25::P25_DUID_TSDU && duid != p25::P25_DUID_PDU) {
+            // is this the end of the call stream?
+            if ((duid == p25::P25_DUID_TDU) || (duid == p25::P25_DUID_TDULC)) {
+                RxStatus status = m_status[dstId];
+                uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
+                if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+                    m_status.erase(dstId);
+                }
+
+                // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
+                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                if (tg.config().parrot()) {
+                    if (m_parrotFrames.size() > 0) {
+                        m_parrotFramesReady = true;
+                        Thread::sleep(m_network->m_parrotDelay);
+                        LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                    }
+                }
+
+                LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
+                    peerId, srcId, dstId, duration / 1000, streamId);
+            }
+
+            // is this a new call stream?
+            if ((duid != p25::P25_DUID_TDU) && (duid != p25::P25_DUID_TDULC)) {
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
+                if (it != m_status.end()) {
+                    RxStatus status = m_status[dstId];
+                    if (streamId != status.streamId && ((duid != p25::P25_DUID_TDU) && (duid != p25::P25_DUID_TDULC))) {
+                        if (status.srcId != 0U && status.srcId != srcId) {
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                            return false;
+                        }
+                    }
+                }
+                else {
+                    // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
+                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                    if (tg.config().parrot()) {
+                        m_parrotFramesReady = false;
+                        if (m_parrotFrames.size() > 0) {
+                            for (auto& pkt : m_parrotFrames) {
+                                if (std::get<0>(pkt) != nullptr) {
+                                    delete std::get<0>(pkt);
+                                }
+                            }
+                            m_parrotFrames.clear();
+                        }
+                    }
+
+                    // this is a new call stream
+                    RxStatus status = RxStatus();
+                    status.callStartTime = pktTime;
+                    status.srcId = srcId;
+                    status.dstId = dstId;
+                    status.streamId = streamId;
+                    m_status[dstId] = status;
+                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                }
+            }
+        }
+
+        // is this a parrot talkgroup?
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+        if (tg.config().parrot()) {
+            uint8_t *copy = new uint8_t[len];
+            ::memcpy(copy, data, len);
+            m_parrotFrames.push_back({ copy, len, pktSeq });
+        }
+
+        // repeat traffic to the connected peers
         for (auto peer : m_network->m_peers) {
             if (peerId != peer.first) {
                 // is this peer ignored?
@@ -158,6 +236,25 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     }
 
     return false;
+}
+
+/// <summary>
+/// Helper to playback a parrot frame to the network.
+/// </summary>
+void TagP25Data::playbackParrot()
+{
+    if (m_parrotFrames.size() == 0) {
+        m_parrotFramesReady = false;
+        return;
+    }
+
+    auto& pkt = m_parrotFrames[0];
+    if (std::get<0>(pkt) != nullptr) {
+        m_network->writePeers({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt));
+        delete std::get<0>(pkt);
+        Thread::sleep(120);
+    }
+    m_parrotFrames.pop_front();
 }
 
 // ---------------------------------------------------------------------------
