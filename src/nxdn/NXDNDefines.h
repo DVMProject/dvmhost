@@ -228,9 +228,7 @@ namespace nxdn
 
     // Common Message Types
     const uint8_t   MESSAGE_TYPE_IDLE = 0x10U;                  // IDLE - Idle
-#define NXDN_MSG_TYPE_IDLE "IDLE (Idle)"
     const uint8_t   MESSAGE_TYPE_DISC = 0x11U;                  // DISC - Disconnect
-#define NXDN_MSG_TYPE_DISC "DISC (Disconnect)"
     const uint8_t   MESSAGE_TYPE_DST_ID_INFO = 0x17U;           // DST_ID_INFO - Digital Station ID
     const uint8_t   MESSAGE_TYPE_SRV_INFO = 0x19U;              // SRV_INFO - Service Information
     const uint8_t   MESSAGE_TYPE_CCH_INFO = 0x1AU;              // CCH_INFO - Control Channel Information
@@ -239,49 +237,30 @@ namespace nxdn
     // Traffic Channel Message Types
     const uint8_t   RTCH_MESSAGE_TYPE_VCALL = 0x01U;            // VCALL - Voice Call
 #define NXDN_RTCH_MSG_TYPE_VCALL "VCALL (Voice Call)"
-#define NXDN_RTCH_MSG_TYPE_VCALL_REQ "VCALL_REQ (Voice Call Request)"
 #define NXDN_RTCH_MSG_TYPE_VCALL_RESP "VCALL_RESP (Voice Call Response)"
     const uint8_t   RTCH_MESSAGE_TYPE_VCALL_IV = 0x03U;         // VCALL_IV - Voice Call Initialization Vector
-#define NXDN_RTCH_MSG_TYPE_VCALL_IV "VCALL_IV (Voice Call Init Vector)"
     const uint8_t   RTCH_MESSAGE_TYPE_TX_REL_EX = 0x07U;        // TX_REL_EX - Transmission Release Extension
-#define NXDN_RTCH_MSG_TYPE_TX_REL_EX "TX_REL_EX (Transmission Release Extension)"
     const uint8_t   RTCH_MESSAGE_TYPE_TX_REL = 0x08U;           // TX_REL - Transmission Release
 #define NXDN_RTCH_MSG_TYPE_TX_REL "TX_REL (Transmission Release)"
     const uint8_t   RTCH_MESSAGE_TYPE_DCALL_HDR = 0x09U;        // DCALL - Data Call (Header)
 #define NXDN_RTCH_MSG_TYPE_DCALL_HDR "DCALL (Data Call Header)"
     const uint8_t   RTCH_MESSAGE_TYPE_DCALL_DATA = 0x0BU;       // DCALL - Data Call (User Data Format)
-#define NXDN_RTCH_MSG_TYPE_DCALL_DATA "DCALL (Data Call User Data)"
     const uint8_t   RTCH_MESSAGE_TYPE_DCALL_ACK = 0x0CU;        // DCALL_ACK - Data Call Acknowledge
-#define NXDN_RTCH_MSG_TYPE_DCALL_ACK "DCALL_ACL (Data Call Acknowledge)"
     const uint8_t   RTCH_MESSAGE_TYPE_HEAD_DLY = 0x0FU;         // HEAD_DLY - Header Delay
-#define NXDN_RTCH_MSG_TYPE_HEAD_DLY "HEAD_DLY (Header Delay)"
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_REQ_HDR = 0x38U;   // SDCALL_REQ - Short Data Call Request (Header)
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_REQ_DATA = 0x39U;  // SDCALL_REQ - Short Data Call Request (User Data Format)
-#define NXDN_RCCH_MSG_TYPE_DCALL_REQ "DCALL_REQ (Data Call Request)"
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_IV = 0x3AU;        // SDCALL_IV - Short Data Call Initialization Vector
     const uint8_t   RTCH_MESSAGE_TYPE_SDCALL_RESP = 0x3BU;      // SDCALL_RESP - Short Data Call Response
-#define NXDN_RCCH_MSG_TYPE_DCALL_RESP "DCALL_RESP (Data Call Response)"
 
     // Control Channel Message Types
     const uint8_t   RCCH_MESSAGE_TYPE_VCALL_CONN = 0x03U;       // VCALL_CONN - Voice Call Connection Request (ISP) / Voice Call Connection Response (OSP)
-#define NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ "VCALL_CONN_REQ (Voice Call Connection Request)"
-#define NXDN_RCCH_MSG_TYPE_VCALL_CONN_RESP "VCALL_CONN_RESP (Voice Call Connection Response)"
     const uint8_t   RCCH_MESSAGE_TYPE_VCALL_ASSGN = 0x04U;      // VCALL_ASSGN - Voice Call Assignment
-#define NXDN_RCCH_MSG_TYPE_VCALL_ASSGN "VCALL_ASSGN (Voice Call Assignment)"
     const uint8_t   RCCH_MESSAGE_TYPE_DCALL_ASSGN = 0x14U;      // DCALL_ASSGN - Data Call Assignment
-#define NXDN_RCCH_MSG_TYPE_DCALL_ASSGN "DCALL_ASSGN (Data Call Assignment)"
     const uint8_t   RCCH_MESSAGE_TYPE_SITE_INFO = 0x18U;        // SITE_INFO - Site Information
     const uint8_t   RCCH_MESSAGE_TYPE_REG = 0x20U;              // REG - Registration Request (ISP) / Registration Response (OSP)
-#define NXDN_RCCH_MSG_TYPE_REG_REQ "REG_REQ (Registration Request)"
-#define NXDN_RCCH_MSG_TYPE_REG_RESP "REG_RESP (Registration Response)"
     const uint8_t   RCCH_MESSAGE_TYPE_REG_C = 0x22U;            // REG_C - Registration Clear Request (ISP) / Registration Clear Response (OSP)
-#define NXDN_RCCH_MSG_TYPE_REG_C_REQ "REG_C_REQ (Registration Clear Request)"
-#define NXDN_RCCH_MSG_TYPE_REG_C_RESP "REG_C_RESP (Registration Clear Response)"
     const uint8_t   RCCH_MESSAGE_TYPE_REG_COMM = 0x23U;         // REG_COMM - Registration Command
-#define NXDN_RCCH_MSG_TYPE_REG_COMM "REG_COMM (Registration Command)"
     const uint8_t   RCCH_MESSAGE_TYPE_GRP_REG = 0x24U;          // GRP_REG - Group Registration Request (ISP) / Group Registration Response (OSP)
-#define NXDN_RCCH_MSG_TYPE_GRP_REG_REQ "GRP_REG_REQ (Group Registration Request)"
-#define NXDN_RCCH_MSG_TYPE_GRP_REG_RESP "GRP_REG_RESP (Group Registration Response)"
     const uint8_t   RCCH_MESSAGE_TYPE_PROP_FORM = 0x3FU;        // PROP_FORM - Proprietary Form
 
     // Call Types

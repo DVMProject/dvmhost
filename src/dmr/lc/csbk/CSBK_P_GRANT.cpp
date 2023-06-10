@@ -89,5 +89,5 @@ void CSBK_P_GRANT::encode(uint8_t* data)
 /// <returns></returns>
 std::string CSBK_P_GRANT::toString()
 {
-    return std::string("CSBKO_TV_GRANT (Talkgroup Voice Channel Grant)");
+    return std::string("CSBK_P_GRANT (Payload Grant)");
 }
