@@ -691,7 +691,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                                 }
 
                                 // is the specified channel granted?
-                                if (m_p25->m_affiliations.isChBusy(chNo) && m_p25->m_affiliations.isGranted(dstId)) {
+                                if (/*m_p25->m_affiliations.isChBusy(chNo) &&*/ m_p25->m_affiliations.isGranted(dstId)) {
                                     m_p25->m_affiliations.releaseGrant(dstId, false);
                                 }
                             }
@@ -713,7 +713,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 switch (tsbk->getLCO()) {
                     case TSBK_IOSP_GRP_VCH:
                     {
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                        if (m_p25->m_dedicatedControl) {
                             if (!m_p25->m_affiliations.isGranted(dstId)) {
                                 if (m_verbose) {
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
@@ -731,7 +731,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
                     {
-                        if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                        if (m_p25->m_dedicatedControl) {
                             if (!m_p25->m_affiliations.isGranted(dstId)) {
                                 if (m_verbose) {
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
@@ -2676,6 +2676,11 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 /// <param name="dstId"></param>
 bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
+    // is the specified channel granted?
+    if (m_p25->m_affiliations.isGranted(dstId)) {
+        m_p25->m_affiliations.releaseGrant(dstId, false);
+    }
+
     std::unique_ptr<OSP_DVM_LC_CALL_TERM> osp = new_unique(OSP_DVM_LC_CALL_TERM);
     osp->setGrpVchId(m_p25->m_siteData.channelId());
     osp->setGrpVchNo(m_p25->m_siteData.channelNo());

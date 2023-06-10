@@ -571,7 +571,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
     }
     else if (frameType == P25_DFSI_START_STOP) {
         if (m_rfDFSILC.getType() == P25_DFSI_TYPE_VOICE && m_rfDFSILC.getStartStop() == P25_DFSI_STOP_FLAG) {
-            if (m_p25->m_control) {
+            if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
             }
 
@@ -771,7 +771,7 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
             return false;
         }
 
-        if (m_p25->m_control) {
+        if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
         }
 
@@ -830,10 +830,6 @@ DFSIVoice::~DFSIVoice()
 /// </summary>
 void DFSIVoice::writeNet_TDU()
 {
-    if (m_p25->m_control) {
-        m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
-    }
-
     m_trunk->writeRF_DSFI_Stop(P25_DFSI_TYPE_VOICE);
 
     if (m_verbose) {

@@ -680,7 +680,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC) {
-        if (m_p25->m_control) {
+        if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
         }
 
@@ -902,7 +902,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 return false;
             }
 
-            if (m_p25->m_control) {
+            if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
             }
 
@@ -1047,10 +1047,6 @@ void Voice::writeRF_EndOfVoice()
 /// </summary>
 void Voice::writeNet_TDU()
 {
-    if (m_p25->m_control) {
-        m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
-    }
-
     uint8_t buffer[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDU_FRAME_LENGTH_BYTES + 2U);
 

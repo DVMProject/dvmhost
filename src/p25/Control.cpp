@@ -432,10 +432,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
-        if (m_control) {
-            m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
-        }
-
+        m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
         m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
 
         writeRF_TDU(false);
@@ -773,10 +770,7 @@ void Control::clock(uint32_t ms)
             }
 
             m_networkWatchdog.stop();
-
-            if (m_control) {
-                m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
-            }
+            m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
 
             if (m_dedicatedControl) {
                 if (m_network != nullptr)
