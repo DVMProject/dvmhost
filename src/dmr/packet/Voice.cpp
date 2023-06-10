@@ -905,6 +905,11 @@ void Voice::processNetwork(const data::Data& dmrData)
                         m_slot->m_slotNo, m_netN, m_slot->m_netErrs, float(m_slot->m_netErrs) / 1.41F);
                 }
             }
+
+            if (m_netN >= 5U) {
+                m_slot->m_netErrs = 0U;
+            }
+            
             m_slot->m_netBits += 141U;
 
             data[0U] = modem::TAG_DATA;
