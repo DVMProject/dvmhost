@@ -126,6 +126,14 @@ private:
     bool setTXDCOffset(int incr);
     /// <summary>Helper to change the Rx DC offset.</summary>
     bool setRXDCOffset(int incr);
+    /// <summary>Helper to change the Tx coarse level.</summary>
+    bool setTXCoarseLevel(int incr);
+    /// <summary>Helper to change the Rx coarse level.</summary>
+    bool setRXCoarseLevel(int incr);
+    /// <summary>Helper to change the Rx fine level.</summary>
+    bool setRXFineLevel(int incr);
+    /// <summary>Helper to change the RSSI level.</summary>
+    bool setRSSICoarseLevel(int incr);
     /// <summary>Helper to toggle modem transmit mode.</summary>
     bool setTransmit();
 

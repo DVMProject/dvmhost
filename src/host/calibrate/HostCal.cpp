@@ -754,6 +754,13 @@ int HostCal::run()
 
                     writeRFParams();
                 }
+            } else {
+                if (m_modem->getVersion() >= 3U) {
+                    setRXCoarseLevel(1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Rx Coarse Level adjustment is not supported on your firmware!");
+                }
             }
         }
         break;
@@ -775,28 +782,46 @@ int HostCal::run()
                     writeRFParams();
                 }
             }
+            else {
+                if (m_modem->getVersion() >= 3U) {
+                    setRXCoarseLevel(-1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Rx Coarse Level adjustment is not supported on your firmware!");
+                }
+            }
         }
         break;
 
         case '3':
         {
-            if (m_isHotspot && m_modem->getVersion() >= 3U) {
-                char value[5] = { '\0' };
-                ::fprintf(stdout, "> NXDN Discriminator BW Offset [%d] ? ", m_modem->m_nxdnDiscBWAdj);
-                ::fflush(stdout);
+            if (m_isHotspot) {
+                if (m_modem->getVersion() >= 3U) {
+                    char value[5] = { '\0' };
+                    ::fprintf(stdout, "> NXDN Discriminator BW Offset [%d] ? ", m_modem->m_nxdnDiscBWAdj);
+                    ::fflush(stdout);
 
-                m_console.getLine(value, 5, 0);
-                if (value[0] != '\0') {
-                    int bwAdj = m_modem->m_nxdnDiscBWAdj;
-                    sscanf(value, "%d", &bwAdj);
+                    m_console.getLine(value, 5, 0);
+                    if (value[0] != '\0') {
+                        int bwAdj = m_modem->m_nxdnDiscBWAdj;
+                        sscanf(value, "%d", &bwAdj);
 
-                    m_modem->m_nxdnDiscBWAdj = bwAdj;
+                        m_modem->m_nxdnDiscBWAdj = bwAdj;
 
-                    writeRFParams();
+                        writeRFParams();
+                    }
+                }
+                else {
+                    LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
                 }
             }
             else {
-                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+                if (m_modem->getVersion() >= 3U) {
+                    setRXFineLevel(1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Rx Fine Level adjustment is not supported on your firmware!");
+                }
             }
         }
         break;
@@ -816,6 +841,14 @@ int HostCal::run()
                     m_modem->m_dmrPostBWAdj = bwAdj;
 
                     writeRFParams();
+                }
+            }
+            else {
+                if (m_modem->getVersion() >= 3U) {
+                    setRXFineLevel(-1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Rx Fine Level adjustment is not supported on your firmware!");
                 }
             }
         }
@@ -838,28 +871,46 @@ int HostCal::run()
                     writeRFParams();
                 }
             }
+            else {
+                if (m_modem->getVersion() >= 3U) {
+                    setTXCoarseLevel(1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Tx Coarse Level adjustment is not supported on your firmware!");
+                }
+            }
         }
         break;
 
         case '6':
         {
-            if (m_isHotspot && m_modem->getVersion() >= 3U) {
-                char value[5] = { '\0' };
-                ::fprintf(stdout, "> NXDN Post Demodulation BW Offset [%d] ? ", m_modem->m_nxdnPostBWAdj);
-                ::fflush(stdout);
+            if (m_isHotspot) {
+                if (m_modem->getVersion() >= 3U) {
+                    char value[5] = { '\0' };
+                    ::fprintf(stdout, "> NXDN Post Demodulation BW Offset [%d] ? ", m_modem->m_nxdnPostBWAdj);
+                    ::fflush(stdout);
 
-                m_console.getLine(value, 5, 0);
-                if (value[0] != '\0') {
-                    int bwAdj = m_modem->m_nxdnPostBWAdj;
-                    sscanf(value, "%d", &bwAdj);
+                    m_console.getLine(value, 5, 0);
+                    if (value[0] != '\0') {
+                        int bwAdj = m_modem->m_nxdnPostBWAdj;
+                        sscanf(value, "%d", &bwAdj);
 
-                    m_modem->m_nxdnPostBWAdj = bwAdj;
+                        m_modem->m_nxdnPostBWAdj = bwAdj;
 
-                    writeRFParams();
+                        writeRFParams();
+                    }
+                }
+                else {
+                    LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
                 }
             }
             else {
-                LogWarning(LOG_CAL, "NXDN is not supported on your firmware!", NXDN_FEC_STR);
+                if (m_modem->getVersion() >= 3U) {
+                    setTXCoarseLevel(-1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "Tx Coarse Level adjustment is not supported on your firmware!");
+                }
             }
         }
         break;
@@ -949,6 +1000,32 @@ int HostCal::run()
             }
             else {
                 LogWarning(LOG_CAL, "ADF7021 AFC alignment is not supported on your firmware!");
+            }
+        }
+        break;
+
+        case '9':
+        {
+            if (!m_isHotspot) {
+                if (m_modem->getVersion() >= 3U) {
+                    setRSSICoarseLevel(1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "RSSI Coarse Level adjustment is not supported on your firmware!");
+                }
+            }
+        }
+        break;
+
+        case '0':
+        {
+            if (!m_isHotspot) {
+                if (m_modem->getVersion() >= 3U) {
+                    setRSSICoarseLevel(-1);
+                }
+                else {
+                    LogWarning(LOG_CAL, "RSSI Coarse Level adjustment is not supported on your firmware!");
+                }
             }
         }
         break;
@@ -1090,7 +1167,7 @@ int HostCal::run()
         break;
         case 'B':
         case 'J':
-        case '0':
+        case ')':
         {
             m_mode = STATE_DMR;
             if (c == 'J') {
@@ -1101,7 +1178,7 @@ int HostCal::run()
                 m_modeStr = DMR_FEC_STR;
                 m_dmrRx1K = false;
             }
-            if (c == '0') {
+            if (c == ')') {
                 m_duplex = true;
             } else {
                 m_duplex = false;
@@ -1585,6 +1662,12 @@ void HostCal::displayHelp()
         LogMessage(LOG_CAL, "    F        Set Rx Frequency Adjustment");
         LogMessage(LOG_CAL, "    f        Set Tx Frequency Adjustment");
     }
+    if (!m_isHotspot) {
+        LogMessage(LOG_CAL, "    1/2      Increase/Decrease receive coarse level");
+        LogMessage(LOG_CAL, "    3/4      Increase/Decrease receive fine level");
+        LogMessage(LOG_CAL, "    5/6      Increase/Decrease transmit coarse level");
+        LogMessage(LOG_CAL, "    9/0      Increase/Decrease RSSI coarse level");
+    }
     LogMessage(LOG_CAL, "Mode Commands:");
     LogMessage(LOG_CAL, "    Z        %s", DMR_CAL_STR);
     LogMessage(LOG_CAL, "    z        %s", P25_CAL_STR);
@@ -1727,6 +1810,118 @@ bool HostCal::setRXDCOffset(int incr)
     if (incr < 0 && m_modem->m_rxDCOffset > -127) {
         m_modem->m_rxDCOffset--;
         LogMessage(LOG_CAL, " - RX DC Offset: %d", m_modem->m_rxDCOffset);
+        return writeConfig();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the Rx coarse level.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setRXCoarseLevel(int incr)
+{
+    if (incr > 0 && m_modem->m_rxCoarsePot < 255U) {
+        if (m_modem->m_rxCoarsePot != 255U) {
+            m_modem->m_rxCoarsePot += 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
+        return writeConfig();
+    }
+
+    if (incr < 0 && m_modem->m_rxCoarsePot > 0U) {
+        if (m_modem->m_rxCoarsePot != 0) {
+            m_modem->m_rxCoarsePot -= 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RX Coarse Level: %u", m_modem->m_rxCoarsePot);
+        return writeConfig();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the Rx fine level.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setRXFineLevel(int incr)
+{
+    if (incr > 0 && m_modem->m_rxFinePot < 255U) {
+        if (m_modem->m_rxFinePot != 255U) {
+            m_modem->m_rxFinePot += 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
+        return writeConfig();
+    }
+
+    if (incr < 0 && m_modem->m_rxFinePot > 0U) {
+        if (m_modem->m_rxFinePot != 0) {
+            m_modem->m_rxFinePot -= 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RX Fine Level: %u", m_modem->m_rxFinePot);
+        return writeConfig();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the Tx coarse level.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setTXCoarseLevel(int incr)
+{
+    if (incr > 0 && m_modem->m_txCoarsePot < 255U) {
+        if (m_modem->m_txCoarsePot != 255U) {
+            m_modem->m_txCoarsePot += 1U;
+        }
+
+        LogMessage(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
+        return writeConfig();
+    }
+
+    if (incr < 0 && m_modem->m_txCoarsePot > 0U) {
+        if (m_modem->m_txCoarsePot != 0) {
+            m_modem->m_txCoarsePot -= 1U;
+        }
+
+        LogMessage(LOG_CAL, " - TX Coarse Level: %u", m_modem->m_txCoarsePot);
+        return writeConfig();
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to change the RSSI coarse level.
+/// </summary>
+/// <param name="incr">Amount to change.</param>
+/// <returns>True, if setting was applied, otherwise false.</returns>
+bool HostCal::setRSSICoarseLevel(int incr)
+{
+    if (incr > 0 && m_modem->m_rssiCoarsePot < 255U) {
+        if (m_modem->m_rssiCoarsePot != 255U) {
+            m_modem->m_rssiCoarsePot += 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
+        return writeConfig();
+    }
+
+    if (incr < 0 && m_modem->m_rssiCoarsePot > 0U) {
+        if (m_modem->m_rssiCoarsePot != 0) {
+            m_modem->m_rssiCoarsePot -= 1U;
+        }
+
+        LogMessage(LOG_CAL, " - RSSI Coarse Level: %u", m_modem->m_rssiCoarsePot);
         return writeConfig();
     }
 
@@ -3023,6 +3218,8 @@ void HostCal::printStatus()
         LogMessage(LOG_CAL, " - RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d",
             m_modem->m_rxLevel, m_modem->m_cwIdTXLevel, m_modem->m_txDCOffset, m_modem->m_rxDCOffset);
         if (!m_isHotspot) {
+            LogMessage(LOG_CAL, " - RX Coarse Level: %u, RX Fine Level: %u, TX Coarse Level: %u, RSSI Coarse Level: %u",
+                m_modem->m_rxCoarsePot, m_modem->m_rxFinePot, m_modem->m_txCoarsePot, m_modem->m_rssiCoarsePot);
             LogMessage(LOG_CAL, " - DMR Symbol +/- 3 Level Adj.: %d, DMR Symbol +/- 1 Level Adj.: %d, P25 Symbol +/- 3 Level Adj.: %d, P25 Symbol +/- 1 Level Adj.: %d",
                 m_modem->m_dmrSymLevel3Adj, m_modem->m_dmrSymLevel1Adj, m_modem->m_p25SymLevel3Adj, m_modem->m_p25SymLevel1Adj);
 
