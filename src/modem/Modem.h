@@ -66,6 +66,17 @@
 class HOST_SW_API HostCal;
 class HOST_SW_API RESTAPI;
 
+class HOST_SW_API HostSetup;
+#if defined(ENABLE_SETUP_TUI)        
+class HOST_SW_API SetupApplication;
+class HOST_SW_API SetupMainWnd;
+
+class HOST_SW_API LevelAdjustWnd;
+class HOST_SW_API SymbLevelAdjustWnd;
+class HOST_SW_API HSBandwidthAdjustWnd;
+class HOST_SW_API HSGainAdjustWnd;
+#endif // defined(ENABLE_SETUP_TUI)
+
 namespace modem
 {
     // ---------------------------------------------------------------------------
@@ -359,6 +370,17 @@ namespace modem
         friend class ::HostCal;
         friend class ::RESTAPI;
 
+        friend class ::HostSetup;
+#if defined(ENABLE_SETUP_TUI)        
+        friend class ::SetupApplication;
+        friend class ::SetupMainWnd;
+
+        friend class ::LevelAdjustWnd;
+        friend class ::SymbLevelAdjustWnd;
+        friend class ::HSBandwidthAdjustWnd;
+        friend class ::HSGainAdjustWnd;
+#endif // defined(ENABLE_SETUP_TUI)
+
         port::IModemPort* m_port;
 
         uint8_t m_protoVer;
@@ -394,6 +416,7 @@ namespace modem
         int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
         bool m_isHotspot;
+        bool m_forceHotspot;
 
         uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
         int m_rxTuning;                 // hotspot modem - Rx Frequency Offset

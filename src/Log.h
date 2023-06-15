@@ -66,11 +66,15 @@
 //  Externs
 // ---------------------------------------------------------------------------
 
+extern uint32_t g_logDisplayLevel;
 extern bool g_disableTimeDisplay;
 
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+/// <summary>Internal helper to set an output stream to direct logging to.</summary>
+extern HOST_SW_API void __InternalOutputStream(std::ostream& stream);
+
 /// <summary>Sets the instance of the Network class to transfer the activity log with.</summary>
 extern HOST_SW_API void LogSetNetwork(void* network);
 

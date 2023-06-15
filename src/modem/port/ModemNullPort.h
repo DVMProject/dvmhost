@@ -72,6 +72,8 @@ namespace modem
             void getStatus();
             /// <summary>Helper to write a faked modem acknowledge.</summary>
             void writeAck(uint8_t type);
+            /// <summary>Helper to write a faked modem negative acknowledge.</summary>
+            void writeNAK(uint8_t opcode, uint8_t err);
         };
     } // namespace port
 } // namespace modem

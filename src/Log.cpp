@@ -68,11 +68,13 @@ static network::Network* m_network;
 static FILE* m_fpLog = nullptr;
 static FILE* m_actFpLog = nullptr;
 
-static uint32_t m_displayLevel = 2U;
+uint32_t g_logDisplayLevel = 2U;
 bool g_disableTimeDisplay = false;
 
 static struct tm m_tm;
 static struct tm m_actTm;
+
+static std::ostream m_outStream{std::cerr.rdbuf()};
 
 static char LEVELS[] = " DMIWEF";
 
@@ -142,6 +144,15 @@ static bool ActivityLogOpen()
     m_actTm = *tm;
 
     return m_actFpLog != nullptr;
+}
+
+/// <summary>
+/// Internal helper to set an output stream to direct logging to.
+/// </summary>
+/// <param name="stream"></param>
+void __InternalOutputStream(std::ostream& stream)
+{
+    m_outStream.rdbuf(stream.rdbuf());
 }
 
 /// <summary>
@@ -241,7 +252,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
         ::fflush(m_fpLog);
     }
 
-    if (2U >= m_displayLevel && m_displayLevel != 0U) {
+    if (2U >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
         ::fprintf(stdout, "%s" EOL, buffer);
         ::fflush(stdout);
     }
@@ -260,7 +271,7 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
     m_filePath = filePath;
     m_fileRoot = fileRoot;
     m_fileLevel = fileLevel;
-    m_displayLevel = displayLevel;
+    g_logDisplayLevel = displayLevel;
     g_disableTimeDisplay = disableTimeDisplay;
     return ::LogOpen();
 }
@@ -324,6 +335,10 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
 
     va_end(vl);
 
+    if (m_outStream && g_logDisplayLevel == 0U) {
+        m_outStream << buffer << std::endl;
+    }
+
     if (m_network != nullptr) {
         // don't transfer debug data...
         if (level > 1U) {
@@ -345,7 +360,7 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         ::fflush(m_fpLog);
     }
 
-    if (level >= m_displayLevel && m_displayLevel != 0U) {
+    if (level >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
         ::fprintf(stdout, "%s" EOL, buffer);
         ::fflush(stdout);
     }

@@ -148,32 +148,44 @@ file(GLOB dvmcmd_SRC
 
 # Digital mode options and other compilation features
 option(ENABLE_DMR "Enable DMR Digtial Mode" on)
-option(ENABLE_P25 "Enable P25 Digital Mode" on)
-option(ENABLE_NXDN "Enable NXDN Digital Mode" on)
-option(ENABLE_DFSI_SUPPORT "Enable P25 DFSI Transport Support" off)
-
 if (ENABLE_DMR)
     add_definitions(-DENABLE_DMR)
     message(CHECK_START "DMR Digital Mode - enabled")
 else ()
     message(CHECK_START "DMR Digital Mode - disabled")
 endif (ENABLE_DMR)
+
+option(ENABLE_P25 "Enable P25 Digital Mode" on)
 if (ENABLE_P25)
     add_definitions(-DENABLE_P25)
     message(CHECK_START "P25 Digital Mode - enabled")
 else ()
     message(CHECK_START "P25 Digital Mode - disabled")
 endif (ENABLE_P25)
+
+option(ENABLE_NXDN "Enable NXDN Digital Mode" on)
 if (ENABLE_NXDN)
     add_definitions(-DENABLE_NXDN)
     message(CHECK_START "NXDN Digital Mode - enabled")
 else ()
     message(CHECK_START "NXDN Digital Mode - disabled")
 endif (ENABLE_NXDN)
+
+option(ENABLE_DFSI_SUPPORT "Enable P25 DFSI Transport Support" off)
 if (ENABLE_DFSI_SUPPORT)
     add_definitions(-DENABLE_DFSI_SUPPORT)
     message(CHECK_START "P25 DFSI Support - enabled")
 endif (ENABLE_DFSI_SUPPORT)
+
+if (ENABLE_TUI_SUPPORT)
+    option(ENABLE_SETUP_TUI "Enable interactive setup TUI" on)
+    if (ENABLE_SETUP_TUI)
+        add_definitions(-DENABLE_SETUP_TUI)
+        message(CHECK_START "Interactive Setup TUI - enabled")
+    endif (ENABLE_SETUP_TUI)
+else()
+    set(ENABLE_SETUP_TUI off)
+endif (ENABLE_TUI_SUPPORT)
 
 # Debug compilation features/options (these should not be enabled for production!)
 option(DEBUG_DMR_PDU_DATA "" off)
@@ -278,6 +290,11 @@ target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
 target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
 target_link_libraries(asio::asio INTERFACE Threads::Threads)
 
+if (ENABLE_SETUP_TUI)
+    # add finalcut
+    target_include_directories(finalcut INTERFACE ${FINALCUT_INCLUDE_DIR})
+endif (ENABLE_SETUP_TUI)
+
 # Check if platform-specific functions exist
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(sendmsg sys/socket.h HAVE_SENDMSG)
@@ -298,7 +315,11 @@ endif (HAVE_SENDMMSG)
 
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE src)
-target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
+if (ENABLE_SETUP_TUI)
+    target_link_libraries(dvmhost PRIVATE asio::asio finalcut Threads::Threads util)
+else()
+    target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
+endif (ENABLE_SETUP_TUI)
 
 set(CPACK_SET_DESTDIR true)
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")

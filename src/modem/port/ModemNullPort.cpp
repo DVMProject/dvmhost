@@ -108,6 +108,9 @@ int ModemNullPort::write(const uint8_t* buffer, uint32_t length)
     case CMD_SET_MODE:
         writeAck(buffer[2U]);
         break;
+    case CMD_FLSH_READ:
+        writeNAK(CMD_FLSH_READ, RSN_NO_INTERNAL_FLASH);
+        break;
     default:
         break;
     }
@@ -128,7 +131,7 @@ void ModemNullPort::close()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-///
+/// Helper to return a faked modem version.
 /// </summary>
 void ModemNullPort::getVersion()
 {
@@ -154,7 +157,7 @@ void ModemNullPort::getVersion()
 }
 
 /// <summary>
-///
+/// Helper to return a faked modem status.
 /// </summary>
 void ModemNullPort::getStatus()
 {
@@ -184,8 +187,9 @@ void ModemNullPort::getStatus()
 }
 
 /// <summary>
-///
+/// Helper to write a faked modem acknowledge.
 /// </summary>
+/// <param name="type"></param>
 void ModemNullPort::writeAck(uint8_t type)
 {
     unsigned char reply[4U];
@@ -196,4 +200,22 @@ void ModemNullPort::writeAck(uint8_t type)
     reply[3U] = type;
 
     m_buffer.addData(reply, 4U);
+}
+
+/// <summary>
+/// Helper to write a faked modem negative acknowledge.
+/// </summary>
+/// <param name="opcode"></param>
+/// <param name="err"></param>
+void ModemNullPort::writeNAK(uint8_t opcode, uint8_t err)
+{
+    uint8_t reply[5U];
+
+    reply[0U] = DVM_FRAME_START;
+    reply[1U] = 5U;
+    reply[2U] = CMD_NAK;
+    reply[3U] = opcode;
+    reply[4U] = err;
+
+    m_buffer.addData(reply, 5U);
 }

@@ -142,7 +142,7 @@ void usage(const char* message, const char* arg)
 
     ::fprintf(stdout, 
         "usage: %s [-vhf]"
-        "[--cal | --setup]"
+        "[--setup]"
         "[--fne]"
         "[-c <configuration file>]"
         "[--remote [-a <address>] [-p <port>]]"
@@ -151,8 +151,7 @@ void usage(const char* message, const char* arg)
         "  -h        show this screen\n"
         "  -f        foreground mode\n"
         "\n"
-        "  --cal     calibration mode\n"
-        "  --setup   setup mode\n"
+        "  --setup   setup and calibration mode\n"
         "\n"
         "  --fne     fixed network equipment mode (conference bridge)\n"
         "\n"
@@ -192,7 +191,11 @@ int checkArgs(int argc, char* argv[])
             g_calibrate = true;
         }
         else if (IS("--setup")) {
+#if defined(ENABLE_SETUP_TUI)
             g_setup = true;
+#else
+            g_calibrate = true;
+#endif // defined(ENABLE_SETUP_TUI)
         }
         else if (IS("--fne")) {
             g_fne = true;
@@ -298,16 +301,24 @@ int main(int argc, char** argv)
         }
         else {
             if (g_calibrate || g_setup) {
+#if defined(ENABLE_SETUP_TUI)
                 if (g_setup) {
                     HostSetup* setup = new HostSetup(g_iniFile);
-                    ret = setup->run();
+                    ret = setup->run(argc, argv);
                     delete setup;
                 }
                 else {
                     HostCal* cal = new HostCal(g_iniFile);
-                    ret = cal->run();
+                    ret = cal->run(argc, argv);
                     delete cal;
                 }
+#else
+                if (g_calibrate) {
+                    HostCal* cal = new HostCal(g_iniFile);
+                    ret = cal->run(argc, argv);
+                    delete cal;
+                }
+#endif // defined(ENABLE_SETUP_TUI)
             }
             else {
                 Host* host = new Host(g_iniFile);

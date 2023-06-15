@@ -33,13 +33,8 @@
 #define __HOST_CAL_H__
 
 #include "Defines.h"
-#include "edac/AMBEFEC.h"
-#include "modem/Modem.h"
+#include "host/setup/HostSetup.h"
 #include "host/Console.h"
-#include "host/Host.h"
-#include "lookups/IdenTableLookup.h"
-#include "yaml/Yaml.h"
-#include "RingBuffer.h"
 
 #include <string>
 
@@ -48,7 +43,7 @@
 //      This class implements the interactive calibration mode.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API HostCal {
+class HOST_SW_API HostCal : public HostSetup {
 public:
     /// <summary>Initializes a new instance of the HostCal class.</summary>
     HostCal(const std::string& confFile);
@@ -56,64 +51,10 @@ public:
     ~HostCal();
 
     /// <summary>Executes the calibration processing loop.</summary>
-    int run();
+    int run(int argc, char **argv);
 
 private:
-    const std::string& m_confFile;
-    yaml::Node m_conf;
-
-    modem::Modem* m_modem;
-
-    RingBuffer<uint8_t> m_queue;
-
     Console m_console;
-    edac::AMBEFEC m_fec;
-    bool m_transmit;
-
-    bool m_duplex;
-
-    bool m_dmrEnabled;
-    bool m_dmrRx1K;
-    bool m_p25Enabled;
-    bool m_p25Rx1K;
-    bool m_p25TduTest;
-    bool m_nxdnEnabled;
-
-    bool m_isHotspot;
-
-    bool m_debug;
-
-    uint8_t m_mode;
-    std::string m_modeStr;
-
-    uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
-    uint32_t m_rxAdjustedFreq;
-    uint32_t m_txFrequency;         // hotspot modem - Tx Frequency
-    uint32_t m_txAdjustedFreq;
-    uint8_t m_channelId;
-    uint32_t m_channelNo;
-
-    lookups::IdenTableLookup* m_idenTable;
-
-    uint32_t m_berFrames;
-    uint32_t m_berBits;
-    uint32_t m_berErrs;
-    uint32_t m_berUndecodableLC;
-    uint32_t m_berUncorrectable;
-
-    uint32_t m_timeout;
-    uint32_t m_timer;
-
-    bool m_updateConfigFromModem;
-    bool m_hasFetchedStatus;
-    bool m_requestedStatus;
-
-    /// <summary>Modem port open callback.</summary>
-    bool portModemOpen(modem::Modem* modem);
-    /// <summary>Modem port close callback.</summary>
-    bool portModemClose(modem::Modem* modem);
-    /// <summary>Modem clock callback.</summary>
-    bool portModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
     /// <summary>Helper to print the calibration help to the console.</summary>
     void displayHelp();
@@ -134,70 +75,9 @@ private:
     bool setRXFineLevel(int incr);
     /// <summary>Helper to change the RSSI level.</summary>
     bool setRSSICoarseLevel(int incr);
-    /// <summary>Helper to toggle modem transmit mode.</summary>
-    bool setTransmit();
 
-    /// <summary>Helper to change the DMR Symbol Level 3 adjust.</summary>
-    bool setDMRSymLevel3Adj(int incr);
-    /// <summary>Helper to change the DMR Symbol Level 1 adjust.</summary>
-    bool setDMRSymLevel1Adj(int incr);
-    /// <summary>Helper to change the P25 Symbol Level 3 adjust.</summary>
-    bool setP25SymLevel3Adj(int incr);
-    /// <summary>Helper to change the P25 Symbol Level 1 adjust.</summary>
-    bool setP25SymLevel1Adj(int incr);
-    /// <summary>Helper to change the NXDN Symbol Level 3 adjust.</summary>
-    bool setNXDNSymLevel3Adj(int incr);
-    /// <summary>Helper to change the NXDN Symbol Level 1 adjust.</summary>
-    bool setNXDNSymLevel1Adj(int incr);
-
-    /// <summary>Process DMR Rx BER.</summary>
-    void processDMRBER(const uint8_t* buffer, uint8_t seq);
-    /// <summary>Process DMR Tx 1011hz BER.</summary>
-    void processDMR1KBER(const uint8_t* buffer, uint8_t seq);
-    /// <summary>Process P25 Rx BER.</summary>
-    void processP25BER(const uint8_t* buffer);
-    /// <summary>Process P25 Tx 1011hz BER.</summary>
-    void processP251KBER(const uint8_t* buffer);
-    /// <summary>Process NXDN Rx BER.</summary>
-    void processNXDNBER(const uint8_t* buffer);
-
-    /// <summary>Write configuration to the modem DSP.</summary>
-    bool writeConfig();
-    /// <summary>Write configuration to the modem DSP.</summary>
-    bool writeConfig(uint8_t modeOverride);
-    /// <summary>Write RF parameters to the air interface modem.</summary>
-    bool writeRFParams();
-    /// <summary>Write symbol level adjustments to the modem DSP.</summary>
-    bool writeSymbolAdjust();
-    /// <summary>Helper to sleep the calibration thread.</summary>
-    void sleep(uint32_t ms);
-
-    /// <summary>Read the configuration area on the air interface modem.</summary>
-    bool readFlash();
-    /// <summary>Process the configuration data from the air interface modem.</summary>
-    void processFlashConfig(const uint8_t *buffer);
-    /// <summary>Erase the configuration area on the air interface modem.</summary>
-    bool eraseFlash();
-    /// <summary>Write the configuration area on the air interface modem.</summary>
-    bool writeFlash();
-
-    /// <summary>Helper to clock the calibration BER timer.</summary>
-    void timerClock();
-    /// <summary>Helper to start the calibration BER timer.</summary>
-    void timerStart();
-    /// <summary>Helper to stop the calibration BER timer.</summary>
-    void timerStop();
-
-    /// <summary>Retrieve the current status from the air interface modem.</summary>
-    void getStatus();
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
-
-    /// <summary>Add data frame to the data ring buffer.</summary>
-    void addFrame(const uint8_t* data, uint32_t length, uint32_t maxFrameSize);
-
-    /// <summary>Counts the total number of bit errors between bytes.</summary>
-    uint8_t countErrs(uint8_t a, uint8_t b);
 };
 
 #endif // __HOST_CAL_H__

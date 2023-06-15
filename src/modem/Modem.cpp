@@ -776,6 +776,11 @@ void Modem::clock(uint32_t ms)
 
             m_isHotspot = (m_buffer[3U] & 0x01U) == 0x01U;
 
+            // override hotspot flag if we're forcing hotspot
+            if (m_forceHotspot) {
+                m_isHotspot = m_forceHotspot;
+            }
+
             bool dmrEnable = (m_buffer[3U] & 0x02U) == 0x02U;
             bool p25Enable = (m_buffer[3U] & 0x08U) == 0x08U;
             bool nxdnEnable = (m_buffer[3U] & 0x10U) == 0x10U;
@@ -2091,9 +2096,11 @@ bool Modem::readFlash()
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
                 LogWarning(LOG_MODEM, "Modem::readFlash(), old modem that doesn't support flash commands?");
+                m_flashDisabled = true;
                 return false;
             }
 
+            m_flashDisabled = false;
             if (resp == RTM_OK && m_buffer[2U] == CMD_FLSH_READ) {
                 uint8_t len = m_buffer[1U];
                 if (m_debug) {

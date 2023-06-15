@@ -43,6 +43,14 @@ else ()
     message(CHECK_PASS "no")
 endif (ENABLE_TESTS)
 
+option(ENABLE_TUI_SUPPORT "Enable TUI support" on)
+message(CHECK_START "Enable TUI support")
+if (ENABLE_TUI_SUPPORT)
+    message(CHECK_PASS "yes")
+else ()
+    message(CHECK_PASS "no")
+endif (ENABLE_TUI_SUPPORT)
+
 # Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
@@ -97,6 +105,7 @@ endif (CROSS_COMPILE_RPI_ARM)
 
 # Standard CMake options
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY .)
 if(NOT CMAKE_BUILD_TYPE)
@@ -128,8 +137,6 @@ endif (CROSS_COMPILE_ARM)
 
 set(CMAKE_INSTALL_PREFIX "/usr/local")
 
-project(dvmhost)
-
 #
 # Library Inclusions
 #
@@ -148,6 +155,18 @@ else()
     set(ASIO_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/asio-src/asio/include)
 endif (WITH_ASIO)
 
+if (ENABLE_TUI_SUPPORT)
+message("-- Cloning finalcut")
+Include(FetchContent)
+FetchContent_Declare(
+    FINALCUT
+    GIT_REPOSITORY https://github.com/gatekeep/finalcut-cmake.git
+)
+set(F_COMPILE_STATIC 1)
+FetchContent_MakeAvailable(FINALCUT)
+set(FINALCUT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/finalcut-src/src)
+endif (ENABLE_TUI_SUPPORT)
+
 #
 # Set GIT_VER compiler directive
 #
@@ -159,6 +178,7 @@ execute_process(COMMAND git describe --abbrev=8 --always --tags WORKING_DIRECTOR
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
+project(dvmhost)
 include(src/CMakeLists.txt)
 
 if (ENABLE_TESTS)
