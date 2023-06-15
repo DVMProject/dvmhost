@@ -661,6 +661,7 @@ private:
             if (m_setup->m_transmit)
                 m_setup->setTransmit();
 
+            m_setup->m_isConnected = false;
             m_setup->m_modem->close();
             Thread::sleep(25);
         }

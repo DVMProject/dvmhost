@@ -162,6 +162,7 @@ int HostCal::run(int argc, char **argv)
     if (!m_hasFetchedStatus) {
         ::LogError(LOG_CAL, "Failed to get status from modem");
 
+        m_isConnected = false;
         m_modem->close();
         m_console.close();
         return 2;
@@ -689,6 +690,7 @@ int HostCal::run(int argc, char **argv)
     if (m_transmit)
         setTransmit();
 
+    m_isConnected = false;
     m_modem->close();
     m_console.close();
     return 0;

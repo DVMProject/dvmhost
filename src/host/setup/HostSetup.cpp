@@ -281,6 +281,7 @@ bool HostSetup::portModemOpen(Modem* modem)
         if (!ret) {
             LogError(LOG_MODEM, "Modem unresponsive to RF parameters set after 2 attempts. Stopping.");
             m_modem->close();
+            m_isConnected = false;
             return false;
         }
     }
@@ -291,6 +292,7 @@ bool HostSetup::portModemOpen(Modem* modem)
         if (!ret) {
             LogError(LOG_MODEM, "Modem unresponsive to configuration set after 2 attempts. Stopping.");
             m_modem->close();
+            m_isConnected = false;
             return false;
         }
     }
