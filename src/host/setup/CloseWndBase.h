@@ -117,6 +117,18 @@ protected:
     /// 
     /// </summary>
     /// <param name="e"></param>
+    virtual void onKeyPress(finalcut::FKeyEvent* e)
+    {
+        const auto key = e->key();
+        if (key == FKey::F2) {
+            m_setup->saveConfig();
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="e"></param>
     virtual void onClose(FCloseEvent* e) override
     {
         hide();

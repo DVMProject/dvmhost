@@ -36,7 +36,6 @@ using namespace modem;
 #include "host/setup/LogDisplayWnd.h"
 #include "host/setup/ModemStatusWnd.h"
 #include "host/setup/BERDisplayWnd.h"
-#include "host/setup/TxButtonWnd.h"
 
 #include "host/setup/LevelAdjustWnd.h"
 #include "host/setup/SymbLevelAdjustWnd.h"
@@ -75,9 +74,6 @@ public:
         __InternalOutputStream(m_logWnd);
         m_statusWnd.hide();
 
-        m_txWnd.setSetup(setup);
-        m_txWnd.show();
-
         resetBERWnd();
 
         // file menu
@@ -87,11 +83,18 @@ public:
         m_connectToModemItem.addCallback("clicked", this, &SetupMainWnd::cb_connectToModemClick);
         m_keyF8.addCallback("activate", this, &SetupMainWnd::cb_connectToModemClick);
         m_saveSettingsItem.addAccelerator(FKey::Meta_s); // Meta/Alt + S
-        m_saveSettingsItem.addCallback("clicked", this, &SetupMainWnd::cb_fileSaveClick);
-        m_keyF2.addCallback("activate", this, &SetupMainWnd::cb_fileSaveClick);
+        m_saveSettingsItem.addCallback("clicked", this, [&]() { m_setup->saveConfig(); });
+        m_keyF2.addCallback("activate", this, [&]() { m_setup->saveConfig(); });
         m_quitItem.addAccelerator(FKey::Meta_x); // Meta/Alt + X
         m_quitItem.addCallback("clicked", getFApplication(), &FApplication::cb_exitApp, this);
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
+        m_keyF12.addCallback("activate", this, [&]() {
+            if (m_setup->m_isConnected) {
+                if (!m_setup->setTransmit()) {
+                    FMessageBox::error(this, "Failed to enable modem transmit!");
+                }
+            }
+        });
 
         // setup menu
         m_setupMenuSeparator1.setSeparator();
@@ -128,7 +131,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -145,7 +147,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -162,7 +163,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -179,7 +179,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -196,7 +195,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -213,7 +211,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -228,7 +225,6 @@ public:
             m_setup->m_p25TduTest = true;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             m_setup->m_queue.clear();
@@ -249,7 +245,6 @@ public:
                 m_setup->m_p25TduTest = false;
                 m_setup->m_nxdnEnabled = false;
 
-                m_txWnd.show();
                 resetBERWnd();
 
                 LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -275,7 +270,6 @@ public:
             m_setup->m_p25Enabled = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.hide();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -297,7 +291,6 @@ public:
             m_setup->m_p25Enabled = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.hide();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -313,7 +306,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.hide();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -329,7 +321,6 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
-            m_txWnd.hide();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -347,7 +338,6 @@ public:
                 m_setup->m_p25TduTest = false;
                 m_setup->m_nxdnEnabled = true;
 
-                m_txWnd.hide();
                 resetBERWnd(true);
 
                 LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -367,7 +357,6 @@ public:
             m_setup->m_p25Rx1K = false;
             m_setup->m_p25TduTest = false;
 
-            m_txWnd.show();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -561,7 +550,6 @@ private:
     LogDisplayWnd m_logWnd{this};
     ModemStatusWnd m_statusWnd{this};
     BERDisplayWnd m_berWnd{this};
-    TxButtonWnd m_txWnd{this};
 
     FString m_line{13, UniChar::BoxDrawingsHorizontal};
 
@@ -626,6 +614,7 @@ private:
     FStatusKey m_keyF3{FKey::F3, "Quit", &m_statusBar};
     FStatusKey m_keyF5{FKey::F5, "Level Adjustment", &m_statusBar};
     FStatusKey m_keyF8{FKey::F8, "Connect to Modem", &m_statusBar};
+    FStatusKey m_keyF12{FKey::F12, "Transmit", &m_statusBar};
 
     /// <summary>
     /// Helper to reset the BER window to a default state.
@@ -654,7 +643,7 @@ private:
     {
         // if we are saving on close -- fire off the file save event
         if (m_saveOnCloseToggle.isChecked()) {
-            cb_fileSaveClick();
+            m_setup->saveConfig();
         }
 
         if (m_setup->m_isConnected) {
@@ -663,7 +652,7 @@ private:
 
             m_setup->m_isConnected = false;
             m_setup->m_modem->close();
-            Thread::sleep(25);
+            Thread::sleep(250);
         }
 
         FApplication::closeConfirmationDialog(this, e);
@@ -737,29 +726,23 @@ private:
 
             setMenuStates();
             m_setup->printStatus();
+
+            // set default state
+            m_setup->m_mode = STATE_DMR_CAL;
+            m_setup->m_modeStr = DMR_CAL_STR;
+            m_setup->m_duplex = true;
+            m_setup->m_dmrEnabled = false;
+            m_setup->m_dmrRx1K = false;
+            m_setup->m_p25Enabled = false;
+            m_setup->m_p25Rx1K = false;
+            m_setup->m_p25TduTest = false;
+            m_setup->m_nxdnEnabled = false;
+            m_setup->writeConfig();
+
             initWait.hide();
         }
         else {
             FMessageBox::error(this, L"Cannot connect to a modem when already connected.");
-        }
-    }
-
-    /// <summary>
-    /// "Save Settings" menu item click callback.
-    /// </summary>
-    void cb_fileSaveClick()
-    {
-        m_setup->m_mode = STATE_IDLE;
-        m_setup->writeConfig();
-        m_setup->writeRFParams();
-        m_setup->writeSymbolAdjust();
-        
-        yaml::Serialize(m_setup->m_conf, m_setup->m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
-        LogMessage(LOG_CAL, " - Saved configuration to %s", m_setup->m_confFile.c_str());
-        if (m_setup->m_isConnected) {
-            if (m_setup->writeFlash()) {
-                LogMessage(LOG_CAL, " - Wrote configuration area on modem");
-            }
         }
     }
 };

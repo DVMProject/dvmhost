@@ -60,11 +60,12 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
+#if defined(ENABLE_SETUP_TUI)
 class HOST_SW_API SetupApplication;
 class HOST_SW_API SetupMainWnd;
 
-class HOST_SW_API TxButtonWnd;
 class HOST_SW_API AdjustWndBase;
+class HOST_SW_API CloseWndBase;
 class HOST_SW_API LevelAdjustWnd;
 class HOST_SW_API SymbLevelAdjustWnd;
 class HOST_SW_API HSBandwidthAdjustWnd;
@@ -74,6 +75,7 @@ class HOST_SW_API LoggingAndDataSetWnd;
 class HOST_SW_API SystemConfigSetWnd;
 class HOST_SW_API SiteParamSetWnd;
 class HOST_SW_API ChannelConfigSetWnd;
+#endif // defined(ENABLE_SETUP_TUI)
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -100,8 +102,8 @@ protected:
     friend class SetupApplication;
     friend class SetupMainWnd;
 
-    friend class TxButtonWnd;
     friend class AdjustWndBase;
+    friend class CloseWndBase;
     friend class LevelAdjustWnd;
     friend class SymbLevelAdjustWnd;
     friend class HSBandwidthAdjustWnd;
@@ -171,6 +173,8 @@ protected:
     /// <summary>Modem clock callback.</summary>
     bool portModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
+    /// <summary>Helper to save configuration.</summary>
+    void saveConfig();
     /// <summary>Helper to calculate the Rx/Tx frequencies.</summary>
     bool calculateRxTxFreq();
     /// <summary>Helper to log the system configuration parameters.</summary>

@@ -114,20 +114,8 @@ protected:
             m_txButton.redraw();
         }
 
-        m_txButton.addCallback("clicked", [&]() {
-            if (!m_setup->setTransmit()) {
-                FMessageBox::error(this, "Failed to enable modem transmit!");
-            }
-            if (m_setup->m_transmit) {
-                m_txButton.setBackgroundColor(FColor::Red3);
-                m_txButton.setFocusBackgroundColor(FColor::Red3);
-            }
-            else {
-                m_txButton.resetColors();
-            }
+        m_txButton.addCallback("clicked", [&]() { setTransmit(); });
 
-            m_txButton.redraw();
-        });
 
         m_closeButton.setGeometry(FPoint(17, int(getHeight()) - 6), FSize(9, 3));
         m_closeButton.addCallback("clicked", [&](){ hide(); });
@@ -161,6 +149,21 @@ protected:
     /// 
     /// </summary>
     /// <param name="e"></param>
+    virtual void onKeyPress(finalcut::FKeyEvent* e)
+    {
+        const auto key = e->key();
+        if (key == FKey::F12) {
+            setTransmit();
+        }
+        else if (key == FKey::F2) {
+            m_setup->saveConfig();
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="e"></param>
     virtual void onClose(FCloseEvent* e) override
     {
         hide();
@@ -171,6 +174,25 @@ private:
 
     FButton m_txButton{"Transmit", this};
     FButton m_closeButton{"Close", this};
+
+    /// <summary>
+    ///
+    /// </summary>
+    void setTransmit() 
+    {
+        if (!m_setup->setTransmit()) {
+            FMessageBox::error(this, "Failed to enable modem transmit!");
+        }
+        if (m_setup->m_transmit) {
+            m_txButton.setBackgroundColor(FColor::Red3);
+            m_txButton.setFocusBackgroundColor(FColor::Red3);
+        }
+        else {
+            m_txButton.resetColors();
+        }
+
+        m_txButton.redraw();
+    }
 };
 
 #endif // __ADJUST_WND_BASE_H__

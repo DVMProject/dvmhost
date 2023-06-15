@@ -545,6 +545,30 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 }
 
 /// <summary>
+/// Helper to save configuration.
+/// </summary>
+void HostSetup::saveConfig()
+{
+    if (m_isConnected) {
+        if (m_transmit) {
+            setTransmit();
+        }
+
+        writeConfig();
+        writeRFParams();
+        writeSymbolAdjust();
+    }
+    
+    yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
+    LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
+    if (m_isConnected) {
+        if (writeFlash()) {
+            LogMessage(LOG_CAL, " - Wrote configuration area on modem");
+        }
+    }
+}
+
+/// <summary>
 /// Helper to calculate the Rx/Tx frequencies.
 /// </summary>
 bool HostSetup::calculateRxTxFreq()

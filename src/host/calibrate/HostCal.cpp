@@ -638,20 +638,8 @@ int HostCal::run(int argc, char **argv)
             break;
         case 'S':
         case 's':
-        {
-            m_mode = STATE_IDLE;
-            writeConfig();
-            if (m_isHotspot) {
-                writeRFParams();
-            }
-            writeSymbolAdjust();
-            yaml::Serialize(m_conf, m_confFile.c_str(), yaml::SerializeConfig(4, 64, false, false));
-            LogMessage(LOG_CAL, " - Saved configuration to %s", m_confFile.c_str());
-            if (writeFlash()) {
-                LogMessage(LOG_CAL, " - Wrote configuration area on modem");
-            }
-        }
-        break;
+            saveConfig();
+            break;
         case 'U':
             m_updateConfigFromModem = true;
             readFlash();
