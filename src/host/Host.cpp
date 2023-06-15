@@ -1830,16 +1830,18 @@ bool Host::readParams()
         /*
         ** Control Channel
         */
-        yaml::Node controlCh = rfssConfig["controlCh"];
+        {
+            yaml::Node controlCh = rfssConfig["controlCh"];
 
-        std::string restApiAddress = controlCh["restAddress"].as<std::string>("127.0.0.1");
-        uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-        std::string restApiPassword = controlCh["restPassword"].as<std::string>();
+            std::string restApiAddress = controlCh["restAddress"].as<std::string>("127.0.0.1");
+            uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+            std::string restApiPassword = controlCh["restPassword"].as<std::string>();
 
-        ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", restApiAddress.c_str(), restApiPort);
+            VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
+            m_controlChData = data;
 
-        VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
-        m_controlChData = data;
+            ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+        }
 
         /*
         ** Voice Channels

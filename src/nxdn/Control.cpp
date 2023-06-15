@@ -921,7 +921,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
         req["dstId"].set<uint32_t>(dstId);
 
         int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+            HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
         if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
             ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
         }
