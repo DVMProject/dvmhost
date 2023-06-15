@@ -83,8 +83,8 @@ namespace nxdn
 
         /// <summary>Helper to set NXDN configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, uint16_t siteId, uint32_t sysId,
-            uint8_t channelId, uint32_t channelNo, bool printOptions);
+            const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, lookups::VoiceChData controlChData,
+            uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the NXDN control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -107,6 +107,11 @@ namespace nxdn
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
+
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId);
 
         /// <summary>Gets instance of the AffiliationLookup class.</summary>
         lookups::AffiliationLookup affiliations() { return m_affiliations; }
@@ -160,6 +165,7 @@ namespace nxdn
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::AffiliationLookup m_affiliations;
+        ::lookups::VoiceChData m_controlChData;
 
         lookups::IdenTable m_idenEntry;
 

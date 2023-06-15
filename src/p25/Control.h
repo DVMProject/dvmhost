@@ -85,8 +85,9 @@ namespace p25
 
         /// <summary>Helper to set P25 configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
-            uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
+            uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
+            uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -117,6 +118,11 @@ namespace p25
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
+
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId);
 
         /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
@@ -171,6 +177,7 @@ namespace p25
         ::lookups::RadioIdLookup* m_ridLookup;
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::P25AffiliationLookup m_affiliations;
+        ::lookups::VoiceChData m_controlChData;
 
         ::lookups::IdenTable m_idenEntry;
 

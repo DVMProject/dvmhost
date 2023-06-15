@@ -70,6 +70,7 @@ bool Slot::m_duplex = true;
 ::lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
 ::lookups::TalkgroupRulesLookup* Slot::m_tidLookup = nullptr;
 dmr::lookups::DMRAffiliationLookup *Slot::m_affiliations = nullptr;
+::lookups::VoiceChData Slot::m_controlChData = ::lookups::VoiceChData();
 
 ::lookups::IdenTable Slot::m_idenEntry = ::lookups::IdenTable();
 
@@ -587,6 +588,44 @@ void Slot::permittedTG(uint32_t dstId)
 }
 
 /// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::releaseGrantTG(uint32_t dstId)
+{
+    if (m_control) {
+        return;
+    }
+
+    if (m_affiliations->isGranted(dstId)) {
+        if (m_verbose) {
+            LogDebug(LOG_DMR, "DMR Slot %u, request to release a TG grant, dstId = %u", m_slotNo, dstId);
+        }
+    
+        m_affiliations->releaseGrant(dstId, false);
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::touchGrantTG(uint32_t dstId)
+{
+    if (m_control) {
+        return;
+    }
+
+    if (m_affiliations->isGranted(dstId)) {
+        if (m_verbose) {
+            LogDebug(LOG_DMR, "DMR Slot %u, request to touch a TG grant, dstId = %u", m_slotNo, dstId);
+        }
+
+        m_affiliations->touchGrant(dstId);
+    }
+}
+
+/// <summary>
 /// Helper to change the debug and verbose state.
 /// </summary>
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
@@ -753,13 +792,14 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// </summary>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="requireReg"></param>
 void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
+    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
@@ -778,6 +818,8 @@ void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unorder
 
     std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
     m_affiliations->setRFChData(chData);
+
+    m_controlChData = controlChData;
 
     lc::CSBK::setSiteData(m_siteData);
 }

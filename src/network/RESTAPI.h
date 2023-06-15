@@ -134,6 +134,11 @@ private:
     void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
+    void restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /// <summary></summary>
     void restAPI_GetRIDWhitelist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);

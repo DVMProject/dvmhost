@@ -110,6 +110,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_affiliations(this, verbose),
+    m_controlChData(),
     m_idenEntry(),
     m_txImmQueue(queueSize, "P25 Imm Frame"),
     m_txQueue(queueSize, "P25 Frame"),
@@ -215,6 +216,7 @@ void Control::reset()
 /// <param name="cwCallsign">CW callsign of this host.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="pSuperGroup"></param>
 /// <param name="netId">P25 Network ID.</param>
 /// <param name="sysId">P25 System ID.</param>
@@ -224,8 +226,9 @@ void Control::reset()
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
-    uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
+    uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
+    uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
@@ -325,6 +328,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
     m_affiliations.setRFChData(chData);
+
+    m_controlChData = controlChData;
 
     // set the grant release callback
     m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
@@ -826,6 +831,44 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     m_permittedDstId = dstId;
+}
+
+/// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::releaseGrantTG(uint32_t dstId)
+{
+    if (m_control) {
+        return;
+    }
+
+    if (m_affiliations.isGranted(dstId)) {
+        if (m_verbose) {
+            LogDebug(LOG_P25, "request to release a TG grant, dstId = %u", dstId);
+        }
+    
+        m_affiliations.releaseGrant(dstId, false);
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::touchGrantTG(uint32_t dstId)
+{
+    if (m_control) {
+        return;
+    }
+
+    if (m_affiliations.isGranted(dstId)) {
+        if (m_verbose) {
+            LogDebug(LOG_P25, "request to touch a TG grant, dstId = %u", dstId);
+        }
+
+        m_affiliations.touchGrant(dstId);
+    }
 }
 
 /// <summary>

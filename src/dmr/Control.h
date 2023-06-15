@@ -69,7 +69,7 @@ namespace dmr
 
         /// <summary>Helper to set DMR configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+            ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -95,6 +95,11 @@ namespace dmr
         void setSupervisor(bool supervisor);
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
+
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId, uint8_t slot);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId, uint8_t slot);
 
         /// <summary>Gets instance of the DMRAffiliationLookup class.</summary>
         lookups::DMRAffiliationLookup affiliations();

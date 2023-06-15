@@ -1076,7 +1076,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
     {
         if (m_nxdn != nullptr) {
             // TODO TODO
-            //nxdn->grantTG(dstId, unitToUnit);
+            //m_nxdn->grantTG(dstId, unitToUnit);
         }
         else {
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1151,6 +1151,230 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
         m_nxdn->affiliations().clearGroupAff(0, true);
     }
 #endif // defined(ENABLE_NXDN)
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (m_host->m_dmrCtrlChannel || m_host->m_p25CtrlChannel || m_host->m_nxdnCtrlChannel) {
+        errorPayload(reply, "Host is not a control channel, cannot release TG grant");
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["state"].is<int>()) {
+        errorPayload(reply, "state was not a valid integer");
+        return;
+    }
+
+    DVM_STATE state = (DVM_STATE)req["state"].get<int>();
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        errorPayload(reply, "destination ID was not a valid integer");
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        errorPayload(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    switch (state) {
+    case STATE_DMR:
+#if defined(ENABLE_DMR)
+    {
+        // validate slot is a integer within the JSON blob
+        if (!req["slot"].is<int>()) {
+            errorPayload(reply, "slot was not a valid integer");
+            return;
+        }
+
+        uint8_t slot = (uint8_t)req["slot"].get<int>();
+
+        if (slot == 0U || slot > 2U) {
+            errorPayload(reply, "illegal DMR slot");
+            return;
+        }
+
+        if (m_dmr != nullptr) {
+            m_dmr->releaseGrantTG(dstId, slot);
+        }
+        else {
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_DMR)
+    break;
+    case STATE_P25:
+#if defined(ENABLE_P25)
+    {
+        if (m_p25 != nullptr) {
+            m_p25->releaseGrantTG(dstId);
+        }
+        else {
+            errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_P25)
+    break;
+    case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+    {
+        if (m_nxdn != nullptr) {
+            m_nxdn->releaseGrantTG(dstId);
+        }
+        else {
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_NXDN)
+    break;
+    default:
+        errorPayload(reply, "invalid mode");
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (m_host->m_dmrCtrlChannel || m_host->m_p25CtrlChannel || m_host->m_nxdnCtrlChannel) {
+        errorPayload(reply, "Host is not a control channel, cannot touch TG grant");
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["state"].is<int>()) {
+        errorPayload(reply, "state was not a valid integer");
+        return;
+    }
+
+    DVM_STATE state = (DVM_STATE)req["state"].get<int>();
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<int>()) {
+        errorPayload(reply, "destination ID was not a valid integer");
+        return;
+    }
+
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (dstId == 0U) {
+        errorPayload(reply, "destination ID is an illegal TGID");
+        return;
+    }
+
+    switch (state) {
+    case STATE_DMR:
+#if defined(ENABLE_DMR)
+    {
+        // validate slot is a integer within the JSON blob
+        if (!req["slot"].is<int>()) {
+            errorPayload(reply, "slot was not a valid integer");
+            return;
+        }
+
+        uint8_t slot = (uint8_t)req["slot"].get<int>();
+
+        if (slot == 0U || slot > 2U) {
+            errorPayload(reply, "illegal DMR slot");
+            return;
+        }
+
+        if (m_dmr != nullptr) {
+            m_dmr->touchGrantTG(dstId, slot);
+        }
+        else {
+            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_DMR)
+    break;
+    case STATE_P25:
+#if defined(ENABLE_P25)
+    {
+        if (m_p25 != nullptr) {
+            m_p25->touchGrantTG(dstId);
+        }
+        else {
+            errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_P25)
+    break;
+    case STATE_NXDN:
+#if defined(ENABLE_NXDN)
+    {
+        if (m_nxdn != nullptr) {
+            m_nxdn->touchGrantTG(dstId);
+        }
+        else {
+            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
+        }
+    }
+#else
+    {
+        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
+    }
+#endif // defined(ENABLE_NXDN)
+    break;
+    default:
+        errorPayload(reply, "invalid mode");
+    }
 }
 
 /// <summary>

@@ -120,13 +120,14 @@ Control::~Control()
 /// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
@@ -152,7 +153,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
         dedicatedTSCC = false;
     }
 
-    Slot::setSiteData(voiceChNo, voiceChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
+    Slot::setSiteData(voiceChNo, voiceChData, controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
     bool disableGrantSourceIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
@@ -399,6 +400,46 @@ void Control::permittedTG(uint32_t dstId, uint8_t slot)
         break;
     case 2U:
         m_slot2->permittedTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+/// <paran name="slot"></param>
+void Control::releaseGrantTG(uint32_t dstId, uint8_t slot)
+{
+    switch (slot) {
+    case 1U:
+        m_slot1->releaseGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->releaseGrantTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+/// <paran name="slot"></param>
+void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
+{
+    switch (slot) {
+    case 1U:
+        m_slot1->touchGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->touchGrantTG(dstId);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);

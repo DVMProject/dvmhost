@@ -113,6 +113,7 @@ Host::Host(const std::string& confFile) :
     m_channelNo(0U),
     m_voiceChNo(),
     m_voiceChData(),
+    m_controlChData(),
     m_idenTable(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
@@ -427,10 +428,11 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
-            dmrDumpCsbkData, dmrDebug, dmrVerbose));
-        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
+        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
+            embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, 
+            m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose));
+        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
+            m_channelNo, true);
 
         if (dmrCtrlChannel) {
             dmr->setCCRunning(true);
@@ -500,11 +502,11 @@ int Host::run()
             }
         }
 
-        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
-            m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
-            p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId,
-            m_siteId, m_channelId, m_channelNo, true);
+        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
+            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
+            p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose));
+        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData,
+            m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
             p25->setCCRunning(true);
@@ -565,10 +567,11 @@ int Host::run()
             }
         }
 
-        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi,
+        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
+            m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData, m_siteId, 
+            m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
@@ -1781,6 +1784,9 @@ bool Host::readParams()
         m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
         m_idenTable->read();
 
+        /*
+        ** Channel Configuration
+        */
         yaml::Node rfssConfig = systemConf["config"];
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
         if (m_channelId > 15U) { // clamp to 15
@@ -1821,6 +1827,23 @@ bool Host::readParams()
             m_rxFrequency = m_txFrequency;
         }
 
+        /*
+        ** Control Channel
+        */
+        yaml::Node controlCh = rfssConfig["controlCh"];
+
+        std::string restApiAddress = controlCh["restAddress"].as<std::string>("127.0.0.1");
+        uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+        std::string restApiPassword = controlCh["restPassword"].as<std::string>();
+
+        ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", restApiAddress.c_str(), restApiPort);
+
+        VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
+        m_controlChData = data;
+
+        /*
+        ** Voice Channels
+        */
         yaml::Node& voiceChList = rfssConfig["voiceChNo"];
 
         if (voiceChList.size() == 0U) {
@@ -1862,6 +1885,9 @@ bool Host::readParams()
         }
         strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
 
+        /*
+        ** Site Parameters
+        */
         m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
         m_siteId = p25::P25Utils::siteId(m_siteId);
 

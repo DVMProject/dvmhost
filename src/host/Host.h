@@ -117,6 +117,7 @@ private:
 
     std::vector<uint32_t> m_voiceChNo;
     std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
+    lookups::VoiceChData m_controlChData;
 
     lookups::IdenTableLookup* m_idenTable;
     lookups::RadioIdLookup* m_ridLookup;
