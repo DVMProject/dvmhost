@@ -74,7 +74,7 @@ private:
     void initLayout() override
     {
         FDialog::setText("Symbol Level Adjustment");
-        FDialog::setSize(FSize{60, 15});
+        FDialog::setSize(FSize{60, 16});
 
         AdjustWndBase::initLayout();
     }
@@ -134,8 +134,8 @@ private:
                 m_setup->writeConfig();
             });
 
-            m_nxdn3LevelLabel.setGeometry(FPoint(2, 6), FSize(25, 1));
-            m_nxdn3Level.setGeometry(FPoint(28, 6), FSize(10, 1));
+            m_nxdn3LevelLabel.setGeometry(FPoint(2, 7), FSize(25, 1));
+            m_nxdn3Level.setGeometry(FPoint(28, 7), FSize(10, 1));
             m_nxdn3Level.setRange(-127, 127);
             m_nxdn3Level.setValue(m_setup->m_modem->m_nxdnSymLevel3Adj);
             m_nxdn3Level.setShadow(false);
@@ -145,8 +145,8 @@ private:
                 m_setup->writeConfig();
             });
 
-            m_nxdn1LevelLabel.setGeometry(FPoint(2, 7), FSize(25, 1));
-            m_nxdn1Level.setGeometry(FPoint(28, 7), FSize(10, 1));
+            m_nxdn1LevelLabel.setGeometry(FPoint(2, 8), FSize(25, 1));
+            m_nxdn1Level.setGeometry(FPoint(28, 8), FSize(10, 1));
             m_nxdn1Level.setRange(-127, 127);
             m_nxdn1Level.setValue(m_setup->m_modem->m_nxdnSymLevel1Adj);
             m_nxdn1Level.setShadow(false);
