@@ -60,6 +60,7 @@ Please note cross-compliation requires you to have the appropriate development p
 Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in favor of a ncurses-based TUI. This TUI is optional, and DVM Host can still be compiled without it for systems or devices that cannot utilize it.
 
 - `-DENABLE_SETUP_TUI=0` - This will disable the setup/calibration TUI interface.
+- `-DENABLE_TUI_SUPPORT=0` - This will disable TUI support project wide. Any projects that require TUI support will not compile, or will have any TUI components disabled.
 
 ### Compiled Protocol Options
 
