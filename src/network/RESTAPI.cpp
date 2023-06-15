@@ -281,6 +281,9 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_RELEASE_GRNTS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseGrants, this));
     m_dispatcher.match(GET_RELEASE_AFFS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseAffs, this));
 
+    m_dispatcher.match(PUT_RELEASE_TG).put(REST_API_BIND(RESTAPI::restAPI_PutReleaseGrant, this));
+    m_dispatcher.match(PUT_TOUCH_TG).put(REST_API_BIND(RESTAPI::restAPI_PutTouchGrant, this));
+
     m_dispatcher.match(GET_RID_WHITELIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDWhitelist, this));
     m_dispatcher.match(GET_RID_BLACKLIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDBlacklist, this));
 

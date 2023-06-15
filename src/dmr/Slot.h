@@ -263,6 +263,11 @@ namespace dmr
         /// <summary>Add data frame to the data ring buffer.</summary>
         void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
+        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        void notifyCC_ReleaseGrant(uint32_t dstId);
+        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        void notifyCC_TouchGrant(uint32_t dstId);
+
         /// <summary>Write data frame to the network.</summary>
         void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);
         /// <summary>Write data frame to the network.</summary>

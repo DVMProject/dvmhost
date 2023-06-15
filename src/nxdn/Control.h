@@ -211,6 +211,11 @@ namespace nxdn
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
 
+        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        void notifyCC_ReleaseGrant(uint32_t dstId);
+        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        void notifyCC_TouchGrant(uint32_t dstId);
+
         /// <summary>Helper to write control channel frame data.</summary>
         bool writeRF_ControlData();
 

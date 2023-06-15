@@ -900,6 +900,62 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 }
 
 /// <summary>
+/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
+{
+    // callback REST API to release the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send release grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_DMR;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+        uint8_t slot = m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
+/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::notifyCC_TouchGrant(uint32_t dstId)
+{
+    // callback REST API to touch the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send touch grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_DMR;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+        uint8_t slot = m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
 /// Write data frame to the network.
 /// </summary>
 /// <param name="data"></param>

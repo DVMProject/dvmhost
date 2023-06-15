@@ -418,6 +418,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 
                     if (m_p25->m_control) {
                         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+                        m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
                     }
 
                     // single-channel trunking or voice on control support?
@@ -573,6 +574,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
         if (m_rfDFSILC.getType() == P25_DFSI_TYPE_VOICE && m_rfDFSILC.getStartStop() == P25_DFSI_STOP_FLAG) {
             if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+                m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
             }
 
             uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
@@ -773,6 +775,7 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
 
         if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+            m_p25->notifyCC_ReleaseGrant(m_netLC.getDstId());
         }
 
         if (m_p25->m_netState != RS_NET_IDLE) {
@@ -925,6 +928,7 @@ void DFSIVoice::writeNet_LDU1()
 
     if (m_p25->m_control) {
         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+        m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
     }
 
     // set network and RF link control states

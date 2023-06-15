@@ -877,6 +877,58 @@ void Control::processNetwork()
 }
 
 /// <summary>
+/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::notifyCC_ReleaseGrant(uint32_t dstId)
+{
+    // callback REST API to release the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send release grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_NXDN;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
+/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::notifyCC_TouchGrant(uint32_t dstId)
+{
+    // callback REST API to touch the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send touch grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_NXDN;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
 /// Helper to write control channel frame data.
 /// </summary>
 /// <returns></returns>

@@ -493,6 +493,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_control) {
                 m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+                m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
             // single-channel trunking or voice on control support?
@@ -682,6 +683,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
     else if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC) {
         if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+            m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
         if (duid == P25_DUID_TDU) {
@@ -804,6 +806,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
@@ -868,6 +871,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
@@ -904,6 +908,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
             if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+                m_p25->notifyCC_ReleaseGrant(m_netLC.getDstId());
             }
 
             if (m_p25->m_netState != RS_NET_IDLE) {
