@@ -298,7 +298,7 @@ endif (HAVE_SENDMMSG)
 
 add_executable(dvmhost ${dvmhost_SRC})
 target_include_directories(dvmhost PRIVATE src)
-target_link_libraries(dvmhost PRIVATE asio::asio finalcut Threads::Threads util)
+target_link_libraries(dvmhost PRIVATE asio::asio Threads::Threads util)
 
 set(CPACK_SET_DESTDIR true)
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
