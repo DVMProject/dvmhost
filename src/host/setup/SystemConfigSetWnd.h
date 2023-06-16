@@ -92,6 +92,7 @@ private:
         FDialog::setText("System Configuration");
         FDialog::setSize(FSize{56, 22});
 
+        m_enableSetButton = false;
         CloseWndBase::initLayout();
     }
 

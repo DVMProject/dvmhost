@@ -78,6 +78,7 @@ private:
         FDialog::setText("Logging and Data Configuration");
         FDialog::setSize(FSize{68, 19});
 
+        m_enableSetButton = false;
         CloseWndBase::initLayout();
     }
 

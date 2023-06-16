@@ -81,6 +81,7 @@ private:
         FDialog::setText("Channel Configuration");
         FDialog::setSize(FSize{60, 17});
 
+        m_enableSetButton = false;
         CloseWndBase::initLayout();
     }
 

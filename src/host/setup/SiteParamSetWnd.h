@@ -98,6 +98,7 @@ private:
         FDialog::setText("Site Parameters");
         FDialog::setSize(FSize{63, 20});
 
+        m_enableSetButton = false;
         CloseWndBase::initLayout();
     }
 
