@@ -690,6 +690,7 @@ private:
 
             m_setup->readFlash();
 
+            m_setup->writeFifoLength();
             m_setup->writeConfig();
             m_setup->writeRFParams();
 

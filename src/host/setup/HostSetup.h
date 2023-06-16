@@ -205,6 +205,8 @@ protected:
     bool writeRFParams();
     /// <summary>Write symbol level adjustments to the modem DSP.</summary>
     bool writeSymbolAdjust();
+    /// <summary>Write transmit FIFO buffer lengths.</summary>
+    bool writeFifoLength();
     /// <summary>Helper to sleep the calibration thread.</summary>
     void sleep(uint32_t ms);
 

@@ -143,6 +143,7 @@ int HostCal::run(int argc, char **argv)
 
     readFlash();
 
+    writeFifoLength();
     writeConfig();
     writeRFParams();
 

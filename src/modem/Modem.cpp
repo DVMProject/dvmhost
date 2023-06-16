@@ -164,6 +164,9 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_txFinePot(127U),
     m_rssiCoarsePot(127U),
     m_rssiFinePot(127U),
+    m_dmrFifoLength(DMR_TX_BUFFER_LEN),
+    m_p25FifoLength(P25_TX_BUFFER_LEN),
+    m_nxdnFifoLength(NXDN_TX_BUFFER_LEN),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
     m_modemState(STATE_IDLE),
@@ -406,14 +409,14 @@ void Modem::setRXLevel(float rxLevel)
     uint8_t buffer[4U];
 
     buffer[0U] = DVM_FRAME_START;
-    buffer[1U] = 16U;
+    buffer[1U] = 4U;
     buffer[2U] = CMD_SET_RXLEVEL;
 
     buffer[3U] = (uint8_t)(m_rxLevel * 2.55F + 0.5F);
 #if DEBUG_MODEM
-    Utils::dump(1U, "Modem::setRXLevel(), Written", buffer, 16U);
+    Utils::dump(1U, "Modem::setRXLevel(), Written", buffer, 4U);
 #endif
-    int ret = write(buffer, 16U);
+    int ret = write(buffer, 4U);
     if (ret != 16)
         return;
 
@@ -436,6 +439,72 @@ void Modem::setRXLevel(float rxLevel)
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
         LogError(LOG_MODEM, "NAK, SET_RXLEVEL, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+    }
+}
+
+/// <summary>
+/// Sets the modem transmit FIFO buffer lengths.
+/// </summary>
+/// <param name="dmrLength"></param>
+/// <param name="p25Length"></param>
+/// <param name="nxdnLength"></param>
+void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnLength)
+{
+    m_dmrFifoLength = dmrLength;
+    m_p25FifoLength = p25Length;
+    m_nxdnFifoLength = nxdnLength;
+
+    // ensure DMR fifo length is not less then the minimum
+    if (m_dmrFifoLength < DMR_TX_BUFFER_LEN)
+        m_dmrFifoLength = DMR_TX_BUFFER_LEN;
+    
+    // ensure P25 fifo length is not less then the minimum
+    if (m_p25FifoLength < P25_TX_BUFFER_LEN)
+        m_p25FifoLength = P25_TX_BUFFER_LEN;
+    
+    // ensure NXDN fifo length is not less then the minimum
+    if (m_nxdnFifoLength < NXDN_TX_BUFFER_LEN)
+        m_nxdnFifoLength = NXDN_TX_BUFFER_LEN;
+
+    uint8_t buffer[9U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 9U;
+    buffer[2U] = CMD_SET_BUFFERS;
+
+    buffer[3U] = (uint8_t)(m_dmrFifoLength >> 8) & 0xFFU;
+    buffer[4U] = (uint8_t)(m_dmrFifoLength & 0xFFU);
+    buffer[5U] = (uint8_t)(m_p25FifoLength >> 8) & 0xFFU;
+    buffer[6U] = (uint8_t)(m_p25FifoLength & 0xFFU);
+    buffer[7U] = (uint8_t)(m_nxdnFifoLength >> 8) & 0xFFU;
+    buffer[8U] = (uint8_t)(m_nxdnFifoLength & 0xFFU);
+
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::setFifoLength(), Written", buffer, 9U);
+#endif
+    int ret = write(buffer, 9U);
+    if (ret != 16)
+        return;
+
+    uint32_t count = 0U;
+    RESP_TYPE_DVM resp;
+    do {
+        Thread::sleep(10U);
+
+        resp = getResponse();
+        if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
+            count++;
+            if (count >= MAX_RESPONSES) {
+                LogError(LOG_MODEM, "No response, SET_BUFFERS command");
+                return;
+            }
+        }
+    } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::setFifoLength(), Response", m_buffer, m_length);
+#endif
+    if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
+        LogError(LOG_MODEM, "NAK, SET_BUFFERS, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
     }
 }
 

@@ -49,6 +49,13 @@
 #define MODEM_UNSUPPORTED_STR "Modem protocol: %u, unsupported! Stopping."
 #define NULL_MODEM "null"
 
+// 505 = DMR_FRAME_LENGTH_BYTES * 15 + 10 (BUFFER_LEN = DMR_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
+#define DMR_TX_BUFFER_LEN 505U  // 15 frames + pad
+// 442 = P25_LDU_FRAME_LENGTH_BYTES * 2 + 10 (BUFFER_LEN = P25_LDU_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
+#define P25_TX_BUFFER_LEN 442U  // 2 frames + pad
+// 538 = NXDN_FRAME_LENGTH_BYTES * 11 + 10 (BUFFER_LEN = NXDN_FRAME_LENGTH_BYTES * NO_OF_FRAMES)
+#define NXDN_TX_BUFFER_LEN 538U // 11 frames + pad
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
@@ -129,6 +136,8 @@ namespace modem
         CMD_RSSI_DATA = 0x09U,
 
         CMD_SEND_CWID = 0x0AU,
+
+        CMD_SET_BUFFERS = 0x0FU,
 
         CMD_DMR_DATA1 = 0x18U,
         CMD_DMR_LOST1 = 0x19U,
@@ -262,6 +271,8 @@ namespace modem
         void setP25DFSI(bool dfsi);
         /// <summary>Sets the RF receive deviation levels.</summary>
         void setRXLevel(float rxLevel);
+        /// <summary>Sets the modem transmit FIFO buffer lengths.</summary>
+        void setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnLength);
 
         /// <summary>Sets a custom modem response handler.</summary>
         /// <remarks>If the response handler returns true, processing will stop, otherwise it will continue.</remarks>
@@ -451,6 +462,10 @@ namespace modem
         uint8_t m_txFinePot;            // dedicated modem - with softpot
         uint8_t m_rssiCoarsePot;        // dedicated modem - with softpot
         uint8_t m_rssiFinePot;          // dedicated modem - with softpot
+
+        uint16_t m_dmrFifoLength;
+        uint16_t m_p25FifoLength;
+        uint16_t m_nxdnFifoLength;
 
         uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count

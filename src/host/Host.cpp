@@ -2084,6 +2084,10 @@ bool Host::createModem()
     uint8_t rssiCoarse = (uint8_t)softpotParams["rssiCoarse"].as<uint32_t>(127U);
     uint8_t rssiFine = (uint8_t)softpotParams["rssiFine"].as<uint32_t>(127U);
 
+    uint16_t dmrFifoLength = (uint16_t)modemConf["dmrFifoLength"].as<uint32_t>(DMR_TX_BUFFER_LEN);
+    uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
+    uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
+
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
@@ -2212,6 +2216,9 @@ bool Host::createModem()
         LogInfo("    DMR Queue Size: %u (%u bytes)", dmrQueueSize, m_dmrQueueSizeBytes);
         LogInfo("    P25 Queue Size: %u (%u bytes)", p25QueueSize, m_p25QueueSizeBytes);
         LogInfo("    NXDN Queue Size: %u (%u bytes)", nxdnQueueSize, m_nxdnQueueSizeBytes);
+        LogInfo("    DMR FIFO Size: %u bytes", dmrFifoLength);
+        LogInfo("    P25 FIFO Size: %u bytes", p25FifoLength);
+        LogInfo("    NXDN FIFO Size: %u bytes", nxdnFifoLength);
 
         if (m_useDFSI) {
             LogInfo("    Digital Fixed Station Interface: yes");
@@ -2259,6 +2266,8 @@ bool Host::createModem()
         m_modem = nullptr;
         return false;
     }
+
+    m_modem->setFifoLength(dmrFifoLength, p25FifoLength, nxdnFifoLength);
 
     // are we on a protocol version older then 3?
     if (m_modem->getVersion() < 3U) {

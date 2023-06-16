@@ -699,6 +699,10 @@ bool HostSetup::createModem()
     uint8_t rssiCoarsePot = (uint8_t)softpotParams["rssiCoarse"].as<uint32_t>(127U);
     uint8_t rssiFinePot = (uint8_t)softpotParams["rssiFine"].as<uint32_t>(127U);
 
+    uint16_t dmrFifoLength = (uint16_t)modemConf["dmrFifoLength"].as<uint32_t>(DMR_TX_BUFFER_LEN);
+    uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
+    uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
+
     uint8_t fdmaPreamble = (uint8_t)modemConf["fdmaPreamble"].as<uint32_t>(80U);
     uint8_t dmrRxDelay = (uint8_t)modemConf["dmrRxDelay"].as<uint32_t>(7U);
     uint8_t p25CorrCount = (uint8_t)modemConf["p25CorrCount"].as<uint32_t>(5U);
@@ -785,6 +789,9 @@ bool HostSetup::createModem()
     LogInfo("    RSSI Coarse: %u, Fine: %u", rssiCoarsePot, rssiFinePot);
     LogInfo("    RX Level: %.1f%%", rxLevel);
     LogInfo("    TX Level: %.1f%%", txLevel);
+    LogInfo("    DMR FIFO Size: %u bytes", dmrFifoLength);
+    LogInfo("    P25 FIFO Size: %u bytes", p25FifoLength);
+    LogInfo("    NXDN FIFO Size: %u bytes", nxdnFifoLength);
 
     if (ignoreModemConfigArea) {
         LogInfo("    Ignore Modem Configuration Area: yes");
@@ -806,6 +813,11 @@ bool HostSetup::createModem()
     m_modem->setOpenHandler(MODEM_OC_PORT_HANDLER_BIND(HostSetup::portModemOpen, this));
     m_modem->setCloseHandler(MODEM_OC_PORT_HANDLER_BIND(HostSetup::portModemClose, this));
     m_modem->setResponseHandler(MODEM_RESP_HANDLER_BIND(HostSetup::portModemHandler, this));
+
+    m_modem->m_dmrFifoLength = dmrFifoLength;
+    m_modem->m_p25FifoLength = p25FifoLength;
+    m_modem->m_nxdnFifoLength = nxdnFifoLength;
+
     return true;
 }
 
@@ -1650,6 +1662,39 @@ bool HostSetup::writeSymbolAdjust()
     buffer[1U] = lengthToWrite;
 
     int ret = m_modem->write(buffer, lengthToWrite);
+    if (ret <= 0)
+        return false;
+
+    sleep(10U);
+
+    m_modem->clock(0U);
+    return true;
+}
+
+/// <summary>
+/// Write transmit FIFO buffer lengths.
+/// </summary>
+/// <returns>True, if level adjustments are written, otherwise false.</returns>
+bool HostSetup::writeFifoLength()
+{
+    uint8_t buffer[9U];
+    ::memset(buffer, 0x00U, 9U);
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 9U;
+    buffer[2U] = CMD_SET_BUFFERS;
+
+    m_conf["system"]["modem"]["dmrFifoLength"] = __INT_STR(m_modem->m_dmrFifoLength);
+    buffer[3U] = (uint8_t)(m_modem->m_dmrFifoLength >> 8) & 0xFFU;
+    buffer[4U] = (uint8_t)(m_modem->m_dmrFifoLength & 0xFFU);
+    m_conf["system"]["modem"]["p25FifoLength"] = __INT_STR(m_modem->m_p25FifoLength);
+    buffer[5U] = (uint8_t)(m_modem->m_p25FifoLength >> 8) & 0xFFU;
+    buffer[6U] = (uint8_t)(m_modem->m_p25FifoLength & 0xFFU);
+    m_conf["system"]["modem"]["nxdnFifoLenth"] = __INT_STR(m_modem->m_nxdnFifoLength);
+    buffer[7U] = (uint8_t)(m_modem->m_nxdnFifoLength >> 8) & 0xFFU;
+    buffer[8U] = (uint8_t)(m_modem->m_nxdnFifoLength & 0xFFU);
+
+    int ret = m_modem->write(buffer, 9U);
     if (ret <= 0)
         return false;
 

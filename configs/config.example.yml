@@ -408,6 +408,12 @@ system:
         # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
         # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
         p25CorrCount: 8
+        # Size (in bytes) of the DMR transmit FIFO buffer.
+        dmrFifoLength: 505
+        # Size (in bytes) of the P25 transmit FIFO buffer.
+        p25FifoLength: 442
+        # Size (in bytes) of the NXDN transmit FIFO buffer.
+        nxdnFifoLength: 538
 
         #
         # Hotspot Modem Configuration
