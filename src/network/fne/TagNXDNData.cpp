@@ -173,7 +173,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         if (tg.config().parrot()) {
             uint8_t *copy = new uint8_t[len];
             ::memcpy(copy, data, len);
-            m_parrotFrames.push_back({ copy, len, pktSeq });
+            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq));
         }
 
         // repeat traffic to the connected peers

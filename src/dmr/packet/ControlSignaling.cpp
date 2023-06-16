@@ -437,7 +437,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             if (csbk->getFID() == FID_DMRA) {
                 if (m_verbose) {
                     LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
-                        m_slot->m_slotNo, csbk->toString(), srcId, dstId);
+                        m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
                 ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
@@ -506,7 +506,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
             CSBK_EXT_FNCT* isp = static_cast<CSBK_EXT_FNCT*>(csbk.get());
             if (m_verbose) {
                 LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
-                    m_slot->m_slotNo, csbk->toString(), isp->getExtendedFunction(), dstId, srcId);
+                    m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction(), dstId, srcId);
             }
 
             // generate activity log entry
@@ -530,7 +530,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                 ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
-                LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString(), isp->getExtendedFunction());
+                LogWarning(LOG_NET, "DMR Slot %u, DT_CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
                 break;
             }
         }
