@@ -429,7 +429,7 @@ void Modem::setRXLevel(float rxLevel)
         if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "No response, SET_RXLEVEL command");
+                LogError(LOG_MODEM, "No response, %s command", cmdToString(CMD_SET_RXLEVEL).c_str());
                 return;
             }
         }
@@ -438,7 +438,7 @@ void Modem::setRXLevel(float rxLevel)
     Utils::dump(1U, "Modem::setRXLevel(), Response", m_buffer, m_length);
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK, SET_RXLEVEL, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+        LogError(LOG_MODEM, "NAK, %s, command = 0x%02X, reason = %u", cmdToString(CMD_SET_RXLEVEL).c_str(), m_buffer[3U], m_buffer[4U]);
     }
 }
 
@@ -495,7 +495,7 @@ void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnL
         if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "No response, SET_BUFFERS command");
+                LogError(LOG_MODEM, "No response, %s command", cmdToString(CMD_SET_BUFFERS).c_str());
                 return;
             }
         }
@@ -504,7 +504,7 @@ void Modem::setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnL
     Utils::dump(1U, "Modem::setFifoLength(), Response", m_buffer, m_length);
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK, SET_BUFFERS, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+        LogError(LOG_MODEM, "NAK, %s, command = 0x%02X, reason = %u", cmdToString(CMD_SET_BUFFERS).c_str(), m_buffer[3U], m_buffer[4U]);
     }
 }
 
@@ -943,7 +943,7 @@ void Modem::clock(uint32_t ms)
             break;
 
         case CMD_NAK:
-            LogWarning(LOG_MODEM, "NAK, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
+            LogWarning(LOG_MODEM, "NAK, command = 0x%02X (%s), reason = %u (%s)", m_buffer[3U], cmdToString(m_buffer[3U]).c_str(), m_buffer[4U], rsnToString(m_buffer[4U]).c_str());
             break;
 
         case CMD_DEBUG1:
@@ -1943,7 +1943,7 @@ bool Modem::writeConfig()
         if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "No response, SET_CONFIG command");
+                LogError(LOG_MODEM, "No response, %s command", cmdToString(CMD_SET_CONFIG).c_str());
                 return false;
             }
         }
@@ -1952,31 +1952,7 @@ bool Modem::writeConfig()
     Utils::dump(1U, "Modem::writeConfig(), Response", m_buffer, m_length);
 #endif
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK, SET_CONFIG, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
-
-        switch (m_buffer[4U]) {
-        case RSN_INVALID_FDMA_PREAMBLE:
-            LogError(LOG_MODEM, "Invalid FDMA preamble");
-            break;
-        case RSN_INVALID_DMR_CC:
-            LogError(LOG_MODEM, "Invalid DMR Color Code");
-            break;
-        case RSN_INVALID_DMR_RX_DELAY:
-            LogError(LOG_MODEM, "Invalid DMR Rx Delay");
-            break;
-        case RSN_INVALID_P25_CORR_COUNT:
-            LogError(LOG_MODEM, "Invalid P25 correlation count");
-            break;
-        case RSN_HS_NO_DUAL_MODE:
-            LogError(LOG_MODEM, "Cannot multi-mode, DMR, P25 and NXDN when using hotspot!");
-            break;
-        case RSN_INVALID_REQUEST:
-            LogError(LOG_MODEM, "Invalid SET_CONFIG request");
-            break;
-        default:
-            break;
-        }
-
+        LogError(LOG_MODEM, "NAK, %s, command = 0x%02X, reason = %u (%s)", cmdToString(CMD_SET_CONFIG).c_str(), m_buffer[3U], m_buffer[4U], rsnToString(m_buffer[4U]).c_str());
         return false;
     }
 
@@ -2025,23 +2001,14 @@ bool Modem::writeSymbolAdjust()
         if (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "No response, SET_SYMLVLADJ command");
+                LogError(LOG_MODEM, "No response, %s command", cmdToString(CMD_SET_SYMLVLADJ).c_str());
                 return false;
             }
         }
     } while (resp == RTM_OK && m_buffer[2U] != CMD_ACK && m_buffer[2U] != CMD_NAK);
 
     if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-        LogError(LOG_MODEM, "NAK, SET_SYMLVLADJ, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
-
-        switch (m_buffer[4U]) {
-        case RSN_INVALID_REQUEST:
-            LogError(LOG_MODEM, "Invalid SET_SYMLVLADJ request");
-            break;
-        default:
-            break;
-        }
-
+        LogError(LOG_MODEM, "NAK, %s, command = 0x%02X, reason = %u (%s)", cmdToString(CMD_SET_SYMLVLADJ).c_str(), m_buffer[3U], m_buffer[4U], rsnToString(m_buffer[4U]).c_str());
         return false;
     }
 
@@ -2112,7 +2079,7 @@ bool Modem::writeRFParams()
         if (resp == RTM_OK && m_buffer[2U] != RSN_OK && m_buffer[2U] != RSN_NAK) {
             count++;
             if (count >= MAX_RESPONSES) {
-                LogError(LOG_MODEM, "No response, SET_RFPARAMS command");
+                LogError(LOG_MODEM, "No response, %s command", cmdToString(CMD_SET_RFPARAMS).c_str());
                 return false;
             }
         }
@@ -2121,16 +2088,7 @@ bool Modem::writeRFParams()
     // CUtils::dump(1U, "Response", m_buffer, m_length);
 
     if (resp == RTM_OK && m_buffer[2U] == RSN_NAK) {
-        LogError(LOG_MODEM, "NAK, SET_RFPARAMS, command = 0x%02X, reason = %u", m_buffer[3U], m_buffer[4U]);
-
-        switch (m_buffer[4U]) {
-        case RSN_INVALID_REQUEST:
-            LogError(LOG_MODEM, "Invalid SET_RFPARAMS request");
-            break;
-        default:
-            break;
-        }
-
+        LogError(LOG_MODEM, "NAK, %s, command = 0x%02X, reason = %u (%s)", cmdToString(CMD_SET_RFPARAMS).c_str(), m_buffer[3U], m_buffer[4U], rsnToString(m_buffer[4U]).c_str());
         return false;
     }
 
@@ -2164,7 +2122,7 @@ bool Modem::readFlash()
                 continue;
 
             if (resp == RTM_OK && m_buffer[2U] == CMD_NAK) {
-                LogWarning(LOG_MODEM, "Modem::readFlash(), old modem that doesn't support flash commands?");
+                LogWarning(LOG_MODEM, "%s, old modem that doesn't support flash commands?", cmdToString(CMD_FLSH_READ).c_str());
                 m_flashDisabled = true;
                 return false;
             }
@@ -2529,3 +2487,138 @@ RESP_TYPE_DVM Modem::getResponse(bool noReportInvalid)
     return RTM_OK;
 }
 
+/// <summary>
+/// Helper to convert a serial opcode to a string.
+/// </summary>
+std::string Modem::cmdToString(uint8_t opcode)
+{
+    switch (opcode) {
+    case CMD_GET_VERSION:
+        return std::string("GET_VERSION");
+    case CMD_GET_STATUS:
+        return std::string("GET_STATUS");
+    case CMD_SET_CONFIG:
+        return std::string("SET_CONFIG");
+    case CMD_SET_MODE:
+        return std::string("SET_MODE");
+
+    case CMD_SET_SYMLVLADJ:
+        return std::string("SET_SYMLVLADJ");
+    case CMD_SET_RXLEVEL:
+        return std::string("SET_RXLEVEL");
+    case CMD_SET_RFPARAMS:
+        return std::string("SET_RFPARAMS");
+
+    case CMD_CAL_DATA:
+        return std::string("CAL_DATA");
+    case CMD_RSSI_DATA:
+        return std::string("RSSI_DATA");
+
+    case CMD_SEND_CWID:
+        return std::string("SEND_CWID");
+
+    case CMD_SET_BUFFERS:
+        return std::string("SET_BUFFERS");
+
+    case CMD_DMR_DATA1:
+        return std::string("DMR_DATA1");
+    case CMD_DMR_LOST1:
+        return std::string("DMR_LOST1");
+    case CMD_DMR_DATA2:
+        return std::string("DMR_DATA2");
+    case CMD_DMR_LOST2:
+        return std::string("DMR_LOST2");
+    case CMD_DMR_SHORTLC:
+        return std::string("DMR_SHORTLC");
+    case CMD_DMR_START:
+        return std::string("DMR_START");
+    case CMD_DMR_ABORT:
+        return std::string("DMR_ABORT");
+    case CMD_DMR_CACH_AT_CTRL:
+        return std::string("DMR_CACH_AT_CTRL");
+
+    case CMD_P25_DATA:
+        return std::string("P25_DATA");
+    case CMD_P25_LOST:
+        return std::string("P25_LOST");
+    case CMD_P25_CLEAR:
+        return std::string("P25_CLEAR");
+
+    case CMD_NXDN_DATA:
+        return std::string("NXDN_DATA");
+    case CMD_NXDN_LOST:
+        return std::string("NXDN_LOST");
+
+    case CMD_ACK:
+        return std::string("ACK");
+    case CMD_NAK:
+        return std::string("NAK");
+
+    case CMD_FLSH_READ:
+        return std::string("FLSH_READ");
+    case CMD_FLSH_WRITE:
+        return std::string("FLSH_WRITE");
+
+    default:
+        return std::string();
+    }
+}
+
+/// <summary>
+/// Helper to convert a serial reason code to a string.
+/// </summary>
+std::string Modem::rsnToString(uint8_t reason)
+{
+    switch (reason) {
+    case RSN_OK:
+        return std::string("OK");
+    case RSN_NAK:
+        return std::string("NAK");
+
+    case RSN_ILLEGAL_LENGTH:
+        return std::string("ILLEGAL_LENGTH");
+    case RSN_INVALID_REQUEST:
+        return std::string("INVALID_REQUEST");
+    case RSN_RINGBUFF_FULL:
+        return std::string("RINGBUFF_FULL");
+
+    case RSN_INVALID_FDMA_PREAMBLE:
+        return std::string("INVALID_FDMA_PREAMBLE");
+    case RSN_INVALID_MODE:
+        return std::string("INVALID_MODE");
+
+    case RSN_INVALID_DMR_CC:
+        return std::string("INVALID_DMR_CC");
+    case RSN_INVALID_DMR_SLOT:
+        return std::string("INVALID_DMR_SLOT");
+    case RSN_INVALID_DMR_START:
+        return std::string("INVALID_DMR_START");
+    case RSN_INVALID_DMR_RX_DELAY:
+        return std::string("INVALID_DMR_RX_DELAY");
+
+    case RSN_INVALID_P25_CORR_COUNT:
+        return std::string("INVALID_P25_CORR_COUNT");
+
+    case RSN_NO_INTERNAL_FLASH:
+        return std::string("NO_INTERNAL_FLASH");
+    case RSN_FAILED_ERASE_FLASH:
+        return std::string("FAILED_ERASE_FLASH");
+    case RSN_FAILED_WRITE_FLASH:
+        return std::string("FAILED_WRITE_FLASH");
+    case RSN_FLASH_WRITE_TOO_BIG:
+        return std::string("FLASH_WRITE_TOO_BIG");
+
+    case RSN_HS_NO_DUAL_MODE:
+        return std::string("HS_NO_DUAL_MODE");
+
+    case RSN_DMR_DISABLED:
+        return std::string("DMR_DISABLED");
+    case RSN_P25_DISABLED:
+        return std::string("P25_DISABLED");
+    case RSN_NXDN_DISABLED:
+        return std::string("NXDN_DISABLED");
+
+    default:
+        return std::string();
+    }
+}

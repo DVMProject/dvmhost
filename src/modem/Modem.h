@@ -535,6 +535,11 @@ namespace modem
         /// <summary>Helper to get the raw response packet from modem.</summary>
         RESP_TYPE_DVM getResponse(bool noReportInvalid = false);
 
+        /// <summary>Helper to convert a serial opcode to a string.</summary>
+        std::string cmdToString(uint8_t opcode);
+        /// <summary>Helper to convert a serial reason code to a string.</summary>
+        std::string rsnToString(uint8_t reason);
+
     public:
         /// <summary>Flag indicating if modem trace is enabled.</summary>
         __READONLY_PROPERTY(bool, trace, Trace);

@@ -521,7 +521,8 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
             break;
 
         case CMD_NAK:
-            LogWarning(LOG_CAL, "NAK, command = 0x%02X, reason = %u", buffer[3U], buffer[4U]);
+            LogWarning(LOG_CAL, "NAK, command = 0x%02X (%s), reason = %u (%s)", buffer[3U], 
+                m_modem->cmdToString(buffer[3U]).c_str(), buffer[4U], m_modem->rsnToString(buffer[4U]).c_str());
             break;
 
         case CMD_DEBUG1:
