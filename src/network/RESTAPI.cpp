@@ -1201,6 +1201,8 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
         return;
     }
 
+    // LogDebug(LOG_REST, "restAPI_PutReleaseGrant(): callback, state = %u, dstId = %u", state, dstId);
+
     switch (state) {
     case STATE_DMR:
 #if defined(ENABLE_DMR)
@@ -1312,6 +1314,8 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
         errorPayload(reply, "destination ID is an illegal TGID");
         return;
     }
+
+    // LogDebug(LOG_REST, "restAPI_PutTouchGrant(): callback, state = %u, dstId = %u", state, dstId);
 
     switch (state) {
     case STATE_DMR:

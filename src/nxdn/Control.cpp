@@ -366,8 +366,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
-        if (m_control) {
-            m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        if (!m_control) {
+            notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
         writeEndRF();
@@ -661,6 +662,10 @@ void Control::permittedTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+    }
+
     m_permittedDstId = dstId;
 }
 
@@ -670,13 +675,13 @@ void Control::permittedTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::releaseGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_NXDN, "request to release a TG grant, dstId = %u", dstId);
+            LogMessage(LOG_NXDN, "REST request, release TG grant, dstId = %u", dstId);
         }
     
         m_affiliations.releaseGrant(dstId, false);
@@ -689,13 +694,13 @@ void Control::releaseGrantTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::touchGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_NXDN, "request to touch a TG grant, dstId = %u", dstId);
+            LogMessage(LOG_NXDN, "REST request, touch TG grant, dstId = %u", dstId);
         }
 
         m_affiliations.touchGrant(dstId);

@@ -438,6 +438,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
+        if (!m_control) {
+            notifyCC_ReleaseGrant(m_voice->m_rfLC.getDstId());
+        }
         m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
 
         writeRF_TDU(false);
@@ -827,7 +830,7 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogDebug(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+        LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
@@ -839,15 +842,15 @@ void Control::permittedTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::releaseGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_P25, "request to release a TG grant, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, release TG grant, dstId = %u", dstId);
         }
-    
+
         m_affiliations.releaseGrant(dstId, false);
     }
 }
@@ -858,13 +861,13 @@ void Control::releaseGrantTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::touchGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_P25, "request to touch a TG grant, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, touch TG grant, dstId = %u", dstId);
         }
 
         m_affiliations.touchGrant(dstId);

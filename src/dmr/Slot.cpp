@@ -215,6 +215,10 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
             }
         }
 
+        if (!m_tscc->m_enableTSCC) {
+            notifyCC_ReleaseGrant(m_rfLC->getDstId());
+        }
+
         if (m_rfTimeout) {
             writeEndRF();
             return false;
@@ -581,7 +585,7 @@ void Slot::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogDebug(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+        LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
     }
 
     m_permittedDstId = dstId;
@@ -593,13 +597,13 @@ void Slot::permittedTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Slot::releaseGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations->isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_DMR, "DMR Slot %u, request to release a TG grant, dstId = %u", m_slotNo, dstId);
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, release TG grant, dstId = %u", m_slotNo, dstId);
         }
     
         m_affiliations->releaseGrant(dstId, false);
@@ -612,13 +616,13 @@ void Slot::releaseGrantTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Slot::touchGrantTG(uint32_t dstId)
 {
-    if (m_control) {
+    if (!m_control) {
         return;
     }
 
     if (m_affiliations->isGranted(dstId)) {
         if (m_verbose) {
-            LogDebug(LOG_DMR, "DMR Slot %u, request to touch a TG grant, dstId = %u", m_slotNo, dstId);
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, touch TG grant, dstId = %u", m_slotNo, dstId);
         }
 
         m_affiliations->touchGrant(dstId);

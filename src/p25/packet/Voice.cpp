@@ -574,7 +574,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_LDU2) {
-
         // prevent two LDUs of the same type from being sent consecutively
         if (m_lastDUID == P25_DUID_LDU2) {
             return false;
