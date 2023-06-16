@@ -1175,7 +1175,7 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
 
     errorPayload(reply, "OK", HTTPPayload::OK);
 
-    if (!m_host->m_dmrCtrlChannel && !m_host->m_p25CtrlChannel && !m_host->m_nxdnCtrlChannel) {
+    if (!m_host->m_dmrTSCCData && !m_host->m_p25CCData && !m_host->m_nxdnCCData) {
         errorPayload(reply, "Host is not a control channel, cannot release TG grant");
         return;
     }
@@ -1289,7 +1289,7 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
 
     errorPayload(reply, "OK", HTTPPayload::OK);
 
-    if (!m_host->m_dmrCtrlChannel && !m_host->m_p25CtrlChannel && !m_host->m_nxdnCtrlChannel) {
+    if (!m_host->m_dmrTSCCData && !m_host->m_p25CCData && !m_host->m_nxdnCCData) {
         errorPayload(reply, "Host is not a control channel, cannot touch TG grant");
         return;
     }
