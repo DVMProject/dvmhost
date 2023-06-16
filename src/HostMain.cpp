@@ -106,6 +106,10 @@ uint8_t* g_gitHashBytes = nullptr;
 // ---------------------------------------------------------------------------
 
 #if !defined(CATCH2_TEST_COMPILATION)
+/// <summary>
+/// Internal signal handler.
+/// </summary>
+/// <param name="signum"></param>
 static void sigHandler(int signum)
 {
     g_killed = true;
@@ -113,6 +117,11 @@ static void sigHandler(int signum)
 }
 #endif
 
+/// <summary>
+/// Helper to print a fatal error message and exit.
+/// </summary>
+/// <remarks>This is a variable argument function.</remarks>
+/// <param name="msg">Message.</param>
 void fatal(const char* msg, ...)
 {
     char buffer[400U];
@@ -129,6 +138,11 @@ void fatal(const char* msg, ...)
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to pring usage the command line arguments. (And optionally an error.)
+/// </summary>
+/// <param name="message">Error message.</param>
+/// <param name="arg">Error message arguments.</param>
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
@@ -166,6 +180,12 @@ void usage(const char* message, const char* arg)
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to validate the command line arguments.
+/// </summary>
+/// <param name="argc">Argument count.</param>
+/// <param name="argv">Array of argument strings.</param>
+/// <returns>Count of remaining unprocessed arguments.</returns>
 int checkArgs(int argc, char* argv[])
 {
     int i, p = 0;

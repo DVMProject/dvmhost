@@ -20,6 +20,7 @@
 */
 #include "Defines.h"
 #include "Clock.h"
+#include "Log.h"
 
 using namespace system_clock;
 
@@ -45,7 +46,7 @@ static const uint64_t NTP_SCALE_FRAC = 4294967296ULL;
 static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 {
     if (older > newer) {
-        // LOG_ERROR("Older timestamp is actually newer");
+        // LogError(LOG_HOST, "Older timestamp is actually newer");
     }
 
     uint32_t s1  = (older >> 32) & 0xffffffff;
@@ -56,7 +57,7 @@ static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
     uint64_t r = (((uint64_t)(s2 - s1) * 1000000) + ((us2 - us1))) / 1000;
 
     if (r > UINT32_MAX) {
-        // LOG_ERROR("NTP difference is too large: %llu. Limiting value", r);
+        // LogError(LOG_HOST, "NTP difference is too large: %llu. Limiting value", r);
         r = UINT32_MAX;
     }
 

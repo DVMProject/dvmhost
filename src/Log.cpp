@@ -201,6 +201,7 @@ void ActivityLogFinalise()
 /// <summary>
 /// Writes a new entry to the activity log.
 /// </summary>
+/// <remarks>This is a variable argument function.</remarks>
 /// <param name="mode">Digital mode (usually P25 or DMR).</param>
 /// <param name="sourceRf">Flag indicating that the entry was generated from an RF event.</param>
 /// <param name="msg">Formatted string to write to activity log.</param>
@@ -291,6 +292,7 @@ void LogFinalise()
 /// <summary>
 /// Writes a new entry to the diagnostics log.
 /// </summary>
+/// <remarks>This is a variable argument function.</remarks>
 /// <param name="level">Log level.</param>
 /// <param name="module">Module name the log entry was genearted from.</param>
 /// <param name="fmt">Formatted string to write to the log.</param>
