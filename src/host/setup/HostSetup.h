@@ -178,11 +178,11 @@ protected:
     /// <summary>Helper to save configuration.</summary>
     void saveConfig();
     /// <summary>Helper to calculate the Rx/Tx frequencies.</summary>
-    bool calculateRxTxFreq();
+    bool calculateRxTxFreq(bool consoleDisplay = false);
     /// <summary>Helper to log the system configuration parameters.</summary>
     void displayConfigParams();
     /// <summary>Initializes the modem DSP.</summary>
-    bool createModem();
+    bool createModem(bool consoleDisplay = false);
     /// <summary>Helper to toggle modem transmit mode.</summary>
     bool setTransmit();
 

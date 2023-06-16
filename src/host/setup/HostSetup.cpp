@@ -196,8 +196,6 @@ int HostSetup::run(int argc, char** argv)
     getHostVersion();
     ::LogInfo(">> Modem Setup");
 
-    g_logDisplayLevel = 0U;
-
     // setup the finalcut tui
     SetupApplication app{this, argc, argv};
 
@@ -219,6 +217,8 @@ int HostSetup::run(int argc, char** argv)
         return 1;
     }
 
+    g_logDisplayLevel = 0U;
+
     LogInfo("Iden Table Lookups");
     LogInfo("    File: %s", idenLookupFile.length() > 0U ? idenLookupFile.c_str() : "None");
     if (idenReloadTime > 0U)
@@ -238,13 +238,13 @@ int HostSetup::run(int argc, char** argv)
         m_channelId = 15U;
     }
 
-    if (!calculateRxTxFreq()) {
-        return false;
+    if (!calculateRxTxFreq(true)) {
+        return 1;
     }
 
     // initialize modem
-    if (!createModem()) {
-        return false;
+    if (!createModem(true)) {
+        return 1;
     }
 
     p25::lc::TSBK::setVerbose(true);
@@ -571,10 +571,16 @@ void HostSetup::saveConfig()
 /// <summary>
 /// Helper to calculate the Rx/Tx frequencies.
 /// </summary>
-bool HostSetup::calculateRxTxFreq()
+/// <param name="consoleDisplay"></param>
+/// <returns></returns>
+bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
 {
     IdenTable entry = m_idenTable->find(m_channelId);
     if (entry.baseFrequency() == 0U) {
+        if (consoleDisplay) {
+            g_logDisplayLevel = 1U;
+        }
+
         ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
         return false;
     }
@@ -591,6 +597,10 @@ bool HostSetup::calculateRxTxFreq()
 
     if (m_duplex) {
         if (entry.txOffsetMhz() == 0U) {
+            if (consoleDisplay) {
+                g_logDisplayLevel = 1U;
+            }
+
             ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
             return false;
         }
@@ -627,10 +637,15 @@ void HostSetup::displayConfigParams()
 /// <summary>
 /// Initializes the modem DSP.
 /// </summary>
+/// <param name="consoleDisplay"></param>
 /// <returns></returns>
-bool HostSetup::createModem()
+bool HostSetup::createModem(bool consoleDisplay)
 {
     if (g_remoteModemMode) {
+        if (consoleDisplay) {
+            g_logDisplayLevel = 1U;
+        }
+
         ::LogError(LOG_HOST, "Setup mode is unsupported with a remote modem!");
         return false;
     }
@@ -798,6 +813,10 @@ bool HostSetup::createModem()
     }
 
     if (modemPort == nullptr) {
+        if (consoleDisplay) {
+            g_logDisplayLevel = 1U;
+        }
+
         ::LogError(LOG_HOST, "Invalid modem port type, %s!", portType.c_str());
         return false;
     }
