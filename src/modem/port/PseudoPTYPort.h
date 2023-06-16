@@ -54,10 +54,10 @@ namespace modem
             virtual ~PseudoPTYPort();
 
             /// <summary>Opens a connection to the serial port.</summary>
-            virtual bool open();
+            bool open();
 
             /// <summary>Closes the connection to the serial port.</summary>
-            virtual void close();
+            void close();
 
         protected:
             std::string m_symlink;

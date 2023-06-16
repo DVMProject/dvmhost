@@ -171,7 +171,7 @@ namespace p25
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
-            void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
+            virtual void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
             /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
             virtual void writeNet_TDULC(lc::TDULC* lc);
             /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>

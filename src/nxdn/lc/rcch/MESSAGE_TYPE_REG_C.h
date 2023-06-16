@@ -47,13 +47,13 @@ namespace nxdn
                 MESSAGE_TYPE_REG_C();
 
                 /// <summary>Decode layer 3 data.</summary>
-                virtual void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
                 /// <summary>Encode layer 3 data.</summary>
-                virtual void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
 
                 /// <summary>Returns a string that represents the current RCCH.</summary>
-                virtual std::string toString(bool isp = false);
-            };
+                virtual std::string toString(bool isp = false) override;
+            }; 
         } // namespace rcch
     } // namespace lc
 } // namespace nxdn

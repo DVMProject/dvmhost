@@ -49,13 +49,13 @@ namespace dmr
             virtual ~DMRAffiliationLookup();
 
             /// <summary>Helper to grant a channel.</summary>
-            virtual bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout);
+            bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout) override;
             /// <summary>Helper to grant a channel and slot.</summary>
             bool grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout);
             /// <summary>Helper to release the channel grant for the destination ID.</summary>
-            virtual bool releaseGrant(uint32_t dstId, bool releaseAll);
+            bool releaseGrant(uint32_t dstId, bool releaseAll) override;
             /// <summary>Helper to determine if the channel number is busy.</summary>
-            virtual bool isChBusy(uint32_t chNo) const;
+            bool isChBusy(uint32_t chNo) const override;
             /// <summary>Helper to get the slot granted for the given destination ID.</summary>
             uint8_t getGrantedSlot(uint32_t dstId) const;
 

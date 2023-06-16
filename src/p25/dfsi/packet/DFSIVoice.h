@@ -58,14 +58,14 @@ namespace p25
             class HOST_SW_API DFSIVoice : public p25::packet::Voice {
             public:
                 /// <summary>Resets the data states for the RF interface.</summary>
-                virtual void resetRF();
+                void resetRF() override;
                 /// <summary>Resets the data states for the network.</summary>
-                virtual void resetNet();
+                void resetNet() override;
 
                 /// <summary>Process a data frame from the RF interface.</summary>
-                virtual bool process(uint8_t* data, uint32_t len);
+                bool process(uint8_t* data, uint32_t len) override;
                 /// <summary>Process a data frame from the network.</summary>
-                virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+                bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType) override;
 
             protected:
                 DFSITrunk* m_trunk;
@@ -82,11 +82,11 @@ namespace p25
                 virtual ~DFSIVoice();
 
                 /// <summary>Helper to write a network P25 TDU packet.</summary>
-                virtual void writeNet_TDU();
+                void writeNet_TDU() override;
                 /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-                virtual void writeNet_LDU1();
+                void writeNet_LDU1() override;
                 /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-                virtual void writeNet_LDU2();
+                void writeNet_LDU2() override;
 
             private:
                 friend class packet::DFSITrunk;

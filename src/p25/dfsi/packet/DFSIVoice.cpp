@@ -634,11 +634,12 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="duid"></param>
+/// <param name="control">Link Control Data.</param>
+/// <param name="lsd">Low Speed Data.</param>
+/// <param name="duid">Data Unit ID.</param>
+/// <param name="frameType">Network Frame Type.</param>
 /// <returns></returns>
-bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
 {
     uint32_t count = 0U;
 

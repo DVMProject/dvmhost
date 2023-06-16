@@ -53,9 +53,9 @@ namespace p25
             virtual ~P25AffiliationLookup();
 
             /// <summary>Helper to release the channel grant for the destination ID.</summary>
-            virtual bool releaseGrant(uint32_t dstId, bool releaseAll);
+            bool releaseGrant(uint32_t dstId, bool releaseAll) override;
             /// <summary>Helper to release group affiliations.</summary>
-            virtual std::vector<uint32_t> clearGroupAff(uint32_t dstId, bool releaseAll);
+            std::vector<uint32_t> clearGroupAff(uint32_t dstId, bool releaseAll) override;
 
         protected:
             Control* m_p25;

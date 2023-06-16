@@ -55,11 +55,11 @@ namespace network
         ~Network();
 
         /// <summary>Resets the DMR ring buffer for the given slot.</summary>
-        virtual void resetDMR(uint32_t slotNo);
+        void resetDMR(uint32_t slotNo) override;
         /// <summary>Resets the P25 ring buffer.</summary>
-        virtual void resetP25();
+        void resetP25() override;
         /// <summary>Resets the NXDN ring buffer.</summary>
-        virtual void resetNXDN();
+        void resetNXDN() override;
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
@@ -75,11 +75,11 @@ namespace network
         /// <summary>Opens connection to the network.</summary>
         bool open();
 
-        /// <summary>Sets flag enabling network communication.</summary>
-        void enable(bool enabled);
-
         /// <summary>Closes connection to the network.</summary>
         void close();
+
+        /// <summary>Sets flag enabling network communication.</summary>
+        void enable(bool enabled);
 
     public:
         /// <summary>Last received RTP sequence number.</summary>

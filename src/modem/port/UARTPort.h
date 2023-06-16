@@ -73,19 +73,19 @@ namespace modem
             virtual ~UARTPort();
 
             /// <summary>Opens a connection to the serial port.</summary>
-            virtual bool open();
+            bool open();
 
             /// <summary>Reads data from the serial port.</summary>
-            virtual int read(uint8_t* buffer, uint32_t length);
+            int read(uint8_t* buffer, uint32_t length);
             /// <summary>Writes data to the serial port.</summary>
-            virtual int write(const uint8_t* buffer, uint32_t length);
+            int write(const uint8_t* buffer, uint32_t length);
 
             /// <summary>Closes the connection to the serial port.</summary>
-            virtual void close();
+            void close();
 
 #if defined(__APPLE__)
             /// <summary></summary>
-            virtual int setNonblock(bool nonblock);
+            int setNonblock(bool nonblock);
 #endif
 
         protected:

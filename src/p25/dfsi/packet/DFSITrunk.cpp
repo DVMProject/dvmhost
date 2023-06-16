@@ -113,7 +113,7 @@ void DFSITrunk::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="force"></param>
-void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force)
+void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force, bool imm)
 {
     if (!m_p25->m_control)
         return;
@@ -156,6 +156,11 @@ void DFSITrunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBefor
 
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
+
+    // bryanb: hack-o-ramma, for now -- we will force any immediate TSDUs as single-block
+    if (imm) {
+        force = true;
+    }
 
     if (!force) {
         if (clearBeforeWrite) {

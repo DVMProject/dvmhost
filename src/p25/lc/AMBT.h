@@ -51,9 +51,9 @@ namespace p25
             virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) = 0;
 
             /// <summary>Decode a trunking signalling block.</summary>
-            virtual bool decode(const uint8_t* data, bool rawTSBK = false);
+            bool decode(const uint8_t* data, bool rawTSBK = false);
             /// <summary>Encode a trunking signalling block.</summary>
-            virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+            void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
 
         protected:
             /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
