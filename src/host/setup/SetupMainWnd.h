@@ -41,6 +41,7 @@ using namespace modem;
 #include "host/setup/SymbLevelAdjustWnd.h"
 #include "host/setup/HSBandwidthAdjustWnd.h"
 #include "host/setup/HSGainAdjustWnd.h"
+#include "host/setup/FIFOBufferAdjustWnd.h"
 
 #include "host/setup/LoggingAndDataSetWnd.h"
 #include "host/setup/SystemConfigSetWnd.h"
@@ -405,9 +406,16 @@ public:
         // engineering menu
         m_engineeringMenuSeparator1.setSeparator();
         m_engineeringMenuSeparator2.setSeparator();
+        m_engineeringMenuSeparator3.setSeparator();
         m_adjSymLevel.addAccelerator(FKey::Meta_s); // Meta/Alt + S
         m_adjSymLevel.addCallback("clicked", this, [&]() {
             SymbLevelAdjustWnd wnd{m_setup, this};
+            wnd.show();
+        });
+
+        m_adjFifoBuffers.addAccelerator(FKey::Meta_f); // Meta/Alt + F
+        m_adjFifoBuffers.addCallback("clicked", this, [&]() {
+            FIFOBufferAdjustWnd wnd{m_setup, this};
             wnd.show();
         });
 
@@ -600,6 +608,8 @@ private:
     FMenuItem m_adjHSBandwidth{"Hotspot &Bandwidth Adjustment", &m_engineeringMenu};
     FMenuItem m_adjHSGain{"Hotspot &Gain & AFC", &m_engineeringMenu};
     FMenuItem m_engineeringMenuSeparator1{&m_engineeringMenu};
+    FMenuItem m_adjFifoBuffers{"&FIFO Buffers", &m_engineeringMenu};
+    FMenuItem m_engineeringMenuSeparator3{&m_engineeringMenu};
     FMenuItem m_eraseConfigArea{"Erase Modem Configuration Area", &m_engineeringMenu};
     FMenuItem m_readConfigArea{"Read Modem Configuration Area", &m_engineeringMenu};
     FMenuItem m_engineeringMenuSeparator2{&m_engineeringMenu};

@@ -118,7 +118,7 @@ protected:
 
 
         m_closeButton.setGeometry(FPoint(17, int(getHeight()) - 6), FSize(9, 3));
-        m_closeButton.addCallback("clicked", [&](){ hide(); });
+        m_closeButton.addCallback("clicked", [&]() { hide(); });
 
         m_connectedLabel.setGeometry(FPoint(36, int(getHeight()) - 3), FSize(20, 3));
         if (m_setup->m_isConnected) {

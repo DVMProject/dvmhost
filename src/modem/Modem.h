@@ -82,6 +82,7 @@ class HOST_SW_API LevelAdjustWnd;
 class HOST_SW_API SymbLevelAdjustWnd;
 class HOST_SW_API HSBandwidthAdjustWnd;
 class HOST_SW_API HSGainAdjustWnd;
+class HOST_SW_API FIFOBufferAdjustWnd;
 #endif // defined(ENABLE_SETUP_TUI)
 
 namespace modem
@@ -390,6 +391,7 @@ namespace modem
         friend class ::SymbLevelAdjustWnd;
         friend class ::HSBandwidthAdjustWnd;
         friend class ::HSGainAdjustWnd;
+        friend class ::FIFOBufferAdjustWnd;
 #endif // defined(ENABLE_SETUP_TUI)
 
         port::IModemPort* m_port;

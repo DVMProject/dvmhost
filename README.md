@@ -123,13 +123,12 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 ## Command Line Parameters
 
 ```
-usage: ./dvmhost [-vhf] [--cal | --setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhf] [--setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
   -f        foreground mode
 
-  --cal     calibration mode
   --setup   setup mode
 
   --fne     fixed network equipment mode (conference bridge)

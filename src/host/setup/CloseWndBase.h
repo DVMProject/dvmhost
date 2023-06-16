@@ -54,6 +54,9 @@ public:
 protected:
     HostSetup *m_setup;
 
+    bool m_enableSetButton;
+    FButton m_setButton{"Set", this};
+
     /// <summary>
     ///
     /// </summary>
@@ -96,7 +99,15 @@ protected:
     virtual void initControls()
     {
         m_closeButton.setGeometry(FPoint(int(getWidth()) - 12, int(getHeight()) - 6), FSize(9, 3));
-        m_closeButton.addCallback("clicked", [&](){ hide(); });
+        m_closeButton.addCallback("clicked", [&]() { hide(); });
+
+        m_setButton.setDisable();
+        m_setButton.setVisible(false);
+        if (m_enableSetButton) {
+            m_setButton.setEnable();
+            m_setButton.setVisible(true);
+            m_setButton.setGeometry(FPoint(int(getWidth()) - 24, int(getHeight()) - 6), FSize(9, 3));
+        }
 
         focusFirstChild();
     }

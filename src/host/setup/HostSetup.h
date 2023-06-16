@@ -70,6 +70,7 @@ class HOST_SW_API LevelAdjustWnd;
 class HOST_SW_API SymbLevelAdjustWnd;
 class HOST_SW_API HSBandwidthAdjustWnd;
 class HOST_SW_API HSGainAdjustWnd;
+class HOST_SW_API FIFOBufferAdjustWnd;
 
 class HOST_SW_API LoggingAndDataSetWnd;
 class HOST_SW_API SystemConfigSetWnd;
@@ -108,6 +109,7 @@ protected:
     friend class SymbLevelAdjustWnd;
     friend class HSBandwidthAdjustWnd;
     friend class HSGainAdjustWnd;
+    friend class FIFOBufferAdjustWnd;
 
     friend class LoggingAndDataSetWnd;
     friend class SystemConfigSetWnd;
