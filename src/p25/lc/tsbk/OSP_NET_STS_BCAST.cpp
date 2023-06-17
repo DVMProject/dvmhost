@@ -84,3 +84,13 @@ void OSP_NET_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_NET_STS_BCAST::toString(bool isp)
+{
+    return std::string("TSBK_OSP_NET_STS_BCAST (Network Status Broadcast)");
+}

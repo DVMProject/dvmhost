@@ -81,3 +81,12 @@ void CSBK_P_CLEAR::encode(uint8_t* data)
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_P_CLEAR::toString()
+{
+    return std::string("CSBKO_P_CLEAR (Payload Channel Clear)");
+}

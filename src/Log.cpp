@@ -31,12 +31,7 @@
 #include "Log.h"
 #include "network/Network.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <sys/time.h>
-#endif
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
@@ -53,11 +48,7 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-#define EOL    "\n"
-#else
 #define EOL    "\r\n"
-#endif
 
 const uint32_t ACT_LOG_BUFFER_LEN = 501U;
 const uint32_t LOG_BUFFER_LEN = 4096U;
@@ -77,11 +68,13 @@ static network::Network* m_network;
 static FILE* m_fpLog = nullptr;
 static FILE* m_actFpLog = nullptr;
 
-static uint32_t m_displayLevel = 2U;
-static bool m_disableTimeDisplay = false;
+uint32_t g_logDisplayLevel = 2U;
+bool g_disableTimeDisplay = false;
 
 static struct tm m_tm;
 static struct tm m_actTm;
+
+static std::ostream m_outStream{std::cerr.rdbuf()};
 
 static char LEVELS[] = " DMIWEF";
 
@@ -116,11 +109,8 @@ static bool LogOpen()
     }
 
     char filename[200U];
-#if defined(_WIN32) || defined(_WIN64)
-    ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#else
     ::sprintf(filename, "%s/%s-%04d-%02d-%02d.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#endif
+
     m_fpLog = ::fopen(filename, "a+t");
     m_tm = *tm;
 
@@ -148,15 +138,21 @@ static bool ActivityLogOpen()
     }
 
     char filename[200U];
-#if defined(_WIN32) || defined(_WIN64)
-    ::sprintf(filename, "%s\\%s-%04d-%02d-%02d.activity.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#else
     ::sprintf(filename, "%s/%s-%04d-%02d-%02d.activity.log", m_filePath.c_str(), m_fileRoot.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-#endif
+
     m_actFpLog = ::fopen(filename, "a+t");
     m_actTm = *tm;
 
     return m_actFpLog != nullptr;
+}
+
+/// <summary>
+/// Internal helper to set an output stream to direct logging to.
+/// </summary>
+/// <param name="stream"></param>
+void __InternalOutputStream(std::ostream& stream)
+{
+    m_outStream.rdbuf(stream.rdbuf());
 }
 
 /// <summary>
@@ -205,6 +201,7 @@ void ActivityLogFinalise()
 /// <summary>
 /// Writes a new entry to the activity log.
 /// </summary>
+/// <remarks>This is a variable argument function.</remarks>
 /// <param name="mode">Digital mode (usually P25 or DMR).</param>
 /// <param name="sourceRf">Flag indicating that the entry was generated from an RF event.</param>
 /// <param name="msg">Formatted string to write to activity log.</param>
@@ -217,19 +214,17 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     assert(msg != nullptr);
 
     char buffer[ACT_LOG_BUFFER_LEN];
-#if defined(_WIN32) || defined(_WIN64)
-    SYSTEMTIME st;
-    ::GetSystemTime(&st);
-
-    ::sprintf(buffer, "A: %04u-%02u-%02u %02u:%02u:%02u.%03u %s %s ", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, mode, (sourceRf) ? "RF" : "Net");
-#else
     struct timeval now;
     ::gettimeofday(&now, NULL);
 
     struct tm* tm = ::gmtime(&now.tv_sec);
 
-    ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
-#endif
+    if (strcmp(mode, "") == 0) {
+        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
+    }
+    else {
+        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
+    }
 
     va_list vl;
     va_start(vl, msg);
@@ -258,7 +253,7 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
         ::fflush(m_fpLog);
     }
 
-    if (2U >= m_displayLevel && m_displayLevel != 0U) {
+    if (2U >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
         ::fprintf(stdout, "%s" EOL, buffer);
         ::fflush(stdout);
     }
@@ -277,8 +272,8 @@ bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uin
     m_filePath = filePath;
     m_fileRoot = fileRoot;
     m_fileLevel = fileLevel;
-    m_displayLevel = displayLevel;
-    m_disableTimeDisplay = disableTimeDisplay;
+    g_logDisplayLevel = displayLevel;
+    g_disableTimeDisplay = disableTimeDisplay;
     return ::LogOpen();
 }
 
@@ -297,38 +292,18 @@ void LogFinalise()
 /// <summary>
 /// Writes a new entry to the diagnostics log.
 /// </summary>
+/// <remarks>This is a variable argument function.</remarks>
 /// <param name="level">Log level.</param>
 /// <param name="module">Module name the log entry was genearted from.</param>
-/// <param name="msg">Formatted string to write to activity log.</param>
+/// <param name="fmt">Formatted string to write to the log.</param>
 void Log(uint32_t level, const char *module, const char* fmt, ...)
 {
     assert(fmt != nullptr);
 #if defined(CATCH2_TEST_COMPILATION)
-    m_disableTimeDisplay = true;
+    g_disableTimeDisplay = true;
 #endif
     char buffer[LOG_BUFFER_LEN];
-#if defined(_WIN32) || defined(_WIN64)
-    if (!m_disableTimeDisplay) {
-        SYSTEMTIME st;
-        ::GetSystemTime(&st);
-
-        if (module != nullptr) {
-            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u (%s) ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, module);
-        }
-        else {
-            ::sprintf(buffer, "%c: %04u-%02u-%02u %02u:%02u:%02u.%03u ", LEVELS[level], st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-        }
-    }
-    else {
-        if (module != nullptr) {
-            ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
-        }
-        else {
-            ::sprintf(buffer, "%c: ", LEVELS[level]);
-        }
-    }
-#else
-    if (!m_disableTimeDisplay) {
+    if (!g_disableTimeDisplay) {
         struct timeval now;
         ::gettimeofday(&now, NULL);
 
@@ -346,10 +321,14 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
             ::sprintf(buffer, "%c: (%s) ", LEVELS[level], module);
         }
         else {
-            ::sprintf(buffer, "%c: ", LEVELS[level]);
+            if (level >= 9999U) {
+                ::sprintf(buffer, "U: ");
+            }
+            else {
+                ::sprintf(buffer, "%c: ", LEVELS[level]);
+            }
         }
     }
-#endif
 
     va_list vl;
     va_start(vl, fmt);
@@ -357,6 +336,10 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
     ::vsnprintf(buffer + ::strlen(buffer), LOG_BUFFER_LEN - 1U, fmt, vl);
 
     va_end(vl);
+
+    if (m_outStream && g_logDisplayLevel == 0U) {
+        m_outStream << buffer << std::endl;
+    }
 
     if (m_network != nullptr) {
         // don't transfer debug data...
@@ -379,12 +362,13 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         ::fflush(m_fpLog);
     }
 
-    if (level >= m_displayLevel && m_displayLevel != 0U) {
+    if (level >= g_logDisplayLevel && g_logDisplayLevel != 0U) {
         ::fprintf(stdout, "%s" EOL, buffer);
         ::fflush(stdout);
     }
 
-    if (level >= 6U) {        // Fatal
+    // fatal error (specially allow any log levels above 9999)
+    if (level >= 6U && level < 9999U) {
         ::fclose(m_fpLog);
         exit(1);
     }

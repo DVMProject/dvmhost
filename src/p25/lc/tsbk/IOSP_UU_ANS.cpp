@@ -98,3 +98,16 @@ void IOSP_UU_ANS::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string IOSP_UU_ANS::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Response)");
+    else    
+        return std::string("TSBK_IOSP_UU_ANS (Unit-to-Unit Answer Request)");
+}

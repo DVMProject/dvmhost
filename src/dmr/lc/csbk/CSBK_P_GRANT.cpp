@@ -82,3 +82,12 @@ void CSBK_P_GRANT::encode(uint8_t* data)
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_P_GRANT::toString()
+{
+    return std::string("CSBK_P_GRANT (Payload Grant)");
+}

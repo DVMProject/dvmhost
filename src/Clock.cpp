@@ -20,6 +20,7 @@
 */
 #include "Defines.h"
 #include "Clock.h"
+#include "Log.h"
 
 using namespace system_clock;
 
@@ -45,7 +46,7 @@ static const uint64_t NTP_SCALE_FRAC = 4294967296ULL;
 static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 {
     if (older > newer) {
-        // LOG_ERROR("Older timestamp is actually newer");
+        // LogError(LOG_HOST, "Older timestamp is actually newer");
     }
 
     uint32_t s1  = (older >> 32) & 0xffffffff;
@@ -56,7 +57,7 @@ static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
     uint64_t r = (((uint64_t)(s2 - s1) * 1000000) + ((us2 - us1))) / 1000;
 
     if (r > UINT32_MAX) {
-        // LOG_ERROR("NTP difference is too large: %llu. Limiting value", r);
+        // LogError(LOG_HOST, "NTP difference is too large: %llu. Limiting value", r);
         r = UINT32_MAX;
     }
 
@@ -70,11 +71,7 @@ static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 uint64_t ntp::now()
 {
     struct timeval tv;
-#ifdef _WIN32
     gettimeofday(&tv, NULL);
-#else
-    gettimeofday(&tv, NULL);
-#endif
 
     uint64_t tv_ntp = tv.tv_sec + EPOCH;
     uint64_t tv_usecs = (uint64_t)((float)(NTP_SCALE_FRAC * tv.tv_usec) / 1000000.f);
@@ -158,9 +155,9 @@ uint64_t hrc::diffNowUS(hrc::hrc_t& then)
 /// </summary>
 /// <param name="ms"></param>
 /// <returns></returns>
-uint64_t msToJiffies(uint64_t ms)
+uint64_t system_clock::msToJiffies(uint64_t ms)
 {
-    return (uint64_t)(((double)ms/1000)* 65536);
+    return (uint64_t)(((double)ms / 1000) * 65536);
 }
 
 /// <summary>
@@ -168,45 +165,7 @@ uint64_t msToJiffies(uint64_t ms)
 /// </summary>
 /// <param name="ms"></param>
 /// <returns></returns>
-uint64_t jiffiesToMs(uint64_t jiffies)
+uint64_t system_clock::jiffiesToMs(uint64_t jiffies)
 {
     return (uint64_t)(((double)jiffies / 65536) * 1000);
 }
-
-#ifdef _WIN32
-/// <summary>
-///
-/// </summary>
-/// <param name="tp"></param>
-/// <param name="tzp"></param>
-/// <returns></returns>
-int gettimeofday(struct timeval* tp, struct timezone* tzp)
-{
-    if (tzp != nullptr) {
-        // LOG_ERROR("Timezone not supported");
-        return -1;
-    }
-
-    // https://stackoverflow.com/questions/10905892/equivalent-of-gettimeday-for-windows
-
-    // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
-    // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-    // until 00:00:00 January 1, 1970
-    static const uint64_t epoch = ((uint64_t) 116444736000000000ULL);
-
-    // TODO: Why do we have two epochs defined?
-
-    SYSTEMTIME system_time;
-    FILETIME file_time;
-    uint64_t time;
-
-    GetSystemTime(&system_time);
-    SystemTimeToFileTime(&system_time, &file_time);
-    time = ((uint64_t)file_time.dwLowDateTime);
-    time += ((uint64_t)file_time.dwHighDateTime) << 32;
-
-    tp->tv_sec = (long)((time - epoch) / 10000000L);
-    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
-    return 0;
-}
-#endif

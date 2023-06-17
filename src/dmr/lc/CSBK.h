@@ -59,6 +59,9 @@ namespace dmr
             /// <summary>Encodes a DMR CSBK.</summary>
             virtual void encode(uint8_t* data) = 0;
 
+            /// <summary>Returns a string that represents the current CSBK.</summary>
+            virtual std::string toString();
+
             /// <summary>Regenerate a DMR CSBK without decoding.</summary>
             /// <remarks>This is because the DMR archeticture allows fall-thru of unsupported CSBKs.</remarks>
             static bool regenerate(uint8_t* data);
@@ -144,7 +147,7 @@ namespace dmr
             /// <summary>Internal helper to convert CSBK bytes to a 64-bit long value.</summary>
             static ulong64_t toValue(const uint8_t* Csbk);
             /// <summary>Internal helper to convert a 64-bit long value to CSBK bytes.</summary>
-            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t csbkValue);
+            static UInt8Array fromValue(const ulong64_t csbkValue);
 
             /// <summary>Internal helper to decode a control signalling block.</summary>
             bool decode(const uint8_t* data, uint8_t* csbk);

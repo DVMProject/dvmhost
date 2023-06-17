@@ -146,9 +146,9 @@ ulong64_t TDULC::toValue(const uint8_t* rs)
 /// </summary>
 /// <param name="rsValue"></param>
 /// <returns></returns>
-std::unique_ptr<uint8_t[]> TDULC::fromValue(const ulong64_t rsValue)
+UInt8Array TDULC::fromValue(const ulong64_t rsValue)
 {
-    __UNIQUE_BUFFER(rs, uint8_t, P25_TDULC_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(rs, P25_TDULC_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
     rs[1U] = (uint8_t)((rsValue >> 56) & 0xFFU);

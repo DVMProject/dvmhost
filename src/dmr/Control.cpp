@@ -55,7 +55,7 @@ using namespace dmr;
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssiMapper">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
@@ -65,8 +65,8 @@ using namespace dmr;
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
-    bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-    ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
+    bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex,
+    ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
     m_supervisor(false),
@@ -120,13 +120,14 @@ Control::~Control()
 /// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
@@ -152,7 +153,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
         dedicatedTSCC = false;
     }
 
-    Slot::setSiteData(voiceChNo, voiceChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
+    Slot::setSiteData(voiceChNo, voiceChData, controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
     bool disableGrantSourceIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
@@ -346,22 +347,7 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 void Control::clock(uint32_t ms)
 {
     if (m_network != nullptr) {
-        data::Data data;
-        bool ret = m_network->readDMR(data);
-        if (ret) {
-            uint32_t slotNo = data.getSlotNo();
-            switch (slotNo) {
-                case 1U:
-                    m_slot1->processNetwork(data);
-                    break;
-                case 2U:
-                    m_slot2->processNetwork(data);
-                    break;
-                default:
-                    LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
-                    break;
-            }
-        }
+        processNetwork();
     }
 
     m_tsccCntInterval.clock(ms);
@@ -414,6 +400,46 @@ void Control::permittedTG(uint32_t dstId, uint8_t slot)
         break;
     case 2U:
         m_slot2->permittedTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+/// <paran name="slot"></param>
+void Control::releaseGrantTG(uint32_t dstId, uint8_t slot)
+{
+    switch (slot) {
+    case 1U:
+        m_slot1->releaseGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->releaseGrantTG(dstId);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+/// <paran name="slot"></param>
+void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
+{
+    switch (slot) {
+    case 1U:
+        m_slot1->touchGrantTG(dstId);
+        break;
+    case 2U:
+        m_slot2->touchGrantTG(dstId);
         break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
@@ -596,4 +622,97 @@ void Control::setCSBKVerbose(bool verbose)
 {
     m_dumpCSBKData = verbose;
     lc::CSBK::setVerbose(verbose);
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Process a data frames from the network.
+/// </summary>
+void Control::processNetwork()
+{
+    uint32_t length = 0U;
+    bool ret = false;
+    UInt8Array buffer = m_network->readDMR(ret, length);
+    if (!ret)
+        return;
+    if (length == 0U)
+        return;
+    if (buffer == nullptr) {
+        return;
+    }
+
+    data::Data data;
+
+    uint8_t seqNo = buffer[4U];
+
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+    uint8_t flco = (buffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+
+    uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+    if (slotNo > 3U) {
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        return;
+    }
+
+    // DMO mode slot disabling
+    if (slotNo == 1U && !m_network->getDuplex()) {
+        LogError(LOG_DMR, "DMR/DMO, invalid slot, slotNo = %u", slotNo);
+        return;
+    }
+
+    // Individual slot disabling
+    if (slotNo == 1U && !m_network->getDMRSlot1()) {
+        LogError(LOG_DMR, "DMR, invalid slot, slot 1 disabled, slotNo = %u", slotNo);
+        return;
+    }
+    if (slotNo == 2U && !m_network->getDMRSlot2()) {
+        LogError(LOG_DMR, "DMR, invalid slot, slot 2 disabled, slotNo = %u", slotNo);
+        return;
+    }
+
+    data.setSeqNo(seqNo);
+    data.setSlotNo(slotNo);
+    data.setSrcId(srcId);
+    data.setDstId(dstId);
+    data.setFLCO(flco);
+
+    bool dataSync = (buffer[15U] & 0x20U) == 0x20U;
+    bool voiceSync = (buffer[15U] & 0x10U) == 0x10U;
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
+    }
+
+    if (dataSync) {
+        uint8_t dataType = buffer[15U] & 0x0FU;
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dataType);
+        data.setN(0U);
+    }
+    else if (voiceSync) {
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dmr::DT_VOICE_SYNC);
+        data.setN(0U);
+    }
+    else {
+        uint8_t n = buffer[15U] & 0x0FU;
+        data.setData(buffer.get() + 20U);
+        data.setDataType(dmr::DT_VOICE);
+        data.setN(n);
+    }
+
+    switch (slotNo) {
+        case 1U:
+            m_slot1->processNetwork(data);
+            break;
+        case 2U:
+            m_slot2->processNetwork(data);
+            break;
+    }
 }

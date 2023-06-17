@@ -97,3 +97,12 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);
     CSBK::encode(data, csbk.get());
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_ACK_RSP::toString()
+{
+    return std::string("CSBKO_ACK_RSP (Acknowledge Response)");
+}

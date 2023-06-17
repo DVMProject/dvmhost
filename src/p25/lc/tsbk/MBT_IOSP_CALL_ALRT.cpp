@@ -87,3 +87,16 @@ void MBT_IOSP_CALL_ALRT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUse
 
     return;
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_IOSP_CALL_ALRT::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_CALL_ALRT (Call Alert Request)");
+    else    
+        return std::string("TSBK_IOSP_CALL_ALRT (Call Alert)");
+}

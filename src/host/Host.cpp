@@ -58,13 +58,11 @@ using namespace lookups;
 #include <functional>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -115,6 +113,7 @@ Host::Host(const std::string& confFile) :
     m_channelNo(0U),
     m_voiceChNo(),
     m_voiceChData(),
+    m_controlChData(),
     m_idenTable(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
@@ -145,7 +144,7 @@ Host::Host(const std::string& confFile) :
     m_idleTickDelay(5U),
     m_RESTAPI(nullptr)
 {
-    UDPSocket::startup();
+    /* stub */
 }
 
 /// <summary>
@@ -153,7 +152,7 @@ Host::Host(const std::string& confFile) :
 /// </summary>
 Host::~Host()
 {
-    UDPSocket::shutdown();
+    /* stub */
 }
 
 /// <summary>
@@ -170,7 +169,7 @@ int Host::run()
         }
     }
     catch (yaml::OperationException const& e) {
-        ::fatal("cannot read the configuration file, %s", e.message());
+        ::fatal("cannot read the configuration file - %s (%s)", m_confFile.c_str(), e.message());
     }
 
     bool m_daemon = m_conf["daemon"].as<bool>(false);
@@ -190,7 +189,6 @@ int Host::run()
         ::fatal("unable to open the activity log file\n");
     }
 
-#if !defined(_WIN32) && !defined(_WIN64)
     // handle POSIX process forking
     if (m_daemon) {
         // create new process
@@ -227,7 +225,6 @@ int Host::run()
         ::close(STDOUT_FILENO);
         ::close(STDERR_FILENO);
     }
-#endif // !defined(_WIN32) && !defined(_WIN64)
 
     getHostVersion();
     ::LogInfo(">> Modem Controller");
@@ -314,13 +311,13 @@ int Host::run()
     uint32_t tidReloadTime = systemConf["talkgroup_id"]["time"].as<uint32_t>(0U);
     bool tidAcl = systemConf["talkgroup_id"]["acl"].as<bool>(false);
 
-    LogInfo("Talkgroup Id Lookups");
+    LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", tidLookupFile.length() > 0U ? tidLookupFile.c_str() : "None");
     if (tidReloadTime > 0U)
         LogInfo("    Reload: %u mins", tidReloadTime);
     LogInfo("    ACL: %s", tidAcl ? "yes" : "no");
 
-    m_tidLookup = new TalkgroupIdLookup(tidLookupFile, tidReloadTime, tidAcl);
+    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl);
     m_tidLookup->read();
 
     // initialize networking
@@ -431,10 +428,11 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes, embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket,
-            dmrDumpCsbkData, dmrDebug, dmrVerbose));
-        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_dmrNetId, m_siteId, m_channelId, m_channelNo, true);
+        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
+            embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, 
+            m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose));
+        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
+            m_channelNo, true);
 
         if (dmrCtrlChannel) {
             dmr->setCCRunning(true);
@@ -504,11 +502,11 @@ int Host::run()
             }
         }
 
-        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem, m_network, m_timeout, m_rfTalkgroupHang,
-            m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, p25RepeatDataPacket,
-            p25DumpTsbkData, p25Debug, p25Verbose));
-        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId,
-            m_siteId, m_channelId, m_channelNo, true);
+        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
+            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
+            p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose));
+        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData,
+            m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
             p25->setCCRunning(true);
@@ -569,10 +567,11 @@ int Host::run()
             }
         }
 
-        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes, m_timeout, m_rfTalkgroupHang,
-            m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi,
+        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
+            m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
-        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_siteId, m_sysId, m_channelId, m_channelNo, true);
+        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData, m_siteId, 
+            m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
             nxdn->setCCRunning(true);
@@ -879,7 +878,7 @@ int Host::run()
                     if (m_state == STATE_DMR) {
                         START_DMR_DUPLEX_IDLE(true);
 
-                        m_modem->writeDMRData1(data, len);
+                        m_modem->writeDMRFrame1(data, len);
 
                         // if there is no DMR CC running; run the interrupt macro to stop
                         // any running DMR beacon
@@ -924,7 +923,7 @@ int Host::run()
                     if (m_state == STATE_DMR) {
                         START_DMR_DUPLEX_IDLE(true);
 
-                        m_modem->writeDMRData2(data, len);
+                        m_modem->writeDMRFrame2(data, len);
 
                         // if there is no DMR CC running; run the interrupt macro to stop
                         // any running DMR beacon
@@ -971,9 +970,9 @@ int Host::run()
                             setState(STATE_P25);
                         }
 
-                        // if the state is P25; write P25 data
+                        // if the state is P25; write P25 frame data
                         if (m_state == STATE_P25) {
-                            m_modem->writeP25Data(data, len);
+                            m_modem->writeP25Frame(data, len);
 
                             INTERRUPT_DMR_BEACON;
 
@@ -1051,7 +1050,7 @@ int Host::run()
 
                     // if the state is NXDN; write NXDN data
                     if (m_state == STATE_NXDN) {
-                        m_modem->writeNXDNData(data, len);
+                        m_modem->writeNXDNFrame(data, len);
 
                         INTERRUPT_DMR_BEACON;
 
@@ -1087,7 +1086,7 @@ int Host::run()
         if (dmr != nullptr) {
             // read DMR slot 1 frames from the modem, and if there is any
             // write those frames to the DMR controller
-            len = m_modem->readDMRData1(data);
+            len = m_modem->readDMRFrame1(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
@@ -1148,7 +1147,7 @@ int Host::run()
 
             // read DMR slot 2 frames from the modem, and if there is any
             // write those frames to the DMR controller
-            len = m_modem->readDMRData2(data);
+            len = m_modem->readDMRFrame2(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // if the modem is in duplex -- process wakeup CSBKs
@@ -1213,7 +1212,7 @@ int Host::run()
         // read P25 frames from modem, and if there are frames
         // write those frames to the P25 controller
         if (p25 != nullptr) {
-            len = m_modem->readP25Data(data);
+            len = m_modem->readP25Frame(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // process P25 frames
@@ -1287,7 +1286,7 @@ int Host::run()
         // write those frames to the NXDN controller
 #if defined(ENABLE_NXDN)
         if (nxdn != nullptr) {
-            len = m_modem->readNXDNData(data);
+            len = m_modem->readNXDNFrame(data);
             if (len > 0U) {
                 if (m_state == STATE_IDLE) {
                     // process NXDN frames
@@ -1594,8 +1593,8 @@ int Host::run()
             if (dmr != nullptr) {
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearDMRData1();
-                        m_modem->clearDMRData2();
+                        m_modem->clearDMRFrame1();
+                        m_modem->clearDMRFrame2();
                     }
 
                     dmr->setCCRunning(false);
@@ -1611,7 +1610,7 @@ int Host::run()
             if (p25 != nullptr) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearP25Data();
+                        m_modem->clearP25Frame();
                         p25->reset();
                     }
 
@@ -1627,7 +1626,7 @@ int Host::run()
             if (nxdn != nullptr) {
                 if (m_nxdnCtrlChannel) {
                     if (!hasTxShutdown) {
-                        m_modem->clearNXDNData();
+                        m_modem->clearNXDNFrame();
                         nxdn->reset();
                     }
 
@@ -1785,6 +1784,9 @@ bool Host::readParams()
         m_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
         m_idenTable->read();
 
+        /*
+        ** Channel Configuration
+        */
         yaml::Node rfssConfig = systemConf["config"];
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
         if (m_channelId > 15U) { // clamp to 15
@@ -1825,6 +1827,25 @@ bool Host::readParams()
             m_rxFrequency = m_txFrequency;
         }
 
+        /*
+        ** Control Channel
+        */
+        {
+            yaml::Node controlCh = rfssConfig["controlCh"];
+
+            std::string restApiAddress = controlCh["restAddress"].as<std::string>("127.0.0.1");
+            uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+            std::string restApiPassword = controlCh["restPassword"].as<std::string>();
+
+            VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
+            m_controlChData = data;
+
+            ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+        }
+
+        /*
+        ** Voice Channels
+        */
         yaml::Node& voiceChList = rfssConfig["voiceChNo"];
 
         if (voiceChList.size() == 0U) {
@@ -1866,6 +1887,9 @@ bool Host::readParams()
         }
         strVoiceChNo.erase(strVoiceChNo.find_last_of(","));
 
+        /*
+        ** Site Parameters
+        */
         m_siteId = (uint8_t)::strtoul(rfssConfig["siteId"].as<std::string>("1").c_str(), NULL, 16);
         m_siteId = p25::P25Utils::siteId(m_siteId);
 
@@ -2060,6 +2084,10 @@ bool Host::createModem()
     uint8_t rssiCoarse = (uint8_t)softpotParams["rssiCoarse"].as<uint32_t>(127U);
     uint8_t rssiFine = (uint8_t)softpotParams["rssiFine"].as<uint32_t>(127U);
 
+    uint16_t dmrFifoLength = (uint16_t)modemConf["dmrFifoLength"].as<uint32_t>(DMR_TX_BUFFER_LEN);
+    uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
+    uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
+
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
@@ -2127,14 +2155,9 @@ bool Host::createModem()
         }
 
         if (portType == PTY_PORT) {
-#if !defined(_WIN32) && !defined(_WIN64)
             modemPort = new port::UARTPort(uartPort, serialSpeed, false);
             LogInfo("    PTY Port: %s", uartPort.c_str());
             LogInfo("    PTY Speed: %u", uartSpeed);
-#else
-            LogError(LOG_HOST, "Pseudo PTY is not supported on Windows!");
-            return false;
-#endif // !defined(_WIN32) && !defined(_WIN64)
         }
         else {
             modemPort = new port::UARTPort(uartPort, serialSpeed, true);
@@ -2193,6 +2216,9 @@ bool Host::createModem()
         LogInfo("    DMR Queue Size: %u (%u bytes)", dmrQueueSize, m_dmrQueueSizeBytes);
         LogInfo("    P25 Queue Size: %u (%u bytes)", p25QueueSize, m_p25QueueSizeBytes);
         LogInfo("    NXDN Queue Size: %u (%u bytes)", nxdnQueueSize, m_nxdnQueueSizeBytes);
+        LogInfo("    DMR FIFO Size: %u bytes", dmrFifoLength);
+        LogInfo("    P25 FIFO Size: %u bytes", p25FifoLength);
+        LogInfo("    NXDN FIFO Size: %u bytes", nxdnFifoLength);
 
         if (m_useDFSI) {
             LogInfo("    Digital Fixed Station Interface: yes");
@@ -2241,6 +2267,8 @@ bool Host::createModem()
         return false;
     }
 
+    m_modem->setFifoLength(dmrFifoLength, p25FifoLength, nxdnFifoLength);
+
     // are we on a protocol version older then 3?
     if (m_modem->getVersion() < 3U) {
         if (m_nxdnEnabled) {
@@ -2273,7 +2301,7 @@ bool Host::createNetwork()
     uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
     std::string restApiPassword = networkConf["restPassword"].as<std::string>();
     bool restApiDebug = networkConf["restDebug"].as<bool>(false);
-    uint32_t id = networkConf["id"].as<uint32_t>(0U);
+    uint32_t id = networkConf["id"].as<uint32_t>(1001U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
@@ -2300,7 +2328,7 @@ bool Host::createNetwork()
     LogInfo("Network Parameters");
     LogInfo("    Enabled: %s", netEnable ? "yes" : "no");
     if (netEnable) {
-        LogInfo("    Peer Id: %u", id);
+        LogInfo("    Peer ID: %u", id);
         LogInfo("    Address: %s", address.c_str());
         LogInfo("    Port: %u", port);
         if (local > 0U)
@@ -2339,6 +2367,7 @@ bool Host::createNetwork()
             m_network->setRESTAPIData(restApiPassword, restApiPort);
         }
 
+        m_network->enable(true);
         bool ret = m_network->open();
         if (!ret) {
             delete m_network;
@@ -2347,7 +2376,6 @@ bool Host::createNetwork()
             return false;
         }
 
-        m_network->enable(true);
         ::LogSetNetwork(m_network);
     }
 
@@ -2532,9 +2560,9 @@ void Host::setState(uint8_t state)
 
             m_modem->setState(STATE_IDLE);
 
-            m_modem->clearDMRData1();
-            m_modem->clearDMRData2();
-            m_modem->clearP25Data();
+            m_modem->clearDMRFrame1();
+            m_modem->clearDMRFrame2();
+            m_modem->clearP25Frame();
 
             if (m_state == HOST_STATE_ERROR) {
                 m_modem->sendCWId(m_cwCallsign);
@@ -2554,15 +2582,6 @@ void Host::setState(uint8_t state)
                     delete m_modem;
                 }
 
-                if (m_tidLookup != nullptr) {
-                    m_tidLookup->stop();
-                    delete m_tidLookup;
-                }
-                if (m_ridLookup != nullptr) {
-                    m_ridLookup->stop();
-                    delete m_ridLookup;
-                }
-
                 if (m_network != nullptr) {
                     m_network->close();
                     delete m_network;
@@ -2571,6 +2590,15 @@ void Host::setState(uint8_t state)
                 if (m_RESTAPI != nullptr) {
                     m_RESTAPI->close();
                     delete m_RESTAPI;
+                }
+
+                if (m_tidLookup != nullptr) {
+                    m_tidLookup->stop();
+                    delete m_tidLookup;
+                }
+                if (m_ridLookup != nullptr) {
+                    m_ridLookup->stop();
+                    delete m_ridLookup;
                 }
             }
             else {

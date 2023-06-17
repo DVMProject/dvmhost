@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@
 #include "Defines.h"
 #include "network/BaseNetwork.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 
 #include <string>
 #include <cstdint>
@@ -43,26 +43,31 @@ namespace network
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the core networking logic.
+    //      Implements the core peer networking logic.
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API Network : public BaseNetwork {
     public:
         /// <summary>Initializes a new instance of the Network class.</summary>
-        Network(const std::string& address, uint16_t port, uint16_t local, uint32_t id, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool transferActivityLog, bool transferDiagnosticLog, bool updateLookup);
+        Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network();
 
+        /// <summary>Resets the DMR ring buffer for the given slot.</summary>
+        void resetDMR(uint32_t slotNo) override;
+        /// <summary>Resets the P25 ring buffer.</summary>
+        void resetP25() override;
+        /// <summary>Resets the NXDN ring buffer.</summary>
+        void resetNXDN() override;
+
         /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupIdLookup* tidLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /// <summary>Sets metadata configuration settings from the modem.</summary>
         void setMetadata(const std::string& callsign, uint32_t rxFrequency, uint32_t txFrequency, float txOffsetMhz, float chBandwidthKhz,
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
         /// <summary>Sets REST API configuration settings from the modem.</summary>
         void setRESTAPIData(const std::string& password, uint16_t port);
-        /// <summary>Gets the current status of the network.</summary>
-        uint8_t getStatus();
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -70,11 +75,15 @@ namespace network
         /// <summary>Opens connection to the network.</summary>
         bool open();
 
+        /// <summary>Closes connection to the network.</summary>
+        void close();
+
         /// <summary>Sets flag enabling network communication.</summary>
         void enable(bool enabled);
 
-        /// <summary>Closes connection to the network.</summary>
-        void close();
+    public:
+        /// <summary>Last received RTP sequence number.</summary>
+        __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
 
     private:
         std::string m_address;
@@ -91,7 +100,19 @@ namespace network
         bool m_updateLookup;
 
         lookups::RadioIdLookup* m_ridLookup;
-        lookups::TalkgroupIdLookup* m_tidLookup;
+        lookups::TalkgroupRulesLookup* m_tidLookup;
+
+        uint8_t* m_salt;
+
+        Timer m_retryTimer;
+        Timer m_timeoutTimer;
+
+        uint32_t* m_rxDMRStreamId;
+        uint32_t m_rxP25StreamId;
+        uint32_t m_rxNXDNStreamId;
+
+        uint16_t m_pktSeq;
+        uint32_t m_loginStreamId;
 
         /** station metadata */
         std::string m_identity;

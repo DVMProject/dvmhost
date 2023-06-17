@@ -78,3 +78,13 @@ void MESSAGE_TYPE_IDLE::encode(uint8_t* data, uint32_t length, uint32_t offset)
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_IDLE::toString(bool isp)
+{
+    return std::string("MESSAGE_TYPE_IDLE (Idle)");
+}

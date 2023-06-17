@@ -94,6 +94,19 @@ void IOSP_STS_UPDT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string IOSP_STS_UPDT::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_STS_UPDT (Status Update Request)");
+    else    
+        return std::string("TSBK_IOSP_STS_UPDT (Status Update)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

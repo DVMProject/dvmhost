@@ -1,0 +1,131 @@
+#
+# Digital Voice Modem - Host Software Configuration (FNE Conference Bridge Mode)
+#
+# @package DVM / Host Software
+#
+
+# Flag indicating whether the host will run as a background or foreground task.
+daemon: true
+
+#
+# Logging Configuration
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
+log:
+    # Console display logging level (used when in foreground).
+    displayLevel: 1
+    # File logging level.
+    fileLevel: 1
+    # Full path for the directory to store the log files.
+    filePath: .
+    # Full path for the directory to store the activity log files.
+    activityFilePath: .
+    # Log filename prefix.
+    fileRoot: DVM
+
+#
+# Master
+#
+master:
+    # Network Peer ID
+    peerId: 9000100
+    # Hostname/IP address to listen on (blank for all).
+    address: 0.0.0.0
+    # Port number to listen on.
+    port: 62031
+    # FNE access password.
+    password: RPT1234
+    # Flag indicating whether or not verbose logging is enabled.
+    verbose: true
+    # Flag indicating whether or not verbose debug logging is enabled.
+    debug: false
+
+    # Flag indicating whether or not DMR traffic will be passed.
+    allowDMRTraffic: true
+    # Flag indicating whether or not P25 traffic will be passed.
+    allowP25Traffic: true
+    # Flag indicating whether or not NXDN traffic will be passed.
+    allowNXDNTraffic: true
+
+    # Delay from when a call on a parrot TG ends to when the playback starts (in milliseconds).
+    parrotDelay: 2000
+
+    #
+    # Talkgroup Rules Configuration
+    #
+    talkgroup_rules:
+        # Full path to the talkgroup rules file.
+        file: talkgroup_rules.yml
+        # Amount of time between updates of talkgroup rules file. (minutes)
+        time: 30
+
+#
+# Peers
+#
+peers:
+    - name: PARROT
+      # Flag indicating whether or not the peer is enabled.
+      enabled: true
+      # Hostname/IP address to listen on (blank for all).
+      address: 127.0.0.1
+      # Port number to listen on.
+      port: 32091
+      # Hostname/IP address of the FNE master to connect to.
+      masterAddress: 127.0.0.1
+      # Port number of the FNE master to connect to.
+      masterPort: 32090
+      # FNE access password.
+      password: RPT1234
+      # Textual identity of this peer.
+      identity: PARROT
+      # Network Peer ID
+      peerId: 9000990
+
+      # 
+      rxFrequency: 0
+      #
+      txFrequency: 0
+      # Latitude.
+      latitude: 0.0
+      # Longitude.
+      longitude: 0.0
+      # Textual location for this host.
+      location: Anywhere, USA
+
+      # Flag indicating whether or not verbose debug logging is enabled.
+      debug: false
+
+#
+# System Configuration
+#
+system:
+    # Time in seconds between pings to peers.
+    pingTime: 5
+    # Maximum number of missable pings before a peer is considered disconnected.
+    maxMissedPings: 5
+
+    # Time in minutes between updates of the talkgroup rules.
+    tgRuleUpdateTime: 10
+
+    # Flag indicating the TGID information for this master will be sent to its peers.
+    sendTalkgroups: true
+
+    # Flag indicating whether or not the host activity log will be sent to the network.
+    allowActivityTransfer: true
+    # Flag indicating whether or not the host diagnostic log will be sent to the network.
+    allowDiagnosticTransfer: true
+
+    #
+    # Radio ID ACL Configuration
+    #
+    radio_id:
+        # Full path to the identity table file.
+        file: rid_acl.dat
+        # Amount of time between updates of identity table file. (minutes)
+        time: 2

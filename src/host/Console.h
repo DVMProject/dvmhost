@@ -32,9 +32,7 @@
 
 #include "Defines.h"
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <termios.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -62,9 +60,7 @@ public:
     void close();
 
 private:
-#if !defined(_WIN32) && !defined(_WIN64)
     termios m_termios;
-#endif
 };
 
 #endif // __CONSOLE_H__

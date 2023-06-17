@@ -99,6 +99,30 @@ void CSBK_RAND::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_RAND::toString()
+{
+    switch (m_serviceKind) {
+    case SVC_KIND_IND_VOICE_CALL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_VOICE_CALL (Individual Voice Call)");
+    case SVC_KIND_GRP_VOICE_CALL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call)");
+    case SVC_KIND_IND_DATA_CALL:        return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_DATA_CALL (Individual Data Call)");
+    case SVC_KIND_GRP_DATA_CALL:        return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call)");
+    case SVC_KIND_IND_UDT_DATA_CALL:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_IND_UDT_DATA_CALL (Individual UDT Short Data Call)");
+    case SVC_KIND_GRP_UDT_DATA_CALL:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_GRP_UDT_DATA_CALL (Group UDT Short Data Call)");
+    case SVC_KIND_UDT_SHORT_POLL:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_UDT_SHORT_POLL (UDT Short Data Polling Service)");
+    case SVC_KIND_STATUS_TRANSPORT:     return std::string("CSBKO_RAND (Random Access), SVC_KIND_STATUS_TRANSPORT (Status Transport Service)");
+    case SVC_KIND_CALL_DIVERSION:       return std::string("CSBKO_RAND (Random Access), SVC_KIND_CALL_DIVERSION (Call Diversion Service)");
+    case SVC_KIND_CALL_ANSWER:          return std::string("CSBKO_RAND (Random Access), SVC_KIND_CALL_ANSWER (Call Answer Service)");
+    case SVC_KIND_SUPPLEMENTARY_SVC:    return std::string("CSBKO_RAND (Random Access), SVC_KIND_SUPPLEMENTARY_SVC (Supplementary Service)");
+    case SVC_KIND_REG_SVC:              return std::string("CSBKO_RAND (Random Access), SVC_KIND_REG_SVC (Registration Service)");
+    case SVC_KIND_CANCEL_CALL:          return std::string("CSBKO_RAND (Random Access), SVC_KIND_CANCEL_CALL (Cancel Call Service)");
+    default:                            return std::string("CSBKO_RAND (Random Access)");
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

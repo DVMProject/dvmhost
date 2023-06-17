@@ -46,9 +46,12 @@ namespace p25
                 OSP_RFSS_STS_BCAST();
 
                 /// <summary>Decode a trunking signalling block.</summary>
-                virtual bool decode(const uint8_t* data, bool rawTSBK = false);
+                bool decode(const uint8_t* data, bool rawTSBK = false);
                 /// <summary>Encode a trunking signalling block.</summary>
-                virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+
+                /// <summary>Returns a string that represents the current TSBK.</summary>
+                virtual std::string toString(bool isp = false) override;
             };
         } // namespace tsbk
     } // namespace lc

@@ -108,6 +108,16 @@ void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_ADJ_STS_BCAST::toString(bool isp)
+{
+    return std::string("TSBK_OSP_ADJ_STS_BCAST (Adjacent Site Status Broadcast)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

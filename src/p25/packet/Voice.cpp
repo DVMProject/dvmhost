@@ -132,9 +132,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             if (!m_p25->m_dedicatedControl) {
-                m_p25->m_modem->clearP25Data();
+                m_p25->m_modem->clearP25Frame();
             }
-            m_p25->m_queue.clear();
+            m_p25->m_txQueue.clear();
             resetRF();
             resetNet();
         }
@@ -213,9 +213,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // if this is a late entry call, clear states
             if (m_rfLastHDU.getDstId() == 0U) {
                 if (!m_p25->m_dedicatedControl) {
-                    m_p25->m_modem->clearP25Data();
+                    m_p25->m_modem->clearP25Frame();
                 }
-                m_p25->m_queue.clear();
+                m_p25->m_txQueue.clear();
                 resetRF();
                 resetNet();
             }
@@ -493,6 +493,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_control) {
                 m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+                m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
             // single-channel trunking or voice on control support?
@@ -573,7 +574,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_LDU2) {
-
         // prevent two LDUs of the same type from being sent consecutively
         if (m_lastDUID == P25_DUID_LDU2) {
             return false;
@@ -680,8 +680,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC) {
-        if (m_p25->m_control) {
+        if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+            m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
         if (duid == P25_DUID_TDU) {
@@ -721,6 +722,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             else {
                 m_p25->m_tailOnIdle = true;
+                m_p25->m_trunk->writeNet_TSDU_Call_Term(m_rfLC.getSrcId(), m_rfLC.getDstId());
             }
         }
 
@@ -739,10 +741,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="duid"></param>
-/// <param name="frameType"></param>
+/// <param name="control">Link Control Data.</param>
+/// <param name="lsd">Low Speed Data.</param>
+/// <param name="duid">Data Unit ID.</param>
+/// <param name="frameType">Network Frame Type.</param>
 /// <returns></returns>
 bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
 {
@@ -803,6 +805,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
@@ -867,6 +870,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                    m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
                 if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
@@ -875,9 +879,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
                     if (!m_p25->m_voiceOnControl) {
-                        m_p25->m_modem->clearP25Data();
+                        m_p25->m_modem->clearP25Frame();
                     }
-                    m_p25->m_queue.clear();
+                    m_p25->m_txQueue.clear();
 
                     resetRF();
                     resetNet();
@@ -901,8 +905,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 return false;
             }
 
-            if (m_p25->m_control) {
+            if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+                m_p25->notifyCC_ReleaseGrant(m_netLC.getDstId());
             }
 
             if (m_p25->m_netState != RS_NET_IDLE) {
@@ -1046,10 +1051,6 @@ void Voice::writeRF_EndOfVoice()
 /// </summary>
 void Voice::writeNet_TDU()
 {
-    if (m_p25->m_control) {
-        m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
-    }
-
     uint8_t buffer[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(buffer, 0x00U, P25_TDU_FRAME_LENGTH_BYTES + 2U);
 

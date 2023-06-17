@@ -145,11 +145,14 @@ namespace network
                     asio::ip::tcp::resolver resolver(m_ioContext);
                     auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
 
-                    connect(endpoints);
+                    try {
+                        connect(endpoints);
 
-                    // the entry() call will block until all asynchronous operations
-                    // have finished
-                    m_ioContext.run();
+                        // the entry() call will block until all asynchronous operations
+                        // have finished
+                        m_ioContext.run();
+                    }
+                    catch (std::exception&) { /* stub */ }
 
                     if (m_connection != nullptr) {
                         m_connection->stop();

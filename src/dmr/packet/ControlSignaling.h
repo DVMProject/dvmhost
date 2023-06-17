@@ -39,8 +39,6 @@
 #include "modem/Modem.h"
 #include "network/BaseNetwork.h"
 #include "RingBuffer.h"
-#include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
 #include "StopWatch.h"
 #include "Timer.h"
 
@@ -87,8 +85,10 @@ namespace dmr
             /// <summary>Finalizes a instance of the ControlSignaling class.</summary>
             ~ControlSignaling();
 
+            /// <summary>Helper to write a immediate CSBK packet.</summary>
+            void writeRF_CSBK_Imm(lc::CSBK *csbk) { writeRF_CSBK(csbk, false, true); }
             /// <summary>Helper to write a CSBK packet.</summary>
-            void writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite = false);
+            void writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite = false, bool imm = false);
 
             /// <summary>Helper to write a ACK RSP packet.</summary>
             void writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint8_t responseInfo);

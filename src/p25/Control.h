@@ -37,11 +37,11 @@
 #include "p25/packet/Data.h"
 #include "p25/packet/Voice.h"
 #include "p25/packet/Trunk.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "p25/lookups/P25AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "RingBuffer.h"
@@ -73,9 +73,9 @@ namespace p25
     class HOST_SW_API Control {
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
-        Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+        Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
-            ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
+            ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
@@ -85,8 +85,9 @@ namespace p25
 
         /// <summary>Helper to set P25 configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
-            uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+            const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
+            uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
+            uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -117,6 +118,11 @@ namespace p25
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
+
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId);
 
         /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
@@ -154,7 +160,7 @@ namespace p25
         uint32_t m_timeout;
 
         modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        network::Network* m_network;
 
         bool m_inhibitIllegal;
         bool m_legacyGroupGrnt;
@@ -169,12 +175,14 @@ namespace p25
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
-        ::lookups::TalkgroupIdLookup* m_tidLookup;
+        ::lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::P25AffiliationLookup m_affiliations;
+        ::lookups::VoiceChData m_controlChData;
 
         ::lookups::IdenTable m_idenEntry;
 
-        RingBuffer<uint8_t> m_queue;
+        RingBuffer<uint8_t> m_txImmQueue;
+        RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;
@@ -216,7 +224,7 @@ namespace p25
         bool m_debug;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false);
+        void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
 #if ENABLE_DFSI_SUPPORT
         /// <summary>Process a DFSI data frame from the RF interface.</summary>
@@ -225,6 +233,11 @@ namespace p25
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
+
+        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        void notifyCC_ReleaseGrant(uint32_t dstId);
+        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        void notifyCC_TouchGrant(uint32_t dstId);
 
         /// <summary>Helper to write control channel frame data.</summary>
         bool writeRF_ControlData();

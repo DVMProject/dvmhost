@@ -36,11 +36,11 @@
 #include "dmr/lookups/DMRAffiliationLookup.h"
 #include "dmr/Slot.h"
 #include "modem/Modem.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "yaml/Yaml.h"
 
 namespace dmr
@@ -61,15 +61,15 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
-            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::BaseNetwork* network, bool duplex,
-            ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssi,
+            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex,
+            ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+            ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }
@@ -95,6 +95,11 @@ namespace dmr
         void setSupervisor(bool supervisor);
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
+
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId, uint8_t slot);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId, uint8_t slot);
 
         /// <summary>Gets instance of the DMRAffiliationLookup class.</summary>
         lookups::DMRAffiliationLookup affiliations();
@@ -134,14 +139,14 @@ namespace dmr
         uint32_t m_colorCode;
 
         modem::Modem* m_modem;
-        network::BaseNetwork* m_network;
+        network::Network* m_network;
 
         Slot* m_slot1;
         Slot* m_slot2;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
-        ::lookups::TalkgroupIdLookup* m_tidLookup;
+        ::lookups::TalkgroupRulesLookup* m_tidLookup;
 
         bool m_enableTSCC;
 
@@ -156,6 +161,9 @@ namespace dmr
         bool m_dumpCSBKData;
         bool m_verbose;
         bool m_debug;
+
+        /// <summary>Process a data frames from the network.</summary>
+        void processNetwork();
     };
 } // namespace dmr
 

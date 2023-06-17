@@ -46,9 +46,9 @@ namespace p25
                 LC_SYS_SRV_BCAST();
 
                 /// <summary>Decode a terminator data unit w/ link control.</summary>
-                virtual bool decode(const uint8_t* data);
+                bool decode(const uint8_t* data);
                 /// <summary>Encode a terminator data unit w/ link control.</summary>
-                virtual void encode(uint8_t* data);
+                void encode(uint8_t* data);
             };
         } // namespace tdulc
     } // namespace lc

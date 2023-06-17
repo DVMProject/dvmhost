@@ -53,15 +53,15 @@ namespace modem
             virtual ~ModemNullPort();
 
             /// <summary>Opens a connection to the port.</summary>
-            virtual bool open();
+            bool open();
 
             /// <summary>Reads data from the port.</summary>
-            virtual int read(uint8_t* buffer, uint32_t length);
+            int read(uint8_t* buffer, uint32_t length);
             /// <summary>Writes data to the port.</summary>
-            virtual int write(const uint8_t* buffer, uint32_t length);
+            int write(const uint8_t* buffer, uint32_t length);
 
             /// <summary>Closes the connection to the port.</summary>
-            virtual void close();
+            void close();
 
         private:
             RingBuffer<unsigned char> m_buffer;
@@ -72,6 +72,8 @@ namespace modem
             void getStatus();
             /// <summary>Helper to write a faked modem acknowledge.</summary>
             void writeAck(uint8_t type);
+            /// <summary>Helper to write a faked modem negative acknowledge.</summary>
+            void writeNAK(uint8_t opcode, uint8_t err);
         };
     } // namespace port
 } // namespace modem

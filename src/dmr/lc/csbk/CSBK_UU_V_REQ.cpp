@@ -81,3 +81,12 @@ void CSBK_UU_V_REQ::encode(uint8_t* data)
 
     /* stub */
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_UU_V_REQ::toString()
+{
+    return std::string("CSBKO_UU_V_REQ (Unit-to-Unit Voice Channel Request)");
+}

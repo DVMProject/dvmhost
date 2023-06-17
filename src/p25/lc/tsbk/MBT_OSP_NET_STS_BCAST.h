@@ -46,9 +46,12 @@ namespace p25
                 MBT_OSP_NET_STS_BCAST();
 
                 /// <summary>Decode a alternate trunking signalling block.</summary>
-                virtual bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
+                bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
                 /// <summary>Encode a alternate trunking signalling block.</summary>
-                virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
+                void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
+
+                /// <summary>Returns a string that represents the current TSBK.</summary>
+                virtual std::string toString(bool isp = false) override;
             };
         } // namespace tsbk
     } // namespace lc

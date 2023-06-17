@@ -95,9 +95,9 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
     if (frameType == P25_DFSI_VHDR2) {
         if (m_p25->m_rfState == RS_RF_LISTENING) {
             if (!m_p25->m_dedicatedControl) {
-                m_p25->m_modem->clearP25Data();
+                m_p25->m_modem->clearP25Frame();
             }
-            m_p25->m_queue.clear();
+            m_p25->m_txQueue.clear();
             resetRF();
             resetNet();
         }
@@ -183,9 +183,9 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
                     // if this is a late entry call, clear states
                     if (m_rfLastHDU.getDstId() == 0U) {
                         if (!m_p25->m_dedicatedControl) {
-                            m_p25->m_modem->clearP25Data();
+                            m_p25->m_modem->clearP25Frame();
                         }
-                        m_p25->m_queue.clear();
+                        m_p25->m_txQueue.clear();
                         resetRF();
                         resetNet();
                     }
@@ -418,6 +418,7 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 
                     if (m_p25->m_control) {
                         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+                        m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
                     }
 
                     // single-channel trunking or voice on control support?
@@ -571,8 +572,9 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
     }
     else if (frameType == P25_DFSI_START_STOP) {
         if (m_rfDFSILC.getType() == P25_DFSI_TYPE_VOICE && m_rfDFSILC.getStartStop() == P25_DFSI_STOP_FLAG) {
-            if (m_p25->m_control) {
+            if (!m_p25->m_control) {
                 m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+                m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
             }
 
             uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
@@ -632,11 +634,12 @@ bool DFSIVoice::process(uint8_t* data, uint32_t len)
 /// </summary>
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
-/// <param name="control"></param>
-/// <param name="lsd"></param>
-/// <param name="duid"></param>
+/// <param name="control">Link Control Data.</param>
+/// <param name="lsd">Low Speed Data.</param>
+/// <param name="duid">Data Unit ID.</param>
+/// <param name="frameType">Network Frame Type.</param>
 /// <returns></returns>
-bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
 {
     uint32_t count = 0U;
 
@@ -745,9 +748,9 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
 
             if (m_p25->m_netState == RS_NET_IDLE) {
                 if (!m_p25->m_voiceOnControl) {
-                    m_p25->m_modem->clearP25Data();
+                    m_p25->m_modem->clearP25Frame();
                 }
-                m_p25->m_queue.clear();
+                m_p25->m_txQueue.clear();
 
                 resetRF();
                 resetNet();
@@ -771,8 +774,9 @@ bool DFSIVoice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, dat
             return false;
         }
 
-        if (m_p25->m_control) {
+        if (!m_p25->m_control) {
             m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+            m_p25->notifyCC_ReleaseGrant(m_netLC.getDstId());
         }
 
         if (m_p25->m_netState != RS_NET_IDLE) {
@@ -830,10 +834,6 @@ DFSIVoice::~DFSIVoice()
 /// </summary>
 void DFSIVoice::writeNet_TDU()
 {
-    if (m_p25->m_control) {
-        m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
-    }
-
     m_trunk->writeRF_DSFI_Stop(P25_DFSI_TYPE_VOICE);
 
     if (m_verbose) {
@@ -929,6 +929,7 @@ void DFSIVoice::writeNet_LDU1()
 
     if (m_p25->m_control) {
         m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+        m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
     }
 
     // set network and RF link control states

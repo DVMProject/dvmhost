@@ -33,15 +33,6 @@
 
 #include "Defines.h"
 
-// Data Unit ID String(s)
-#define P25_HDU_STR "P25_DUID_HDU (Header Data Unit)"
-#define P25_TDU_STR "P25_DUID_TDU (Simple Terminator Data Unit)"
-#define P25_LDU1_STR "P25_DUID_LDU1 (Logical Link Data Unit 1)"
-#define P25_TSDU_STR "P25_DUID_TSDU (Trunking System Data Unit)"
-#define P25_LDU2_STR "P25_DUID_LDU2 (Logical Link Data Unit 2)"
-#define P25_PDU_STR "P25_DUID_PDU (Packet Data Unit)"
-#define P25_TDULC_STR "P25_DUID_TDULC (Terminator Data Unit with Link Control)"
-
 namespace p25
 {
     // ---------------------------------------------------------------------------
@@ -354,17 +345,24 @@ namespace p25
     const uint8_t   TSBK_OSP_MOT_CC_BSI = 0x0BU;        // MOT CC BSI - Motorola / Control Channel Base Station Identifier
     const uint8_t   TSBK_OSP_MOT_PSH_CCH = 0x0EU;       // MOT PSH CCH - Motorola / Planned Control Channel Shutdown
 
-    // TSBK Motorola Outbound Signalling Packet (OSP) Opcode(s)
+    // TSBK DVM Outbound Signalling Packet (OSP) Opcode(s)
     const uint8_t   TSBK_OSP_DVM_GIT_HASH = 0x3FU;      //
 
     // Data Unit ID(s)
     const uint8_t   P25_DUID_HDU = 0x00U;               // Header Data Unit
+#define P25_HDU_STR "P25_DUID_HDU (Header Data Unit)"
     const uint8_t   P25_DUID_TDU = 0x03U;               // Simple Terminator Data Unit
+#define P25_TDU_STR "P25_DUID_TDU (Simple Terminator Data Unit)"
     const uint8_t   P25_DUID_LDU1 = 0x05U;              // Logical Link Data Unit 1
+#define P25_LDU1_STR "P25_DUID_LDU1 (Logical Link Data Unit 1)"
     const uint8_t   P25_DUID_TSDU = 0x07U;              // Trunking System Data Unit
+#define P25_TSDU_STR "P25_DUID_TSDU (Trunking System Data Unit)"
     const uint8_t   P25_DUID_LDU2 = 0x0AU;              // Logical Link Data Unit 2
+#define P25_LDU2_STR "P25_DUID_LDU2 (Logical Link Data Unit 2)"
     const uint8_t   P25_DUID_PDU = 0x0CU;               // Packet Data Unit
+#define P25_PDU_STR "P25_DUID_PDU (Packet Data Unit)"
     const uint8_t   P25_DUID_TDULC = 0x0FU;             // Terminator Data Unit with Link Control
+#define P25_TDULC_STR "P25_DUID_TDULC (Terminator Data Unit with Link Control)"
 } // namespace p25
 
 // ---------------------------------------------------------------------------

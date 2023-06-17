@@ -30,8 +30,6 @@
 #if !defined(__PSEUDO_PTY_PORT_H__)
 #define __PSEUDO_PTY_PORT_H__
 
-#if !defined(_WIN32) && !defined(_WIN64)
-
 #include "Defines.h"
 #include "modem/port/UARTPort.h"
 
@@ -56,17 +54,15 @@ namespace modem
             virtual ~PseudoPTYPort();
 
             /// <summary>Opens a connection to the serial port.</summary>
-            virtual bool open();
+            bool open();
 
             /// <summary>Closes the connection to the serial port.</summary>
-            virtual void close();
+            void close();
 
         protected:
             std::string m_symlink;
         }; // class HOST_SW_API PseudoPTYPort : public UARTPort
     } // namespace port
-} // namespace Modem
-
-#endif
+} // namespace modem
 
 #endif // __PSEUDO_PTY_PORT_H__

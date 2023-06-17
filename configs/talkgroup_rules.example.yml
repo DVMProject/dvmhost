@@ -1,0 +1,131 @@
+#
+# Digital Voice Modem - Talkgroup Rules
+#
+# @package DVM / Host Software
+#
+
+# 
+# Talkgroup Rules
+#
+groupVoice:
+    # Textual name of the talkgroup.
+  - name: Talkgroup 1
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 1
+      # DMR slot number.
+      slot: 1
+
+    # Textual name of the talkgroup.
+  - name: Parrot
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+      # Flag indicating whether or not this talkgroup is a parrot talkgroup.
+      parrot: true
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 9990
+      # DMR slot number.
+      slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide P25
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 65535
+      # DMR slot number.
+      slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide DMR TS1
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 16777215
+      # DMR slot number.
+      slot: 1
+
+    # Textual name of the talkgroup.
+  - name: System Wide DMR TS2
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
+      affiliated: false
+
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 16777215
+      # DMR slot number.
+      slot: 2

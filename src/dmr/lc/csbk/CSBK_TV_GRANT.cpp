@@ -84,6 +84,15 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_TV_GRANT::toString()
+{
+    return std::string("CSBKO_TV_GRANT (Talkgroup Voice Channel Grant)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

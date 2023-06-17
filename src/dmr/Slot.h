@@ -39,11 +39,11 @@
 #include "dmr/packet/Data.h"
 #include "dmr/packet/Voice.h"
 #include "modem/Modem.h"
-#include "network/BaseNetwork.h"
+#include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 #include "RingBuffer.h"
 #include "StopWatch.h"
 #include "Timer.h"
@@ -97,6 +97,11 @@ namespace dmr
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);
 
+        /// <summary>Releases a granted TG.</summary>
+        void releaseGrantTG(uint32_t dstId);
+        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        void touchGrantTG(uint32_t dstId);
+
         /// <summary>Gets instance of the ControlSignaling class.</summary>
         packet::ControlSignaling* control() { return m_control; }
 
@@ -116,11 +121,11 @@ namespace dmr
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-            network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+            network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
             ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose);
         /// <summary>Sets local configured site data.</summary>
         static void setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
+            ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReq);
         /// <summary>Sets TSCC Aloha configuration.</summary>
         static void setAlohaConfig(uint8_t nRandWait, uint8_t backOff);
 
@@ -135,7 +140,8 @@ namespace dmr
 
         uint32_t m_slotNo;
 
-        RingBuffer<uint8_t> m_queue;
+        RingBuffer<uint8_t> m_txImmQueue;
+        RingBuffer<uint8_t> m_txQueue;
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;
@@ -220,14 +226,15 @@ namespace dmr
         static bool m_dumpTAData;
 
         static modem::Modem* m_modem;
-        static network::BaseNetwork* m_network;
+        static network::Network* m_network;
 
         static bool m_duplex;
 
         static ::lookups::IdenTableLookup* m_idenTable;
         static ::lookups::RadioIdLookup* m_ridLookup;
-        static ::lookups::TalkgroupIdLookup* m_tidLookup;
+        static ::lookups::TalkgroupRulesLookup* m_tidLookup;
         static lookups::DMRAffiliationLookup* m_affiliations;
+        static ::lookups::VoiceChData m_controlChData;
 
         static ::lookups::IdenTable m_idenEntry;
 
@@ -254,7 +261,12 @@ namespace dmr
         static uint8_t m_alohaBackOff;
 
         /// <summary>Add data frame to the data ring buffer.</summary>
-        void addFrame(const uint8_t* data, bool net = false);
+        void addFrame(const uint8_t* data, bool net = false, bool imm = false);
+
+        /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
+        void notifyCC_ReleaseGrant(uint32_t dstId);
+        /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>
+        void notifyCC_TouchGrant(uint32_t dstId);
 
         /// <summary>Write data frame to the network.</summary>
         void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);

@@ -87,6 +87,16 @@ void ISP_GRP_AFF_Q_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     /* stub */
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string ISP_GRP_AFF_Q_RSP::toString(bool isp)
+{
+    return std::string("TSBK_ISP_GRP_AFF_Q_RSP (Group Affiliation Query Response)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

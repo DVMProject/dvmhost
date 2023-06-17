@@ -100,8 +100,10 @@ namespace nxdn
             /// <summary>Helper to write control channel packet data.</summary>
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
+            /// <summary>Helper to write a immediate single-block RCCH packet.</summary>
+            void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, false, true); }
             /// <summary>Helper to write a single-block RCCH packet.</summary>
-            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false);
+            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false, bool imm = false);
 
             /// <summary>Helper to write a grant packet.</summary>
             bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);

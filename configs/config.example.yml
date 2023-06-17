@@ -43,20 +43,25 @@ network:
     port: 62031
     # FNE access password.
     password: "PASSWORD"
+
     # Maximum allowable DMR network jitter.
     jitter: 360
+
     # Flag indicating whether DMR slot 1 traffic will be passed.
     slot1: true
     # Flag indicating whether DMR slot 2 traffic will be passed.
     slot2: true
+
     # Flag indicating whether the local host lookup tables (RID, TGID, etc) will be updated from the network.
     updateLookups: false
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
+
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
+
     # Flag indicating whether or not REST API is enabled.
     restEnable: false
     # IP address of the network interface to listen for REST API on (or 0.0.0.0 for all).
@@ -320,6 +325,19 @@ system:
         channelNo: 1
 
         #
+        # Control Channel
+        # Note: These parameters are used by a voice channel to communicate back to a
+        #   control channel to give the control channel "realtime" traffic channel updates.
+        #
+        controlCh:
+            # REST API IP Address for control channel.
+            restAddress: 127.0.0.1
+            # REST API Port number for control channel.
+            restPort: 9990
+            # REST API access password for control channel.
+            restPassword: "PASSWORD"
+
+        #
         # Voice Channels
         #
         voiceChNo:
@@ -390,6 +408,12 @@ system:
         # Amount of packet correlations that should occur before P25 data is returned from the modem to the host.
         # (Note: Changing this value will impact P25 protocol stability, and should not be altered.)
         p25CorrCount: 8
+        # Size (in bytes) of the DMR transmit FIFO buffer.
+        dmrFifoLength: 505
+        # Size (in bytes) of the P25 transmit FIFO buffer.
+        p25FifoLength: 442
+        # Size (in bytes) of the NXDN transmit FIFO buffer.
+        nxdnFifoLength: 538
 
         #
         # Hotspot Modem Configuration
@@ -506,9 +530,9 @@ system:
     # Radio ID ACL Configuration
     #
     radio_id:
-        # Full path to the identity table file.
+        # Full path to the RID ACL file.
         file: rid_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Amount of time between updates of RID ACL file. (minutes)
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
@@ -517,9 +541,9 @@ system:
     # Talkgroupd ID ACL Configuration
     #
     talkgroup_id:
-        # Full path to the identity table file.
-        file: tg_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Full path to the talkgroup rules file.
+        file: talkgroup_rules.yml
+        # Amount of time between updates of talkgroup rules file. (minutes)
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false

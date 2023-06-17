@@ -87,3 +87,13 @@ void OSP_DVM_GIT_HASH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_DVM_GIT_HASH::toString(bool isp)
+{
+    return std::string("TSBK_OSP_DVM_GIT_HASH (DVM Git Hash Identifier)");
+}

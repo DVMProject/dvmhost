@@ -40,10 +40,6 @@ using namespace modem::port;
 
 #include <sys/types.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <setupapi.h>
-#include <winioctl.h>
-#else
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -51,206 +47,10 @@ using namespace modem::port;
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
-
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-/// Initializes a new instance of the UARTPort class.
-/// </summary>
-/// <param name="device">Serial port device.</param>
-/// <param name="speed">Serial port speed.</param>
-/// <param name="assertRTS"></param>
-UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
-    m_isOpen(false),
-    m_device(device),
-    m_speed(speed),
-    m_assertRTS(assertRTS),
-    m_handle(INVALID_HANDLE_VALUE)
-{
-    assert(!device.empty());
-}
-
-/// <summary>
-/// Finalizes a instance of the UARTPort class.
-/// </summary>
-UARTPort::~UARTPort()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Opens a connection to the serial port.
-/// </summary>
-/// <returns>True, if connection is opened, otherwise false.</returns>
-bool UARTPort::open()
-{
-    if (m_isOpen)
-        return true;
-
-    assert(m_handle == INVALID_HANDLE_VALUE);
-
-    DWORD errCode;
-
-    // Convert "\\.\COM10" to "COM10"
-    std::string baseName = m_device.substr(4U);
-
-    m_handle = ::CreateFileA(m_device.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (m_handle == INVALID_HANDLE_VALUE) {
-        ::LogError(LOG_HOST, "Cannot open device - %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        return false;
-    }
-
-    DCB dcb;
-    if (::GetCommState(m_handle, &dcb) == 0) {
-        ::LogError(LOG_HOST, "Cannot get the attributes for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    dcb.BaudRate = DWORD(m_speed);
-    dcb.ByteSize = 8;
-    dcb.Parity = NOPARITY;
-    dcb.fParity = FALSE;
-    dcb.StopBits = ONESTOPBIT;
-    dcb.fInX = FALSE;
-    dcb.fOutX = FALSE;
-    dcb.fOutxCtsFlow = FALSE;
-    dcb.fOutxDsrFlow = FALSE;
-    dcb.fDsrSensitivity = FALSE;
-    dcb.fDtrControl = DTR_CONTROL_DISABLE;
-    dcb.fRtsControl = RTS_CONTROL_DISABLE;
-
-    if (::SetCommState(m_handle, &dcb) == 0) {
-        ::LogError(LOG_HOST, "Cannot set the attributes for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    COMMTIMEOUTS timeouts;
-    if (!::GetCommTimeouts(m_handle, &timeouts)) {
-        ::LogError(LOG_HOST, "Cannot get the timeouts for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    timeouts.ReadIntervalTimeout = MAXDWORD;
-    timeouts.ReadTotalTimeoutMultiplier = 0UL;
-    timeouts.ReadTotalTimeoutConstant = 0UL;
-
-    if (!::SetCommTimeouts(m_handle, &timeouts)) {
-        ::LogError(LOG_HOST, "Cannot set the timeouts for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    if (::EscapeCommFunction(m_handle, CLRDTR) == 0) {
-        ::LogError(LOG_HOST, "Cannot clear DTR for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    if (::EscapeCommFunction(m_handle, m_assertRTS ? SETRTS : CLRRTS) == 0) {
-        ::LogError(LOG_HOST, "Cannot set/clear RTS for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        ::ClearCommError(m_handle, &errCode, NULL);
-        ::CloseHandle(m_handle);
-        return false;
-    }
-
-    ::ClearCommError(m_handle, &errCode, NULL);
-
-    m_isOpen = true;
-    return true;
-}
-
-/// <summary>
-/// Reads data from the serial port.
-/// </summary>
-/// <param name="buffer">Buffer to read data from the serial port to.</param>
-/// <param name="length">Length of data to read from the serial port.</param>
-/// <returns>Actual length of data read from serial port.</returns>
-int UARTPort::read(uint8_t* buffer, uint32_t length)
-{
-    assert(m_handle != INVALID_HANDLE_VALUE);
-    assert(buffer != nullptr);
-
-    uint32_t ptr = 0U;
-
-    while (ptr < length) {
-        int ret = readNonblock(buffer + ptr, length - ptr);
-        if (ret < 0) {
-            return ret;
-        }
-        else if (ret == 0) {
-            if (ptr == 0U)
-                return 0;
-        }
-        else {
-            ptr += ret;
-        }
-    }
-
-    return int(length);
-}
-
-/// <summary>
-/// Writes data to the serial port.
-/// </summary>
-/// <param name="buffer">Buffer containing data to write to serial port.</param>
-/// <param name="length">Length of data to write to serial port.</param>
-/// <returns>Actual length of data written to the serial port.</returns>
-int UARTPort::write(const uint8_t* buffer, uint32_t length)
-{
-    assert(buffer != nullptr);
-
-    if (m_isOpen && m_handle == INVALID_HANDLE_VALUE)
-        return 0;
-
-    assert(m_handle != INVALID_HANDLE_VALUE);
-
-    if (length == 0U)
-        return 0;
-
-    uint32_t ptr = 0U;
-
-    while (ptr < length) {
-        DWORD bytes = 0UL;
-        BOOL ret = ::WriteFile(m_handle, buffer + ptr, length - ptr, &bytes, NULL);
-        if (!ret) {
-            ::LogError(LOG_HOST, "Error from WriteFile for %s: %04lx", m_device.c_str(), ::GetLastError());
-            return -1;
-        }
-
-        ptr += bytes;
-    }
-
-    return int(length);
-}
-
-/// <summary>
-/// Closes the connection to the serial port.
-/// </summary>
-void UARTPort::close()
-{
-    if (!m_isOpen && m_handle == INVALID_HANDLE_VALUE)
-        return;
-
-    assert(m_handle != INVALID_HANDLE_VALUE);
-
-    ::CloseHandle(m_handle);
-    m_handle = INVALID_HANDLE_VALUE;
-    m_isOpen = false;
-}
-
-#else
 
 /// <summary>
 /// Initializes a new instance of the UARTPort class.
@@ -431,7 +231,6 @@ int UARTPort::setNonblock(bool nonblock)
     return ::fcntl(m_fd, F_SETFL, flag);
 }
 #endif
-#endif
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
@@ -446,55 +245,10 @@ UARTPort::UARTPort(SERIAL_SPEED speed, bool assertRTS) :
     m_isOpen(false),
     m_speed(speed),
     m_assertRTS(assertRTS),
-#if defined(_WIN32) || defined(_WIN64)
-    m_handle(INVALID_HANDLE_VALUE)
-#else
     m_fd(-1)
-#endif
 {
     /* stub */
 }
-
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-///
-/// </summary>
-/// <param name="buffer"></param>
-/// <param name="length"></param>
-/// <returns></returns>
-int UARTPort::readNonblock(uint8_t* buffer, uint32_t length)
-{
-    assert(m_handle != INVALID_HANDLE_VALUE);
-    assert(buffer != nullptr);
-
-    if (length == 0U)
-        return 0;
-
-    DWORD errors;
-    COMSTAT status;
-    if (::ClearCommError(m_handle, &errors, &status) == 0) {
-        ::LogError(LOG_HOST, "Error from ClearCommError for %s, err=%04lx", m_device.c_str(), ::GetLastError());
-        return -1;
-    }
-
-    if (status.cbInQue == 0UL)
-        return 0;
-
-    DWORD readLength = status.cbInQue;
-    if (length < readLength)
-        readLength = length;
-
-    DWORD bytes = 0UL;
-    BOOL ret = ::ReadFile(m_handle, buffer, readLength, &bytes, NULL);
-    if (!ret) {
-        ::LogError(LOG_HOST, "Error from ReadFile for %s: %04lx", m_device.c_str(), ::GetLastError());
-        return -1;
-    }
-
-    return int(bytes);
-}
-
-#else
 
 /// <summary>
 ///
@@ -623,4 +377,3 @@ bool UARTPort::setTermios()
     m_isOpen = true;
     return true;
 }
-#endif

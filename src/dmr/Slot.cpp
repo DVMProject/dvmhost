@@ -62,14 +62,15 @@ bool Slot::m_embeddedLCOnly = false;
 bool Slot::m_dumpTAData = true;
 
 modem::Modem* Slot::m_modem = nullptr;
-network::BaseNetwork* Slot::m_network = nullptr;
+network::Network* Slot::m_network = nullptr;
 
 bool Slot::m_duplex = true;
 
 ::lookups::IdenTableLookup* Slot::m_idenTable = nullptr;
 ::lookups::RadioIdLookup* Slot::m_ridLookup = nullptr;
-::lookups::TalkgroupIdLookup* Slot::m_tidLookup = nullptr;
+::lookups::TalkgroupRulesLookup* Slot::m_tidLookup = nullptr;
 dmr::lookups::DMRAffiliationLookup *Slot::m_affiliations = nullptr;
+::lookups::VoiceChData Slot::m_controlChData = ::lookups::VoiceChData();
 
 ::lookups::IdenTable Slot::m_idenEntry = ::lookups::IdenTable();
 
@@ -113,7 +114,8 @@ uint8_t Slot::m_alohaBackOff = 1U;
 Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSize, bool dumpDataPacket, bool repeatDataPacket,
     bool dumpCSBKData, bool debug, bool verbose) :
     m_slotNo(slotNo),
-    m_queue(queueSize, "DMR Slot Frame"),
+    m_txImmQueue(queueSize, "DMR Imm Slot Frame"),
+    m_txQueue(queueSize, "DMR Slot Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -211,6 +213,10 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
             if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
                 m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
+        }
+
+        if (!m_tscc->m_enableTSCC) {
+            notifyCC_ReleaseGrant(m_rfLC->getDstId());
         }
 
         if (m_rfTimeout) {
@@ -325,12 +331,20 @@ uint32_t Slot::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.getData(&len, 1U);
-    m_queue.getData(data, len);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.getData(&len, 1U);
+        m_txImmQueue.getData(data, len);
+    }
+    else {
+        m_txQueue.getData(&len, 1U);
+        m_txQueue.getData(data, len);
+    }
 
     return len;
 }
@@ -422,7 +436,7 @@ void Slot::clock()
             if (!m_ccRunning) {
                 m_ccHalted = false;
                 m_ccPrevRunning = m_ccRunning;
-                m_queue.clear(); // clear the frame buffer
+                m_txQueue.clear(); // clear the frame buffer
             }
         }
         else {
@@ -456,7 +470,7 @@ void Slot::clock()
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
-            m_queue.clear(); // clear the frame buffer
+            m_txQueue.clear(); // clear the frame buffer
             m_ccPrevRunning = m_ccRunning;
         }
     }
@@ -543,7 +557,7 @@ void Slot::clock()
 
     if (m_rfState == RS_RF_REJECTED) {
         if (!m_enableTSCC) {
-            m_queue.clear();
+            m_txQueue.clear();
         }
 
         m_rfFrames = 0U;
@@ -571,10 +585,48 @@ void Slot::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogDebug(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
+        LogMessage(LOG_DMR, "DMR Slot %u, non-authoritative TG permit, dstId = %u", m_slotNo, dstId);
     }
 
     m_permittedDstId = dstId;
+}
+
+/// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::releaseGrantTG(uint32_t dstId)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_affiliations->isGranted(dstId)) {
+        if (m_verbose) {
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, release TG grant, dstId = %u", m_slotNo, dstId);
+        }
+    
+        m_affiliations->releaseGrant(dstId, false);
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::touchGrantTG(uint32_t dstId)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_affiliations->isGranted(dstId)) {
+        if (m_verbose) {
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, touch TG grant, dstId = %u", m_slotNo, dstId);
+        }
+
+        m_affiliations->touchGrant(dstId);
+    }
 }
 
 /// <summary>
@@ -640,13 +692,13 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-    network::BaseNetwork* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupIdLookup* tidLookup,
+    network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
     ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
     assert(dmr != nullptr);
@@ -744,13 +796,14 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// </summary>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="requireReg"></param>
 void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
+    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
@@ -769,6 +822,8 @@ void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unorder
 
     std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
     m_affiliations->setRFChData(chData);
+
+    m_controlChData = controlChData;
 
     lc::CSBK::setSiteData(m_siteData);
 }
@@ -791,9 +846,10 @@ void Slot::setAlohaConfig(uint8_t nRandWait, uint8_t backOff)
 /// <summary>
 /// Add data frame to the data ring buffer.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="net"></param>
-void Slot::addFrame(const uint8_t *data, bool net)
+/// <param name="data">Frame data to add to Tx queue.</param>
+/// <param name="net">Flag indicating whether the data came from the network or not</param>
+/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 {
     assert(data != nullptr);
 
@@ -803,12 +859,38 @@ void Slot::addFrame(const uint8_t *data, bool net)
     }
 
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_queue.freeSpace();
+    if (m_debug) {
+        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
+    }
+
+    // is this immediate data?
+    if (imm) {
+        // resize immediate queue if necessary (this shouldn't really ever happen)
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (len + 1U)) {
+            if (!net) {
+                uint32_t queueLen = m_txImmQueue.length();
+                m_txImmQueue.resize(queueLen + len);
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
+                return;
+            }
+            else {
+                LogError(LOG_DMR, "Slot %u, overflow in the imm DMR slot queue while writing network data; queue free is %u, needed %u", m_slotNo, space, len);
+                return;
+            }
+        }
+
+        m_txImmQueue.addData(&len, 1U);
+        m_txImmQueue.addData(data, len);
+        return;
+    }
+
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         if (!net) {
-            uint32_t queueLen = m_queue.length();
-            m_queue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
-            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_queue.length());
+            uint32_t queueLen = m_txQueue.length();
+            m_txQueue.resize(queueLen + (DMR_FRAME_LENGTH_BYTES + 2U));
+            LogError(LOG_DMR, "Slot %u, overflow in the DMR slot queue; queue free is %u, needed %u; resized was %u is %u", m_slotNo, space, len, queueLen, m_txQueue.length());
             return;
         }
         else {
@@ -817,12 +899,64 @@ void Slot::addFrame(const uint8_t *data, bool net)
         }
     }
 
-    if (m_debug) {
-        Utils::symbols("!!! *Tx DMR", data + 2U, len - 2U);
-    }
+    m_txQueue.addData(&len, 1U);
+    m_txQueue.addData(data, len);
+}
 
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
+/// <summary>
+/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
+{
+    // callback REST API to release the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send release grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_DMR;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+        uint8_t slot = m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
+/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+/// </summary>
+/// <param name="dstId"></param>
+void Slot::notifyCC_TouchGrant(uint32_t dstId)
+{
+    // callback REST API to touch the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send touch grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_DMR;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+        uint8_t slot = m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
 }
 
 /// <summary>
@@ -1006,7 +1140,7 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         m_ccSeq--;
         if (m_ccSeq < 0U)

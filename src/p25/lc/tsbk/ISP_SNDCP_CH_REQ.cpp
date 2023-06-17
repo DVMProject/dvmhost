@@ -88,6 +88,16 @@ void ISP_SNDCP_CH_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     /* stub */
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string ISP_SNDCP_CH_REQ::toString(bool isp)
+{
+    return std::string("TSBK_ISP_SNDCP_CH_REQ (Authentication FNE Result)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

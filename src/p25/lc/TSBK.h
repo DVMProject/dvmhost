@@ -77,6 +77,9 @@ namespace p25
             /// <summary>Encode a trunking signalling block.</summary>
             virtual void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) = 0;
 
+            /// <summary>Returns a string that represents the current TSBK.</summary>
+            virtual std::string toString(bool isp = false);
+
             /// <summary>Sets the flag indicating verbose log output.</summary>
             static void setVerbose(bool verbose) { m_verbose = verbose; }
             /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
@@ -158,7 +161,7 @@ namespace p25
             /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
             static ulong64_t toValue(const uint8_t* tsbk);
             /// <summary>Internal helper to convert a 64-bit long value to TSBK bytes.</summary>
-            static std::unique_ptr<uint8_t[]> fromValue(const ulong64_t tsbkValue);
+            static UInt8Array fromValue(const ulong64_t tsbkValue);
 
             /// <summary>Internal helper to decode a trunking signalling block.</summary>
             bool decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK = false);

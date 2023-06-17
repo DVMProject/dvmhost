@@ -83,3 +83,13 @@ void MESSAGE_TYPE_REG_COMM::encode(uint8_t* data, uint32_t length, uint32_t offs
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_REG_COMM::toString(bool isp)
+{
+    return std::string("RCCH_MESSAGE_TYPE_REG_COMM (Registration Command)");
+}

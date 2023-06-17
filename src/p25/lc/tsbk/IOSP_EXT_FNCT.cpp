@@ -94,6 +94,19 @@ void IOSP_EXT_FNCT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string IOSP_EXT_FNCT::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
+    else    
+        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

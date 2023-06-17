@@ -154,6 +154,20 @@ void CSBK_BROADCAST::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_BROADCAST::toString()
+{
+    switch (m_anncType) {
+    case BCAST_ANNC_ANN_WD_TSCC:    return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_ANN_WD_TSCC (Announce-WD TSCC Channel)");
+    case BCAST_ANNC_CHAN_FREQ:      return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_CHAN_FREQ (Logical Channel/Frequency)");
+    case BCAST_ANNC_SITE_PARMS:     return std::string("CSBKO_BROADCAST (Announcement PDU), BCAST_ANNC_SITE_PARMS (General Site Parameters)");
+    default:                        return std::string("CSBKO_BROADCAST (Announcement PDU)");
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

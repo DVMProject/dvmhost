@@ -58,7 +58,7 @@ using namespace nxdn::packet;
 // Make sure control data is supported.
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
     if (!m_nxdn->m_control) {                                                           \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, unsupported service, srcId = %u", _SRCID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, unsupported service, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, NXDN_CAUSE_SVC_UNAVAILABLE, _PCKT);            \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -67,7 +67,7 @@ using namespace nxdn::packet;
 // Validate the source RID.
 #define VALID_SRCID(_PCKT_STR, _PCKT, _SRCID, _RSN)                                      \
     if (!acl::AccessControl::validateSrcId(_SRCID)) {                                   \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, RID rejection, srcId = %u", _SRCID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -76,7 +76,7 @@ using namespace nxdn::packet;
 // Validate the target RID.
 #define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                     \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, RID rejection, dstId = %u", _DSTID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -85,7 +85,7 @@ using namespace nxdn::packet;
 // Validate the talkgroup ID.
 #define VALID_TGID(_PCKT_STR, _PCKT, _DSTID, _SRCID, _RSN)                              \
     if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, TGID rejection, dstId = %u", _DSTID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -94,7 +94,7 @@ using namespace nxdn::packet;
 // Verify the source RID is registered.
 #define VERIFY_SRCID_REG(_PCKT_STR, _PCKT, _SRCID, _RSN)                                \
     if (!m_nxdn->m_affiliations.isUnitReg(_SRCID) && m_verifyReg) {                     \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, RID not registered, srcId = %u", _SRCID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, RID not registered, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -103,10 +103,34 @@ using namespace nxdn::packet;
 // Verify the source RID is affiliated.
 #define VERIFY_SRCID_AFF(_PCKT_STR, _PCKT, _SRCID, _DSTID, _RSN)                        \
     if (!m_nxdn->m_affiliations.isGroupAff(_SRCID, _DSTID) && m_verifyAff) {            \
-        LogWarning(LOG_RF, "NXDN, " _PCKT_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _SRCID, _DSTID); \
+        LogWarning(LOG_RF, "NXDN, %s denial, RID not affiliated to TGID, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
+    }
+
+// Macro helper to verbose log a generic message.
+#define VERBOSE_LOG_MSG(_PCKT_STR, _SRCID, _DSTID)                                      \
+    if (m_verbose) {                                                                    \
+        LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+    }
+
+// Macro helper to verbose log a generic message.
+#define VERBOSE_LOG_MSG_DST(_PCKT_STR, _DSTID)                                          \
+    if (m_verbose) {                                                                    \
+        LogMessage(LOG_RF, "NXDN, %s, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
+    }
+
+// Macro helper to verbose log a generic network message.
+#define VERBOSE_LOG_MSG_NET(_PCKT_STR, _SRCID, _DSTID)                                  \
+    if (m_verbose) {                                                                    \
+        LogMessage(LOG_NET, "NXDN, %s, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
+    }
+
+// Macro helper to verbose log a generic network message.
+#define DEBUG_LOG_MSG(_PCKT_STR)                                                        \
+    if (m_debug) {                                                                      \
+        LogMessage(LOG_RF, "NXDN, %s", _PCKT_STR.c_str());                             \
     }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +171,7 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         m_nxdn->m_rfState = RS_RF_DATA;
     }
 
-    m_nxdn->m_queue.clear();
+    m_nxdn->m_txQueue.clear();
 
     // the layer3 data will only be correct if valid is true
     uint8_t buffer[NXDN_FRAME_LENGTH_BYTES];
@@ -164,21 +188,18 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         case RTCH_MESSAGE_TYPE_VCALL:
         {
             // make sure control data is supported
-            IS_SUPPORT_CONTROL_CHECK(NXDN_RTCH_MSG_TYPE_VCALL_REQ, RTCH_MESSAGE_TYPE_VCALL, srcId);
+            IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), RTCH_MESSAGE_TYPE_VCALL, srcId);
 
             // validate the source RID
-            VALID_SRCID(NXDN_RTCH_MSG_TYPE_VCALL_REQ, RTCH_MESSAGE_TYPE_VCALL, srcId, NXDN_CAUSE_VD_REQ_UNIT_NOT_PERM);
+            VALID_SRCID(rcch->toString(true), RTCH_MESSAGE_TYPE_VCALL, srcId, NXDN_CAUSE_VD_REQ_UNIT_NOT_PERM);
 
             // validate the talkgroup ID
-            VALID_TGID(NXDN_RTCH_MSG_TYPE_VCALL_REQ, RTCH_MESSAGE_TYPE_VCALL, dstId, srcId, NXDN_CAUSE_VD_TGT_UNIT_NOT_PERM);
+            VALID_TGID(rcch->toString(true), RTCH_MESSAGE_TYPE_VCALL, dstId, srcId, NXDN_CAUSE_VD_TGT_UNIT_NOT_PERM);
 
             // verify the source RID is affiliated
-            VERIFY_SRCID_AFF(NXDN_RTCH_MSG_TYPE_VCALL_REQ, RTCH_MESSAGE_TYPE_VCALL, srcId, dstId, NXDN_CAUSE_VD_REQ_UNIT_NOT_REG);
+            VERIFY_SRCID_AFF(rcch->toString(true), RTCH_MESSAGE_TYPE_VCALL, srcId, dstId, NXDN_CAUSE_VD_REQ_UNIT_NOT_REG);
 
-            if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ ", srcId = %u, dstId = %u", srcId, dstId);
-            }
-
+            VERBOSE_LOG_MSG(rcch->toString(true), srcId, dstId);
             uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
                 (rcch->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
                 (rcch->getPriority() & 0x07U);                                      // Priority
@@ -193,10 +214,11 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         case RCCH_MESSAGE_TYPE_REG:
         {
             // make sure control data is supported
-            IS_SUPPORT_CONTROL_CHECK(NXDN_RCCH_MSG_TYPE_REG_REQ, RCCH_MESSAGE_TYPE_REG, srcId);
+            IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), RCCH_MESSAGE_TYPE_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_REG_REQ ", srcId = %u, locId = %u", srcId, rcch->getLocId());
+                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = %u", 
+                    rcch->toString(true).c_str(), srcId, rcch->getLocId());
             }
 
             writeRF_Message_U_Reg_Rsp(srcId, rcch->getLocId());
@@ -205,10 +227,11 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         case RCCH_MESSAGE_TYPE_GRP_REG:
         {
             // make sure control data is supported
-            IS_SUPPORT_CONTROL_CHECK(NXDN_RCCH_MSG_TYPE_GRP_REG_REQ, RCCH_MESSAGE_TYPE_GRP_REG, srcId);
+            IS_SUPPORT_CONTROL_CHECK(rcch->toString(true), RCCH_MESSAGE_TYPE_GRP_REG, srcId);
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ ", srcId = %u, dstId = %u, locId = %u", srcId, dstId, rcch->getLocId());
+                LogMessage(LOG_RF, "NXDN, %s, srcId = %u, dstId = %u, locId = %u", 
+                    rcch->toString(true).c_str(), srcId, dstId, rcch->getLocId());
             }
 
             writeRF_Message_Grp_Reg_Rsp(srcId, dstId, rcch->getLocId());
@@ -242,7 +265,7 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         return false;
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
-        m_nxdn->m_queue.clear();
+        m_nxdn->m_txQueue.clear();
     }
 
     if (m_nxdn->m_netState == RS_NET_IDLE) {
@@ -261,8 +284,8 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 if (m_nxdn->m_dedicatedControl && !m_nxdn->m_voiceOnControl) {
                     if (!m_nxdn->m_affiliations.isGranted(dstId)) {
                         if (m_verbose) {
-                            LogMessage(LOG_NET, NXDN_RCCH_MSG_TYPE_VCALL_CONN_REQ ", emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
+                            LogMessage(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+                                rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), srcId, dstId);
                         }
 
                         uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
@@ -367,7 +390,7 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_nxdn->m_queue.freeSpace();
+    uint32_t space = m_nxdn->m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return;
     }
@@ -400,7 +423,8 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// <param name="rcch"></param>
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
-void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
+/// <param name="imm"></param>
+void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, bool imm)
 {
     if (!m_nxdn->m_control)
         return;
@@ -441,12 +465,12 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
     if (clearBeforeWrite) {
-        m_nxdn->m_modem->clearNXDNData();
-        m_nxdn->m_queue.clear();
+        m_nxdn->m_modem->clearNXDNFrame();
+        m_nxdn->m_txQueue.clear();
     }
 
     if (m_nxdn->m_duplex) {
-        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
+        m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, imm);
     }
 }
 
@@ -467,11 +491,13 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
+    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
+
     // are we skipping checking?
     if (!skip) {
         if (m_nxdn->m_rfState != RS_RF_LISTENING && m_nxdn->m_rfState != RS_RF_DATA) {
             if (!net) {
-                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " denied, traffic in progress, dstId = %u", dstId);
+                LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                 writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
 
                 ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
@@ -483,7 +509,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
 
         if (m_nxdn->m_netState != RS_NET_IDLE && dstId == m_nxdn->m_netLastDstId) {
             if (!net) {
-                LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " denied, traffic in progress, dstId = %u", dstId);
+                LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                 writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
 
                 ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
@@ -509,7 +535,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             if (!m_nxdn->m_affiliations.isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
-                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " queued, no channels available, dstId = %u", dstId);
+                        LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_CHN_RESOURCE_NOT_AVAIL, RTCH_MESSAGE_TYPE_VCALL);
 
                         ::ActivityLog("NXDN", true, "group grant request from %u to TG %u queued", srcId, dstId);
@@ -520,7 +546,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
                 }
                 else {
                     if (!net) {
-                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " queued, no channels available, dstId = %u", dstId);
+                        LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_CHN_RESOURCE_NOT_AVAIL, RTCH_MESSAGE_TYPE_VCALL);
 
                         ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", srcId, dstId);
@@ -543,7 +569,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
                 uint32_t grantedSrcId = m_nxdn->m_affiliations.getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
-                        LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_REQ " denied, traffic in progress, dstId = %u", dstId);
+                        LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
 
                         ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
@@ -583,7 +609,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                 HTTP_PUT, PUT_PERMIT_TG, req, m_nxdn->m_debug);
             if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to permit TG for use, chNo = %u", chNo);
+                ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
                 m_nxdn->m_affiliations.releaseGrant(dstId, false);
                 if (!net) {
                     writeRF_Message_Deny(0U, srcId, NXDN_CAUSE_VD_QUE_GRP_BUSY, RTCH_MESSAGE_TYPE_VCALL);
@@ -594,11 +620,10 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             }
         }
         else {
-            ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to permit TG for use, chNo = %u", chNo);
+            ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
         }
     }
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
     rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
     rcch->setGrpVchNo(chNo);
     rcch->setGroup(grp);
@@ -610,12 +635,12 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
     rcch->setPriority(priority);
 
     if (m_verbose) {
-        LogMessage((net) ? LOG_NET : LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-            rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), rcch->getSrcId(), rcch->getDstId());
+        LogMessage((net) ? LOG_NET : LOG_RF, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
+            rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), rcch->getSrcId(), rcch->getDstId());
     }
 
     // transmit group grant
-    writeRF_Message(rcch.get(), net, true);
+    writeRF_Message_Imm(rcch.get(), net);
     return true;
 }
 
@@ -647,7 +672,7 @@ void Trunk::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason,
             service, srcId, dstId);
     }
 
-    writeRF_Message(rcch.get(), false);
+    writeRF_Message_Imm(rcch.get(), false);
 }
 
 /// <summary>
@@ -665,41 +690,39 @@ bool Trunk::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t
 
     // validate the location ID
     if (locId != m_nxdn->m_siteData.locId()) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ " denial, LOCID rejection, locId = $%04X", locId);
+        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%04X", rcch->toString().c_str(), locId);
         ::ActivityLog("NXDN", true, "group affiliation request from %u denied", srcId);
         rcch->setCauseResponse(NXDN_CAUSE_MM_REG_FAILED);
     }
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ " denial, RID rejection, srcId = %u", srcId);
+        LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", rcch->toString().c_str(), srcId);
         ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         rcch->setCauseResponse(NXDN_CAUSE_MM_REG_FAILED);
     }
 
     // validate the source RID is registered
     if (!m_nxdn->m_affiliations.isUnitReg(srcId) && m_verifyReg) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ " denial, RID not registered, srcId = %u", srcId);
+        LogWarning(LOG_RF, "NXDN, %s denial, RID not registered, srcId = %u", rcch->toString().c_str(), srcId);
         ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         rcch->setCauseResponse(NXDN_CAUSE_MM_REG_REFUSED);
     }
 
     // validate the talkgroup ID
     if (dstId == 0U) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ ", TGID 0, dstId = %u", dstId);
+        LogWarning(LOG_RF, "NXDN, %s, TGID 0, dstId = %u", rcch->toString().c_str(), dstId);
     }
     else {
         if (!acl::AccessControl::validateTGId(dstId)) {
-            LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ " denial, TGID rejection, dstId = %u", dstId);
+            LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", rcch->toString().c_str(), dstId);
             ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
             rcch->setCauseResponse(NXDN_CAUSE_MM_LOC_ACPT_GRP_REFUSE);
         }
     }
 
     if (rcch->getCauseResponse() == NXDN_CAUSE_MM_REG_ACCEPTED) {
-        if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_GRP_REG_REQ ", srcId = %u, dstId = %u", srcId, dstId);
-        }
+        VERBOSE_LOG_MSG(rcch->toString(), srcId, dstId);
 
         ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
         ret = true;
@@ -708,7 +731,7 @@ bool Trunk::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t
         m_nxdn->m_affiliations.groupAff(srcId, dstId);
     }
 
-    writeRF_Message(rcch.get(), false);
+    writeRF_Message_Imm(rcch.get(), false);
     return ret;
 }
 
@@ -723,21 +746,22 @@ void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 
     // validate the location ID
     if (locId != m_nxdn->m_siteData.locId()) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_REG_REQ " denial, LOCID rejection, locId = $%04X", locId);
+        LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%04X", rcch->toString().c_str(), locId);
         ::ActivityLog("NXDN", true, "unit registration request from %u denied", srcId);
         rcch->setCauseResponse(NXDN_CAUSE_MM_REG_FAILED);
     }
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
-        LogWarning(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_REG_REQ " denial, RID rejection, srcId = %u", srcId);
+        LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", rcch->toString().c_str(), srcId);
         ::ActivityLog("NXDN", true, "unit registration request from %u denied", srcId);
         rcch->setCauseResponse(NXDN_CAUSE_MM_REG_FAILED);
     }
 
     if (rcch->getCauseResponse() == NXDN_CAUSE_MM_REG_ACCEPTED) {
         if (m_verbose) {
-            LogMessage(LOG_RF, "NXDN, " NXDN_RCCH_MSG_TYPE_REG_REQ ", srcId = %u, locId = %u", srcId, locId);
+            LogMessage(LOG_RF, "NXDN, %s, srcId = %u, locId = %u", 
+                rcch->toString().c_str(), srcId, locId);
         }
 
         ::ActivityLog("NXDN", true, "unit registration request from %u", srcId);
@@ -751,7 +775,7 @@ void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
     rcch->setSrcId(srcId);
     rcch->setDstId(srcId);
 
-    writeRF_Message(rcch.get(), true);
+    writeRF_Message_Imm(rcch.get(), true);
 }
 
 /// <summary>
@@ -759,10 +783,6 @@ void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 /// </summary>
 void Trunk::writeRF_CC_Message_Site_Info()
 {
-    if (m_debug) {
-        LogMessage(LOG_RF, "NXDN, SITE_INFO (Site Information)");
-    }
-
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
 
@@ -780,6 +800,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
     std::unique_ptr<rcch::MESSAGE_TYPE_SITE_INFO> rcch = new_unique(rcch::MESSAGE_TYPE_SITE_INFO);
+    DEBUG_LOG_MSG(rcch->toString());
     rcch->setBcchCnt(m_bcchCnt);
     rcch->setRcchGroupingCnt(m_rcchGroupingCnt);
     rcch->setCcchPagingCnt(m_ccchPagingCnt);
@@ -812,10 +833,6 @@ void Trunk::writeRF_CC_Message_Site_Info()
 /// </summary>
 void Trunk::writeRF_CC_Message_Service_Info()
 {
-    if (m_debug) {
-        LogMessage(LOG_RF, "NXDN, SRV_INFO (Service Information)");
-    }
-
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
 
@@ -833,6 +850,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
     std::unique_ptr<rcch::MESSAGE_TYPE_SRV_INFO> rcch = new_unique(rcch::MESSAGE_TYPE_SRV_INFO);
+    DEBUG_LOG_MSG(rcch->toString());
     rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
     //rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);
 

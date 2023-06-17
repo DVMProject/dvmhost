@@ -10,13 +10,23 @@ Please feel free to reach out to us for help, comments or otherwise, on our Disc
 
 This project utilizes CMake for its build system. (All following information assumes familiarity with the standard Linux make system.)
 
-The DVM Host software requires the library dependancies below. Generally, the software attempts to be as portable as possible and as library-free as possible. A basic GCC/G++ install is usually all thats needed to compile.
+The DVM Host software requires the library dependancies below. Generally, the software attempts to be as portable as possible and as library-free as possible. A basic GCC/G++ install, with libasio and ncurses is usually all that is needed to compile.
 
 ### Dependencies
 
-This project requires the ASIO library (https://think-async.com/Asio/) for its REST API services. This can be installed on most Debian/Ubuntu Linux's with: `apt-get install libasio-dev`
+`apt-get install libasio-dev libncurses-dev`
+
+- ASIO Library (https://think-async.com/Asio/); on Debian/Ubuntu Linux's: `apt-get install libasio-dev`
+- ncurses; on Debian/Ubuntu Linux's: ``apt-get install libncurses-dev`
 
 Alternatively, if you download the ASIO library from the ASIO website and extract it to a location, you can specify the path to the ASIO library using: `-DWITH_ASIO=/path/to/asio`. This method is required when cross-compiling for old Raspberry Pi ARM 32 bit.
+
+If cross-compiling ensure you install the appropriate libraries, for example for AARCH64/ARM64:
+```
+sudo dpkg --add-architecture arm64
+sudo apt-get update
+sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64
+```
 
 ### Build Instructions
 
@@ -44,6 +54,13 @@ If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi 
 Please note cross-compliation requires you to have the appropriate development packages installed for your system. For ARM 32-bit, on Debian/Ubuntu OS install the "arm-linux-gnueabihf-gcc" and "arm-linux-gnueabihf-g++" packages. For ARM 64-bit, on Debian/Ubuntu OS install the "aarch64-linux-gnu-gcc" and "aarch64-linux-gnu-g++" packages.
 
 [See build notes](#build-notes).
+
+### Setup TUI (Text-based User Interface)
+
+Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in favor of a ncurses-based TUI. This TUI is optional, and DVM Host can still be compiled without it for systems or devices that cannot utilize it.
+
+- `-DENABLE_SETUP_TUI=0` - This will disable the setup/calibration TUI interface.
+- `-DENABLE_TUI_SUPPORT=0` - This will disable TUI support project wide. Any projects that require TUI support will not compile, or will have any TUI components disabled.
 
 ### Compiled Protocol Options
 
@@ -106,11 +123,15 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 ## Command Line Parameters
 
 ```
-usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhf] [--setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
+  -v        show version information
+  -h        show this screen
   -f        foreground mode
-  --cal     calibration mode
+
   --setup   setup mode
+
+  --fne     fixed network equipment mode (conference bridge)
 
   -c <file> specifies the configuration file to use
 
@@ -118,10 +139,16 @@ usage: ./dvmhost [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remot
   -a        remote modem command address
   -p        remote modem command port
 
-  -v        show version information
-  -h        show this screen
   --        stop handling options
 ```
+
+## Embedded FNE Mode
+
+DVMHost contains its own "embedded FNE" or "mini-FNE", which is a simple conference bridge style FNE that can be activated using the `--fne` command line options. This FNE mode does not use the standard DVMHost configuration file and uses its own configuration file (see `fne-config.example.yml`). 
+
+The "embedded FNE" is a simplistic FNE, meant for simple single-master small-scale deployments. It, like the full-scale FNE, defines rules for available talkgroups and manages calls. Unlike the full-scale FNE, the "embedded FNE" does not have multi-system routing or support multiple masters. It can peer to other FNEs, however, unlike full-scale FNE the "embedded FNE" does not have provisioning for talkgroup mutuation (i.e. talkgroup number rewriting, where on System A TG123 routes to System B TG456), all TGs must be one to one across peers. 
+
+The "embedded FNE" is meant as an easier alternative to a full-scale FNE where complex routing or multiple masters are not required.
 
 ## Build Notes
 

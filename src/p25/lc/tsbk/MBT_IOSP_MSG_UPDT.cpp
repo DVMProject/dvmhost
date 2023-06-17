@@ -90,6 +90,19 @@ void MBT_IOSP_MSG_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
     return;
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_IOSP_MSG_UPDT::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_MSG_UPDT (Message Update Request)");
+    else    
+        return std::string("TSBK_IOSP_MSG_UPDT (Message Update)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

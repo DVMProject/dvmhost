@@ -33,7 +33,7 @@
 
 #include "Defines.h"
 #include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupIdLookup.h"
+#include "lookups/TalkgroupRulesLookup.h"
 
 namespace p25
 {
@@ -49,7 +49,7 @@ namespace p25
         class HOST_SW_API AccessControl {
         public:
             /// <summary>Initializes the P25 access control.</summary>
-            static void init(RadioIdLookup* ridLookup, TalkgroupIdLookup* tidLookup);
+            static void init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLookup);
 
             /// <summary>Helper to validate a source radio ID.</summary>
             static bool validateSrcId(uint32_t id);
@@ -58,9 +58,9 @@ namespace p25
 
         private:
             static RadioIdLookup* m_ridLookup;
-            static TalkgroupIdLookup* m_tidLookup;
+            static TalkgroupRulesLookup* m_tidLookup;
         };
-    } // namespace ACL
+    } // namespace acl
 } // namespace p25
 
 #endif // __P25_ACL__ACCESS_CONTROL_H__

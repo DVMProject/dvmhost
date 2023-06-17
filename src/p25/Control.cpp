@@ -75,7 +75,7 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="tgHang">Amount of time to hang on the last talkgroup mode from RF.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
-/// <param name="tidLookup">Instance of the TalkgroupIdLookup class.</param>
+/// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
 /// <param name="rssi">Instance of the RSSIInterpolator class.</param>
 /// <param name="dumpPDUData"></param>
@@ -83,9 +83,9 @@ const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::BaseNetwork* network,
+Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::RadioIdLookup* ridLookup,
-    ::lookups::TalkgroupIdLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
+    ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
     m_voice(nullptr),
     m_data(nullptr),
@@ -110,8 +110,10 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_affiliations(this, verbose),
+    m_controlChData(),
     m_idenEntry(),
-    m_queue(queueSize, "P25 Frame"),
+    m_txImmQueue(queueSize, "P25 Imm Frame"),
+    m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
     m_netState(RS_NET_IDLE),
@@ -202,7 +204,8 @@ void Control::reset()
         m_data->resetRF();
     }
 
-    m_queue.clear();
+    m_txImmQueue.clear();
+    m_txQueue.clear();
 }
 
 /// <summary>
@@ -213,6 +216,7 @@ void Control::reset()
 /// <param name="cwCallsign">CW callsign of this host.</param>
 /// <param name="voiceChNo">Voice Channel Number list.</param>
 /// <param name="voiceChData">Voice Channel data map.</param>
+/// <param name="controlChData">Control Channel data.</param>
 /// <param name="pSuperGroup"></param>
 /// <param name="netId">P25 Network ID.</param>
 /// <param name="sysId">P25 System ID.</param>
@@ -222,8 +226,9 @@ void Control::reset()
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, uint32_t pSuperGroup, uint32_t netId,
-    uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+    const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
+    uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
+    uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
@@ -323,6 +328,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
     m_affiliations.setRFChData(chData);
+
+    m_controlChData = controlChData;
 
     // set the grant release callback
     m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
@@ -430,9 +437,11 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
-        if (m_control) {
-            m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
+        m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
+        if (!m_control) {
+            notifyCC_ReleaseGrant(m_voice->m_rfLC.getDstId());
         }
+        m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
 
         writeRF_TDU(false);
         m_voice->m_lastDUID = P25_DUID_TDU;
@@ -445,7 +454,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_tailOnIdle = true;
 
         m_rfTimeout.stop();
-        m_queue.clear();
+        m_txQueue.clear();
 
         if (m_network != nullptr)
             m_network->resetP25();
@@ -463,7 +472,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         m_data->resetRF();
 
         m_rfTimeout.stop();
-        m_queue.clear();
+        m_txQueue.clear();
 
         return false;
     }
@@ -595,11 +604,18 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::peekFrameLength()
 {
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.peek(&len, 1U);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.peek(&len, 1U);
+    }
+    else {
+        m_txQueue.peek(&len, 1U);
+    }
 
     return len;
 }
@@ -613,12 +629,20 @@ uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
 
-    if (m_queue.isEmpty())
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
         return 0U;
 
     uint8_t len = 0U;
-    m_queue.getData(&len, 1U);
-    m_queue.getData(data, len);
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.getData(&len, 1U);
+        m_txImmQueue.getData(data, len);
+    }
+    else {
+        m_txQueue.getData(&len, 1U);
+        m_txQueue.getData(data, len);
+    }
 
     return len;
 }
@@ -754,10 +778,7 @@ void Control::clock(uint32_t ms)
             }
 
             m_networkWatchdog.stop();
-
-            if (m_control) {
-                m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
-            }
+            m_affiliations.releaseGrant(m_voice->m_netLC.getDstId(), false);
 
             if (m_dedicatedControl) {
                 if (m_network != nullptr)
@@ -775,7 +796,7 @@ void Control::clock(uint32_t ms)
 
     // reset states if we're in a rejected state
     if (m_rfState == RS_RF_REJECTED) {
-        m_queue.clear();
+        m_txQueue.clear();
 
         m_voice->resetRF();
         m_voice->resetNet();
@@ -809,10 +830,48 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogDebug(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+        LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
+}
+
+/// <summary>
+/// Releases a granted TG.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::releaseGrantTG(uint32_t dstId)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_affiliations.isGranted(dstId)) {
+        if (m_verbose) {
+            LogMessage(LOG_P25, "REST request, release TG grant, dstId = %u", dstId);
+        }
+
+        m_affiliations.releaseGrant(dstId, false);
+    }
+}
+
+/// <summary>
+/// Touchs a granted TG to keep a channel grant alive.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::touchGrantTG(uint32_t dstId)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_affiliations.isGranted(dstId)) {
+        if (m_verbose) {
+            LogMessage(LOG_P25, "REST request, touch TG grant, dstId = %u", dstId);
+        }
+
+        m_affiliations.touchGrant(dstId);
+    }
 }
 
 /// <summary>
@@ -842,10 +901,11 @@ void Control::setDebugVerbose(bool debug, bool verbose)
 /// <summary>
 /// Add data frame to the data ring buffer.
 /// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="net"></param>
-void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
+/// <param name="data">Frame data to add to Tx queue.</param>
+/// <param name="length">Length of data to add.</param>
+/// <param name="net">Flag indicating whether the data came from the network or not</param>
+/// <param name="imm">Flag indicating whether or not the data is priority and is added to the immediate queue.</param>
+void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
 
@@ -857,12 +917,40 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
             return;
     }
 
-    uint32_t space = m_queue.freeSpace();
+    if (m_debug) {
+        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
+    }
+
+    // is this immediate data?
+    if (imm) {
+        // resize immediate queue if necessary (this shouldn't really ever happen)
+        uint32_t space = m_txImmQueue.freeSpace();
+        if (space < (length + 1U)) {
+            if (!net) {
+                uint32_t queueLen = m_txImmQueue.length();
+                m_txImmQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
+                LogError(LOG_P25, "overflow in the P25 queue while writing imm data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txImmQueue.length());
+                return;
+            }
+            else {
+                LogError(LOG_P25, "overflow in the P25 queue while writing imm network data; queue free is %u, needed %u", space, length);
+                return;
+            }
+        }
+
+        uint8_t len = length;
+        m_txImmQueue.addData(&len, 1U);
+        m_txImmQueue.addData(data, len);
+        return;
+    }
+
+    // resize immediate queue if necessary (this shouldn't really ever happen)
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (length + 1U)) {
         if (!net) {
-            uint32_t queueLen = m_queue.length();
-            m_queue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
-            LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_queue.length());
+            uint32_t queueLen = m_txQueue.length();
+            m_txQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
+            LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u", space, length, queueLen, m_txQueue.length());
             return;
         }
         else {
@@ -871,13 +959,9 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net)
         }
     }
 
-    if (m_debug) {
-        Utils::symbols("!!! *Tx P25", data + 2U, length - 2U);
-    }
-
     uint8_t len = length;
-    m_queue.addData(&len, 1U);
-    m_queue.addData(data, len);
+    m_txQueue.addData(&len, 1U);
+    m_txQueue.addData(data, len);
 }
 
 #if ENABLE_DFSI_SUPPORT
@@ -1042,57 +1126,181 @@ void Control::processNetwork()
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE)
         return;
 
-    lc::LC control;
-    data::LowSpeedData lsd;
-    uint8_t duid;
-    uint8_t frameType;
-
-    uint32_t length = 100U;
+    uint32_t length = 0U;
     bool ret = false;
-    uint8_t* data = m_network->readP25(ret, control, lsd, duid, frameType, length);
+    UInt8Array buffer = m_network->readP25(ret, length);
     if (!ret)
         return;
     if (length == 0U)
         return;
-    if (data == nullptr) {
+    if (buffer == nullptr) {
         m_network->resetP25();
         return;
+    }
+
+    uint8_t lco = buffer[4U];
+
+    uint32_t srcId = __GET_UINT16(buffer, 5U);
+    uint32_t dstId = __GET_UINT16(buffer, 8U);
+
+    uint8_t MFId = buffer[15U];
+
+    uint8_t lsd1 = buffer[20U];
+    uint8_t lsd2 = buffer[21U];
+
+    uint8_t duid = buffer[22U];
+    uint8_t frameType = p25::P25_FT_DATA_UNIT;
+
+    if (m_debug) {
+        LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+    }
+
+    lc::LC control;
+    data::LowSpeedData lsd;
+
+    // is this a LDU1, is this the first of a call?
+    if (duid == p25::P25_DUID_LDU1) {
+        frameType = buffer[180U];
+
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, frameType = $%02X", frameType);
+        }
+
+        if (frameType == p25::P25_FT_HDU_VALID) {
+            uint8_t algId = buffer[181U];
+            uint32_t kid = (buffer[182U] << 8) | (buffer[183U] << 0);
+
+            // copy MI data
+            uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+            ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+
+            for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+                mi[i] = buffer[184U + i];
+            }
+
+            if (m_debug) {
+                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+                Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
+            }
+
+            control.setAlgId(algId);
+            control.setKId(kid);
+            control.setMI(mi);
+        }
+    }
+
+    control.setLCO(lco);
+    control.setSrcId(srcId);
+    control.setDstId(dstId);
+    control.setMFId(MFId);
+
+    lsd.setLSD1(lsd1);
+    lsd.setLSD2(lsd2);
+
+    UInt8Array data;
+    uint8_t frameLength = buffer[23U];
+    if (duid == p25::P25_DUID_PDU) {
+        frameLength = length;
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+        ::memset(data.get(), 0x00U, length);
+        ::memcpy(data.get(), buffer.get(), length);
+    }
+    else {
+        if (frameLength <= 24) {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+        }
+        else {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+            ::memcpy(data.get(), buffer.get() + 24U, frameLength);
+        }
     }
 
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *P25 Network Frame", data, length);
+        Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
     }
 
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
-            ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+            ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
-            m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+            m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_PDU:
             if (!m_dedicatedControl)
-                ret = m_data->processNetwork(data, length, control, lsd, duid);
+                ret = m_data->processNetwork(data.get(), frameLength, control, lsd, duid);
             else {
                 if (m_voiceOnControl) {
-                    ret = m_voice->processNetwork(data, length, control, lsd, duid, frameType);
+                    ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
                 }
             }
             break;
 
         case P25_DUID_TSDU:
-            m_trunk->processNetwork(data, length, control, lsd, duid);
+            m_trunk->processNetwork(data.get(), frameLength, control, lsd, duid);
             break;
     }
+}
 
-    delete data;
+/// <summary>
+/// Helper to send a REST API request to the CC to release a channel grant at the end of a call.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::notifyCC_ReleaseGrant(uint32_t dstId)
+{
+    // callback REST API to release the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send release grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_P25;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
+}
+
+/// <summary>
+/// Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.
+/// </summary>
+/// <param name="dstId"></param>
+void Control::notifyCC_TouchGrant(uint32_t dstId)
+{
+    // callback REST API to touch the granted TG on the specified control channel
+    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+        if (m_controlChData.address() == "127.0.0.1") {
+            // cowardly ignore trying to send touch grants to ourselves
+            return;
+        }
+
+        json::object req = json::object();
+        int state = modem::DVM_STATE::STATE_P25;
+        req["state"].set<int>(state);
+        req["dstId"].set<uint32_t>(dstId);
+
+        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+            HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+        }
+    }
 }
 
 /// <summary>
@@ -1111,7 +1319,7 @@ bool Control::writeRF_ControlData()
 
     // don't add any frames if the queue is full
     uint8_t len = (P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 2U) + 2U;
-    uint32_t space = m_queue.freeSpace();
+    uint32_t space = m_txQueue.freeSpace();
     if (space < (len + 1U)) {
         return false;
     }
@@ -1144,7 +1352,7 @@ bool Control::writeRF_ControlEnd()
     if (!m_control)
         return false;
 
-    m_queue.clear();
+    m_txQueue.clear();
     m_ccPacketInterval.stop();
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {

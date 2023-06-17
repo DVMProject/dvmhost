@@ -49,6 +49,13 @@
 #define MODEM_UNSUPPORTED_STR "Modem protocol: %u, unsupported! Stopping."
 #define NULL_MODEM "null"
 
+// 505 = DMR_FRAME_LENGTH_BYTES * 15 + 10 (BUFFER_LEN = DMR_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
+#define DMR_TX_BUFFER_LEN 505U  // 15 frames + pad
+// 442 = P25_LDU_FRAME_LENGTH_BYTES * 2 + 10 (BUFFER_LEN = P25_LDU_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
+#define P25_TX_BUFFER_LEN 442U  // 2 frames + pad
+// 538 = NXDN_FRAME_LENGTH_BYTES * 11 + 10 (BUFFER_LEN = NXDN_FRAME_LENGTH_BYTES * NO_OF_FRAMES)
+#define NXDN_TX_BUFFER_LEN 538U // 11 frames + pad
+
 // ---------------------------------------------------------------------------
 //  Macros
 // ---------------------------------------------------------------------------
@@ -65,6 +72,18 @@
 
 class HOST_SW_API HostCal;
 class HOST_SW_API RESTAPI;
+
+class HOST_SW_API HostSetup;
+#if defined(ENABLE_SETUP_TUI)        
+class HOST_SW_API SetupApplication;
+class HOST_SW_API SetupMainWnd;
+
+class HOST_SW_API LevelAdjustWnd;
+class HOST_SW_API SymbLevelAdjustWnd;
+class HOST_SW_API HSBandwidthAdjustWnd;
+class HOST_SW_API HSGainAdjustWnd;
+class HOST_SW_API FIFOBufferAdjustWnd;
+#endif // defined(ENABLE_SETUP_TUI)
 
 namespace modem
 {
@@ -118,6 +137,8 @@ namespace modem
         CMD_RSSI_DATA = 0x09U,
 
         CMD_SEND_CWID = 0x0AU,
+
+        CMD_SET_BUFFERS = 0x0FU,
 
         CMD_DMR_DATA1 = 0x18U,
         CMD_DMR_LOST1 = 0x19U,
@@ -251,6 +272,8 @@ namespace modem
         void setP25DFSI(bool dfsi);
         /// <summary>Sets the RF receive deviation levels.</summary>
         void setRXLevel(float rxLevel);
+        /// <summary>Sets the modem transmit FIFO buffer lengths.</summary>
+        void setFifoLength(uint16_t dmrLength, uint16_t p25Length, uint16_t nxdnLength);
 
         /// <summary>Sets a custom modem response handler.</summary>
         /// <remarks>If the response handler returns true, processing will stop, otherwise it will continue.</remarks>
@@ -272,13 +295,13 @@ namespace modem
         void close();
 
         /// <summary>Reads DMR Slot 1 frame data from the DMR Slot 1 ring buffer.</summary>
-        uint32_t readDMRData1(uint8_t* data);
+        uint32_t readDMRFrame1(uint8_t* data);
         /// <summary>Reads DMR Slot 2 frame data from the DMR Slot 1 ring buffer.</summary>
-        uint32_t readDMRData2(uint8_t* data);
+        uint32_t readDMRFrame2(uint8_t* data);
         /// <summary>Reads P25 frame data from the P25 ring buffer.</summary>
-        uint32_t readP25Data(uint8_t* data);
+        uint32_t readP25Frame(uint8_t* data);
         /// <summary>Reads NXDN frame data from the NXDN ring buffer.</summary>
-        uint32_t readNXDNData(uint8_t* data);
+        uint32_t readNXDNFrame(uint8_t* data);
 
         /// <summary>Helper to test if the DMR Slot 1 ring buffer has free space.</summary>
         bool hasDMRSpace1() const;
@@ -306,31 +329,31 @@ namespace modem
         bool hasError() const;
 
         /// <summary>Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.</summary>
-        void clearDMRData1();
+        void clearDMRFrame1();
         /// <summary>Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.</summary>
-        void clearDMRData2();
+        void clearDMRFrame2();
         /// <summary>Clears any buffered P25 frame data to be sent to the air interface modem.</summary>
-        void clearP25Data();
+        void clearP25Frame();
         /// <summary>Clears any buffered NXDN frame data to be sent to the air interface modem.</summary>
-        void clearNXDNData();
+        void clearNXDNFrame();
 
         /// <summary>Internal helper to inject DMR Slot 1 frame data as if it came from the air interface modem.</summary>
-        void injectDMRData1(const uint8_t* data, uint32_t length);
+        void injectDMRFrame1(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject DMR Slot 2 frame data as if it came from the air interface modem.</summary>
-        void injectDMRData2(const uint8_t* data, uint32_t length);
+        void injectDMRFrame2(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject P25 frame data as if it came from the air interface modem.</summary>
-        void injectP25Data(const uint8_t* data, uint32_t length);
+        void injectP25Frame(const uint8_t* data, uint32_t length);
         /// <summary>Internal helper to inject NXDN frame data as if it came from the air interface modem.</summary>
-        void injectNXDNData(const uint8_t* data, uint32_t length);
+        void injectNXDNFrame(const uint8_t* data, uint32_t length);
 
         /// <summary>Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.</summary>
-        bool writeDMRData1(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame1(const uint8_t* data, uint32_t length);
         /// <summary>Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.</summary>
-        bool writeDMRData2(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame2(const uint8_t* data, uint32_t length);
         /// <summary>Writes P25 frame data to the P25 ring buffer.</summary>
-        bool writeP25Data(const uint8_t* data, uint32_t length);
+        bool writeP25Frame(const uint8_t* data, uint32_t length);
         /// <summary>Writes NXDN frame data to the NXDN ring buffer.</summary>
-        bool writeNXDNData(const uint8_t* data, uint32_t length);
+        bool writeNXDNFrame(const uint8_t* data, uint32_t length);
 
         /// <summary>Triggers the start of DMR transmit.</summary>
         bool writeDMRStart(bool tx);
@@ -358,6 +381,18 @@ namespace modem
     private:
         friend class ::HostCal;
         friend class ::RESTAPI;
+
+        friend class ::HostSetup;
+#if defined(ENABLE_SETUP_TUI)        
+        friend class ::SetupApplication;
+        friend class ::SetupMainWnd;
+
+        friend class ::LevelAdjustWnd;
+        friend class ::SymbLevelAdjustWnd;
+        friend class ::HSBandwidthAdjustWnd;
+        friend class ::HSGainAdjustWnd;
+        friend class ::FIFOBufferAdjustWnd;
+#endif // defined(ENABLE_SETUP_TUI)
 
         port::IModemPort* m_port;
 
@@ -394,6 +429,7 @@ namespace modem
         int m_txDCOffset;               // dedicated modem - Tx signal DC offset
 
         bool m_isHotspot;
+        bool m_forceHotspot;
 
         uint32_t m_rxFrequency;         // hotspot modem - Rx Frequency
         int m_rxTuning;                 // hotspot modem - Rx Frequency Offset
@@ -429,6 +465,10 @@ namespace modem
         uint8_t m_rssiCoarsePot;        // dedicated modem - with softpot
         uint8_t m_rssiFinePot;          // dedicated modem - with softpot
 
+        uint16_t m_dmrFifoLength;
+        uint16_t m_p25FifoLength;
+        uint16_t m_nxdnFifoLength;
+
         uint32_t m_adcOverFlowCount;    // dedicated modem - ADC overflow count
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count
 
@@ -445,10 +485,10 @@ namespace modem
         std::function<MODEM_OC_PORT_HANDLER> m_closePortHandler;
         std::function<MODEM_RESP_HANDLER> m_rspHandler;
 
-        RingBuffer<uint8_t> m_rxDMRData1;
-        RingBuffer<uint8_t> m_rxDMRData2;
-        RingBuffer<uint8_t> m_rxP25Data;
-        RingBuffer<uint8_t> m_rxNXDNData;
+        RingBuffer<uint8_t> m_rxDMRQueue1;
+        RingBuffer<uint8_t> m_rxDMRQueue2;
+        RingBuffer<uint8_t> m_rxP25Queue;
+        RingBuffer<uint8_t> m_rxNXDNQueue;
 
         bool m_useDFSI;
 
@@ -494,6 +534,11 @@ namespace modem
 
         /// <summary>Helper to get the raw response packet from modem.</summary>
         RESP_TYPE_DVM getResponse(bool noReportInvalid = false);
+
+        /// <summary>Helper to convert a serial opcode to a string.</summary>
+        std::string cmdToString(uint8_t opcode);
+        /// <summary>Helper to convert a serial reason code to a string.</summary>
+        std::string rsnToString(uint8_t reason);
 
     public:
         /// <summary>Flag indicating if modem trace is enabled.</summary>

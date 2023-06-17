@@ -92,3 +92,13 @@ void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pd
 
     AMBT::encode(dataHeader, pduUserData);
 }
+
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_OSP_RFSS_STS_BCAST::toString(bool isp)
+{
+    return std::string("TSBK_OSP_RFSS_STS_BCAST (RFSS Status Broadcast)");
+}

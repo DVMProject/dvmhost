@@ -37,8 +37,7 @@ namespace nxdn
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Implements VCALL_CONN - Voice Call Connection Request (ISP) and
-            //          Voice Call Connection Response (OSP)
+            //      Implements DCALL_HDR - Data Call Header
             // ---------------------------------------------------------------------------
 
             class HOST_SW_API MESSAGE_TYPE_DCALL_HDR : public RCCH {
@@ -47,9 +46,12 @@ namespace nxdn
                 MESSAGE_TYPE_DCALL_HDR();
 
                 /// <summary>Decode layer 3 data.</summary>
-                virtual void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
                 /// <summary>Encode layer 3 data.</summary>
-                virtual void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
+
+                /// <summary>Returns a string that represents the current RCCH.</summary>
+                virtual std::string toString(bool isp = false) override;
             };
         } // namespace rcch
     } // namespace lc

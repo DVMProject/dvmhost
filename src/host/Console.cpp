@@ -31,64 +31,15 @@
 
 #include <cstdio>
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <conio.h>
-#else
 #include <cstring>
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-#if defined(_WIN32) || defined(_WIN64)
-/// <summary>
-/// Initializes a new instance of the Console class.
-/// </summary>
-Console::Console()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Finalizes a instance of the Console class.
-/// </summary>
-Console::~Console()
-{
-    /* stub */
-}
-
-/// <summary>
-/// Opens the terminal console.
-/// </summary>
-bool Console::open()
-{
-    return true;
-}
-
-/// <summary>
-/// Retrieves a character input on the keyboard.
-/// </summary>
-/// <returns></returns>
-int Console::getChar()
-{
-    if (::_kbhit() == 0)
-        return -1;
-
-    return ::_getch();
-}
-
-/// <summary>
-/// Closes the terminal console.
-/// </summary>
-void Console::close()
-{
-    /* stub */
-}
-#else
 /// <summary>
 /// Initializes a new instance of the Console class.
 /// </summary>
@@ -173,7 +124,6 @@ void Console::close()
     if (n != 0)
         ::fprintf(stderr, "tcsetattr: returned %d\r\n", n);
 }
-#endif
 
 /// <summary>
 /// Retrieves an array of characters input on the keyboard.

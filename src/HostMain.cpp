@@ -33,6 +33,7 @@
 #include "host/Host.h"
 #include "host/calibrate/HostCal.h"
 #include "host/setup/HostSetup.h"
+#include "host/fne/HostFNE.h"
 #include "Log.h"
 
 using namespace network;
@@ -43,13 +44,11 @@ using namespace lookups;
 #include <cstdarg>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#endif
 
 // ---------------------------------------------------------------------------
 //	Constants
@@ -84,6 +83,7 @@ using namespace lookups;
 int g_signal = 0;
 bool g_calibrate = false;
 bool g_setup = false;
+bool g_fne = false;
 std::string g_progExe = std::string(__EXE_NAME__);
 std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
 std::string g_lockFile = std::string(DEFAULT_LOCK_FILE);
@@ -105,7 +105,11 @@ uint8_t* g_gitHashBytes = nullptr;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-#if !defined(_WIN32) && !defined(_WIN64) && !defined(CATCH2_TEST_COMPILATION)
+#if !defined(CATCH2_TEST_COMPILATION)
+/// <summary>
+/// Internal signal handler.
+/// </summary>
+/// <param name="signum"></param>
 static void sigHandler(int signum)
 {
     g_killed = true;
@@ -113,6 +117,11 @@ static void sigHandler(int signum)
 }
 #endif
 
+/// <summary>
+/// Helper to print a fatal error message and exit.
+/// </summary>
+/// <remarks>This is a variable argument function.</remarks>
+/// <param name="msg">Message.</param>
 void fatal(const char* msg, ...)
 {
     char buffer[400U];
@@ -129,6 +138,11 @@ void fatal(const char* msg, ...)
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to pring usage the command line arguments. (And optionally an error.)
+/// </summary>
+/// <param name="message">Error message.</param>
+/// <param name="arg">Error message arguments.</param>
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
@@ -140,10 +154,20 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-vh] [-f] [--cal] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]\n\n"
+    ::fprintf(stdout, 
+        "usage: %s [-vhf]"
+        "[--setup]"
+        "[--fne]"
+        "[-c <configuration file>]"
+        "[--remote [-a <address>] [-p <port>]]"
+        "\n\n"
+        "  -v        show version information\n"
+        "  -h        show this screen\n"
         "  -f        foreground mode\n"
-        "  --cal     calibration mode\n"
-        "  --setup   setup mode\n"
+        "\n"
+        "  --setup   setup and calibration mode\n"
+        "\n"
+        "  --fne     fixed network equipment mode (conference bridge)\n"
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
@@ -151,13 +175,17 @@ void usage(const char* message, const char* arg)
         "  -a        remote modem command address\n"
         "  -p        remote modem command port\n"
         "\n"
-        "  -v        show version information\n"
-        "  -h        show this screen\n"
         "  --        stop handling options\n",
         g_progExe.c_str());
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to validate the command line arguments.
+/// </summary>
+/// <param name="argc">Argument count.</param>
+/// <param name="argv">Array of argument strings.</param>
+/// <returns>Count of remaining unprocessed arguments.</returns>
 int checkArgs(int argc, char* argv[])
 {
     int i, p = 0;
@@ -183,7 +211,14 @@ int checkArgs(int argc, char* argv[])
             g_calibrate = true;
         }
         else if (IS("--setup")) {
+#if defined(ENABLE_SETUP_TUI)
             g_setup = true;
+#else
+            g_calibrate = true;
+#endif // defined(ENABLE_SETUP_TUI)
+        }
+        else if (IS("--fne")) {
+            g_fne = true;
         }
         else if (IS("-c")) {
             if (argc-- <= 0)
@@ -270,33 +305,46 @@ int main(int argc, char** argv)
         }
     }
 
-#if !defined(_WIN32) && !defined(_WIN64)
     ::signal(SIGINT, sigHandler);
     ::signal(SIGTERM, sigHandler);
     ::signal(SIGHUP, sigHandler);
-#endif
 
     int ret = 0;
 
     do {
         g_signal = 0;
 
-        if (g_calibrate || g_setup) {
-            if (g_setup) {
-                HostSetup* setup = new HostSetup(g_iniFile);
-                ret = setup->run();
-                delete setup;
-            }
-            else {
-                HostCal* cal = new HostCal(g_iniFile);
-                ret = cal->run();
-                delete cal;
-            }
+        if (g_fne) {
+            HostFNE *fne = new HostFNE(g_iniFile);
+            ret = fne->run();
+            delete fne;
         }
         else {
-            Host* host = new Host(g_iniFile);
-            ret = host->run();
-            delete host;
+            if (g_calibrate || g_setup) {
+#if defined(ENABLE_SETUP_TUI)
+                if (g_setup) {
+                    HostSetup* setup = new HostSetup(g_iniFile);
+                    ret = setup->run(argc, argv);
+                    delete setup;
+                }
+                else {
+                    HostCal* cal = new HostCal(g_iniFile);
+                    ret = cal->run(argc, argv);
+                    delete cal;
+                }
+#else
+                if (g_calibrate) {
+                    HostCal* cal = new HostCal(g_iniFile);
+                    ret = cal->run(argc, argv);
+                    delete cal;
+                }
+#endif // defined(ENABLE_SETUP_TUI)
+            }
+            else {
+                Host* host = new Host(g_iniFile);
+                ret = host->run();
+                delete host;
+            }
         }
 
         if (g_signal == 2)

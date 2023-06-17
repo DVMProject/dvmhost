@@ -33,17 +33,6 @@
 
 #include "Defines.h"
 
-// Data Type ID String(s)
-#define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
-#define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
-#define DMR_DT_RATE_12_DATA "DMR_DT_RATE_12_DATA (1/2-rate Data)"
-#define DMR_DT_RATE_34_DATA "DMR_DT_RATE_34_DATA (3/4-rate Data)"
-#define DMR_DT_RATE_1_DATA "DMR_DT_RATE_1_DATA (1-rate Data)"
-#define DMR_DT_VOICE_LC_HEADER "DMR_DT_VOICE_LC_HEADER (Voice Header with Link Control)"
-#define DMR_DT_VOICE_PI_HEADER "DMR_DT_VOICE_PI_HEADER (Voice Header with Privacy Indicator)"
-#define DMR_DT_VOICE_SYNC "DMR_DT_VOICE_SYNC (Voice Data with Sync)"
-#define DMR_DT_VOICE "DMR_DT_VOICE (Voice Data)"
-
 namespace dmr
 {
     // ---------------------------------------------------------------------------
@@ -197,18 +186,29 @@ namespace dmr
 
     // Data Type(s)
     const uint8_t   DT_VOICE_PI_HEADER = 0x00U;
+#define DMR_DT_VOICE_PI_HEADER "DMR_DT_VOICE_PI_HEADER (Voice Header with Privacy Indicator)"
     const uint8_t   DT_VOICE_LC_HEADER = 0x01U;
+#define DMR_DT_VOICE_LC_HEADER "DMR_DT_VOICE_LC_HEADER (Voice Header with Link Control)"
     const uint8_t   DT_TERMINATOR_WITH_LC = 0x02U;
+#define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
     const uint8_t   DT_CSBK = 0x03U;
     const uint8_t   DT_DATA_HEADER = 0x06U;
+#define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
     const uint8_t   DT_RATE_12_DATA = 0x07U;
+#define DMR_DT_RATE_12_DATA "DMR_DT_RATE_12_DATA (1/2-rate Data)"
     const uint8_t   DT_RATE_34_DATA = 0x08U;
+#define DMR_DT_RATE_34_DATA "DMR_DT_RATE_34_DATA (3/4-rate Data)"
     const uint8_t   DT_IDLE = 0x09U;
     const uint8_t   DT_RATE_1_DATA = 0x0AU;
+#define DMR_DT_RATE_1_DATA "DMR_DT_RATE_1_DATA (1-rate Data)"
 
-    // Dummy values
+    /*
+    ** Internal Data Type(s)
+    */
     const uint8_t   DT_VOICE_SYNC = 0xF0U;
+#define DMR_DT_VOICE_SYNC "DMR_DT_VOICE_SYNC (Voice Data with Sync)"
     const uint8_t   DT_VOICE = 0xF1U;
+#define DMR_DT_VOICE "DMR_DT_VOICE (Voice Data)"
 
     // Site Models
     const uint8_t   SITE_MODEL_TINY = 0x00U;
@@ -277,9 +277,9 @@ namespace dmr
     const uint8_t   BCAST_ANNC_VOTE_NOW = 0x02U;            // Vote Now Advice
     const uint8_t   BCAST_ANNC_LOCAL_TIME = 0x03U;          // Broadcast Local Time
     const uint8_t   BCAST_ANNC_MASS_REG = 0x04U;            // Mass Registration
-    const uint8_t   BCAST_ANNC_CHAN_FREQ = 0x05U;           // Announce a logical channel/frequency relationship
-    const uint8_t   BCAST_ANNC_ADJ_SITE = 0x06U;            // Adjacent Site information
-    const uint8_t   BCAST_ANNC_SITE_PARMS = 0x07U;          // General Site Parameters information
+    const uint8_t   BCAST_ANNC_CHAN_FREQ = 0x05U;           // Logical Channel/Frequency
+    const uint8_t   BCAST_ANNC_ADJ_SITE = 0x06U;            // Adjacent Site Information
+    const uint8_t   BCAST_ANNC_SITE_PARMS = 0x07U;          // General Site Parameters
 
     // Full-Link Control Opcode(s)
     const uint8_t   FLCO_GROUP = 0x00U;                     // GRP VCH USER - Group Voice Channel User
@@ -293,15 +293,15 @@ namespace dmr
     // Control Signalling Block Opcode(s)
     const uint8_t   CSBKO_NONE = 0x00U;                     //
     const uint8_t   CSBKO_UU_V_REQ = 0x04U;                 // UU VCH REQ - Unit-to-Unit Voice Channel Request
-    const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit to Unit Answer Response
+    const uint8_t   CSBKO_UU_ANS_RSP = 0x05U;               // UU ANS RSP - Unit-to-Unit Answer Response
     const uint8_t   CSBKO_CTCSBK = 0x07U;                   // CT CSBK - Channel Timing CSBK
-    const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDUs for the random access protocol
+    const uint8_t   CSBKO_ALOHA = 0x19U;                    // ALOHA - Aloha PDU for Random Access
     const uint8_t   CSBKO_AHOY = 0x1CU;                     // AHOY - Enquiry from TSCC
     const uint8_t   CSBKO_RAND = 0x1FU;                     // (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
     const uint8_t   CSBKO_ACK_RSP = 0x20U;                  // ACK RSP - Acknowledge Response
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
-    const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDUs
+    const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDU
     const uint8_t   CSBKO_P_CLEAR = 0x2EU;                  // P_CLEAR - Payload Channel Clear
     const uint8_t   CSBKO_PV_GRANT = 0x30U;                 // PV_GRANT - Private Voice Channel Grant
     const uint8_t   CSBKO_TV_GRANT = 0x31U;                 // TV_GRANT - Talkgroup Voice Channel Grant
@@ -311,7 +311,7 @@ namespace dmr
     const uint8_t   CSBKO_BSDWNACT = 0x38U;                 // BS DWN ACT - BS Outbound Activation
     const uint8_t   CSBKO_PRECCSBK = 0x3DU;                 // PRE CSBK - Preamble CSBK
 
-    const uint8_t   CSBKO_DVM_GIT_HASH = 0xFBU;             //
+    const uint8_t   CSBKO_DVM_GIT_HASH = 0x3FU;             //
 
     const uint8_t   TALKER_ID_NONE = 0x00U;
     const uint8_t   TALKER_ID_HEADER = 0x01U;

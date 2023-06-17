@@ -34,8 +34,6 @@
 #include <cassert>
 #include <cstdlib>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-
 using namespace modem::port;
 
 #include <sys/types.h>
@@ -114,5 +112,3 @@ void PseudoPTYPort::close()
     UARTPort::close();
     ::unlink(m_symlink.c_str());
 }
-
-#endif

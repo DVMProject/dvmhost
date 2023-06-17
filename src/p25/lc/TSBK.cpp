@@ -127,6 +127,16 @@ TSBK::~TSBK()
 }
 
 /// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string TSBK::toString(bool isp)
+{
+    return std::string("TSBK_IOSP_UNKWN (Unknown TSBK)");
+}
+
+/// <summary>
 /// Sets the callsign.
 /// </summary>
 /// <param name="callsign">Callsign.</param>
@@ -179,9 +189,9 @@ ulong64_t TSBK::toValue(const uint8_t* tsbk)
 /// </summary>
 /// <param name="tsbkValue"></param>
 /// <returns></returns>
-std::unique_ptr<uint8_t[]> TSBK::fromValue(const ulong64_t tsbkValue)
+UInt8Array TSBK::fromValue(const ulong64_t tsbkValue)
 {
-    __UNIQUE_BUFFER(tsbk, uint8_t, P25_TSBK_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(tsbk, P25_TSBK_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
     tsbk[2U] = (uint8_t)((tsbkValue >> 56) & 0xFFU);

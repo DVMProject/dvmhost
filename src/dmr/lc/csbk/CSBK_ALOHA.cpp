@@ -92,6 +92,15 @@ void CSBK_ALOHA::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_ALOHA::toString()
+{
+    return std::string("CSBKO_ALOHA (Aloha PDU)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

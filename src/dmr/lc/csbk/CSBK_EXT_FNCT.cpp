@@ -96,6 +96,15 @@ void CSBK_EXT_FNCT::encode(uint8_t* data)
     CSBK::encode(data, csbk.get());
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_EXT_FNCT::toString()
+{
+    return std::string("CSBKO_EXT_FNCT (Extended Function)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

@@ -96,6 +96,19 @@ void IOSP_GRP_AFF::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string IOSP_GRP_AFF::toString(bool isp)
+{
+    if (isp)
+        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
+    else    
+        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

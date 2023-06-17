@@ -84,3 +84,13 @@ void MESSAGE_TYPE_DST_ID_INFO::encode(uint8_t* data, uint32_t length, uint32_t o
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_DST_ID_INFO::toString(bool isp)
+{
+    return std::string("MESSAGE_TYPE_DST_ID_INFO (Digital Station ID)");
+}

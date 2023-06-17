@@ -109,24 +109,22 @@ typedef unsigned long long  ulong64_t;
 #define __PROG_NAME__ "Digital Voice Modem (DVM) Host"
 #define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ "dvmhost"
-#define __VER__ "D03.00.00 (" __GIT_VER__ ")"
+#define __VER__ "D03.50.00 (" __GIT_VER__ ")"
 #define __BUILD__ __DATE__ " " __TIME__
 
 #define HOST_SW_API
 
-#if defined(_WIN32) || defined(_WIN64)
 #define DEFAULT_CONF_FILE "config.yml"
-#else
-#define DEFAULT_CONF_FILE "/opt/dvm/config.yml"
-#endif // defined(_WIN32) || defined(_WIN64)
-#if defined(_WIN32) || defined(_WIN64)
-#define DEFAULT_LOCK_FILE "dvm.lock"
-#else
 #define DEFAULT_LOCK_FILE "/tmp/dvm.lock"
-#endif // defined(_WIN32) || defined(_WIN64)
 
 #if defined(__GNUC__) || defined(__GNUG__)
 #define __forceinline __attribute__((always_inline))
+#endif
+
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__GNUC__) || defined(__GNUG__)
+#define PACK(decl) decl __attribute__((__packed__))
+#else
+#define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
 #endif
 
 #define NULL_PORT "null"
@@ -287,6 +285,11 @@ inline std::string strtoupper(const std::string value) {
         std::unique_ptr<type[]> name = std::unique_ptr<type[]>(new type[length]);       \
         ::memset(name.get(), 0x00U, length);
 
+typedef std::unique_ptr<uint8_t[]> UInt8Array;
+
+/// <summary>Creates a named uint8_t array buffer.</summary>
+#define __UNIQUE_UINT8_ARRAY(name, length) __UNIQUE_BUFFER(name, uint8_t, length)
+
 /**
  * Class Copy Code Pattern
  */
@@ -323,6 +326,10 @@ inline std::string strtoupper(const std::string value) {
 #define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
+/// <summary>Creates a read-only get property, does not use "get"/"set".</summary>
+#define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName, propName)               \
+        protected: type m_##variableName;                                               \
+        public: __forceinline type propName(void) const { return m_##variableName; }
 /// <summary>Creates a read-only get property, does not use "get".</summary>
 #define __READONLY_PROPERTY_PLAIN(type, variableName, propName)                         \
         private: type m_##variableName;                                                 \

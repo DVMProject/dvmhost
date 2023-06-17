@@ -95,6 +95,16 @@ void OSP_SCCB_EXP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_SCCB_EXP::toString(bool isp)
+{
+    return std::string("TSBK_OSP_SCCB_EXP (Secondary Control Channel Broadcast - Explicit)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

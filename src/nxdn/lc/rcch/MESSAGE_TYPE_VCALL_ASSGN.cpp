@@ -95,3 +95,13 @@ void MESSAGE_TYPE_VCALL_ASSGN::encode(uint8_t* data, uint32_t length, uint32_t o
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_VCALL_ASSGN::toString(bool isp)
+{
+    return std::string("RCCH_MESSAGE_TYPE_VCALL_ASSGN (Voice Call Assignment)");
+}

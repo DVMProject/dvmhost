@@ -56,6 +56,9 @@ using namespace network::rest::http;
 #define ERRNO_API_CALL_TIMEOUT 96
 #define ERRNO_INTERNAL_ERROR 100
 
+#define ERRNO_NO_ADDRESS 404
+#define ERRNO_NO_PASSWORD 403
+
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
@@ -139,9 +142,6 @@ RESTClient::~RESTClient()
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RESTClient::send(const std::string method, const std::string endpoint, json::object payload)
 {
-    assert(!m_address.empty());
-    assert(m_port > 0U);
-
     return send(m_address, m_port, m_password, method, endpoint, payload, m_debug);
 }
 
@@ -159,9 +159,15 @@ int RESTClient::send(const std::string method, const std::string endpoint, json:
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
     const std::string endpoint, json::object payload, bool debug)
 {
-    assert(!address.empty());
-    assert(port > 0U);
-    assert(password.empty());
+    if (address.empty()) {
+        return ERRNO_NO_ADDRESS;
+    }
+    if (port <= 0U) {
+        return ERRNO_NO_ADDRESS;
+    }
+    if (password.empty()) {
+        return ERRNO_NO_PASSWORD;
+    }
 
     int ret = EXIT_SUCCESS;
     m_debug = debug;

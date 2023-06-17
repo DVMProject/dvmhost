@@ -542,8 +542,8 @@ void Data::writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserD
     }
 
     if (clearBeforeWrite) {
-        m_p25->m_modem->clearP25Data();
-        m_p25->m_queue.clear();
+        m_p25->m_modem->clearP25Frame();
+        m_p25->m_txQueue.clear();
     }
 
     writeRF_PDU(data, bitLength);

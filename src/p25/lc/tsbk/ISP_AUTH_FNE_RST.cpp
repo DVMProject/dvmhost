@@ -88,6 +88,16 @@ void ISP_AUTH_FNE_RST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     /* stub */
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string ISP_AUTH_FNE_RST::toString(bool isp)
+{
+    return std::string("TSBK_ISP_AUTH_FNE_RST (Authentication FNE Result)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

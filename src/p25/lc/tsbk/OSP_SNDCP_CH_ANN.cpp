@@ -101,6 +101,16 @@ void OSP_SNDCP_CH_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string OSP_SNDCP_CH_ANN::toString(bool isp)
+{
+    return std::string("TSBK_OSP_SNDCP_CH_ANN (SNDCP Data Channel Announcement)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

@@ -83,6 +83,15 @@ void CSBK_BSDWNACT::encode(uint8_t* data)
     /* stub */
 }
 
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_BSDWNACT::toString()
+{
+    return std::string("CSBKO_BSDWNACT (BS Outbound Activation)");
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

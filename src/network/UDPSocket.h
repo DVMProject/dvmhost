@@ -36,7 +36,6 @@
 #include <string>
 #include <vector>
 
-#if !defined(_WIN32) && !defined(_WIN64)
 #include <netdb.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -46,10 +45,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #if !defined(UDP_SOCKET_MAX)
 #define UDP_SOCKET_MAX	1
@@ -85,8 +80,22 @@ namespace network
     }
 #endif
 
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    //      This structure represents a container for a network buffer.
+    // ---------------------------------------------------------------------------
+
+    struct UDPDatagram {
+        uint8_t* buffer;
+        size_t length;
+
+        sockaddr_storage address;
+        uint32_t addrLen;
+
+    };
+
     /* Vector of buffers that contain a full frames */
-    typedef std::vector<std::pair<size_t, uint8_t*>> BufferVector;
+    typedef std::vector<UDPDatagram*> BufferVector;
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -115,17 +124,15 @@ namespace network
         /// <summary>Write data to the UDP socket.</summary>
         bool write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
         /// <summary>Write data to the UDP socket.</summary>
-        bool write(BufferVector& buffers, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten = nullptr);
+        bool write(BufferVector& buffers, int* lenWritten = nullptr);
 
         /// <summary>Closes the UDP socket connection.</summary>
         void close();
         /// <summary>Closes the UDP socket connection.</summary>
         void close(const uint32_t index);
 
-        /// <summary></summary>
-        static void startup();
-        /// <summary></summary>
-        static void shutdown();
+        /// <summary>Flag indicating the UDP socket(s) are open.</summary>
+        bool isOpen() const { return m_isOpen; }
 
         /// <summary>Helper to lookup a hostname and resolve it to an IP address.</summary>
         static int lookup(const std::string& hostName, uint16_t port, sockaddr_storage& address, uint32_t& addrLen);
@@ -147,6 +154,8 @@ namespace network
         uint16_t m_port_save;
         std::string m_address[UDP_SOCKET_MAX];
         uint16_t m_port[UDP_SOCKET_MAX];
+
+        bool m_isOpen;
 
         uint32_t m_af[UDP_SOCKET_MAX];
         int m_fd[UDP_SOCKET_MAX];

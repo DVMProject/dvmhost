@@ -177,7 +177,7 @@ bool RadioIdLookup::load()
 
     std::ifstream file (m_filename, std::ifstream::in);
     if (file.fail()) {
-        LogError(LOG_HOST, "Cannot open the lookup file - %s", m_filename.c_str());
+        LogError(LOG_HOST, "Cannot open the radio ID lookup file - %s", m_filename.c_str());
         return false;
     }
 

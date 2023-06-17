@@ -46,9 +46,12 @@ namespace dmr
                 CSBK_P_CLEAR();
 
                 /// <summary>Decode a control signalling block.</summary>
-                virtual bool decode(const uint8_t* data);
+                bool decode(const uint8_t* data);
                 /// <summary>Encode a control signalling block.</summary>
-                virtual void encode(uint8_t* data);
+                void encode(uint8_t* data);
+
+                /// <summary>Returns a string that represents the current CSBK.</summary>
+                virtual std::string toString() override;
             };
         } // namespace csbk
     } // namespace lc

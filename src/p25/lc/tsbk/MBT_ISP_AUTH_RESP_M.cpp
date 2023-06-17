@@ -127,6 +127,16 @@ void MBT_ISP_AUTH_RESP_M::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUs
     return;
 }
 
+/// <summary>
+/// Returns a string that represents the current TSBK.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MBT_ISP_AUTH_RESP_M::toString(bool isp)
+{
+    return std::string("TSBK_ISP_AUTH_RESP_M (Authentication Response Mutual)");
+}
+
 /// <summary>Gets the authentication result.</summary>
 /// <returns></returns>
 void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const

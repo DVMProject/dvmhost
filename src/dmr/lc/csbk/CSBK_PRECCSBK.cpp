@@ -84,3 +84,12 @@ void CSBK_PRECCSBK::encode(uint8_t* data)
 
     /* stub */
 }
+
+/// <summary>
+/// Returns a string that represents the current CSBK.
+/// </summary>
+/// <returns></returns>
+std::string CSBK_PRECCSBK::toString()
+{
+    return std::string("CSBKO_PRECCSBK (Preamble CSBK)");
+}

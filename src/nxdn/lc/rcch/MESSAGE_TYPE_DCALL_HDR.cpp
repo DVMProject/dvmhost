@@ -101,3 +101,13 @@ void MESSAGE_TYPE_DCALL_HDR::encode(uint8_t* data, uint32_t length, uint32_t off
 
     RCCH::encode(data, rcch, length, offset);
 }
+
+/// <summary>
+/// Returns a string that represents the current RCCH.
+/// </summary>
+/// <param name="isp"></param>
+/// <returns></returns>
+std::string MESSAGE_TYPE_DCALL_HDR::toString(bool isp)
+{
+    return std::string("RTCH_MESSAGE_TYPE_DCALL_HDR (Data Call Header)");
+}
