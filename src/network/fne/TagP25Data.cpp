@@ -300,7 +300,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t 
     else {
         if (exclusion.size() > 0) {
             auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-            if (it != inclusion.end()) {
+            if (it != exclusion.end()) {
                 return false;
             }
         }

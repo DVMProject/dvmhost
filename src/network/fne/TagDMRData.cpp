@@ -281,7 +281,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_
         else {
             if (exclusion.size() > 0) {
                 auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                if (it != inclusion.end()) {
+                if (it != exclusion.end()) {
                     return false;
                 }
             }

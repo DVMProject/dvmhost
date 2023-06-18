@@ -778,13 +778,15 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
         if (inclusion.size() > 0) {
             auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
             if (it == inclusion.end()) {
+                // LogDebug(LOG_NET, "PEER %u TGID %u TS %u -- not included peer", peerId, entry.source().tgId(), entry.source().tgSlot());
                 continue;
             }
         }
         else {
             if (exclusion.size() > 0) {
                 auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                if (it != inclusion.end()) {
+                if (it != exclusion.end()) {
+                    // LogDebug(LOG_NET, "PEER %u TGID %u TS %u -- excluded peer", peerId, entry.source().tgId(), entry.source().tgSlot());
                     continue;
                 }
             }
@@ -846,13 +848,15 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
         if (inclusion.size() > 0) {
             auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
             if (it == inclusion.end()) {
+                // LogDebug(LOG_NET, "PEER %u TGID %u TS %u -- not included peer", peerId, entry.source().tgId(), entry.source().tgSlot());
                 continue;
             }
         }
         else {
             if (exclusion.size() > 0) {
                 auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                if (it != inclusion.end()) {
+                if (it != exclusion.end()) {
+                    // LogDebug(LOG_NET, "PEER %u TGID %u TS %u -- excluded peer", peerId, entry.source().tgId(), entry.source().tgSlot());
                     continue;
                 }
             }

@@ -254,7 +254,7 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t m
         else {
             if (exclusion.size() > 0) {
                 auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
-                if (it != inclusion.end()) {
+                if (it != exclusion.end()) {
                     return false;
                 }
             }
