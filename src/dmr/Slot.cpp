@@ -601,9 +601,13 @@ void Slot::releaseGrantTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, REST request, release TG grant, dstId = %u", m_slotNo, dstId);
+    }
+
     if (m_affiliations->isGranted(dstId)) {
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, REST request, release TG grant, dstId = %u", m_slotNo, dstId);
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, TG grant released, dstId = %u", m_slotNo, dstId);
         }
     
         m_affiliations->releaseGrant(dstId, false);

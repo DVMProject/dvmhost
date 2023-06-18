@@ -846,11 +846,14 @@ void Control::releaseGrantTG(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogMessage(LOG_P25, "REST request, release TG grant, dstId = %u", dstId);
+    }
+
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, release TG grant, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, TG grant released, dstId = %u", dstId);
         }
-
         m_affiliations.releaseGrant(dstId, false);
     }
 }
