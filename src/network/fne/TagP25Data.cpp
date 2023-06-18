@@ -224,7 +224,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
 
                 m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, pktSeq, true);
-                if (m_network->m_verbose) {
+                if (m_network->m_debug) {
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
                 }
