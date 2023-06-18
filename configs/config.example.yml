@@ -281,7 +281,7 @@ system:
     # Amount of time the host will "hang" on a network received digital mode in multi-mode operation. (seconds)
 #    netModeHang: 10
     # Flag indicating the host is operating in a single digital mode.
-#    fixedMode: false
+    fixedMode: false
     # Amount of time the host will "hang" on the last TGID received via RF before returning to allowing all 
     # TGID traffic.
     rfTalkgroupHang: 10
