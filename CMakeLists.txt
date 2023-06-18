@@ -101,6 +101,10 @@ if (CROSS_COMPILE_RPI_ARM)
     set(ARCH armhf)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
     message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM - ${CMAKE_C_COMPILER}")
+
+    # No TUI for this
+    set(ENABLE_TUI_SUPPORT OFF)
+    message(CHECK_START "Enable TUI support - no; for simplicity RPI_ARM cross-compiling does not support TUI.")
 endif (CROSS_COMPILE_RPI_ARM)
 
 # Standard CMake options
@@ -201,9 +205,29 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: talkgroup_ru
 #
 # Helper target to force strip binaries.
 #
-add_custom_target(strip
-    COMMAND strip -s dvmhost
-    COMMAND strip -s dvmcmd)
+if (CROSS_COMPILE_ARM)
+    add_custom_target(strip
+        COMMAND arm-linux-gnueabihf-strip -s dvmhost
+        COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
+elseif (CROSS_COMPILE_AARCH64)
+    add_custom_target(strip
+        COMMAND aarch64-linux-gnu-strip -s dvmhost
+        COMMAND aarch64-linux-gnu-strip -s dvmcmd)
+elseif (CROSS_COMPILE_RPI_ARM)
+    if (NOT WITH_RPI_ARM_TOOLS)
+        add_custom_target(strip
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+    else()
+        add_custom_target(strip
+            COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
+            COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+    endif ()
+else()
+    add_custom_target(strip
+        COMMAND strip -s dvmhost
+        COMMAND strip -s dvmcmd)
+endif (CROSS_COMPILE_ARM)
 
 #/*
 #** bryanb: Please do not change the following section unless adding or removing paths that need to be part of a build
