@@ -771,6 +771,25 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
     std::vector<std::pair<uint32_t, uint8_t>> tgidList;
     auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
+        std::vector<uint32_t> inclusion = entry.config().inclusion();
+        std::vector<uint32_t> exclusion = entry.config().exclusion();
+
+        // peer inclusion lists take priority over exclusion lists
+        if (inclusion.size() > 0) {
+            auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
+            if (it == inclusion.end()) {
+                continue;
+            }
+        }
+        else {
+            if (exclusion.size() > 0) {
+                auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                if (it != inclusion.end()) {
+                    continue;
+                }
+            }
+        }
+        
         if (entry.config().active()) {
             tgidList.push_back({ entry.source().tgId(), entry.source().tgSlot() });
         }
@@ -820,6 +839,25 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
     std::vector<std::pair<uint32_t, uint8_t>> tgidList;
     auto groupVoice = m_tidLookup->groupVoice();
     for (auto entry : groupVoice) {
+        std::vector<uint32_t> inclusion = entry.config().inclusion();
+        std::vector<uint32_t> exclusion = entry.config().exclusion();
+
+        // peer inclusion lists take priority over exclusion lists
+        if (inclusion.size() > 0) {
+            auto it = std::find(inclusion.begin(), inclusion.end(), peerId);
+            if (it == inclusion.end()) {
+                continue;
+            }
+        }
+        else {
+            if (exclusion.size() > 0) {
+                auto it = std::find(exclusion.begin(), exclusion.end(), peerId);
+                if (it != inclusion.end()) {
+                    continue;
+                }
+            }
+        }
+
         if (!entry.config().active()) {
             tgidList.push_back({ entry.source().tgId(), entry.source().tgSlot() });
         }
