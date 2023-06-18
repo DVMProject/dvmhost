@@ -58,39 +58,41 @@ protected:
     /// </summary>
     virtual void processExternalUserEvent()
     {
-        if (m_setup->m_p25TduTest && m_setup->m_queue.hasSpace(p25::P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
-            uint8_t data[p25::P25_TDU_FRAME_LENGTH_BYTES + 2U];
-            ::memset(data + 2U, 0x00U, p25::P25_TDU_FRAME_LENGTH_BYTES);
+        if (m_setup->m_isConnected) {
+            if (m_setup->m_p25TduTest && m_setup->m_queue.hasSpace(p25::P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
+                uint8_t data[p25::P25_TDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(data + 2U, 0x00U, p25::P25_TDU_FRAME_LENGTH_BYTES);
 
-            // Generate Sync
-            p25::Sync::addP25Sync(data + 2U);
+                // Generate Sync
+                p25::Sync::addP25Sync(data + 2U);
 
-            // Generate NID
-            std::unique_ptr<p25::NID> nid = new_unique(p25::NID, 1U);
-            nid->encode(data + 2U, p25::P25_DUID_TDU);
+                // Generate NID
+                std::unique_ptr<p25::NID> nid = new_unique(p25::NID, 1U);
+                nid->encode(data + 2U, p25::P25_DUID_TDU);
 
-            // Add busy bits
-            p25::P25Utils::addBusyBits(data + 2U, p25::P25_TDU_FRAME_LENGTH_BITS, true, true);
+                // Add busy bits
+                p25::P25Utils::addBusyBits(data + 2U, p25::P25_TDU_FRAME_LENGTH_BITS, true, true);
 
-            data[0U] = modem::TAG_EOT;
-            data[1U] = 0x00U;
+                data[0U] = modem::TAG_EOT;
+                data[1U] = 0x00U;
 
-            m_setup->addFrame(data, p25::P25_TDU_FRAME_LENGTH_BYTES + 2U, p25::P25_LDU_FRAME_LENGTH_BYTES);
+                m_setup->addFrame(data, p25::P25_TDU_FRAME_LENGTH_BYTES + 2U, p25::P25_LDU_FRAME_LENGTH_BYTES);
+            }
+
+            // ------------------------------------------------------
+            //  -- Modem Clocking                                 --
+            // ------------------------------------------------------
+
+            uint32_t ms = m_setup->m_stopWatch.elapsed();
+            m_setup->m_stopWatch.start();
+
+            m_setup->m_modem->clock(ms);
+
+            m_setup->timerClock();
+
+            if (ms < 2U)
+                Thread::sleep(1U);
         }
-
-        // ------------------------------------------------------
-        //  -- Modem Clocking                                 --
-        // ------------------------------------------------------
-
-        uint32_t ms = m_setup->m_stopWatch.elapsed();
-        m_setup->m_stopWatch.start();
-
-        m_setup->m_modem->clock(ms);
-
-        m_setup->timerClock();
-
-        if (ms < 2U)
-            Thread::sleep(1U);
     }
 
     /*
