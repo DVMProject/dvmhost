@@ -435,6 +435,7 @@ void Network::clock(uint32_t ms)
 
                                 j += 5U;
                             }
+                            LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
                         }
                     }
                 }
@@ -459,6 +460,7 @@ void Network::clock(uint32_t ms)
 
                                 j += 5U;
                             }
+                            LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
                         }
                     }
                 }
