@@ -333,11 +333,9 @@ int main(int argc, char** argv)
                     delete cal;
                 }
 #else
-                if (g_calibrate) {
-                    HostCal* cal = new HostCal(g_iniFile);
-                    ret = cal->run(argc, argv);
-                    delete cal;
-                }
+                HostCal* cal = new HostCal(g_iniFile);
+                ret = cal->run(argc, argv);
+                delete cal;
 #endif // defined(ENABLE_SETUP_TUI)
             }
             else {
