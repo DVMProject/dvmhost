@@ -1138,10 +1138,6 @@ void Voice::writeNet_LDU1()
         }
     }
     else {
-        if (m_p25->m_rfLastDstId != 0U) {
-            resetNet();
-            return;
-        }
         LogWarning(LOG_NET, P25_LDU1_STR ", last LDU1 LC has bad data, dstId = 0");
     }
 
