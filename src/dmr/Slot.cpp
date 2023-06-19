@@ -164,6 +164,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
     m_supervisor(false),
+    m_notifyCC(true),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -915,8 +916,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 {
     // callback REST API to release the granted TG on the specified control channel
     if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (m_controlChData.address() == "127.0.0.1") {
-            // cowardly ignore trying to send release grants to ourselves
+        if (!m_notifyCC) {
             return;
         }
 
@@ -943,8 +943,7 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 {
     // callback REST API to touch the granted TG on the specified control channel
     if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (m_controlChData.address() == "127.0.0.1") {
-            // cowardly ignore trying to send touch grants to ourselves
+        if (!m_notifyCC) {
             return;
         }
 

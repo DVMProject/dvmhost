@@ -178,7 +178,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
     }
 
     m_enableTSCC = enableTSCC;
-    
+
+    yaml::Node rfssConfig = systemConf["config"];
+    yaml::Node controlCh = rfssConfig["controlCh"];
+    bool notifyCC = controlCh["notifyEnable"].as<bool>(true);
+    m_slot1->setNotifyCC(notifyCC);
+    m_slot2->setNotifyCC(notifyCC);
 
     uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
     if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {

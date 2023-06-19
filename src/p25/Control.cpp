@@ -140,6 +140,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_notifyCC(true),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -357,6 +358,15 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
 
     m_trunk->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
+
+    yaml::Node rfssConfig = systemConf["config"];
+    yaml::Node controlCh = rfssConfig["controlCh"];
+    m_notifyCC = controlCh["notifyEnable"].as<bool>(true);
+    
+    // voice on control forcibly disables CC notification
+    if (m_voiceOnControl) {
+        m_notifyCC = false;
+    }
 
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
@@ -1262,8 +1272,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 {
     // callback REST API to release the granted TG on the specified control channel
     if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (m_controlChData.address() == "127.0.0.1") {
-            // cowardly ignore trying to send release grants to ourselves
+        if (!m_notifyCC) {
             return;
         }
 
@@ -1288,8 +1297,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
 {
     // callback REST API to touch the granted TG on the specified control channel
     if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (m_controlChData.address() == "127.0.0.1") {
-            // cowardly ignore trying to send touch grants to ourselves
+        if (!m_notifyCC) {
             return;
         }
 

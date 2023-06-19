@@ -327,7 +327,7 @@ system:
         #
         # Control Channel
         # Note: These parameters are used by a voice channel to communicate back to a
-        #   control channel to give the control channel "realtime" traffic channel updates.
+        #   control channel to give the control channel "real time" traffic channel updates.
         #
         controlCh:
             # REST API IP Address for control channel.
@@ -336,6 +336,8 @@ system:
             restPort: 9990
             # REST API access password for control channel.
             restPassword: "PASSWORD"
+            # Flag indicating voice channels will notify the control channel of traffic status.
+            notifyEnable: true
 
         #
         # Voice Channels

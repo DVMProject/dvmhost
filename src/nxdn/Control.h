@@ -202,6 +202,8 @@ namespace nxdn
 
         bool m_dumpRCCH;
 
+        bool m_notifyCC;
+
         bool m_verbose;
         bool m_debug;
 
