@@ -563,7 +563,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
             }
         }
         else {
-            if (!m_disableGrantSrcIdCheck) {
+            if (!m_disableGrantSrcIdCheck && !net) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
                 uint32_t grantedSrcId = m_nxdn->m_affiliations.getGrantedSrcId(dstId);
@@ -582,6 +582,15 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
 
             chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
             m_nxdn->m_affiliations.touchGrant(dstId);
+        }
+    }
+    else {
+        if (m_nxdn->m_affiliations.isGranted(dstId)) {
+            chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
+            m_nxdn->m_affiliations.touchGrant(dstId);
+        }
+        else {
+            return false;
         }
     }
 

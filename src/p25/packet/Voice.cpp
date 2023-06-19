@@ -382,7 +382,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // single-channel trunking or voice on control support?
             if (m_p25->m_control && m_p25->m_voiceOnControl) {
-                m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true);
+                m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true, true);
             }
 
             m_hadVoice = true;

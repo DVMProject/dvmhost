@@ -861,7 +861,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            if (!m_tscc->m_disableGrantSrcIdCheck) {
+            if (!m_tscc->m_disableGrantSrcIdCheck && !net) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
                 uint32_t grantedSrcId = m_tscc->m_affiliations->getGrantedSrcId(dstId);
@@ -882,6 +882,17 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
             m_tscc->m_affiliations->touchGrant(dstId);
+        }
+    }
+    else {
+        if (m_tscc->m_affiliations->isGranted(dstId)) {
+            chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
+            slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
+
+            m_tscc->m_affiliations->touchGrant(dstId);
+        }
+        else {
+            return false;
         }
     }
 
