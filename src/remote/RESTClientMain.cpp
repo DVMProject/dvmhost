@@ -51,7 +51,6 @@
 // ---------------------------------------------------------------------------
 
 #define RCD_GET_VERSION                 "version"
-#define RCD_GET_HELP                    "help"
 #define RCD_GET_STATUS                  "status"
 #define RCD_GET_VOICE_CH                "voice-ch"
 
@@ -73,6 +72,7 @@
 
 #define RCD_RELEASE_GRANTS              "rel-grnts"
 #define RCD_RELEASE_AFFS                "rel-affs"
+#define RCD_RELEASE_AFF                 "rel-aff"
 
 #define RCD_DMR_BEACON                  "dmr-beacon"
 #define RCD_P25_CC                      "p25-cc"
@@ -91,7 +91,6 @@
 #define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
 #define RCD_P25_RID_GAQ                 "p25-rid-gaq"
 #define RCD_P25_RID_UREG                "p25-rid-ureg"
-#define RCD_P25_RID_EMERG               "p25-rid-emerg"
 
 #define RCD_DMR_CC_DEDICATED            "dmr-cc-dedicated"
 #define RCD_DMR_CC_BCAST                "dmr-cc-bcast"
@@ -150,16 +149,75 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-dvh] [-a <address>] [-p <port>] [-P <password>] <command>\n\n"
-        "  -a       remote modem command address\n"
-        "  -p       remote modem command port\n"
-        "  -P       remote modem authentication password\n"
+    ::fprintf(stdout, "usage: %s [-dvh] [-a <address>] [-p <port>] [-P <password>] <command> <arguments ...>\n\n"
+        "  -a                          remote modem command address\n"
+        "  -p                          remote modem command port\n"
+        "  -P                          remote modem authentication password\n"
         "\n"
-        "  -d       enable debug\n"
-        "  -v       show version information\n"
-        "  -h       show this screen\n"
-        "  --       stop handling options\n",
+        "  -d                          enable debug\n"
+        "  -v                          show version information\n"
+        "  -h                          show this screen\n"
+        "  --                          stop handling options\n",
         g_progExe.c_str());
+
+    std::string reply = "";
+    reply += "Modem States:\r\n";
+    reply += "  1   - DMR (Digital Mobile Radio)\r\n";
+    reply += "  2   - P25 (Project 25)\r\n";
+    reply += "  3   - NXDN (Next Generation Digital Narrowband)\r\n";
+    reply += "\r\nRCON Commands & Arguments\r\nGeneral Commands:\r\n";
+    reply += "  version                     Display current version of host\r\n";
+    reply += "  status                      Display current settings and operation mode\r\n";
+    reply += "  voice-ch                    Retrieves the list of configured voice channels\r\n";
+    reply += "\r\n";
+    reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
+    reply += "  mdm-kill                    Causes the host to quit\r\n";
+    reply += "  mdm-force-kill              Causes the host to quit immediately\r\n";
+    reply += "\r\n";
+    reply += "  permit-tg <state> <dstid>   Causes the host to permit the specified destination ID if non-authoritative\r\n";
+    reply += "  grant-tg <state> <dstid> <uu> Causes the host to grant the specified destination ID if non-authoritative\r\n";
+    reply += "\r\n";
+    reply += "  rid-whitelist <rid>         Whitelists the specified RID in the host ACL tables\r\n";
+    reply += "  rid-blacklist <rid>         Blacklists the specified RID in the host ACL tables\r\n";
+    reply += "\r\n";
+    reply += "  rel-grnts                   Forcibly releases all channel grants\r\n";
+    reply += "  rel-affs                    Forcibly releases all group affiliations\r\n";
+    reply += "  rel-aff <state> <dstid>     Forcibly releases specified group affiliations\r\n";
+    reply += "\r\n";
+    reply += "  dmr-beacon                  Transmits a DMR beacon burst\r\n";
+    reply += "  p25-cc                      Transmits a non-continous P25 CC burst\r\n";
+    reply += "  p25-cc-fallback <0/1>       Sets the P25 CC into conventional fallback mode\r\n";
+    reply += "  nxdn-cc                     Transmits a non-continous NXDN CC burst\r\n";
+    reply += "\r\n";
+    reply += "  dmr-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  dmr-dump-csbk <0/1>\r\n";
+    reply += "  p25-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  p25-dump-tsbk <0/1>\r\n";
+    reply += "  nxdn-debug <debug 0/1> <verbose 0/1>\r\n";
+    reply += "  nxdn-dump-rcch <0/1>\r\n";
+    reply += "\r\nDMR Commands:\r\n";
+    reply += "  dmr-rid-page <rid>          Pages/Calls the specified RID\r\n";
+    reply += "  dmr-rid-check <rid>         Radio Checks the specified RID\r\n";
+    reply += "  dmr-rid-inhibit <rid>       Inhibits the specified RID\r\n";
+    reply += "  dmr-rid-uninhibit <rid>     Uninhibits the specified RID\r\n";
+    reply += "\r\n";
+    reply += "  dmr-cc-dedicated            Enables or disables dedicated control channel\r\n";
+    reply += "  dmr-cc-bcast                Enables or disables broadcast of the control channel\r\n";
+    reply += "\r\nP25 Commands:\r\n";
+    reply += "  p25-set-mfid <mfid>         Sets the P25 MFId for the next sent P25 command\r\n";
+    reply += "  p25-rid-page <rid>          Pages/Calls the specified RID\r\n";
+    reply += "  p25-rid-check <rid>         Radio Checks the specified RID\r\n";
+    reply += "  p25-rid-inhibit <rid>       Inhibits the specified RID\r\n";
+    reply += "  p25-rid-uninhibit <rid>     Uninhibits the specified RID\r\n";
+    reply += "  p25-rid-gaq <rid>           Group affiliation queries the specified RID\r\n";
+    reply += "  p25-rid-ureg <rid>          Demand unit registration for the specified RID\r\n";
+    reply += "\r\n";
+    reply += "  p25-cc-dedicated            Enables or disables dedicated control channel\r\n";
+    reply += "  p25-cc-bcast                Enables or disables broadcast of the control channel\r\n";
+    reply += "\r\nNXDN Commands:\r\n";
+    reply += "  nxdn-cc-dedicated           Enables or disables dedicated control channel\r\n";
+
+    ::fprintf(stdout, "\n%s\n", reply.c_str());
     exit(EXIT_FAILURE);
 }
 
@@ -263,73 +321,6 @@ uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n) { return (uint8_t
 /// <summary></summary>
 int8_t getArgInt8(std::vector<std::string> args, uint32_t n) { return (int8_t)::atoi(getArgString(args, n).c_str()); }
 
-/// <summary>
-/// Helper to print the remote control help.
-/// </summary>
-/// <returns></returns>
-std::string displayHelp()
-{
-    std::string reply = "";
-
-    reply += __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n";
-    reply += "Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n\r\n";
-
-    reply += "RCON Help\r\nGeneral Commands:\r\n";
-    reply += "  version                 Display current version of host\r\n";
-    reply += "  help                    Displays RCON help\r\n";
-    reply += "  status                  Display current settings and operation mode\r\n";
-    reply += "  voice-ch                Retrieves the list of configured voice channels\r\n";
-    reply += "\r\n";
-    reply += "  mdm-mode <mode>         Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
-    reply += "  mdm-kill                Causes the host to quit\r\n";
-    reply += "  mdm-force-kill          Causes the host to quit immediately\r\n";
-    reply += "\r\n";
-    reply += "  permit-tg <state> <dstid> Causes the host to permit the specified destination ID if non-authoritative\r\n";
-    reply += "  grant-tg <state> <dstid> <uu> Causes the host to grant the specified destination ID if non-authoritative\r\n";
-    reply += "\r\n";
-    reply += "  rid-whitelist <rid>     Whitelists the specified RID in the host ACL tables\r\n";
-    reply += "  rid-blacklist <rid>     Blacklists the specified RID in the host ACL tables\r\n";
-    reply += "\r\n";
-    reply += "  rel-grnts               Forcibly releases all channel grants\r\n";
-    reply += "  rel-affs                Forcibly releases all group affiliations\r\n";
-    reply += "\r\n";
-    reply += "  dmr-beacon              Transmits a DMR beacon burst\r\n";
-    reply += "  p25-cc                  Transmits a non-continous P25 CC burst\r\n";
-    reply += "  p25-cc-fallback <0/1>   Sets the P25 CC into conventional fallback mode\r\n";
-    reply += "  nxdn-cc                 Transmits a non-continous NXDN CC burst\r\n";
-    reply += "\r\n";
-    reply += "  dmr-debug <debug 0/1> <verbose 0/1>\r\n";
-    reply += "  dmr-dump-csbk <0/1>\r\n";
-    reply += "  p25-debug <debug 0/1> <verbose 0/1>\r\n";
-    reply += "  p25-dump-tsbk <0/1>\r\n";
-    reply += "  nxdn-debug <debug 0/1> <verbose 0/1>\r\n";
-    reply += "  nxdn-dump-rcch <0/1>\r\n";
-    reply += "\r\nDMR Commands:\r\n";
-    reply += "  dmr-rid-page <rid>      Pages/Calls the specified RID\r\n";
-    reply += "  dmr-rid-check <rid>     Radio Checks the specified RID\r\n";
-    reply += "  dmr-rid-inhibit <rid>   Inhibits the specified RID\r\n";
-    reply += "  dmr-rid-uninhibit <rid> Uninhibits the specified RID\r\n";
-    reply += "\r\n";
-    reply += "  dmr-cc-dedicated        Enables or disables dedicated control channel\r\n";
-    reply += "  dmr-cc-bcast            Enables or disables broadcast of the control channel\r\n";
-    reply += "\r\nP25 Commands:\r\n";
-    reply += "  p25-set-mfid <mfid>     Sets the P25 MFId for the next sent P25 command\r\n";
-    reply += "  p25-rid-page <rid>      Pages/Calls the specified RID\r\n";
-    reply += "  p25-rid-check <rid>     Radio Checks the specified RID\r\n";
-    reply += "  p25-rid-inhibit <rid>   Inhibits the specified RID\r\n";
-    reply += "  p25-rid-uninhibit <rid> Uninhibits the specified RID\r\n";
-    reply += "  p25-rid-gaq <rid>       Group affiliation queries the specified RID\r\n";
-    reply += "  p25-rid-ureg <rid>      Demand unit registration for the specified RID\r\n";
-    reply += "  p25-rid-emerg <src> <dst> Send emergency from the specified RID to the specified RID\r\n";
-    reply += "\r\n";
-    reply += "  p25-cc-dedicated        Enables or disables dedicated control channel\r\n";
-    reply += "  p25-cc-bcast            Enables or disables broadcast of the control channel\r\n";
-    reply += "\r\nNXDN Commands:\r\n";
-    reply += "  nxdn-cc-dedicated       Enables or disables dedicated control channel\r\n";
-
-    return reply;
-}
-
 // ---------------------------------------------------------------------------
 //  Program Entry Point
 // ---------------------------------------------------------------------------
@@ -395,6 +386,7 @@ int main(int argc, char** argv)
         LogWarning(LOG_REST, BAD_CMD_STR);
     }
     else {
+        json::object response = json::object();
         std::string rcom = args.at(0);
         uint32_t argCnt = args.size() - 1;
         if (g_debug) {
@@ -402,18 +394,14 @@ int main(int argc, char** argv)
         }
 
         // determine command to execute
-        if (rcom == RCD_GET_HELP) {
-            std::string help = displayHelp();
-            fprintf(stdout, "%s", help.c_str());
-        }
-        else if (rcom == RCD_GET_VERSION) {
-            retCode = client->send(HTTP_GET, GET_VERSION, json::object());
+        if (rcom == RCD_GET_VERSION) {
+            retCode = client->send(HTTP_GET, GET_VERSION, json::object(), response);
         }
         else if (rcom == RCD_GET_STATUS) {
-            retCode = client->send(HTTP_GET, GET_STATUS, json::object());
+            retCode = client->send(HTTP_GET, GET_STATUS, json::object(), response);
         }
         else if (rcom == RCD_GET_VOICE_CH) {
-            retCode = client->send(HTTP_GET, GET_VOICE_CH, json::object());
+            retCode = client->send(HTTP_GET, GET_VOICE_CH, json::object(), response);
         }
         else if (rcom == RCD_MODE && argCnt >= 1U) {
             std::string mode = getArgString(args, 0U);
@@ -421,21 +409,21 @@ int main(int argc, char** argv)
             json::object req = json::object();
             req["mode"].set<std::string>(mode);
 
-            retCode = client->send(HTTP_PUT, PUT_MDM_MODE, req);
+            retCode = client->send(HTTP_PUT, PUT_MDM_MODE, req, response);
         }
         else if (rcom == RCD_KILL) {
             json::object req = json::object();
             bool force = false;
             req["force"].set<bool>(force);
 
-            retCode = client->send(HTTP_PUT, PUT_MDM_KILL, req);
+            retCode = client->send(HTTP_PUT, PUT_MDM_KILL, req, response);
         }
         else if (rcom == RCD_FORCE_KILL) {
             json::object req = json::object();
             bool force = true;
             req["force"].set<bool>(force);
 
-            retCode = client->send(HTTP_PUT, PUT_MDM_KILL, req);
+            retCode = client->send(HTTP_PUT, PUT_MDM_KILL, req, response);
         }
         else if (rcom == RCD_PERMIT_TG && argCnt >= 1U) {
             json::object req = json::object();
@@ -450,7 +438,7 @@ int main(int argc, char** argv)
                 req["slot"].set<uint8_t>(slot);
             }
 
-            retCode = client->send(HTTP_PUT, PUT_PERMIT_TG, req);
+            retCode = client->send(HTTP_PUT, PUT_PERMIT_TG, req, response);
         }
         else if (rcom == RCD_GRANT_TG && argCnt >= 1U) {
             json::object req = json::object();
@@ -478,17 +466,32 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_RID_WLIST && argCnt >= 1U) {
             uint32_t srcId = getArgUInt32(args, 0U);
-            retCode = client->send(HTTP_GET, GET_RID_WHITELIST_BASE + std::to_string(srcId), json::object());
+            retCode = client->send(HTTP_GET, GET_RID_WHITELIST_BASE + std::to_string(srcId), json::object(), response);
         }
         else if (rcom == RCD_RID_BLIST && argCnt >= 1U) {
             uint32_t srcId = getArgUInt32(args, 0U);
-            retCode = client->send(HTTP_GET, GET_RID_BLACKLIST_BASE + std::to_string(srcId), json::object());
+            retCode = client->send(HTTP_GET, GET_RID_BLACKLIST_BASE + std::to_string(srcId), json::object(), response);
         }
         else if (rcom == RCD_RELEASE_GRANTS) {
-            retCode = client->send(HTTP_GET, GET_RELEASE_GRNTS, json::object());
+            retCode = client->send(HTTP_GET, GET_RELEASE_GRNTS, json::object(), response);
         }
         else if (rcom == RCD_RELEASE_AFFS) {
-            retCode = client->send(HTTP_GET, GET_RELEASE_AFFS, json::object());
+            retCode = client->send(HTTP_GET, GET_RELEASE_AFFS, json::object(), response);
+        }
+        else if (rcom == RCD_RELEASE_AFF) {
+            json::object req = json::object();
+            int state = getArgInt32(args, 0U);
+            req["state"].set<int>(state);
+
+            uint32_t dstId = getArgInt32(args, 1U);
+            req["dstId"].set<uint32_t>(dstId);
+
+            if (state == 1) {
+                uint8_t slot = getArgInt8(args, 2U);
+                req["slot"].set<uint8_t>(slot);
+            }
+
+            retCode = client->send(HTTP_PUT, PUT_RELEASE_TG, req, response);
         }
 
         /*
@@ -496,25 +499,25 @@ int main(int argc, char** argv)
         */
 
         else if (rcom == RCD_DMR_BEACON) {
-            retCode = client->send(HTTP_GET, GET_DMR_BEACON, json::object());
+            retCode = client->send(HTTP_GET, GET_DMR_BEACON, json::object(), response);
         }
         else if (rcom == RCD_DMR_DEBUG) {
             if (argCnt < 2U) {
-                retCode = client->send(HTTP_GET, GET_DMR_DEBUG_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_DMR_DEBUG_BASE, json::object(), response);
             }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
-                retCode = client->send(HTTP_GET, GET_DMR_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_DMR_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_DMR_DUMP_CSBK) {
             if (argCnt < 1U) {
-                retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE, json::object(), response);
             }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
-                retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
@@ -525,7 +528,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
         else if (rcom == RCD_DMR_RID_CHECK && argCnt >= 2U) {
             json::object req = json::object();
@@ -535,7 +538,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
         else if (rcom == RCD_DMR_RID_INHIBIT && argCnt >= 2U) {
             json::object req = json::object();
@@ -545,7 +548,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
         else if (rcom == RCD_DMR_RID_UNINHIBIT && argCnt >= 2U) {
             json::object req = json::object();
@@ -555,13 +558,13 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
         else if (rcom == RCD_DMR_CC_DEDICATED) {
-            retCode = client->send(HTTP_GET, GET_DMR_CC_DEDICATED, json::object());
+            retCode = client->send(HTTP_GET, GET_DMR_CC_DEDICATED, json::object(), response);
         }
         else if (rcom == RCD_DMR_CC_BCAST) {
-            retCode = client->send(HTTP_GET, GET_DMR_CC_BCAST, json::object());
+            retCode = client->send(HTTP_GET, GET_DMR_CC_BCAST, json::object(), response);
         }
 
         /*
@@ -569,25 +572,25 @@ int main(int argc, char** argv)
         */
 
         else if (rcom == RCD_P25_CC) {
-            retCode = client->send(HTTP_GET, GET_P25_CC, json::object());
+            retCode = client->send(HTTP_GET, GET_P25_CC, json::object(), response);
         }
         else if (rcom == RCD_P25_DEBUG) {
             if (argCnt < 2U) {
-                retCode = client->send(HTTP_GET, GET_P25_DEBUG_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_P25_DEBUG_BASE, json::object(), response);
             }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
-                retCode = client->send(HTTP_GET, GET_P25_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_P25_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_P25_DUMP_TSBK) {
             if (argCnt < 1U) {
-                retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE, json::object(), response);
             }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
-                retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_P25_DUMP_TSBK_BASE + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_P25_SET_MFID && argCnt >= 1U) {
@@ -596,7 +599,7 @@ int main(int argc, char** argv)
             uint8_t mfId = getArgUInt8(args, 0U);
             req["mfId"].set<uint8_t>(mfId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
             json::object req = json::object();
@@ -604,7 +607,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
             json::object req = json::object();
@@ -612,7 +615,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
             json::object req = json::object();
@@ -620,7 +623,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
             json::object req = json::object();
@@ -628,7 +631,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
             json::object req = json::object();
@@ -636,7 +639,7 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
             json::object req = json::object();
@@ -644,23 +647,13 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
-        }
-        else if (rcom == RCD_P25_RID_EMERG && argCnt >= 2U) {
-            json::object req = json::object();
-            req["command"].set<std::string>(std::string(RID_CMD_EMERG));
-            uint32_t dstId = getArgUInt32(args, 0U);
-            req["dstId"].set<uint32_t>(dstId);
-            uint32_t srcId = getArgUInt32(args, 1U);
-            req["srcId"].set<uint32_t>(srcId);
-
-            retCode = client->send(HTTP_PUT, PUT_P25_RID, req);
+            retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
         else if (rcom == RCD_P25_CC_DEDICATED) {
-            retCode = client->send(HTTP_GET, GET_P25_CC_DEDICATED, json::object());
+            retCode = client->send(HTTP_GET, GET_P25_CC_DEDICATED, json::object(), response);
         }
         else if (rcom == RCD_P25_CC_BCAST) {
-            retCode = client->send(HTTP_GET, GET_P25_CC_BCAST, json::object());
+            retCode = client->send(HTTP_GET, GET_P25_CC_BCAST, json::object(), response);
         }
 
         /*
@@ -668,31 +661,30 @@ int main(int argc, char** argv)
         */
 
         else if (rcom == RCD_NXDN_CC) {
-            retCode = client->send(HTTP_GET, GET_NXDN_CC, json::object());
+            retCode = client->send(HTTP_GET, GET_NXDN_CC, json::object(), response);
         }
         else if (rcom == RCD_NXDN_DEBUG) {
             if (argCnt < 2U) {
-                retCode = client->send(HTTP_GET, GET_NXDN_DEBUG_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_NXDN_DEBUG_BASE, json::object(), response);
             }
             else {
                 uint8_t debug = getArgUInt8(args, 0U);
                 uint8_t verbose = getArgUInt8(args, 1U);
-                retCode = client->send(HTTP_GET, GET_NXDN_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_NXDN_DEBUG_BASE + std::to_string(debug) + "/" + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_NXDN_DUMP_RCCH) {
             if (argCnt < 1U) {
-                retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE, json::object());
+                retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE, json::object(), response);
             }
             else {
                 uint8_t verbose = getArgUInt8(args, 0U);
-                retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE + std::to_string(verbose), json::object());
+                retCode = client->send(HTTP_GET, GET_NXDN_DUMP_RCCH_BASE + std::to_string(verbose), json::object(), response);
             }
         }
         else if (rcom == RCD_NXDN_CC_DEDICATED) {
-            retCode = client->send(HTTP_GET, GET_NXDN_CC_DEDICATED, json::object());
+            retCode = client->send(HTTP_GET, GET_NXDN_CC_DEDICATED, json::object(), response);
         }
-
         else {
             args.clear();
             LogError(LOG_REST, BAD_CMD_STR " (\"%s\")", rcom.c_str());

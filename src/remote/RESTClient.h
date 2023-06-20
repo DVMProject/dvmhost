@@ -47,10 +47,15 @@ public:
 
     /// <summary>Sends remote control command to the specified modem.</summary>
     int send(const std::string method, const std::string endpoint, json::object payload);
+    /// <summary>Sends remote control command to the specified modem.</summary>
+    int send(const std::string method, const std::string endpoint, json::object payload, json::object& response);
 
     /// <summary>Sends remote control command to the specified modem.</summary>
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
         const std::string endpoint, json::object payload, bool debug = false);
+    /// <summary>Sends remote control command to the specified modem.</summary>
+    static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
+        const std::string endpoint, json::object payload, json::object& response, bool debug = false);
 
 private:
     typedef network::rest::http::HTTPPayload HTTPPayload;

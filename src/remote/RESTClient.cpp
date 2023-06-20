@@ -54,6 +54,7 @@ using namespace network::rest::http;
 #define ERRNO_SOCK_OPEN 98
 #define ERRNO_BAD_API_RESPONSE 97
 #define ERRNO_API_CALL_TIMEOUT 96
+#define ERRNO_BAD_AUTH_RESPONSE 95
 #define ERRNO_INTERNAL_ERROR 100
 
 #define ERRNO_NO_ADDRESS 404
@@ -142,7 +143,21 @@ RESTClient::~RESTClient()
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RESTClient::send(const std::string method, const std::string endpoint, json::object payload)
 {
-    return send(m_address, m_port, m_password, method, endpoint, payload, m_debug);
+    json::object rsp = json::object();
+    return send(method, endpoint, payload, rsp);
+}
+
+/// <summary>
+/// Sends remote control command to the specified modem.
+/// </summary>
+/// <param name="method">REST API method.</param>
+/// <param name="endpoint">REST API endpoint.</param>
+/// <param name="payload">REST API endpoint payload.</param>
+/// <param name="response">REST API endpoint response.</param>
+/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+int RESTClient::send(const std::string method, const std::string endpoint, json::object payload, json::object& response)
+{
+    return send(m_address, m_port, m_password, method, endpoint, payload, response, m_debug);
 }
 
 /// <summary>
@@ -158,6 +173,25 @@ int RESTClient::send(const std::string method, const std::string endpoint, json:
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
     const std::string endpoint, json::object payload, bool debug)
+{
+    json::object rsp = json::object();
+    return send(address, port, password, method, endpoint, payload, rsp, debug);
+}
+
+/// <summary>
+/// Sends remote control command to the specified modem.
+/// </summary>
+/// <param name="address">Network Hostname/IP address to connect to.</param>
+/// <param name="port">Network port number.</param>
+/// <param name="password">Authentication password.</param>
+/// <param name="method">REST API method.</param>
+/// <param name="endpoint">REST API endpoint.</param>
+/// <param name="payload">REST API endpoint payload.</param>
+/// <param name="response">REST API endpoint response.</param>
+/// <param name="debug">Flag indicating whether debug is enabled.</param>
+/// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
+int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
+    const std::string endpoint, json::object payload, json::object& response, bool debug)
 {
     if (address.empty()) {
         return ERRNO_NO_ADDRESS;
@@ -236,7 +270,7 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
         else {
             client->close();
             delete client;
-            return ERRNO_BAD_API_RESPONSE;
+            return ERRNO_BAD_AUTH_RESPONSE;
         }
 
         client->close();
@@ -261,12 +295,12 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
             return ERRNO_API_CALL_TIMEOUT;
         }
 
-        rsp = json::object();
-        if (!parseResponseBody(m_response, rsp)) {
+        response = json::object();
+        if (!parseResponseBody(m_response, response)) {
             return ERRNO_BAD_API_RESPONSE;
         }
 
-        ret = rsp["status"].get<int>();
+        ret = response["status"].get<int>();
         if (m_console) {
             fprintf(stdout, "%s\r\n", m_response.content.c_str());
         }
