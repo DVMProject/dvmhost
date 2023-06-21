@@ -1155,7 +1155,16 @@ bool Modem::hasError() const
 /// </summary>
 void Modem::clearDMRFrame1()
 {
-    // TODO -- implement modem side buffer clear
+    uint8_t buffer[3U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_DMR_CLEAR1;
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::clearDMRFrame1(), Written", buffer, 3U);
+#endif
+    write(buffer, 3U);
+    Thread::sleep(5); // 5ms delay
 }
 
 /// <summary>
@@ -1163,7 +1172,16 @@ void Modem::clearDMRFrame1()
 /// </summary>
 void Modem::clearDMRFrame2()
 {
-    // TODO -- implement modem side buffer clear
+    uint8_t buffer[3U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_DMR_CLEAR2;
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::clearDMRFrame2(), Written", buffer, 3U);
+#endif
+    write(buffer, 3U);
+    Thread::sleep(5); // 5ms delay
 }
 
 /// <summary>
@@ -1180,6 +1198,7 @@ void Modem::clearP25Frame()
     Utils::dump(1U, "Modem::clearP25Data(), Written", buffer, 3U);
 #endif
     write(buffer, 3U);
+    Thread::sleep(5); // 5ms delay
 }
 
 /// <summary>
@@ -1187,7 +1206,16 @@ void Modem::clearP25Frame()
 /// </summary>
 void Modem::clearNXDNFrame()
 {
-    // TODO -- implement modem side buffer clear
+    uint8_t buffer[3U];
+
+    buffer[0U] = DVM_FRAME_START;
+    buffer[1U] = 3U;
+    buffer[2U] = CMD_NXDN_CLEAR;
+#if DEBUG_MODEM
+    Utils::dump(1U, "Modem::clearNXDNFrame(), Written", buffer, 3U);
+#endif
+    write(buffer, 3U);
+    Thread::sleep(5); // 5ms delay
 }
 
 /// <summary>
@@ -2536,6 +2564,10 @@ std::string Modem::cmdToString(uint8_t opcode)
         return std::string("DMR_ABORT");
     case CMD_DMR_CACH_AT_CTRL:
         return std::string("DMR_CACH_AT_CTRL");
+    case CMD_DMR_CLEAR1:
+        return std::string("DMR_CLEAR1");
+    case CMD_DMR_CLEAR2:
+        return std::string("DMR_CLEAR2");
 
     case CMD_P25_DATA:
         return std::string("P25_DATA");
@@ -2548,6 +2580,8 @@ std::string Modem::cmdToString(uint8_t opcode)
         return std::string("NXDN_DATA");
     case CMD_NXDN_LOST:
         return std::string("NXDN_LOST");
+    case CMD_NXDN_CLEAR:
+        return std::string("NXDN_CLEAR");
 
     case CMD_ACK:
         return std::string("ACK");

@@ -148,6 +148,8 @@ namespace modem
         CMD_DMR_START = 0x1DU,
         CMD_DMR_ABORT = 0x1EU,
         CMD_DMR_CACH_AT_CTRL = 0x1FU,
+        CMD_DMR_CLEAR1 = 0x20U,
+        CMD_DMR_CLEAR2 = 0x21U,
 
         CMD_P25_DATA = 0x31U,
         CMD_P25_LOST = 0x32U,
@@ -155,6 +157,7 @@ namespace modem
 
         CMD_NXDN_DATA = 0x41U,
         CMD_NXDN_LOST = 0x42U,
+        CMD_NXDN_CLEAR = 0x43U,
 
         CMD_ACK = 0x70U,
         CMD_NAK = 0x7FU,

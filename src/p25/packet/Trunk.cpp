@@ -37,6 +37,7 @@
 #include "edac/CRC.h"
 #include "remote/RESTClient.h"
 #include "Log.h"
+#include "Thread.h"
 #include "Utils.h"
 
 using namespace p25;
@@ -302,7 +303,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
 
                 if (iosp->getResponse() == P25_ANS_RSP_PROCEED) {
                     if (m_p25->m_ackTSBKRequests) {
-                        writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_ANS, false, true);
+                        writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
                     }
 
                     if (m_p25->m_authoritative) {
@@ -316,10 +317,12 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
                     }
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
-                    writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
+                    writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
+                    writeRF_TSDU_Deny(P25_WUID_FNE, dstId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_VCH);
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_WAIT) {
-                    writeRF_TSDU_Queue(P25_WUID_FNE, srcId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_ANS);
+                    writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
+                    writeRF_TSDU_Queue(P25_WUID_FNE, dstId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_VCH, false, false);
                 }
             }
             break;
@@ -2264,6 +2267,10 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit group grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
+            if (m_p25->m_voiceOnControl) {
+                for (int i = 0; i < 3; i++)
+                    writeRF_TSDU_SBF(iosp.get(), net);
+            }
         }
         else {
             if (!net) {
@@ -2314,6 +2321,10 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit private grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
+            if (m_p25->m_voiceOnControl) {
+                for (int i = 0; i < 3; i++)
+                    writeRF_TSDU_SBF(iosp.get(), net);
+            }
         }
     }
 
@@ -2603,7 +2614,8 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// <param name="reason"></param>
 /// <param name="service"></param>
 /// <param name="aiv"></param>
-void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+/// <param name="grp"></param>
+void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
     osp->setAIV(aiv);
@@ -2611,6 +2623,7 @@ void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, u
     osp->setDstId(dstId);
     osp->setService(service);
     osp->setResponse(reason);
+    osp->setGroup(grp);
 
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",

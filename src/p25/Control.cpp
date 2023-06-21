@@ -127,7 +127,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_ccPacketInterval(1000U, 0U, 5U),
+    m_ccPacketInterval(1000U, 0U, 10U),
     m_hangCount(3U * 8U),
     m_tduPreambleCount(8U),
     m_ccFrameCnt(0U),
@@ -646,6 +646,8 @@ uint32_t Control::getFrame(uint8_t* data)
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
+        m_modem->clearP25Frame();
+
         m_txImmQueue.getData(&len, 1U);
         m_txImmQueue.getData(data, len);
     }

@@ -208,7 +208,7 @@ namespace p25
             /// <summary>Helper to write a unit de-registration acknowledge packet.</summary>
             void writeRF_TSDU_U_Dereg_Ack(uint32_t srcId);
             /// <summary>Helper to write a queue packet.</summary>
-            void writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false);
+            void writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false, bool group = true);
             /// <summary>Helper to write a location registration response packet.</summary>
             bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp);
 

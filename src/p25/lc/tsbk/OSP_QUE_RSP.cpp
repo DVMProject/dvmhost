@@ -93,7 +93,7 @@ void OSP_QUE_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     }
 
     tsbkValue = (m_aivFlag) ? 0x80U : 0x00U;                                        // Additional Info Flag
-    tsbkValue = (tsbkValue << 6) + m_service;                                       // Service Type
+    tsbkValue = (tsbkValue << 6) + (m_service & 0x3FU);                             // Service Type
     tsbkValue = (tsbkValue << 8) + m_response;                                      // Deny/Queue Reason
 
     if (m_group) {

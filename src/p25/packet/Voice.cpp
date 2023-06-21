@@ -389,7 +389,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_p25->m_rfState = RS_RF_AUDIO;
 
-            m_p25->m_rfTGHang.start();
+            if (group) {
+                m_p25->m_rfTGHang.start();
+            }
+            else {
+                m_p25->m_rfTGHang.stop();
+            }
+            
             m_p25->m_rfLastDstId = dstId;
 
             // make sure we actually got a HDU -- otherwise treat the call as a late entry
