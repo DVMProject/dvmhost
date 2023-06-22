@@ -151,6 +151,7 @@ namespace p25
 
             bool m_sndcpChGrant;
             bool m_disableGrantSrcIdCheck;
+            bool m_redundantGrant;
 
             bool m_dumpTSBK;
 

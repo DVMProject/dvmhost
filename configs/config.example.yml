@@ -170,15 +170,18 @@ protocols:
             enableTimeDateAnn: false
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Flag indicating whether redundant grant responses should be transmitted.
+            #   (This is useful for single-channel VOC (voice on control) configurations.)
+            redundantGrantTransmit: false
 
         # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
         # Flag indicating whether or not the composite flag in the CC service options is set.
         #   (This is useful to disable for some radios when running in VOC mode.)
         disableCompositeFlag: false
-        # Flag indicating that the host will attempt to automatically inhibit illegal RIDs (those not in the
+        # Flag indicating that the host will attempt to automatically inhibit unauthorized RIDs (those not in the
         # RID ACL list).
-        inhibitIllegal: false
+        inhibitUnauthorized: false
         # Flag indicating the fallback legacy group grant for radios that do not support group affilition to 
         # have group grants transmitted. (Useful for alerting the FNE to affiliations to TGIDs for radios that
         # do not properly support group affiliation.)

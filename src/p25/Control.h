@@ -162,7 +162,7 @@ namespace p25
         modem::Modem* m_modem;
         network::Network* m_network;
 
-        bool m_inhibitIllegal;
+        bool m_inhibitUnauth;
         bool m_legacyGroupGrnt;
         bool m_legacyGroupReg;
 

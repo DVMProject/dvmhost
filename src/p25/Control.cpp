@@ -97,7 +97,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_timeout(timeout),
     m_modem(modem),
     m_network(network),
-    m_inhibitIllegal(false),
+    m_inhibitUnauth(false),
     m_legacyGroupGrnt(true),
     m_legacyGroupReg(false),
     m_duplex(duplex),
@@ -240,7 +240,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_trunk->m_patchSuperGroup = pSuperGroup;
 
-    m_inhibitIllegal = p25Protocol["inhibitIllegal"].as<bool>(false);
+    m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
     m_legacyGroupReg = p25Protocol["legacyGroupReg"].as<bool>(false);
 
@@ -266,6 +266,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
+    m_trunk->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
 
 #if ENABLE_DFSI_SUPPORT
     if (m_modem->isP25DFSI()) {
@@ -303,7 +304,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     uint32_t valueTest = (netId >> 8);
-    if (valueTest == 0xBEE) {
+    const uint32_t constValue = 0x17DC0U;
+    if (valueTest == (constValue >> 5)) {
         ::fatal("error 8\n");
     }
     m_siteData.setCallsign(cwCallsign);
@@ -385,7 +387,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
         LogInfo("    Time/Date Announcement TSBK: %s", m_trunk->m_ctrlTimeDateAnn ? "yes" : "no");
 
-        LogInfo("    Inhibit Illegal: %s", m_inhibitIllegal ? "yes" : "no");
+        LogInfo("    Inhibit Unauthorized: %s", m_inhibitUnauth ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
         LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
@@ -396,6 +398,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_trunk->m_unitToUnitAvailCheck ? "yes" : "no");
+
+        if (!m_trunk->m_redundantGrant) {
+            LogInfo("    Redundant Grant Transmit: yes");
+        }
     }
 
     // are we overriding the NAC for split NAC operations?
@@ -646,8 +652,6 @@ uint32_t Control::getFrame(uint8_t* data)
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
-        m_modem->clearP25Frame();
-
         m_txImmQueue.getData(&len, 1U);
         m_txImmQueue.getData(data, len);
     }

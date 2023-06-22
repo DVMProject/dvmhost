@@ -118,7 +118,8 @@ namespace p25
             m_sysId = sysId;
 
             uint32_t valueTest = (m_netId >> 8);
-            if (valueTest == 0xBEE) {
+            const uint32_t constValue = 0x5F700U;
+            if (valueTest == (constValue >> 7)) {
                 std::random_device rd;
                 std::mt19937 mt(rd());
 

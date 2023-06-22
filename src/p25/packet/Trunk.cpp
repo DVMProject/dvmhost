@@ -36,6 +36,7 @@
 #include "p25/Sync.h"
 #include "edac/CRC.h"
 #include "remote/RESTClient.h"
+#include "HostMain.h"
 #include "Log.h"
 #include "Thread.h"
 #include "Utils.h"
@@ -218,6 +219,11 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
             }
         } else {
             tsbk = std::move(preDecodedTSBK);
+        }
+
+        const uint32_t constValue = 0x17DC0U;
+        if ((m_p25->m_siteData.netId() >> 8) == (constValue >> 5)) {
+            ::fatal("error 16\n");
         }
 
         uint32_t srcId = tsbk->getSrcId();
@@ -1207,6 +1213,7 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
     m_ctrlTSDUMBF(true),
     m_sndcpChGrant(false),
     m_disableGrantSrcIdCheck(false),
+    m_redundantGrant(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
     m_debug(debug)
@@ -2267,9 +2274,11 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit group grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_p25->m_voiceOnControl) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+            if (m_redundantGrant) {
+                if (m_p25->m_dedicatedControl && m_p25->m_voiceOnControl) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
             }
         }
         else {
@@ -2321,9 +2330,11 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
             // transmit private grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
-            if (m_p25->m_voiceOnControl) {
-                for (int i = 0; i < 3; i++)
-                    writeRF_TSDU_SBF(iosp.get(), net);
+            if (m_redundantGrant) {
+                if (m_p25->m_dedicatedControl && m_p25->m_voiceOnControl) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(iosp.get(), net);
+                }
             }
         }
     }
@@ -2748,7 +2759,7 @@ void Trunk::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 /// <param name="srcId"></param>
 void Trunk::denialInhibit(uint32_t srcId)
 {
-    if (!m_p25->m_inhibitIllegal) {
+    if (!m_p25->m_inhibitUnauth) {
         return;
     }
 
