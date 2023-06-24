@@ -1277,7 +1277,7 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
-            if (!m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true)) {
+            if (!m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
                 LogError(LOG_NET, P25_HDU_STR " call failure, not granted, this should not happen, dstId = %u", dstId);
 
                 if (m_network != nullptr)

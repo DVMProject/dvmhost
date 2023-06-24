@@ -2132,6 +2132,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_p25->m_rfState = RS_RF_REJECTED;
             }
+            else {
+                LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
+            }
 
             return false;
         }
@@ -2143,6 +2146,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_p25->m_rfState = RS_RF_REJECTED;
+            }
+            else {
+                LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
             }
 
             return false;
@@ -2170,6 +2176,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                         ::ActivityLog("P25", true, "group grant request from %u to TG %u queued", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
                     }
+                    else {
+                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", dstId);
+                    }
 
                     return false;
                 }
@@ -2180,6 +2189,9 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 
                         ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u queued", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
+                    }
+                    else {
+                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) queued, no channels available, dstId = %u", dstId);
                     }
 
                     return false;
@@ -2199,11 +2211,14 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
                 uint32_t grantedSrcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
                 if (srcId != grantedSrcId) {
                     if (!net) {
-                        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
+                        LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
                         writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
 
                         ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
+                    }
+                    else {
+                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
                     }
 
                     return false;
