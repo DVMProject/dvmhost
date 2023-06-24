@@ -943,8 +943,32 @@ void Modem::clock(uint32_t ms)
             break;
 
         case CMD_NAK:
+        {
             LogWarning(LOG_MODEM, "NAK, command = 0x%02X (%s), reason = %u (%s)", m_buffer[3U], cmdToString(m_buffer[3U]).c_str(), m_buffer[4U], rsnToString(m_buffer[4U]).c_str());
-            break;
+            switch (m_buffer[4U]) {
+                case RSN_RINGBUFF_FULL:
+                {
+                    switch (m_buffer[3U]) {
+                        case CMD_DMR_DATA1:
+                            LogWarning(LOG_MODEM, "NAK, %s, dmrSpace1 = %u", rsnToString(m_buffer[4U]).c_str(), m_dmrSpace1);
+                            break;
+                        case CMD_DMR_DATA2:
+                            LogWarning(LOG_MODEM, "NAK, %s, dmrSpace2 = %u", rsnToString(m_buffer[4U]).c_str(), m_dmrSpace2);
+                            break;
+
+                        case CMD_P25_DATA:
+                            LogWarning(LOG_MODEM, "NAK, %s, p25Space = %u", rsnToString(m_buffer[4U]).c_str(), m_p25Space);
+                            break;
+
+                        case CMD_NXDN_DATA:
+                            LogWarning(LOG_MODEM, "NAK, %s, nxdnSpace = %u", rsnToString(m_buffer[4U]).c_str(), m_nxdnSpace);
+                            break;
+                        }
+                }
+                break;
+            }
+        }
+        break;
 
         case CMD_DEBUG1:
         case CMD_DEBUG2:
