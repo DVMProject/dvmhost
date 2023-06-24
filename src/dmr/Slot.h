@@ -194,6 +194,8 @@ namespace dmr
 
         uint32_t m_silenceThreshold;
 
+        uint8_t m_frameLossCnt;
+
         uint8_t m_ccSeq;
         bool m_ccRunning;
         bool m_ccPrevRunning;

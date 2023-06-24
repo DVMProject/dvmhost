@@ -58,6 +58,8 @@ using namespace nxdn::packet;
 
 const uint8_t MAX_SYNC_BYTES_ERRS = 0U;
 
+const uint8_t MAX_LOST_FRAMES = 4U;
+
 const uint8_t SCRAMBLER[] = {
 	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
 	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
@@ -130,6 +132,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
+    m_frameLossCnt(0U),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_siteData(),
@@ -355,44 +358,65 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
-    uint8_t type = data[0U];
     bool sync = data[1U] == 0x01U;
 
-    if (type == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
-        if (m_rssi != 0U) {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
-                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
+    if (data[0U] == modem::TAG_LOST) {
+        if (m_frameLossCnt > MAX_LOST_FRAMES) {
+            m_frameLossCnt = 0U;
+
+            if (m_rfState == RS_RF_AUDIO) {
+                if (m_rssi != 0U) {
+                    ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
+                        float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
+                }
+                else {
+                    ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%",
+                        float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+                }
+
+                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+                    m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+
+                m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+                if (!m_control) {
+                    notifyCC_ReleaseGrant(m_rfLC.getDstId());
+                }
+
+                writeEndRF();
+                return false;
+            }
+
+            if (m_rfState == RS_RF_DATA) {
+                writeEndRF();
+                return false;
+            }
+
+            m_rfState = RS_RF_LISTENING;
+
+            m_rfMask = 0x00U;
+            m_rfLC.reset();
+
+            return false;
         }
         else {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%",
-                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+            // increment the frame loss count by one for audio or data; otherwise drop
+            // packets
+            if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+                ++m_frameLossCnt;
+            }
+            else {
+                m_frameLossCnt = 0U;
+                m_rfState = RS_RF_LISTENING;
+
+                m_rfMask = 0x00U;
+                m_rfLC.reset();
+
+                return false;
+            }
         }
-
-        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-
-        m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
-        if (!m_control) {
-            notifyCC_ReleaseGrant(m_rfLC.getDstId());
-        }
-
-        writeEndRF();
-        return false;
     }
 
-	if (type == modem::TAG_LOST && m_rfState == RS_RF_DATA) {
-		writeEndRF();
-		return false;
-	}
-
-	if (type == modem::TAG_LOST) {
-		m_rfState = RS_RF_LISTENING;
-		m_rfMask  = 0x00U;
-		m_rfLC.reset();
-		return false;
-	}
-
-	// Have we got RSSI bytes on the end?
+	// have we got RSSI bytes on the end?
     if (len == (NXDN_FRAME_LENGTH_BYTES + 4U)) {
         uint16_t raw = 0U;
         raw |= (data[50U] << 8) & 0xFF00U;

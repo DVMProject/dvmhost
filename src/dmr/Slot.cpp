@@ -46,6 +46,12 @@ using namespace dmr::packet;
 #include <cmath>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint8_t MAX_LOST_FRAMES = 4U;
+
+// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
@@ -152,6 +158,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_aveRSSI(0U),
     m_rssiCount(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
+    m_frameLossCnt(0U),
     m_ccSeq(0U),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -195,52 +202,75 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
 
-    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
-        if (m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
-                m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
-        }
-        else {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%",
-                m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits));
-        }
+    if (data[0U] == modem::TAG_LOST) {
+        if (m_frameLossCnt > MAX_LOST_FRAMES) {
+            m_frameLossCnt = 0U;
 
-        LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
-            m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
+            if (m_rfState == RS_RF_AUDIO) {
+                if (m_rssi != 0U) {
+                    ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
+                        m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
+                }
+                else {
+                    ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%",
+                        m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits));
+                }
 
-        // release trunked grant (if necessary)
-        Slot *m_tscc = m_dmr->getTSCCSlot();
-        if (m_tscc != nullptr) {
-            if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
-                m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+                LogMessage(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
+                    m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
+
+                // release trunked grant (if necessary)
+                Slot *m_tscc = m_dmr->getTSCCSlot();
+                if (m_tscc != nullptr) {
+                    if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
+                        m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
+                    }
+                }
+
+                if (!m_tscc->m_enableTSCC) {
+                    notifyCC_ReleaseGrant(m_rfLC->getDstId());
+                }
+
+                if (m_rfTimeout) {
+                    writeEndRF();
+                    return false;
+                }
+                else {
+                    writeEndRF(true);
+                    return true;
+                }
             }
-        }
 
-        if (!m_tscc->m_enableTSCC) {
-            notifyCC_ReleaseGrant(m_rfLC->getDstId());
-        }
+            if (m_rfState == RS_RF_DATA) {
+                ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
+                writeEndRF();
+                return false;
+            }
 
-        if (m_rfTimeout) {
-            writeEndRF();
+            m_rfState = RS_RF_LISTENING;
+
+            m_rfLastDstId = 0U;
+            m_rfTGHang.stop();
+
             return false;
         }
         else {
-            writeEndRF(true);
-            return true;
+            // increment the frame loss count by one for audio or data; otherwise drop
+            // packets
+            if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+                ++m_frameLossCnt;
+            }
+            else {
+                // drop normally
+                m_frameLossCnt = 0U;
+                m_rfState = RS_RF_LISTENING;
+
+                m_rfLastDstId = 0U;
+                m_rfTGHang.stop();
+
+                return false;
+            }
         }
-    }
-
-    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_DATA) {
-        ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
-        writeEndRF();
-        return false;
-    }
-
-    if (data[0U] == modem::TAG_LOST) {
-        m_rfState = RS_RF_LISTENING;
-        m_rfLastDstId = 0U;
-        m_rfTGHang.stop();
-        return false;
     }
 
     // Have we got RSSI bytes on the end?
