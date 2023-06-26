@@ -944,24 +944,30 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 /// <param name="dstId"></param>
 void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 {
+    if (m_controlChData.address().empty()) {
+        return;
+    }
+
+    if (m_controlChData.port() == 0) {
+        return;
+    }
+
+    if (!m_notifyCC) {
+        return;
+    }
+
     // callback REST API to release the granted TG on the specified control channel
-    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (!m_notifyCC) {
-            return;
-        }
+    json::object req = json::object();
+    int state = modem::DVM_STATE::STATE_DMR;
+    req["state"].set<int>(state);
+    req["dstId"].set<uint32_t>(dstId);
+    uint8_t slot = m_slotNo;
+    req["slot"].set<uint8_t>(slot);
 
-        json::object req = json::object();
-        int state = modem::DVM_STATE::STATE_DMR;
-        req["state"].set<int>(state);
-        req["dstId"].set<uint32_t>(dstId);
-        uint8_t slot = m_slotNo;
-        req["slot"].set<uint8_t>(slot);
-
-        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-        }
+    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+        HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 }
 
@@ -971,24 +977,30 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 /// <param name="dstId"></param>
 void Slot::notifyCC_TouchGrant(uint32_t dstId)
 {
+    if (m_controlChData.address().empty()) {
+        return;
+    }
+
+    if (m_controlChData.port() == 0) {
+        return;
+    }
+
+    if (!m_notifyCC) {
+        return;
+    }
+
     // callback REST API to touch the granted TG on the specified control channel
-    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (!m_notifyCC) {
-            return;
-        }
+    json::object req = json::object();
+    int state = modem::DVM_STATE::STATE_DMR;
+    req["state"].set<int>(state);
+    req["dstId"].set<uint32_t>(dstId);
+    uint8_t slot = m_slotNo;
+    req["slot"].set<uint8_t>(slot);
 
-        json::object req = json::object();
-        int state = modem::DVM_STATE::STATE_DMR;
-        req["state"].set<int>(state);
-        req["dstId"].set<uint32_t>(dstId);
-        uint8_t slot = m_slotNo;
-        req["slot"].set<uint8_t>(slot);
-
-        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-            HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-            ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-        }
+    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+        HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 }
 

@@ -366,7 +366,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
-    m_notifyCC = controlCh["notifyEnable"].as<bool>(true);
+    m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
     
     // voice on control forcibly disables CC notification
     if (m_voiceOnControl) {
@@ -384,6 +384,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             }
         }
 
+        LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");
         if (!m_trunk->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
@@ -1299,22 +1300,28 @@ void Control::processNetwork()
 /// <param name="dstId"></param>
 void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 {
+    if (m_controlChData.address().empty()) {
+        return;
+    }
+
+    if (m_controlChData.port() == 0) {
+        return;
+    }
+
+    if (!m_notifyCC) {
+        return;
+    }
+
     // callback REST API to release the granted TG on the specified control channel
-    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (!m_notifyCC) {
-            return;
-        }
+    json::object req = json::object();
+    int state = modem::DVM_STATE::STATE_P25;
+    req["state"].set<int>(state);
+    req["dstId"].set<uint32_t>(dstId);
 
-        json::object req = json::object();
-        int state = modem::DVM_STATE::STATE_P25;
-        req["state"].set<int>(state);
-        req["dstId"].set<uint32_t>(dstId);
-
-        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-            HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-        }
+    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+        HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 }
 
@@ -1324,22 +1331,28 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::notifyCC_TouchGrant(uint32_t dstId)
 {
+    if (m_controlChData.address().empty()) {
+        return;
+    }
+
+    if (m_controlChData.port() == 0) {
+        return;
+    }
+
+    if (!m_notifyCC) {
+        return;
+    }
+
     // callback REST API to touch the granted TG on the specified control channel
-    if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-        if (!m_notifyCC) {
-            return;
-        }
+    json::object req = json::object();
+    int state = modem::DVM_STATE::STATE_P25;
+    req["state"].set<int>(state);
+    req["dstId"].set<uint32_t>(dstId);
 
-        json::object req = json::object();
-        int state = modem::DVM_STATE::STATE_P25;
-        req["state"].set<int>(state);
-        req["dstId"].set<uint32_t>(dstId);
-
-        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-            HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
-        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-            ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
-        }
+    int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+        HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+    if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+        ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 }
 

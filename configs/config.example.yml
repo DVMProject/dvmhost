@@ -333,14 +333,14 @@ system:
         #   control channel to give the control channel "real time" traffic channel updates.
         #
         controlCh:
-            # REST API IP Address for control channel.
-            restAddress: 127.0.0.1
-            # REST API Port number for control channel.
-            restPort: 9990
+            # REST API IP Address for control channel. (If blank, notifications are disabled.)
+            restAddress: 
+            # REST API Port number for control channel. (If 0, notifications are disabled.)
+            restPort: 0
             # REST API access password for control channel.
             restPassword: "PASSWORD"
             # Flag indicating voice channels will notify the control channel of traffic status.
-            notifyEnable: true
+            notifyEnable: false
 
         #
         # Voice Channels

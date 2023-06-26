@@ -1833,14 +1833,18 @@ bool Host::readParams()
         {
             yaml::Node controlCh = rfssConfig["controlCh"];
 
-            std::string restApiAddress = controlCh["restAddress"].as<std::string>("127.0.0.1");
+            std::string restApiAddress = controlCh["restAddress"].as<std::string>("");
             uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = controlCh["restPassword"].as<std::string>();
 
             VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
             m_controlChData = data;
 
-            ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+            if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
+                ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+            } else {
+                ::LogInfoEx(LOG_HOST, "No Control Channel REST API Configured, CC notify disabled");
+            }
         }
 
         /*

@@ -181,7 +181,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
 
     yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
-    bool notifyCC = controlCh["notifyEnable"].as<bool>(true);
+    bool notifyCC = controlCh["notifyEnable"].as<bool>(false);
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
@@ -210,6 +210,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
             }
         }
 
+        LogInfo("    Notify Control: %s", notifyCC ? "yes" : "no");
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
 
         LogInfo("    Verify Registration: %s", Slot::m_verifyReg ? "yes" : "no");
