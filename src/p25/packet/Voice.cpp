@@ -499,6 +499,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_control) {
                 m_p25->m_affiliations.touchGrant(m_rfLC.getDstId());
+            }
+
+            if (m_p25->m_notifyCC) {
                 m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
@@ -811,6 +814,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                }
+
+                if (m_p25->m_notifyCC) {
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
@@ -876,6 +882,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());
                     m_p25->m_affiliations.touchGrant(control.getDstId());
+                }
+
+                if (m_p25->m_notifyCC) {
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 

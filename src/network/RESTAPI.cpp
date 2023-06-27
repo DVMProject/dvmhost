@@ -32,6 +32,7 @@
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "nxdn/Control.h"
+#include "lookups/AffiliationLookup.h"
 #include "modem/Modem.h"
 #include "host/Host.h"
 #include "network/json/json.h"
