@@ -365,37 +365,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         if (m_frameLossCnt > MAX_LOST_FRAMES) {
             m_frameLossCnt = 0U;
 
-            if (m_rfState == RS_RF_AUDIO) {
-                if (m_rssi != 0U) {
-                    ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
-                        float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
-                }
-                else {
-                    ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%",
-                        float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-                }
-
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-                    m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-
-                m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
-                if (!m_control) {
-                    notifyCC_ReleaseGrant(m_rfLC.getDstId());
-                }
-
-                writeEndRF();
-                return false;
-            }
-
-            if (m_rfState == RS_RF_DATA) {
-                writeEndRF();
-                return false;
-            }
-
-            m_rfState = RS_RF_LISTENING;
-
-            m_rfMask = 0x00U;
-            m_rfLC.reset();
+            processFrameLoss();
 
             return false;
         }
@@ -676,6 +646,12 @@ void Control::clock(uint32_t ms)
         m_rfState = RS_RF_LISTENING;
     }
 
+    if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
+        m_frameLossCnt = 0U;
+    if (m_frameLossCnt >= MAX_LOST_FRAMES && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
+        processFrameLoss();
+    }
+
     // clock data and trunking
     if (m_trunk != nullptr) {
         m_trunk->clock(ms);
@@ -913,6 +889,42 @@ void Control::processNetwork()
             ret = m_voice->processNetwork(usc, option, lc, data.get(), frameLength);
             break;
     }
+}
+
+/// <summary>
+/// Helper to process loss of frame stream from modem.
+/// </summary>
+void Control::processFrameLoss()
+{
+    if (m_rfState == RS_RF_AUDIO) {
+        if (m_rssi != 0U) {
+            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
+        }
+        else {
+            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, loss count: %u",
+                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
+        }
+
+        LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+
+        m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        if (!m_control) {
+            notifyCC_ReleaseGrant(m_rfLC.getDstId());
+        }
+
+        writeEndRF();
+    }
+
+    if (m_rfState == RS_RF_DATA) {
+        writeEndRF();
+    }
+
+    m_rfState = RS_RF_LISTENING;
+
+    m_rfMask = 0x00U;
+    m_rfLC.reset();
 }
 
 /// <summary>

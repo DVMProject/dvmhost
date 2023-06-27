@@ -214,6 +214,8 @@ namespace nxdn
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
+        /// <summary>Helper to process loss of frame stream from modem.</summary>
+        void processFrameLoss();
 
         /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
         void notifyCC_ReleaseGrant(uint32_t dstId);

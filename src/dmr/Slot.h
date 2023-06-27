@@ -268,6 +268,9 @@ namespace dmr
         /// <summary>Add data frame to the data ring buffer.</summary>
         void addFrame(const uint8_t* data, bool net = false, bool imm = false);
 
+        /// <summary>Helper to process loss of frame stream from modem.</summary>
+        void processFrameLoss();
+
         /// <summary>Helper to send a REST API request to the CC to release a channel grant at the end of a call.</summary>
         void notifyCC_ReleaseGrant(uint32_t dstId);
         /// <summary>Helper to send a REST API request to the CC to "touch" a channel grant to refresh grant timers.</summary>

@@ -58,7 +58,7 @@ const uint8_t MAX_SYNC_BYTES_ERRS = 4U;
 const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
-const uint8_t MAX_LOST_FRAMES = 4U;
+const uint8_t MAX_LOST_FRAMES = 6U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -448,63 +448,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         if (m_frameLossCnt > MAX_LOST_FRAMES) {
             m_frameLossCnt = 0U;
 
-            if (m_rfState == RS_RF_AUDIO) {
-                if (m_rssi != 0U) {
-                    ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
-                        float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
-                }
-                else {
-                    ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%",
-                        float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-                }
-
-                LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-                    m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-
-                m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
-                if (!m_control) {
-                    notifyCC_ReleaseGrant(m_voice->m_rfLC.getDstId());
-                }
-                m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
-
-                writeRF_TDU(false);
-                m_voice->m_lastDUID = P25_DUID_TDU;
-                m_voice->writeNetwork(data + 2U, P25_DUID_TDU);
-
-                m_rfState = RS_RF_LISTENING;
-                m_rfLastDstId = 0U;
-                m_rfTGHang.stop();
-
-                m_tailOnIdle = true;
-
-                m_rfTimeout.stop();
-                m_txQueue.clear();
-
-                if (m_network != nullptr)
-                    m_network->resetP25();
-
-                return false;
-            }
-
-            if (m_rfState == RS_RF_DATA) {
-                m_rfState = RS_RF_LISTENING;
-                m_rfLastDstId = 0U;
-                m_rfTGHang.stop();
-
-                m_tailOnIdle = true;
-
-                m_data->resetRF();
-
-                m_rfTimeout.stop();
-                m_txQueue.clear();
-
-                return false;
-            }
-
-            m_rfState = RS_RF_LISTENING;
-
-            m_voice->resetRF();
-            m_data->resetRF();
+            processFrameLoss();
 
             return false;
         }
@@ -613,6 +557,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
+            m_frameLossCnt = 0U;
             ret = m_voice->process(data, len);
             break;
 
@@ -847,6 +792,12 @@ void Control::clock(uint32_t ms)
             m_network->resetP25();
 
         m_rfState = RS_RF_LISTENING;
+    }
+
+    if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
+        m_frameLossCnt = 0U;
+    if (m_frameLossCnt >= MAX_LOST_FRAMES && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
+        processFrameLoss();
     }
 
     // clock data and trunking
@@ -1292,6 +1243,65 @@ void Control::processNetwork()
             m_trunk->processNetwork(data.get(), frameLength, control, lsd, duid);
             break;
     }
+}
+
+/// <summary>
+/// Helper to process loss of frame stream from modem.
+/// </summary>
+void Control::processFrameLoss()
+{
+    if (m_rfState == RS_RF_AUDIO) {
+        if (m_rssi != 0U) {
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
+        }
+        else {
+            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, loss count: %u",
+                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
+        }
+
+        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+
+        m_affiliations.releaseGrant(m_voice->m_rfLC.getDstId(), false);
+        if (!m_control) {
+            notifyCC_ReleaseGrant(m_voice->m_rfLC.getDstId());
+        }
+        m_trunk->writeNet_TSDU_Call_Term(m_voice->m_rfLC.getSrcId(), m_voice->m_rfLC.getDstId());
+
+        writeRF_TDU(false);
+        m_voice->m_lastDUID = P25_DUID_TDU;
+        //m_voice->writeNetwork(data + 2U, P25_DUID_TDU);
+        m_voice->writeNet_TDU();
+
+        m_rfState = RS_RF_LISTENING;
+        m_rfLastDstId = 0U;
+        m_rfTGHang.stop();
+
+        m_tailOnIdle = true;
+
+        m_rfTimeout.stop();
+        m_txQueue.clear();
+
+        if (m_network != nullptr)
+            m_network->resetP25();
+    }
+
+    if (m_rfState == RS_RF_DATA) {
+        m_rfState = RS_RF_LISTENING;
+        m_rfLastDstId = 0U;
+        m_rfTGHang.stop();
+
+        m_tailOnIdle = true;
+
+        m_data->resetRF();
+
+        m_rfTimeout.stop();
+        m_txQueue.clear();
+    }
+
+    m_voice->resetRF();
+    m_data->resetRF();
 }
 
 /// <summary>

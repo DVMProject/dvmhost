@@ -235,6 +235,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
                 m_nxdn->m_rfState = RS_RF_LISTENING;
                 m_nxdn->m_rfMask  = 0x00U;
                 m_nxdn->m_rfLC.reset();
+                m_nxdn->m_frameLossCnt = 0U;
                 return false;
             }
         } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
