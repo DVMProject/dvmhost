@@ -133,11 +133,6 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
             *fneHeader = _fneHeader;
         }
 
-        // ensure the RTP synchronization source ID matches the FNE stream ID
-        if (_rtpHeader.getSSRC() != _fneHeader.getStreamId()) {
-            LogWarning(LOG_NET, "FrameQueue::read(), RTP header and FNE header do not agree on stream ID? %u != %u", _rtpHeader.getSSRC(), _fneHeader.getStreamId());
-        }
-
         // copy message
         messageLength = _fneHeader.getMessageLength();
         __UNIQUE_UINT8_ARRAY(message, messageLength);
@@ -172,6 +167,25 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
     OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
 {
+    enqueueMessage(message, length, streamId, peerId, peerId, opcode, rtpSeq, addr, addrLen);
+}
+
+/// <summary>
+/// Cache "message" to frame queue.
+/// </summary>
+/// <param name="message">Message buffer to frame and queue.</param>
+/// <param name="length">Length of message.</param>
+/// <param name="streamId">Message stream ID.</param>
+/// <param name="peerId">Peer ID.</param>
+/// <param name="ssrc">RTP SSRC ID.</param>
+/// <param name="opcode">Opcode.</param>
+/// <param name="rtpSeq">RTP Sequence.</param>
+/// <param name="addr">IP address to write data to.</param>
+/// <param name="addrLen"></param>
+/// <returns></returns>
+void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+    uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
+{
     assert(message != nullptr);
     assert(length > 0U);
 
@@ -184,13 +198,12 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
     header.setPayloadType(DVM_RTP_PAYLOAD_TYPE);
     header.setSequence(rtpSeq);
-    header.setSSRC(streamId);
+    header.setSSRC(ssrc);
 
     // properly flag control opcodes
     if ((opcode.first == NET_FUNC_TRANSFER) || (opcode.first == NET_FUNC_GRANT)) {
         header.setPayloadType(DVM_CTRL_RTP_PAYLOAD_TYPE);
         header.setSequence(0U);
-        header.setSSRC(0U);
     }
 
     header.encode(buffer);

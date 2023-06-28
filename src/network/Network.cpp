@@ -98,7 +98,8 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_height(0),
     m_location(),
     m_restApiPassword(),
-    m_restApiPort(0)
+    m_restApiPort(0),
+    m_remotePeerId(0U)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -265,6 +266,12 @@ void Network::clock(uint32_t ms)
         if (m_debug) {
             LogDebug(LOG_NET, "RTP, peerId = %u, seq = %u, streamId = %u, func = %02X, subFunc = %02X", fneHeader.getPeerId(), rtpHeader.getSequence(),
                 fneHeader.getStreamId(), fneHeader.getFunction(), fneHeader.getSubFunction());
+        }
+
+        // ensure the RTP synchronization source ID matches the FNE peer ID
+        if (m_remotePeerId != 0U && rtpHeader.getSSRC() != m_remotePeerId) {
+            LogWarning(LOG_NET, "RTP header and traffic session do not agree on remote peer ID? %u != %u", rtpHeader.getSSRC(), m_remotePeerId);
+            // should this be a fatal error?
         }
 
         // is this RTP packet destined for us?
@@ -507,6 +514,7 @@ void Network::clock(uint32_t ms)
                     case NET_STAT_WAITING_CONFIG:
                         LogMessage(LOG_NET, "Logged into the master successfully");
                         m_loginStreamId = 0U;
+                        m_remotePeerId = rtpHeader.getSSRC();
                         pktSeq(true);
                         m_status = NET_STAT_RUNNING;
                         m_timeoutTimer.start();
@@ -641,6 +649,7 @@ bool Network::writeLogin()
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
 
     m_loginStreamId = createStreamId();
+    m_remotePeerId = 0U;
     m_frameQueue->enqueueMessage(buffer, 8U, m_loginStreamId, m_peerId, 
         { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
     return m_frameQueue->flushQueue();

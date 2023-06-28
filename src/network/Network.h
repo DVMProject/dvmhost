@@ -133,6 +133,8 @@ namespace network
         std::string m_restApiPassword;
         uint16_t m_restApiPort;
 
+        uint32_t m_remotePeerId;
+
         /// <summary>Writes login request to the network.</summary>
         bool writeLogin();
         /// <summary>Writes network authentication challenge.</summary>
