@@ -596,19 +596,6 @@ int Host::run()
         g_killed = true;
     }
 
-#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
-    // DFSI checks
-    if (m_useDFSI && m_dmrEnabled) {
-        ::LogError(LOG_HOST, "Cannot have DMR enabled when using DFSI!");
-        g_killed = true;
-    }
-
-    if (m_useDFSI && m_nxdnEnabled) {
-        ::LogError(LOG_HOST, "Cannot have NXDN enabled when using DFSI!");
-        g_killed = true;
-    }
-#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
-
     // P25 CC checks
     if (m_dmrEnabled && m_p25CtrlChannel) {
         ::LogError(LOG_HOST, "Cannot have DMR enabled when using dedicated P25 control!");
@@ -2032,12 +2019,6 @@ bool Host::createModem()
 
     yaml::Node modemProtocol = modemConf["protocol"];
     std::string portType = modemProtocol["type"].as<std::string>("null");
-#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
-    m_useDFSI = modemProtocol["dfsi"].as<bool>(false);
-#else
-    m_useDFSI = false;
-#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
-
     yaml::Node uartProtocol = modemProtocol["uart"];
     std::string uartPort = uartProtocol["port"].as<std::string>();
     uint32_t uartSpeed = uartProtocol["speed"].as<uint32_t>(115200);
@@ -2224,10 +2205,6 @@ bool Host::createModem()
         LogInfo("    P25 FIFO Size: %u bytes", p25FifoLength);
         LogInfo("    NXDN FIFO Size: %u bytes", nxdnFifoLength);
 
-        if (m_useDFSI) {
-            LogInfo("    Digital Fixed Station Interface: yes");
-        }
-
         if (ignoreModemConfigArea) {
             LogInfo("    Ignore Modem Configuration Area: yes");
         }
@@ -2253,9 +2230,6 @@ bool Host::createModem()
         m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
         m_modem->setDMRColorCode(m_dmrColorCode);
         m_modem->setP25NAC(m_p25NAC);
-#if defined(ENABLE_P25) && defined(ENABLE_DFSI)
-        m_modem->setP25DFSI(m_useDFSI);
-#endif // defined(ENABLE_P25) && defined(ENABLE_DFSI)
     }
 
     if (m_modemRemote) {

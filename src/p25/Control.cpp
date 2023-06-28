@@ -32,8 +32,6 @@
 #include "p25/P25Defines.h"
 #include "p25/Control.h"
 #include "p25/acl/AccessControl.h"
-#include "p25/dfsi/packet/DFSITrunk.h"
-#include "p25/dfsi/packet/DFSIVoice.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
@@ -156,22 +154,9 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
 
     m_hangCount = callHang * 4U;
 
-#if ENABLE_DFSI_SUPPORT
-    if (m_modem->isP25DFSI()) {
-        LogMessage(LOG_P25, "DFSI protocol mode is enabled.");
-        m_voice = new dfsi::packet::DFSIVoice(this, network, debug, verbose);
-        m_trunk = new dfsi::packet::DFSITrunk(this, network, dumpTSBKData, debug, verbose);
-    }
-    else {
-        m_voice = new Voice(this, network, debug, verbose);
-        m_trunk = new Trunk(this, network, dumpTSBKData, debug, verbose);
-        m_data = new Data(this, network, dumpPDUData, repeatPDU, debug, verbose);
-    }
-#else
     m_voice = new Voice(this, network, debug, verbose);
     m_trunk = new Trunk(this, network, dumpTSBKData, debug, verbose);
     m_data = new Data(this, network, dumpPDUData, repeatPDU, debug, verbose);
-#endif
 }
 
 /// <summary>
@@ -270,12 +255,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
     m_trunk->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
-
-#if ENABLE_DFSI_SUPPORT
-    if (m_modem->isP25DFSI()) {
-        m_trunk->m_ctrlTSDUMBF = false; // force SBF for TSDUs when using DFSI
-    }
-#endif
 
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_P25_VOICE_ERRORS) {
@@ -435,12 +414,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 bool Control::processFrame(uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
-
-#if ENABLE_DFSI_SUPPORT
-    if (m_modem->isP25DFSI()) {
-        return processDFSI(data, len);
-    }
-#endif
 
     bool sync = data[1U] == 0x01U;
 
@@ -958,160 +931,6 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     m_txQueue.addData(data, len);
 }
 
-#if ENABLE_DFSI_SUPPORT
-/// <summary>
-/// Process a DFSI data frame from the RF interface.
-/// </summary>
-/// <param name="data">Buffer containing data frame.</param>
-/// <param name="len">Length of data frame.</param>
-/// <returns></returns>
-bool Control::processDFSI(uint8_t* data, uint32_t len)
-{
-    assert(data != nullptr);
-
-    dfsi::LC dfsiLC = dfsi::LC();
-
-    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_AUDIO) {
-        if (m_rssi != 0U) {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
-                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount);
-        }
-        else {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%",
-                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-        }
-
-        LogMessage(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
-
-        if (m_control) {
-            m_trunk->releaseDstIdGrant(m_voice->m_rfLC.getDstId(), false);
-        }
-
-        writeRF_TDU(false);
-        m_voice->m_lastDUID = P25_DUID_TDU;
-        m_voice->writeNetworkRF(data + 2U, P25_DUID_TDU);
-
-        m_rfState = RS_RF_LISTENING;
-        m_rfLastDstId = 0U;
-        m_rfTGHang.stop();
-
-        m_tailOnIdle = true;
-
-        m_rfTimeout.stop();
-        m_queue.clear();
-
-        if (m_network != nullptr)
-            m_network->resetP25();
-
-        return false;
-    }
-
-    if (data[0U] == modem::TAG_LOST && m_rfState == RS_RF_DATA) {
-        m_rfState = RS_RF_LISTENING;
-        m_rfLastDstId = 0U;
-        m_rfTGHang.stop();
-
-        m_tailOnIdle = true;
-
-        m_data->resetRF();
-
-        m_rfTimeout.stop();
-        m_queue.clear();
-
-        return false;
-    }
-
-    if (data[0U] == modem::TAG_LOST) {
-        m_rfState = RS_RF_LISTENING;
-
-        m_voice->resetRF();
-        m_data->resetRF();
-
-        m_trunk->m_rfTSBK = lc::TSBK(m_siteData, m_idenEntry);
-
-        return false;
-    }
-
-    // Decode the NID
-    bool valid = dfsiLC.decodeNID(data + 2U);
-
-    if (!valid && m_rfState == RS_RF_LISTENING)
-        return false;
-
-    uint8_t duid = 0xFFU; // a very invalid DUID
-    uint8_t frameType = dfsiLC.getFrameType();
-
-    if (m_debug) {
-        LogDebug(LOG_RF, "P25 DFSI, rfState = %u, netState = %u, frameType = %u", m_rfState, m_netState, dfsiLC.getFrameType());
-    }
-
-    // are we interrupting a running CC?
-    if (m_ccRunning) {
-        if (duid != P25_DUID_TSDU) {
-            g_interruptP25Control = true;
-        }
-    }
-
-    // convert DFSI frame-types to DUIDs (this doesn't 100% line up)
-    if (frameType == dfsi::P25_DFSI_START_STOP || frameType == dfsi::P25_DFSI_VHDR1 ||
-        frameType == dfsi::P25_DFSI_VHDR2) {
-        duid = P25_DUID_HDU;
-    }
-    else if (frameType >= dfsi::P25_DFSI_LDU1_VOICE1 && frameType <= dfsi::P25_DFSI_LDU1_VOICE9) {
-        duid = P25_DUID_LDU1;
-    }
-    else if (frameType >= dfsi::P25_DFSI_LDU2_VOICE10 && frameType <= dfsi::P25_DFSI_LDU2_VOICE18) {
-        duid = P25_DUID_LDU2;
-    }
-    else if (frameType == dfsi::P25_DFSI_TSBK) {
-        duid = P25_DUID_TSDU;
-    }
-
-    bool ret = false;
-
-    // handle individual DUIDs
-    switch (duid) {
-    case P25_DUID_HDU:
-    case P25_DUID_LDU1:
-    case P25_DUID_LDU2:
-        if (!m_dedicatedControl)
-            ret = m_voice->process(data, len);
-        else {
-            if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
-                ret = m_voice->process(data, len);
-            }
-        }
-        break;
-
-    case P25_DUID_TDU:
-    case P25_DUID_TDULC:
-        ret = m_voice->process(data, len);
-        break;
-
-    case P25_DUID_PDU:
-        if (!m_dedicatedControl)
-            ret = m_data->process(data, len);
-        else {
-            if (m_voiceOnControl && m_trunk->isChBusy(m_siteData.channelNo())) {
-                ret = m_data->process(data, len);
-            }
-        }
-        break;
-
-    case P25_DUID_TSDU:
-        ret = m_trunk->process(data, len);
-        break;
-
-    default:
-        LogError(LOG_RF, "P25 unhandled DUID, duid = $%02X", duid);
-        return false;
-    }
-
-    return ret;
-}
-#endif
-
 /// <summary>
 /// Process a data frames from the network.
 /// </summary>
@@ -1492,13 +1311,6 @@ void Control::writeRF_Preamble(uint32_t preambleCount, bool force)
 /// <param name="noNetwork"></param>
 void Control::writeRF_TDU(bool noNetwork)
 {
-#ifdef ENABLE_DFSI_SUPPORT
-    // for now abort out of this...
-    if (m_modem->isP25DFSI()) {
-        return;
-    }
-#endif
-
     uint8_t data[P25_TDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TDU_FRAME_LENGTH_BYTES);
 

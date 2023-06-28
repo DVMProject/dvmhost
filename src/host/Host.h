@@ -93,7 +93,6 @@ private:
 
     bool m_duplex;
     bool m_fixedMode;
-    bool m_useDFSI;
 
     uint32_t m_timeout;
     uint32_t m_rfModeHang;

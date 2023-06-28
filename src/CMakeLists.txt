@@ -55,8 +55,6 @@ file(GLOB dvmhost_SRC
     "src/p25/data/*.cpp"
     "src/p25/dfsi/*.h"
     "src/p25/dfsi/*.cpp"
-    "src/p25/dfsi/packet/*.h"
-    "src/p25/dfsi/packet/*.cpp"
     "src/p25/edac/*.h"
     "src/p25/edac/*.cpp"
     "src/p25/lc/*.h"
@@ -170,12 +168,6 @@ if (ENABLE_NXDN)
 else ()
     message(CHECK_START "NXDN Digital Mode - disabled")
 endif (ENABLE_NXDN)
-
-option(ENABLE_DFSI_SUPPORT "Enable P25 DFSI Transport Support" off)
-if (ENABLE_DFSI_SUPPORT)
-    add_definitions(-DENABLE_DFSI_SUPPORT)
-    message(CHECK_START "P25 DFSI Support - enabled")
-endif (ENABLE_DFSI_SUPPORT)
 
 if (ENABLE_TUI_SUPPORT)
     option(ENABLE_SETUP_TUI "Enable interactive setup TUI" on)

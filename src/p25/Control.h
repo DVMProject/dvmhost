@@ -59,10 +59,8 @@ namespace p25
     // ---------------------------------------------------------------------------
 
     namespace packet { class HOST_SW_API Voice; }
-    namespace dfsi { namespace packet { class HOST_SW_API DFSIVoice; } }
     namespace packet { class HOST_SW_API Data; }
     namespace packet { class HOST_SW_API Trunk; }
-    namespace dfsi { namespace packet { class HOST_SW_API DFSITrunk; } }
     namespace lookups { class HOST_SW_API P25AffiliationLookup; }
 
     // ---------------------------------------------------------------------------
@@ -143,12 +141,10 @@ namespace p25
 
     private:
         friend class packet::Voice;
-        friend class dfsi::packet::DFSIVoice;
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
         friend class packet::Trunk;
-        friend class dfsi::packet::DFSITrunk;
         packet::Trunk* m_trunk;
         friend class lookups::P25AffiliationLookup;
 
@@ -229,11 +225,6 @@ namespace p25
 
         /// <summary>Add data frame to the data ring buffer.</summary>
         void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
-
-#if ENABLE_DFSI_SUPPORT
-        /// <summary>Process a DFSI data frame from the RF interface.</summary>
-        bool processDFSI(uint8_t* data, uint32_t len);
-#endif
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();

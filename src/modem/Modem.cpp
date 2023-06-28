@@ -183,7 +183,6 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_rxDMRQueue2(dmrQueueSize, "Modem RX DMR2"),
     m_rxP25Queue(p25QueueSize, "Modem RX P25"),
     m_rxNXDNQueue(nxdnQueueSize, "Modem RX NXDN"),
-    m_useDFSI(false),
     m_statusTimer(1000U, 0U, 250U),
     m_inactivityTimer(1000U, 8U),
     m_dmrSpace1(0U),
@@ -387,15 +386,6 @@ void Modem::setP25NAC(uint32_t nac)
     assert(nac < 0xFFFU);
 
     m_p25NAC = nac;
-}
-
-/// <summary>
-/// Sets the P25 DFSI data mode.
-/// </summary>
-/// <param name="nac"></param>
-void Modem::setP25DFSI(bool dfsi)
-{
-    m_useDFSI = dfsi;
 }
 
 /// <summary>
@@ -1130,15 +1120,6 @@ bool Modem::isHotspot() const
 }
 
 /// <summary>
-/// Helper to test if the modem is in P25 DFSI data mode.
-/// </summary>
-/// <returns>True, if the modem is in P25 DFSI data mode, otherwise false.</returns>
-bool Modem::isP25DFSI() const
-{
-    return m_useDFSI;
-}
-
-/// <summary>
 /// Flag indicating whether or not the air interface modem is transmitting.
 /// </summary>
 /// <returns>True, if air interface modem is transmitting, otherwise false.</returns>
@@ -1253,11 +1234,6 @@ void Modem::injectDMRFrame1(const uint8_t* data, uint32_t length)
     assert(data != nullptr);
     assert(length > 0U);
 
-    if (m_useDFSI) {
-        LogWarning(LOG_MODEM, "Cannot inject DMR Slot 1 Data in DFSI mode");
-        return;
-    }
-
     if (m_trace)
         Utils::dump(1U, "Injected DMR Slot 1 Data", data, length);
 
@@ -1283,11 +1259,6 @@ void Modem::injectDMRFrame2(const uint8_t* data, uint32_t length)
 #if defined(ENABLE_DMR)
     assert(data != nullptr);
     assert(length > 0U);
-
-    if (m_useDFSI) {
-        LogWarning(LOG_MODEM, "Cannot inject DMr Slot 2 Data in DFSI mode");
-        return;
-    }
 
     if (m_trace)
         Utils::dump(1U, "Injected DMR Slot 2 Data", data, length);
