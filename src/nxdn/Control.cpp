@@ -835,6 +835,7 @@ void Control::processNetwork()
         return;
     }
 
+    // process network message header
     uint8_t messageType = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
@@ -852,6 +853,7 @@ void Control::processNetwork()
     bool group = (buffer[15U] & 0x40U) == 0x40U ? false : true;
     lc.setGroup(group);
 
+    // process raw NXDN data bytes
     UInt8Array data;
     uint8_t frameLength = buffer[23U];
     if (frameLength <= 24) {
@@ -881,6 +883,7 @@ void Control::processNetwork()
     uint8_t usc = m_rfLastLICH.getFCT();
     uint8_t option = m_rfLastLICH.getOption();
 
+    // forward onto the specific processor for final processing and delivery
     switch (usc) {
         case NXDN_LICH_USC_UDCH:
             ret = m_data->processNetwork(option, lc, data.get(), frameLength);

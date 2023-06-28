@@ -286,9 +286,6 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_
                 }
             }
         }
-
-        // TODO TODO TODO
-        // TODO: handle checking group affiliations if affiliation option is enabled
     }
 
     return true;
@@ -338,9 +335,6 @@ bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t strea
         if (!tg.config().active()) {
             return false;
         }
-
-        // TODO TODO TODO
-        // TODO: handle checking group affiliations if affiliation option is enabled
     }
 
     return true;

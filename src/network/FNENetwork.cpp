@@ -516,8 +516,7 @@ void FNENetwork::clock(uint32_t ms)
 
                     // validate peer (simple validation really)
                     if (connection.connected() && connection.address() == ip) {
-                        // TODO TODO TODO
-                        // TODO: handle repeater grant request
+                        /* ignored */
                     }
                     else {
                         writePeerNAK(peerId, TAG_REPEATER_GRANT);

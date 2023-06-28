@@ -1132,6 +1132,7 @@ void Control::processNetwork()
         return;
     }
 
+    // process network message header
     uint8_t lco = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
@@ -1191,6 +1192,7 @@ void Control::processNetwork()
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
+    // process raw P25 data bytes
     UInt8Array data;
     uint8_t frameLength = buffer[23U];
     if (duid == p25::P25_DUID_PDU) {
@@ -1217,6 +1219,7 @@ void Control::processNetwork()
         Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
     }
 
+    // forward onto the specific processor for final processing and delivery
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:

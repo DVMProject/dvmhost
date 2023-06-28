@@ -259,9 +259,6 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t m
                 }
             }
         }
-
-        // TODO TODO TODO
-        // TODO: handle checking group affiliations if affiliation option is enabled
     }
 
     return true;
@@ -306,9 +303,6 @@ bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageT
     if (!tg.config().active()) {
         return false;
     }
-
-    // TODO TODO TODO
-    // TODO: handle checking group affiliations if affiliation option is enabled
 
     return true;
 }

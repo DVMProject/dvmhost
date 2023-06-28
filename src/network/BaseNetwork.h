@@ -93,8 +93,10 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
-    const uint32_t DMR_PACKET_SIZE = 55U;
-    const uint32_t PACKET_PAD = 8U;
+    const uint32_t  DMR_PACKET_SIZE = 55U;
+    const uint32_t  PACKET_PAD = 8U;
+    const uint32_t  P25_MSG_HDR_SIZE = 24U;
+    const uint32_t  NXDN_MSG_HDR_SIZE = 24U;
 
     const uint8_t   NET_SUBFUNC_NOP = 0xFFU;                                    // No Operation Sub-Function
 
@@ -276,6 +278,10 @@ namespace network
 
         /// <summary>Creates an DMR frame message.</summary>
         UInt8Array createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data);
+
+        /// <summary>Creates an P25 frame message header.</summary>
+        void createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 
+            uint8_t frameType = p25::P25_FT_DATA_UNIT);
 
         /// <summary>Creates an P25 LDU1 frame message.</summary>
         UInt8Array createP25_LDU1Message(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, 

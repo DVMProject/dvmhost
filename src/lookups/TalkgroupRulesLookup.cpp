@@ -319,7 +319,6 @@ bool TalkgroupRulesLookup::load()
             uint32_t tgId = groupVoice.source().tgId();
             uint8_t tgSlot = groupVoice.source().tgSlot();
             bool active = groupVoice.config().active();
-            bool affiliated = groupVoice.config().affiliated();
             bool parrot = groupVoice.config().parrot();
 
             uint32_t incCount = groupVoice.config().inclusion().size();
@@ -329,7 +328,7 @@ bool TalkgroupRulesLookup::load()
                 ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
             }
 
-            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u AFFILIATED: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u", groupName.c_str(), tgId, tgSlot, active, affiliated, parrot, incCount, excCount);
+            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount);
         }
     }
     m_mutex.unlock();

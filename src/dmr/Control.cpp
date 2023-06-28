@@ -652,6 +652,7 @@ void Control::processNetwork()
 
     data::Data data;
 
+    // process network message header
     uint8_t seqNo = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
@@ -695,6 +696,7 @@ void Control::processNetwork()
         LogDebug(LOG_NET, "DMR, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u", seqNo, srcId, dstId, flco, slotNo, length);
     }
 
+    // process raw DMR data bytes
     if (dataSync) {
         uint8_t dataType = buffer[15U] & 0x0FU;
         data.setData(buffer.get() + 20U);
@@ -713,6 +715,7 @@ void Control::processNetwork()
         data.setN(n);
     }
 
+    // forward onto the specific slot for final processing and delivery
     switch (slotNo) {
         case 1U:
             m_slot1->processNetwork(data);

@@ -771,39 +771,39 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE1);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 10U);
-                count += 22U;
+                count += dfsi::P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE2);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 26U);
-                count += 14U;
+                count += dfsi::P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE3);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 55U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE4);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 80U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE5);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 105U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE6);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 130U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE7);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 155U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE8);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 180U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU1_VOICE9);
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 204U);
-                count += 16U;
+                count += dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
                 m_netLastLDU1 = control;
                 m_netLastFrameType = frameType;
@@ -845,39 +845,39 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 (data[138U] == dfsi::P25_DFSI_LDU2_VOICE18)) {
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE10);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 10U);
-                count += 22U;
+                count += dfsi::P25_DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE11);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 26U);
-                count += 14U;
+                count += dfsi::P25_DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE12);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 55U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE13);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 80U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE14);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 105U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE15);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 130U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE16);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 155U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE17);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 180U);
-                count += 17U;
+                count += dfsi::P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
 
                 m_dfsiLC.setFrameType(dfsi::P25_DFSI_LDU2_VOICE18);
                 m_dfsiLC.decodeLDU2(data + count, m_netLDU2 + 204U);
-                count += 16U;
+                count += dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
                 if (m_p25->m_control) {
                     lc::LC control = lc::LC(*m_dfsiLC.control());

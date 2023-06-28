@@ -16,9 +16,6 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
-      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
-      affiliated: false
-
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -40,11 +37,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
-      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
-      affiliated: false
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
-
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -66,9 +60,6 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
-      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
-      affiliated: false
-
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -90,9 +81,6 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
-      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
-      affiliated: false
-
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -114,9 +102,6 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
-      # Flag indicating whether this talkgroup requires affiliations to repeat traffic.
-      affiliated: false
-
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).

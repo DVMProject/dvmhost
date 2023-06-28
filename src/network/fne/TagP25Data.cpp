@@ -306,9 +306,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t 
         }
     }
 
-    // TODO TODO TODO
-    // TODO: handle checking group affiliations if affiliation option is enabled
-
     return true;
 }
 
@@ -355,9 +352,6 @@ bool TagP25Data::validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, u
     if (!tg.config().active()) {
         return false;
     }
-
-    // TODO TODO TODO
-    // TODO: handle checking group affiliations if affiliation option is enabled
 
     return true;
 }

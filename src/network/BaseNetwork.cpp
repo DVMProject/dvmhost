@@ -645,6 +645,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
+    // construct DMR message header
     ::memcpy(buffer + 0U, TAG_DMR_DATA, 4U);
 
     uint32_t srcId = data.getSrcId();                                               // Source Address
@@ -679,16 +680,74 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 
     buffer[4U] = data.getSeqNo();                                                   // Sequence Number
 
-    data.getData(buffer + 20U);
-
     buffer[53U] = data.getBER();                                                    // Bit Error Rate
     buffer[54U] = data.getRSSI();                                                   // RSSI
+
+    // pack raw DMR message bytes
+    data.getData(buffer + 20U);
 
     if (m_debug)
         Utils::dump(1U, "Network Message, DMR", buffer, (DMR_PACKET_SIZE + PACKET_PAD));
 
     length = (DMR_PACKET_SIZE + PACKET_PAD);
     return UInt8Array(buffer);
+}
+
+/// <summary>
+/// Creates an P25 frame message header.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="duid"></param>
+/// <param name="control"></param>
+/// <param name="lsd"></param>
+/// <param name="frameType"></param>
+void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+    uint8_t frameType)
+{
+    assert(data != nullptr);
+
+    // construct P25 message header
+    ::memcpy(data + 0U, TAG_P25_DATA, 4U);
+
+    data[4U] = control.getLCO();                                                    // LCO
+
+    uint32_t srcId = control.getSrcId();                                            // Source Address
+    __SET_UINT16(srcId, data, 5U);
+
+    uint32_t dstId = control.getDstId();                                            // Target Address
+    __SET_UINT16(dstId, data, 8U);
+
+    data[15U] = control.getMFId();                                                  // MFId
+
+    data[20U] = lsd.getLSD1();                                                      // LSD 1
+    data[21U] = lsd.getLSD2();                                                      // LSD 2
+
+    data[22U] = duid;                                                               // DUID
+
+    data[180U] = frameType;                                                         // DVM Frame Type
+
+    // is this the first frame of a call?
+    if (frameType == p25::P25_FT_HDU_VALID) {
+        data[180U] = 0x01U;                                                         // First LDU1 Marker
+        data[181U] = control.getAlgId();                                            // Algorithm ID
+
+        uint32_t kid = control.getKId();
+        data[182U] = (kid >> 8) & 0xFFU;                                            // Key ID
+        data[183U] = (kid >> 0) & 0xFFU;
+
+        // copy MI data
+        uint8_t mi[p25::P25_MI_LENGTH_BYTES];
+        ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
+        control.getMI(mi);
+
+        if (m_debug) {
+            Utils::dump(1U, "P25 HDU MI written to network", mi, p25::P25_MI_LENGTH_BYTES);
+        }
+
+        for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
+            data[184U + i] = mi[i];                                               // Message Indicator
+        }
+    }
 }
 
 /// <summary>
@@ -710,95 +769,57 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
+    // construct P25 message header
+    createP25_MessageHdr(buffer, p25::P25_DUID_LDU1, control, lsd, frameType);
 
-    buffer[4U] = control.getLCO();                                                  // LCO
-
-    uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
-
-    uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
-
-    buffer[15U] = control.getMFId();                                                // MFId
-
-    buffer[20U] = lsd.getLSD1();                                                    // LSD 1
-    buffer[21U] = lsd.getLSD2();                                                    // LSD 2
-
-    buffer[22U] = p25::P25_DUID_LDU1;                                               // DUID
-
-    buffer[180U] = frameType;                                                       // DVM Frame Type
-
-    // is this the first frame of a call?
-    if (frameType == p25::P25_FT_HDU_VALID) {
-        buffer[180U] = 0x01U;                                                       // First LDU1 Marker
-        buffer[181U] = control.getAlgId();                                          // Algorithm ID
-
-        uint32_t kid = control.getKId();
-        buffer[182U] = (kid >> 8) & 0xFFU;                                          // Key ID
-        buffer[183U] = (kid >> 0) & 0xFFU;
-
-        // copy MI data
-        uint8_t mi[p25::P25_MI_LENGTH_BYTES];
-        ::memset(mi, 0x00U, p25::P25_MI_LENGTH_BYTES);
-        control.getMI(mi);
-
-        if (m_debug) {
-            Utils::dump(1U, "P25 HDU MI written to network", mi, p25::P25_MI_LENGTH_BYTES);
-        }
-
-        for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
-            buffer[184U + i] = mi[i];                                               // Message Indicator
-        }
-    }
-
-    uint32_t count = 24U;
+    // pack DFSI data
+    uint32_t count = P25_MSG_HDR_SIZE;
     uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE1);
     m_audio.decode(data, imbe, 0U);
     dfsiLC.encodeLDU1(buffer + 24U, imbe);
-    count += 22U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE2);
     m_audio.decode(data, imbe, 1U);
     dfsiLC.encodeLDU1(buffer + 46U, imbe);
-    count += 14U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE3);
     m_audio.decode(data, imbe, 2U);
     dfsiLC.encodeLDU1(buffer + 60U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE4);
     m_audio.decode(data, imbe, 3U);
     dfsiLC.encodeLDU1(buffer + 77U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE5);
     m_audio.decode(data, imbe, 4U);
     dfsiLC.encodeLDU1(buffer + 94U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE6);
     m_audio.decode(data, imbe, 5U);
     dfsiLC.encodeLDU1(buffer + 111U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE7);
     m_audio.decode(data, imbe, 6U);
     dfsiLC.encodeLDU1(buffer + 128U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE8);
     m_audio.decode(data, imbe, 7U);
     dfsiLC.encodeLDU1(buffer + 145U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE9);
     m_audio.decode(data, imbe, 8U);
     dfsiLC.encodeLDU1(buffer + 162U, imbe);
-    count += 16U;
+    count += p25::dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -827,70 +848,57 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
+    // construct P25 message header
+    createP25_MessageHdr(buffer, p25::P25_DUID_LDU2, control, lsd, p25::P25_FT_DATA_UNIT);
 
-    buffer[4U] = control.getLCO();                                                  // LCO
-
-    uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
-
-    uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
-
-    buffer[15U] = control.getMFId();                                                // MFId
-
-    buffer[20U] = lsd.getLSD1();                                                    // LSD 1
-    buffer[21U] = lsd.getLSD2();                                                    // LSD 2
-
-    buffer[22U] = p25::P25_DUID_LDU2;                                               // DUID
-
-    uint32_t count = 24U;
+    // pack DFSI data
+    uint32_t count = P25_MSG_HDR_SIZE;
     uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE10);
     m_audio.decode(data, imbe, 0U);
     dfsiLC.encodeLDU2(buffer + 24U, imbe);
-    count += 22U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE11);
     m_audio.decode(data, imbe, 1U);
     dfsiLC.encodeLDU2(buffer + 46U, imbe);
-    count += 14U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE12);
     m_audio.decode(data, imbe, 2U);
     dfsiLC.encodeLDU2(buffer + 60U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE13);
     m_audio.decode(data, imbe, 3U);
     dfsiLC.encodeLDU2(buffer + 77U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE14);
     m_audio.decode(data, imbe, 4U);
     dfsiLC.encodeLDU2(buffer + 94U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE15);
     m_audio.decode(data, imbe, 5U);
     dfsiLC.encodeLDU2(buffer + 111U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE16);
     m_audio.decode(data, imbe, 6U);
     dfsiLC.encodeLDU2(buffer + 128U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE17);
     m_audio.decode(data, imbe, 7U);
     dfsiLC.encodeLDU2(buffer + 145U, imbe);
-    count += 17U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE18);
     m_audio.decode(data, imbe, 8U);
     dfsiLC.encodeLDU2(buffer + 162U, imbe);
-    count += 16U;
+    count += p25::dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
     buffer[23U] = count;
 
@@ -913,24 +921,10 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
+    // construct P25 message header
+    createP25_MessageHdr(buffer, p25::P25_DUID_TDU, control, lsd, p25::P25_FT_DATA_UNIT);
 
-    buffer[4U] = control.getLCO();                                                  // LCO
-
-    uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
-
-    uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
-
-    buffer[15U] = control.getMFId();                                                // MFId
-
-    buffer[20U] = lsd.getLSD1();                                                    // LSD 1
-    buffer[21U] = lsd.getLSD2();                                                    // LSD 2
-
-    buffer[22U] = p25::P25_DUID_TDU;                                                // DUID
-
-    uint32_t count = 24U;
+    uint32_t count = P25_MSG_HDR_SIZE;
     buffer[23U] = count;
 
     if (m_debug)
@@ -954,24 +948,12 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
+    // construct P25 message header
+    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+    createP25_MessageHdr(buffer, p25::P25_DUID_TSDU, control, lsd, p25::P25_FT_DATA_UNIT);
 
-    buffer[4U] = control.getLCO();                                                  // LCO
-
-    uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, buffer, 5U);
-
-    uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, buffer, 8U);
-
-    buffer[15U] = control.getMFId();                                                // MFId
-
-    buffer[20U] = 0U;                                                               // Reserved (LSD 1)
-    buffer[21U] = 0U;                                                               // Reserved (LSD 2)
-
-    buffer[22U] = p25::P25_DUID_TSDU;                                               // DUID
-
-    uint32_t count = 24U;
+    // pack raw P25 TSDU bytes
+    uint32_t count = P25_MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, p25::P25_TSDU_FRAME_LENGTH_BYTES);
     count += p25::P25_TSDU_FRAME_LENGTH_BYTES;
@@ -1011,6 +993,12 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
+    // construct P25 message header
+    /*
+    ** PDU packs different bytes into the P25 message header space from the rest of the
+    ** P25 DUIDs
+    */
+
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
     buffer[4U] = header.getSAP();                                                   // Service Access Point
@@ -1030,7 +1018,8 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 
     buffer[22U] = p25::P25_DUID_PDU;                                                // DUID
 
-    uint32_t count = 24U;
+    // pack raw P25 PDU bytes
+    uint32_t count = P25_MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, len);
     count += len;
@@ -1059,6 +1048,7 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
+    // construct NXDN message header
     ::memcpy(buffer + 0U, TAG_NXDN_DATA, 4U);
 
     buffer[4U] = lc.getMessageType();                                           // Message Type
@@ -1071,7 +1061,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
-    uint32_t count = 24U;
+    // pack raw NXDN message bytes
+    uint32_t count = NXDN_MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, len);
     count += len;
