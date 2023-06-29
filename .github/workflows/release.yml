@@ -43,6 +43,7 @@ jobs:
           submodules: recursive
       - name: Install dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y git build-essential cmake \
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
@@ -52,9 +53,11 @@ jobs:
         run: |
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+              -DENABLE_TUI_SUPPORT=0 \
               -DCROSS_COMPILE_RPI_ARM=1 .
           else
             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s" \
+              -DENABLE_TUI_SUPPORT=0 \
               -D "CROSS_COMPILE_$(echo '${{ matrix.arch }}' | tr '[:lower:]' '[:upper:]')=1" .
           fi
 
