@@ -41,7 +41,7 @@ using namespace finalcut;
 class HOST_SW_API SetupApplication final : public finalcut::FApplication {
 public:
     /// <summary>
-    /// Initializes a new instance of the SetupWnd class.
+    /// Initializes a new instance of the SetupApplication class.
     /// </summary>
     /// <param name="setup"></param>
     /// <param name="argc"></param>
