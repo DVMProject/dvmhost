@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       buildType:
-        description: 'CMake Build Type'
+        description: "CMake Build Type"
         required: true
-        default: 'Release'
+        default: "Release"
         type: choice
         options:
           - Release
@@ -15,7 +15,7 @@ on:
           - RelWithDebInfo
           - MinSizeRel
       stripSymbols:
-        description: 'Strip Symbols'
+        description: "Strip Symbols"
         required: false
         type: boolean
   push:
@@ -60,6 +60,7 @@ jobs:
           submodules: recursive
       - name: Install dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y git build-essential cmake \
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
@@ -67,13 +68,14 @@ jobs:
             libasio-dev
       - name: Build
         run: |
+          build_args='-DENABLE_TUI_SUPPORT=0'
           if [[ "${{ github.event_name }}" == 'push' ]]; then
-            build_args="-DCMAKE_BUILD_TYPE=${{ inputs.buildType }}"
+            build_args="$build_args -DCMAKE_BUILD_TYPE=${{ inputs.buildType }}"
             if [[ "${{ inputs.stripSymbols }}" == 'true' ]]; then
               build_args="$build_args -DCMAKE_C_FLAGS='-s' -DCMAKE_CXX_FLAGS='-s'"
             fi
           else
-            build_args='-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-s" -DCMAKE_CXX_FLAGS="-s"'
+            build_args="$build_args -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS='-s' -DCMAKE_CXX_FLAGS='-s'"
           fi
 
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then
