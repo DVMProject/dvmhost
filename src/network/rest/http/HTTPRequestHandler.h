@@ -59,8 +59,7 @@ namespace network
             //      This class implements the common handler for all incoming requests.
             // ---------------------------------------------------------------------------
 
-            class HTTPRequestHandler
-            {
+            class HTTPRequestHandler {
             public:
                 /// <summary>Initializes a new instance of the HTTPRequestHandler class.</summary>
                 explicit HTTPRequestHandler(const std::string& docRoot);

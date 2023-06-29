@@ -66,8 +66,7 @@ namespace network
             // ---------------------------------------------------------------------------
 
             template <typename RequestHandlerType>
-            class ServerConnection : public std::enable_shared_from_this<ServerConnection<RequestHandlerType>>
-            {
+            class ServerConnection : public std::enable_shared_from_this<ServerConnection<RequestHandlerType>> {
                 typedef ServerConnection<RequestHandlerType> selfType;
                 typedef std::shared_ptr<selfType> selfTypePtr;
                 typedef ServerConnectionManager<selfTypePtr> ConnectionManagerType;

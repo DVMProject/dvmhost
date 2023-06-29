@@ -60,8 +60,7 @@ namespace network
             //      This class implements the lexer for incoming payloads.
             // ---------------------------------------------------------------------------
 
-            class HTTPLexer
-            {
+            class HTTPLexer {
             public:
                 enum ResultType { GOOD, BAD, INDETERMINATE };
 

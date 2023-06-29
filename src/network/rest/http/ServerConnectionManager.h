@@ -56,8 +56,7 @@ namespace network
             // ---------------------------------------------------------------------------
 
             template<typename ConnectionPtr>
-            class ServerConnectionManager
-            {
+            class ServerConnectionManager {
             public:
                 /// <summary>Initializes a new instance of the ServerConnectionManager class.</summary>
                 ServerConnectionManager() { /* stub */ }

@@ -45,8 +45,7 @@ namespace network
         //
         // ---------------------------------------------------------------------------
 
-        struct RequestMatch : std::smatch
-        {
+        struct RequestMatch : std::smatch {
             /// <summary>Initializes a new instance of the RequestMatch structure.</summary>
             RequestMatch(const std::smatch& m, const std::string& c) : std::smatch(m), content(c) { /* stub */ }
 

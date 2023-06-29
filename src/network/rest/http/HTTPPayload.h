@@ -69,8 +69,7 @@ namespace network
             //      HTTP client/server.
             // ---------------------------------------------------------------------------
 
-            struct HTTPPayload
-            {
+            struct HTTPPayload {
                 /// <summary>
                 /// HTTP Status/Response Codes
                 /// </summary>

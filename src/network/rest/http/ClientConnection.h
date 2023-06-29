@@ -60,8 +60,7 @@ namespace network
             // ---------------------------------------------------------------------------
 
             template <typename RequestHandlerType>
-            class ClientConnection
-            {
+            class ClientConnection {
             public:
                 /// <summary>Initializes a new instance of the ClientConnection class.</summary>
                 explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :

@@ -61,8 +61,7 @@ namespace network
             //
             // ---------------------------------------------------------------------------
 
-            struct HTTPHeaders
-            {
+            struct HTTPHeaders {
                 struct Header
                 {
                     std::string name;
