@@ -30,6 +30,7 @@
 #include "p25/data/LowSpeedData.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/TSBK.h"
+#include "edac/RS634717.h"
 
 #include <string>
 
@@ -116,6 +117,8 @@ namespace p25
             __PROPERTY_PLAIN(p25::lc::TSBK*, tsbk, tsbk);
 
         private:
+            edac::RS634717 m_rs;
+
             /** Encryption data */
             uint8_t* m_mi;
 
