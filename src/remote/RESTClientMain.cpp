@@ -132,12 +132,21 @@ static bool g_debug = false;
 //	Global Functions
 // ---------------------------------------------------------------------------
 
+/// <summary>
+/// Helper to print a fatal error message and exit.
+/// </summary>
+/// <param name="msg">Message.</param>
 void fatal(const char* message)
 {
     ::fprintf(stderr, "%s: %s\n", g_progExe.c_str(), message);
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to pring usage the command line arguments. (And optionally an error.)
+/// </summary>
+/// <param name="message">Error message.</param>
+/// <param name="arg">Error message arguments.</param>
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
@@ -221,6 +230,12 @@ void usage(const char* message, const char* arg)
     exit(EXIT_FAILURE);
 }
 
+/// <summary>
+/// Helper to validate the command line arguments.
+/// </summary>
+/// <param name="argc">Argument count.</param>
+/// <param name="argv">Array of argument strings.</param>
+/// <returns>Count of remaining unprocessed arguments.</returns>
 int checkArgs(int argc, char* argv[])
 {
     int i, p = 0;

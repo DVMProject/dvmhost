@@ -511,6 +511,14 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         response["dmrCC"].set<bool>(m_host->m_dmrCtrlChannel);
         response["p25CC"].set<bool>(m_host->m_p25CtrlChannel);
         response["nxdnCC"].set<bool>(m_host->m_nxdnCtrlChannel);
+
+        yaml::Node p25Protocol = m_host->m_conf["protocols"]["p25"];
+        bool p25VOC = p25Protocol["voiceOnControl"].as<bool>(false);
+        yaml::Node nxdnProtocol = m_host->m_conf["protocols"]["nxdn"];
+        bool nxdnVOC = nxdnProtocol["voiceOnControl"].as<bool>(false);
+
+        response["p25VOC"].set<bool>(p25VOC);
+        response["nxdnVOC"].set<bool>(nxdnVOC);
     }
 
     {
