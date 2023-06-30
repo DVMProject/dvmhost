@@ -99,6 +99,8 @@ private:
     uint32_t m_rfTalkgroupHang;
     uint32_t m_netModeHang;
 
+    uint32_t m_lastDstId;
+
     std::string m_identity;
     std::string m_cwCallsign;
     uint32_t m_cwIdTime;

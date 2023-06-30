@@ -105,7 +105,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         yaml::Node cwId = m_setup->m_conf["system"]["cwId"];
         bool enabled = cwId["enable"].as<bool>(false);

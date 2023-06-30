@@ -121,6 +121,9 @@ namespace dmr
         /// <summary>Helper to set the voice error silence threshold.</summary>
         void setSilenceThreshold(uint32_t threshold);
 
+        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        uint32_t getLastDstId() const;
+
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
             network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,

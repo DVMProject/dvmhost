@@ -748,6 +748,23 @@ void Control::setRCCHVerbose(bool verbose)
     lc::RTCH::setVerbose(verbose);
 }
 
+/// <summary>
+/// Helper to get the last transmitted destination ID.
+/// </summary>
+/// <returns></returns>
+uint32_t Control::getLastDstId() const
+{
+    if (m_rfLastDstId != 0U) {
+        return m_rfLastDstId;
+    }
+
+    if (m_netLastDstId != 0U) {
+        return m_netLastDstId;
+    }
+
+    return 0U;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

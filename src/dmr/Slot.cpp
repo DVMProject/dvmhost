@@ -677,6 +677,23 @@ void Slot::setSilenceThreshold(uint32_t threshold)
 }
 
 /// <summary>
+/// Helper to get the last transmitted destination ID.
+/// </summary>
+/// <returns></returns>
+uint32_t Slot::getLastDstId() const
+{
+    if (m_rfLastDstId != 0U) {
+        return m_rfLastDstId;
+    }
+
+    if (m_netLastDstId != 0U) {
+        return m_netLastDstId;
+    }
+
+    return 0U;
+}
+
+/// <summary>
 /// Helper to initialize the DMR slot processor.
 /// </summary>
 /// <param name="dmr">Instance of the Control class.</param>

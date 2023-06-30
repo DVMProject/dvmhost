@@ -88,7 +88,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         yaml::Node rfssConfig = m_setup->m_conf["system"]["config"];
         m_setup->m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);

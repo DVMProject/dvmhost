@@ -130,6 +130,9 @@ namespace nxdn
         /// <summary>Helper to change the RCCH verbose state.</summary>
         void setRCCHVerbose(bool verbose);
 
+        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        uint32_t getLastDstId() const;
+
     private:
         friend class packet::Voice;
         packet::Voice* m_voice;

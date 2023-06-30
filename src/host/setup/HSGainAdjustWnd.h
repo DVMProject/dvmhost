@@ -85,7 +85,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         // gain
         {

@@ -99,7 +99,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         yaml::Node modemConfig = m_setup->m_conf["system"]["modem"];
         m_setup->m_conf["system"]["modem"]["protocol"]["type"] = std::string("uart"); // configuring modem, always sets type to UART

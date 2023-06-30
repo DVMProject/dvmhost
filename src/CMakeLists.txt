@@ -144,6 +144,42 @@ file(GLOB dvmcmd_SRC
     "src/Utils.cpp"
 )
 
+#
+## dvmmon source/header files
+#
+file(GLOB dvmmon_SRC
+    "src/lookups/AffiliationLookup.h"
+    "src/lookups/LookupTable.h"
+    "src/lookups/IdenTableLookup.h"
+    "src/lookups/IdenTableLookup.cpp"
+    "src/modem/Modem.h"
+    "src/monitor/*.h"
+    "src/monitor/*.cpp"
+    "src/network/UDPSocket.h"
+    "src/network/UDPSocket.cpp"
+    "src/network/RESTDefines.h"
+    "src/network/json/*.h"
+    "src/network/rest/*.h"
+    "src/network/rest/*.cpp"
+    "src/network/rest/http/*.h"
+    "src/network/rest/http/*.cpp"
+    "src/remote/RESTClient.h"
+    "src/remote/RESTClient.cpp"
+    "src/edac/SHA256.h"
+    "src/edac/SHA256.cpp"
+    "src/yaml/*.h"
+    "src/yaml/*.cpp"
+    "src/Defines.h"
+    "src/Thread.h"
+    "src/Thread.cpp"
+    "src/Timer.h"
+    "src/Timer.cpp"
+    "src/Log.h"
+    "src/Log.cpp"
+    "src/Utils.h"
+    "src/Utils.cpp"
+)
+
 # Digital mode options and other compilation features
 option(ENABLE_DMR "Enable DMR Digtial Mode" on)
 if (ENABLE_DMR)
@@ -350,3 +386,24 @@ target_link_libraries(asio::asio INTERFACE Threads::Threads)
 add_executable(dvmcmd ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE src)
+
+#
+## dvmmon project
+#
+if (ENABLE_TUI_SUPPORT)
+project(dvmmon)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+find_package(Threads REQUIRED)
+
+# add ASIO
+target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+target_link_libraries(asio::asio INTERFACE Threads::Threads)
+
+# add finalcut
+target_include_directories(finalcut INTERFACE ${FINALCUT_INCLUDE_DIR})
+
+add_executable(dvmmon ${dvmmon_SRC})
+target_link_libraries(dvmmon PRIVATE asio::asio finalcut Threads::Threads)
+target_include_directories(dvmmon PRIVATE src)
+endif (ENABLE_TUI_SUPPORT)

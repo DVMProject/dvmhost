@@ -630,6 +630,26 @@ void Control::setCSBKVerbose(bool verbose)
     lc::CSBK::setVerbose(verbose);
 }
 
+/// <summary>
+/// Helper to get the last transmitted destination ID.
+/// </summary>
+/// <param name="slotNo">DMR slot number.</param>
+/// <returns></returns>
+uint32_t Control::getLastDstId(uint32_t slotNo) const
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->getLastDstId();
+    case 2U:
+        return m_slot2->getLastDstId();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        break;
+    }
+
+    return 0U;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

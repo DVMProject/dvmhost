@@ -77,7 +77,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         // symbol levels
         {

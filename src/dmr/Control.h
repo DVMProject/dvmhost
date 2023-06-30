@@ -130,6 +130,9 @@ namespace dmr
         /// <summary>Helper to change the CSBK verbose state.</summary>
         void setCSBKVerbose(bool verbose);
 
+        /// <summary>Helper to get the last transmitted destination ID.</summary>
+        uint32_t getLastDstId(uint32_t slotNo) const;
+
     private:
         friend class Slot;
 

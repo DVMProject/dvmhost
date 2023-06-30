@@ -85,7 +85,7 @@ private:
     /// <summary>
     ///
     /// </summary>
-    void initControls()
+    void initControls() override
     {
         yaml::Node logConf = m_setup->m_conf["log"];
         uint32_t logLevel = logConf["fileLevel"].as<uint32_t>(1U);

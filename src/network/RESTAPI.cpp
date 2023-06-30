@@ -508,8 +508,11 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         uint8_t protoVer = m_host->m_modem->getVersion();
         response["protoVer"].set<uint8_t>(protoVer);
 
+        response["dmrTSCCEnable"].set<bool>(m_host->m_dmrTSCCData);
         response["dmrCC"].set<bool>(m_host->m_dmrCtrlChannel);
+        response["p25CtrlEnable"].set<bool>(m_host->m_p25CCData);
         response["p25CC"].set<bool>(m_host->m_p25CtrlChannel);
+        response["nxdnCtrlEnable"].set<bool>(m_host->m_nxdnCCData);
         response["nxdnCC"].set<bool>(m_host->m_nxdnCtrlChannel);
 
         yaml::Node p25Protocol = m_host->m_conf["protocols"]["p25"];
@@ -519,6 +522,13 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
 
         response["p25VOC"].set<bool>(p25VOC);
         response["nxdnVOC"].set<bool>(nxdnVOC);
+
+        response["tx"].set<bool>(m_host->m_modem->m_tx);
+
+        response["channelId"].set<uint8_t>(m_host->m_channelId);
+        response["channelNo"].set<uint32_t>(m_host->m_channelNo);
+
+        response["lastDstId"].set<uint32_t>(m_host->m_lastDstId);
     }
 
     {
