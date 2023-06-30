@@ -287,6 +287,9 @@ private:
                             case modem::STATE_NXDN:
                                 m_modeStr.setText("NXDN");
                                 break;
+                            default:
+                                m_modeStr.setText("");
+                                break;
                             }
 
                             // get remote node state
