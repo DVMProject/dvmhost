@@ -109,8 +109,8 @@ private:
     FLabel m_rxFreqLabel{"Rx: ", this};
     FLabel m_rxFreq{this};
 
-    FLabel m_lastTGLabel{"Last TG: ", this};
-    FLabel m_lastTG{this};
+    FLabel m_lastDstLabel{"Last Dst: ", this};
+    FLabel m_lastDst{this};
     FLabel m_lastSrcLabel{"Last Src: ", this};
     FLabel m_lastSrc{this};
 
@@ -187,10 +187,10 @@ private:
 
         // last TG
         {
-            m_lastTGLabel.setGeometry(FPoint(2, 4), FSize(11, 1));
+            m_lastDstLabel.setGeometry(FPoint(2, 4), FSize(11, 1));
 
-            m_lastTG.setGeometry(FPoint(13, 4), FSize(8, 1));
-            m_lastTG.setText("None");
+            m_lastDst.setGeometry(FPoint(13, 4), FSize(8, 1));
+            m_lastDst.setText("None");
         }
 
         // last source
@@ -352,10 +352,10 @@ private:
                             if (rsp["lastDstId"].is<uint32_t>()) {
                                 uint32_t lastDstId = rsp["lastDstId"].get<uint32_t>();
                                 if (lastDstId == 0) {
-                                    m_lastTG.setText("None");
+                                    m_lastDst.setText("None");
                                 }
                                 else {
-                                    m_lastTG.setText(__INT_STR(lastDstId));
+                                    m_lastDst.setText(__INT_STR(lastDstId));
                                 }
                             }
                             else {
