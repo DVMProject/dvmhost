@@ -53,6 +53,8 @@ std::string g_iniFile = std::string(DEFAULT_CONF_FILE);
 yaml::Node g_conf;
 bool g_debug = false;
 
+bool g_hideLoggingWnd = false;
+
 lookups::IdenTableLookup* g_idenTable = nullptr;
 
 // ---------------------------------------------------------------------------
@@ -96,8 +98,10 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-dvh] [-c <monitor configuration file>]\n\n"
+    ::fprintf(stdout, "usage: %s [-dvh][--hide-log][-c <monitor configuration file>]\n\n"
         "  -c <file>                   specifies the monitor configuration file to use\n"
+        "\n"
+        "  --hide-log                  hide interactive logging window on startup\n"
         "\n"
         "  -d                          enable debug\n"
         "  -v                          show version information\n"
@@ -141,6 +145,10 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "monitor configuration file cannot be blank!");
 
             p += 2;
+        }
+        else if (IS("--hide-log")) {
+            ++p;
+            g_hideLoggingWnd = true;
         }
         else if (IS("-d")) {
             ++p;

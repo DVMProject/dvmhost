@@ -50,6 +50,8 @@ extern std::string g_iniFile;
 extern yaml::Node g_conf;
 extern bool g_debug;
 
+extern bool g_hideLoggingWnd;
+
 extern lookups::IdenTableLookup* g_idenTable;
 
 #endif // __MONITOR_MAIN_H__

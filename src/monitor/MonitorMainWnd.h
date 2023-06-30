@@ -236,6 +236,12 @@ private:
     void onShow(FShowEvent* e) override
     {
         intializeNodeDisplay();
+        if (g_hideLoggingWnd) {
+            const auto& rootWidget = getRootWidget();
+            m_logWnd.setGeometry(FPoint{(int)(rootWidget->getClientWidth() - 81), (int)(rootWidget->getClientHeight() - 1)}, FSize{80, 20});
+
+            m_logWnd.minimizeWindow();
+        }
     }
 
     /// <summary>
