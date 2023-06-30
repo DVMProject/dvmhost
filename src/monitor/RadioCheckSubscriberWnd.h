@@ -96,9 +96,19 @@ private:
                 m_subscriberLabel.setGeometry(FPoint(2, 4), FSize(25, 1));
                 m_subscriber.setGeometry(FPoint(28, 4), FSize(20, 1));
             }
-            m_subscriber.setRange(1, 16777211);
+            m_subscriber.setRange(0, 16777211);
             m_subscriber.setValue(1);
             m_subscriber.setShadow(false);
+            m_subscriber.addCallback("changed", [&]() {
+                if (m_subscriber.getValue() >= 1 && m_subscriber.getValue() <= 16777211) {
+                    m_txButton.setEnable(true);
+                }
+                else {
+                    m_txButton.setEnable(false);
+                }
+
+                redraw();
+            });
         }
 
         m_subscriberLabel.redraw();
@@ -136,7 +146,7 @@ private:
         int ret = RESTClient::send(m_selectedCh.address(), m_selectedCh.port(), m_selectedCh.password(),
             HTTP_PUT, method, req, g_debug);
         if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-            ::LogError(LOG_HOST, "failed to send request to %s:%u", m_selectedCh.address().c_str(), m_selectedCh.port());
+            ::LogError(LOG_HOST, "failed to send request %s to %s:%u", method.c_str(), m_selectedCh.address().c_str(), m_selectedCh.port());
         }
     }
 };

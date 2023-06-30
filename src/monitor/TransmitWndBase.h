@@ -118,9 +118,10 @@ protected:
 
         try {
             if (rsp["fixedMode"].get<bool>()) {
-                m_mode = rsp["state"].is<uint8_t>();
                 m_hideModeSelect = true;
             }
+
+            m_mode = rsp["state"].get<uint8_t>();
 
             bool dmrCC = rsp["dmrCC"].get<bool>();
             bool p25CC = rsp["p25CC"].get<bool>();
@@ -267,7 +268,6 @@ protected:
         /* stub */
     }
 
-private:
     FButton m_txButton{"Transmit", this};
     FButton m_closeButton{"Close", this};
 
@@ -277,8 +277,6 @@ private:
     FRadioButton m_modeNXDN{"NXDN", &m_digModeGroup};
 
     FLabel m_dmrSlotLabel{"DMR Slot: ", this};
-
-protected:
     FSpinBox m_dmrSlot{this};
 };
 
