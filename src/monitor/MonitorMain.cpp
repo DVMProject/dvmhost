@@ -98,14 +98,19 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-dvh][--hide-log][-c <monitor configuration file>]\n\n"
-        "  -c <file>                   specifies the monitor configuration file to use\n"
-        "\n"
-        "  --hide-log                  hide interactive logging window on startup\n"
-        "\n"
+    ::fprintf(stdout, 
+        "usage: %s [-dvh]"
+        "[--hide-log]"
+        "[-c <configuration file>]"
+        "\n\n"
         "  -d                          enable debug\n"
         "  -v                          show version information\n"
         "  -h                          show this screen\n"
+        "\n"
+        "  --hide-log                  hide interactive logging window on startup\n"
+        "\n"
+        "  -c <file>                   specifies the monitor configuration file to use\n"
+        "\n"
         "  --                          stop handling options\n",
         g_progExe.c_str());
 
