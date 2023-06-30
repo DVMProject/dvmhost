@@ -215,6 +215,11 @@ else()
     set(ENABLE_SETUP_TUI off)
 endif (ENABLE_TUI_SUPPORT)
 
+option(DISABLE_MONITOR "Disable dvmmon compilation" off)
+if (DISABLE_MONITOR)
+    message(CHECK_START "Disable dvmmon compilation - enabled")
+endif (DISABLE_MONITOR)
+
 # Debug compilation features/options (these should not be enabled for production!)
 option(DEBUG_DMR_PDU_DATA "" off)
 option(DEBUG_CRC "" off)
@@ -390,7 +395,7 @@ target_include_directories(dvmcmd PRIVATE src)
 #
 ## dvmmon project
 #
-if (ENABLE_TUI_SUPPORT)
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 project(dvmmon)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
@@ -406,4 +411,4 @@ target_include_directories(finalcut INTERFACE ${FINALCUT_INCLUDE_DIR})
 add_executable(dvmmon ${dvmmon_SRC})
 target_link_libraries(dvmmon PRIVATE asio::asio finalcut Threads::Threads)
 target_include_directories(dvmmon PRIVATE src)
-endif (ENABLE_TUI_SUPPORT)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
