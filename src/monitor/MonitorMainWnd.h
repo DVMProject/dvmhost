@@ -167,8 +167,11 @@ private:
 
             mainChNo = chNo;
 
-            //std::string restApiAddress = networkConf["restAddress"].as<std::string>("127.0.0.1");
-            std::string restApiAddress = std::string("127.0.0.1");
+            std::string restApiAddress = networkConf["restAddress"].as<std::string>("127.0.0.1");
+            if (restApiAddress == "0.0.0.0") {
+                restApiAddress = std::string("127.0.0.1");
+            }
+            
             uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = networkConf["restPassword"].as<std::string>();
 
