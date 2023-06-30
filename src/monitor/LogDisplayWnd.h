@@ -95,8 +95,6 @@ private:
         FDialog::adjustSize();
 
         m_scrollText.setGeometry(FPoint{1, 2}, FSize{getWidth(), getHeight() - 1});
-
-        redraw();
     }
 
     /*
