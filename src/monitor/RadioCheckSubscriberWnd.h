@@ -80,10 +80,10 @@ private:
         // subscriber entry
         {
             if (!m_hideModeSelect) {
-                m_dialogLabel.setGeometry(FPoint(2, 6), FSize(20, 2));
+                m_dialogLabel.setGeometry(FPoint(6, 6), FSize(25, 2));
             }
             else {
-                m_dialogLabel.setGeometry(FPoint(2, 2), FSize(20, 2));
+                m_dialogLabel.setGeometry(FPoint(6, 2), FSize(25, 2));
             }
             m_dialogLabel.setEmphasis();
             m_dialogLabel.setAlignment(Align::Center);
@@ -111,6 +111,7 @@ private:
             });
         }
 
+        m_dialogLabel.redraw();
         m_subscriberLabel.redraw();
         redraw();
     }
