@@ -48,8 +48,7 @@ using namespace finalcut;
 //      This class implements the node status display window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API NodeStatusWnd final : public finalcut::FDialog
-{
+class HOST_SW_API NodeStatusWnd final : public finalcut::FDialog {
 public:
     /// <summary>
     /// Initializes a new instance of the NodeStatusWnd class.
@@ -79,12 +78,14 @@ public:
     /// <summary>Disable set position.</summary>
     void setPos(const FPoint&, bool = true) override { }
 
+    /// <summary>Gets the channel ID.</summary>
+    uint8_t getChannelId() const { return m_channelId; }
+    /// <summary>Gets the channel number.</summary>
+    uint32_t getChannelNo() const { return m_channelNo; }
+    /// <summary>Gets the channel data.</summary>
+    lookups::VoiceChData getChData() { return m_chData; }
     /// <summary>Sets the channel data.</summary>
     void setChData(lookups::VoiceChData chData) { m_chData = chData; }
-    /// <summary>Sets the channel number.</summary>
-    void setChannelId(uint8_t channelId) { m_channelId = channelId; }
-    /// <summary>Sets the channel number.</summary>
-    void setChannelNo(uint32_t channelNo) { m_channelNo = channelNo; }
 
 private:
     int m_timerId;
@@ -162,41 +163,18 @@ private:
             m_channelNoLabel.setGeometry(FPoint(2, 1), FSize(10, 1));
 
             m_chanNo.setGeometry(FPoint(11, 1), FSize(8, 1));
-            m_chanNo.setText(__INT_STR(m_channelNo));
+            m_chanNo.setText("");
         }
 
         // channel frequency
         {
-            IdenTable entry = g_idenTable->find(m_channelId);
-            if (entry.baseFrequency() == 0U) {
-                ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
-            }
-
-            if (entry.txOffsetMhz() == 0U) {
-                ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
-            }
-
-            uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
-            float calcTxOffset = entry.txOffsetMhz() * 1000000;
-
-            uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
-            uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
-
             m_txFreqLabel.setGeometry(FPoint(2, 2), FSize(4, 1));
             m_txFreq.setGeometry(FPoint(6, 2), FSize(8, 1));
-
-            std::stringstream ss;
-            ss << std::fixed << std::setprecision(4) << (float)(txFrequency / 1000000.0f);
-
-            m_txFreq.setText(ss.str());
+            m_txFreq.setText("");
 
             m_rxFreqLabel.setGeometry(FPoint(2, 3), FSize(4, 1));
             m_rxFreq.setGeometry(FPoint(6, 3), FSize(8, 1));
-
-            ss.str(std::string());
-            ss << std::fixed << std::setprecision(4) << (float)(rxFrequency / 1000000.0f);
-
-            m_rxFreq.setText(ss.str());
+            m_rxFreq.setText("");
         }
 
         // last TG
@@ -206,6 +184,57 @@ private:
             m_lastTG.setGeometry(FPoint(11, 4), FSize(8, 1));
             m_lastTG.setText("None");
         }
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    void calculateRxTx()
+    {
+        IdenTable entry = g_idenTable->find(m_channelId);
+        if (entry.baseFrequency() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
+        }
+
+        if (entry.txOffsetMhz() == 0U) {
+            ::LogError(LOG_HOST, "Channel Id %u has an invalid Tx offset.", m_channelId);
+        }
+
+        m_chanNo.setText(__INT_STR(m_channelId) + "-" + __INT_STR(m_channelNo));
+
+        uint32_t calcSpace = (uint32_t)(entry.chSpaceKhz() / 0.125);
+        float calcTxOffset = entry.txOffsetMhz() * 1000000;
+
+        uint32_t rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)) + calcTxOffset);
+        uint32_t txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
+
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(4) << (float)(txFrequency / 1000000.0f);
+
+        m_txFreq.setText(ss.str());
+
+        ss.str(std::string());
+        ss << std::fixed << std::setprecision(4) << (float)(rxFrequency / 1000000.0f);
+
+        m_rxFreq.setText(ss.str());
+
+        if (isWindowActive()) {
+            emitCallback("update-selected");
+        }
+    }
+
+    /*
+    ** Event Handlers
+    */
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="e"></param>
+    void onWindowRaised(FEvent* e) override
+    {
+        FDialog::onWindowLowered(e);
+        emitCallback("update-selected");
     }
 
     /// <summary>
@@ -230,91 +259,83 @@ private:
                         setText("FAILED");
                     }
                     else {
-                        // get remote node state
-                        if (rsp["dmrTSCCEnable"].is<bool>() && rsp["p25CtrlEnable"].is<bool>() &&
-                            rsp["nxdnCtrlEnable"].is<bool>()) {
-                            bool dmrTSCCEnable = rsp["dmrTSCCEnable"].get<bool>();
-                            bool dmrCC = rsp["dmrCC"].get<bool>();
-                            bool p25CtrlEnable = rsp["p25CtrlEnable"].get<bool>();
-                            bool p25CC = rsp["p25CC"].get<bool>();
-                            bool p25VOC = rsp["p25VOC"].get<bool>();
-                            bool nxdnCtrlEnable = rsp["nxdnCtrlEnable"].get<bool>();
-                            bool nxdnCC = rsp["nxdnCC"].get<bool>();
+                        try {
+                            // get remote node state
+                            if (rsp["dmrTSCCEnable"].is<bool>() && rsp["p25CtrlEnable"].is<bool>() &&
+                                rsp["nxdnCtrlEnable"].is<bool>()) {
+                                bool dmrTSCCEnable = rsp["dmrTSCCEnable"].get<bool>();
+                                bool dmrCC = rsp["dmrCC"].get<bool>();
+                                bool p25CtrlEnable = rsp["p25CtrlEnable"].get<bool>();
+                                bool p25CC = rsp["p25CC"].get<bool>();
+                                bool p25VOC = rsp["p25VOC"].get<bool>();
+                                bool nxdnCtrlEnable = rsp["nxdnCtrlEnable"].get<bool>();
+                                bool nxdnCC = rsp["nxdnCC"].get<bool>();
 
-                            // are we a dedicated control channel?
-                            if (dmrCC || p25CC || nxdnCC) {
-                                m_control = true;
-                                if (p25CC && p25VOC) {
-                                    setText("CONTROL (VOC)");
+                                // are we a dedicated control channel?
+                                if (dmrCC || p25CC || nxdnCC) {
+                                    m_control = true;
+                                    if (p25CC && p25VOC) {
+                                        setText("CONTROL (VOC)");
+                                    }
+                                    else {
+                                        setText("CONTROL");
+                                    }
                                 }
-                                else {
-                                    setText("CONTROL");
+
+                                // if we aren't a dedicated control channel; set our
+                                // title bar appropriately and set Tx state
+                                if (!m_control) {
+                                    if (dmrTSCCEnable || p25CtrlEnable || nxdnCtrlEnable) {
+                                        setText("ENH. VOICE/CONV");
+                                    }
+                                    else {
+                                        setText("VOICE/CONV");
+                                    }
+
+                                    // are we transmitting?
+                                    if (rsp["tx"].is<bool>()) {
+                                        m_tx = rsp["tx"].get<bool>();
+                                    }
+                                    else {
+                                        ::LogWarning(LOG_HOST, "%s:%u, does not report Tx status");
+                                        m_tx = false;
+                                    }
                                 }
                             }
 
-                            // if we aren't a dedicated control channel; set our
-                            // title bar appropriately and set Tx state
-                            if (!m_control) {
-                                if (dmrTSCCEnable || p25CtrlEnable || nxdnCtrlEnable) {
-                                    setText("ENH. VOICE/CONV");
+                            // get the remote node channel information
+                            if (rsp["channelId"].is<uint8_t>() && rsp["channelNo"].is<uint32_t>()) {
+                                uint8_t channelId = rsp["channelId"].get<uint8_t>();
+                                uint32_t channelNo = rsp["channelNo"].get<uint32_t>();
+
+                                if (m_channelId != channelId && m_channelNo != channelNo) {
+                                    m_channelId = channelId;
+                                    m_channelNo = channelNo;
+
+                                    calculateRxTx();
                                 }
-                                else {
-                                    setText("VOICE/CONV");
-                                }
-
-                                // are we transmitting?
-                                if (rsp["tx"].is<bool>()) {
-                                    m_tx = rsp["tx"].get<bool>();
-                                }
-                                else {
-                                    ::LogWarning(LOG_HOST, "%s:%u, does not report Tx status");
-                                    m_tx = false;
-                                }
-                            }
-                        }
-
-                        // get the remote node channel information
-                        if (rsp["channelId"].is<uint8_t>() && rsp["channelNo"].is<uint32_t>()) {
-                            uint8_t channelId = rsp["channelId"].get<uint8_t>();
-                            uint32_t channelNo = rsp["channelNo"].get<uint32_t>();
-                            bool resetControls = false;
-
-                            // verify channel ID matches our configuration
-                            if (channelId != m_channelId) {
-                                ::LogWarning(LOG_HOST, "%s:%u, reports chId = %u, disagrees with chId = %u", m_chData.address().c_str(), m_chData.port(), channelId, m_channelId);
-                                m_channelId = channelId;
-                                resetControls = true;
-                            }
-
-                            // verify channel number matches our configuration
-                            if (channelNo != m_channelNo) {
-                                ::LogWarning(LOG_HOST, "%s:%u, reports chNo = %u, disagrees with chNo = %u", m_chData.address().c_str(), m_chData.port(), channelNo, m_channelNo);
-                                m_channelNo = channelNo;
-                                resetControls = true;
-                            }
-
-                            // reset controls for our display if necessary
-                            if (resetControls) {
-                                initControls();
-                                setText(getText() + "*");
-                            }
-                        }
-                        else {
-                            ::LogWarning(LOG_HOST, "%s:%u, does not report channel information");
-                        }
-
-                        // report last known transmitted destination ID
-                        if (rsp["lastDstId"].is<uint32_t>()) {
-                            uint32_t lastDstId = rsp["lastDstId"].get<uint32_t>();
-                            if (lastDstId == 0) {
-                                m_lastTG.setText("None");
                             }
                             else {
-                                m_lastTG.setText(__INT_STR(lastDstId));
+                                ::LogWarning(LOG_HOST, "%s:%u, does not report channel information");
+                            }
+
+                            // report last known transmitted destination ID
+                            if (rsp["lastDstId"].is<uint32_t>()) {
+                                uint32_t lastDstId = rsp["lastDstId"].get<uint32_t>();
+                                if (lastDstId == 0) {
+                                    m_lastTG.setText("None");
+                                }
+                                else {
+                                    m_lastTG.setText(__INT_STR(lastDstId));
+                                }
+                            }
+                            else {
+                                ::LogWarning(LOG_HOST, "%s:%u, does not report last TG information");
                             }
                         }
-                        else {
-                            ::LogWarning(LOG_HOST, "%s:%u, does not report last TG information");
+                        catch (std::exception&) {
+                            ::LogWarning(LOG_HOST, "%s:%u, failed to properly handle status");
+                            m_failed = true;
                         }
                     }
                 }

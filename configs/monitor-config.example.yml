@@ -1,0 +1,25 @@
+#
+# Digital Voice Modem - Monitor Configuration
+#
+# @package DVM / Monitor
+#
+
+#
+# Channel Identity Table Configuration
+#
+iden_table:
+    # Full path to the identity table file.
+    file: iden_table.dat
+    # Amount of time between updates of identity table file. (minutes)
+    time: 30
+
+#
+# DVM Channels to Monitor
+#
+channels:
+      # REST API IP Address for channel.
+    - restAddress: 127.0.0.1
+      # REST API Port number for channel.
+      restPort: 9990
+      # REST API access password for channel.
+      restPassword: "PASSWORD"

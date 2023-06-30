@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the hotspot bandwidth adjustment window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API HSBandwidthAdjustWnd final : public AdjustWndBase
-{
+class HOST_SW_API HSBandwidthAdjustWnd final : public AdjustWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the HSBandwidthAdjustWnd class.

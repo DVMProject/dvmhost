@@ -40,6 +40,11 @@ using namespace finalcut;
 
 #include "monitor/LogDisplayWnd.h"
 #include "monitor/NodeStatusWnd.h"
+#include "monitor/SelectedNodeWnd.h"
+#include "monitor/PageSubscriberWnd.h"
+#include "monitor/RadioCheckSubscriberWnd.h"
+#include "monitor/InhibitSubscriberWnd.h"
+#include "monitor/UninhibitSubscriberWnd.h"
 
 #include <vector>
 
@@ -70,12 +75,35 @@ public:
         m_keyF3.addCallback("activate", getFApplication(), &FApplication::cb_exitApp, this);
 
         // command menu
+        m_pageSU.addCallback("clicked", this, [&]() {
+            PageSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
+        m_keyF5.addCallback("activate", this, [&]() {
+            PageSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
+        m_radioCheckSU.addCallback("clicked", this, [&]() {
+            RadioCheckSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
         m_cmdMenuSeparator1.setSeparator();
-        m_cmdMenuSeparator2.setSeparator();
-
-        // engineering menu
-        m_engineeringMenuSeparator1.setSeparator();
-        m_engineeringMenuSeparator2.setSeparator();
+        m_inhibitSU.addCallback("clicked", this, [&]() {
+            InhibitSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
+        m_keyF7.addCallback("activate", this, [&]() {
+            InhibitSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
+        m_uninhibitSU.addCallback("clicked", this, [&]() {
+            UninhibitSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
+        m_keyF8.addCallback("activate", this, [&]() {
+            UninhibitSubscriberWnd wnd{m_selectedCh, this};
+            wnd.show();
+        });
 
         // help menu
         m_aboutItem.addCallback("clicked", this, [&]() {
@@ -90,14 +118,17 @@ public:
         });
     }
 
+    /// <summary></summary>
+    lookups::VoiceChData getSelectedCh() { return m_selectedCh; }
+
 private:
     friend class MonitorApplication;
 
     LogDisplayWnd m_logWnd{this};
+    SelectedNodeWnd m_selectWnd{this};
     std::vector<NodeStatusWnd*> m_nodes;
 
-    std::vector<uint32_t> m_voiceChNo;
-    std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
+    lookups::VoiceChData m_selectedCh;
 
     FString m_line{13, UniChar::BoxDrawingsHorizontal};
 
@@ -112,25 +143,15 @@ private:
     FMenuItem m_cmdMenuSeparator1{&m_cmdMenu};
     FMenuItem m_inhibitSU{"&Inhibit Subscriber", &m_cmdMenu};
     FMenuItem m_uninhibitSU{"&Uninhibit Subscriber", &m_cmdMenu};
-    FMenuItem m_cmdMenuSeparator2{&m_cmdMenu};
-    FMenuItem m_gaqSU{"&Group Affiliation Query", &m_cmdMenu};
-    FMenuItem m_uregSU{"&Force Unit Registration", &m_cmdMenu};
-
-    FMenu m_engineeringMenu{"&Engineering", &m_menuBar};
-    FMenuItem m_toggleDMRDebug{"Toggle DMR Debug", &m_engineeringMenu};
-    FMenuItem m_toggleDMRCSBKDump{"Toggle DMR CSBK Dump", &m_engineeringMenu};
-    FMenuItem m_engineeringMenuSeparator1{&m_engineeringMenu};
-    FMenuItem m_toggleP25Debug{"Toggle P25 Debug", &m_engineeringMenu};
-    FMenuItem m_toggleP25TSBKDump{"Toggle P25 TSBK Dump", &m_engineeringMenu};
-    FMenuItem m_engineeringMenuSeparator2{&m_engineeringMenu};
-    FMenuItem m_toggleNXDNDebug{"Toggle NXDN Debug", &m_engineeringMenu};
-    FMenuItem m_toggleNXDNRCCHDump{"Toggle NXDN RCCH Dump", &m_engineeringMenu};
 
     FMenu m_helpMenu{"&Help", &m_menuBar};
     FMenuItem m_aboutItem{"&About", &m_helpMenu};
 
     FStatusBar m_statusBar{this};
     FStatusKey m_keyF3{FKey::F3, "Quit", &m_statusBar};
+    FStatusKey m_keyF5{FKey::F5, "Page Subscriber", &m_statusBar};
+    FStatusKey m_keyF7{FKey::F7, "Inhibit Subscriber", &m_statusBar};
+    FStatusKey m_keyF8{FKey::F8, "Uninhibit Subscriber", &m_statusBar};
 
     /// <summary>
     /// 
@@ -139,88 +160,32 @@ private:
     {
         const auto& rootWidget = getRootWidget();
         const int defaultOffsX = 2;
-        int offsX = defaultOffsX, offsY = 2;
+        int offsX = defaultOffsX, offsY = 8;
 
         int maxWidth = 77;
         if (rootWidget) {
             maxWidth = rootWidget->getClientWidth() - 3;
         }
 
-        yaml::Node systemConf = g_conf["system"];
-        yaml::Node rfssConfig = systemConf["config"];
-        uint8_t channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
-        if (channelId > 15U) { // clamp to 15
-            channelId = 15U;
-        }
-
-        // main/control channel
-        uint32_t mainChNo = 0U;
-        {
-            yaml::Node networkConf = g_conf["network"];
-            uint32_t chNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
-            if (chNo == 0U) { // clamp to 1
-                chNo = 1U;
-            }
-            if (chNo > 4095U) { // clamp to 4095
-                chNo = 4095U;
-            }
-
-            mainChNo = chNo;
-
-            std::string restApiAddress = networkConf["restAddress"].as<std::string>("127.0.0.1");
-            if (restApiAddress == "0.0.0.0") {
-                restApiAddress = std::string("127.0.0.1");
-            }
-            
-            uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
-            std::string restApiPassword = networkConf["restPassword"].as<std::string>();
-
-            VoiceChData data = VoiceChData(chNo, restApiAddress, restApiPort, restApiPassword);
-
-            // create configuration file node
-            NodeStatusWnd* wnd = new NodeStatusWnd(this);
-            wnd->setChData(data);
-            wnd->setChannelId(channelId);
-            wnd->setChannelNo(chNo);
-
-            wnd->setGeometry(FPoint{offsX, offsY}, FSize{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT});
-            offsX += NODE_STATUS_WIDTH + 2;
-            m_nodes.push_back(wnd);
-        }
-
         /*
-        ** Voice Channels
+        ** Channels
         */
-        yaml::Node& voiceChList = rfssConfig["voiceChNo"];
+        yaml::Node& voiceChList = g_conf["channels"];
 
         if (voiceChList.size() != 0U) {
             for (size_t i = 0; i < voiceChList.size(); i++) {
                 yaml::Node& channel = voiceChList[i];
 
-                uint32_t chNo = (uint32_t)::strtoul(channel["channelNo"].as<std::string>("1").c_str(), NULL, 16);
-                if (chNo == 0U) { // clamp to 1
-                    chNo = 1U;
-                }
-                if (chNo > 4095U) { // clamp to 4095
-                    chNo = 4095U;
-                }
-
-                if (chNo == mainChNo) {
-                    continue;
-                }
-
                 std::string restApiAddress = channel["restAddress"].as<std::string>("127.0.0.1");
                 uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
                 std::string restApiPassword = channel["restPassword"].as<std::string>();
 
-                ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Adddress %s:%u", g_channelId, chNo, restApiAddress.c_str(), restApiPort);
+                ::LogInfoEx(LOG_HOST, "Channel REST API Adddress %s:%u", restApiAddress.c_str(), restApiPort);
 
-                VoiceChData data = VoiceChData(chNo, restApiAddress, restApiPort, restApiPassword);
+                VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
 
                 NodeStatusWnd* wnd = new NodeStatusWnd(this);
                 wnd->setChData(data);
-                wnd->setChannelId(channelId);
-                wnd->setChannelNo(chNo);
 
                 // set control position
                 if (offsX + NODE_STATUS_WIDTH > maxWidth) {
@@ -229,6 +194,16 @@ private:
                 }
 
                 wnd->setGeometry(FPoint{offsX, offsY}, FSize{NODE_STATUS_WIDTH, NODE_STATUS_HEIGHT});
+
+                wnd->addCallback("update-selected", this, [&](NodeStatusWnd* wnd) {
+                    std::stringstream ss;
+                    ss << (uint32_t)(wnd->getChannelId()) << "-" << wnd->getChannelNo() << " / "
+                       << wnd->getChData().address() << ":" << wnd->getChData().port();
+
+                    m_selectWnd.setSelectedText(ss.str());
+                    m_selectedCh = wnd->getChData();
+                }, wnd);
+
                 offsX += NODE_STATUS_WIDTH + 2;
                 m_nodes.push_back(wnd);
             }
@@ -238,7 +213,14 @@ private:
         for (auto* wnd : m_nodes) {
             wnd->setModal(false);
             wnd->show();
+
+            wnd->lowerWindow();
+            wnd->deactivateWindow();
         }
+
+        // raise and activate first window
+        m_nodes.at(0)->raiseWindow();
+        m_nodes.at(0)->activateWindow();
 
         redraw();
     }

@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the FIFO buffer adjustment window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API FIFOBufferAdjustWnd final : public CloseWndBase
-{
+class HOST_SW_API FIFOBufferAdjustWnd final : public CloseWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the FIFOBufferAdjustWnd class.

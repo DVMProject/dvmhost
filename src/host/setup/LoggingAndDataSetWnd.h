@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the logging and data configuration window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API LoggingAndDataSetWnd final : public CloseWndBase
-{
+class HOST_SW_API LoggingAndDataSetWnd final : public CloseWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the LoggingAndDataSetWnd class.

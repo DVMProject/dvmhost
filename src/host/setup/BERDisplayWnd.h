@@ -45,8 +45,7 @@ using namespace finalcut;
 //      This class implements the bit error rate display window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API BERDisplayWnd final : public finalcut::FDialog
-{
+class HOST_SW_API BERDisplayWnd final : public finalcut::FDialog {
 public:
     /// <summary>
     /// Initializes a new instance of the BERDisplayWnd class.

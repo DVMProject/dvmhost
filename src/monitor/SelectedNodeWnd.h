@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Host Software
+* Digital Voice Modem - Monitor
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Host Software
+* @package DVM / Monitor
 *
 */
 /*
@@ -23,42 +23,40 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__LOG_DISPLAY_WND_H__)
-#define __LOG_DISPLAY_WND_H__
+#if !defined(__SELECTED_NODE_WND_H__)
+#define __SELECTED_NODE_WND_H__
 
-#include "host/setup/HostSetup.h"
+#include "monitor/MonitorMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      This class implements the log display window.
+//      This class implements the selected node display window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API LogDisplayWnd final : public finalcut::FDialog, public std::ostringstream {
+class HOST_SW_API SelectedNodeWnd final : public finalcut::FDialog {
 public:
     /// <summary>
-    /// Initializes a new instance of the LogDisplayWnd class.
+    /// Initializes a new instance of the SelectedNodeWnd class.
     /// </summary>
     /// <param name="widget"></param>
-    explicit LogDisplayWnd(FWidget* widget = nullptr) : FDialog{widget}
+    explicit SelectedNodeWnd(FWidget* widget = nullptr) : FDialog{widget}
     {
-        m_scrollText.ignorePadding();
-
-        m_timerId = addTimer(250); // starts the timer every 250 milliseconds
+        /* stub */
     }
     /// <summary>Copy constructor.</summary>
-    LogDisplayWnd(const LogDisplayWnd&) = delete;
+    SelectedNodeWnd(const SelectedNodeWnd&) = delete;
     /// <summary>Move constructor.</summary>
-    LogDisplayWnd(LogDisplayWnd&&) noexcept = delete;
-    /// <summary>Finalizes an instance of the LogDisplayWnd class.</summary>
-    ~LogDisplayWnd() noexcept override = default;
+    SelectedNodeWnd(SelectedNodeWnd&&) noexcept = delete;
+    /// <summary>Finalizes an instance of the SelectedNodeWnd class.</summary>
+    ~SelectedNodeWnd() noexcept override = default;
 
     /// <summary>Disable copy assignment operator (=).</summary>
-    auto operator= (const LogDisplayWnd&) -> LogDisplayWnd& = delete;
+    auto operator= (const SelectedNodeWnd&) -> SelectedNodeWnd& = delete;
     /// <summary>Disable move assignment operator (=).</summary>
-    auto operator= (LogDisplayWnd&&) noexcept -> LogDisplayWnd& = delete;
+    auto operator= (SelectedNodeWnd&&) noexcept -> SelectedNodeWnd& = delete;
 
     /// <summary>Disable set X coordinate.</summary>
     void setX(int, bool = true) override { }
@@ -67,19 +65,22 @@ public:
     /// <summary>Disable set position.</summary>
     void setPos(const FPoint&, bool = true) override { }
 
+    /// <summary></summary>
+    void setSelectedText(std::string str) 
+    {
+        m_selectedHost.setText(str);
+        redraw();
+    }
+
 private:
-    FTextView m_scrollText{this};
-    int m_timerId;
+    FLabel m_selectedHostLabel{"Selected Host: ", this};
+    FLabel m_selectedHost{this};
 
     /// <summary>
     ///
     /// </summary>
     void initLayout() override
     {
-        using namespace std::string_literals;
-        auto lightning = "\u26a1";
-        FDialog::setText("System Log"s + lightning);
-
         std::size_t maxWidth;
         const auto& rootWidget = getRootWidget();
 
@@ -91,41 +92,33 @@ private:
             maxWidth = 77;
         }
 
-        FDialog::setGeometry(FPoint{2, 2}, FSize{maxWidth, 20});
+        FDialog::setGeometry(FPoint{2, 2}, FSize{maxWidth, 2});
         FDialog::setMinimumSize(FSize{80, 5});
         FDialog::setResizeable(false);
         FDialog::setMinimizable(false);
         FDialog::setTitlebarButtonVisibility(false);
-        FDialog::setShadow();
+        FDialog::setShadow(false);
 
-        m_scrollText.setGeometry(FPoint{1, 2}, FSize{getWidth(), getHeight() - 1});
+        m_selectedHostLabel.setGeometry(FPoint(2, 1), FSize(18, 1));
+        m_selectedHost.setGeometry(FPoint(20, 1), FSize(30, 1));
+        m_selectedHost.setText("None");
 
         FDialog::initLayout();
     }
 
-    /*
-    ** Event Handlers
-    */
-
     /// <summary>
     ///
     /// </summary>
-    /// <param name="timer"></param>
-    void onTimer(FTimerEvent* timer) override
+    void draw() override
     {
-        if (timer != nullptr) {
-            if (timer->getTimerId() == m_timerId) {
-                if (str().empty()) {
-                    return;
-                }
+        setColor();
+        clearArea();
 
-                m_scrollText.append(str());
-                str("");
-                m_scrollText.scrollToEnd();
-                redraw();
-            }
-        }
+        const auto& wc = getColorTheme();
+        setColor(wc->dialog_resize_fg, getBackgroundColor());
+
+        finalcut::drawBorder(this, FRect(FPoint{1, 1}, FPoint{(int)getWidth(), (int)getHeight()}));
     }
 };
 
-#endif // __LOG_DISPLAY_WND_H__
+#endif // __SELECTED_NODE_WND_H__

@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the channel configuration window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API ChannelConfigSetWnd final : public CloseWndBase
-{
+class HOST_SW_API ChannelConfigSetWnd final : public CloseWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the ChannelConfigSetWnd class.

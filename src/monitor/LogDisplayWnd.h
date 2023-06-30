@@ -34,8 +34,7 @@ using namespace finalcut;
 //      This class implements the log display window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API LogDisplayWnd final : public finalcut::FDialog, public std::ostringstream
-{
+class HOST_SW_API LogDisplayWnd final : public finalcut::FDialog, public std::ostringstream {
 public:
     /// <summary>
     /// Initializes a new instance of the LogDisplayWnd class.

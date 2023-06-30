@@ -508,6 +508,8 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         uint8_t protoVer = m_host->m_modem->getVersion();
         response["protoVer"].set<uint8_t>(protoVer);
 
+        response["fixedMode"].set<bool>(m_host->m_fixedMode);
+
         response["dmrTSCCEnable"].set<bool>(m_host->m_dmrTSCCData);
         response["dmrCC"].set<bool>(m_host->m_dmrCtrlChannel);
         response["p25CtrlEnable"].set<bool>(m_host->m_p25CCData);

@@ -36,8 +36,7 @@ using namespace finalcut;
 //      This class implements the modem status display window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API ModemStatusWnd final : public finalcut::FDialog
-{
+class HOST_SW_API ModemStatusWnd final : public finalcut::FDialog {
 public:
     /// <summary>
     /// Initializes a new instance of the ModemStatusWnd class.

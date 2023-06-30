@@ -37,8 +37,7 @@ using namespace finalcut;
 //      This class implements the base class for adjustment windows.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API AdjustWndBase : public finalcut::FDialog
-{
+class HOST_SW_API AdjustWndBase : public finalcut::FDialog {
 public:
     /// <summary>
     /// Initializes a new instance of the AdjustWndBase class.

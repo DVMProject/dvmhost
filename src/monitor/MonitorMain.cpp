@@ -54,7 +54,6 @@ yaml::Node g_conf;
 bool g_debug = false;
 
 lookups::IdenTableLookup* g_idenTable = nullptr;
-uint32_t g_channelId = 0U;
 
 // ---------------------------------------------------------------------------
 //	Global Functions
@@ -97,8 +96,8 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, "usage: %s [-dvh] [-c <configuration file>]\n\n"
-        "  -c <file>                   specifies the configuration file to use\n"
+    ::fprintf(stdout, "usage: %s [-dvh] [-c <monitor configuration file>]\n\n"
+        "  -c <file>                   specifies the monitor configuration file to use\n"
         "\n"
         "  -d                          enable debug\n"
         "  -v                          show version information\n"
@@ -135,11 +134,11 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-c")) {
             if (argc-- <= 0)
-                usage("error: %s", "must specify the configuration file to use");
+                usage("error: %s", "must specify the monitor configuration file to use");
             g_iniFile = std::string(argv[++i]);
 
             if (g_iniFile == "")
-                usage("error: %s", "configuration file cannot be blank!");
+                usage("error: %s", "monitor configuration file cannot be blank!");
 
             p += 2;
         }
@@ -218,14 +217,18 @@ int main(int argc, char** argv)
     MonitorMainWnd wnd{&app};
     finalcut::FWidget::setMainWidget(&wnd);
 
-    yaml::Node systemConf = g_conf["system"];
-
     // try to load bandplan identity table
-    std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
-    uint32_t idenReloadTime = systemConf["iden_table"]["time"].as<uint32_t>(0U);
+    std::string idenLookupFile = g_conf["iden_table"]["file"].as<std::string>();
+    uint32_t idenReloadTime = g_conf["iden_table"]["time"].as<uint32_t>(0U);
 
     if (idenLookupFile.length() <= 0U) {
         ::LogError(LOG_HOST, "No bandplan identity table? This must be defined!");
+        return 1;
+    }
+
+    yaml::Node& voiceChList = g_conf["channels"];
+    if (voiceChList.size() == 0U) {
+        ::LogError(LOG_HOST, "No channels defined to monitor? This must be defined!");
         return 1;
     }
 
@@ -238,12 +241,6 @@ int main(int argc, char** argv)
 
     g_idenTable = new IdenTableLookup(idenLookupFile, idenReloadTime);
     g_idenTable->read();
-
-    yaml::Node rfssConfig = systemConf["config"];
-    g_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
-    if (g_channelId > 15U) { // clamp to 15
-        g_channelId = 15U;
-    }
 
     // show and start the application
     wnd.show();

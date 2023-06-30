@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the hotspot gain adjustment window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API HSGainAdjustWnd final : public AdjustWndBase
-{
+class HOST_SW_API HSGainAdjustWnd final : public AdjustWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the HSGainAdjustWnd class.

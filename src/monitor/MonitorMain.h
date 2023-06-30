@@ -51,6 +51,5 @@ extern yaml::Node g_conf;
 extern bool g_debug;
 
 extern lookups::IdenTableLookup* g_idenTable;
-extern uint32_t g_channelId;
 
 #endif // __MONITOR_MAIN_H__

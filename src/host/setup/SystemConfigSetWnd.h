@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the system configuration window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API SystemConfigSetWnd final : public CloseWndBase
-{
+class HOST_SW_API SystemConfigSetWnd final : public CloseWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the SystemConfigSetWnd class.

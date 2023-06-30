@@ -39,8 +39,7 @@ using namespace finalcut;
 //      This class implements the symbol level adjustment window.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API SymbLevelAdjustWnd final : public AdjustWndBase
-{
+class HOST_SW_API SymbLevelAdjustWnd final : public AdjustWndBase {
 public:
     /// <summary>
     /// Initializes a new instance of the SymbLevelAdjustWnd class.

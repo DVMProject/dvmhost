@@ -37,8 +37,7 @@ using namespace finalcut;
 //      This class implements the base class for windows with close buttons.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API CloseWndBase : public finalcut::FDialog
-{
+class HOST_SW_API CloseWndBase : public finalcut::FDialog {
 public:
     /// <summary>
     /// Initializes a new instance of the CloseWndBase class.
