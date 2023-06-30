@@ -100,6 +100,7 @@ Host::Host(const std::string& confFile) :
     m_rfTalkgroupHang(10U),
     m_netModeHang(3U),
     m_lastDstId(0U),
+    m_lastSrcId(0U),
     m_identity(),
     m_cwCallsign(),
     m_cwIdTime(0U),
@@ -892,6 +893,7 @@ int Host::run()
                     }
 
                     m_lastDstId = dmr->getLastDstId(1U);
+                    m_lastSrcId = dmr->getLastSrcId(1U);
                 }
             }
 
@@ -939,6 +941,7 @@ int Host::run()
                     }
 
                     m_lastDstId = dmr->getLastDstId(2U);
+                    m_lastSrcId = dmr->getLastSrcId(2U);
                 }
             }
         }
@@ -979,6 +982,7 @@ int Host::run()
                         }
 
                         m_lastDstId = p25->getLastDstId();
+                        m_lastSrcId = p25->getLastSrcId();
                     }
                     else {
                         nextLen = 0U;
@@ -1059,6 +1063,7 @@ int Host::run()
                     }
 
                     m_lastDstId = nxdn->getLastDstId();
+                    m_lastSrcId = nxdn->getLastSrcId();
                 }
             }
         }

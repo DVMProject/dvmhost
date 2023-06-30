@@ -117,6 +117,7 @@ using namespace nxdn::packet;
         }                                                                               \
                                                                                         \
         m_nxdn->m_rfLastDstId = 0U;                                                     \
+        m_nxdn->m_rfLastSrcId = 0U;                                                     \
         m_nxdn->m_rfTGHang.stop();                                                      \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -133,6 +134,7 @@ using namespace nxdn::packet;
             }                                                                           \
                                                                                         \
             m_nxdn->m_rfLastDstId = 0U;                                                 \
+            m_nxdn->m_rfLastSrcId = 0U;                                                 \
             m_nxdn->m_rfTGHang.stop();                                                  \
             m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
             return false;                                                               \
@@ -147,6 +149,7 @@ using namespace nxdn::packet;
             }                                                                           \
                                                                                         \
             m_nxdn->m_rfLastDstId = 0U;                                                 \
+            m_nxdn->m_rfLastSrcId = 0U;                                                 \
             m_nxdn->m_rfTGHang.stop();                                                  \
             m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
             return false;                                                               \
@@ -251,6 +254,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         }
 
         m_nxdn->m_rfLastDstId = lc.getDstId();
+        m_nxdn->m_rfLastSrcId = lc.getSrcId();
         m_nxdn->m_rfLC = lc;
 
         Sync::addNXDNSync(data + 2U);
@@ -411,6 +415,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             VALID_DSTID(srcId, dstId, group);
 
             m_nxdn->m_rfLastDstId = m_nxdn->m_rfLC.getDstId();
+            m_nxdn->m_rfLastSrcId = m_nxdn->m_rfLC.getSrcId();
             m_rfFrames = 0U;
             m_rfErrs = 0U;
             m_rfBits = 1U;
@@ -695,6 +700,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         }
 
         m_nxdn->m_netLastDstId = lc.getDstId();
+        m_nxdn->m_netLastSrcId = lc.getSrcId();
         m_nxdn->m_netLC = lc;
 
         Sync::addNXDNSync(data + 2U);
@@ -834,6 +840,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             VALID_DSTID(srcId, dstId, group);
 
             m_nxdn->m_netLastDstId = m_nxdn->m_netLC.getDstId();
+            m_nxdn->m_netLastSrcId = m_nxdn->m_netLC.getSrcId();
             m_rfFrames = 0U;
             m_rfErrs = 0U;
             m_rfBits = 1U;

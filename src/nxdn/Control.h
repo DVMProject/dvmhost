@@ -132,6 +132,8 @@ namespace nxdn
 
         /// <summary>Helper to get the last transmitted destination ID.</summary>
         uint32_t getLastDstId() const;
+        /// <summary>Helper to get the last transmitted source ID.</summary>
+        uint32_t getLastSrcId() const;
 
     private:
         friend class packet::Voice;
@@ -177,8 +179,10 @@ namespace nxdn
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;
+        uint32_t m_rfLastSrcId;
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
+        uint32_t m_netLastSrcId;
 
         bool m_ccRunning;
         bool m_ccPrevRunning;

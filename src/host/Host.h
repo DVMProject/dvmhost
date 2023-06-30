@@ -100,6 +100,7 @@ private:
     uint32_t m_netModeHang;
 
     uint32_t m_lastDstId;
+    uint32_t m_lastSrcId;
 
     std::string m_identity;
     std::string m_cwCallsign;

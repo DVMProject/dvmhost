@@ -116,8 +116,10 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_txQueue(queueSize, "P25 Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
+    m_rfLastSrcId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_netLastSrcId(0U),
     m_permittedDstId(0U),
     m_tailOnIdle(false),
     m_ccRunning(false),
@@ -715,6 +717,7 @@ void Control::clock(uint32_t ms)
                 LogMessage(LOG_RF, "talkgroup hang has expired, lastDstId = %u", m_rfLastDstId);
             }
             m_rfLastDstId = 0U;
+            m_rfLastSrcId = 0U;
 
             // reset permitted ID and clear permission state
             if (!m_authoritative && m_permittedDstId != 0U) {
@@ -873,6 +876,23 @@ uint32_t Control::getLastDstId() const
 
     if (m_netLastDstId != 0U) {
         return m_netLastDstId;
+    }
+
+    return 0U;
+}
+
+/// <summary>
+/// Helper to get the last transmitted source ID.
+/// </summary>
+/// <returns></returns>
+uint32_t Control::getLastSrcId() const
+{
+    if (m_rfLastSrcId != 0U) {
+        return m_rfLastSrcId;
+    }
+
+    if (m_rfLastSrcId != 0U) {
+        return m_rfLastSrcId;
     }
 
     return 0U;
@@ -1115,6 +1135,7 @@ void Control::processFrameLoss()
 
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
+        m_rfLastSrcId = 0U;
         m_rfTGHang.stop();
 
         m_tailOnIdle = true;
@@ -1129,6 +1150,7 @@ void Control::processFrameLoss()
     if (m_rfState == RS_RF_DATA) {
         m_rfState = RS_RF_LISTENING;
         m_rfLastDstId = 0U;
+        m_rfLastSrcId = 0U;
         m_rfTGHang.stop();
 
         m_tailOnIdle = true;

@@ -216,6 +216,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfState = RS_RF_DATA;
         m_slot->m_rfLastDstId = dstId;
+        m_slot->m_rfLastSrcId = srcId;
 
         if (m_slot->m_netState == RS_NET_IDLE) {
             m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
@@ -423,6 +424,7 @@ void Data::processNetwork(const data::Data& dmrData)
 
         m_slot->m_netState = RS_NET_DATA;
         m_slot->m_netLastDstId = dstId;
+        m_slot->m_netLastSrcId = srcId;
 
         m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO_GROUP : FLCO_PRIVATE, false);
 

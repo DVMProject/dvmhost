@@ -123,6 +123,8 @@ namespace dmr
 
         /// <summary>Helper to get the last transmitted destination ID.</summary>
         uint32_t getLastDstId() const;
+        /// <summary>Helper to get the last transmitted source ID.</summary>
+        uint32_t getLastSrcId() const;
 
         /// <summary>Helper to initialize the slot processor.</summary>
         static void init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
@@ -150,8 +152,10 @@ namespace dmr
 
         RPT_RF_STATE m_rfState;
         uint32_t m_rfLastDstId;
+        uint32_t m_rfLastSrcId;
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
+        uint32_t m_netLastSrcId;
 
         uint32_t m_permittedDstId;
 

@@ -193,6 +193,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_p25->m_rfTGHang.start();
             m_p25->m_rfLastDstId = lc.getDstId();
+            m_p25->m_rfLastSrcId = lc.getSrcId();
 
             m_rfLastHDU = lc;
         }
@@ -282,6 +283,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_p25->m_rfLastDstId = 0U;
+                m_p25->m_rfLastSrcId = 0U;
                 m_p25->m_rfTGHang.stop();
                 m_p25->m_rfState = RS_RF_REJECTED;
                 return false;
@@ -302,6 +304,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfLastSrcId = 0U;
                     m_p25->m_rfTGHang.stop();
                     m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
@@ -321,6 +324,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfLastSrcId = 0U;
                     m_p25->m_rfTGHang.stop();
                     m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
@@ -341,6 +345,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_p25->m_rfLastDstId = 0U;
+                    m_p25->m_rfLastSrcId = 0U;
                     m_p25->m_rfTGHang.stop();
                     m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
@@ -397,6 +402,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             
             m_p25->m_rfLastDstId = dstId;
+            m_p25->m_rfLastSrcId = srcId;
 
             // make sure we actually got a HDU -- otherwise treat the call as a late entry
             if (m_rfLastHDU.getDstId() != 0U) {
@@ -1106,6 +1112,7 @@ void Voice::writeNet_TDU()
     resetNet();
     m_p25->m_netState = RS_NET_IDLE;
     m_p25->m_netLastDstId = 0U;
+    m_p25->m_netLastSrcId = 0U;
     m_p25->m_tailOnIdle = true;
 }
 
@@ -1304,6 +1311,7 @@ void Voice::writeNet_LDU1()
 
                 m_p25->m_netState = RS_NET_IDLE;
                 m_p25->m_netLastDstId = 0U;
+                m_p25->m_netLastSrcId = 0U;
 
                 if (m_p25->m_rfState == RS_RF_REJECTED) {
                     m_p25->m_rfState = RS_RF_LISTENING;
@@ -1318,6 +1326,7 @@ void Voice::writeNet_LDU1()
         m_hadVoice = true;
         m_p25->m_netState = RS_NET_AUDIO;
         m_p25->m_netLastDstId = dstId;
+        m_p25->m_netLastSrcId = srcId;
         m_p25->m_netTimeout.start();
         m_netFrames = 0U;
         m_netLost = 0U;

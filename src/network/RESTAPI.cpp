@@ -531,6 +531,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         response["channelNo"].set<uint32_t>(m_host->m_channelNo);
 
         response["lastDstId"].set<uint32_t>(m_host->m_lastDstId);
+        response["lastSrcId"].set<uint32_t>(m_host->m_lastSrcId);
     }
 
     {

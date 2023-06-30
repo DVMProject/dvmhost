@@ -124,8 +124,10 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_txQueue(queueSize, "DMR Slot Frame"),
     m_rfState(RS_RF_LISTENING),
     m_rfLastDstId(0U),
+    m_rfLastSrcId(0U),
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
+    m_netLastSrcId(0U),
     m_permittedDstId(0U),
     m_rfLC(nullptr),
     m_rfPrivacyLC(nullptr),
@@ -222,6 +224,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
                 m_rfState = RS_RF_LISTENING;
 
                 m_rfLastDstId = 0U;
+                m_rfLastSrcId = 0U;
                 m_rfTGHang.stop();
 
                 return false;
@@ -502,6 +505,7 @@ void Slot::clock()
                 LogMessage(LOG_RF, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_rfLastDstId);
             }
             m_rfLastDstId = 0U;
+            m_rfLastSrcId = 0U;
 
             // reset permitted ID and clear permission state
             if (!m_authoritative && m_permittedDstId != 0U) {
@@ -688,6 +692,23 @@ uint32_t Slot::getLastDstId() const
 
     if (m_netLastDstId != 0U) {
         return m_netLastDstId;
+    }
+
+    return 0U;
+}
+
+/// <summary>
+/// Helper to get the last transmitted source ID.
+/// </summary>
+/// <returns></returns>
+uint32_t Slot::getLastSrcId() const
+{
+    if (m_rfLastSrcId != 0U) {
+        return m_rfLastSrcId;
+    }
+
+    if (m_netLastSrcId != 0U) {
+        return m_netLastSrcId;
     }
 
     return 0U;

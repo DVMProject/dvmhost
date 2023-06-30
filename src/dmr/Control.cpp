@@ -650,6 +650,26 @@ uint32_t Control::getLastDstId(uint32_t slotNo) const
     return 0U;
 }
 
+/// <summary>
+/// Helper to get the last transmitted source ID.
+/// </summary>
+/// <param name="slotNo">DMR slot number.</param>
+/// <returns></returns>
+uint32_t Control::getLastSrcId(uint32_t slotNo) const
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->getLastSrcId();
+    case 2U:
+        return m_slot2->getLastSrcId();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        break;
+    }
+
+    return 0U;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

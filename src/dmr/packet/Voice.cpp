@@ -125,6 +125,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 m_slot->m_rfLastDstId = 0U;
+                m_slot->m_rfLastSrcId = 0U;
                 m_slot->m_rfTGHang.stop();
 
                 m_slot->m_rfState = RS_RF_REJECTED;
@@ -140,6 +141,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_slot->m_rfLastDstId = 0U;
+                    m_slot->m_rfLastSrcId = 0U;
                     m_slot->m_rfTGHang.stop();
 
                     m_slot->m_rfState = RS_RF_REJECTED;
@@ -203,6 +205,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_slot->m_rfState = RS_RF_AUDIO;
             m_slot->m_rfLastDstId = dstId;
+            m_slot->m_rfLastSrcId = srcId;
 
             if (m_slot->m_netState == RS_NET_IDLE) {
                 m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
@@ -289,6 +292,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_slot->m_rfTGHang.start();
             m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
+            m_slot->m_rfLastSrcId = m_slot->m_rfLC->getSrcId();
 
             m_rfEmbeddedReadN = (m_rfEmbeddedReadN + 1U) % 2U;
             m_rfEmbeddedWriteN = (m_rfEmbeddedWriteN + 1U) % 2U;
@@ -356,6 +360,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             m_slot->m_rfTGHang.start();
             m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
+            m_slot->m_rfLastSrcId = m_slot->m_rfLC->getSrcId();
 
             // get the LCSS from the EMB
             data::EMB emb;
@@ -611,6 +616,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                 m_slot->m_rfTGHang.start();
                 m_slot->m_rfLastDstId = dstId;
+                m_slot->m_rfLastSrcId = srcId;
 
                 if (m_slot->m_netState == RS_NET_IDLE) {
                     m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
@@ -718,6 +724,7 @@ void Voice::processNetwork(const data::Data& dmrData)
 
         m_slot->m_netState = RS_NET_AUDIO;
         m_slot->m_netLastDstId = dstId;
+        m_slot->m_netLastSrcId = srcId;
 
         m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
 
@@ -785,6 +792,7 @@ void Voice::processNetwork(const data::Data& dmrData)
 
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
+            m_slot->m_netLastSrcId = srcId;
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
@@ -889,6 +897,7 @@ void Voice::processNetwork(const data::Data& dmrData)
 
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
+            m_slot->m_netLastSrcId = srcId;
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 

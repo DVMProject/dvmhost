@@ -115,6 +115,7 @@ using namespace nxdn::packet;
         }                                                                               \
                                                                                         \
         m_nxdn->m_rfLastDstId = 0U;                                                     \
+        m_nxdn->m_rfLastSrcId = 0U;                                                     \
         m_nxdn->m_rfTGHang.stop();                                                      \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -131,6 +132,7 @@ using namespace nxdn::packet;
             }                                                                           \
                                                                                         \
             m_nxdn->m_rfLastDstId = 0U;                                                 \
+            m_nxdn->m_rfLastSrcId = 0U;                                                 \
             m_nxdn->m_rfTGHang.stop();                                                  \
             m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
             return false;                                                               \
@@ -145,6 +147,7 @@ using namespace nxdn::packet;
             }                                                                           \
                                                                                         \
             m_nxdn->m_rfLastDstId = 0U;                                                 \
+            m_nxdn->m_rfLastSrcId = 0U;                                                 \
             m_nxdn->m_rfTGHang.stop();                                                  \
             m_nxdn->m_rfState = RS_RF_REJECTED;                                         \
             return false;                                                               \

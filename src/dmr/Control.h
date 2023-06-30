@@ -132,6 +132,8 @@ namespace dmr
 
         /// <summary>Helper to get the last transmitted destination ID.</summary>
         uint32_t getLastDstId(uint32_t slotNo) const;
+        /// <summary>Helper to get the last transmitted source ID.</summary>
+        uint32_t getLastSrcId(uint32_t slotNo) const;
 
     private:
         friend class Slot;
