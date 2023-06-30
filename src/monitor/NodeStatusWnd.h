@@ -41,7 +41,7 @@ using namespace finalcut;
 // ---------------------------------------------------------------------------
 
 #define NODE_STATUS_WIDTH 28
-#define NODE_STATUS_HEIGHT 7
+#define NODE_STATUS_HEIGHT 8
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -99,6 +99,8 @@ private:
     uint8_t m_channelId;
     uint32_t m_channelNo;
 
+    FLabel m_modeStr{this};
+
     FLabel m_channelNoLabel{"Ch. No.: ", this};
     FLabel m_chanNo{this};
 
@@ -109,6 +111,8 @@ private:
 
     FLabel m_lastTGLabel{"Last TG: ", this};
     FLabel m_lastTG{this};
+    FLabel m_lastSrcLabel{"Last Src: ", this};
+    FLabel m_lastSrc{this};
 
     /// <summary>
     ///
@@ -138,13 +142,13 @@ private:
         FDialog::draw();
 
         if (m_failed) {
-            setColor(FColor::LightGray, FColor::Red3);
+            setColor(FColor::LightGray, FColor::LightRed);
         }
         else if (m_control) {
             setColor(FColor::LightGray, FColor::Purple1);
         }
         else if (m_tx) {
-            setColor(FColor::LightGray, FColor::Green1);
+            setColor(FColor::LightGray, FColor::LightGreen);
         }
         else {
             setColor(FColor::LightGray, FColor::Black);
@@ -158,6 +162,10 @@ private:
     /// </summary>
     void initControls()
     {
+        m_modeStr.setGeometry(FPoint(22, 1), FSize(4, 1));
+        m_modeStr.setAlignment(Align::Right);
+        m_modeStr.setEmphasis();
+
         // channel number
         {
             m_channelNoLabel.setGeometry(FPoint(2, 1), FSize(10, 1));
@@ -179,10 +187,18 @@ private:
 
         // last TG
         {
-            m_lastTGLabel.setGeometry(FPoint(2, 4), FSize(10, 1));
+            m_lastTGLabel.setGeometry(FPoint(2, 4), FSize(11, 1));
 
-            m_lastTG.setGeometry(FPoint(11, 4), FSize(8, 1));
+            m_lastTG.setGeometry(FPoint(13, 4), FSize(8, 1));
             m_lastTG.setText("None");
+        }
+
+        // last source
+        {
+            m_lastSrcLabel.setGeometry(FPoint(2, 5), FSize(11, 1));
+
+            m_lastSrc.setGeometry(FPoint(13, 5), FSize(8, 1));
+            m_lastSrc.setText("None");
         }
     }
 
@@ -260,6 +276,19 @@ private:
                     }
                     else {
                         try {
+                            uint8_t mode = rsp["state"].get<uint8_t>();
+                            switch (mode) {
+                            case modem::STATE_DMR:
+                                m_modeStr.setText("DMR");
+                                break;
+                            case modem::STATE_P25:
+                                m_modeStr.setText("P25");
+                                break;
+                            case modem::STATE_NXDN:
+                                m_modeStr.setText("NXDN");
+                                break;
+                            }
+
                             // get remote node state
                             if (rsp["dmrTSCCEnable"].is<bool>() && rsp["p25CtrlEnable"].is<bool>() &&
                                 rsp["nxdnCtrlEnable"].is<bool>()) {
@@ -331,6 +360,20 @@ private:
                             }
                             else {
                                 ::LogWarning(LOG_HOST, "%s:%u, does not report last TG information");
+                            }
+
+                            // report last known transmitted source ID
+                            if (rsp["lastSrcId"].is<uint32_t>()) {
+                                uint32_t lastSrcId = rsp["lastSrcId"].get<uint32_t>();
+                                if (lastSrcId == 0) {
+                                    m_lastSrc.setText("None");
+                                }
+                                else {
+                                    m_lastSrc.setText(__INT_STR(lastSrcId));
+                                }
+                            }
+                            else {
+                                ::LogWarning(LOG_HOST, "%s:%u, does not report last source information");
                             }
                         }
                         catch (std::exception&) {
