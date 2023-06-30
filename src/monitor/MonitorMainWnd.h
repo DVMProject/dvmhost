@@ -127,6 +127,7 @@ private:
     LogDisplayWnd m_logWnd{this};
     SelectedNodeWnd m_selectWnd{this};
     std::vector<NodeStatusWnd*> m_nodes;
+    uint32_t m_activeNodeId = 0U;
 
     lookups::VoiceChData m_selectedCh;
 
@@ -202,6 +203,12 @@ private:
 
                     m_selectWnd.setSelectedText(ss.str());
                     m_selectedCh = wnd->getChData();
+
+                    auto it = std::find(m_nodes.begin(), m_nodes.end(), wnd);
+                    if (it != m_nodes.end()) {
+                        uint32_t i = it - m_nodes.begin();
+                        m_activeNodeId = i;
+                    }
                 }, wnd);
 
                 offsX += NODE_STATUS_WIDTH + 2;
@@ -228,6 +235,29 @@ private:
     /*
     ** Event Handlers
     */
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="e"></param>
+    void onKeyPress(finalcut::FKeyEvent* e) override
+    {
+        const FKey key = e->key();
+        if (key == FKey::Tab) {
+            // lower and deactivate current window
+            m_nodes.at(m_activeNodeId)->lowerWindow();
+            m_nodes.at(m_activeNodeId)->deactivateWindow();
+
+            m_activeNodeId++;
+            if (m_activeNodeId >= m_nodes.size()) {
+                m_activeNodeId = 0U;
+            }
+
+            // raise and activate window
+            m_nodes.at(m_activeNodeId)->raiseWindow();
+            m_nodes.at(m_activeNodeId)->activateWindow();
+        }
+    }
 
     /// <summary>
     /// 
