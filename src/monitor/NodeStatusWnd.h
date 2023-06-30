@@ -138,13 +138,13 @@ private:
         FDialog::draw();
 
         if (m_failed) {
-            setColor(FColor::Yellow1, FColor::Red3);
+            setColor(FColor::LightGray, FColor::Red3);
         }
         else if (m_control) {
-            setColor(FColor::LightGray, FColor::Purple3);
+            setColor(FColor::LightGray, FColor::Purple4);
         }
         else if (m_tx) {
-            setColor(FColor::LightGray, FColor::Green3);
+            setColor(FColor::LightGray, FColor::Green1);
         }
         else {
             setColor(FColor::LightGray, FColor::Black);
