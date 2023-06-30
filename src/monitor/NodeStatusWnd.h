@@ -141,7 +141,7 @@ private:
             setColor(FColor::LightGray, FColor::Red3);
         }
         else if (m_control) {
-            setColor(FColor::LightGray, FColor::Purple4);
+            setColor(FColor::LightGray, FColor::Purple1);
         }
         else if (m_tx) {
             setColor(FColor::LightGray, FColor::Green1);
