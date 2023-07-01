@@ -129,11 +129,6 @@ namespace network
                     }
 
                     m_completed = true;
-                    
-                    if (m_connection != nullptr) {
-                        m_connection->stop();
-                    }
-
                     m_ioContext.stop();
 
                     wait();
