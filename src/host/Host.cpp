@@ -2293,7 +2293,7 @@ bool Host::createNetwork()
     uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
     std::string restApiPassword = networkConf["restPassword"].as<std::string>();
     bool restApiDebug = networkConf["restDebug"].as<bool>(false);
-    uint32_t id = networkConf["id"].as<uint32_t>(1001U);
+    uint32_t id = networkConf["id"].as<uint32_t>(1000U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
@@ -2302,6 +2302,11 @@ bool Host::createNetwork()
     bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
+
+    if (id > 999999999U) {
+        ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
+        return false;
+    }
 
     if (restApiPassword.length() > 64) {
         std::string password = restApiPassword;

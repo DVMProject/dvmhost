@@ -100,7 +100,7 @@ private:
         FDialog::setShadow(false);
 
         m_selectedHostLabel.setGeometry(FPoint(2, 1), FSize(18, 1));
-        m_selectedHost.setGeometry(FPoint(20, 1), FSize(30, 1));
+        m_selectedHost.setGeometry(FPoint(20, 1), FSize(60, 1));
         m_selectedHost.setText("None");
 
         FDialog::initLayout();

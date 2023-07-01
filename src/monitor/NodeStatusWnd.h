@@ -86,6 +86,8 @@ public:
     lookups::VoiceChData getChData() { return m_chData; }
     /// <summary>Sets the channel data.</summary>
     void setChData(lookups::VoiceChData chData) { m_chData = chData; }
+    /// <summary>Gets the peer ID.</summary>
+    uint32_t getPeerId() const { return m_peerId; }
 
 private:
     int m_timerId;
@@ -98,8 +100,10 @@ private:
     lookups::VoiceChData m_chData;
     uint8_t m_channelId;
     uint32_t m_channelNo;
+    uint32_t m_peerId;
 
     FLabel m_modeStr{this};
+    FLabel m_peerIdStr{this};
 
     FLabel m_channelNoLabel{"Ch. No.: ", this};
     FLabel m_chanNo{this};
@@ -165,6 +169,9 @@ private:
         m_modeStr.setGeometry(FPoint(22, 1), FSize(4, 1));
         m_modeStr.setAlignment(Align::Right);
         m_modeStr.setEmphasis();
+
+        m_peerIdStr.setGeometry(FPoint(17, 2), FSize(9, 1));
+        m_peerIdStr.setAlignment(Align::Right);
 
         // channel number
         {
@@ -290,6 +297,11 @@ private:
                             default:
                                 m_modeStr.setText("");
                                 break;
+                            }
+
+                            if (rsp["peerId"].is<uint32_t>()) {
+                                m_peerId = rsp["peerId"].get<uint32_t>();
+                                m_peerIdStr.setText(__INT_STR(m_peerId));
                             }
 
                             // get remote node state

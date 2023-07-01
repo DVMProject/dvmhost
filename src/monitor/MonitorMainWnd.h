@@ -199,7 +199,8 @@ private:
                 wnd->addCallback("update-selected", this, [&](NodeStatusWnd* wnd) {
                     std::stringstream ss;
                     ss << (uint32_t)(wnd->getChannelId()) << "-" << wnd->getChannelNo() << " / "
-                       << wnd->getChData().address() << ":" << wnd->getChData().port();
+                       << wnd->getChData().address() << ":" << wnd->getChData().port() << " / "
+                       << "Peer ID " << (uint32_t)(wnd->getPeerId());
 
                     m_selectWnd.setSelectedText(ss.str());
                     m_selectedCh = wnd->getChData();

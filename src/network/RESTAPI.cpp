@@ -486,17 +486,8 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
     setResponseDefaultStatus(response);
 
     yaml::Node systemConf = m_host->m_conf["system"];
+    yaml::Node networkConf = m_host->m_conf["network"];
     {
-        yaml::Node modemConfig = m_host->m_conf["system"]["modem"];
-        std::string portType = modemConfig["protocol"]["type"].as<std::string>();
-        response["portType"].set<std::string>(portType);
-
-        yaml::Node uartConfig = modemConfig["protocol"]["uart"];
-        std::string modemPort = uartConfig["port"].as<std::string>();
-        response["modemPort"].set<std::string>(modemPort);
-        uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
-        response["portSpeed"].set<uint32_t>(portSpeed);
-
         response["state"].set<uint8_t>(m_host->m_state);
         bool dmrEnabled = m_dmr != nullptr;
         response["dmrEnabled"].set<bool>(dmrEnabled);
@@ -504,9 +495,6 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         response["p25Enabled"].set<bool>(p25Enabled);
         bool nxdnEnabled = m_nxdn != nullptr;
         response["nxdnEnabled"].set<bool>(nxdnEnabled);
-
-        uint8_t protoVer = m_host->m_modem->getVersion();
-        response["protoVer"].set<uint8_t>(protoVer);
 
         response["fixedMode"].set<bool>(m_host->m_fixedMode);
 
@@ -532,10 +520,23 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
 
         response["lastDstId"].set<uint32_t>(m_host->m_lastDstId);
         response["lastSrcId"].set<uint32_t>(m_host->m_lastSrcId);
+
+        uint32_t peerId = networkConf["id"].as<uint32_t>();
+        response["peerId"].set<uint32_t>(peerId);
     }
 
+    yaml::Node modemConfig = m_host->m_conf["system"]["modem"];
     {
         json::object modemInfo = json::object();
+        std::string portType = modemConfig["protocol"]["type"].as<std::string>();
+        modemInfo["portType"].set<std::string>(portType);
+
+        yaml::Node uartConfig = modemConfig["protocol"]["uart"];
+        std::string modemPort = uartConfig["port"].as<std::string>();
+        modemInfo["modemPort"].set<std::string>(modemPort);
+        uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
+        modemInfo["portSpeed"].set<uint32_t>(portSpeed);
+
         if (!m_host->m_modem->isHotspot()) {
             modemInfo["pttInvert"].set<bool>(m_host->m_modem->m_pttInvert);
             modemInfo["rxInvert"].set<bool>(m_host->m_modem->m_rxInvert);
@@ -611,6 +612,10 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         modemInfo["rxFrequencyEffective"].set<uint32_t>(rxFreqEffective);
         uint32_t txFreqEffective = m_host->m_modem->m_txFrequency + m_host->m_modem->m_txTuning;
         modemInfo["txFrequencyEffective"].set<uint32_t>(txFreqEffective);
+
+        uint8_t protoVer = m_host->m_modem->getVersion();
+        modemInfo["protoVer"].set<uint8_t>(protoVer);
+
         response["modem"].set<json::object>(modemInfo);
     }
 
