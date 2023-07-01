@@ -142,6 +142,10 @@ namespace network
                 /// <summary></summary>
                 virtual void entry()
                 {
+                    if (m_completed) {
+                        return;
+                    }
+
                     asio::ip::tcp::resolver resolver(m_ioContext);
                     auto endpoints = resolver.resolve(m_address, std::to_string(m_port));
 
@@ -163,6 +167,15 @@ namespace network
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
                     asio::connect(m_socket, endpoints);
+
+                    // enable SO_LINGER timeout 0
+                    asio::socket_base::linger linger(true, 0);
+                    m_socket.set_option(linger);
+
+                    // enable TCP_NODELAY
+                    asio::ip::tcp::no_delay noDelay(true);
+                    m_socket.set_option(noDelay);
+
                     m_connection = new_unique(ConnectionType, std::move(m_socket), m_requestHandler);
                     m_connection->start();
                 }
