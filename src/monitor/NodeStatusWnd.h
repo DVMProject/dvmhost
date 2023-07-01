@@ -399,8 +399,7 @@ private:
                             }
                         }
                         catch (std::exception&) {
-                            ::LogWarning(LOG_HOST, "%s:%u, failed to properly handle status");
-                            m_failed = true;
+                            ::LogWarning(LOG_HOST, "%s:%u, failed to properly handle status", m_chData.address().c_str(), m_chData.port());
                         }
                     }
                 }
