@@ -206,13 +206,27 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: talkgroup_ru
 # Helper target to force strip binaries.
 #
 if (CROSS_COMPILE_ARM)
-    add_custom_target(strip
-        COMMAND arm-linux-gnueabihf-strip -s dvmhost
-        COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        add_custom_target(strip
+                COMMAND arm-linux-gnueabihf-strip -s dvmhost
+                COMMAND arm-linux-gnueabihf-strip -s dvmcmd
+                COMMAND arm-linux-gnueabihf-strip -s dvmmon)
+    else()
+        add_custom_target(strip
+                COMMAND arm-linux-gnueabihf-strip -s dvmhost
+                COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 elseif (CROSS_COMPILE_AARCH64)
-    add_custom_target(strip
-        COMMAND aarch64-linux-gnu-strip -s dvmhost
-        COMMAND aarch64-linux-gnu-strip -s dvmcmd)
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        add_custom_target(strip
+            COMMAND aarch64-linux-gnu-strip -s dvmhost
+            COMMAND aarch64-linux-gnu-strip -s dvmcmd
+            COMMAND aarch64-linux-gnu-strip -s dvmmon)
+    else()
+        add_custom_target(strip
+            COMMAND aarch64-linux-gnu-strip -s dvmhost
+            COMMAND aarch64-linux-gnu-strip -s dvmcmd)
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 elseif (CROSS_COMPILE_RPI_ARM)
     if (NOT WITH_RPI_ARM_TOOLS)
         add_custom_target(strip
@@ -224,9 +238,16 @@ elseif (CROSS_COMPILE_RPI_ARM)
             COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
     endif ()
 else()
-    add_custom_target(strip
-        COMMAND strip -s dvmhost
-        COMMAND strip -s dvmcmd)
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        add_custom_target(strip
+            COMMAND strip -s dvmhost
+            COMMAND strip -s dvmcmd
+            COMMAND strip -s dvmmon)
+    else()
+        add_custom_target(strip
+            COMMAND strip -s dvmhost
+            COMMAND strip -s dvmcmd)
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 endif (CROSS_COMPILE_ARM)
 
 #/*
@@ -267,6 +288,7 @@ add_custom_target(old_install
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/log
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
     COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
