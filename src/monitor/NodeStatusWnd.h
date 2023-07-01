@@ -42,6 +42,7 @@ using namespace finalcut;
 
 #define NODE_STATUS_WIDTH 28
 #define NODE_STATUS_HEIGHT 8
+#define NODE_UPDATE_FAIL_CNT 4
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -93,6 +94,7 @@ private:
     int m_timerId;
     int m_reconnectTimerId;
 
+    uint8_t m_failCnt = 0U;
     bool m_failed;
     bool m_control;
     bool m_tx;
@@ -278,11 +280,16 @@ private:
                         HTTP_GET, GET_STATUS, req, rsp, g_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                         ::LogError(LOG_HOST, "failed to get status for %s:%u, chNo = %u", m_chData.address().c_str(), m_chData.port(), m_channelNo);
-                        m_failed = true;
-                        setText("FAILED");
+                        ++m_failCnt;
+                        if (m_failCnt > NODE_UPDATE_FAIL_CNT) {
+                            m_failed = true;
+                            setText("FAILED");
+                        }
                     }
                     else {
                         try {
+                            m_failCnt = 0U;
+
                             uint8_t mode = rsp["state"].get<uint8_t>();
                             switch (mode) {
                             case modem::STATE_DMR:
@@ -414,6 +421,7 @@ private:
                     }
                     else {
                         m_failed = false;
+                        m_failCnt = 0U;
                         setText("UNKNOWN");
                     }
                 }
