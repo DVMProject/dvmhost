@@ -260,19 +260,36 @@ endif (CROSS_COMPILE_ARM)
 # the non-standard legacy install to "/opt/dvm" does.
 # 
 set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
-add_custom_target(tarball
-    COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
-    COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-    COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
-    COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
-    COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-    COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-    COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-    COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-    COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-    COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-    COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
-    COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    add_custom_target(tarball
+        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+        COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+        COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
+        COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+else()
+    add_custom_target(tarball
+        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+        COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+        COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
+        COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 
 #
 # Custom make target to perform non-standard legacy install to "/opt/dvm". This is meant
