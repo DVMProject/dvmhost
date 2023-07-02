@@ -40,6 +40,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
+#include "Log.h"
 #include "Utils.h"
 
 #include <array>
@@ -138,6 +139,9 @@ namespace network
                             }
                         }
                         else if (ec != asio::error::operation_aborted) {
+                            if (ec) {
+                                ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                            }
                             m_connectionManager.stop(this->shared_from_this());
                         }
                     });
@@ -170,6 +174,9 @@ namespace network
                             }
 
                             if (ec != asio::error::operation_aborted) {
+                                if (ec) {
+                                    ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                                }
                                 m_connectionManager.stop(this->shared_from_this());
                             }
                         }

@@ -40,6 +40,7 @@
 #include "Defines.h"
 #include "network/rest/http/HTTPLexer.h"
 #include "network/rest/http/HTTPPayload.h"
+#include "Log.h"
 #include "Utils.h"
 
 #include <array>
@@ -135,6 +136,9 @@ namespace network
                             }
                         }
                         else if (ec != asio::error::operation_aborted) {
+                            if (ec) {
+                                ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                            }
                             stop();
                         }
                     });
@@ -152,6 +156,8 @@ namespace network
                     {
                         asio::error_code ec = e.code();
                         if (ec) {
+                            ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+
                             // initiate graceful connection closure
                             asio::error_code ignored_ec;
                             m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
