@@ -83,11 +83,20 @@ namespace network
                 {
                     try
                     {
+                        ensureNoLinger();
                         if (m_socket.is_open()) {
                             m_socket.close();
                         }
                     }
                     catch(const std::exception&) { /* ignore */ }
+                }
+
+                /// <summary>Helper to enable the SO_LINGER socket option during shutdown.</summary>
+                void ensureNoLinger()
+                {
+                    // enable SO_LINGER timeout 0
+                    asio::socket_base::linger linger(true, 0);
+                    m_socket.set_option(linger);
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
@@ -126,9 +135,7 @@ namespace network
                             }
                         }
                         else if (ec != asio::error::operation_aborted) {
-                            if (m_socket.is_open()) {
-                                m_socket.close();
-                            }
+                            stop();
                         }
                     });
                 }

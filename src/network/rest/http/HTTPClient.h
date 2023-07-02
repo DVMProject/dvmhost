@@ -164,14 +164,6 @@ namespace network
                 {
                     asio::connect(m_socket, endpoints);
 
-                    // enable SO_LINGER timeout 0
-                    asio::socket_base::linger linger(true, 0);
-                    m_socket.set_option(linger);
-
-                    // enable TCP_NODELAY
-                    asio::ip::tcp::no_delay noDelay(true);
-                    m_socket.set_option(noDelay);
-
                     m_connection = new_unique(ConnectionType, std::move(m_socket), m_requestHandler);
                     m_connection->start();
                 }

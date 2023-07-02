@@ -90,7 +90,7 @@ namespace network
                 void stopAll()
                 {
                     for (auto c : m_connections)
-                    c->stop();
+                        c->stop();
 
                     std::lock_guard<std::mutex> guard(m_lock);
                     m_connections.clear();
