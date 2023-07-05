@@ -170,27 +170,6 @@ void FNENetwork::clock(uint32_t ms)
         m_updateLookupTimer.start();
     }
 
-#if defined(ENABLE_DMR)
-    // if the DMR handler has parrot frames to playback, playback a frame
-    if (m_tagDMR->hasParrotFrames()) {
-        m_tagDMR->playbackParrot();
-    }
-#endif // defined(ENABLE_DMR)
-
-#if defined(ENABLE_P25)
-    // if the P25 handler has parrot frames to playback, playback a frame
-    if (m_tagP25->hasParrotFrames()) {
-        m_tagP25->playbackParrot();
-    }
-#endif // defined(ENABLE_P25)
-
-#if defined(ENABLE_NXDN)
-    // if the NXDN handler has parrot frames to playback, playback a frame
-    if (m_tagNXDN->hasParrotFrames()) {
-        m_tagNXDN->playbackParrot();
-    }
-#endif // defined(ENABLE_NXDN)
-
     sockaddr_storage address;
     uint32_t addrLen;
     frame::RTPHeader rtpHeader;
@@ -586,6 +565,28 @@ void FNENetwork::clock(uint32_t ms)
             break;
         }
     }
+    else {
+#if defined(ENABLE_DMR)
+        // if the DMR handler has parrot frames to playback, playback a frame
+        if (m_tagDMR->hasParrotFrames()) {
+            m_tagDMR->playbackParrot();
+        }
+#endif // defined(ENABLE_DMR)
+
+#if defined(ENABLE_P25)
+        // if the P25 handler has parrot frames to playback, playback a frame
+        if (m_tagP25->hasParrotFrames()) {
+            m_tagP25->playbackParrot();
+        }
+#endif // defined(ENABLE_P25)
+
+#if defined(ENABLE_NXDN)
+        // if the NXDN handler has parrot frames to playback, playback a frame
+        if (m_tagNXDN->hasParrotFrames()) {
+            m_tagNXDN->playbackParrot();
+        }
+#endif // defined(ENABLE_NXDN)
+   }
 
     return;
 }
