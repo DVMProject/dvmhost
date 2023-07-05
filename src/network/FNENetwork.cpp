@@ -517,7 +517,7 @@ void FNENetwork::clock(uint32_t ms)
                                 uint8_t rawPayload[length - 11U];
                                 ::memset(rawPayload, 0x00U, length - 11U);
                                 ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
-                                std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
+                                std::string payload(rawPayload, rawPayload + (length - 11U));
 
                                 std::stringstream ss;
                                 ss << peerId << " " << payload;

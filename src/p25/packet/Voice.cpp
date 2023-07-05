@@ -1151,6 +1151,18 @@ void Voice::writeNet_LDU1()
     uint32_t srcId = control.getSrcId();
     bool group = control.getLCO() == LC_GROUP;
 
+    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+    if (m_p25->m_rfLastDstId != 0U && dstId != 0U) {
+        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            resetNet();
+            return;
+        }
+
+        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            m_p25->m_rfTGHang.start();
+        }
+    }
+
     // ensure our srcId and dstId are sane from the last LDU1
     if (m_netLastLDU1.getDstId() != 0U) {
         if (dstId != m_netLastLDU1.getDstId()) {
@@ -1179,18 +1191,6 @@ void Voice::writeNet_LDU1()
         LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
         resetNet();
         return;
-    }
-
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_p25->m_rfLastDstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            resetNet();
-            return;
-        }
-
-        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            m_p25->m_rfTGHang.start();
-        }
     }
 
     // don't process network frames if the RF modem isn't in a listening state
