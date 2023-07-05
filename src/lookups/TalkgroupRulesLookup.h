@@ -235,7 +235,7 @@ namespace lookups
         bool getACL();
 
     private:
-        const std::string& m_rulesFile;
+        const std::string m_rulesFile;
         uint32_t m_reloadTime;
         yaml::Node m_rules;
 
