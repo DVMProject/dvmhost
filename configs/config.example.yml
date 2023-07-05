@@ -286,7 +286,8 @@ system:
     # Flag indicating the host is operating in a single digital mode.
     fixedMode: false
     # Amount of time the host will "hang" on the last TGID received via RF before returning to allowing all 
-    # TGID traffic.
+    # TGID traffic. This applies only to network traffic, it essentially allows time-based filtering of network
+    # traffic for the last TGID received.
     rfTalkgroupHang: 10
     # Sets the amount of delay between "ticks" of the processing loop when the host is active (i.e. 
     # processing traffic). (ms) [Note: Default value is recommend, normally this should not be changed.]
