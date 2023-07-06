@@ -298,6 +298,20 @@ void FNENetwork::clock(uint32_t ms)
                 }
                 else {
                     writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
+
+                    // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
+                    // the login sequence
+                    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection connection = m_peers[peerId];
+                        connection.lastPing(now);
+
+                        if (connection.connectionState() != NET_STAT_RUNNING) {
+                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                            if (it != m_peers.end()) {
+                                m_peers.erase(peerId);
+                            }
+                        }
+                    }
                 }
             }
             break;
