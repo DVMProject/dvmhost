@@ -104,6 +104,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_control(false),
     m_dedicatedControl(false),
     m_voiceOnControl(false),
+    m_controlOnly(false),
     m_ackTSBKRequests(true),
     m_disableNetworkHDU(false),
     m_idenTable(idenTable),
@@ -253,6 +254,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
+    m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
@@ -359,6 +361,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
+            LogInfo("    Control data only: %s", m_controlOnly ? "yes" : "no");
             LogInfo("    Ack Requests: %s", m_ackTSBKRequests ? "yes" : "no");
             if (m_trunk->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
@@ -521,6 +524,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
+            if (m_controlOnly) {
+                LogDebug(LOG_RF, "CC only mode, ignoring HDU/LDU");
+                break;
+            }
             if (!m_dedicatedControl)
                 ret = m_voice->process(data, len);
             else {
@@ -537,6 +544,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             break;
 
         case P25_DUID_PDU:
+            if (m_controlOnly) {
+                LogDebug(LOG_RF, "CC only mode, ignoring PDU");
+                break;
+            }
             if (!m_dedicatedControl)
                 ret = m_data->process(data, len);
             else {
@@ -1080,6 +1091,10 @@ void Control::processNetwork()
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
+            if (m_controlOnly) {
+                LogDebug(LOG_NET, "CC only mode, ignoring HDU/LDU from network");
+                break;
+            }
             ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
@@ -1089,6 +1104,10 @@ void Control::processNetwork()
             break;
 
         case P25_DUID_PDU:
+            if (m_controlOnly) {
+                LogDebug(LOG_NET, "CC only mode, ignoring PDU from network");
+                break;
+            }
             if (!m_dedicatedControl)
                 ret = m_data->processNetwork(data.get(), frameLength, control, lsd, duid);
             else {

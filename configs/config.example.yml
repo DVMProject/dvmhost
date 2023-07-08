@@ -176,6 +176,9 @@ protocols:
 
         # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
+        # Flag indicating whether to ignore voice traffic on this host
+        #   (This is useful when running in multi-channel non-dedicated mode to block voice traffic over the control channel)
+        controlOnly: false
         # Flag indicating whether or not the composite flag in the CC service options is set.
         #   (This is useful to disable for some radios when running in VOC mode.)
         disableCompositeFlag: false
