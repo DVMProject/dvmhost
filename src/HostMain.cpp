@@ -112,8 +112,8 @@ uint8_t* g_gitHashBytes = nullptr;
 /// <param name="signum"></param>
 static void sigHandler(int signum)
 {
-    g_killed = true;
     g_signal = signum;
+    g_killed = true;
 }
 #endif
 
@@ -313,6 +313,7 @@ int main(int argc, char** argv)
 
     do {
         g_signal = 0;
+        g_killed = false;
 
         if (g_fne) {
             HostFNE *fne = new HostFNE(g_iniFile);
