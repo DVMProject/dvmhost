@@ -396,7 +396,7 @@ void FNENetwork::clock(uint32_t ms)
                         uint8_t rawPayload[length - 8U];
                         ::memset(rawPayload, 0x00U, length - 8U);
                         ::memcpy(rawPayload, buffer.get() + 8U, length - 8U);
-                        std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
+                        std::string payload(rawPayload, rawPayload + (length - 8U));
 
                         // parse JSON body
                         json::value v;
@@ -555,7 +555,7 @@ void FNENetwork::clock(uint32_t ms)
                                 uint8_t rawPayload[length - 12U];
                                 ::memset(rawPayload, 0x00U, length - 12U);
                                 ::memcpy(rawPayload, buffer.get() + 12U, length - 12U);
-                                std::string payload(rawPayload, rawPayload + sizeof(rawPayload));
+                                std::string payload(rawPayload, rawPayload + (length - 12U));
 
                                 bool currState = g_disableTimeDisplay;
                                 g_disableTimeDisplay = true;
