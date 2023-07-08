@@ -710,7 +710,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         else {
             std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data + 2U);
             if (tdulc == nullptr) {
-                LogWarning(LOG_RF, P25_LDU2_STR ", undecodable TDULC");
+                LogWarning(LOG_RF, P25_TDULC_STR ", undecodable TDULC");
             }
             else {
                 m_p25->m_trunk->writeRF_TDULC(tdulc.get(), false);

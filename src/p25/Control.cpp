@@ -127,6 +127,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ccHalted(false),
     m_rfTimeout(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
+    m_rfLossWatchdog(1000U, 0U, 1500U),
     m_netTimeout(1000U, timeout),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 10U),
@@ -431,6 +432,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             // increment the frame loss count by one for audio or data; otherwise drop
             // packets
             if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+                m_rfLossWatchdog.start();
                 ++m_frameLossCnt;
             }
             else {
@@ -442,6 +444,12 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
                 return false;
             }
+        }
+    }
+
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+        if (m_rfLossWatchdog.isRunning()) {
+            m_rfLossWatchdog.start();
         }
     }
 
@@ -722,6 +730,18 @@ void Control::clock(uint32_t ms)
             // reset permitted ID and clear permission state
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
+            }
+        }
+    }
+
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+        if (m_rfLossWatchdog.isRunning()) {
+            m_rfLossWatchdog.clock(ms);
+
+            if (m_rfLossWatchdog.hasExpired()) {
+                m_rfLossWatchdog.stop();
+
+                processFrameLoss();
             }
         }
     }
