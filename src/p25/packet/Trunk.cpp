@@ -909,6 +909,10 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 /// <param name="dataBlock"></param>
 bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
 {
+    if (!m_p25->m_control) {
+        return false;
+    }
+
     uint8_t data[1U];
     ::memset(data, 0x00U, 1U);
 

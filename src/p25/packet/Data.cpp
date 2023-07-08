@@ -236,7 +236,11 @@ bool Data::process(uint8_t* data, uint32_t len)
                             }
                         }
 
-                        writeNetwork(m_rfDataBlockCnt, m_pduUserData + dataOffset, (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                        // only repeat data blocks if we're not an AMBT
+                        if (m_rfDataHeader.getFormat() != PDU_FMT_AMBT) {
+                            writeNetwork(m_rfDataBlockCnt, m_pduUserData + dataOffset, (m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                        }
+
                         m_rfDataBlockCnt++;
                     }
                     else {
