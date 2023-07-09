@@ -226,11 +226,6 @@ bool Data::process(uint8_t* data, uint32_t len)
                     if (ret) {
                         if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR && m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED &&
                             m_rfData[i].getSerialNo() == 0U) {
-                            // bryanb: HACK - workaround for some vendors setting lastBlock to true when it shouldn't be
-                            if (blocksToFollow > 1 && m_rfData[i].getLastBlock()) {
-                                m_rfData[i].setLastBlock(false);
-                            }
-
                             LogMessage(LOG_RF, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
                                 m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
                             m_rfSecondHeader.reset();
