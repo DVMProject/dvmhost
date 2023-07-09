@@ -389,6 +389,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
+                m_pduUserDataLength = 0U;
 
                 m_p25->m_rfState = m_prevRfState;
             } // switch (m_rfDataHeader.getSAP())
@@ -593,6 +594,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             m_netDataOffset = 0U;
             m_netDataBlockCnt = 0U;
             m_netPDUCount = 0U;
+            m_pduUserDataLength = 0U;
+
             m_p25->m_netState = RS_NET_IDLE;
         }
     }
