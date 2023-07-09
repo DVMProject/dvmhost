@@ -534,7 +534,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
                     }
                     else {
                         LogMessage(LOG_NET, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u",
-                            (m_netSecondHeader.getFormat() == PDU_FMT_CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
+                            (m_netDataHeader.getFormat() == PDU_FMT_CONFIRMED) ? m_netData[i].getSerialNo() : m_netDataBlockCnt, m_netData[i].getFormat(),
                             m_netData[i].getLastBlock());
                     }
 
