@@ -91,10 +91,9 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
                 return false;
             }
 
-            // determine the number of user data bytes
+            // determine if this is the last data block
             uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-            if ((m_serialNo == (header.getBlocksToFollow() - 1) && header.getBlocksToFollow() > 1) ||
-                (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U)) {
+            if (m_serialNo == (header.getBlocksToFollow() - 1) && header.getBlocksToFollow() > 1) {
                 m_lastBlock = true;
             } else {
                 if (header.getBlocksToFollow() <= 1) {

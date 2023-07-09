@@ -202,6 +202,7 @@ namespace p25
 
         Timer m_rfTimeout;
         Timer m_rfTGHang;
+        Timer m_rfLossWatchdog;
         Timer m_netTimeout;
         Timer m_networkWatchdog;
 

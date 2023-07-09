@@ -495,13 +495,12 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 /// Writes P25 PDU frame data to the network.
 /// </summary>
 /// <param name="header"></param>
-/// <param name="secHeader"></param>
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader, const uint8_t currentBlock,
-    const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data,
+    const uint32_t len)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -513,7 +512,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const p25::da
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_PDUMessage(messageLength, header, secHeader, currentBlock, data, len);
+    UInt8Array message = createP25_PDUMessage(messageLength, header, currentBlock, data, len);
     if (message == nullptr) {
         return false;
     }
@@ -972,42 +971,30 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 /// </summary>
 /// <param name="length"></param>
 /// <param name="header"></param>
-/// <param name="secHeader"></param>
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
 /// <returns></returns>
-UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
+UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header,
     const uint8_t currentBlock, const uint8_t* data, const uint32_t len)
 {
-    bool useSecondHeader = false;
-
-    // process second header if we're using enhanced addressing
-    if (header.getSAP() == p25::PDU_SAP_EXT_ADDR &&
-        header.getFormat() == p25::PDU_FMT_UNCONFIRMED) {
-        useSecondHeader = true;
-    }
-
     assert(data != nullptr);
 
     uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    // construct P25 message header
     /*
     ** PDU packs different bytes into the P25 message header space from the rest of the
     ** P25 DUIDs
     */
 
+    // construct P25 message header
     ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
     buffer[4U] = header.getSAP();                                                   // Service Access Point
     if (header.getFormat() == p25::PDU_FMT_CONFIRMED) {
         buffer[4U] |= 0x80U;
     }
-
-    uint32_t llId = (useSecondHeader) ? secHeader.getLLId() : header.getLLId();
-    __SET_UINT16(llId, buffer, 5U);                                                 // Logical Link Address
 
     __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
 

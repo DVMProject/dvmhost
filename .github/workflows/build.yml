@@ -4,7 +4,7 @@ name: dvmhost-build
 on:
   workflow_dispatch:
     inputs:
-      buildType:
+      build_type:
         description: "CMake Build Type"
         required: true
         default: "Release"
@@ -14,8 +14,12 @@ on:
           - Debug
           - RelWithDebInfo
           - MinSizeRel
-      stripSymbols:
+      strip_symbols:
         description: "Strip Symbols"
+        required: false
+        type: boolean
+      create_pre_release:
+        description: "Create Pre-Release"
         required: false
         type: boolean
   push:
@@ -70,8 +74,8 @@ jobs:
         run: |
           build_args='-DENABLE_TUI_SUPPORT=0'
           if [[ "${{ github.event_name }}" == 'push' ]]; then
-            build_args="$build_args -DCMAKE_BUILD_TYPE=${{ inputs.buildType }}"
-            if [[ "${{ inputs.stripSymbols }}" == 'true' ]]; then
+            build_args="$build_args -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}"
+            if [[ "${{ inputs.strip_symbols }}" == 'true' ]]; then
               build_args="$build_args -DCMAKE_C_FLAGS='-s' -DCMAKE_CXX_FLAGS='-s'"
             fi
           else
@@ -98,7 +102,7 @@ jobs:
           path: ${{ env.PACKAGENAME }}.zip
 
   create-release:
-    if: ${{ github.event == 'push' }}
+    if: ${{ github.event.inputs.create_pre_release == 'true' }}
     name: Create Release
     needs: [setup, build]
     runs-on: ubuntu-20.04
@@ -115,7 +119,7 @@ jobs:
           prerelease: true
 
   upload:
-    if: ${{ github.event == 'push' }}
+    if: ${{ github.event.inputs.create_pre_release == 'true' }}
     name: Upload
     needs: [setup, build, create-release]
     strategy:
