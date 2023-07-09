@@ -68,7 +68,7 @@ namespace p25
             /// <summary>Process a data frame from the RF interface.</summary>
             bool process(uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+            bool processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength);
 
             /// <summary>Helper to check if a logical link ID has registered with data services.</summary>
             bool hasLLIdFNEReg(uint32_t llId) const;
@@ -91,6 +91,7 @@ namespace p25
             data::DataHeader m_rfDataHeader;
             data::DataHeader m_rfSecondHeader;
             bool m_rfUseSecondHeader;
+            bool m_rfExtendedAddress;
             uint8_t m_rfDataBlockCnt;
             uint8_t* m_rfPDU;
             uint32_t m_rfPDUCount;
@@ -100,6 +101,7 @@ namespace p25
             data::DataHeader m_netDataHeader;
             data::DataHeader m_netSecondHeader;
             bool m_netUseSecondHeader;
+            bool m_netExtendedAddress;
             uint32_t m_netDataOffset;
             uint8_t m_netDataBlockCnt;
             uint8_t* m_netPDU;

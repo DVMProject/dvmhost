@@ -221,8 +221,8 @@ namespace network
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
         bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
-        bool writeP25PDU(const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
-            const uint8_t currentBlock, const uint8_t* data, const uint32_t len);
+        bool writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data, 
+            const uint32_t len);
 
         /// <summary>Helper to test if the P25 ring buffer has data.</summary>
         bool hasP25Data() const;
@@ -297,8 +297,8 @@ namespace network
         UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
 
         /// <summary>Creates an P25 PDU frame message.</summary>
-        UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const p25::data::DataHeader& secHeader,
-            const uint8_t currentBlock, const uint8_t* data, const uint32_t len);
+        UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const uint8_t currentBlock,
+            const uint8_t* data, const uint32_t len);
         
         /// <summary>Creates an NXDN frame message.</summary>
         UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);

@@ -1009,17 +1009,58 @@ void Control::processNetwork()
     }
 
     // process network message header
+    uint8_t duid = buffer[22U];
+    uint8_t MFId = buffer[15U];
+
+    // process raw P25 data bytes
+    UInt8Array data;
+    uint8_t frameLength = buffer[23U];
+    if (duid == p25::P25_DUID_PDU) {
+        frameLength = length;
+        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+        ::memset(data.get(), 0x00U, length);
+        ::memcpy(data.get(), buffer.get(), length);
+    }
+    else {
+        if (frameLength <= 24) {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+        }
+        else {
+            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+            ::memcpy(data.get(), buffer.get() + 24U, frameLength);
+        }
+    }
+
+    // is this a PDU?
+    if (duid == P25_DUID_PDU) {
+        uint32_t blockLength = __GET_UINT16(buffer, 8U);
+
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, duid = $%02X, MFId = $%02X, blockLength = %u, len = %u", duid, MFId, blockLength, length);
+        }
+
+        if (!m_dedicatedControl)
+            ret = m_data->processNetwork(data.get(), frameLength, blockLength);
+        else {
+            if (m_voiceOnControl) {
+                ret = m_data->processNetwork(data.get(), frameLength, blockLength);
+            }
+        }
+
+        return;
+    }
+
+    // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
 
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-    uint8_t MFId = buffer[15U];
-
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
 
-    uint8_t duid = buffer[22U];
     uint8_t frameType = p25::P25_FT_DATA_UNIT;
 
     if (m_debug) {
@@ -1068,27 +1109,6 @@ void Control::processNetwork()
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    // process raw P25 data bytes
-    UInt8Array data;
-    uint8_t frameLength = buffer[23U];
-    if (duid == p25::P25_DUID_PDU) {
-        frameLength = length;
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
-        ::memset(data.get(), 0x00U, length);
-        ::memcpy(data.get(), buffer.get(), length);
-    }
-    else {
-        if (frameLength <= 24) {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-        }
-        else {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-            ::memcpy(data.get(), buffer.get() + 24U, frameLength);
-        }
-    }
-
     m_networkWatchdog.start();
 
     if (m_debug) {
@@ -1106,16 +1126,6 @@ void Control::processNetwork()
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
-            break;
-
-        case P25_DUID_PDU:
-            if (!m_dedicatedControl)
-                ret = m_data->processNetwork(data.get(), frameLength, control, lsd, duid);
-            else {
-                if (m_voiceOnControl) {
-                    ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
-                }
-            }
             break;
 
         case P25_DUID_TSDU:
