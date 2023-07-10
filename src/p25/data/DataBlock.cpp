@@ -71,7 +71,7 @@ DataBlock::~DataBlock()
 /// <param name="data"></param>
 /// <param name="header">Instance of the DataHeader class.</param>
 /// <returns>True, if data block was decoded, otherwise false.</returns>
-bool DataBlock::decode(const uint8_t* data, const DataHeader header)
+bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 {
     assert(data != nullptr);
     assert(m_data != nullptr);
@@ -82,6 +82,11 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
     m_fmt = header.getFormat();
     m_headerSap = header.getSAP();
 
+    // set these to reasonable defaults
+    m_serialNo = 0U;
+    m_lastBlock = false;
+    m_llId = 0U;
+
     if (m_fmt == PDU_FMT_CONFIRMED) {
         // decode 3/4 rate Trellis
         try {
@@ -89,16 +94,6 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             if (!valid) {
                 LogError(LOG_P25, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
                 return false;
-            }
-
-            // determine if this is the last data block
-            uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
-            if (m_serialNo == (header.getBlocksToFollow() - 1) && header.getBlocksToFollow() > 1) {
-                m_lastBlock = true;
-            } else {
-                if (header.getBlocksToFollow() <= 1) {
-                    m_lastBlock = true;
-                }
             }
 
 #if DEBUG_P25_PDU_DATA
@@ -111,6 +106,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader header)
             ::memset(m_data, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
             // if this is extended addressing and the first block decode the SAP and LLId
+            uint32_t count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
             if (m_headerSap == PDU_SAP_EXT_ADDR && m_serialNo == 0U) {
                 count = P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - 4U;
 
@@ -225,28 +221,36 @@ void DataBlock::encode(uint8_t* data)
     }
 }
 
-/// <summary>Sets the data format.</summary>
+/// <summary>
+/// Sets the data format.
+/// </summary>
 /// <param name="fmt"></param>
 void DataBlock::setFormat(const uint8_t fmt)
 {
     m_fmt = fmt;
 }
 
-/// <summary>Sets the data format from the data header.</summary>
+/// <summary>
+/// Sets the data format from the data header.
+/// </summary>
 /// <param name="header"></param>
-void DataBlock::setFormat(const DataHeader header)
+void DataBlock::setFormat(const DataHeader& header)
 {
     m_fmt = header.getFormat();
 }
 
-/// <summary>Gets the data format.</summary>
+/// <summary>
+/// Gets the data format.
+/// </summary>
 /// <returns></returns>
 uint8_t DataBlock::getFormat() const
 {
     return m_fmt;
 }
 
-/// <summary>Sets the raw data stored in the data block.</summary>
+/// <summary>
+/// Sets the raw data stored in the data block.
+/// </summary>
 /// <param name="buffer"></param>
 void DataBlock::setData(const uint8_t* buffer)
 {
@@ -264,7 +268,9 @@ void DataBlock::setData(const uint8_t* buffer)
     }
 }
 
-/// <summary>Gets the raw data stored in the data block.</summary>
+/// <summary>
+/// Gets the raw data stored in the data block.
+/// </summary>
 /// <returns></returns>
 uint32_t DataBlock::getData(uint8_t* buffer) const
 {

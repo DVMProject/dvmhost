@@ -134,6 +134,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 Utils::dump(1U, "Unfixable PDU Data", buffer, P25_PDU_FEC_LENGTH_BYTES);
 
                 m_rfDataHeader.reset();
+                m_rfSecondHeader.reset();
                 m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
@@ -153,6 +154,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 LogError(LOG_RF, P25_PDU_STR ", too many PDU blocks to process, %u > %u", m_rfDataHeader.getBlocksToFollow(), P25_MAX_PDU_COUNT);
 
                 m_rfDataHeader.reset();
+                m_rfSecondHeader.reset();
                 m_rfDataBlockCnt = 0U;
                 m_rfPDUCount = 0U;
                 m_rfPDUBits = 0U;
@@ -219,11 +221,29 @@ bool Data::process(uint8_t* data, uint32_t len)
             if (m_rfPDUBits >= bitLength) {
                 // process all blocks in the data stream
                 uint32_t dataOffset = 0U;
+
+                // if we are using a secondary header place it in the PDU user data buffer
+                if (m_rfUseSecondHeader) {
+                    m_rfSecondHeader.getData(m_pduUserData + dataOffset);
+                    dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+                    m_pduUserDataLength += P25_PDU_HEADER_LENGTH_BYTES;
+                }
+
+                // decode data blocks
                 for (uint32_t i = 0U; i < blocksToFollow; i++) {
                     ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
                     Utils::getBitRange(m_rfPDU, buffer, offset, P25_PDU_FEC_LENGTH_BITS);
                     bool ret = m_rfData[i].decode(buffer, (m_rfUseSecondHeader) ? m_rfSecondHeader : m_rfDataHeader);
                     if (ret) {
+                        // if we are getting unconfirmed or confirmed blocks, and if we've reached the total number of blocks
+                        // set this block as the last block for full packet CRC
+                        if ((m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED) || (m_rfDataHeader.getFormat() == PDU_FMT_UNCONFIRMED)) {
+                            if ((m_rfDataBlockCnt + 1U) == blocksToFollow) {
+                                m_rfData[i].setLastBlock(true);
+                            }
+                        }
+
+                        // are we processing extended address data from the first block?
                         if (m_rfDataHeader.getSAP() == PDU_SAP_EXT_ADDR && m_rfDataHeader.getFormat() == PDU_FMT_CONFIRMED &&
                             m_rfData[i].getSerialNo() == 0U) {
                             LogMessage(LOG_RF, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
@@ -430,6 +450,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             Utils::dump(1U, "Unfixable PDU Data", buffer, P25_PDU_FEC_LENGTH_BYTES);
 
             m_netDataHeader.reset();
+            m_netSecondHeader.reset();
             m_netDataBlockCnt = 0U;
             m_netPDUCount = 0U;
             m_p25->m_netState = RS_NET_IDLE;
@@ -448,6 +469,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             LogError(LOG_NET, P25_PDU_STR ", too many PDU blocks to process, %u > %u", m_netDataHeader.getBlocksToFollow(), P25_MAX_PDU_COUNT);
 
             m_netDataHeader.reset();
+            m_netSecondHeader.reset();
             m_netDataOffset = 0U;
             m_netDataBlockCnt = 0U;
             m_netPDUCount = 0U;
@@ -510,12 +532,30 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
 
             // process all blocks in the data stream
             uint32_t dataOffset = 0U;
+
+            // if we are using a secondary header place it in the PDU user data buffer
+            if (m_netUseSecondHeader) {
+                m_netSecondHeader.getData(m_pduUserData + dataOffset);
+                dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
+                m_pduUserDataLength += P25_PDU_HEADER_LENGTH_BYTES;
+            }
+
+            // decode data blocks
             for (uint32_t i = 0U; i < blocksToFollow; i++) {
                 ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
                 ::memcpy(buffer, m_netPDU + offset, P25_PDU_FEC_LENGTH_BYTES);
 
                 bool ret = m_netData[i].decode(buffer, (m_netUseSecondHeader) ? m_netSecondHeader : m_netDataHeader);
                 if (ret) {
+                    // if we are getting unconfirmed or confirmed blocks, and if we've reached the total number of blocks
+                    // set this block as the last block for full packet CRC
+                    if ((m_netDataHeader.getFormat() == PDU_FMT_CONFIRMED) || (m_netDataHeader.getFormat() == PDU_FMT_UNCONFIRMED)) {
+                        if ((m_netDataBlockCnt + 1U) == blocksToFollow) {
+                            m_netData[i].setLastBlock(true);
+                        }
+                    }
+
+                    // are we processing extended address data from the first block?
                     if (m_netDataHeader.getSAP() == PDU_SAP_EXT_ADDR && m_netDataHeader.getFormat() == PDU_FMT_CONFIRMED &&
                         m_netData[i].getSerialNo() == 0U) {
                         LogMessage(LOG_NET, P25_PDU_STR ", block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, llId = %u",
@@ -867,12 +907,15 @@ void Data::writeNet_PDU_Buffered()
 
     uint32_t blocksToFollow = m_netDataHeader.getBlocksToFollow();
 
-    // Generate the PDU header and 1/2 rate Trellis
+    // generate the PDU header and 1/2 rate Trellis
     m_netDataHeader.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
     offset += P25_PDU_FEC_LENGTH_BITS;
 
-    // Generate the second PDU header
+    uint32_t dataOffset = 0U;
+    edac::CRC::addCRC32(m_pduUserData, m_pduUserDataLength);
+
+    // generate the second PDU header
     if (m_netUseSecondHeader) {
         ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -880,11 +923,11 @@ void Data::writeNet_PDU_Buffered()
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
         offset += P25_PDU_FEC_LENGTH_BITS;
+        dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
         blocksToFollow--;
     }
 
-    // Generate the PDU data
-    uint32_t dataOffset = 0U;
+    // generate the PDU data
     for (uint32_t i = 0U; i < blocksToFollow; i++) {
         m_netData[i].setFormat((m_netUseSecondHeader) ? m_netSecondHeader : m_netDataHeader);
         m_netData[i].setSerialNo(i);
@@ -917,12 +960,15 @@ void Data::writeRF_PDU_Buffered()
 
     uint32_t blocksToFollow = m_rfDataHeader.getBlocksToFollow();
 
-    // Generate the PDU header and 1/2 rate Trellis
+    // generate the PDU header and 1/2 rate Trellis
     m_rfDataHeader.encode(block);
     Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
     offset += P25_PDU_FEC_LENGTH_BITS;
 
-    // Generate the second PDU header
+    uint32_t dataOffset = 0U;
+    edac::CRC::addCRC32(m_pduUserData, m_pduUserDataLength);
+
+    // generate the second PDU header
     if (m_rfUseSecondHeader) {
         ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
 
@@ -930,11 +976,11 @@ void Data::writeRF_PDU_Buffered()
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
 
         offset += P25_PDU_FEC_LENGTH_BITS;
+        dataOffset += P25_PDU_HEADER_LENGTH_BYTES;
         blocksToFollow--;
     }
 
-    // Generate the PDU data
-    uint32_t dataOffset = 0U;
+    // generate the PDU data
     for (uint32_t i = 0U; i < blocksToFollow; i++) {
         m_rfData[i].setFormat((m_rfUseSecondHeader) ? m_rfSecondHeader : m_rfDataHeader);
         m_rfData[i].setSerialNo(i);

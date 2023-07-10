@@ -58,6 +58,9 @@ namespace p25
             /// <summary>Gets the total number of data octets.</summary>
             uint32_t getDataOctets() const;
 
+            /// <summary>Gets the raw header data.</summary>
+            uint32_t getData(uint8_t* buffer) const;
+
             /** Common Data */
             /// <summary>Sets the total number of blocks to follow this header.</summary>
             void setBlocksToFollow(uint8_t blocksToFollow);
@@ -119,6 +122,8 @@ namespace p25
             uint8_t m_blocksToFollow;
             uint8_t m_padCount;
             uint32_t m_dataOctets;
+
+            uint8_t* m_data;
         };
     } // namespace data
 } // namespace p25

@@ -67,9 +67,11 @@ DataHeader::DataHeader() :
     m_trellis(),
     m_blocksToFollow(0U),
     m_padCount(0U),
-    m_dataOctets(0U)
+    m_dataOctets(0U),
+    m_data(nullptr)
 {
-    /* stub */
+    m_data = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
+    ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 }
 
 /// <summary>
@@ -77,7 +79,7 @@ DataHeader::DataHeader() :
 /// </summary>
 DataHeader::~DataHeader()
 {
-    /* stub */
+    delete[] m_data;
 }
 
 /// <summary>
@@ -89,35 +91,32 @@ bool DataHeader::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
-    ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
-
     // decode 1/2 rate Trellis & check CRC-CCITT 16
-    bool valid = m_trellis.decode12(data, header);
+    bool valid = m_trellis.decode12(data, m_data);
     if (valid)
-        valid = edac::CRC::checkCCITT162(header, P25_PDU_HEADER_LENGTH_BYTES);
+        valid = edac::CRC::checkCCITT162(m_data, P25_PDU_HEADER_LENGTH_BYTES);
     if (!valid) {
         return false;
     }
 
 #if DEBUG_P25_PDU_DATA
-    Utils::dump(1U, "P25, DataHeader::decode(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
+    Utils::dump(1U, "P25, DataHeader::decode(), PDU Header Data", m_data, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
-    m_ackNeeded = (header[0U] & 0x40U) == 0x40U;                                // Acknowledge Needed
-    m_outbound = (header[0U] & 0x20U) == 0x20U;                                 // Inbound/Outbound
-    m_fmt = header[0U] & 0x1FU;                                                 // Packet Format
+    m_ackNeeded = (m_data[0U] & 0x40U) == 0x40U;                                // Acknowledge Needed
+    m_outbound = (m_data[0U] & 0x20U) == 0x20U;                                 // Inbound/Outbound
+    m_fmt = m_data[0U] & 0x1FU;                                                 // Packet Format
 
-    m_sap = header[1U] & 0x3FU;                                                 // Service Access Point
+    m_sap = m_data[1U] & 0x3FU;                                                 // Service Access Point
 
-    m_mfId = header[2U];                                                        // Mfg Id.
+    m_mfId = m_data[2U];                                                        // Mfg Id.
 
-    m_llId = (header[3U] << 16) + (header[4U] << 8) + header[5U];               // Logical Link ID
+    m_llId = (m_data[3U] << 16) + (m_data[4U] << 8) + m_data[5U];               // Logical Link ID
 
-    m_F = (header[6U] & 0x80U) == 0x80U;                                        // Full Message Flag
-    m_blocksToFollow = header[6U] & 0x7FU;                                      // Block Frames to Follow
+    m_F = (m_data[6U] & 0x80U) == 0x80U;                                        // Full Message Flag
+    m_blocksToFollow = m_data[6U] & 0x7FU;                                      // Block Frames to Follow
 
-    m_padCount = header[7U] & 0x1FU;                                            // Pad Count
+    m_padCount = m_data[7U] & 0x1FU;                                            // Pad Count
     if (m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
         m_padCount = 0;
     }
@@ -131,28 +130,28 @@ bool DataHeader::decode(const uint8_t* data)
 
     switch (m_fmt) {
     case PDU_FMT_CONFIRMED:
-        m_S = (header[8U] & 0x80U) == 0x80U;                                    // Re-synchronize Flag
+        m_S = (m_data[8U] & 0x80U) == 0x80U;                                    // Re-synchronize Flag
 
-        m_Ns = (header[8U] >> 4) & 0x07U;                                       // Packet Sequence No.
-        m_fsn = header[8U] & 0x07U;                                             // Fragment Sequence No.
-        m_lastFragment = (header[8U] & 0x08U) == 0x08U;                         // Last Fragment Flag
+        m_Ns = (m_data[8U] >> 4) & 0x07U;                                       // Packet Sequence No.
+        m_fsn = m_data[8U] & 0x07U;                                             // Fragment Sequence No.
+        m_lastFragment = (m_data[8U] & 0x08U) == 0x08U;                         // Last Fragment Flag
 
-        m_headerOffset = header[9U] & 0x3FU;                                    // Data Header Offset
+        m_headerOffset = m_data[9U] & 0x3FU;                                    // Data Header Offset
         break;
     case PDU_FMT_RSP:
         m_ackNeeded = false;
         m_sap = PDU_SAP_USER_DATA;
-        m_rspClass = (header[1U] >> 6) & 0x03U;                                 // Response Class
-        m_rspType = (header[1U] >> 3) & 0x07U;                                  // Response Type
-        m_rspStatus = header[1U] & 0x07U;                                       // Response Status
+        m_rspClass = (m_data[1U] >> 6) & 0x03U;                                 // Response Class
+        m_rspType = (m_data[1U] >> 3) & 0x07U;                                  // Response Type
+        m_rspStatus = m_data[1U] & 0x07U;                                       // Response Status
         if (!m_F) {
-            m_srcLlId = (header[7U] << 16) + (header[8U] << 8) + header[9U];    // Source Logical Link ID
+            m_srcLlId = (m_data[7U] << 16) + (m_data[8U] << 8) + m_data[9U];    // Source Logical Link ID
         }
         break;
     case PDU_FMT_AMBT:
-        m_ambtOpcode = header[7U] & 0x3FU;                                      // AMBT Opcode
-        m_ambtField8 = header[8U];                                              // AMBT Field 8
-        m_ambtField9 = header[9U];                                              // AMBT Field 9
+        m_ambtOpcode = m_data[7U] & 0x3FU;                                      // AMBT Opcode
+        m_ambtField8 = m_data[8U];                                              // AMBT Field 8
+        m_ambtField9 = m_data[9U];                                              // AMBT Field 9
         // fall-thru
     case PDU_FMT_UNCONFIRMED:
     default:
@@ -207,9 +206,8 @@ void DataHeader::encode(uint8_t* data)
     switch (m_fmt) {
     case PDU_FMT_CONFIRMED:
         header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
-
         header[8U] = (m_S ? 0x80U : 0x00U) +                                    // Re-synchronize Flag
-            ((m_Ns << 4) & 0x07U) +                                             // Packet Sequence No.
+            ((m_Ns & 0x07U) << 4) +                                             // Packet Sequence No.
             (m_lastFragment ? 0x08U : 0x00U) +                                  // Last Fragment Flag
             (m_fsn & 0x07);                                                     // Fragment Sequence No.
 
@@ -232,6 +230,7 @@ void DataHeader::encode(uint8_t* data)
         break;
     case PDU_FMT_UNCONFIRMED:
     default:
+        header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
         header[8U] = 0x00U;
         header[9U] = m_headerOffset & 0x3FU;                                    // Data Header Offset
         break;
@@ -284,17 +283,36 @@ void DataHeader::reset()
     m_ambtOpcode = 0U;
     m_ambtField8 = 0U;
     m_ambtField9 = 0U;
+
+    ::memset(m_data, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
 }
 
-/// <summary>Gets the total number of data octets.</summary>
+/// <summary>
+/// Gets the total number of data octets.
+/// </summary>
 /// <returns></returns>
 uint32_t DataHeader::getDataOctets() const
 {
     return m_dataOctets;
 }
 
+/// <summary>
+/// Gets the raw header data.
+/// </summary>
+/// <returns></returns>
+uint32_t DataHeader::getData(uint8_t* buffer) const
+{
+    assert(buffer != nullptr);
+    assert(m_data != nullptr);
+
+    ::memcpy(buffer, m_data, P25_PDU_HEADER_LENGTH_BYTES);
+    return P25_PDU_HEADER_LENGTH_BYTES;
+}
+
 /** Common Data */
-/// <summary>Sets the total number of blocks to follow this header.</summary>
+/// <summary>
+/// Sets the total number of blocks to follow this header.
+/// </summary>
 /// <param name="blocksToFollow"></param>
 void DataHeader::setBlocksToFollow(uint8_t blocksToFollow)
 {
@@ -309,14 +327,18 @@ void DataHeader::setBlocksToFollow(uint8_t blocksToFollow)
     }
 }
 
-/// <summary>Gets the total number of blocks to follow this header.</summary>
+/// <summary>
+/// Gets the total number of blocks to follow this header.
+/// </summary>
 /// <returns></returns>
 uint8_t DataHeader::getBlocksToFollow() const
 {
     return m_blocksToFollow;
 }
 
-/// <summary>Sets the count of block padding.</summary>
+/// <summary>
+/// Sets the count of block padding.
+/// </summary>
 /// <param name="padCount"></param>
 void DataHeader::setPadCount(uint8_t padCount)
 {
@@ -331,7 +353,9 @@ void DataHeader::setPadCount(uint8_t padCount)
     }
 }
 
-/// <summary>Gets the count of block padding.</summary>
+/// <summary>
+/// Gets the count of block padding.
+/// </summary>
 /// <returns></returns>
 uint8_t DataHeader::getPadCount() const
 {

@@ -49,14 +49,14 @@ namespace p25
             ~DataBlock();
 
             /// <summary>Decodes P25 PDU data block.</summary>
-            bool decode(const uint8_t* data, const DataHeader header);
+            bool decode(const uint8_t* data, const DataHeader& header);
             /// <summary>Encodes a P25 PDU data block.</summary>
             void encode(uint8_t* data);
 
             /// <summary>Sets the data format.</summary>
             void setFormat(const uint8_t fmt);
             /// <summary>Sets the data format from the data header.</summary>
-            void setFormat(const DataHeader header);
+            void setFormat(const DataHeader& header);
             /// <summary>Gets the data format.</summary>
             uint8_t getFormat() const;
 
