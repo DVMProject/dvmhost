@@ -46,7 +46,7 @@ namespace p25
             AMBT();
 
             /// <summary>Decode a alternate trunking signalling block.</summary>
-            virtual bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks) = 0;
+            virtual bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) = 0;
             /// <summary>Encode a alternate trunking signalling block.</summary>
             virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) = 0;
 
@@ -57,10 +57,10 @@ namespace p25
 
         protected:
             /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
-            static ulong64_t toValue(const data::DataHeader dataHeader, const uint8_t* pduUserData);
+            static ulong64_t toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData);
 
             /// <summary>Internal helper to decode a trunking signalling block.</summary>
-            bool decode(const data::DataHeader dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData);
+            bool decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData);
             /// <summary>Internal helper to encode a trunking signalling block.</summary>
             void encode(data::DataHeader& dataHeader, uint8_t* pduUserData);
         };

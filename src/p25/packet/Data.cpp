@@ -679,7 +679,7 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
 /// <param name="clearBeforeWrite"></param>
-void Data::writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite)
+void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite)
 {
     assert(pduUserData != nullptr);
 

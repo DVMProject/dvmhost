@@ -53,7 +53,7 @@ MBT_ISP_CAN_SRV_REQ::MBT_ISP_CAN_SRV_REQ() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 

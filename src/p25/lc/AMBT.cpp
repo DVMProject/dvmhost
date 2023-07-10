@@ -85,7 +85,7 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// </summary>
 /// <param name="tsbk"></param>
 /// <returns></returns>
-ulong64_t AMBT::toValue(const data::DataHeader dataHeader, const uint8_t* pduUserData)
+ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData)
 {
     ulong64_t tsbkValue = 0U;
 
@@ -109,7 +109,7 @@ ulong64_t AMBT::toValue(const data::DataHeader dataHeader, const uint8_t* pduUse
 /// <param name="blocks"></param>
 /// <param name="pduUserData"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool AMBT::decode(const data::DataHeader dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData)
+bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData)
 {
     assert(blocks != nullptr);
     assert(pduUserData != nullptr);
