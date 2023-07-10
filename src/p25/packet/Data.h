@@ -118,6 +118,8 @@ namespace p25
             bool m_dumpPDUData;
             bool m_repeatPDU;
 
+            bool m_controlOnly;
+
             bool m_verbose;
             bool m_debug;
 

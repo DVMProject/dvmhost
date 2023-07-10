@@ -160,6 +160,23 @@ bool Data::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
+            // Check if we're in controlOnly mode and ignore any PDUs that aren't AMBTs
+            if (m_controlOnly && m_rfDataHeader.getFormat() != PDU_FMT_AMBT) {
+                if (m_debug) { 
+                    LogDebug(LOG_RF, "CC only mode, ignoring non-AMBT PDU"); 
+                }
+                // Reset the CC halt flag
+                m_p25->m_ccHalted = false;
+                // Reset everything else
+                m_rfDataHeader.reset();
+                m_rfDataBlockCnt = 0U;
+                m_rfPDUCount = 0U;
+                m_rfPDUBits = 0U;
+                m_p25->m_rfState = m_prevRfState;
+                // Return false
+                return false;
+            }
+
             // only send data blocks across the network, if we're not an AMBT,
             // an RSP or a registration service
             if ((m_rfDataHeader.getFormat() != PDU_FMT_AMBT) &&
@@ -452,6 +469,23 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             m_netDataBlockCnt = 0U;
             m_netPDUCount = 0U;
             m_p25->m_netState = RS_NET_IDLE;
+            return false;
+        }
+
+        // Check if we're in controlOnly mode and ignore any PDUs that aren't AMBTs
+        if (m_controlOnly && m_rfDataHeader.getFormat() != PDU_FMT_AMBT) {
+            if (m_debug) { 
+                LogDebug(LOG_NET, "CC only mode, ignoring non-AMBT PDU from network"); 
+            }
+            // Reset the CC halt flag
+            m_p25->m_ccHalted = false;
+            // Reset everything else
+            m_rfDataHeader.reset();
+            m_rfDataBlockCnt = 0U;
+            m_rfPDUCount = 0U;
+            m_rfPDUBits = 0U;
+            m_p25->m_rfState = m_prevRfState;
+            // Return false
             return false;
         }
 
@@ -765,6 +799,8 @@ Data::Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool r
 
     m_pduUserData = new uint8_t[P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+
+    m_controlOnly = m_p25->m_controlOnly;
 
     m_fneRegTable.clear();
     m_connQueueTable.clear();

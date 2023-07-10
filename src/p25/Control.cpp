@@ -533,7 +533,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
             if (m_controlOnly) {
-                LogDebug(LOG_RF, "CC only mode, ignoring HDU/LDU");
+                if (m_debug) { 
+                    LogDebug(LOG_RF, "CC only mode, ignoring HDU/LDU"); 
+                }
                 break;
             }
             if (!m_dedicatedControl)
@@ -552,10 +554,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             break;
 
         case P25_DUID_PDU:
-            if (m_controlOnly) {
-                LogDebug(LOG_RF, "CC only mode, ignoring PDU");
-                break;
-            }
             if (!m_dedicatedControl)
                 ret = m_data->process(data, len);
             else {
@@ -1132,7 +1130,9 @@ void Control::processNetwork()
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
             if (m_controlOnly) {
-                LogDebug(LOG_NET, "CC only mode, ignoring HDU/LDU from network");
+                if (m_debug) { 
+                    LogDebug(LOG_NET, "CC only mode, ignoring HDU/LDU from network"); 
+                }
                 break;
             }
             ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
