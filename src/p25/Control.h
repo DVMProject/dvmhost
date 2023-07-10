@@ -171,6 +171,7 @@ namespace p25
         bool m_control;
         bool m_dedicatedControl;
         bool m_voiceOnControl;
+        bool m_controlOnly;
         bool m_ackTSBKRequests;
         bool m_disableNetworkHDU;
 

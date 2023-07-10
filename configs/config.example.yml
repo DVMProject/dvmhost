@@ -176,6 +176,9 @@ protocols:
 
         # Flag indicating whether or not VOC (voice on control) support is enabled.
         voiceOnControl: false
+        # Flag indicating whether or not to ignore voice frames on a control channel
+        #   This comes in handy if you're running non-dedicated with an FNE so the CC doesn't repeat voice traffic
+        controlOnly: false
         # Flag indicating whether or not the composite flag in the CC service options is set.
         #   (This is useful to disable for some radios when running in VOC mode.)
         disableCompositeFlag: false
