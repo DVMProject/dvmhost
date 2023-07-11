@@ -162,14 +162,14 @@ bool Data::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
-            // If we're in control only mode, we only want to handle AMBTs. Otherwise return
-            if (m_p25->m_controlOnly && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+            // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
+            if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
                 if (m_debug) {
                     LogDebug(LOG_RF, "CC only mode, ignoring non-AMBT PDU from RF");
                 }
-                // Reset the CC halted flag
+                
                 m_p25->m_ccHalted = false;
-                // Reset everything else
+                
                 m_rfDataHeader.reset();
                 m_rfSecondHeader.reset();
                 m_rfDataBlockCnt = 0U;
@@ -508,12 +508,12 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
             return false;
         }
 
-        // If we're in control only mode, we only want to handle AMBTs. Otherwise return
-        if (m_p25->m_controlOnly && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+        // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
+        if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
             if (m_debug) {
                 LogDebug(LOG_NET, "CC only mode, ignoring non-AMBT PDU from network");
             }
-            // Reset everything else
+
             m_netDataHeader.reset();
             m_netSecondHeader.reset();
             m_netDataOffset = 0U;

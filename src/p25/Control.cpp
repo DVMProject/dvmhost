@@ -254,11 +254,17 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
-    m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
 
     // if control channel is off for voice on control off
     if (!m_control) {
         m_voiceOnControl = false;
+    }
+
+    m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
+
+    // if we're a dedicated control channel don't set the control only flag
+    if (m_dedicatedControl) {
+        m_controlOnly = false;
     }
 
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
@@ -371,6 +377,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_trunk->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
+        }
+
+        if (m_controlOnly) {
+            LogInfo("    Control Data Only: yes");
         }
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
@@ -558,13 +568,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             break;
 
         case P25_DUID_PDU:
-            if (!m_dedicatedControl)
-                ret = m_data->process(data, len);
-            else {
-                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
-                    ret = m_data->process(data, len);
-                }
-            }
+            ret = m_data->process(data, len);
             break;
 
         case P25_DUID_TSDU:
