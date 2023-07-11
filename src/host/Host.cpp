@@ -1842,7 +1842,7 @@ bool Host::readParams()
             m_controlChData = data;
 
             if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-                ::LogInfoEx(LOG_HOST, "Control Channel REST API Adddress %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+                ::LogInfoEx(LOG_HOST, "Control Channel REST API Address %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
             } else {
                 ::LogInfoEx(LOG_HOST, "No Control Channel REST API Configured, CC notify disabled");
             }
@@ -1873,7 +1873,7 @@ bool Host::readParams()
             uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = channel["restPassword"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Adddress %s:%u", m_channelId, chNo, restApiAddress.c_str(), restApiPort);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", m_channelId, chNo, restApiAddress.c_str(), restApiPort);
 
             VoiceChData data = VoiceChData(chNo, restApiAddress, restApiPort, restApiPassword);
             m_voiceChData[chNo] = data;
