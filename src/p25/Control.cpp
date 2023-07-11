@@ -1219,6 +1219,10 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogMessage(LOG_P25, "REST request, notifying CC of call termination, dstId = %u", dstId);
+    }
+
     // callback REST API to release the granted TG on the specified control channel
     json::object req = json::object();
     int state = modem::DVM_STATE::STATE_P25;
