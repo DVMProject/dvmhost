@@ -54,7 +54,7 @@ MBT_IOSP_EXT_FNCT::MBT_IOSP_EXT_FNCT() : AMBT(),
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 

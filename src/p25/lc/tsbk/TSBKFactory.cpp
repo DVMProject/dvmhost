@@ -247,7 +247,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns></returns>
-std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
 
@@ -358,7 +358,7 @@ std::unique_ptr<TSBK> TSBKFactory::decode(TSBK* tsbk, const uint8_t* data, bool 
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns></returns>
-std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader dataHeader, const data::DataBlock* blocks)
+std::unique_ptr<AMBT> TSBKFactory::decode(AMBT* ambt, const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(ambt != nullptr);
     assert(blocks != nullptr);

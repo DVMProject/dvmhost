@@ -255,6 +255,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
     m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
+
+    // if control channel is off for voice on control off
+    if (!m_control) {
+        m_voiceOnControl = false;
+    }
+
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_trunk->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
@@ -350,7 +356,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
-    
+
     // voice on control forcibly disables CC notification
     if (m_voiceOnControl) {
         m_notifyCC = false;
@@ -864,7 +870,7 @@ void Control::touchGrantTG(uint32_t dstId)
 
     if (m_affiliations.isGranted(dstId)) {
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, touch TG grant, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, call in progress, touch TG grant, dstId = %u", dstId);
         }
 
         m_affiliations.touchGrant(dstId);
@@ -1224,6 +1230,10 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
 
     if (!m_notifyCC) {
         return;
+    }
+
+    if (m_verbose) {
+        LogMessage(LOG_P25, "REST request, notifying CC of call termination, dstId = %u", dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel

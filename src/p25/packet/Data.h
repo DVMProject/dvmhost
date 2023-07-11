@@ -74,7 +74,7 @@ namespace p25
             bool hasLLIdFNEReg(uint32_t llId) const;
 
             /// <summary>Helper to write user data as a P25 PDU packet.</summary>
-            void writeRF_PDU_User(data::DataHeader dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite = false);
+            void writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite = false);
 
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
@@ -138,7 +138,7 @@ namespace p25
             /// <summary>Helper to write a PDU registration response.</summary>
             void writeRF_PDU_Reg_Response(uint8_t regType, uint8_t mfId, uint32_t llId, ulong64_t ipAddr);
             /// <summary>Helper to write a PDU acknowledge response.</summary>
-            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, bool noNulls = false);
+            void writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint32_t llId, uint32_t srcLlId = 0U, bool noNulls = false);
         };
     } // namespace packet
 } // namespace p25

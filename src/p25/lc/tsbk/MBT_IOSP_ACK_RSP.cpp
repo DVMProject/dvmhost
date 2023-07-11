@@ -53,7 +53,7 @@ MBT_IOSP_ACK_RSP::MBT_IOSP_ACK_RSP() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_IOSP_ACK_RSP::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_ACK_RSP::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 

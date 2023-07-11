@@ -907,7 +907,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="dataBlock"></param>
-bool Trunk::processMBT(DataHeader dataHeader, DataBlock* blocks)
+bool Trunk::processMBT(DataHeader& dataHeader, DataBlock* blocks)
 {
     if (!m_p25->m_control) {
         return false;

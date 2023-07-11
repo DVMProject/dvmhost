@@ -48,7 +48,7 @@ namespace p25
                 ~MBT_ISP_AUTH_RESP_M();
 
                 /// <summary>Decode a alternate trunking signalling block.</summary>
-                bool decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks);
+                bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks);
                 /// <summary>Encode a alternate trunking signalling block.</summary>
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
 

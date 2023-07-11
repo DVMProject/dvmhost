@@ -238,6 +238,8 @@ namespace p25
     const uint8_t   PDU_ACK_CLASS_ACK_RETRY = 0x02U;
 
     // PDU ACK Type(s)
+    const uint8_t   PDU_ACK_TYPE_RETRY = 0x00U;
+
     const uint8_t   PDU_ACK_TYPE_ACK = 0x01U;
 
     const uint8_t   PDU_ACK_TYPE_NACK_ILLEGAL = 0x00U;      // Illegal Format

@@ -74,7 +74,7 @@ MBT_ISP_AUTH_RESP_M::~MBT_ISP_AUTH_RESP_M()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 

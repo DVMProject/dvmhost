@@ -53,7 +53,7 @@ MBT_OSP_NET_STS_BCAST::MBT_OSP_NET_STS_BCAST() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader dataHeader, const data::DataBlock* blocks)
+bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
