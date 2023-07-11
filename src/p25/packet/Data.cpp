@@ -163,7 +163,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
-            if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+            if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfDataHeader.getFormat() != PDU_FMT_AMBT) {
                 if (m_debug) {
                     LogDebug(LOG_RF, "CC only mode, ignoring non-AMBT PDU from RF");
                 }
@@ -509,7 +509,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
-        if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+        if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_netDataHeader.getFormat() != PDU_FMT_AMBT) {
             if (m_debug) {
                 LogDebug(LOG_NET, "CC only mode, ignoring non-AMBT PDU from network");
             }
