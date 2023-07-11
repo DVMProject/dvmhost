@@ -1052,6 +1052,14 @@ void Control::processNetwork()
 
     // is this a PDU?
     if (duid == P25_DUID_PDU) {
+        if (m_controlOnly) {
+            if (m_debug) {
+                LogDebug(LOG_NET, "CC only mode, ignoring PDU from network");
+            }
+
+            return;
+        }
+
         uint32_t blockLength = __GET_UINT16(buffer, 8U);
 
         if (m_debug) {
