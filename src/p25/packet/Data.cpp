@@ -162,6 +162,23 @@ bool Data::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
+            // If we're in control only mode, we only want to handle AMBTs. Otherwise return
+            if (m_p25->m_controlOnly && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+                if (m_debug) {
+                    LogDebug(LOG_RF, "CC only mode, ignoring non-AMBT PDU from RF");
+                }
+                // Reset the CC halted flag
+                m_p25->m_ccHalted = false;
+                // Reset everything else
+                m_rfDataHeader.reset();
+                m_rfSecondHeader.reset();
+                m_rfDataBlockCnt = 0U;
+                m_rfPDUCount = 0U;
+                m_rfPDUBits = 0U;
+                m_p25->m_rfState = m_prevRfState;
+                return false;
+            }
+
             // only send data blocks across the network, if we're not an AMBT,
             // an RSP or a registration service
             if ((m_rfDataHeader.getFormat() != PDU_FMT_AMBT) &&
@@ -482,6 +499,21 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         if (m_netDataHeader.getBlocksToFollow() >= P25_MAX_PDU_COUNT) {
             LogError(LOG_NET, P25_PDU_STR ", too many PDU blocks to process, %u > %u", m_netDataHeader.getBlocksToFollow(), P25_MAX_PDU_COUNT);
 
+            m_netDataHeader.reset();
+            m_netSecondHeader.reset();
+            m_netDataOffset = 0U;
+            m_netDataBlockCnt = 0U;
+            m_netPDUCount = 0U;
+            m_p25->m_netState = RS_NET_IDLE;
+            return false;
+        }
+
+        // If we're in control only mode, we only want to handle AMBTs. Otherwise return
+        if (m_p25->m_controlOnly && m_rfDataHeader.getMFId() != PDU_FMT_AMBT) {
+            if (m_debug) {
+                LogDebug(LOG_NET, "CC only mode, ignoring non-AMBT PDU from network");
+            }
+            // Reset everything else
             m_netDataHeader.reset();
             m_netSecondHeader.reset();
             m_netDataOffset = 0U;

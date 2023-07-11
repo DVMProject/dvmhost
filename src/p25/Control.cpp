@@ -254,6 +254,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
+    m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
 
     // if control channel is off for voice on control off
     if (!m_control) {
@@ -535,6 +536,12 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
+            if (m_controlOnly) {
+                if (m_debug) {
+                    LogDebug(LOG_RF, "CC only mode, ignoring HDU/LDU from RF");
+                }
+                break;
+            }
             if (!m_dedicatedControl)
                 ret = m_voice->process(data, len);
             else {
@@ -1126,6 +1133,12 @@ void Control::processNetwork()
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
         case P25_DUID_LDU2:
+            if (m_controlOnly) {
+                if (m_debug) {
+                    LogDebug(LOG_NET, "CC only mode, ignoring HDU/LDU from network");
+                }
+                break;
+            }
             ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
