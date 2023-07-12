@@ -94,33 +94,43 @@ using namespace nxdn::packet;
         }                                                                               \
     }                                                                                   \
                                                                                         \
-    if (m_nxdn->m_netLastDstId != 0U) {                                                 \
-        if (m_nxdn->m_netLastDstId != _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
-            return false;                                                               \
+    if (m_nxdn->m_authoritative) {                                                      \
+        if (m_nxdn->m_netLastDstId != 0U) {                                             \
+            if (m_nxdn->m_netLastDstId != _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
+                return false;                                                           \
+            }                                                                           \
+                                                                                        \
+            if (m_nxdn->m_netLastDstId == _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
+                m_nxdn->m_netTGHang.start();                                            \
+            }                                                                           \
         }                                                                               \
                                                                                         \
-        if (m_nxdn->m_netLastDstId == _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
-            m_nxdn->m_netTGHang.start();                                                \
+        if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                     \
+            if (_LAYER3.getSrcId() == _SRC_ID && _LAYER3.getDstId() == _DST_ID) {       \
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
+                    _SRC_ID, _DST_ID);                                                  \
+                resetNet();                                                             \
+                if (m_network != nullptr)                                               \
+                    m_network->resetNXDN();                                             \
+                return false;                                                           \
+            }                                                                           \
+            else {                                                                      \
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", _LAYER3.getDstId(), \
+                    _DST_ID);                                                           \
+                resetNet();                                                             \
+                if (m_network != nullptr)                                               \
+                    m_network->resetNXDN();                                             \
+                return false;                                                           \
+            }                                                                           \
         }                                                                               \
     }                                                                                   \
                                                                                         \
-    if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                         \
-        if (_LAYER3.getSrcId() == _SRC_ID && _LAYER3.getDstId() == _DST_ID) {           \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
-                _SRC_ID, _DST_ID);                                                      \
-            resetNet();                                                                 \
-            if (m_network != nullptr)                                                   \
-                m_network->resetNXDN();                                                 \
-            return false;                                                               \
-        }                                                                               \
-        else {                                                                          \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", _LAYER3.getDstId(), \
-                _DST_ID);                                                               \
-            resetNet();                                                                 \
-            if (m_network != nullptr)                                                   \
-                m_network->resetNXDN();                                                 \
-            return false;                                                               \
-        }                                                                               \
+    if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {                \
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!"); \
+        resetNet();                                                                     \
+        if (m_network != nullptr)                                                       \
+            m_network->resetNXDN();                                                     \
+        return false;                                                                   \
     }
 
 // Validate the source RID

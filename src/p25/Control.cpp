@@ -764,17 +764,22 @@ void Control::clock(uint32_t ms)
         }
     }
 
-    if (m_netTGHang.isRunning()) {
-        m_netTGHang.clock(ms);
+    if (m_authoritative) {
+        if (m_netTGHang.isRunning()) {
+            m_netTGHang.clock(ms);
 
-        if (m_netTGHang.hasExpired()) {
-            m_netTGHang.stop();
-            if (m_verbose) {
-                LogMessage(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
+            if (m_netTGHang.hasExpired()) {
+                m_netTGHang.stop();
+                if (m_verbose) {
+                    LogMessage(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
+                }
+                m_netLastDstId = 0U;
+                m_netLastSrcId = 0U;
             }
-            m_netLastDstId = 0U;
-            m_netLastSrcId = 0U;
         }
+    }
+    else {
+        m_netTGHang.stop();
     }
 
     if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {

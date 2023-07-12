@@ -349,7 +349,7 @@ void Slot::processNetwork(const data::Data& dmrData)
 {
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING) {
-        LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic!");
+        LogWarning(LOG_NET, "DMR Slot %u, Traffic collision detect, preempting new network traffic to existing RF traffic!", m_slotNo);
         return;
     }
 
@@ -364,15 +364,23 @@ void Slot::processNetwork(const data::Data& dmrData)
         }
     }
 
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_netLastDstId != 0U && dmrData.getDstId() != 0U && m_netState != RS_NET_IDLE) {
-        if (m_netLastDstId != dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
-            return;
-        }
+    if (m_authoritative) {
+        // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+        if (m_netLastDstId != 0U && dmrData.getDstId() != 0U && m_netState != RS_NET_IDLE) {
+            if (m_netLastDstId != dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
+                return;
+            }
 
-        if (m_netLastDstId == dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
-            m_netTGHang.start();
+            if (m_netLastDstId == dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
+                m_netTGHang.start();
+            }
         }
+    }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!m_authoritative && m_permittedDstId != dmrData.getDstId()) {
+        LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
+        return;
     }
 
     m_networkWatchdog.start();
@@ -526,17 +534,22 @@ void Slot::clock()
         }
     }
 
-    if (m_netTGHang.isRunning()) {
-        m_netTGHang.clock(ms);
+    if (m_authoritative) {
+        if (m_netTGHang.isRunning()) {
+            m_netTGHang.clock(ms);
 
-        if (m_netTGHang.hasExpired()) {
-            m_netTGHang.stop();
-            if (m_verbose) {
-                LogMessage(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
+            if (m_netTGHang.hasExpired()) {
+                m_netTGHang.stop();
+                if (m_verbose) {
+                    LogMessage(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
+                }
+                m_netLastDstId = 0U;
+                m_netLastSrcId = 0U;
             }
-            m_netLastDstId = 0U;
-            m_netLastSrcId = 0U;
         }
+    }
+    else {
+        m_netTGHang.stop();
     }
 
     if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {

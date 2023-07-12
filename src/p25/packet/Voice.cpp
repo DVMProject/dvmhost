@@ -799,35 +799,47 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
         }
     }
 
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == P25_DUID_LDU1 || duid == P25_DUID_LDU2)) {
-        if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
-            return false;
+    // perform authoritative network TG hangtimer and traffic preemption
+    if (m_p25->m_authoritative) {
+        // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+        if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == P25_DUID_LDU1 || duid == P25_DUID_LDU2)) {
+            if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+                return false;
+            }
+
+            if (m_p25->m_netLastDstId == dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+                m_p25->m_netTGHang.start();
+            }
         }
 
-        if (m_p25->m_netLastDstId == dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
-            m_p25->m_netTGHang.start();
+        // don't process network frames if the RF modem isn't in a listening state
+        if (m_p25->m_rfState != RS_RF_LISTENING) {
+            if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                    srcId, dstId);
+                resetNet();
+                if (m_network != nullptr)
+                    m_network->resetP25();
+                return false;
+            }
+            else {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                    dstId);
+                resetNet();
+                if (m_network != nullptr)
+                    m_network->resetP25();
+                return false;
+            }
         }
     }
 
-    // don't process network frames if the RF modem isn't in a listening state
-    if (m_p25->m_rfState != RS_RF_LISTENING) {
-        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
-                srcId, dstId);
-            resetNet();
-            if (m_network != nullptr)
-                m_network->resetP25();
-            return false;
-        }
-        else {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
-                dstId);
-            resetNet();
-            if (m_network != nullptr)
-                m_network->resetP25();
-            return false;
-        }
+    // don't process network frames if this modem isn't authoritative
+    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
+        resetNet();
+        if (m_network != nullptr)
+            m_network->resetP25();
+        return false;
     }
 
     uint32_t count = 0U;
@@ -1237,13 +1249,6 @@ void Voice::writeNet_LDU1()
             }
             srcId = m_netLastLDU1.getSrcId();
         }
-    }
-
-    // don't process network frames if this modem isn't authoritative
-    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
-        resetNet();
-        return;
     }
 
     if (m_debug) {
