@@ -262,22 +262,18 @@ namespace network
         /// <summary>Helper to send a raw message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
             uint32_t streamId, bool queueOnly = false, bool incPktSeq = false);
+
         /// <summary>Helper to send a tagged message to the specified peer.</summary>
         bool writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, 
             bool queueOnly = false, bool incPktSeq = false);
+
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
+
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage& addr, uint32_t addrLen);
-
-        /// <summary>Helper to send a raw message to the connected peers.</summary>
-        void writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length);
-        /// <summary>Helper to send a raw message to the connected peers.</summary>
-        void writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq);
-        /// <summary>Helper to send a tagged message to the connected peers.</summary>
-        void writePeersTagged(FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data, uint32_t length);
     };
 } // namespace network
 

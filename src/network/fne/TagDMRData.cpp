@@ -201,7 +201,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t* copy = new uint8_t[len];
             ::memcpy(copy, data, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq));
+            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
         }
 
         // repeat traffic to the connected peers
@@ -239,10 +239,18 @@ void TagDMRData::playbackParrot()
 
     auto& pkt = m_parrotFrames[0];
     if (std::get<0>(pkt) != nullptr) {
-        m_network->writePeers({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt));
+        // repeat traffic to the connected peers
+        for (auto peer : m_network->m_peers) {
+            m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
+            if (m_network->m_debug) {
+                LogDebug(LOG_NET, "DMR, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                    peer.first, std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt));
+            }
+        }
+
         delete std::get<0>(pkt);
-        Thread::sleep(60);
     }
+    Thread::sleep(60);
     m_parrotFrames.pop_front();
 }
 

@@ -644,7 +644,10 @@ void FNENetwork::close()
     if (m_status == NET_STAT_MST_RUNNING) {
         uint8_t buffer[9U];
         ::memcpy(buffer + 0U, TAG_MASTER_CLOSING, 5U);
-        writePeers({ NET_FUNC_MST_CLOSING, NET_SUBFUNC_NOP }, buffer, 9U);
+
+        for (auto peer : m_peers) {
+            writePeer(peer.first, { NET_FUNC_MST_CLOSING, NET_SUBFUNC_NOP }, buffer, 9U, (ushort)0U, 0U);
+        }
     }
 
     m_socket->close();
@@ -997,7 +1000,7 @@ bool FNENetwork::writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode,
     }
 
     uint32_t len = length + (strlen(tag) + 4U);
-    return writePeer(peerId, opcode, buffer, len, queueOnly, incPktSeq);
+    return writePeer(peerId, opcode, buffer, len, 0U, queueOnly, incPktSeq);
 }
 
 /// <summary>
@@ -1018,7 +1021,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, 10U + length, false, true);
+    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, 10U + length, 0U, false, true);
 }
 
 /// <summary>
@@ -1038,7 +1041,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
-    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, false, true);
+    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, 0U, false, true);
 }
 
 /// <summary>
@@ -1064,69 +1067,4 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
     m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId, m_peerId,
         { NET_FUNC_NAK, NET_SUBFUNC_NOP }, 0U, addr, addrLen);
     return m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Helper to send a raw message to the connected peers.
-/// </summary>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-void FNENetwork::writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length)
-{
-    for (auto peer : m_peers) {
-        uint32_t peerId = peer.first;
-        uint32_t streamId = peer.second.currStreamId();
-        sockaddr_storage addr = peer.second.socketStorage();
-        uint32_t addrLen = peer.second.sockStorageLen();
-        uint16_t pktSeq = peer.second.pktLastSeq();
-
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
-    }
-
-    m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Helper to send a raw message to the connected peers.
-/// </summary>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-/// <param name="pktSeq"></param>
-void FNENetwork::writePeers(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq)
-{
-    for (auto peer : m_peers) {
-        uint32_t peerId = peer.first;
-        uint32_t streamId = peer.second.currStreamId();
-        sockaddr_storage addr = peer.second.socketStorage();
-        uint32_t addrLen = peer.second.sockStorageLen();
-
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
-    }
-
-    m_frameQueue->flushQueue();
-}
-
-/// <summary>
-/// Helper to send a tagged message to the connected peers.
-/// </summary>
-/// <param name="tag"></param>
-/// <param name="data">Buffer to write to the network.</param>
-/// <param name="length">Length of buffer to write.</param>
-void FNENetwork::writePeersTagged(FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data, uint32_t length)
-{
-    assert(tag != nullptr);
-
-    if (strlen(tag) + length > DATA_PACKET_LENGTH) {
-        return;
-    }
-
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
-
-    ::memcpy(buffer + 0U, tag, strlen(tag));
-
-    ::memcpy(buffer + strlen(tag), data, length);
-
-    uint32_t len = length + strlen(tag);
-    writePeers(opcode, buffer, len);
 }
