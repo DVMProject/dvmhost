@@ -75,6 +75,8 @@ using namespace nxdn::packet;
             LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId, \
                 m_nxdn->m_netLastDstId);                                                \
             resetNet();                                                                 \
+            if (m_network != nullptr)                                                   \
+                m_network->resetNXDN();                                                 \
         }                                                                               \
     }
 
@@ -82,27 +84,41 @@ using namespace nxdn::packet;
 // timer is running, and don't process network frames if the RF modem isn't in a listening state
 #define CHECK_NET_TRAFFIC_COLLISION(_LAYER3, _SRC_ID, _DST_ID)                          \
     if (m_nxdn->m_rfLastDstId != 0U) {                                                  \
-        if (m_nxdn->m_rfLastDstId != dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
+        if (m_nxdn->m_rfLastDstId != _DST_ID && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
             resetNet();                                                                 \
             return false;                                                               \
         }                                                                               \
                                                                                         \
-        if (m_nxdn->m_rfLastDstId == dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
+        if (m_nxdn->m_rfLastDstId == _DST_ID && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) { \
             m_nxdn->m_rfTGHang.start();                                                 \
         }                                                                               \
     }                                                                                   \
                                                                                         \
+    if (m_nxdn->m_netLastDstId != 0U) {                                                 \
+        if (m_nxdn->m_netLastDstId != _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
+            return false;                                                               \
+        }                                                                               \
+                                                                                        \
+        if (m_nxdn->m_netLastDstId == _DST_ID && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) { \
+            m_nxdn->m_netTGHang.start();                                                \
+        }                                                                               \
+    }                                                                                   \
+                                                                                        \
     if (m_nxdn->m_rfState != RS_RF_LISTENING) {                                         \
-        if (_LAYER3.getSrcId() == srcId && _LAYER3.getDstId() == dstId) { \
+        if (_LAYER3.getSrcId() == _SRC_ID && _LAYER3.getDstId() == _DST_ID) {           \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
-                srcId, dstId);                                                          \
+                _SRC_ID, _DST_ID);                                                      \
             resetNet();                                                                 \
+            if (m_network != nullptr)                                                   \
+                m_network->resetNXDN();                                                 \
             return false;                                                               \
         }                                                                               \
         else {                                                                          \
             LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", _LAYER3.getDstId(), \
-                dstId);                                                                 \
+                _DST_ID);                                                               \
             resetNet();                                                                 \
+            if (m_network != nullptr)                                                   \
+                m_network->resetNXDN();                                                 \
             return false;                                                               \
         }                                                                               \
     }
@@ -253,6 +269,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             return false;
         }
 
+        m_nxdn->m_rfTGHang.start();
+        m_nxdn->m_netTGHang.stop();
         m_nxdn->m_rfLastDstId = lc.getDstId();
         m_nxdn->m_rfLastSrcId = lc.getSrcId();
         m_nxdn->m_rfLC = lc;
@@ -414,6 +432,8 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             // validate destination ID
             VALID_DSTID(srcId, dstId, group);
 
+            m_nxdn->m_rfTGHang.start();
+            m_nxdn->m_netTGHang.stop();
             m_nxdn->m_rfLastDstId = m_nxdn->m_rfLC.getDstId();
             m_nxdn->m_rfLastSrcId = m_nxdn->m_rfLC.getSrcId();
             m_rfFrames = 0U;
@@ -685,6 +705,8 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
                 m_nxdn->m_netState = RS_NET_IDLE;
                 m_nxdn->m_netMask  = 0x00U;
                 m_nxdn->m_netLC.reset();
+                m_nxdn->m_netLastDstId = 0U;
+                m_nxdn->m_netLastSrcId = 0U;
                 return false;
             }
         } else if (type == RTCH_MESSAGE_TYPE_VCALL) {
@@ -699,6 +721,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             return false;
         }
 
+        m_nxdn->m_netTGHang.start();
         m_nxdn->m_netLastDstId = lc.getDstId();
         m_nxdn->m_netLastSrcId = lc.getSrcId();
         m_nxdn->m_netLC = lc;
@@ -839,6 +862,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             // validate destination ID
             VALID_DSTID(srcId, dstId, group);
 
+            m_nxdn->m_netTGHang.start();
             m_nxdn->m_netLastDstId = m_nxdn->m_netLC.getDstId();
             m_nxdn->m_netLastSrcId = m_nxdn->m_netLC.getSrcId();
             m_rfFrames = 0U;

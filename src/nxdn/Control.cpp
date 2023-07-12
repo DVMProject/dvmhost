@@ -132,6 +132,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_rfTimeout(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
     m_netTimeout(1000U, timeout),
+    m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
     m_frameLossCnt(0U),
@@ -600,6 +601,19 @@ void Control::clock(uint32_t ms)
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+        }
+    }
+
+    if (m_netTGHang.isRunning()) {
+        m_netTGHang.clock(ms);
+
+        if (m_netTGHang.hasExpired()) {
+            m_netTGHang.stop();
+            if (m_verbose) {
+                LogMessage(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
+            }
+            m_netLastDstId = 0U;
+            m_netLastSrcId = 0U;
         }
     }
 

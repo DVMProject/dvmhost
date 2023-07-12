@@ -70,12 +70,20 @@ using namespace dmr::packet;
         return false;                                                                   \
     }
 
-#define CHECK_TG_HANG(_DST_ID)                                                          \
+// Don't process network frames if the destination ID's don't match and the network TG hang
+// timer is running, and don't process network frames if the RF modem isn't in a listening state
+#define CHECK_NET_TRAFFIC_COLLISION(_DST_ID)                                            \
     if (m_slot->m_rfLastDstId != 0U) {                                                  \
         if (m_slot->m_rfLastDstId != _DST_ID && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) { \
             return;                                                                     \
         }                                                                               \
-    }
+    }                                                                                   \
+                                                                                        \
+    if (m_slot->m_netLastDstId != 0U) {                                                 \
+        if (m_slot->m_netLastDstId != _DST_ID && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) { \
+            return;                                                                     \
+        }                                                                               \
+    }                                                                                   \
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -291,6 +299,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_rfFrames++;
 
             m_slot->m_rfTGHang.start();
+            m_slot->m_netTGHang.stop();
             m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
             m_slot->m_rfLastSrcId = m_slot->m_rfLC->getSrcId();
 
@@ -359,6 +368,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->m_rfFrames++;
 
             m_slot->m_rfTGHang.start();
+            m_slot->m_netTGHang.stop();
             m_slot->m_rfLastDstId = m_slot->m_rfLC->getDstId();
             m_slot->m_rfLastSrcId = m_slot->m_rfLC->getSrcId();
 
@@ -615,6 +625,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfState = RS_RF_AUDIO;
 
                 m_slot->m_rfTGHang.start();
+                m_slot->m_netTGHang.stop();
                 m_slot->m_rfLastDstId = dstId;
                 m_slot->m_rfLastSrcId = srcId;
 
@@ -658,7 +669,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         uint8_t flco = lc->getFLCO();
 
         CHECK_NET_AUTHORITATIVE(dstId);
-        CHECK_TG_HANG(dstId);
+        CHECK_NET_TRAFFIC_COLLISION(dstId);
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,
@@ -725,6 +736,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         m_slot->m_netState = RS_NET_AUDIO;
         m_slot->m_netLastDstId = dstId;
         m_slot->m_netLastSrcId = srcId;
+        m_slot->m_netTGHang.start();
 
         m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, true);
 
@@ -743,7 +755,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             uint32_t dstId = lc->getDstId();
 
             CHECK_NET_AUTHORITATIVE(dstId);
-            CHECK_TG_HANG(dstId);
+            CHECK_NET_TRAFFIC_COLLISION(dstId);
 
             m_slot->m_netLC = std::move(lc);
 
@@ -793,6 +805,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
             m_slot->m_netLastSrcId = srcId;
+            m_slot->m_netTGHang.start();
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
@@ -898,6 +911,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             m_slot->m_netState = RS_NET_AUDIO;
             m_slot->m_netLastDstId = dstId;
             m_slot->m_netLastSrcId = srcId;
+            m_slot->m_netTGHang.start();
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), true);
 
@@ -965,6 +979,7 @@ void Voice::processNetwork(const data::Data& dmrData)
             }
         }
         m_slot->m_netBits += 141U;
+        m_slot->m_netTGHang.start();
 
         // Get the LCSS from the EMB
         data::EMB emb;

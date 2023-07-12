@@ -180,7 +180,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_p25->m_netState != RS_NET_IDLE) {
                 LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", lc.getDstId(),
                     m_p25->m_netLastDstId);
+                if (!m_p25->m_dedicatedControl) {
+                    m_p25->m_affiliations.releaseGrant(m_p25->m_netLastDstId, false);
+                }
+
                 resetNet();
+                if (m_network != nullptr)
+                    m_network->resetP25();
 
                 if (m_p25->m_duplex) {
                     m_p25->writeRF_TDU(true);
@@ -192,6 +198,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             m_p25->m_rfTGHang.start();
+            m_p25->m_netTGHang.stop();
             m_p25->m_rfLastDstId = lc.getDstId();
             m_p25->m_rfLastSrcId = lc.getSrcId();
 
@@ -265,7 +272,19 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 else {
                     LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
                         m_p25->m_netLastDstId);
+                    if (!m_p25->m_dedicatedControl) {
+                        m_p25->m_affiliations.releaseGrant(m_p25->m_netLastDstId, false);
+                    }
+
                     resetNet();
+                    if (m_network != nullptr)
+                        m_network->resetP25();
+
+                    if (m_p25->m_duplex) {
+                        m_p25->writeRF_TDU(true);
+                    }
+
+                    m_p25->m_netTGHang.stop();
                 }
             }
 
@@ -400,7 +419,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             else {
                 m_p25->m_rfTGHang.stop();
             }
-            
+            m_p25->m_netTGHang.stop();
             m_p25->m_rfLastDstId = dstId;
             m_p25->m_rfLastSrcId = srcId;
 
@@ -763,8 +782,55 @@ bool Voice::process(uint8_t* data, uint32_t len)
 /// <returns></returns>
 bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType)
 {
-    uint32_t count = 0U;
+    uint32_t dstId = control.getDstId();
+    uint32_t srcId = control.getSrcId();
 
+    // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
+    if (m_p25->m_rfLastDstId != 0U && dstId != 0U) {
+        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            resetNet();
+            if (m_network != nullptr)
+                m_network->resetP25();
+            return false;
+        }
+
+        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+            m_p25->m_rfTGHang.start();
+        }
+    }
+
+    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+    if (m_p25->m_netLastDstId != 0U && dstId != 0U && (duid == P25_DUID_LDU1 || duid == P25_DUID_LDU2)) {
+        if (m_p25->m_netLastDstId != dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+            return false;
+        }
+
+        if (m_p25->m_netLastDstId == dstId && (m_p25->m_netTGHang.isRunning() && !m_p25->m_netTGHang.hasExpired())) {
+            m_p25->m_netTGHang.start();
+        }
+    }
+
+    // don't process network frames if the RF modem isn't in a listening state
+    if (m_p25->m_rfState != RS_RF_LISTENING) {
+        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                srcId, dstId);
+            resetNet();
+            if (m_network != nullptr)
+                m_network->resetP25();
+            return false;
+        }
+        else {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                dstId);
+            resetNet();
+            if (m_network != nullptr)
+                m_network->resetP25();
+            return false;
+        }
+    }
+
+    uint32_t count = 0U;
     switch (duid) {
         case P25_DUID_LDU1:
             if ((data[0U] == dfsi::P25_DFSI_LDU1_VOICE1) && (data[22U] == dfsi::P25_DFSI_LDU1_VOICE2) &&
@@ -839,6 +905,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 checkNet_LDU2();
                 if (m_p25->m_netState != RS_NET_IDLE) {
+                    m_p25->m_netTGHang.start();
                     writeNet_LDU1();
                 }
             }
@@ -914,6 +981,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 }
 
                 if (m_p25->m_netState != RS_NET_IDLE) {
+                    m_p25->m_netTGHang.start();
                     writeNet_LDU2();
                 }
             }
@@ -1111,8 +1179,6 @@ void Voice::writeNet_TDU()
     m_p25->m_networkWatchdog.stop();
     resetNet();
     m_p25->m_netState = RS_NET_IDLE;
-    m_p25->m_netLastDstId = 0U;
-    m_p25->m_netLastSrcId = 0U;
     m_p25->m_tailOnIdle = true;
 }
 
@@ -1151,39 +1217,26 @@ void Voice::writeNet_LDU1()
     uint32_t srcId = control.getSrcId();
     bool group = control.getLCO() == LC_GROUP;
 
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_p25->m_rfLastDstId != 0U && dstId != 0U) {
-        if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            resetNet();
-            return;
-        }
-
-        if (m_p25->m_rfLastDstId == dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            m_p25->m_rfTGHang.start();
-        }
-    }
-
-    // ensure our srcId and dstId are sane from the last LDU1
+    // ensure our dstId are sane from the last LDU1
     if (m_netLastLDU1.getDstId() != 0U) {
         if (dstId != m_netLastLDU1.getDstId()) {
-            LogWarning(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
-                m_rfLC.getDstId(), m_rfLastLDU1.getDstId());
+            if (m_verbose) {
+                LogMessage(LOG_NET, P25_LDU1_STR ", dstId = %u doesn't match last LDU1 dstId = %u, fixing",
+                    dstId, m_netLastLDU1.getDstId());
+            }
             dstId = m_netLastLDU1.getDstId();
         }
     }
-    else {
-        LogWarning(LOG_NET, P25_LDU1_STR ", last LDU1 LC has bad data, dstId = 0");
-    }
 
+    // ensure our srcId are sane from the last LDU1
     if (m_netLastLDU1.getSrcId() != 0U) {
         if (srcId != m_netLastLDU1.getSrcId()) {
-            LogWarning(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
-                m_rfLC.getSrcId(), m_rfLastLDU1.getSrcId());
+            if (m_verbose) {
+                LogMessage(LOG_NET, P25_LDU1_STR ", srcId = %u doesn't match last LDU1 srcId = %u, fixing",
+                    srcId, m_netLastLDU1.getSrcId());
+            }
             srcId = m_netLastLDU1.getSrcId();
         }
-    }
-    else {
-        LogWarning(LOG_NET, P25_LDU1_STR ", last LDU1 LC has bad data, srcId = 0");
     }
 
     // don't process network frames if this modem isn't authoritative
@@ -1191,22 +1244,6 @@ void Voice::writeNet_LDU1()
         LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
         resetNet();
         return;
-    }
-
-    // don't process network frames if the RF modem isn't in a listening state
-    if (m_p25->m_rfState != RS_RF_LISTENING) {
-        if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
-                srcId, dstId);
-            resetNet();
-            return;
-        }
-        else {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
-                dstId);
-            resetNet();
-            return;
-        }
     }
 
     if (m_debug) {
@@ -1294,7 +1331,7 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
             if (!m_p25->m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
-                LogError(LOG_NET, P25_HDU_STR " call failure, not granted, this should not happen, dstId = %u", dstId);
+                LogError(LOG_NET, P25_HDU_STR " call failure, network call not granted, dstId = %u", dstId);
 
                 if (m_network != nullptr)
                     m_network->resetP25();
@@ -1327,6 +1364,7 @@ void Voice::writeNet_LDU1()
         m_p25->m_netState = RS_NET_AUDIO;
         m_p25->m_netLastDstId = dstId;
         m_p25->m_netLastSrcId = srcId;
+        m_p25->m_netTGHang.start();
         m_p25->m_netTimeout.start();
         m_netFrames = 0U;
         m_netLost = 0U;
@@ -1463,14 +1501,6 @@ void Voice::writeNet_LDU2()
         LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU2), destination not permitted!");
         resetNet();
         return;
-    }
-
-    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
-    if (m_p25->m_rfLastDstId != 0U) {
-        if (m_p25->m_rfLastDstId != m_netLastLDU1.getDstId() && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
-            resetNet();
-            return;
-        }
     }
 
     uint8_t mi[P25_MI_LENGTH_BYTES];

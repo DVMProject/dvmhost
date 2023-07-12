@@ -173,6 +173,7 @@ namespace dmr
         Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
         Timer m_netTimeoutTimer;
+        Timer m_netTGHang;
         Timer m_packetTimer;
 
         Timer m_ccPacketInterval;

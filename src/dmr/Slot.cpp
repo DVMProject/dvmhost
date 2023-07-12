@@ -140,6 +140,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
     m_netTimeoutTimer(1000U, timeout),
+    m_netTGHang(1000U, 2U),
     m_packetTimer(1000U, 0U, 50U),
     m_ccPacketInterval(1000U, 0U, DMR_SLOT_TIME),
     m_interval(),
@@ -363,6 +364,17 @@ void Slot::processNetwork(const data::Data& dmrData)
         }
     }
 
+    // don't process network frames if the destination ID's don't match and the network TG hang timer is running
+    if (m_netLastDstId != 0U && dmrData.getDstId() != 0U && m_netState != RS_NET_IDLE) {
+        if (m_netLastDstId != dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
+            return;
+        }
+
+        if (m_netLastDstId == dmrData.getDstId() && (m_netTGHang.isRunning() && !m_netTGHang.hasExpired())) {
+            m_netTGHang.start();
+        }
+    }
+
     m_networkWatchdog.start();
 
     uint8_t dataType = dmrData.getDataType();
@@ -511,6 +523,19 @@ void Slot::clock()
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+        }
+    }
+
+    if (m_netTGHang.isRunning()) {
+        m_netTGHang.clock(ms);
+
+        if (m_netTGHang.hasExpired()) {
+            m_netTGHang.stop();
+            if (m_verbose) {
+                LogMessage(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
+            }
+            m_netLastDstId = 0U;
+            m_netLastSrcId = 0U;
         }
     }
 

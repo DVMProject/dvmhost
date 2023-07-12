@@ -306,9 +306,11 @@ void Network::clock(uint32_t ms)
                                     LogWarning(LOG_NET, "DMR Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                 }
                             }
+/*
                             else {
                                 m_rxDMRStreamId[slotNo] = streamId;
                             }
+*/
                         }
                         m_pktLastSeq = m_pktSeq;
                        
@@ -333,9 +335,11 @@ void Network::clock(uint32_t ms)
                                     LogWarning(LOG_NET, "P25 Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                 }
                             }
+/*
                             else {
                                 m_rxP25StreamId = streamId;
                             }
+*/
                         }
                         m_pktLastSeq = m_pktSeq;
 
@@ -360,9 +364,11 @@ void Network::clock(uint32_t ms)
                                     LogWarning(LOG_NET, "NXDN Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                 }
                             }
+/*
                             else {
                                 m_rxNXDNStreamId = streamId;
                             }
+*/
                         }
                         m_pktLastSeq = m_pktSeq;
 
