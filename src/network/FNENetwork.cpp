@@ -919,12 +919,16 @@ void FNENetwork::writeDeactiveTGIDs()
 /// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
 /// <param name="pktSeq"></param>
+/// <param name="streamId"></param>
 /// <param name="queueOnly"></param>
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, bool queueOnly)
+bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly)
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
-        uint32_t streamId = m_peers[peerId].currStreamId();
+        uint32_t peerStreamId = m_peers[peerId].currStreamId();
+        if (streamId == 0U) {
+            streamId = peerStreamId;
+        }
         sockaddr_storage addr = m_peers[peerId].socketStorage();
         uint32_t addrLen = m_peers[peerId].sockStorageLen();
         
@@ -944,9 +948,10 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
 /// <param name="opcode">Opcode.</param>
 /// <param name="data">Buffer to write to the network.</param>
 /// <param name="length">Length of buffer to write.</param>
+/// <param name="streamId"></param>
 /// <param name="queueOnly"></param>
 /// <param name="incPktSeq"></param>
-bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, bool queueOnly, bool incPktSeq)
+bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint32_t streamId, bool queueOnly, bool incPktSeq)
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
@@ -955,7 +960,7 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
         }
         uint16_t pktSeq = m_peers[peerId].pktLastSeq();
 
-        return writePeer(peerId, opcode, data, length, pktSeq, queueOnly);
+        return writePeer(peerId, opcode, data, length, pktSeq, streamId, queueOnly);
     }
 
     return false;

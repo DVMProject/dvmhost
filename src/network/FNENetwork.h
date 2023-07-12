@@ -258,10 +258,10 @@ namespace network
 
         /// <summary>Helper to send a raw message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, bool queueOnly = false);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
         /// <summary>Helper to send a raw message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            bool queueOnly = false, bool incPktSeq = false);
+            uint32_t streamId, bool queueOnly = false, bool incPktSeq = false);
         /// <summary>Helper to send a tagged message to the specified peer.</summary>
         bool writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, 
             bool queueOnly = false, bool incPktSeq = false);
