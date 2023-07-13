@@ -65,24 +65,12 @@
 #define TAG_P25_DATA            "P25D"
 #define TAG_NXDN_DATA           "NXDD"
 
-#define TAG_MASTER_WL_RID       "MSTWRID"
-#define TAG_MASTER_BL_RID       "MSTBRID"
-#define TAG_MASTER_ACTIVE_TGS   "MSTTID"
-#define TAG_MASTER_DEACTIVE_TGS "MSTDTID"
-
-#define TAG_MASTER_NAK          "MSTNAK"
-#define TAG_MASTER_CLOSING      "MSTCL"
-#define TAG_MASTER_PONG         "MSTPONG"
-
 #define TAG_REPEATER_LOGIN      "RPTL"
 #define TAG_REPEATER_AUTH       "RPTK"
 #define TAG_REPEATER_CONFIG     "RPTC"
 
-#define TAG_REPEATER_ACK        "RPTACK"
-#define TAG_REPEATER_CLOSING    "RPTCL"
-#define TAG_REPEATER_PING       "RPTPING"
-
-#define TAG_REPEATER_GRANT      "RPTGRNT"
+#define TAG_REPEATER_PING       "RPTP"
+#define TAG_REPEATER_GRANT      "RPTG"
 
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"

@@ -617,8 +617,8 @@ void Network::close()
         LogMessage(LOG_NET, "Closing Network");
 
     if (m_status == NET_STAT_RUNNING) {
-        uint8_t buffer[9U];
-        ::memcpy(buffer + 0U, TAG_REPEATER_CLOSING, 5U);
+        uint8_t buffer[1U];
+        ::memset(buffer, 0x00U, 1U);
 
         m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, 
             { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
@@ -648,8 +648,8 @@ bool Network::writeLogin()
     }
 
     uint8_t buffer[8U];
-
     ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);
+    __SET_UINT32(m_peerId, buffer, 4U);                                             // Peer ID
 
     if (m_debug)
         Utils::dump(1U, "Network Message, Login", buffer, 8U);
@@ -764,9 +764,8 @@ bool Network::writeConfig()
 /// </summary>
 bool Network::writePing()
 {
-    uint8_t buffer[11U];
-
-    ::memcpy(buffer + 0U, TAG_REPEATER_PING, 7U);
+    uint8_t buffer[1U];
+    ::memset(buffer, 0x00U, 1U);
 
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);

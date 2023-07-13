@@ -256,15 +256,15 @@ namespace network
         /// <summary>Helper to send the list of deactivated TGIDs to connected peers.</summary>
         void writeDeactiveTGIDs();
 
-        /// <summary>Helper to send a raw message to the specified peer.</summary>
+        /// <summary>Helper to send a data message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
             uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
-        /// <summary>Helper to send a raw message to the specified peer.</summary>
+        /// <summary>Helper to send a data message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
             uint32_t streamId, bool queueOnly = false, bool incPktSeq = false);
 
-        /// <summary>Helper to send a tagged message to the specified peer.</summary>
-        bool writePeerTagged(uint32_t peerId, FrameQueue::OpcodePair opcode, const char* tag, const uint8_t* data = nullptr, uint32_t length = 0U, 
+        /// <summary>Helper to send a command message to the specified peer.</summary>
+        bool writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U, 
             bool queueOnly = false, bool incPktSeq = false);
 
         /// <summary>Helper to send a ACK response to the specified peer.</summary>

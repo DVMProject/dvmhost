@@ -128,8 +128,6 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
-    ::memcpy(buffer + 0U, TAG_REPEATER_GRANT, 7U);
-
     __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
     __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
     buffer[19U] = slot;                                                             // Slot Number
@@ -162,8 +160,6 @@ bool BaseNetwork::writeActLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
-    ::memcpy(buffer + 0U, TAG_TRANSFER_ACT_LOG, 7U);
-
     ::strcpy(buffer + 11U, message);
 
     m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, 0U, m_peerId, 
@@ -189,11 +185,9 @@ bool BaseNetwork::writeDiagLog(const char* message)
     char buffer[DATA_PACKET_LENGTH];
     uint32_t len = ::strlen(message);
 
-    ::memcpy(buffer + 0U, TAG_TRANSFER_DIAG_LOG, 8U);
+    ::strcpy(buffer + 11U, message);
 
-    ::strcpy(buffer + 12U, message);
-
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 13U, 0U, m_peerId, 
+    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, 0U, m_peerId, 
         { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, 0U, m_addr, m_addrLen);
     return m_frameQueue->flushQueue();
 }
