@@ -24,6 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "host/fne/HostFNE.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagP25Data.h"
 #include "Clock.h"
@@ -228,6 +229,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
                 }
+            }
+        }
+
+        // repeat traffic to upstream peers
+        if (m_network->m_host->m_peerNetworks.size() > 0) {
+            for (auto peer : m_network->m_host->m_peerNetworks) {
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, data, len, pktSeq, streamId);
             }
         }
 

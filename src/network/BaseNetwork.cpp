@@ -249,6 +249,20 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 }
 
 /// <summary>
+/// Helper to send a data message to the master.
+/// </summary>
+/// <param name="opcode">Opcode.</param>
+/// <param name="data">Buffer to write to the network.</param>
+/// <param name="length">Length of buffer to write.</param>
+/// <param name="pktSeq"></param>
+/// <param name="streamId"></param>
+bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId)
+{
+    m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+    return m_frameQueue->flushQueue();
+}
+
+/// <summary>
 /// Reads DMR raw frame data from the DMR ring buffer.
 /// </summary>
 /// <param name="ret"></param>
@@ -320,9 +334,7 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_dmrStreamId[slotIndex], m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, pktSeq(resetSeq), m_dmrStreamId[slotIndex]);
 }
 
 /// <summary>
@@ -395,9 +407,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -424,9 +434,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -452,9 +460,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -480,9 +486,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -511,9 +515,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_p25StreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -585,9 +587,7 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
         return false;
     }
 
-    m_frameQueue->enqueueMessage(message.get(), messageLength, m_nxdnStreamId, m_peerId, 
-        { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, pktSeq(resetSeq), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, pktSeq(resetSeq), m_nxdnStreamId);
 }
 
 /// <summary>

@@ -24,6 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "host/fne/HostFNE.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagDMRData.h"
 #include "Clock.h"
@@ -217,6 +218,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId);
                 }
+            }
+        }
+
+        // repeat traffic to upstream peers
+        if (m_network->m_host->m_peerNetworks.size() > 0) {
+            for (auto peer : m_network->m_host->m_peerNetworks) {
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
             }
         }
 

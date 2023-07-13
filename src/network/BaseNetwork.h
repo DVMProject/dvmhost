@@ -187,6 +187,10 @@ namespace network
         /// <summary>Gets the current NXDN stream ID.</summary>
         uint32_t getNXDNStreamId() const { return m_nxdnStreamId; }
 
+        /// <summary>Helper to send a data message to the master.</summary>
+        bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
+            uint16_t pktSeq, uint32_t streamId);
+
         /** Digital Mobile Radio */
         /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>
         UInt8Array readDMR(bool& ret, uint32_t& frameLength);

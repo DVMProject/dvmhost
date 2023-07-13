@@ -25,6 +25,7 @@
 */
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
+#include "host/fne/HostFNE.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagNXDNData.h"
 #include "Clock.h"
@@ -189,6 +190,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId);
                 }
+            }
+        }
+
+        // repeat traffic to upstream peers
+        if (m_network->m_host->m_peerNetworks.size() > 0) {
+            for (auto peer : m_network->m_host->m_peerNetworks) {
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, data, len, pktSeq, streamId);
             }
         }
 

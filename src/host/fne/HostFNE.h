@@ -39,6 +39,14 @@
 #include <vector>
 
 // ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
+namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
+namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
+
+// ---------------------------------------------------------------------------
 //  Class Declaration
 //      This class implements the core FNE service logic.
 // ---------------------------------------------------------------------------
@@ -58,6 +66,9 @@ private:
     yaml::Node m_conf;
 
     friend class network::FNENetwork;
+    friend class network::fne::TagDMRData;
+    friend class network::fne::TagP25Data;
+    friend class network::fne::TagNXDNData;
     network::FNENetwork* m_network;
 
     bool m_dmrEnabled;

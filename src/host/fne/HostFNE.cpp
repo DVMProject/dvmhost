@@ -379,8 +379,6 @@ bool HostFNE::createPeerNetworks()
             yaml::Node& peerConf = peerList[i];
 
             bool enabled = peerConf["enabled"].as<bool>(false);
-            std::string address = peerConf["address"].as<std::string>();
-            uint16_t port = (uint16_t)peerConf["port"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
             std::string masterAddress = peerConf["masterAddress"].as<std::string>();
             uint16_t masterPort = (uint16_t)peerConf["masterPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
             std::string password = peerConf["password"].as<std::string>();
@@ -397,7 +395,7 @@ bool HostFNE::createPeerNetworks()
             ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled);
 
             // initialize networking
-            network::Network* network = new Network(address, port, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
+            network::Network* network = new Network(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
 
             network->enable(enabled);

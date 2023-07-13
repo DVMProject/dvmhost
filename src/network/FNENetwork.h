@@ -274,6 +274,8 @@ namespace network
         bool writePeerNAK(uint32_t peerId, const char* tag);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage& addr, uint32_t addrLen);
+
+        
     };
 } // namespace network
 
