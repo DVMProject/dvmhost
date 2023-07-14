@@ -21,5 +21,39 @@
                 "trace": true
             }
         },
+        {
+            // Use IntelliSense to find out which attributes exist for C# debugging
+            // Use hover for the description of the existing attributes
+            // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
+            "name": "Debug FNE",
+            "type": "cppdbg",
+            "request": "launch",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/build/dvmhost",
+            "args": ["-c", "./fne-config.yml", "--fne", "-f"],
+            "cwd": "${workspaceFolder}/build",
+            "stopAtEntry": false,
+            "logging": {
+                "moduleLoad": true,
+                "trace": true
+            }
+        },
+        {
+            // Use IntelliSense to find out which attributes exist for C# debugging
+            // Use hover for the description of the existing attributes
+            // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
+            "name": "Debug Monitor",
+            "type": "cppdbg",
+            "request": "launch",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/build/dvmmon",
+            "args": ["-c", "./monitor-config.yml"],
+            "cwd": "${workspaceFolder}/build",
+            "stopAtEntry": false,
+            "logging": {
+                "moduleLoad": true,
+                "trace": true
+            }
+        },
     ]
 }
