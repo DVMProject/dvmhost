@@ -109,7 +109,7 @@ namespace network
     const uint8_t   NET_FUNC_PING = 0x74U;                                      // Ping
     const uint8_t   NET_FUNC_PONG = 0x75U;                                      // Pong
 
-    const uint8_t   NET_FUNC_GRANT = 0x7AU;                                     // Grant Request
+    const uint8_t   NET_FUNC_GRANT_REQ = 0x7AU;                                 // Grant Request
 
     const uint8_t   NET_FUNC_ACK = 0x7EU;                                       // Packet Acknowledge
     const uint8_t   NET_FUNC_NAK = 0x7FU;                                       // Packet Negative Acknowledge
