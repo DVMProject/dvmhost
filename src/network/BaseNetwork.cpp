@@ -651,6 +651,8 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     if (slotNo == 2U && !m_slot2)
         return nullptr;
 
+    buffer[14U] = NET_DATATYPE_DATA;                                                // Frame Message Data Type
+
     buffer[15U] = slotNo == 1U ? 0x00U : 0x80U;                                     // Slot Number
 
     uint8_t flco = data.getFLCO();
@@ -706,6 +708,8 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::l
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, data, 8U);
 
+    data[14U] = NET_DATATYPE_DATA;                                                  // Frame Message Data Type
+
     data[15U] = control.getMFId();                                                  // MFId
 
     data[20U] = lsd.getLSD1();                                                      // LSD 1
@@ -717,7 +721,6 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::l
 
     // is this the first frame of a call?
     if (frameType == p25::P25_FT_HDU_VALID) {
-        data[180U] = 0x01U;                                                         // First LDU1 Marker
         data[181U] = control.getAlgId();                                            // Algorithm ID
 
         uint32_t kid = control.getKId();
@@ -988,6 +991,8 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 
     __SET_UINT16(len, buffer, 8U);                                                  // PDU Length [bytes]
 
+    buffer[14U] = NET_DATATYPE_DATA;                                                // Frame Message Data Type
+
     buffer[15U] = header.getMFId();                                                 // MFId
 
     buffer[20U] = header.getBlocksToFollow();                                       // Blocks To Follow
@@ -1035,6 +1040,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 
     uint32_t dstId = lc.getDstId();                                             // Target Address
     __SET_UINT16(dstId, buffer, 8U);
+
+    buffer[14U] = NET_DATATYPE_DATA;                                            // Frame Message Data Type
 
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 

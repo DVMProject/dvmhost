@@ -118,6 +118,9 @@ namespace network
     const uint8_t   NET_TRANSFER_SUBFUNC_ACTIVITY = 0x01U;                      // Activity Log Transfer
     const uint8_t   NET_TRANSFER_SUBFUNC_DIAG = 0x02U;                          // Diagnostic Log Transfer
 
+    const uint8_t   NET_DATATYPE_DATA = 0x00U;                                  // 
+    const uint8_t   NET_DATATYPE_CONTROL = 0x01U;                               // 
+
     // ---------------------------------------------------------------------------
     //  Network Peer Connection Status
     // ---------------------------------------------------------------------------

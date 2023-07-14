@@ -71,6 +71,8 @@ namespace dmr
             void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
             /// <summary>Helper to write a call alert packet on the RF interface.</summary>
             void writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId);
+            /// <summary>Helper to write a raw CSBK packet on the RF interface.</summary>
+            void writeRF_CSBK_Raw(uint8_t* data);
 
         private:
             friend class dmr::Slot;
