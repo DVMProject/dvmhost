@@ -201,7 +201,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     header.setSSRC(ssrc);
 
     // properly flag control opcodes
-    if ((opcode.first == NET_FUNC_TRANSFER) || (opcode.first == NET_FUNC_GRANT)) {
+    if ((opcode.first == NET_FUNC_TRANSFER) || (opcode.first == NET_FUNC_GRANT_REQ)) {
         header.setPayloadType(DVM_CTRL_RTP_PAYLOAD_TYPE);
         header.setSequence(0U);
     }
