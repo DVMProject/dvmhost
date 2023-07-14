@@ -137,9 +137,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    m_frameQueue->enqueueMessage(buffer, 21U, 0U, m_peerId, 
-        { NET_FUNC_GRANT, NET_SUBFUNC_NOP }, 0U, m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_GRANT_REQ, NET_SUBFUNC_NOP }, buffer, 21U, 0U, 0U);
 }
 
 /// <summary>
@@ -162,9 +160,8 @@ bool BaseNetwork::writeActLog(const char* message)
 
     ::strcpy(buffer + 11U, message);
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, 0U, m_peerId, 
-        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, 0U, m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
+        0U, 0U);
 }
 
 /// <summary>
@@ -187,9 +184,8 @@ bool BaseNetwork::writeDiagLog(const char* message)
 
     ::strcpy(buffer + 11U, message);
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, (uint32_t)len + 12U, 0U, m_peerId, 
-        { NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, 0U, m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
+        0U, 0U);
 }
 
 /// <summary>
