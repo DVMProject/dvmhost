@@ -620,9 +620,7 @@ void Network::close()
         uint8_t buffer[1U];
         ::memset(buffer, 0x00U, 1U);
 
-        m_frameQueue->enqueueMessage(buffer, 9U, createStreamId(), m_peerId, 
-            { NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
-        m_frameQueue->flushQueue();
+        writeMaster({ NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, buffer, 1U, pktSeq(true), createStreamId());
     }
 
     m_socket->close();
@@ -656,9 +654,7 @@ bool Network::writeLogin()
 
     m_loginStreamId = createStreamId();
     m_remotePeerId = 0U;
-    m_frameQueue->enqueueMessage(buffer, 8U, m_loginStreamId, m_peerId, 
-        { NET_FUNC_RPTL, NET_SUBFUNC_NOP }, pktSeq(true), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_RPTL, NET_SUBFUNC_NOP }, buffer, 8U, pktSeq(true), m_loginStreamId);
 }
 
 /// <summary>
@@ -691,9 +687,7 @@ bool Network::writeAuthorisation()
     if (m_debug)
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    m_frameQueue->enqueueMessage(out, 40U, m_loginStreamId, m_peerId, 
-        { NET_FUNC_RPTK, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_RPTK, NET_SUBFUNC_NOP }, out, 40U, pktSeq(), m_loginStreamId);
 }
 
 /// <summary>
@@ -754,9 +748,7 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    m_frameQueue->enqueueMessage((uint8_t*)buffer, json.length() + 8U, m_loginStreamId, m_peerId, 
-        { NET_FUNC_RPTC, NET_SUBFUNC_NOP }, pktSeq(), m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_RPTC, NET_SUBFUNC_NOP }, (uint8_t*)buffer, json.length() + 8U, pktSeq(), m_loginStreamId);
 }
 
 /// <summary>
@@ -770,7 +762,5 @@ bool Network::writePing()
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    m_frameQueue->enqueueMessage(buffer, 11U, createStreamId(), m_peerId, 
-        { NET_FUNC_PING, NET_SUBFUNC_NOP }, 0U, m_addr, m_addrLen);
-    return m_frameQueue->flushQueue();
+    return writeMaster({ NET_FUNC_PING, NET_SUBFUNC_NOP }, buffer, 1U, 0U, createStreamId());
 }
