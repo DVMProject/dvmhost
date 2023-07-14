@@ -32,7 +32,6 @@
 #include "p25/P25Defines.h"
 #include "p25/Control.h"
 #include "p25/acl/AccessControl.h"
-#include "p25/lc/tsbk/TSBKFactory.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
 #include "edac/CRC.h"
@@ -1048,8 +1047,6 @@ void Control::processNetwork()
         return;
     }
 
-    uint8_t frameMessageType = buffer[14U];
-
     // process network message header
     uint8_t duid = buffer[22U];
     uint8_t MFId = buffer[15U];
@@ -1100,24 +1097,6 @@ void Control::processNetwork()
         }
 
         return;
-    }
-
-    // is this a control frame? (i.e. does the network frame contain raw TSBK data)
-    if (frameMessageType == network::NET_DATATYPE_CONTROL) {
-        if (m_control && m_trunk != nullptr) {
-            std::unique_ptr<lc::tsbk::OSP_TSBK_RAW> osp = new_unique(lc::tsbk::OSP_TSBK_RAW);
-            osp->setTSBK(data.get());
-
-            if (m_verbose) {
-                LogMessage(LOG_NET, "P25, raw TSBK, %s", osp->toString().c_str());
-            }
-
-            m_trunk->writeRF_TSDU_SBF_Imm(osp.get(), true);
-        }
-        else {
-            LogError(LOG_P25, "refusing to transmit control data, ignored, control = %u", m_control);
-            return;
-        }
     }
 
     // handle LDU, TDU or TSDU frame

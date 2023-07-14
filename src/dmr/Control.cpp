@@ -692,8 +692,6 @@ void Control::processNetwork()
 
     data::Data data;
 
-    uint8_t frameMessageType = buffer[14U];
-
     // process network message header
     uint8_t seqNo = buffer[4U];
 
@@ -722,25 +720,6 @@ void Control::processNetwork()
     }
     if (slotNo == 2U && !m_network->getDMRSlot2()) {
         LogError(LOG_DMR, "DMR, invalid slot, slot 2 disabled, slotNo = %u", slotNo);
-        return;
-    }
-
-    // is this a control frame? (i.e. does the network frame contain raw TSBK data)
-    if (frameMessageType == network::NET_DATATYPE_CONTROL) {
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
-        ::memset(data.get(), 0x00U, length);
-        ::memcpy(data.get(), buffer.get() + 20U, length);
-
-        // forward onto the specific slot for final processing and delivery
-        switch (slotNo) {
-            case 1U:
-                m_slot1->control()->writeRF_CSBK_Raw(data.get());
-                break;
-            case 2U:
-                m_slot2->control()->writeRF_CSBK_Raw(data.get());
-                break;
-        }
-
         return;
     }
 

@@ -891,13 +891,6 @@ void Control::processNetwork()
         return;
     }
 
-    uint8_t frameMessageType = buffer[14U];
-
-    if (frameMessageType == network::NET_DATATYPE_CONTROL) {
-        LogError(LOG_NXDN, "invalid network data type, ignored");
-        return;
-    }
-
     // process network message header
     uint8_t messageType = buffer[4U];
 

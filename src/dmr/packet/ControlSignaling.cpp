@@ -652,22 +652,6 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     writeRF_CSBK(csbk.get());
 }
 
-/// <summary>
-/// Helper to write a raw CSBK packet on the RF interface.
-/// </summary>
-/// <param name="data"></param>
-void ControlSignaling::writeRF_CSBK_Raw(uint8_t* data)
-{
-    std::unique_ptr<CSBK_RAW> csbk = new_unique(CSBK_RAW);
-    csbk->setCSBK(data);
-
-    if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, raw DT_CSBK, %s", m_slot->m_slotNo, csbk->toString().c_str());
-    }
-
-    writeRF_CSBK(csbk.get());
-}
-
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
