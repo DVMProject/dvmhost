@@ -501,7 +501,7 @@ void FNENetwork::clock(uint32_t ms)
             }
             break;
 
-        case NET_FUNC_GRANT:                                                            // Repeater Grant Request
+        case NET_FUNC_GRANT_REQ:                                                        // Repeater Grant Request
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection connection = m_peers[peerId];
