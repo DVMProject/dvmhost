@@ -111,6 +111,7 @@ namespace p25
             network::BaseNetwork* m_network;
 
             uint32_t m_patchSuperGroup;
+            uint32_t m_announcementGroup;
 
             bool m_verifyAff;
             bool m_verifyReg;

@@ -220,8 +220,7 @@ void Control::reset()
 /// <param name="printOptions"></param>
 void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
     const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
-    uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
-    uint32_t channelNo, bool printOptions)
+    uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node p25Protocol = conf["protocols"]["p25"];
@@ -230,7 +229,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 
-    m_trunk->m_patchSuperGroup = pSuperGroup;
+    yaml::Node rfssConfig = systemConf["config"];
+    m_trunk->m_patchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
+    m_trunk->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
 
     m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
@@ -360,7 +361,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_trunk->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
 
-    yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
 
@@ -383,6 +383,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         if (m_controlOnly) {
             LogInfo("    Control Data Only: yes");
         }
+
+        LogInfo("    Patch Super Group: $%04X", m_trunk->m_patchSuperGroup);
+        LogInfo("    Announcement Group: $%04X", m_trunk->m_announcementGroup);
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");

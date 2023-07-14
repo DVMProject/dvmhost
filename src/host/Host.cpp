@@ -133,7 +133,6 @@ Host::Host(const std::string& confFile) :
     m_dmrNetId(1U),
     m_dmrColorCode(1U),
     m_p25NAC(0x293U),
-    m_p25PatchSuperGroup(0xFFFFU),
     m_p25NetId(0xBB800U),
     m_p25RfssId(1U),
     m_nxdnRAN(1U),
@@ -508,7 +507,7 @@ int Host::run()
             m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
             p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose));
         p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData,
-            m_p25PatchSuperGroup, m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
+            m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
             p25->setCCRunning(true);
@@ -1912,7 +1911,6 @@ bool Host::readParams()
             LogWarning(LOG_HOST, "Only use txNAC when split NAC operations are needed. nac and txNAC should not be the same!");
         }
 
-        m_p25PatchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFF").c_str(), NULL, 16);
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
         if (m_p25NetId == 0xBEE00) {
@@ -1954,7 +1952,6 @@ bool Host::readParams()
             LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
         }
 
-        LogInfo("    P25 Patch Super Group: $%04X", m_p25PatchSuperGroup);
         LogInfo("    P25 Network Id: $%05X", m_p25NetId);
         LogInfo("    P25 RFSS Id: $%02X", m_p25RfssId);
         LogInfo("    NXDN RAN: %u", m_nxdnRAN);

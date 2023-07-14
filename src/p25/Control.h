@@ -84,8 +84,7 @@ namespace p25
         /// <summary>Helper to set P25 configuration options.</summary>
         void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
             const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData, const ::lookups::VoiceChData controlChData,
-            uint32_t pSuperGroup, uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, 
-            uint32_t channelNo, bool printOptions);
+            uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
         bool getCCRunning() { return m_ccRunning; }

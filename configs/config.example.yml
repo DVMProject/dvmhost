@@ -368,8 +368,10 @@ system:
         # NXDN Random Access Number.
         ran: 1
 
-        # P25 Patch Super Group.
-        pSuperGroup: FFFF
+        # Patch Super Group.
+        pSuperGroup: FFFE
+        # Announcment Talkgroup Group.
+        announcementGroup: FFFE
 
         # DMR network ID.
         dmrNetId: 1

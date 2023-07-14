@@ -140,7 +140,6 @@ private:
     uint32_t m_dmrNetId;
     uint32_t m_dmrColorCode;
     uint32_t m_p25NAC;
-    uint32_t m_p25PatchSuperGroup;
     uint32_t m_p25NetId;
     uint8_t m_p25RfssId;
     uint32_t m_nxdnRAN;

@@ -1191,7 +1191,8 @@ void Trunk::setTSBKVerbose(bool verbose)
 Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
     m_p25(p25),
     m_network(network),
-    m_patchSuperGroup(0xFFFFU),
+    m_patchSuperGroup(0xFFFEU),
+    m_announcementGroup(0xFFFEU),
     m_verifyAff(false),
     m_verifyReg(false),
     m_rfMBF(nullptr),
@@ -2514,7 +2515,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 
     std::unique_ptr<IOSP_GRP_AFF> iosp = new_unique(IOSP_GRP_AFF);
     iosp->setMFId(m_lastMFID);
-    iosp->setAnnounceGroup(m_patchSuperGroup); // this isn't right...
+    iosp->setAnnounceGroup(m_announcementGroup);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
     iosp->setResponse(P25_RSP_ACCEPT);
@@ -2548,7 +2549,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     if (iosp->getResponse() == P25_RSP_ACCEPT) {
         if (m_verbose) {
             LogMessage(LOG_RF, P25_TSDU_STR ", %s, anncId = %u, srcId = %u, dstId = %u",
-                iosp->toString().c_str(), m_patchSuperGroup, srcId, dstId);
+                iosp->toString().c_str(), m_announcementGroup, srcId, dstId);
         }
 
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
