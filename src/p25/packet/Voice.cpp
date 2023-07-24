@@ -835,7 +835,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
     // don't process network frames if this modem isn't authoritative
     if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU1), destination not permitted!");
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
         resetNet();
         if (m_network != nullptr)
             m_network->resetP25();

@@ -125,8 +125,8 @@ using namespace nxdn::packet;
         }                                                                               \
     }                                                                                   \
                                                                                         \
-    if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {                \
-        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!"); \
+    if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != _DST_ID) {              \
+        LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \
         resetNet();                                                                     \
         if (m_network != nullptr)                                                       \
             m_network->resetNXDN();                                                     \

@@ -54,13 +54,13 @@ using namespace dmr::packet;
 // ---------------------------------------------------------------------------
 
 #define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
-    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
-        LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
+    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != _DST_ID) {              \
+        LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted, dstId = %u", _DST_ID); \
         return false;                                                                   \
     }
 
 #define CHECK_NET_AUTHORITATIVE(_DST_ID)                                                \
-    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
+    if (!m_slot->m_authoritative && m_slot->m_permittedDstId != _DST_ID) {              \
         return;                                                                         \
     }
 
