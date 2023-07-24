@@ -1045,13 +1045,24 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
         return;
     }
 
-    // validate unit-to-unit is a integer within the JSON blob
-    if (!req["unitToUnit"].is<bool>()) {
-        errorPayload(reply, "unit-to-unit was not a valid boolean");
+    // validate source ID is a integer within the JSON blob
+    if (!req["srcId"].is<int>()) {
+        errorPayload(reply, "source ID was not a valid integer");
         return;
     }
 
-    //bool unitToUnit = req["unitToUnit"].get<bool>();
+    uint32_t srcId = req["srcId"].get<uint32_t>();
+
+    if (srcId == 0U) {
+        errorPayload(reply, "soruce ID is an illegal TGID");
+        return;
+    }
+
+    // validate unit-to-unit is a integer within the JSON blob
+    bool unitToUnit = false;
+    if (req["unitToUnit"].is<bool>()) {
+        unitToUnit = req["unitToUnit"].get<bool>();
+    }
 
     switch (state) {
     case STATE_DMR:
@@ -1071,8 +1082,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
         }
 
         if (m_dmr != nullptr) {
-            // TODO TODO
-            //m_dmr->grantTG(dstId, slot, unitToUnit);
+            m_dmr->grantTG(srcId, dstId, slot, !unitToUnit);
         }
         else {
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1088,8 +1098,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
 #if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
-            // TODO TODO
-            //m_p25->grantTG(dstId, unitToUnit);
+            m_p25->grantTG(srcId, dstId, !unitToUnit);
         }
         else {
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
@@ -1105,8 +1114,7 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
 #if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
-            // TODO TODO
-            //m_nxdn->grantTG(dstId, unitToUnit);
+            m_nxdn->grantTG(srcId, dstId, !unitToUnit);
         }
         else {
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);

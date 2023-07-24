@@ -95,7 +95,8 @@ namespace dmr
         void setSupervisor(bool supervisor);
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId, uint8_t slot);
-
+        /// <summary>Grants a TGID on a non-authoritative host.</summary>
+        void grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp);
         /// <summary>Releases a granted TG.</summary>
         void releaseGrantTG(uint32_t dstId, uint8_t slot);
         /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>

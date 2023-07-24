@@ -414,6 +414,26 @@ void Control::permittedTG(uint32_t dstId, uint8_t slot)
 }
 
 /// <summary>
+/// Grants a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="dstId"></param>
+/// <paran name="slot"></param>
+void Control::grantTG(uint32_t srcId, uint32_t dstId, uint8_t slot, bool grp)
+{
+    switch (slot) {
+    case 1U:
+        m_slot1->grantTG(srcId, dstId, grp);
+        break;
+    case 2U:
+        m_slot2->grantTG(srcId, dstId, grp);
+        break;
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slot);
+        break;
+    }
+}
+
+/// <summary>
 /// Releases a granted TG.
 /// </summary>
 /// <param name="dstId"></param>

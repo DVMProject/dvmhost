@@ -691,10 +691,29 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+        LogMessage(LOG_NXDN, "non-authoritative TG permit, dstId = %u", dstId);
     }
 
     m_permittedDstId = dstId;
+}
+
+/// <summary>
+/// Grants a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="grp"></param>
+void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_verbose) {
+        LogMessage(LOG_NXDN, "network TG grant demand, srcId = %u, dstId = %u", srcId, dstId);
+    }
+
+    m_trunk->writeRF_Message_Grant(srcId, dstId, 4U, grp);
 }
 
 /// <summary>

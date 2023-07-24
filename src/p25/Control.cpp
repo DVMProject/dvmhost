@@ -863,6 +863,25 @@ void Control::permittedTG(uint32_t dstId)
 }
 
 /// <summary>
+/// Grants a TGID on a non-authoritative host.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="grp"></param>
+void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
+{
+    if (!m_control) {
+        return;
+    }
+
+    if (m_verbose) {
+        LogMessage(LOG_P25, "network TG grant demand, srcId = %u, dstId = %u", srcId, dstId);
+    }
+
+    m_trunk->writeRF_TSDU_Grant(srcId, dstId, 4U, grp);
+}
+
+/// <summary>
 /// Releases a granted TG.
 /// </summary>
 /// <param name="dstId"></param>
