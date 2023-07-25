@@ -274,6 +274,7 @@ namespace p25
     const uint8_t   LC_UU_ANS_REQ = 0x05U;              // UU ANS REQ - Unit to Unit Answer Request
     const uint8_t   LC_TEL_INT_VCH_USER = 0x06U;        // TEL INT VCH USER - Telephone Interconnect Voice Channel User / MOT GPS DATA - Motorola In-Band GPS Data
     const uint8_t   LC_TEL_INT_ANS_RQST = 0x07U;        // TEL INT ANS RQST - Telephone Interconnect Answer Request
+    const uint8_t   LC_EXPLICIT_SOURCE_ID = 0x09U;      // EXPLICIT SOURCE ID - Explicit Source ID
     const uint8_t   LC_CALL_TERM = 0x0FU;               // CALL TERM - Call Termination or Cancellation
     const uint8_t   LC_IDEN_UP = 0x18U;                 // IDEN UP - Channel Identifier Update
     const uint8_t   LC_SYS_SRV_BCAST = 0x20U;           // SYS SRV BCAST - System Service Broadcast
