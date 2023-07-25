@@ -209,6 +209,8 @@ protocols:
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: true
+        # Flag indicating explicit source ID support is enabled.
+        allowExplicitSourceId: true
         # Flag indicating whether or not the host will respond to SNDCP data grant requests.
         sndcpGrant: false
         # BER/Error threshold for silencing voice packets. (0 or 1233 disables)

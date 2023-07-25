@@ -174,6 +174,7 @@ namespace p25
         bool m_controlOnly;
         bool m_ackTSBKRequests;
         bool m_disableNetworkHDU;
+        bool m_allowExplicitSourceId;
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;

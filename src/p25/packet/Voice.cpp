@@ -55,6 +55,7 @@ using namespace p25::packet;
 // ---------------------------------------------------------------------------
 
 const uint32_t VOC_LDU1_COUNT = 3U;
+const uint32_t ROAM_LDU1_COUNT = 1U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -77,6 +78,7 @@ void Voice::resetRF()
     m_rfBits = 1U;
     m_rfUndecodableLC = 0U;
     m_vocLDU1Count = 0U;
+    m_roamLDU1Count = 0U;
 }
 
 /// <summary>
@@ -93,6 +95,7 @@ void Voice::resetNet()
     m_netFrames = 0U;
     m_netLost = 0U;
     m_vocLDU1Count = 0U;
+    m_roamLDU1Count = 0U;
 }
 
 /// <summary>
@@ -477,6 +480,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfBits = 1U;
             m_rfUndecodableLC = 0U;
             m_vocLDU1Count = 0U;
+            m_roamLDU1Count = 0U;
             m_p25->m_rfTimeout.start();
             m_lastDUID = P25_DUID_HDU;
 
@@ -889,6 +893,11 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_dfsiLC.decodeLDU1(data + count, m_netLDU1 + 204U);
                 count += dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
+                // these aren't set by the DFSI decoder, so we'll manually
+                // reset them
+                m_dfsiLC.control()->setNetId(control.getNetId());
+                m_dfsiLC.control()->setSysId(control.getSysId());
+
                 m_netLastLDU1 = control;
                 m_netLastFrameType = frameType;
 
@@ -1063,6 +1072,7 @@ Voice::Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbo
     m_lastRejectId(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_vocLDU1Count(0U),
+    m_roamLDU1Count(0U),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -1374,6 +1384,7 @@ void Voice::writeNet_LDU1()
         m_netFrames = 0U;
         m_netLost = 0U;
         m_vocLDU1Count = 0U;
+        m_roamLDU1Count = 0U;
 
         if (!m_p25->m_disableNetworkHDU) {
             if (m_netLastFrameType != P25_FT_HDU_LATE_ENTRY) {
@@ -1412,6 +1423,41 @@ void Voice::writeNet_LDU1()
                 LogMessage(LOG_NET, P25_HDU_STR ", not transmitted; network HDU disabled, dstId = %u, algo = $%02X, kid = $%04X", m_netLC.getDstId(), m_netLC.getAlgId(), m_netLC.getKId());
             }
         }
+    }
+
+    uint32_t netId = control.getNetId();
+    uint32_t sysId = control.getSysId();
+
+    // is the network peer a different WACN or system ID?
+    if (m_p25->m_control && m_p25->m_allowExplicitSourceId) {
+        if (netId == 0U) {
+            netId = lc::LC::getSiteData().netId();
+        }
+
+        if (sysId == 0U) {
+            sysId = lc::LC::getSiteData().sysId();
+        }
+
+        if (sysId != lc::LC::getSiteData().sysId()) {
+            // per TIA-102.AABD-D transmit EXPLICIT_SOURCE_ID every other frame (e.g. every other LDU1)
+            m_roamLDU1Count++;
+            if (m_roamLDU1Count > ROAM_LDU1_COUNT) {
+                m_roamLDU1Count = 0U;
+                m_netLC.setNetId(netId);
+                m_netLC.setSysId(sysId);
+                m_netLC.setLCO(LC_EXPLICIT_SOURCE_ID);
+            }
+            else {
+                // flag explicit block to follow in next LDU1
+                if (m_netLC.getLCO() == LC_GROUP) {
+                    m_netLC.setExplicitId(true);
+                }
+            }
+        }
+    }
+    else {
+        netId = lc::LC::getSiteData().netId();
+        sysId = lc::LC::getSiteData().sysId();
     }
 
     // single-channel trunking or voice on control support?
@@ -1463,8 +1509,9 @@ void Voice::writeNet_LDU1()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
-            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority());
+        LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
+            m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
+            sysId, netId);
     }
 
     ::memset(m_netLDU1, 0x00U, 9U * 25U);

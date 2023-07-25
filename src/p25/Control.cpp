@@ -369,6 +369,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         m_notifyCC = false;
     }
 
+    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
 
@@ -405,6 +407,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Status ACK: %s", m_trunk->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_trunk->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_trunk->m_unitToUnitAvailCheck ? "yes" : "no");
+        LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
 
         if (!m_trunk->m_redundantGrant) {
             LogInfo("    Redundant Grant Transmit: yes");
@@ -1124,6 +1127,9 @@ void Control::processNetwork()
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
+    uint32_t netId = __GET_UINT16(buffer, 16U);
+    uint32_t sysId = (buffer[11U] << 8) | (buffer[12U] << 0);
+
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
 
@@ -1171,6 +1177,9 @@ void Control::processNetwork()
     control.setSrcId(srcId);
     control.setDstId(dstId);
     control.setMFId(MFId);
+
+    control.setNetId(netId);
+    control.setSysId(sysId);
 
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
