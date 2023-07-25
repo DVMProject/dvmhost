@@ -111,6 +111,14 @@ namespace p25
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
+            /// <summary>Flag indicating explicit addressing.</summary>
+            __PROPERTY(bool, explicitId, ExplicitId);
+
+            /// <summary>Network ID.</summary>
+            __PROPERTY(uint32_t, netId, NetId);
+            /// <summary>System ID.</summary>
+            __PROPERTY(uint32_t, sysId, SysId);
+
             /** Service Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>
             __PROPERTY(bool, emergency, Emergency);

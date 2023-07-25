@@ -66,6 +66,9 @@ LC::LC() :
     m_srcId(0U),
     m_dstId(0U),
     m_grpVchNo(0U),
+    m_explicitId(false),
+    m_netId(P25_WACN_STD_DEFAULT),
+    m_sysId(P25_SID_STD_DEFAULT),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
@@ -512,6 +515,11 @@ void LC::copy(const LC& data)
 
     m_grpVchNo = data.m_grpVchNo;
 
+    m_explicitId = data.m_explicitId;
+
+    m_netId = data.m_netId;
+    m_sysId = data.m_sysId;
+
     m_emergency = data.m_emergency;
     m_encrypted = data.m_encrypted;
     m_priority = data.m_priority;
@@ -601,6 +609,7 @@ bool LC::decodeLC(const uint8_t* rs)
             m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                // Encryption Flag
         }
         m_priority = (rs[2U] & 0x07U);                                              // Priority
+        m_explicitId = (rs[3U] & 0x01U) == 0x01U;                                   // Explicit Source ID Flag
         m_dstId = (uint32_t)((rsValue >> 24) & 0xFFFFU);                            // Talkgroup Address
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
@@ -625,6 +634,11 @@ bool LC::decodeLC(const uint8_t* rs)
         if (m_srcId == 0U) {
             m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                              // Source/Target Address
         }
+        break;
+    case LC_EXPLICIT_SOURCE_ID:
+        m_netId = (uint32_t)((rsValue >> 36) & 0xFFFFFU);                           // Network ID
+        m_sysId = (uint32_t)((rsValue >> 24) & 0xFFFU);                             // System ID
+        m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
     default:
         LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
@@ -685,6 +699,11 @@ void LC::encodeLC(uint8_t* rs)
             (m_priority & 0x07U);                                                   // Priority
         rsValue = (rsValue << 16) + m_callTimer;                                    // Call Timer
         rsValue = (rsValue << 24) + m_srcId;                                        // Source/Target Radio Address
+        break;
+    case LC_EXPLICIT_SOURCE_ID:
+        rsValue = m_netId;                                                          // Network ID
+        rsValue = (rsValue << 12) + (m_sysId & 0xFFFU);                             // System ID
+        rsValue = (rsValue << 24) + m_srcId;                                        // Source Radio Address
         break;
     case LC_RFSS_STS_BCAST:
         rs[0U] |= 0x40U;                                                            // Implicit Operation
