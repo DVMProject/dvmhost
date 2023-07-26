@@ -1127,8 +1127,8 @@ void Control::processNetwork()
     uint32_t srcId = __GET_UINT16(buffer, 5U);
     uint32_t dstId = __GET_UINT16(buffer, 8U);
 
-    uint32_t netId = __GET_UINT16(buffer, 16U);
     uint32_t sysId = (buffer[11U] << 8) | (buffer[12U] << 0);
+    uint32_t netId = __GET_UINT16(buffer, 16U);
 
     uint8_t lsd1 = buffer[20U];
     uint8_t lsd2 = buffer[21U];
