@@ -706,13 +706,14 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::l
     uint32_t dstId = control.getDstId();                                            // Target Address
     __SET_UINT16(dstId, data, 8U);
 
+    uint16_t sysId = control.getSiteData().sysId();                                 // System ID
+    data[11U] = (sysId >> 8) & 0xFFU;
+    data[12U] = (sysId >> 0) & 0xFFU;
+
     data[15U] = control.getMFId();                                                  // MFId
 
     uint32_t netId = control.getSiteData().netId();                                 // Network ID
     __SET_UINT16(netId, data, 16U);
-    uint16_t sysId = control.getSiteData().sysId();                                 // System ID
-    data[11U] = (sysId >> 8) & 0xFFU;
-    data[12U] = (sysId >> 0) & 0xFFU;
 
     data[20U] = lsd.getLSD1();                                                      // LSD 1
     data[21U] = lsd.getLSD2();                                                      // LSD 2
