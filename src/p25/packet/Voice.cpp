@@ -1430,14 +1430,6 @@ void Voice::writeNet_LDU1()
 
     // is the network peer a different WACN or system ID?
     if (m_p25->m_control && m_p25->m_allowExplicitSourceId) {
-        if (netId == 0U) {
-            netId = lc::LC::getSiteData().netId();
-        }
-
-        if (sysId == 0U) {
-            sysId = lc::LC::getSiteData().sysId();
-        }
-
         if (sysId != lc::LC::getSiteData().sysId()) {
             // per TIA-102.AABD-D transmit EXPLICIT_SOURCE_ID every other frame (e.g. every other LDU1)
             m_roamLDU1Count++;

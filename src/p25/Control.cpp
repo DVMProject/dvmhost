@@ -1135,6 +1135,15 @@ void Control::processNetwork()
 
     uint8_t frameType = p25::P25_FT_DATA_UNIT;
 
+    // if the netId or sysId is missing; default to our netId and sysId
+    if (netId == 0U) {
+        netId = lc::LC::getSiteData().netId();
+    }
+
+    if (sysId == 0U) {
+        sysId = lc::LC::getSiteData().sysId();
+    }
+
     if (m_debug) {
         LogDebug(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
     }
