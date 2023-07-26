@@ -132,6 +132,8 @@ protocols:
         txHang: 8
         # BER/Error threshold for silencing voice packets. (0 or 141 disables)
         silenceThreshold: 21
+        # Maximum number of lost frames before terminating a call.
+        frameLossThreshold: 2
         # Internal data queue size (in DMR packets).
         queueSize: 31
         # Flag indicating whether or not verbose logging is enabled.
@@ -215,6 +217,8 @@ protocols:
         sndcpGrant: false
         # BER/Error threshold for silencing voice packets. (0 or 1233 disables)
         silenceThreshold: 124
+        # Maximum number of lost frames before terminating a call.
+        frameLossThreshold: 6
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
         # Internal data queue size (in P25 packets).
@@ -262,6 +266,8 @@ protocols:
         callHang: 5
         # BER/Error threshold for silencing voice packets. (0 or 144 disables)
         silenceThreshold: 14
+        # Maximum number of lost frames before terminating a call.
+        frameLossThreshold: 4
         # Internal data queue size (in NXDN packets).
         queueSize: 31
         # Flag indicating whether or not verbose logging is enabled.

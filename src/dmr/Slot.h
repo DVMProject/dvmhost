@@ -120,7 +120,9 @@ namespace dmr
         /// <summary>Sets a flag indicating whether the voice channels will notify the TSCC of traffic channel changes.</summary>
         void setNotifyCC(bool notifyCC) { m_notifyCC = notifyCC; }
         /// <summary>Helper to set the voice error silence threshold.</summary>
-        void setSilenceThreshold(uint32_t threshold);
+        void setSilenceThreshold(uint32_t threshold) { m_silenceThreshold = threshold; }
+        /// <summary>Helper to set the frame loss threshold.</summary>
+        void setFrameLossThreshold(uint32_t threshold) { m_frameLossThreshold = threshold; }
 
         /// <summary>Helper to get the last transmitted destination ID.</summary>
         uint32_t getLastDstId() const;
@@ -204,6 +206,7 @@ namespace dmr
         uint32_t m_silenceThreshold;
 
         uint8_t m_frameLossCnt;
+        uint8_t m_frameLossThreshold;
 
         uint8_t m_ccSeq;
         bool m_ccRunning;

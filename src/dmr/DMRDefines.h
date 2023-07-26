@@ -126,6 +126,7 @@ namespace dmr
 
     const uint8_t   DEFAULT_NRAND_WAIT = 8U;
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 21U;
+    const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 2U;
     const uint32_t  MAX_DMR_VOICE_ERRORS = 141U;
 
     const uint32_t  DMR_WUID_SUPLI = 0xFFFEC4U;

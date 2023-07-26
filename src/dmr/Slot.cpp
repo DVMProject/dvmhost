@@ -46,12 +46,6 @@ using namespace dmr::packet;
 #include <cmath>
 
 // ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint8_t MAX_LOST_FRAMES = 2U;
-
-// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
@@ -162,6 +156,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_rssiCount(0U),
     m_silenceThreshold(DEFAULT_SILENCE_THRESHOLD),
     m_frameLossCnt(0U),
+    m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccSeq(0U),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -206,7 +201,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     assert(data != nullptr);
 
     if (data[0U] == modem::TAG_LOST) {
-        if (m_frameLossCnt > MAX_LOST_FRAMES) {
+        if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
             processFrameLoss();
@@ -605,7 +600,7 @@ void Slot::clock()
 
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
-    if (m_frameLossCnt >= MAX_LOST_FRAMES && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
+    if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
     }
 }
@@ -726,15 +721,6 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     m_tsccPayloadDstId = dstId;
     m_tsccPayloadGroup = group;
     m_tsccPayloadVoice = voice;
-}
-
-/// <summary>
-/// Helper to set the voice error silence threshold.
-/// </summary>
-/// <param name="threshold"></param>
-void Slot::setSilenceThreshold(uint32_t threshold)
-{
-    m_silenceThreshold = threshold;
 }
 
 /// <summary>

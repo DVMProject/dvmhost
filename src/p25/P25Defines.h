@@ -201,6 +201,7 @@ namespace p25
     const uint32_t  P25_TGID_ALL = 0xFFFFU;
 
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
+    const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 6U;
     const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
 
     const uint8_t   P25_FT_HDU_VALID = 0x01U;

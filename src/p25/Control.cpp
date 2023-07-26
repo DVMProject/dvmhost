@@ -56,8 +56,6 @@ const uint8_t MAX_SYNC_BYTES_ERRS = 4U;
 const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
-const uint8_t MAX_LOST_FRAMES = 6U;
-
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -135,6 +133,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_hangCount(3U * 8U),
     m_tduPreambleCount(8U),
     m_frameLossCnt(0U),
+    m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_nid(nac),
@@ -285,6 +284,14 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "Silence threshold set to zero, defaulting to %u", p25::MAX_P25_VOICE_ERRORS);
         m_voice->m_silenceThreshold = p25::MAX_P25_VOICE_ERRORS;
     }
+    m_frameLossThreshold = (uint8_t)p25Protocol["frameLossThreshold"].as<uint32_t>(p25::DEFAULT_FRAME_LOSS_THRESHOLD);
+    if (m_frameLossThreshold == 0U) {
+        m_frameLossThreshold = 1U;
+    }
+
+    if (m_frameLossThreshold > p25::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", p25::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
+    }
 
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
@@ -373,6 +380,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
+        LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
@@ -445,7 +453,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     bool sync = data[1U] == 0x01U;
 
     if (data[0U] == modem::TAG_LOST) {
-        if (m_frameLossCnt > MAX_LOST_FRAMES) {
+        if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
             processFrameLoss();
@@ -834,7 +842,7 @@ void Control::clock(uint32_t ms)
 
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
-    if (m_frameLossCnt >= MAX_LOST_FRAMES && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
+    if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
     }
 

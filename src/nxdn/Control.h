@@ -198,6 +198,7 @@ namespace nxdn
         Timer m_ccPacketInterval;
 
         uint8_t m_frameLossCnt;
+        uint8_t m_frameLossThreshold;
 
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;

@@ -58,8 +58,6 @@ using namespace nxdn::packet;
 
 const uint8_t MAX_SYNC_BYTES_ERRS = 0U;
 
-const uint8_t MAX_LOST_FRAMES = 4U;
-
 const uint8_t SCRAMBLER[] = {
 	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
 	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
@@ -136,6 +134,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
     m_frameLossCnt(0U),
+    m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_siteData(),
@@ -258,6 +257,14 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_NXDN, "Silence threshold set to zero, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS);
         m_voice->m_silenceThreshold = nxdn::MAX_NXDN_VOICE_ERRORS;
     }
+    m_frameLossThreshold = (uint8_t)nxdnProtocol["frameLossThreshold"].as<uint32_t>(nxdn::DEFAULT_FRAME_LOSS_THRESHOLD);
+    if (m_frameLossThreshold == 0U) {
+        m_frameLossThreshold = 1U;
+    }
+
+    if (m_frameLossThreshold > nxdn::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_NXDN, "Frame loss threshold may be excessive, default is %u, configured is %u", nxdn::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
+    }
 
     bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
@@ -329,6 +336,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
+        LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
         if (m_control) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
@@ -365,7 +373,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     bool sync = data[1U] == 0x01U;
 
     if (data[0U] == modem::TAG_LOST) {
-        if (m_frameLossCnt > MAX_LOST_FRAMES) {
+        if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
             processFrameLoss();
@@ -670,7 +678,7 @@ void Control::clock(uint32_t ms)
 
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
-    if (m_frameLossCnt >= MAX_LOST_FRAMES && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
+    if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
     }
 

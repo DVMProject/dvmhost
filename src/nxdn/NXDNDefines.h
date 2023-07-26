@@ -145,6 +145,7 @@ namespace nxdn
     const uint8_t   SACCH_IDLE[] = { 0x10U, 0x00U, 0x00U };
 
     const uint32_t  DEFAULT_SILENCE_THRESHOLD = 14U;
+    const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 4U;
     const uint32_t  MAX_NXDN_VOICE_ERRORS = 144U;
     const uint32_t  MAX_NXDN_VOICE_ERRORS_STEAL = 94U;
 

@@ -192,13 +192,25 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
     }
 
     // either MAX_DMR_VOICE_ERRORS or 0 will disable the threshold logic
-    if (silenceThreshold == 0) {
+    if (silenceThreshold == 0U) {
         LogWarning(LOG_DMR, "Silence threshold set to zero, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS);
         silenceThreshold = dmr::MAX_DMR_VOICE_ERRORS;
     }
 
     m_slot1->setSilenceThreshold(silenceThreshold);
     m_slot2->setSilenceThreshold(silenceThreshold);
+
+    uint8_t frameLossThreshold = (uint8_t)dmrProtocol["frameLossThreshold"].as<uint32_t>(dmr::DEFAULT_FRAME_LOSS_THRESHOLD);
+    if (frameLossThreshold == 0U) {
+        frameLossThreshold = 1U;
+    }
+
+    if (frameLossThreshold > dmr::DEFAULT_FRAME_LOSS_THRESHOLD * 2U) {
+        LogWarning(LOG_DMR, "Frame loss threshold may be excessive, default is %u, configured is %u", dmr::DEFAULT_FRAME_LOSS_THRESHOLD, frameLossThreshold);
+    }
+
+    m_slot1->setFrameLossThreshold(frameLossThreshold);
+    m_slot2->setFrameLossThreshold(frameLossThreshold);
 
     if (printOptions) {
         if (enableTSCC) {
@@ -212,6 +224,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
 
         LogInfo("    Notify Control: %s", notifyCC ? "yes" : "no");
         LogInfo("    Silence Threshold: %u (%.1f%%)", silenceThreshold, float(silenceThreshold) / 1.41F);
+        LogInfo("    Frame Loss Threshold: %u", frameLossThreshold);
 
         LogInfo("    Verify Registration: %s", Slot::m_verifyReg ? "yes" : "no");
     }

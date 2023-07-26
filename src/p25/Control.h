@@ -214,6 +214,7 @@ namespace p25
         uint32_t m_tduPreambleCount;
 
         uint8_t m_frameLossCnt;
+        uint8_t m_frameLossThreshold;
 
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;
