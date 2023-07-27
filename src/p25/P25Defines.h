@@ -206,6 +206,7 @@ namespace p25
 
     const uint8_t   P25_FT_HDU_VALID = 0x01U;
     const uint8_t   P25_FT_HDU_LATE_ENTRY = 0x02U;
+    const uint8_t   P25_FT_TERMINATOR = 0x03U;
     const uint8_t   P25_FT_DATA_UNIT = 0x00U;
 
     // PDU Format Type(s)

@@ -125,8 +125,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t buffer[MSG_HDR_SIZE];
+    ::memset(buffer, 0x00U, MSG_HDR_SIZE);
 
     __SET_UINT32(srcId, buffer, 11U);                                               // Source Address
     __SET_UINT32(dstId, buffer, 15U);                                               // Destination Address
@@ -137,7 +137,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    return writeMaster({ NET_FUNC_GRANT_REQ, NET_SUBFUNC_NOP }, buffer, 21U, 0U, 0U);
+    return writeMaster({ NET_FUNC_GRANT_REQ, NET_SUBFUNC_NOP }, buffer, MSG_HDR_SIZE, 0U, 0U);
 }
 
 /// <summary>
@@ -631,8 +631,8 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 /// <returns></returns>
 UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t streamId, const dmr::data::Data& data)
 {
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[DMR_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, DMR_PACKET_LENGTH + PACKET_PAD);
 
     // construct DMR message header
     ::memcpy(buffer + 0U, TAG_DMR_DATA, 4U);
@@ -676,9 +676,9 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     data.getData(buffer + 20U);
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, DMR", buffer, (DMR_PACKET_SIZE + PACKET_PAD));
+        Utils::dump(1U, "Network Message, DMR", buffer, (DMR_PACKET_LENGTH + PACKET_PAD));
 
-    length = (DMR_PACKET_SIZE + PACKET_PAD);
+    length = (DMR_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }
 
@@ -720,7 +720,9 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::l
 
     data[22U] = duid;                                                               // DUID
 
-    data[180U] = frameType;                                                         // DVM Frame Type
+    if (frameType != p25::P25_FT_TERMINATOR) {
+        data[180U] = frameType;                                                     // DVM Frame Type
+    }
 
     // is this the first frame of a call?
     if (frameType == p25::P25_FT_HDU_VALID) {
@@ -761,14 +763,14 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
 
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[P25_LDU1_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, P25_LDU1_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
     createP25_MessageHdr(buffer, p25::P25_DUID_LDU1, control, lsd, frameType);
 
     // pack DFSI data
-    uint32_t count = P25_MSG_HDR_SIZE;
+    uint32_t count = MSG_HDR_SIZE;
     uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU1_VOICE1);
@@ -819,9 +821,9 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU1", buffer, (count + 15U + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
 
-    length = (count + 15U + PACKET_PAD);
+    length = (P25_LDU1_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }
 
@@ -840,14 +842,14 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 
     p25::dfsi::LC dfsiLC = p25::dfsi::LC(control, lsd);
 
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[P25_LDU2_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, P25_LDU2_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
     createP25_MessageHdr(buffer, p25::P25_DUID_LDU2, control, lsd, p25::P25_FT_DATA_UNIT);
 
     // pack DFSI data
-    uint32_t count = P25_MSG_HDR_SIZE;
+    uint32_t count = MSG_HDR_SIZE;
     uint8_t imbe[p25::P25_RAW_IMBE_LENGTH_BYTES];
 
     dfsiLC.setFrameType(p25::dfsi::P25_DFSI_LDU2_VOICE10);
@@ -898,9 +900,9 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 LDU2", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
 
-    length = (count + PACKET_PAD);
+    length = (P25_LDU2_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }
 
@@ -913,19 +915,18 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 /// <returns></returns>
 UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
 {
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[MSG_HDR_SIZE + PACKET_PAD];
+    ::memset(buffer, 0x00U, MSG_HDR_SIZE + PACKET_PAD);
 
     // construct P25 message header
-    createP25_MessageHdr(buffer, p25::P25_DUID_TDU, control, lsd, p25::P25_FT_DATA_UNIT);
+    createP25_MessageHdr(buffer, p25::P25_DUID_TDU, control, lsd, p25::P25_FT_TERMINATOR);
 
-    uint32_t count = P25_MSG_HDR_SIZE;
-    buffer[23U] = count;
+    buffer[23U] = MSG_HDR_SIZE;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 TDU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 TDU", buffer, (MSG_HDR_SIZE + PACKET_PAD));
 
-    length = (count + PACKET_PAD);
+    length = (MSG_HDR_SIZE + PACKET_PAD);
     return UInt8Array(buffer);
 }
 
@@ -940,15 +941,15 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 {
     assert(data != nullptr);
 
-    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    uint8_t* buffer = new uint8_t[P25_TSDU_PACKET_LENGTH + PACKET_PAD];
+    ::memset(buffer, 0x00U, P25_TSDU_PACKET_LENGTH + PACKET_PAD);
 
     // construct P25 message header
     p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
-    createP25_MessageHdr(buffer, p25::P25_DUID_TSDU, control, lsd, p25::P25_FT_DATA_UNIT);
+    createP25_MessageHdr(buffer, p25::P25_DUID_TSDU, control, lsd, p25::P25_FT_TERMINATOR);
 
     // pack raw P25 TSDU bytes
-    uint32_t count = P25_MSG_HDR_SIZE;
+    uint32_t count = MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, p25::P25_TSDU_FRAME_LENGTH_BYTES);
     count += p25::P25_TSDU_FRAME_LENGTH_BYTES;
@@ -956,9 +957,9 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     buffer[23U] = count;
 
     if (m_debug)
-        Utils::dump(1U, "Network Message, P25 TDSU", buffer, (count + PACKET_PAD));
+        Utils::dump(1U, "Network Message, P25 TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
 
-    length = (count + PACKET_PAD);
+    length = (P25_TSDU_PACKET_LENGTH + PACKET_PAD);
     return UInt8Array(buffer);
 }
 
@@ -1002,7 +1003,7 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
     buffer[22U] = p25::P25_DUID_PDU;                                                // DUID
 
     // pack raw P25 PDU bytes
-    uint32_t count = P25_MSG_HDR_SIZE;
+    uint32_t count = MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, len);
     count += len;
@@ -1045,7 +1046,7 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
     // pack raw NXDN message bytes
-    uint32_t count = NXDN_MSG_HDR_SIZE;
+    uint32_t count = MSG_HDR_SIZE;
 
     ::memcpy(buffer + 24U, data, len);
     count += len;

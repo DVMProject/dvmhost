@@ -81,10 +81,13 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
-    const uint32_t  DMR_PACKET_SIZE = 55U;
     const uint32_t  PACKET_PAD = 8U;
-    const uint32_t  P25_MSG_HDR_SIZE = 24U;
-    const uint32_t  NXDN_MSG_HDR_SIZE = 24U;
+
+    const uint32_t  MSG_HDR_SIZE = 24U;
+    const uint32_t  DMR_PACKET_LENGTH = 55U;        // 20 byte header + DMR_FRAME_LENGTH_BYTES + 2 byte trailer
+    const uint32_t  P25_LDU1_PACKET_LENGTH = 193U;  // 24 byte header + DFSI data + 1 byte frame type + 12 byte enc sync
+    const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
+    const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
 
     const uint8_t   NET_SUBFUNC_NOP = 0xFFU;                                    // No Operation Sub-Function
 
