@@ -1229,7 +1229,7 @@ void Control::processNetwork()
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
             // is this an TDU with a grant demand?
-            if (duid == P25_DUID_TDU && grantDemand) {
+            if (duid == P25_DUID_TDU && m_control && grantDemand) {
                 uint8_t serviceOptions = (control.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                     (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                     (control.getPriority() & 0x07U);                                    // Priority
