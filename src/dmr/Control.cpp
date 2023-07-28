@@ -519,7 +519,6 @@ Slot* Control::getTSCCSlot() const
         return m_slot2;
         break;
     default:
-        LogError(LOG_DMR, "DMR, invalid slot, TSCC disabled, slotNo = %u", m_tsccSlotNo);
         return nullptr;
     }
 }
