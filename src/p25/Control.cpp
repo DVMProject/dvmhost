@@ -1221,7 +1221,7 @@ void Control::processNetwork()
                 break;
             }
 
-            if (m_dedicatedControl && m_voiceOnControl) {
+            if (!m_dedicatedControl) {
                 ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             }
             break;
