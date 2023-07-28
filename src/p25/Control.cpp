@@ -1221,9 +1221,7 @@ void Control::processNetwork()
                 break;
             }
 
-            if (!m_dedicatedControl) {
-                ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
-            }
+            ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
         case P25_DUID_TDU:
@@ -1242,6 +1240,8 @@ void Control::processNetwork()
                     LogError(LOG_NET, P25_TSDU_STR " call failure, network call not granted, dstId = %u", dstId);
                     return;
                 }
+
+                return;
             }
 
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
