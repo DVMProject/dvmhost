@@ -1228,6 +1228,16 @@ void Control::processNetwork()
         case P25_DUID_TDULC:
             // is this an TDU with a grant demand?
             if (duid == P25_DUID_TDU && m_control && grantDemand) {
+                // validate source RID
+                if (!acl::AccessControl::validateSrcId(srcId)) {
+                    return;
+                }
+
+                // validate the target ID, if the target is a talkgroup
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    return;
+                }
+
                 uint8_t serviceOptions = (control.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                     (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                     (control.getPriority() & 0x07U);                                    // Priority
