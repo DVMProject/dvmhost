@@ -1009,6 +1009,11 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             break;
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
+            // ignore a TDU that doesn't contain our destination ID
+            if (control.getDstId() != m_p25->m_netLastDstId) {
+                return false;
+            }
+
             // don't process network frames if the RF modem isn't in a listening state
             if (m_p25->m_rfState != RS_RF_LISTENING) {
                 resetNet();
@@ -1297,7 +1302,6 @@ void Voice::writeNet_LDU1()
             control.setAlgId(m_netLastLDU1.getAlgId());
             control.setKId(m_netLastLDU1.getKId());
         }
-
 
         // restore MI from member variable
         ::memcpy(mi, m_lastMI, P25_MI_LENGTH_BYTES);

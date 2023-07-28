@@ -299,6 +299,7 @@ void Network::clock(uint32_t ms)
                         uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
                         if (m_rxDMRStreamId[slotNo] == 0U) {
                             m_rxDMRStreamId[slotNo] = streamId;
+                            m_pktLastSeq = m_pktSeq;
                         }
                         else {
                             if (m_rxDMRStreamId[slotNo] == streamId) {
@@ -307,14 +308,10 @@ void Network::clock(uint32_t ms)
                                         LogWarning(LOG_NET, "DMR Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                     }
                                 }
+        
+                                m_pktLastSeq = m_pktSeq;
                             }
-/*
-                            else {
-                                m_rxDMRStreamId[slotNo] = streamId;
-                            }
-*/
                         }
-                        m_pktLastSeq = m_pktSeq;
                        
                         if (m_debug)
                             Utils::dump(1U, "Network Received, DMR", buffer.get(), length);
@@ -330,6 +327,7 @@ void Network::clock(uint32_t ms)
                     if (m_enabled && m_p25Enabled) {
                         if (m_rxP25StreamId == 0U) {
                             m_rxP25StreamId = streamId;
+                            m_pktLastSeq = m_pktSeq;
                         }
                         else {
                             if (m_rxP25StreamId == streamId) {
@@ -338,14 +336,10 @@ void Network::clock(uint32_t ms)
                                         LogWarning(LOG_NET, "P25 Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                     }
                                 }
+        
+                                m_pktLastSeq = m_pktSeq;
                             }
-/*
-                            else {
-                                m_rxP25StreamId = streamId;
-                            }
-*/
                         }
-                        m_pktLastSeq = m_pktSeq;
 
                         if (m_debug)
                             Utils::dump(1U, "Network Received, P25", buffer.get(), length);
@@ -361,6 +355,7 @@ void Network::clock(uint32_t ms)
                     if (m_enabled && m_nxdnEnabled) {
                         if (m_rxNXDNStreamId == 0U) {
                             m_rxNXDNStreamId = streamId;
+                            m_pktLastSeq = m_pktSeq;
                         }
                         else {
                             if (m_rxNXDNStreamId == streamId) {
@@ -369,14 +364,10 @@ void Network::clock(uint32_t ms)
                                         LogWarning(LOG_NET, "NXDN Stream %u out-of-sequence; %u != %u", streamId, m_pktSeq, m_pktLastSeq + 1);
                                     }
                                 }
+        
+                                m_pktLastSeq = m_pktSeq;
                             }
-/*
-                            else {
-                                m_rxNXDNStreamId = streamId;
-                            }
-*/
                         }
-                        m_pktLastSeq = m_pktSeq;
 
                         if (m_debug)
                             Utils::dump(1U, "Network Received, NXDN", buffer.get(), length);
