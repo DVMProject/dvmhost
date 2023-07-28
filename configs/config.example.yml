@@ -9,6 +9,7 @@ daemon: true
 
 #
 # Logging Configuration
+#
 #   Logging Levels:
 #     1 - Debug
 #     2 - Message
@@ -393,6 +394,17 @@ system:
         siteId: 1
 
     #
+    # CW ID Configuration
+    #
+    cwId:
+        # Flag indicating whether or not CWID is enabled.
+        enable: true
+        # Amount of time between CWID transmissions. (minutes)
+        time: 15
+        # Callsign to be transmitted.
+        callsign: ABCD123
+
+    #
     # Modem Configuration
     #
     modem:
@@ -524,17 +536,6 @@ system:
         trace: false
         # Flag indicating whether or not debug logging is enabled.
         debug: false
-
-    #
-    # CW ID Configuration
-    #
-    cwId:
-        # Flag indicating whether or not CWID is enabled.
-        enable: true
-        # Amount of time between CWID transmissions. (minutes)
-        time: 15
-        # Callsign to be transmitted.
-        callsign: ABCD123
 
     #
     # Channel Identity Table Configuration

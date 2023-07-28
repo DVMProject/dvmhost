@@ -645,6 +645,8 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 
     uint32_t slotNo = data.getSlotNo();
 
+    buffer[14U] = 0U;                                                               // Control Bits
+
     // Individual slot disabling
     if (slotNo == 1U && !m_slot1)
         return nullptr;
@@ -685,52 +687,54 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
 /// <summary>
 /// Creates an P25 frame message header.
 /// </summary>
-/// <param name="data"></param>
+/// <param name="buffer"></param>
 /// <param name="duid"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
 /// <param name="frameType"></param>
-void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
     uint8_t frameType)
 {
-    assert(data != nullptr);
+    assert(buffer != nullptr);
 
     // construct P25 message header
-    ::memcpy(data + 0U, TAG_P25_DATA, 4U);
+    ::memcpy(buffer + 0U, TAG_P25_DATA, 4U);
 
-    data[4U] = control.getLCO();                                                    // LCO
+    buffer[4U] = control.getLCO();                                                  // LCO
 
     uint32_t srcId = control.getSrcId();                                            // Source Address
-    __SET_UINT16(srcId, data, 5U);
+    __SET_UINT16(srcId, buffer, 5U);
 
     uint32_t dstId = control.getDstId();                                            // Target Address
-    __SET_UINT16(dstId, data, 8U);
+    __SET_UINT16(dstId, buffer, 8U);
 
     uint16_t sysId = control.getSiteData().sysId();                                 // System ID
-    data[11U] = (sysId >> 8) & 0xFFU;
-    data[12U] = (sysId >> 0) & 0xFFU;
+    buffer[11U] = (sysId >> 8) & 0xFFU;
+    buffer[12U] = (sysId >> 0) & 0xFFU;
 
-    data[15U] = control.getMFId();                                                  // MFId
+    buffer[14U] = 0U;                                                               // Control Bits
+
+    buffer[15U] = control.getMFId();                                                // MFId
 
     uint32_t netId = control.getSiteData().netId();                                 // Network ID
-    __SET_UINT16(netId, data, 16U);
+    __SET_UINT16(netId, buffer, 16U);
 
-    data[20U] = lsd.getLSD1();                                                      // LSD 1
-    data[21U] = lsd.getLSD2();                                                      // LSD 2
+    buffer[20U] = lsd.getLSD1();                                                    // LSD 1
+    buffer[21U] = lsd.getLSD2();                                                    // LSD 2
 
-    data[22U] = duid;                                                               // DUID
+    buffer[22U] = duid;                                                             // DUID
 
     if (frameType != p25::P25_FT_TERMINATOR) {
-        data[180U] = frameType;                                                     // DVM Frame Type
+        buffer[180U] = frameType;                                                   // DVM Frame Type
     }
 
     // is this the first frame of a call?
     if (frameType == p25::P25_FT_HDU_VALID) {
-        data[181U] = control.getAlgId();                                            // Algorithm ID
+        buffer[181U] = control.getAlgId();                                          // Algorithm ID
 
         uint32_t kid = control.getKId();
-        data[182U] = (kid >> 8) & 0xFFU;                                            // Key ID
-        data[183U] = (kid >> 0) & 0xFFU;
+        buffer[182U] = (kid >> 8) & 0xFFU;                                          // Key ID
+        buffer[183U] = (kid >> 0) & 0xFFU;
 
         // copy MI data
         uint8_t mi[p25::P25_MI_LENGTH_BYTES];
@@ -742,7 +746,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* data, uint8_t duid, const p25::l
         }
 
         for (uint8_t i = 0; i < p25::P25_MI_LENGTH_BYTES; i++) {
-            data[184U + i] = mi[i];                                               // Message Indicator
+            buffer[184U + i] = mi[i];                                               // Message Indicator
         }
     }
 }
@@ -1042,6 +1046,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 
     uint32_t dstId = lc.getDstId();                                             // Target Address
     __SET_UINT16(dstId, buffer, 8U);
+
+    buffer[14U] = 0U;                                                           // Control Bits
 
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 

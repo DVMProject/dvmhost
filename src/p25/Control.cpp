@@ -1077,6 +1077,8 @@ void Control::processNetwork()
         return;
     }
 
+    bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
+
     // process network message header
     uint8_t duid = buffer[22U];
     uint8_t MFId = buffer[15U];
@@ -1218,11 +1220,30 @@ void Control::processNetwork()
                 }
                 break;
             }
-            ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
+
+            if (m_dedicatedControl && m_voiceOnControl) {
+                ret = m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
+            }
             break;
 
         case P25_DUID_TDU:
         case P25_DUID_TDULC:
+            // is this an TDU with a grant demand?
+            if (duid == P25_DUID_TDU && grantDemand) {
+                uint8_t serviceOptions = (control.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
+                    (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
+                    (control.getPriority() & 0x07U);                                    // Priority
+
+                if (m_verbose) {
+                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
+                }
+
+                if (!m_trunk->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true, true)) {
+                    LogError(LOG_NET, P25_TSDU_STR " call failure, network call not granted, dstId = %u", dstId);
+                    return;
+                }
+            }
+
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
