@@ -1316,10 +1316,9 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 
     if (m_convFallback) {
         bool fallbackTx = (frameCnt % 253U) == 0U;
-        if (fallbackTx && n == 7U) {
+        if (fallbackTx && n == 8U) {
             if (m_convFallbackPacketDelay >= CONV_FALLBACK_PACKET_DELAY) {
                 std::unique_ptr<lc::tdulc::LC_CONV_FALLBACK> lc = new_unique(lc::tdulc::LC_CONV_FALLBACK);
-
                 for (uint8_t i = 0U; i < 3U; i++) {
                     writeRF_TDULC(lc.get(), true);
                 }
@@ -1327,6 +1326,12 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
                 m_convFallbackPacketDelay = 0U;
             } else {
                 m_convFallbackPacketDelay++;
+            }
+        }
+        else {
+            if (n == 8U) {
+                std::unique_ptr<lc::tdulc::LC_FAILSOFT> lc = new_unique(lc::tdulc::LC_FAILSOFT);
+                writeRF_TDULC(lc.get(), true);
             }
         }
 

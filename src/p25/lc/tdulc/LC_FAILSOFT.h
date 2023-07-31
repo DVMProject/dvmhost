@@ -23,26 +23,11 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__P25_LC__TDULC_FACTORY_H__)
-#define  __P25_LC__TDULC_FACTORY_H__
+#if !defined(__P25_LC_TSBK__LC_FAILSOFT_H__)
+#define  __P25_LC_TSBK__LC_FAILSOFT_H__
 
 #include "Defines.h"
-#include "edac/RS634717.h"
-
 #include "p25/lc/TDULC.h"
-#include "p25/lc/tdulc/LC_ADJ_STS_BCAST.h"
-#include "p25/lc/tdulc/LC_CALL_TERM.h"
-#include "p25/lc/tdulc/LC_CONV_FALLBACK.h"
-#include "p25/lc/tdulc/LC_GROUP_UPDT.h"
-#include "p25/lc/tdulc/LC_GROUP.h"
-#include "p25/lc/tdulc/LC_IDEN_UP.h"
-#include "p25/lc/tdulc/LC_NET_STS_BCAST.h"
-#include "p25/lc/tdulc/LC_PRIVATE.h"
-#include "p25/lc/tdulc/LC_RFSS_STS_BCAST.h"
-#include "p25/lc/tdulc/LC_SYS_SRV_BCAST.h"
-#include "p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
-
-#include "p25/lc/tdulc/LC_FAILSOFT.h"
 
 namespace p25
 {
@@ -52,27 +37,21 @@ namespace p25
         {
             // ---------------------------------------------------------------------------
             //  Class Declaration
-            //      Helper class to instantiate an instance of a TDULC.
+            //      Implements FAILSOFT - Failsoft
             // ---------------------------------------------------------------------------
 
-            class HOST_SW_API TDULCFactory {
+            class HOST_SW_API LC_FAILSOFT : public TDULC {
             public:
-                /// <summary>Initializes a new instance of the TDULCFactory class.</summary>
-                TDULCFactory();
-                /// <summary>Finalizes a instance of the TDULCFactory class.</summary>
-                ~TDULCFactory();
+                /// <summary>Initializes a new instance of the LC_FAILSOFT class.</summary>
+                LC_FAILSOFT();
 
-                /// <summary>Create an instance of a TDULC.</summary>
-                static std::unique_ptr<TDULC> createTDULC(const uint8_t* data);
-
-            private:
-                static edac::RS634717 m_rs;
-
-                /// <summary></summary>
-                static std::unique_ptr<TDULC> decode(TDULC* tdulc, const uint8_t* data);
+                /// <summary>Decode a terminator data unit w/ link control.</summary>
+                bool decode(const uint8_t* data);
+                /// <summary>Encode a terminator data unit w/ link control.</summary>
+                void encode(uint8_t* data);
             };
         } // namespace tdulc
     } // namespace lc
 } // namespace p25
 
-#endif // __P25_LC__TDULC_FACTORY_H__
+#endif // __P25_LC_TSBK__LC_FAILSOFT_H__

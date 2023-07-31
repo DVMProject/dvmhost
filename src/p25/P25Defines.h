@@ -285,6 +285,9 @@ namespace p25
     const uint8_t   LC_NET_STS_BCAST = 0x24U;           // NET STS BCAST - Network Status Broadcast
     const uint8_t   LC_CONV_FALLBACK = 0x2AU;           // CONV FALLBACK - Conventional Fallback
 
+    // LDUx/TDULC Motorola Link Control Opcode(s)
+    const uint8_t   LC_FAILSOFT = 0x02U;                // FAILSOFT - Failsoft
+
     // TSBK ISP/OSP Shared Opcode(s)
     const uint8_t   TSBK_IOSP_GRP_VCH = 0x00U;          // GRP VCH REQ - Group Voice Channel Request (ISP), GRP VCH GRANT - Group Voice Channel Grant (OSP)
     const uint8_t   TSBK_IOSP_UU_VCH = 0x04U;           // UU VCH REQ - Unit-to-Unit Voice Channel Request (ISP), UU VCH GRANT - Unit-to-Unit Voice Channel Grant (OSP)

@@ -567,7 +567,8 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
                 }
                 break;
             }
-            if (!m_dedicatedControl)
+
+            if (!m_dedicatedControl || m_trunk->m_convFallback)
                 ret = m_voice->process(data, len);
             else {
                 if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
