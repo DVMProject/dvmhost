@@ -44,13 +44,6 @@ namespace p25
         //  Constants
         // ---------------------------------------------------------------------------
 
-        const uint32_t  P25_DFSI_START_LENGTH_BYTES = 4U;
-
-        const uint32_t  P25_DFSI_SS_FRAME_LENGTH_BYTES = 10U;
-
-        const uint32_t  P25_DFSI_VHDR1_FRAME_LENGTH_BYTES = 30U;
-        const uint32_t  P25_DFSI_VHDR2_FRAME_LENGTH_BYTES = 22U;
-
         const uint32_t  P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES = 22U;
         const uint32_t  P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES = 14U;
         const uint32_t  P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES = 17U;
@@ -71,31 +64,7 @@ namespace p25
         const uint32_t  P25_DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES = 17U;
         const uint32_t  P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES = 16U;
 
-        const uint32_t  P25_DFSI_TSBK_FRAME_LENGTH_BYTES = 25U;
-
-        const uint8_t   P25_DFSI_STATUS_NO_ERROR = 0x00U;   //
-        const uint8_t   P25_DFSI_STATUS_ERASE = 0x02U;      //
-
-        const uint8_t   P25_DFSI_RT_ENABLED = 0x02U;        //
-        const uint8_t   P25_DFSI_RT_DISABLED = 0x04U;       //
-
-        const uint8_t   P25_DFSI_START_FLAG = 0x0CU;        //
-        const uint8_t   P25_DFSI_STOP_FLAG = 0x25U;         //
-
-        const uint8_t   P25_DFSI_TYPE_DATA_PAYLOAD = 0x06U; //
-        const uint8_t   P25_DFSI_TYPE_VOICE = 0x0BU;        //
-        const uint8_t   P25_DFSI_TYPE_DATA = 0x0CU;         //
-        const uint8_t   P25_DFSI_TYPE_TSBK = 0x0FU;         //
-
-        const uint8_t   P25_DFSI_DEF_ICW_SOURCE = 0x00U;    // Infrastructure Source - Default Source
-        const uint8_t   P25_DFSI_DEF_SOURCE = 0x00U;        //
-
         // Frame Type(s)
-        const uint8_t   P25_DFSI_START_STOP = 0x00U;        // Start/Stop
-
-        const uint8_t   P25_DFSI_VHDR1 = 0x60U;             // Voice Header 1
-        const uint8_t   P25_DFSI_VHDR2 = 0x61U;             // Voice Header 2
-
         const uint8_t   P25_DFSI_LDU1_VOICE1 = 0x62U;       // IMBE LDU1 - Voice 1
         const uint8_t   P25_DFSI_LDU1_VOICE2 = 0x63U;       // IMBE LDU1 - Voice 2
         const uint8_t   P25_DFSI_LDU1_VOICE3 = 0x64U;       // IMBE LDU1 - Voice 3 + Link Control

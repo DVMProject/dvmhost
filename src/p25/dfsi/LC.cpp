@@ -47,15 +47,9 @@ using namespace p25;
 /// Initializes a new instance of the LC class.
 /// </summary>
 LC::LC() :
-    m_rtModeFlag(P25_DFSI_RT_ENABLED),
-    m_startStopFlag(P25_DFSI_START_FLAG),
-    m_typeFlag(P25_DFSI_TYPE_VOICE),
-    m_icwFlag(P25_DFSI_DEF_ICW_SOURCE),
     m_rssi(0U),
-    m_source(P25_DFSI_DEF_SOURCE),
     m_control(nullptr),
     m_lsd(nullptr),
-    m_tsbk(nullptr),
     m_rs(),
     m_mi(nullptr)
 {
@@ -125,146 +119,6 @@ void LC::setControl(const lc::LC& data)
 }
 
 /// <summary>
-/// Decode a NID start/stop.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
-bool LC::decodeNID(const uint8_t* data)
-{
-    assert(data != nullptr);
-
-    m_frameType = data[0U];                                                         // Frame Type
-
-    return decodeStart(data + 1U);
-}
-
-/// <summary>
-/// Encode a NID start/stop.
-/// </summary>
-/// <param name="data"></param>
-void LC::encodeNID(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t dfsiFrame[P25_DFSI_SS_FRAME_LENGTH_BYTES];
-    ::memset(dfsiFrame, 0x00U, P25_DFSI_SS_FRAME_LENGTH_BYTES);
-
-    dfsiFrame[0U] = m_frameType;                                                    // Frame Type
-
-    // encode start record
-    encodeStart(dfsiFrame + 1U);
-
-#if DEBUG_P25_DFSI
-    Utils::dump(2U, "LC::encodeNID(), DFSI Start/Stop Frame", dfsiFrame, P25_DFSI_SS_FRAME_LENGTH_BYTES);
-#endif
-
-    ::memcpy(data, dfsiFrame, P25_DFSI_SS_FRAME_LENGTH_BYTES);
-}
-
-/// <summary>
-/// Decode a voice header 1.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
-bool LC::decodeVHDR1(const uint8_t* data)
-{
-    assert(data != nullptr);
-
-    m_frameType = data[0U];                                                         // Frame Type
-    if (m_frameType != P25_DFSI_VHDR1) {
-        LogError(LOG_P25, "LC::decodeVHDR1(), invalid frametype, frameType = $%02X", m_frameType);
-        return false;
-    }
-
-    if (!decodeStart(data + 1U)) {
-        LogError(LOG_P25, "LC::decodeVHDR1(), failed to decode start record");
-        return false;
-    }
-
-    m_icwFlag = data[5U];                                                           // ICW Flag
-    m_rssi = data[6U];                                                              // RSSI
-
-    return true;
-}
-
-/// <summary>
-/// Encode a voice header 1.
-/// </summary>
-/// <param name="data"></param>
-void LC::encodeVHDR1(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t dfsiFrame[P25_DFSI_VHDR1_FRAME_LENGTH_BYTES];
-    ::memset(dfsiFrame, 0x00U, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
-
-    dfsiFrame[0U] = P25_DFSI_VHDR1;                                                 // Frame Type
-
-    // encode start record
-    encodeStart(dfsiFrame + 1U);
-
-    dfsiFrame[5U] = m_icwFlag;                                                      // ICW Flag
-    dfsiFrame[6U] = m_rssi;                                                         // RSSI
-
-#if DEBUG_P25_DFSI
-    Utils::dump(2U, "LC::encodeVHDR1(), DFSI Voice Header 1 Frame", dfsiFrame, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
-#endif
-
-    ::memcpy(data, dfsiFrame, P25_DFSI_VHDR1_FRAME_LENGTH_BYTES);
-}
-
-/// <summary>
-/// Decode a voice header 2.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
-bool LC::decodeVHDR2(const uint8_t* data)
-{
-    assert(data != nullptr);
-
-    if (m_control != nullptr) {
-        delete m_control;
-    }
-    m_control = new lc::LC();
-
-    m_frameType = data[0U];                                                         // Frame Type
-    if (m_frameType != P25_DFSI_VHDR2) {
-        LogError(LOG_P25, "LC::decodeVHDR2(), invalid frametype, frameType = $%02X", m_frameType);
-        return false;
-    }
-
-    uint32_t dstId = (data[1U] << 16) | (data[2U] << 8) | (data[3U] << 0);
-    m_control->setDstId(dstId);                                                     // Talkgroup Address
-
-    return true;
-}
-
-/// <summary>
-/// Encode a voice header 2.
-/// </summary>
-/// <param name="data"></param>
-void LC::encodeVHDR2(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t dfsiFrame[P25_DFSI_VHDR2_FRAME_LENGTH_BYTES];
-    ::memset(dfsiFrame, 0x00U, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
-
-    dfsiFrame[0U] = P25_DFSI_VHDR2;                                                 // Frame Type
-
-    uint32_t dstId = m_control->getDstId();
-    dfsiFrame[1U] = (dstId >> 16) & 0xFFU;                                          // Talkgroup Address
-    dfsiFrame[2U] = (dstId >> 8) & 0xFFU;
-    dfsiFrame[3U] = (dstId >> 0) & 0xFFU;
-
-#if DEBUG_P25_DFSI
-    Utils::dump(2U, "LC::encodeVHDR2(), DFSI Voice Header 2 Frame", dfsiFrame, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
-#endif
-
-    ::memcpy(data, dfsiFrame, P25_DFSI_VHDR2_FRAME_LENGTH_BYTES);
-}
-
-/// <summary>
 /// Decode a logical link data unit 1.
 /// </summary>
 /// <param name="data"></param>
@@ -291,17 +145,13 @@ bool LC::decodeLDU1(const uint8_t* data, uint8_t* imbe)
                     m_lsd = new data::LowSpeedData();
                 }
 
-                decodeStart(data + 1U);                                             // Start Record
-                m_icwFlag = data[5U];                                               // ICW Flag
                 m_rssi = data[6U];                                                  // RSSI
                 ::memcpy(imbe, data + 10U, P25_RAW_IMBE_LENGTH_BYTES);              // IMBE
-                m_source = data[21U];                                               // Source
             }
             break;
         case P25_DFSI_LDU1_VOICE2:
             {
                 ::memcpy(imbe, data + 1U, P25_RAW_IMBE_LENGTH_BYTES);               // IMBE
-                m_source = data[12U];                                               // Source
             }
             break;
         case P25_DFSI_LDU1_VOICE3:
@@ -445,7 +295,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
         case P25_DFSI_LDU1_VOICE2:
             {
                 ::memcpy(dfsiFrame + 1U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[12U] = m_source;                                          // Source
             }
             break;
         case P25_DFSI_LDU1_VOICE3:
@@ -454,7 +303,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[1U];                                             // MFId
                 dfsiFrame[3U] = rs[2U];                                             // Service Options
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE4:
@@ -463,7 +311,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[4U];
                 dfsiFrame[3U] = rs[5U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE5:
@@ -472,7 +319,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[7U];
                 dfsiFrame[3U] = rs[8U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE6:
@@ -481,7 +327,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[10U];                                            // RS (24,12,13)
                 dfsiFrame[3U] = rs[11U];                                            // RS (24,12,13)
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE7:
@@ -490,7 +335,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[13U];                                            // RS (24,12,13)
                 dfsiFrame[3U] = rs[14U];                                            // RS (24,12,13)
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE8:
@@ -499,7 +343,6 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = rs[16U];                                            // RS (24,12,13)
                 dfsiFrame[3U] = rs[17U];                                            // RS (24,12,13)
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU1_VOICE9:
@@ -513,11 +356,8 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
         case P25_DFSI_LDU1_VOICE1:
         default:
             {
-                encodeStart(dfsiFrame + 1U);                                        // Start Record
-                dfsiFrame[5U] = m_icwFlag;                                          // ICW Flag
                 dfsiFrame[6U] = m_rssi;                                             // RSSI
                 ::memcpy(dfsiFrame + 10U, imbe, P25_RAW_IMBE_LENGTH_BYTES);         // IMBE
-                dfsiFrame[21U] = m_source;                                          // Source
             }
             break;
     }
@@ -555,11 +395,8 @@ bool LC::decodeLDU2(const uint8_t* data, uint8_t* imbe)
                 }
                 m_lsd = new data::LowSpeedData();
 
-                decodeStart(data + 1U);                                             // Start Record
-                m_icwFlag = data[5U];                                               // ICW Flag
                 m_rssi = data[6U];                                                  // RSSI
                 ::memcpy(imbe, data + 10U, P25_RAW_IMBE_LENGTH_BYTES);              // IMBE
-                m_source = data[21U];                                               // Source
             }
             break;
         case P25_DFSI_LDU2_VOICE11:
@@ -693,7 +530,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE11:
             {
                 ::memcpy(dfsiFrame + 1U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[12U] = P25_DFSI_STATUS_ERASE;                                   // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE12:
@@ -702,7 +538,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[1U];
                 dfsiFrame[3U] = mi[2U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE13:
@@ -711,7 +546,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[4U];
                 dfsiFrame[3U] = mi[5U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE14:
@@ -720,7 +554,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = mi[7U];
                 dfsiFrame[3U] = mi[8U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE15:
@@ -730,7 +563,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 dfsiFrame[2U] = (kid >> 8) & 0xFFU;                                 // Key ID
                 dfsiFrame[3U] = (kid >> 0) & 0xFFU;
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE16:
@@ -739,7 +571,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
                 // control bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE17:
@@ -748,7 +579,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
                 // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
                 // control bytes
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
-                dfsiFrame[16U] = P25_DFSI_STATUS_ERASE;                             // Status
             }
             break;
         case P25_DFSI_LDU2_VOICE18:
@@ -762,11 +592,8 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
         case P25_DFSI_LDU2_VOICE10:
         default:
             {
-                encodeStart(dfsiFrame + 1U);                                        // Start Record
-                dfsiFrame[5U] = m_icwFlag;                                          // ICW Flag
                 dfsiFrame[6U] = m_rssi;                                             // RSSI
                 ::memcpy(dfsiFrame + 10U, imbe, P25_RAW_IMBE_LENGTH_BYTES);         // IMBE
-                dfsiFrame[21U] = m_source;                                          // Source
             }
             break;
     }
@@ -777,65 +604,6 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
 #endif
 
     ::memcpy(data, dfsiFrame, frameLength);
-}
-
-/// <summary>
-/// Decode a TSBK.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
-bool LC::decodeTSBK(const uint8_t* data)
-{
-    assert(data != nullptr);
-    if (m_tsbk != nullptr) {
-        delete m_tsbk;
-        m_tsbk = nullptr;
-    }
-
-    m_frameType = data[0U];                                                         // Frame Type
-    if (m_frameType != P25_DFSI_TSBK) {
-        LogError(LOG_P25, "LC::decodeTSBK(), invalid frametype, frameType = $%02X", m_frameType);
-        return false;
-    }
-
-    decodeStart(data + 1U);                                                         // Start Record
-
-    uint8_t buffer[P25_TSBK_LENGTH_BYTES];
-    ::memcpy(buffer, data + 9U, P25_TSBK_LENGTH_BYTES);                             // Raw TSBK + CRC
-
-    std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer, true);
-    m_tsbk = tsbk.release();
-    if (m_tsbk != nullptr) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-/// <summary>
-/// Encode a TSBK.
-/// </summary>
-/// <param name="data"></param>
-void LC::encodeTSBK(uint8_t* data)
-{
-    assert(data != nullptr);
-    assert(m_tsbk != nullptr);
-
-    uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
-    m_tsbk->encode(tsbk, true, true);
-
-    uint8_t dfsiFrame[P25_DFSI_TSBK_FRAME_LENGTH_BYTES];
-    ::memset(dfsiFrame, 0x00U, P25_DFSI_TSBK_FRAME_LENGTH_BYTES);
-
-    dfsiFrame[0U] = P25_DFSI_TSBK;                                                  // Frame Type
-    encodeStart(dfsiFrame + 1U);                                                    // Start Record
-    ::memcpy(dfsiFrame + 9U, tsbk, P25_TSBK_LENGTH_BYTES);                          // Raw TSBK + CRC
-
-#if DEBUG_P25_DFSI
-    Utils::dump(2U, "LC::encodeTSBK(), DFSI TSBK Frame", dfsiFrame, P25_TSBK_LENGTH_BYTES);
-#endif
-
-    ::memcpy(data, dfsiFrame, P25_DFSI_TSBK_FRAME_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -849,13 +617,8 @@ void LC::encodeTSBK(uint8_t* data)
 void LC::copy(const LC& data)
 {
     m_frameType = data.m_frameType;
-    m_rtModeFlag = data.m_rtModeFlag;
-    m_startStopFlag = data.m_startStopFlag;
-    m_typeFlag = data.m_typeFlag;
-    m_icwFlag = data.m_icwFlag;
 
     m_rssi = data.m_rssi;
-    m_source = data.m_source;
 
     m_control = new lc::LC(*data.m_control);
     m_lsd = new data::LowSpeedData(*data.m_lsd);
@@ -866,39 +629,4 @@ void LC::copy(const LC& data)
     ::memcpy(mi, data.m_mi, P25_MI_LENGTH_BYTES);
 
     m_mi = mi;
-}
-
-/// <summary>
-/// Decode start record data.
-/// </summary>
-/// <param name="data"></param>
-/// <returns>True, if decoded, otherwise false.</returns>
-bool LC::decodeStart(const uint8_t* data)
-{
-    assert(data != nullptr);
-
-    m_rtModeFlag = data[0U];                                                        // RT Mode Flag
-    m_startStopFlag = data[1U];                                                     // Start/Stop Flag
-    m_typeFlag = data[2U];                                                          // Type Flag
-
-    return true;
-}
-
-/// <summary>
-/// Encode start record data.
-/// </summary>
-/// <param name="data"></param>
-void LC::encodeStart(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    uint8_t rawFrame[P25_DFSI_START_LENGTH_BYTES];
-    ::memset(rawFrame, 0x00U, P25_DFSI_START_LENGTH_BYTES);
-
-    rawFrame[0U] = 0x02U;                                                           //
-    rawFrame[1U] = m_rtModeFlag;                                                    // RT/RT Mode Flag
-    rawFrame[2U] = m_startStopFlag;                                                 // Start/Stop Flag
-    rawFrame[3U] = m_typeFlag;                                                      // Type flag
-
-    ::memcpy(data, rawFrame, P25_DFSI_START_LENGTH_BYTES);
 }

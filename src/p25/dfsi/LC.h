@@ -60,21 +60,6 @@ namespace p25
             /// <summary>Helper to set the LC data.</summary>
             void setControl(const lc::LC& data);
 
-            /// <summary>Decode a NID start/stop.</summary>
-            bool decodeNID(const uint8_t* data);
-            /// <summary>Encode a NID start/stop.</summary>
-            void encodeNID(uint8_t* data);
-
-            /// <summary>Decode a voice header 1.</summary>
-            bool decodeVHDR1(const uint8_t* data);
-            /// <summary>Encode a voice header 1.</summary>
-            void encodeVHDR1(uint8_t* data);
-
-            /// <summary>Decode a voice header 2.</summary>
-            bool decodeVHDR2(const uint8_t* data);
-            /// <summary>Encode a voice header 2.</summary>
-            void encodeVHDR2(uint8_t* data);
-
             /// <summary>Decode a logical link data unit 1.</summary>
             bool decodeLDU1(const uint8_t* data, uint8_t* imbe);
             /// <summary>Encode a logical link data unit 1.</summary>
@@ -85,36 +70,18 @@ namespace p25
             /// <summary>Encode a logical link data unit 2.</summary>
             void encodeLDU2(uint8_t* data, const uint8_t* imbe);
 
-            /// <summary>Decode a TSBK.</summary>
-            bool decodeTSBK(const uint8_t* data);
-            /// <summary>Encode a TSBK.</summary>
-            void encodeTSBK(uint8_t* data);
-
         public:
             /** Common Data */
             /// <summary>Frame Type.</summary>
             __PROPERTY(uint8_t, frameType, FrameType);
-            /// <summary>RT Mode Flag.</summary>
-            __PROPERTY(uint8_t, rtModeFlag, RTMode);
-            /// <summary>Start/Stop Flag.</summary>
-            __PROPERTY(uint8_t, startStopFlag, StartStop);
-            /// <summary>Type Flag.</summary>
-            __PROPERTY(uint8_t, typeFlag, Type);
-            /// <summary>ICW Flag.</summary>
-            __PROPERTY(uint8_t, icwFlag, ICW);
 
             /// <summary>RSSI.</summary>
             __PROPERTY(uint8_t, rssi, RSSI);
-
-            /// <summary>Source.</summary>
-            __PROPERTY(uint8_t, source, Source);
 
             /// <summary>Link control data.</summary>
             __READONLY_PROPERTY_PLAIN(p25::lc::LC*, control, control);
             /// <summary>Low speed data.</summary>
             __READONLY_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd, lsd);
-            /// <summary>TSBK.</summary>
-            __PROPERTY_PLAIN(p25::lc::TSBK*, tsbk, tsbk);
 
         private:
             edac::RS634717 m_rs;
@@ -124,11 +91,6 @@ namespace p25
 
             /// <summary>Internal helper to copy the class.</summary>
             void copy(const LC& data);
-
-            /// <summary>Decode start record data.</summary>
-            bool decodeStart(const uint8_t* data);
-            /// <summary>Encode start record data.</summary>
-            void encodeStart(uint8_t* data);
         };
     } // namespace dfsi
 } // namespace p25
