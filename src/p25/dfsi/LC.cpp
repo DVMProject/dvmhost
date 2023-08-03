@@ -520,6 +520,19 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
+    uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+
+    for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
+        rs[i] = m_mi[i];                                                            // Message Indicator
+
+    rs[9U] = m_control->getAlgId();                                                 // Algorithm ID
+    rs[10U] = (m_control->getKId() >> 8) & 0xFFU;                                   // Key ID
+    rs[11U] = (m_control->getKId() >> 0) & 0xFFU;                                   // ...
+
+    // encode RS (24,16,9) FEC
+    m_rs.encode24169(rs);
+
     uint8_t dfsiFrame[frameLength];
 
     dfsiFrame[0U] = m_frameType;                                                    // Frame Type
@@ -534,50 +547,49 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
         case P25_DFSI_LDU2_VOICE12:
             {
-                dfsiFrame[1U] = mi[0U];                                             // Message Indicator
-                dfsiFrame[2U] = mi[1U];
-                dfsiFrame[3U] = mi[2U];
+                dfsiFrame[1U] = rs[0U];                                             // Message Indicator
+                dfsiFrame[2U] = rs[1U];
+                dfsiFrame[3U] = rs[2U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
         case P25_DFSI_LDU2_VOICE13:
             {
-                dfsiFrame[1U] = mi[3U];                                             // Message Indicator
-                dfsiFrame[2U] = mi[4U];
-                dfsiFrame[3U] = mi[5U];
+                dfsiFrame[1U] = rs[3U];                                             // Message Indicator
+                dfsiFrame[2U] = rs[4U];
+                dfsiFrame[3U] = rs[5U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
         case P25_DFSI_LDU2_VOICE14:
             {
-                dfsiFrame[1U] = mi[6U];                                             // Message Indicator
-                dfsiFrame[2U] = mi[7U];
-                dfsiFrame[3U] = mi[8U];
+                dfsiFrame[1U] = rs[6U];                                             // Message Indicator
+                dfsiFrame[2U] = rs[7U];
+                dfsiFrame[3U] = rs[8U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
         case P25_DFSI_LDU2_VOICE15:
             {
-                dfsiFrame[1U] = m_control->getAlgId();                              // Algorithm ID
-                uint32_t kid = m_control->getKId();
-                dfsiFrame[2U] = (kid >> 8) & 0xFFU;                                 // Key ID
-                dfsiFrame[3U] = (kid >> 0) & 0xFFU;
+                dfsiFrame[1U] = rs[9U];                                             // Algorithm ID
+                dfsiFrame[2U] = rs[10U];                                            // Key ID
+                dfsiFrame[3U] = rs[11U];
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
         case P25_DFSI_LDU2_VOICE16:
             {
-                // first 3 bytes of frame are supposed to be
-                // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
-                // control bytes
+                dfsiFrame[1U] = rs[12U];                                            // RS (24,16,9)
+                dfsiFrame[2U] = rs[13U];                                            // RS (24,16,9)
+                dfsiFrame[3U] = rs[14U];                                            // RS (24,16,9)
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
         case P25_DFSI_LDU2_VOICE17:
             {
-                // first 3 bytes of frame are supposed to be
-                // part of the RS(24, 16, 9) of the VOICE12, 13, 14, 15
-                // control bytes
+                dfsiFrame[1U] = rs[15U];                                            // RS (24,16,9)
+                dfsiFrame[2U] = rs[16U];                                            // RS (24,16,9)
+                dfsiFrame[3U] = rs[17U];                                            // RS (24,16,9)
                 ::memcpy(dfsiFrame + 5U, imbe, P25_RAW_IMBE_LENGTH_BYTES);          // IMBE
             }
             break;
