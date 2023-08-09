@@ -53,7 +53,7 @@ FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) :
     m_buffers(),
     m_debug(debug)
 {
-    assert(peerId > 1000U);
+    assert(peerId < 999999999U);
 }
 
 /// <summary>
