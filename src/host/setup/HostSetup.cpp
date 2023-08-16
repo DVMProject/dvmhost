@@ -127,6 +127,7 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_fec(),
     m_transmit(false),
     m_duplex(true),
+    m_startupDuplex(true),
     m_dmrEnabled(false),
     m_dmrRx1K(false),
     m_p25Enabled(false),
@@ -207,6 +208,7 @@ int HostSetup::run(int argc, char** argv)
     yaml::Node systemConf = m_conf["system"];
     yaml::Node modemConfig = systemConf["modem"];
     m_duplex = systemConf["duplex"].as<bool>(true);
+    m_startupDuplex = m_duplex;
 
     // try to load bandplan identity table
     std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
@@ -596,7 +598,7 @@ bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
         m_channelNo = 4095U;
     }
 
-    if (m_duplex) {
+    if (m_startupDuplex) {
         if (entry.txOffsetMhz() == 0U) {
             if (consoleDisplay) {
                 g_logDisplayLevel = 1U;
@@ -617,6 +619,12 @@ bool HostSetup::calculateRxTxFreq(bool consoleDisplay)
 
         m_rxFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
         m_txFrequency = m_rxFrequency;
+    }
+
+    if (m_isHotspot) {
+        // apply the frequency tuning offsets
+        m_rxAdjustedFreq = m_rxFrequency + m_modem->m_rxTuning;
+        m_txAdjustedFreq = m_txFrequency + m_modem->m_txTuning;
     }
 
     return true;

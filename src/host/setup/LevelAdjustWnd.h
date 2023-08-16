@@ -256,24 +256,30 @@ private:
 
             m_rxFreqAdjLabel.setGeometry(FPoint(32, 10), FSize(20, 1));
             m_rxTuning.setGeometry(FPoint(52, 10), FSize(10, 1));
-            m_rxTuning.setRange(-1000, 1000);
+            m_rxTuning.setRange(-100000, 100000);
             m_rxTuning.setValue(m_setup->m_modem->m_rxTuning);
             m_rxTuning.setShadow(false);
             m_rxTuning.addCallback("changed", [&]() {
                 m_setup->m_modem->m_rxTuning = m_rxTuning.getValue();
                 Thread::sleep(2);
+                m_setup->calculateRxTxFreq();
                 m_setup->writeRFParams();
+                Thread::sleep(2);
+                m_setup->writeConfig();
             });
 
             m_txFreqAdjLabel.setGeometry(FPoint(32, 12), FSize(20, 1));
             m_txTuning.setGeometry(FPoint(52, 12), FSize(10, 1));
-            m_txTuning.setRange(-1000, 1000);
+            m_txTuning.setRange(-100000, 100000);
             m_txTuning.setValue(m_setup->m_modem->m_txTuning);
             m_txTuning.setShadow(false);
             m_txTuning.addCallback("changed", [&]() {
                 m_setup->m_modem->m_txTuning = m_txTuning.getValue();
                 Thread::sleep(2);
+                m_setup->calculateRxTxFreq();
                 m_setup->writeRFParams();
+                Thread::sleep(2);
+                m_setup->writeConfig();
             });
         }
 

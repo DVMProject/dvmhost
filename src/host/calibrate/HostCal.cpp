@@ -135,6 +135,8 @@ int HostCal::run(int argc, char **argv)
         return 1;
     }
 
+    m_isConnected = true;
+
     // open terminal console
     ret = m_console.open();
     if (!ret) {
@@ -278,6 +280,8 @@ int HostCal::run(int argc, char **argv)
                 m_rxAdjustedFreq = m_rxFrequency + m_modem->m_rxTuning;
 
                 writeRFParams();
+                Thread::sleep(2);
+                writeConfig();
             }
         }
         break;
@@ -298,6 +302,8 @@ int HostCal::run(int argc, char **argv)
                 m_txAdjustedFreq = m_txFrequency + m_modem->m_txTuning;
 
                 writeRFParams();
+                Thread::sleep(2);
+                writeConfig();
             }
         }
         break;

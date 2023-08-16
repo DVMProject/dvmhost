@@ -130,6 +130,7 @@ protected:
     bool m_transmit;
 
     bool m_duplex;
+    bool m_startupDuplex;
 
     bool m_dmrEnabled;
     bool m_dmrRx1K;
