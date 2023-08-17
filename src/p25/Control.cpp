@@ -103,6 +103,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_dedicatedControl(false),
     m_voiceOnControl(false),
     m_ackTSBKRequests(true),
+    m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
@@ -273,6 +274,24 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_trunk->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
     m_trunk->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
 
+    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
+
+    uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
+    m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
+
+    m_trunk->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
+
+    yaml::Node controlCh = rfssConfig["controlCh"];
+    m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
+
+    // voice on control forcibly disables CC notification
+    if (m_voiceOnControl) {
+        m_notifyCC = false;
+    }
+
+    /*
+    ** Voice Silence and Frame Loss Thresholds
+    */
     m_voice->m_silenceThreshold = p25Protocol["silenceThreshold"].as<uint32_t>(p25::DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_P25_VOICE_ERRORS) {
         LogWarning(LOG_P25, "Silence threshold > %u, defaulting to %u", p25::MAX_P25_VOICE_ERRORS, p25::DEFAULT_SILENCE_THRESHOLD);
@@ -293,8 +312,25 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", p25::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
+    /*
+    ** Network HDU and Grant Disables
+    */
+    m_disableNetworkGrant = p25Protocol["disableNetworkGrant"].as<bool>(false);
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
 
+    if (m_disableNetworkGrant && m_control && m_dedicatedControl) {
+        LogWarning(LOG_P25, "Cannot disable network traffic grants for dedicated control configuration.");
+        m_disableNetworkGrant = false;
+    }
+
+    if (m_disableNetworkGrant && m_controlOnly) {
+        LogWarning(LOG_P25, "Cannot disable network traffic grants for control-only configuration.");
+        m_disableNetworkGrant = false;
+    }
+
+    /*
+    ** CC Service Class
+    */
     bool disableCompositeFlag = p25Protocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
     if (m_control) {
@@ -307,8 +343,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     }
 
+    /*
+    ** Site Data
+    */
     int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
-
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     uint32_t valueTest = (netId >> 8);
     const uint32_t constValue = 0x17DC0U;
@@ -363,21 +401,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     });
 
-    uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
-    m_trunk->m_adjSiteUpdateInterval += ccBcstInterval;
-
-    m_trunk->m_disableGrantSrcIdCheck = p25Protocol["control"]["disableGrantSourceIdCheck"].as<bool>(false);
-
-    yaml::Node controlCh = rfssConfig["controlCh"];
-    m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
-
-    // voice on control forcibly disables CC notification
-    if (m_voiceOnControl) {
-        m_notifyCC = false;
-    }
-
-    m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
-
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
@@ -398,7 +421,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Announcement Group: $%04X", m_trunk->m_announcementGroup);
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
-        LogInfo("    Disable Network HDUs: %s", m_disableNetworkHDU ? "yes" : "no");
+        if (!m_disableNetworkHDU) {
+            LogInfo("    Disable Network HDUs: yes");
+        }
+        if (!m_disableNetworkGrant) {
+            LogInfo("    Disable Network Grants: yes");
+        }
         if (!m_trunk->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
         }
@@ -1229,6 +1257,10 @@ void Control::processNetwork()
         case P25_DUID_TDULC:
             // is this an TDU with a grant demand?
             if (duid == P25_DUID_TDU && m_control && grantDemand) {
+                if (m_disableNetworkGrant) {
+                    return;
+                }
+
                 // validate source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
                     return;

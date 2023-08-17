@@ -185,6 +185,12 @@ protocols:
         # Flag indicating whether or not the composite flag in the CC service options is set.
         #   (This is useful to disable for some radios when running in VOC mode.)
         disableCompositeFlag: false
+        # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
+        disableNetworkHDU: false
+        # Flag indicating whether or not network calls will generate a channel grant.
+        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
+        #    steering is required.)
+        disableNetworkGrant: false
         # Flag indicating that the host will attempt to automatically inhibit unauthorized RIDs (those not in the
         # RID ACL list).
         inhibitUnauthorized: false
@@ -220,8 +226,6 @@ protocols:
         silenceThreshold: 124
         # Maximum number of lost frames before terminating a call.
         frameLossThreshold: 6
-        # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
-        disableNetworkHDU: false
         # Internal data queue size (in P25 packets).
         queueSize: 12
         # Flag indicating whether or not verbose logging is enabled.

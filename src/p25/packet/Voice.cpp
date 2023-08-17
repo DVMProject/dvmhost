@@ -1344,7 +1344,7 @@ void Voice::writeNet_LDU1()
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
         // single-channel trunking or voice on control support?
-        if (m_p25->m_control && m_p25->m_voiceOnControl) {
+        if (m_p25->m_control && m_p25->m_voiceOnControl && !m_p25->m_disableNetworkGrant) {
             uint8_t serviceOptions = (m_netLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority

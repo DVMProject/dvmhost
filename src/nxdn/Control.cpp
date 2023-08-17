@@ -246,6 +246,15 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_voiceOnControl = nxdnProtocol["voiceOnControl"].as<bool>(false);
 
+    m_trunk->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+
+    yaml::Node rfssConfig = systemConf["config"];
+    yaml::Node controlCh = rfssConfig["controlCh"];
+    m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
+
+    /*
+    ** Voice Silence and Frame Loss Thresholds
+    */
     m_voice->m_silenceThreshold = nxdnProtocol["silenceThreshold"].as<uint32_t>(nxdn::DEFAULT_SILENCE_THRESHOLD);
     if (m_voice->m_silenceThreshold > MAX_NXDN_VOICE_ERRORS) {
         LogWarning(LOG_NXDN, "Silence threshold > %u, defaulting to %u", nxdn::MAX_NXDN_VOICE_ERRORS, nxdn::DEFAULT_SILENCE_THRESHOLD);
@@ -266,6 +275,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_NXDN, "Frame loss threshold may be excessive, default is %u, configured is %u", nxdn::DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
+    /*
+    ** CC Service Class
+    */
     bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
     if (m_control) {
@@ -278,6 +290,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
     }
 
+    /*
+    ** Site Data
+    */
     // calculate the NXDN location ID
     uint32_t locId = NXDN_LOC_CAT_LOCAL; // DVM is currently fixed to "local" category
     locId = (locId << 17) + sysId;
@@ -327,12 +342,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             break;
         }
     }
-
-    m_trunk->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
-
-    yaml::Node rfssConfig = systemConf["config"];
-    yaml::Node controlCh = rfssConfig["controlCh"];
-    m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
 
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);

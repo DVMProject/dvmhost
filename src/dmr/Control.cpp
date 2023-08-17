@@ -185,6 +185,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
+    /*
+    ** Voice Silence and Frame Loss Thresholds
+    */
     uint32_t silenceThreshold = dmrProtocol["silenceThreshold"].as<uint32_t>(dmr::DEFAULT_SILENCE_THRESHOLD);
     if (silenceThreshold > MAX_DMR_VOICE_ERRORS) {
         LogWarning(LOG_DMR, "Silence threshold > %u, defaulting to %u", dmr::MAX_DMR_VOICE_ERRORS, dmr::DEFAULT_SILENCE_THRESHOLD);
