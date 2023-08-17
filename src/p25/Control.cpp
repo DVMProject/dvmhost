@@ -828,10 +828,12 @@ void Control::clock(uint32_t ms)
     if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {
         m_networkWatchdog.clock(ms);
 
-        if (m_networkWatchdog.hasExpired()) {
+        if (m_networkWatchdog.isRunning() && m_networkWatchdog.hasExpired()) {
             if (m_netState == RS_NET_AUDIO) {
-                ::ActivityLog("P25", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
-                    float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
+                if (m_voice->m_netFrames > 0.0F) {
+                    ::ActivityLog("P25", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
+                        float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
+                }
             }
             else {
                 ::ActivityLog("P25", false, "network watchdog has expired");

@@ -96,6 +96,7 @@ void Voice::resetNet()
     m_netLost = 0U;
     m_vocLDU1Count = 0U;
     m_roamLDU1Count = 0U;
+    m_p25->m_networkWatchdog.stop();
 }
 
 /// <summary>

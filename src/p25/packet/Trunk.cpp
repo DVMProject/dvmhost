@@ -2132,6 +2132,25 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
+    // are network channel grants disabled?
+    if (m_p25->m_disableNetworkGrant) {
+        // don't process RF grant if the network isn't in a idle state and the RF destination is the network destination
+        if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
+            LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
+            writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+
+            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+            m_p25->m_rfState = RS_RF_REJECTED;
+            return false;
+        }
+
+        // ensure network watchdog is stopped
+        if (m_p25->m_networkWatchdog.isRunning()) {
+            m_p25->m_networkWatchdog.stop();
+        }
+    }
+
     // are we skipping checking?
     if (!skip) {
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
