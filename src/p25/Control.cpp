@@ -421,10 +421,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Announcement Group: $%04X", m_trunk->m_announcementGroup);
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
-        if (!m_disableNetworkHDU) {
+        if (m_disableNetworkHDU) {
             LogInfo("    Disable Network HDUs: yes");
         }
-        if (!m_disableNetworkGrant) {
+        if (m_disableNetworkGrant) {
             LogInfo("    Disable Network Grants: yes");
         }
         if (!m_trunk->m_ctrlTSDUMBF) {
