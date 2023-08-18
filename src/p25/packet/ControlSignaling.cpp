@@ -1463,6 +1463,10 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool cle
         data[1U] = 0x00U;
 
         m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
+        if (imm) {
+            // queue an immediate frame at least twice
+            m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
+        }
     }
 }
 
