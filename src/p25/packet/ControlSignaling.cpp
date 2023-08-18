@@ -1216,6 +1216,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_ctrlTSDUMBF(true),
     m_sndcpChGrant(false),
     m_disableGrantSrcIdCheck(false),
+    m_redundantImmediate(true),
     m_redundantGrant(false),
     m_dumpTSBK(dumpTSBKData),
     m_verbose(verbose),
@@ -1463,7 +1464,8 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool cle
         data[1U] = 0x00U;
 
         m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
-        if (imm) {
+        
+        if (imm && m_redundantImmediate) {
             // queue an immediate frame at least twice
             m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
         }

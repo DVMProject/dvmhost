@@ -272,6 +272,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
     m_control->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     m_control->m_ctrlTimeDateAnn = control["enableTimeDateAnn"].as<bool>(false);
+    m_control->m_redundantImmediate = control["redundantImmediate"].as<bool>(true);
     m_control->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
 
     m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
@@ -445,6 +446,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
 
+        LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");
         if (m_control->m_redundantGrant) {
             LogInfo("    Redundant Grant Transmit: yes");
         }
