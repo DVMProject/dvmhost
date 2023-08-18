@@ -445,7 +445,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
 
-        if (!m_control->m_redundantGrant) {
+        if (m_control->m_redundantGrant) {
             LogInfo("    Redundant Grant Transmit: yes");
         }
     }
