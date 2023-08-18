@@ -1301,6 +1301,10 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
         m_p25->m_network->resetP25();
 }
 
+/*
+** Modem Frame Queuing
+*/
+
 /// <summary>
 /// Helper to write a P25 TDU w/ link control packet.
 /// </summary>
@@ -1653,6 +1657,10 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
 
     m_p25->m_data->writeRF_PDU_User(header, pduUserData, clearBeforeWrite);
 }
+
+/*
+** Control Signalling Logic
+*/
 
 /// <summary>
 /// Helper to write a P25 TDU w/ link control channel release packet.

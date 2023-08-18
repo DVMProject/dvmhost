@@ -164,6 +164,10 @@ namespace p25
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset);
 
+            /*
+            ** Modem Frame Queuing
+            */
+
             /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
             virtual void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
             /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
@@ -179,6 +183,10 @@ namespace p25
             void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
             /// <summary>Helper to write a alternate multi-block ControlSignalinging PDU packet.</summary>
             virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
+
+            /*
+            ** Control Signalling Logic
+            */
 
             /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
             void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);

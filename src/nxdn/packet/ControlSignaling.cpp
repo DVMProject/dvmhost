@@ -373,6 +373,10 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
     m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }
 
+/*
+** Modem Frame Queuing
+*/
+
 /// <summary>
 /// Helper to write a single-block RCCH packet.
 /// </summary>
@@ -429,6 +433,10 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBef
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, imm);
     }
 }
+
+/*
+** Control Signalling Logic
+*/
 
 /// <summary>
 /// Helper to write control channel packet data.

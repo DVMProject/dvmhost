@@ -94,10 +94,18 @@ namespace nxdn
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint32_t len);
 
+            /*
+            ** Modem Frame Queuing
+            */
+
             /// <summary>Helper to write a immediate single-block RCCH packet.</summary>
             void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, false, true); }
             /// <summary>Helper to write a single-block RCCH packet.</summary>
             void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false, bool imm = false);
+
+            /*
+            ** Control Signalling Logic
+            */
 
             /// <summary>Helper to write control channel packet data.</summary>
             void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);

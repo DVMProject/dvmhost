@@ -681,6 +681,10 @@ ControlSignaling::~ControlSignaling()
     /* stub */
 }
 
+/*
+** Modem Frame Queuing
+*/
+
 /// <summary>
 /// Helper to write a CSBK packet.
 /// </summary>
@@ -728,6 +732,10 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool 
     if (m_slot->m_duplex)
         m_slot->addFrame(data, false, imm);
 }
+
+/*
+** Control Signalling Logic
+*/
 
 /// <summary>
 /// Helper to write a deny packet.
