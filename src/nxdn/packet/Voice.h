@@ -33,7 +33,6 @@
 
 #include "Defines.h"
 #include "nxdn/Control.h"
-#include "network/BaseNetwork.h"
 
 #include <cstdio>
 #include <string>
@@ -71,8 +70,6 @@ namespace nxdn
             friend class nxdn::Control;
             Control* m_nxdn;
 
-            network::BaseNetwork* m_network;
-
             uint32_t m_rfFrames;
             uint32_t m_rfBits;
             uint32_t m_rfErrs;
@@ -88,7 +85,7 @@ namespace nxdn
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Voice class.</summary>
-            Voice(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
+            Voice(Control* nxdn, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Voice class.</summary>
             virtual ~Voice();
 

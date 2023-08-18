@@ -23,8 +23,8 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__P25_PACKET_TRUNK_H__)
-#define __P25_PACKET_TRUNK_H__
+#if !defined(__P25_PACKET_CONTROL_SIGNALING_H__)
+#define __P25_PACKET_CONTROL_SIGNALING_H__
 
 #include "Defines.h"
 #include "p25/data/DataHeader.h"
@@ -33,7 +33,6 @@
 #include "p25/lc/AMBT.h"
 #include "p25/lc/TDULC.h"
 #include "p25/Control.h"
-#include "network/BaseNetwork.h"
 #include "Timer.h"
 
 #include <cstdio>
@@ -56,10 +55,10 @@ namespace p25
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements handling logic for P25 trunking packets.
+        //      This class implements handling logic for P25 TSDU and TDULC packets.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API Trunk {
+        class HOST_SW_API ControlSignaling {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
             virtual bool process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK = nullptr);
@@ -108,8 +107,6 @@ namespace p25
             Control* m_p25;
             friend class lookups::P25AffiliationLookup;
 
-            network::BaseNetwork* m_network;
-
             uint32_t m_patchSuperGroup;
             uint32_t m_announcementGroup;
 
@@ -157,25 +154,20 @@ namespace p25
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Trunk class.</summary>
-            Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Trunk class.</summary>
-            virtual ~Trunk();
+            /// <summary>Initializes a new instance of the ControlSignaling class.</summary>
+            ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, bool verbose);
+            /// <summary>Finalizes a instance of the ControlSignaling class.</summary>
+            virtual ~ControlSignaling();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset);
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset);
 
-            /// <summary>Helper to write control channel packet data.</summary>
-            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
-
             /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
             virtual void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
             /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
             virtual void writeNet_TDULC(lc::TDULC* lc);
-            /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
-            void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
 
             /// <summary>Helper to write a immediate single-block P25 TSDU packet.</summary>
             virtual void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, false, true); }
@@ -185,8 +177,14 @@ namespace p25
             virtual void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
             void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
-            /// <summary>Helper to write a alternate multi-block trunking PDU packet.</summary>
+            /// <summary>Helper to write a alternate multi-block ControlSignalinging PDU packet.</summary>
             virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
+
+            /// <summary>Helper to write a P25 TDU w/ link control channel release packet.</summary>
+            void writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId);
+
+            /// <summary>Helper to write control channel packet data.</summary>
+            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to generate the given control TSBK into the TSDU frame queue.</summary>
             void queueRF_TSBK_Ctrl(uint8_t lco);
@@ -227,4 +225,4 @@ namespace p25
     } // namespace packet
 } // namespace p25
 
-#endif // __P25_PACKET_TRUNK_H__
+#endif // __P25_PACKET_CONTROL_SIGNALING_H__

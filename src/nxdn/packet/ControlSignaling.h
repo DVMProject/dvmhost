@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -27,13 +27,12 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__NXDN_PACKET_TRUNK_H__)
-#define __NXDN_PACKET_TRUNK_H__
+#if !defined(__NXDN_PACKET_CONTROL_SIGNALING_H__)
+#define __NXDN_PACKET_CONTROL_SIGNALING_H__
 
 #include "Defines.h"
 #include "nxdn/Control.h"
 #include "nxdn/lc/RCCH.h"
-#include "network/BaseNetwork.h"
 
 #include <cstdio>
 #include <string>
@@ -52,10 +51,10 @@ namespace nxdn
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      This class implements handling logic for NXDN control signalling packets.
+        //      This class implements handling logic for NXDN RCCH packets.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API Trunk {
+        class HOST_SW_API ControlSignaling {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
             virtual bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
@@ -70,8 +69,6 @@ namespace nxdn
             friend class nxdn::packet::Voice;
             friend class nxdn::Control;
             Control* m_nxdn;
-
-            network::BaseNetwork* m_network;
 
             uint8_t m_bcchCnt;
             uint8_t m_rcchGroupingCnt;
@@ -89,21 +86,21 @@ namespace nxdn
             bool m_verbose;
             bool m_debug;
 
-            /// <summary>Initializes a new instance of the Trunk class.</summary>
-            Trunk(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
-            /// <summary>Finalizes a instance of the Trunk class.</summary>
-            virtual ~Trunk();
+            /// <summary>Initializes a new instance of the ControlSignaling class.</summary>
+            ControlSignaling(Control* nxdn, bool debug, bool verbose);
+            /// <summary>Finalizes a instance of the ControlSignaling class.</summary>
+            virtual ~ControlSignaling();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint32_t len);
-
-            /// <summary>Helper to write control channel packet data.</summary>
-            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to write a immediate single-block RCCH packet.</summary>
             void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, false, true); }
             /// <summary>Helper to write a single-block RCCH packet.</summary>
             void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false, bool imm = false);
+
+            /// <summary>Helper to write control channel packet data.</summary>
+            void writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS);
 
             /// <summary>Helper to write a grant packet.</summary>
             bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
@@ -125,4 +122,4 @@ namespace nxdn
     } // namespace packet
 } // namespace nxdn
 
-#endif // __NXDN_PACKET_TRUNK_H__
+#endif // __NXDN_PACKET_CONTROL_SIGNALING_H__

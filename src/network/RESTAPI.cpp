@@ -1924,7 +1924,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (match.size() <= 1) {
-            bool tsbkDump = m_p25->trunk()->getTSBKVerbose();
+            bool tsbkDump = m_p25->control()->getTSBKVerbose();
 
             response["verbose"].set<bool>(tsbkDump);
 
@@ -1934,7 +1934,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
         else {
             if (match.size() == 2) {
                 uint8_t enable = (uint8_t)::strtoul(match.str(1).c_str(), NULL, 10);
-                m_p25->trunk()->setTSBKVerbose((enable == 1U) ? true : false);
+                m_p25->control()->setTSBKVerbose((enable == 1U) ? true : false);
             }
         }
     }
@@ -2003,25 +2003,25 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
         }
 
         uint8_t mfId = req["mfId"].get<uint8_t>();
-        m_p25->trunk()->setLastMFId(mfId);
+        m_p25->control()->setLastMFId(mfId);
     }
     else if (::strtolower(command) == RID_CMD_PAGE) {
-        m_p25->trunk()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Call_Alrt(p25::P25_WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_p25->trunk()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+        m_p25->control()->writeRF_TSDU_Ext_Func(p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_GAQ) {
-        m_p25->trunk()->writeRF_TSDU_Grp_Aff_Q(dstId);
+        m_p25->control()->writeRF_TSDU_Grp_Aff_Q(dstId);
     }
     else if (::strtolower(command) == RID_CMD_UREG) {
-        m_p25->trunk()->writeRF_TSDU_U_Reg_Cmd(dstId);
+        m_p25->control()->writeRF_TSDU_U_Reg_Cmd(dstId);
     }
     else if (::strtolower(command) == RID_CMD_EMERG) {
         // validate source ID is a integer within the JSON blob
@@ -2037,7 +2037,7 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
             return;
         }
 
-        m_p25->trunk()->writeRF_TSDU_Emerg_Alrm(srcId, dstId);
+        m_p25->control()->writeRF_TSDU_Emerg_Alrm(srcId, dstId);
     }
     else {
         errorPayload(reply, "invalid command");
@@ -2188,7 +2188,7 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
         Utils::dump("Raw TSBK", tsbk, p25::P25_TSBK_LENGTH_BYTES);
     }
 
-    m_p25->trunk()->writeRF_TSDU_Raw(tsbk);
+    m_p25->control()->writeRF_TSDU_Raw(tsbk);
 #else
     errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
 #endif // defined(ENABLE_P25)

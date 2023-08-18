@@ -37,7 +37,6 @@
 #include "p25/lc/LC.h"
 #include "p25/Control.h"
 #include "p25/Audio.h"
-#include "network/BaseNetwork.h"
 
 #include <cstdio>
 #include <string>
@@ -48,7 +47,7 @@ namespace p25
     //  Class Prototypes
     // ---------------------------------------------------------------------------
 
-    namespace packet { class HOST_SW_API Trunk; }
+    namespace packet { class HOST_SW_API ControlSignaling; }
     class HOST_SW_API Control;
 
     namespace packet
@@ -71,11 +70,9 @@ namespace p25
             virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType);
 
         protected:
-            friend class packet::Trunk;
+            friend class packet::ControlSignaling;
             friend class p25::Control;
             Control* m_p25;
-
-            network::BaseNetwork* m_network;
 
             uint32_t m_rfFrames;
             uint32_t m_rfBits;
@@ -118,7 +115,7 @@ namespace p25
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Voice class.</summary>
-            Voice(Control* p25, network::BaseNetwork* network, bool debug, bool verbose);
+            Voice(Control* p25, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Voice class.</summary>
             virtual ~Voice();
 

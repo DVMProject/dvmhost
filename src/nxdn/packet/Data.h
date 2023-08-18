@@ -33,7 +33,6 @@
 
 #include "Defines.h"
 #include "nxdn/Control.h"
-#include "network/BaseNetwork.h"
 
 #include <cstdio>
 #include <string>
@@ -69,15 +68,13 @@ namespace nxdn
             friend class nxdn::Control;
             Control* m_nxdn;
 
-            network::BaseNetwork* m_network;
-
             uint16_t m_lastRejectId;
 
             bool m_verbose;
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Data class.</summary>
-            Data(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose);
+            Data(Control* nxdn, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Data class.</summary>
             virtual ~Data();
 

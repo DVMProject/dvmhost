@@ -27,7 +27,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/packet/Voice.h"
-#include "p25/packet/Trunk.h"
+#include "p25/packet/ControlSignaling.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/lc/tsbk/TSBKFactory.h"
 #include "p25/lc/tdulc/TDULCFactory.h"
@@ -57,7 +57,7 @@ using namespace p25::packet;
 
 // Make sure control data is supported.
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
-    if (!m_p25->m_control) {                                                            \
+    if (!m_p25->m_enableControl) {                                                      \
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, unsupported service, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_TSDU_Deny(P25_WUID_FNE, _SRCID, P25_DENY_RSN_SYS_UNSUPPORTED_SVC, _PCKT); \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
@@ -151,7 +151,7 @@ using namespace p25::packet;
     }
 
 #define RF_TO_WRITE_NET(OSP)                                                            \
-    if (m_network != nullptr) {                                                         \
+    if (m_p25->m_network != nullptr) {                                                  \
         uint8_t _buf[P25_TSDU_FRAME_LENGTH_BYTES];                                      \
         writeNet_TSDU_From_RF(OSP, _buf);                                               \
         writeNetworkRF(OSP, _buf, true);                                                \
@@ -179,11 +179,11 @@ const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 /// <param name="len">Length of data frame.</param>
 /// <param name="preDecodedTSBK">Pre-decoded TSBK.</param>
 /// <returns></returns>
-bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK)
+bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK)
 {
     assert(data != nullptr);
 
-    if (!m_p25->m_control)
+    if (!m_p25->m_enableControl)
         return false;
 
     uint8_t duid = 0U;
@@ -255,7 +255,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
 
                     writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                 } else {
-                    m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
+                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
                 }
             }
             break;
@@ -285,7 +285,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
 
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
-                        m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
                     }
                 }
             }
@@ -319,7 +319,7 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
 
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
-                        m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
                     }
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
@@ -616,9 +616,9 @@ bool Trunk::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDe
 /// <param name="lsd"></param>
 /// <param name="duid"></param>
 /// <returns></returns>
-bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
+bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid)
 {
-    if (!m_p25->m_control)
+    if (!m_p25->m_enableControl)
         return false;
     if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
         return false;
@@ -633,7 +633,7 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 // handle updating internal adjacent site information
                 if (tsbk->getLCO() == TSBK_OSP_ADJ_STS_BCAST) {
-                    if (!m_p25->m_control) {
+                    if (!m_p25->m_enableControl) {
                         return false;
                     }
 
@@ -907,9 +907,9 @@ bool Trunk::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="dataBlock"></param>
-bool Trunk::processMBT(DataHeader& dataHeader, DataBlock* blocks)
+bool ControlSignaling::processMBT(DataHeader& dataHeader, DataBlock* blocks)
 {
-    if (!m_p25->m_control) {
+    if (!m_p25->m_enableControl) {
         return false;
     }
 
@@ -929,15 +929,15 @@ bool Trunk::processMBT(DataHeader& dataHeader, DataBlock* blocks)
 /// <summary>
 /// Helper to write P25 adjacent site information to the network.
 /// </summary>
-void Trunk::writeAdjSSNetwork()
+void ControlSignaling::writeAdjSSNetwork()
 {
-    if (!m_p25->m_control) {
+    if (!m_p25->m_enableControl) {
         return;
     }
 
-    if (m_network != nullptr) {
+    if (m_p25->m_network != nullptr) {
         uint8_t cfva = P25_CFVA_VALID;
-        if (m_p25->m_control && m_p25->m_voiceOnControl) {
+        if (m_p25->m_enableControl && m_p25->m_voiceOnControl) {
             cfva |= P25_CFVA_CONV;
         }
 
@@ -965,9 +965,9 @@ void Trunk::writeAdjSSNetwork()
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
-void Trunk::clock(uint32_t ms)
+void ControlSignaling::clock(uint32_t ms)
 {
-    if (m_p25->m_control) {
+    if (m_p25->m_enableControl) {
         // clock all the grant timers
         m_p25->m_affiliations.clock(ms);
 
@@ -1019,7 +1019,7 @@ void Trunk::clock(uint32_t ms)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_CALL_ALRT> iosp = new_unique(IOSP_CALL_ALRT);
     iosp->setSrcId(srcId);
@@ -1037,7 +1037,7 @@ void Trunk::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <param name="txMult"></param>
-void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMult)
+void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMult)
 {
     std::unique_ptr<IOSP_RAD_MON> iosp = new_unique(IOSP_RAD_MON);
     iosp->setSrcId(srcId);
@@ -1059,7 +1059,7 @@ void Trunk::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMul
 /// <param name="func"></param>
 /// <param name="arg"></param>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
     std::unique_ptr<IOSP_EXT_FNCT> iosp = new_unique(IOSP_EXT_FNCT);
     iosp->setExtendedFunction(func);
@@ -1089,7 +1089,7 @@ void Trunk::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 /// Helper to write a group affiliation query packet.
 /// </summary>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 {
     std::unique_ptr<OSP_GRP_AFF_Q> osp = new_unique(OSP_GRP_AFF_Q);
     osp->setSrcId(P25_WUID_FNE);
@@ -1105,7 +1105,7 @@ void Trunk::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 /// Helper to write a unit registration command packet.
 /// </summary>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 {
     std::unique_ptr<OSP_U_REG_CMD> osp = new_unique(OSP_U_REG_CMD);
     osp->setSrcId(P25_WUID_FNE);
@@ -1122,7 +1122,7 @@ void Trunk::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = new_unique(ISP_EMERG_ALRM_REQ);
     isp->setSrcId(srcId);
@@ -1136,7 +1136,7 @@ void Trunk::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 /// Helper to write a raw TSBK.
 /// </summary>
 /// <param name="tsbk"></param>
-void Trunk::writeRF_TSDU_Raw(const uint8_t* tsbk)
+void ControlSignaling::writeRF_TSDU_Raw(const uint8_t* tsbk)
 {
     if (tsbk == nullptr) {
         return;
@@ -1152,10 +1152,10 @@ void Trunk::writeRF_TSDU_Raw(const uint8_t* tsbk)
 /// Helper to change the conventional fallback state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether conventional fallback is enabled.</param>
-void Trunk::setConvFallback(bool fallback)
+void ControlSignaling::setConvFallback(bool fallback)
 {
     m_convFallback = fallback;
-    if (m_convFallback && m_p25->m_control) {
+    if (m_convFallback && m_p25->m_enableControl) {
         m_convFallbackPacketDelay = 0U;
 
         std::unique_ptr<OSP_MOT_PSH_CCH> osp = new_unique(OSP_MOT_PSH_CCH);
@@ -1169,7 +1169,7 @@ void Trunk::setConvFallback(bool fallback)
 /// Helper to change the TSBK verbose state.
 /// </summary>
 /// <param name="verbose">Flag indicating whether TSBK dumping is enabled.</param>
-void Trunk::setTSBKVerbose(bool verbose)
+void ControlSignaling::setTSBKVerbose(bool verbose)
 {
     m_dumpTSBK = verbose;
     lc::TSBK::setVerbose(verbose);
@@ -1181,16 +1181,14 @@ void Trunk::setTSBKVerbose(bool verbose)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the Trunk class.
+/// Initializes a new instance of the ControlSignaling class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpTSBKData">Flag indicating whether TSBK data is dumped to the log.</param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, bool debug, bool verbose) :
+ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, bool verbose) :
     m_p25(p25),
-    m_network(network),
     m_patchSuperGroup(0xFFFEU),
     m_announcementGroup(0xFFFEU),
     m_verifyAff(false),
@@ -1241,9 +1239,9 @@ Trunk::Trunk(Control* p25, network::BaseNetwork* network, bool dumpTSBKData, boo
 }
 
 /// <summary>
-/// Finalizes a instance of the Trunk class.
+/// Finalizes a instance of the ControlSignaling class.
 /// </summary>
-Trunk::~Trunk()
+ControlSignaling::~ControlSignaling()
 {
     delete[] m_rfMBF;
 }
@@ -1254,12 +1252,12 @@ Trunk::~Trunk()
 /// <param name="tsbk"></param>
 /// <param name="data"></param>
 /// <param name="autoReset"></param>
-void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
+void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 {
     assert(tsbk != nullptr);
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_p25->m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -1271,9 +1269,9 @@ void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
     lc.setSrcId(tsbk->getSrcId());
     lc.setDstId(tsbk->getDstId());
 
-    m_network->writeP25TSDU(lc, data);
+    m_p25->m_network->writeP25TSDU(lc, data);
     if (autoReset)
-        m_network->resetP25();
+        m_p25->m_network->resetP25();
 }
 
 /// <summary>
@@ -1282,11 +1280,11 @@ void Trunk::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
 /// <param name="tduLc"></param>
 /// <param name="data"></param>
 /// <param name="autoReset"></param>
-void Trunk::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset)
+void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset)
 {
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_p25->m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -1298,9 +1296,415 @@ void Trunk::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset
     lc.setSrcId(tduLc->getSrcId());
     lc.setDstId(tduLc->getDstId());
 
-    m_network->writeP25TSDU(lc, data);
+    m_p25->m_network->writeP25TSDU(lc, data);
     if (autoReset)
-        m_network->resetP25();
+        m_p25->m_network->resetP25();
+}
+
+/// <summary>
+/// Helper to write a P25 TDU w/ link control packet.
+/// </summary>
+/// <param name="lc"></param>
+/// <param name="noNetwork"></param>
+void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
+{
+    uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
+
+    // Generate Sync
+    Sync::addP25Sync(data + 2U);
+
+    // Generate NID
+    m_p25->m_nid.encode(data + 2U, P25_DUID_TDULC);
+
+    // Generate TDULC Data
+    lc->encode(data + 2U);
+
+    // Add busy bits
+    P25Utils::addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+
+    m_p25->m_rfTimeout.stop();
+
+    if (!noNetwork)
+        writeNetworkRF(lc, data + 2U, P25_DUID_TDULC);
+
+    if (m_p25->m_duplex) {
+        data[0U] = modem::TAG_EOT;
+        data[1U] = 0x00U;
+
+        m_p25->addFrame(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+    }
+
+    //if (m_verbose) {
+    //    LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_rfTDULC.getLCO(), m_rfTDULC.getSrcId());
+    //}
+}
+
+/// <summary>
+/// Helper to write a network P25 TDU w/ link control packet.
+/// </summary>
+/// <param name="lc"></param>
+void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
+{
+    uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+    ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+
+    buffer[0U] = modem::TAG_EOT;
+    buffer[1U] = 0x00U;
+
+    // Generate Sync
+    Sync::addP25Sync(buffer + 2U);
+
+    // Generate NID
+    m_p25->m_nid.encode(buffer + 2U, P25_DUID_TDULC);
+
+    // Regenerate TDULC Data
+    lc->encode(buffer + 2U);
+
+    // Add busy bits
+    P25Utils::addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
+
+    m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
+
+    if (m_verbose) {
+        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc->getLCO(), lc->getSrcId());
+    }
+
+    if (m_p25->m_voice->m_netFrames > 0) {
+        ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss",
+            float(m_p25->m_voice->m_netFrames) / 50.0F, (m_p25->m_voice->m_netLost * 100U) / m_p25->m_voice->m_netFrames);
+    }
+    else {
+        ::ActivityLog("P25", false, "network end of transmission, %u frames", m_p25->m_voice->m_netFrames);
+    }
+
+    if (m_p25->m_network != nullptr)
+        m_p25->m_network->resetP25();
+
+    m_p25->m_netTimeout.stop();
+    m_p25->m_networkWatchdog.stop();
+    m_p25->m_netState = RS_NET_IDLE;
+    m_p25->m_tailOnIdle = true;
+}
+
+/// <summary>
+/// Helper to write a single-block P25 TSDU packet.
+/// </summary>
+/// <param name="tsbk"></param>
+/// <param name="noNetwork"></param>
+/// <param name="clearBeforeWrite"></param>
+/// <param name="force"></param>
+/// <param name="imm"></param>
+void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force, bool imm)
+{
+    if (!m_p25->m_enableControl)
+        return;
+
+    assert(tsbk != nullptr);
+
+    uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
+
+    // Generate Sync
+    Sync::addP25Sync(data + 2U);
+
+    // Generate NID
+    m_p25->m_nid.encode(data + 2U, P25_DUID_TSDU);
+
+    // Generate TSBK block
+    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
+    tsbk->encode(data + 2U);
+
+    if (m_debug) {
+        LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+            tsbk->getSysId(), tsbk->getNetId());
+
+        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
+    }
+
+    // Add busy bits
+    P25Utils::addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
+
+    // Set first busy bits to 1,1
+    P25Utils::setBusyBits(data + 2U, P25_SS0_START, true, true);
+
+    if (!noNetwork)
+        writeNetworkRF(tsbk, data + 2U, true);
+
+    // bryanb: hack-o-ramma, for now -- we will force any immediate TSDUs as single-block
+    if (imm) {
+        force = true;
+    }
+
+    if (!force) {
+        if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
+            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
+            return;
+        }
+
+        if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
+            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
+            return;
+        }
+
+        if (clearBeforeWrite) {
+            m_p25->m_modem->clearP25Frame();
+            m_p25->m_txQueue.clear();
+        }
+    }
+
+    if (m_p25->m_duplex) {
+        data[0U] = modem::TAG_DATA;
+        data[1U] = 0x00U;
+
+        m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
+    }
+}
+
+/// <summary>
+/// Helper to write a network single-block P25 TSDU packet.
+/// </summary>
+/// <param name="tsbk"></param>
+void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
+{
+    assert(tsbk != nullptr);
+
+    uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
+
+    buffer[0U] = modem::TAG_DATA;
+    buffer[1U] = 0x00U;
+
+    // Generate Sync
+    Sync::addP25Sync(buffer + 2U);
+
+    // Generate NID
+    m_p25->m_nid.encode(buffer + 2U, P25_DUID_TSDU);
+
+    // Regenerate TSDU Data
+    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
+    tsbk->encode(buffer + 2U);
+
+    // Add busy bits
+    P25Utils::addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+
+    // Set first busy bits to 1,1
+    P25Utils::setBusyBits(buffer + 2U, P25_SS0_START, true, true);
+
+    m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
+
+    if (m_p25->m_network != nullptr)
+        m_p25->m_network->resetP25();
+}
+
+/// <summary>
+/// Helper to write a multi-block (3-block) P25 TSDU packet.
+/// </summary>
+/// <param name="tsbk"></param>
+/// <param name="clearBeforeWrite"></param>
+void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
+{
+    if (!m_p25->m_enableControl) {
+        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        m_mbfCnt = 0U;
+        return;
+    }
+
+    assert(tsbk != nullptr);
+
+    uint8_t frame[P25_TSBK_FEC_LENGTH_BYTES];
+    ::memset(frame, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
+
+    // LogDebug(LOG_P25, "writeRF_TSDU_MBF, mbfCnt = %u", m_mbfCnt);
+
+    // trunking data is unsupported in simplex operation
+    if (!m_p25->m_duplex) {
+        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        m_mbfCnt = 0U;
+        return;
+    }
+
+    if (m_mbfCnt == 0U) {
+        ::memset(m_rfMBF, 0x00U, P25_TSBK_FEC_LENGTH_BYTES * TSBK_MBF_CNT);
+    }
+
+    // trigger encoding of last block and write to queue
+    if (m_mbfCnt + 1U == TSBK_MBF_CNT) {
+        // Generate TSBK block
+        tsbk->setLastBlock(true); // set last block
+        tsbk->encode(frame, true);
+
+        if (m_debug) {
+            LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+                tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+                tsbk->getSysId(), tsbk->getNetId());
+
+            Utils::dump(1U, "!!! *TSDU MBF Last TSBK Block", frame, P25_TSBK_FEC_LENGTH_BYTES);
+        }
+
+        Utils::setBitRange(frame, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
+
+        // Generate TSDU frame
+        uint8_t tsdu[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES];
+        ::memset(tsdu, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
+
+        uint32_t offset = 0U;
+        for (uint8_t i = 0U; i < m_mbfCnt + 1U; i++) {
+            ::memset(frame, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
+            Utils::getBitRange(m_rfMBF, frame, offset, P25_TSBK_FEC_LENGTH_BITS);
+
+            if (m_debug) {
+                LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+                    tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+                    tsbk->getSysId(), tsbk->getNetId());
+
+                Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", frame, P25_TSBK_FEC_LENGTH_BYTES);
+            }
+
+            // Add TSBK data
+            Utils::setBitRange(frame, tsdu, offset, P25_TSBK_FEC_LENGTH_BITS);
+
+            offset += P25_TSBK_FEC_LENGTH_BITS;
+        }
+
+        // Utils::dump(2U, "!!! *TSDU DEBUG - tsdu", tsdu, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
+
+        uint8_t data[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data + 2U, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
+
+        // Generate Sync
+        Sync::addP25Sync(data + 2U);
+
+        // Generate NID
+        m_p25->m_nid.encode(data + 2U, P25_DUID_TSDU);
+
+        // interleave
+        P25Utils::encode(tsdu, data + 2U, 114U, 720U);
+
+        // Add busy bits
+        P25Utils::addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
+
+        // Add idle bits
+        addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
+
+        data[0U] = modem::TAG_DATA;
+        data[1U] = 0x00U;
+
+        if (clearBeforeWrite) {
+            m_p25->m_modem->clearP25Frame();
+            m_p25->m_txQueue.clear();
+        }
+
+        m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
+
+        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        m_mbfCnt = 0U;
+        return;
+    }
+
+    // Generate TSBK block
+    tsbk->setLastBlock(false); // clear last block
+    tsbk->encode(frame, true);
+
+    if (m_debug) {
+        LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+            tsbk->getSysId(), tsbk->getNetId());
+
+        Utils::dump(1U, "!!! *TSDU MBF Block Data", frame, P25_TSBK_FEC_LENGTH_BYTES);
+    }
+
+    Utils::setBitRange(frame, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
+    m_mbfCnt++;
+}
+
+/// <summary>
+/// Helper to write a alternate multi-block trunking PDU packet.
+/// </summary>
+/// <param name="ambt"></param>
+/// <param name="clearBeforeWrite"></param>
+void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
+{
+    if (!m_p25->m_enableControl)
+        return;
+
+    assert(ambt != nullptr);
+
+    DataHeader header = DataHeader();
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT);
+
+    // Generate TSBK block
+    ambt->setLastBlock(true); // always set last block -- this a Single Block TSDU
+    ambt->encodeMBT(header, pduUserData);
+
+    if (m_debug) {
+        LogDebug(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, hdrOffset = %u",
+            header.getAckNeeded(), header.getOutbound(), header.getFormat(), header.getSAP(), header.getFullMessage(),
+            header.getBlocksToFollow(), header.getPadCount(), header.getNs(), header.getFSN(),
+            header.getHeaderOffset());
+        LogDebug(LOG_RF, P25_PDU_STR " AMBT, lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            ambt->getLCO(), ambt->getMFId(), ambt->getLastBlock(), ambt->getAIV(), ambt->getEX(), ambt->getSrcId(), ambt->getDstId(),
+            ambt->getSysId(), ambt->getNetId());
+
+        Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
+    }
+
+    m_p25->m_data->writeRF_PDU_User(header, pduUserData, clearBeforeWrite);
+}
+
+/// <summary>
+/// Helper to write a P25 TDU w/ link control channel release packet.
+/// </summary>
+/// <param name="grp"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
+{
+    if (!m_p25->m_duplex) {
+        return;
+    }
+
+    uint32_t count = m_p25->m_hangCount / 2;
+    if (m_p25->m_voiceOnControl) {
+        count = count / 2;
+    }
+    std::unique_ptr<lc::TDULC> lc = nullptr;
+
+    if (m_p25->m_enableControl) {
+        for (uint32_t i = 0; i < count; i++) {
+            if ((srcId != 0U) && (dstId != 0U)) {
+                if (grp) {
+                    lc = new_unique(lc::tdulc::LC_GROUP);
+                } else {
+                    lc = new_unique(lc::tdulc::LC_PRIVATE);
+                }
+
+                lc->setSrcId(srcId);
+                lc->setDstId(dstId);
+                lc->setEmergency(false);
+
+                writeRF_TDULC(lc.get(), true);
+            }
+
+            lc = new_unique(lc::tdulc::LC_NET_STS_BCAST);
+            writeRF_TDULC(lc.get(), true);
+            lc = new_unique(lc::tdulc::LC_RFSS_STS_BCAST);
+            writeRF_TDULC(lc.get(), true);
+        }
+    }
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
+    }
+
+    lc = new_unique(lc::tdulc::LC_CALL_TERM);
+    writeRF_TDULC(lc.get(), true);
+
+    if (m_p25->m_enableControl) {
+        writeNet_TSDU_Call_Term(srcId, dstId);
+    }
 }
 
 /// <summary>
@@ -1309,9 +1713,9 @@ void Trunk::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, bool autoReset
 /// <param name="frameCnt"></param>
 /// <param name="n"></param>
 /// <param name="adjSS"></param>
-void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
+void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 {
-    if (!m_p25->m_control)
+    if (!m_p25->m_enableControl)
         return;
 
     if (m_convFallback) {
@@ -1457,418 +1861,12 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 }
 
 /// <summary>
-/// Helper to write a P25 TDU w/ link control packet.
-/// </summary>
-/// <param name="lc"></param>
-/// <param name="noNetwork"></param>
-void Trunk::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
-{
-    uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
-
-    // Generate Sync
-    Sync::addP25Sync(data + 2U);
-
-    // Generate NID
-    m_p25->m_nid.encode(data + 2U, P25_DUID_TDULC);
-
-    // Generate TDULC Data
-    lc->encode(data + 2U);
-
-    // Add busy bits
-    P25Utils::addBusyBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
-
-    m_p25->m_rfTimeout.stop();
-
-    if (!noNetwork)
-        writeNetworkRF(lc, data + 2U, P25_DUID_TDULC);
-
-    if (m_p25->m_duplex) {
-        data[0U] = modem::TAG_EOT;
-        data[1U] = 0x00U;
-
-        m_p25->addFrame(data, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
-    }
-
-    //if (m_verbose) {
-    //    LogMessage(LOG_RF, P25_TDULC_STR ", lc = $%02X, srcId = %u", m_rfTDULC.getLCO(), m_rfTDULC.getSrcId());
-    //}
-}
-
-/// <summary>
-/// Helper to write a network P25 TDU w/ link control packet.
-/// </summary>
-/// <param name="lc"></param>
-void Trunk::writeNet_TDULC(lc::TDULC* lc)
-{
-    uint8_t buffer[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
-    ::memset(buffer, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
-
-    buffer[0U] = modem::TAG_EOT;
-    buffer[1U] = 0x00U;
-
-    // Generate Sync
-    Sync::addP25Sync(buffer + 2U);
-
-    // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_TDULC);
-
-    // Regenerate TDULC Data
-    lc->encode(buffer + 2U);
-
-    // Add busy bits
-    P25Utils::addBusyBits(buffer + 2U, P25_TDULC_FRAME_LENGTH_BITS, true, true);
-
-    m_p25->addFrame(buffer, P25_TDULC_FRAME_LENGTH_BYTES + 2U, true);
-
-    if (m_verbose) {
-        LogMessage(LOG_NET, P25_TDULC_STR ", lc = $%02X, srcId = %u", lc->getLCO(), lc->getSrcId());
-    }
-
-    if (m_p25->m_voice->m_netFrames > 0) {
-        ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss",
-            float(m_p25->m_voice->m_netFrames) / 50.0F, (m_p25->m_voice->m_netLost * 100U) / m_p25->m_voice->m_netFrames);
-    }
-    else {
-        ::ActivityLog("P25", false, "network end of transmission, %u frames", m_p25->m_voice->m_netFrames);
-    }
-
-    if (m_network != nullptr)
-        m_network->resetP25();
-
-    m_p25->m_netTimeout.stop();
-    m_p25->m_networkWatchdog.stop();
-    m_p25->m_netState = RS_NET_IDLE;
-    m_p25->m_tailOnIdle = true;
-}
-
-/// <summary>
-/// Helper to write a P25 TDU w/ link control channel release packet.
-/// </summary>
-/// <param name="grp"></param>
-/// <param name="srcId"></param>
-/// <param name="dstId"></param>
-void Trunk::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint32_t dstId)
-{
-    if (!m_p25->m_duplex) {
-        return;
-    }
-
-    uint32_t count = m_p25->m_hangCount / 2;
-    if (m_p25->m_voiceOnControl) {
-        count = count / 2;
-    }
-    std::unique_ptr<lc::TDULC> lc = nullptr;
-
-    if (m_p25->m_control) {
-        for (uint32_t i = 0; i < count; i++) {
-            if ((srcId != 0U) && (dstId != 0U)) {
-                if (grp) {
-                    lc = new_unique(lc::tdulc::LC_GROUP);
-                } else {
-                    lc = new_unique(lc::tdulc::LC_PRIVATE);
-                }
-
-                lc->setSrcId(srcId);
-                lc->setDstId(dstId);
-                lc->setEmergency(false);
-
-                writeRF_TDULC(lc.get(), true);
-            }
-
-            lc = new_unique(lc::tdulc::LC_NET_STS_BCAST);
-            writeRF_TDULC(lc.get(), true);
-            lc = new_unique(lc::tdulc::LC_RFSS_STS_BCAST);
-            writeRF_TDULC(lc.get(), true);
-        }
-    }
-
-    if (m_verbose) {
-        LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
-    }
-
-    lc = new_unique(lc::tdulc::LC_CALL_TERM);
-    writeRF_TDULC(lc.get(), true);
-
-    if (m_p25->m_control) {
-        writeNet_TSDU_Call_Term(srcId, dstId);
-    }
-}
-
-/// <summary>
-/// Helper to write a single-block P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <param name="noNetwork"></param>
-/// <param name="clearBeforeWrite"></param>
-/// <param name="force"></param>
-/// <param name="imm"></param>
-void Trunk::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force, bool imm)
-{
-    if (!m_p25->m_control)
-        return;
-
-    assert(tsbk != nullptr);
-
-    uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
-
-    // Generate Sync
-    Sync::addP25Sync(data + 2U);
-
-    // Generate NID
-    m_p25->m_nid.encode(data + 2U, P25_DUID_TSDU);
-
-    // Generate TSBK block
-    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
-    tsbk->encode(data + 2U);
-
-    if (m_debug) {
-        LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
-            tsbk->getSysId(), tsbk->getNetId());
-
-        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
-    }
-
-    // Add busy bits
-    P25Utils::addBusyBits(data + 2U, P25_TSDU_FRAME_LENGTH_BITS, true, false);
-
-    // Set first busy bits to 1,1
-    P25Utils::setBusyBits(data + 2U, P25_SS0_START, true, true);
-
-    if (!noNetwork)
-        writeNetworkRF(tsbk, data + 2U, true);
-
-    // bryanb: hack-o-ramma, for now -- we will force any immediate TSDUs as single-block
-    if (imm) {
-        force = true;
-    }
-
-    if (!force) {
-        if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
-            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
-            return;
-        }
-
-        if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
-            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
-            return;
-        }
-
-        if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Frame();
-            m_p25->m_txQueue.clear();
-        }
-    }
-
-    if (m_p25->m_duplex) {
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
-
-        m_p25->addFrame(data, P25_TSDU_FRAME_LENGTH_BYTES + 2U, false, imm);
-    }
-}
-
-/// <summary>
-/// Helper to write a network single-block P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
-void Trunk::writeNet_TSDU(lc::TSBK* tsbk)
-{
-    assert(tsbk != nullptr);
-
-    uint8_t buffer[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(buffer, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES + 2U);
-
-    buffer[0U] = modem::TAG_DATA;
-    buffer[1U] = 0x00U;
-
-    // Generate Sync
-    Sync::addP25Sync(buffer + 2U);
-
-    // Generate NID
-    m_p25->m_nid.encode(buffer + 2U, P25_DUID_TSDU);
-
-    // Regenerate TSDU Data
-    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
-    tsbk->encode(buffer + 2U);
-
-    // Add busy bits
-    P25Utils::addBusyBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
-
-    // Set first busy bits to 1,1
-    P25Utils::setBusyBits(buffer + 2U, P25_SS0_START, true, true);
-
-    m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
-
-    if (m_network != nullptr)
-        m_network->resetP25();
-}
-
-/// <summary>
-/// Helper to write a multi-block (3-block) P25 TSDU packet.
-/// </summary>
-/// <param name="tsbk"></param>
-/// <param name="clearBeforeWrite"></param>
-void Trunk::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
-{
-    if (!m_p25->m_control) {
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-        m_mbfCnt = 0U;
-        return;
-    }
-
-    assert(tsbk != nullptr);
-
-    uint8_t frame[P25_TSBK_FEC_LENGTH_BYTES];
-    ::memset(frame, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
-
-    // LogDebug(LOG_P25, "writeRF_TSDU_MBF, mbfCnt = %u", m_mbfCnt);
-
-    // trunking data is unsupported in simplex operation
-    if (!m_p25->m_duplex) {
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-        m_mbfCnt = 0U;
-        return;
-    }
-
-    if (m_mbfCnt == 0U) {
-        ::memset(m_rfMBF, 0x00U, P25_TSBK_FEC_LENGTH_BYTES * TSBK_MBF_CNT);
-    }
-
-    // trigger encoding of last block and write to queue
-    if (m_mbfCnt + 1U == TSBK_MBF_CNT) {
-        // Generate TSBK block
-        tsbk->setLastBlock(true); // set last block
-        tsbk->encode(frame, true);
-
-        if (m_debug) {
-            LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-                tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
-                tsbk->getSysId(), tsbk->getNetId());
-
-            Utils::dump(1U, "!!! *TSDU MBF Last TSBK Block", frame, P25_TSBK_FEC_LENGTH_BYTES);
-        }
-
-        Utils::setBitRange(frame, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
-
-        // Generate TSDU frame
-        uint8_t tsdu[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES];
-        ::memset(tsdu, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
-
-        uint32_t offset = 0U;
-        for (uint8_t i = 0U; i < m_mbfCnt + 1U; i++) {
-            ::memset(frame, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
-            Utils::getBitRange(m_rfMBF, frame, offset, P25_TSBK_FEC_LENGTH_BITS);
-
-            if (m_debug) {
-                LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-                    tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
-                    tsbk->getSysId(), tsbk->getNetId());
-
-                Utils::dump(1U, "!!! *TSDU (MBF) TSBK Block", frame, P25_TSBK_FEC_LENGTH_BYTES);
-            }
-
-            // Add TSBK data
-            Utils::setBitRange(frame, tsdu, offset, P25_TSBK_FEC_LENGTH_BITS);
-
-            offset += P25_TSBK_FEC_LENGTH_BITS;
-        }
-
-        // Utils::dump(2U, "!!! *TSDU DEBUG - tsdu", tsdu, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
-
-        uint8_t data[P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U];
-        ::memset(data + 2U, 0x00U, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES);
-
-        // Generate Sync
-        Sync::addP25Sync(data + 2U);
-
-        // Generate NID
-        m_p25->m_nid.encode(data + 2U, P25_DUID_TSDU);
-
-        // interleave
-        P25Utils::encode(tsdu, data + 2U, 114U, 720U);
-
-        // Add busy bits
-        P25Utils::addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
-
-        // Add idle bits
-        addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
-
-        data[0U] = modem::TAG_DATA;
-        data[1U] = 0x00U;
-
-        if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Frame();
-            m_p25->m_txQueue.clear();
-        }
-
-        m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
-
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-        m_mbfCnt = 0U;
-        return;
-    }
-
-    // Generate TSBK block
-    tsbk->setLastBlock(false); // clear last block
-    tsbk->encode(frame, true);
-
-    if (m_debug) {
-        LogDebug(LOG_RF, P25_TSDU_STR " (MBF), lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
-            tsbk->getSysId(), tsbk->getNetId());
-
-        Utils::dump(1U, "!!! *TSDU MBF Block Data", frame, P25_TSBK_FEC_LENGTH_BYTES);
-    }
-
-    Utils::setBitRange(frame, m_rfMBF, (m_mbfCnt * P25_TSBK_FEC_LENGTH_BITS), P25_TSBK_FEC_LENGTH_BITS);
-    m_mbfCnt++;
-}
-
-/// <summary>
-/// Helper to write a alternate multi-block trunking PDU packet.
-/// </summary>
-/// <param name="ambt"></param>
-/// <param name="clearBeforeWrite"></param>
-void Trunk::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
-{
-    if (!m_p25->m_control)
-        return;
-
-    assert(ambt != nullptr);
-
-    DataHeader header = DataHeader();
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT);
-
-    // Generate TSBK block
-    ambt->setLastBlock(true); // always set last block -- this a Single Block TSDU
-    ambt->encodeMBT(header, pduUserData);
-
-    if (m_debug) {
-        LogDebug(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, hdrOffset = %u",
-            header.getAckNeeded(), header.getOutbound(), header.getFormat(), header.getSAP(), header.getFullMessage(),
-            header.getBlocksToFollow(), header.getPadCount(), header.getNs(), header.getFSN(),
-            header.getHeaderOffset());
-        LogDebug(LOG_RF, P25_PDU_STR " AMBT, lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
-            ambt->getLCO(), ambt->getMFId(), ambt->getLastBlock(), ambt->getAIV(), ambt->getEX(), ambt->getSrcId(), ambt->getDstId(),
-            ambt->getSysId(), ambt->getNetId());
-
-        Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
-    }
-
-    m_p25->m_data->writeRF_PDU_User(header, pduUserData, clearBeforeWrite);
-}
-
-/// <summary>
 /// Helper to generate the given control TSBK into the TSDU frame queue.
 /// </summary>
 /// <param name="lco"></param>
-void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
+void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 {
-    if (!m_p25->m_control)
+    if (!m_p25->m_enableControl)
         return;
 
     std::unique_ptr<lc::TSBK> tsbk;
@@ -2122,7 +2120,7 @@ void Trunk::queueRF_TSBK_Ctrl(uint8_t lco)
 /// <param name="skip"></param>
 /// <param name="chNo"></param>
 /// <returns></returns>
-bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -2394,7 +2392,7 @@ bool Trunk::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOp
 /// <param name="skip"></param>
 /// <param name="net"></param>
 /// <returns></returns>
-bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
+bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
 {
     std::unique_ptr<OSP_SNDCP_CH_GNT> osp = new_unique(OSP_SNDCP_CH_GNT);
     osp->setMFId(m_lastMFID);
@@ -2468,7 +2466,7 @@ bool Trunk::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, 
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
+void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_UU_ANS> iosp = new_unique(IOSP_UU_ANS);
     iosp->setMFId(m_lastMFID);
@@ -2485,7 +2483,7 @@ void Trunk::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 /// <param name="srcId"></param>
 /// <param name="service"></param>
 /// <param name="noNetwork"></param>
-void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
+void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = new_unique(IOSP_ACK_RSP);
     iosp->setSrcId(srcId);
@@ -2511,7 +2509,7 @@ void Trunk::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended
 /// <param name="reason"></param>
 /// <param name="service"></param>
 /// <param name="aiv"></param>
-void Trunk::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = new_unique(OSP_DENY_RSP);
     osp->setAIV(aiv);
@@ -2533,7 +2531,7 @@ void Trunk::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, ui
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
+bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
@@ -2592,7 +2590,7 @@ bool Trunk::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="sysId"></param>
-void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
+void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
     std::unique_ptr<IOSP_U_REG> iosp = new_unique(IOSP_U_REG);
     iosp->setMFId(m_lastMFID);
@@ -2639,7 +2637,7 @@ void Trunk::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 /// Helper to write a unit de-registration acknowledge packet.
 /// </summary>
 /// <param name="srcId"></param>
-void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
+void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 {
     bool dereged = false;
 
@@ -2670,7 +2668,7 @@ void Trunk::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// <param name="service"></param>
 /// <param name="aiv"></param>
 /// <param name="grp"></param>
-void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
+void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
     osp->setAIV(aiv);
@@ -2694,7 +2692,7 @@ void Trunk::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, u
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <param name="group"></param>
-bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
+bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 {
     bool ret = false;
 
@@ -2751,7 +2749,7 @@ bool Trunk::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp)
 /// </summary>
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
-bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
+bool ControlSignaling::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 {
     // is the specified channel granted?
     if (m_p25->m_affiliations.isGranted(dstId)) {
@@ -2773,7 +2771,7 @@ bool Trunk::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
 /// </summary>
 /// <paran name="tsbk"></param>
 /// <param name="data"></param>
-void Trunk::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
+void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 {
     assert(tsbk != nullptr);
     assert(data != nullptr);
@@ -2801,7 +2799,7 @@ void Trunk::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
 /// Helper to automatically inhibit a source ID on a denial.
 /// </summary>
 /// <param name="srcId"></param>
-void Trunk::denialInhibit(uint32_t srcId)
+void ControlSignaling::denialInhibit(uint32_t srcId)
 {
     if (!m_p25->m_inhibitUnauth) {
         return;
@@ -2821,7 +2819,7 @@ void Trunk::denialInhibit(uint32_t srcId)
 /// <param name="length"></param>
 /// <param name="b1"></param>
 /// <param name="b2"></param>
-void Trunk::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+void ControlSignaling::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
 {
     assert(data != nullptr);
 

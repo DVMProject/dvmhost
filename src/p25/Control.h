@@ -36,7 +36,7 @@
 #include "p25/SiteData.h"
 #include "p25/packet/Data.h"
 #include "p25/packet/Voice.h"
-#include "p25/packet/Trunk.h"
+#include "p25/packet/ControlSignaling.h"
 #include "network/Network.h"
 #include "lookups/RSSIInterpolator.h"
 #include "lookups/IdenTableLookup.h"
@@ -124,8 +124,8 @@ namespace p25
 
         /// <summary>Gets instance of the NID class.</summary>
         NID nid() { return m_nid; }
-        /// <summary>Gets instance of the Trunk class.</summary>
-        packet::Trunk* trunk() { return m_trunk; }
+        /// <summary>Gets instance of the ControlSignaling class.</summary>
+        packet::ControlSignaling* control() { return m_control; }
         /// <summary>Gets instance of the P25AffiliationLookup class.</summary>
         lookups::P25AffiliationLookup affiliations() { return m_affiliations; }
 
@@ -149,8 +149,8 @@ namespace p25
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
-        friend class packet::Trunk;
-        packet::Trunk* m_trunk;
+        friend class packet::ControlSignaling;
+        packet::ControlSignaling* m_control;
         friend class lookups::P25AffiliationLookup;
 
         bool m_authoritative;
@@ -168,7 +168,7 @@ namespace p25
         bool m_legacyGroupReg;
 
         bool m_duplex;
-        bool m_control;
+        bool m_enableControl;
         bool m_dedicatedControl;
         bool m_voiceOnControl;
         bool m_controlOnly;

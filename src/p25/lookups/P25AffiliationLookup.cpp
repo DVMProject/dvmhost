@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "p25/lookups/P25AffiliationLookup.h"
-#include "p25/packet/Trunk.h"
+#include "p25/packet/ControlSignaling.h"
 #include "p25/Control.h"
 #include "Log.h"
 
@@ -89,7 +89,7 @@ std::vector<uint32_t> P25AffiliationLookup::clearGroupAff(uint32_t dstId, bool r
     if (srcToRel.size() > 0U) {
         // release affiliations
         for (uint32_t srcId : srcToRel) {
-            m_p25->m_trunk->writeRF_TSDU_U_Dereg_Ack(srcId);
+            m_p25->m_control->writeRF_TSDU_U_Dereg_Ack(srcId);
         }
     }
 

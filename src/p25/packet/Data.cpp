@@ -31,7 +31,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/packet/Data.h"
-#include "p25/packet/Trunk.h"
+#include "p25/packet/ControlSignaling.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -410,7 +410,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 m_rfDataHeader.getAMBTOpcode(), m_rfDataHeader.getBlocksToFollow());
                         }
 
-                        m_p25->m_trunk->processMBT(m_rfDataHeader, m_rfData);
+                        m_p25->m_control->processMBT(m_rfDataHeader, m_rfData);
                     }
                     break;
                     default:
@@ -802,14 +802,12 @@ void Data::clock(uint32_t ms)
 /// Initializes a new instance of the Data class.
 /// </summary>
 /// <param name="p25">Instance of the Control class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="dumpPDUData"></param>
 /// <param name="repeatPDU"></param>
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
-Data::Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
+Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose) :
     m_p25(p25),
-    m_network(network),
     m_prevRfState(RS_RF_LISTENING),
     m_rfData(nullptr),
     m_rfDataHeader(),
@@ -879,7 +877,7 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 {
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_p25->m_network == nullptr)
         return;
 
     if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
@@ -887,7 +885,7 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 
     // Utils::dump(1U, "Outgoing Network PDU Frame", data, len);
 
-    m_network->writeP25PDU(m_rfDataHeader, currentBlock, data, len);
+    m_p25->m_network->writeP25PDU(m_rfDataHeader, currentBlock, data, len);
 }
 
 /// <summary>

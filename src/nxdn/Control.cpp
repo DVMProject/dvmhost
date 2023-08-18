@@ -94,6 +94,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(nullptr),
     m_data(nullptr),
+    m_control(nullptr),
     m_authoritative(authoritative),
     m_supervisor(false),
     m_ran(ran),
@@ -101,7 +102,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_modem(modem),
     m_network(network),
     m_duplex(duplex),
-    m_control(false),
+    m_enableControl(false),
     m_dedicatedControl(false),
     m_voiceOnControl(false),
     m_rfLastLICH(),
@@ -156,9 +157,9 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
-    m_voice = new Voice(this, network, debug, verbose);
-    m_trunk = new Trunk(this, network, debug, verbose);
-    m_data = new Data(this, network, debug, verbose);
+    m_voice = new Voice(this, debug, verbose);
+    m_control = new ControlSignaling(this, debug, verbose);
+    m_data = new Data(this, debug, verbose);
 
     lc::RCCH::setVerbose(dumpRCCHData);
     lc::RTCH::setVerbose(dumpRCCHData);
@@ -173,8 +174,8 @@ Control::~Control()
         delete m_voice;
     }
 
-    if (m_trunk != nullptr) {
-        delete m_trunk;
+    if (m_control != nullptr) {
+        delete m_control;
     }
 
     if (m_data != nullptr) {
@@ -232,12 +233,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_supervisor = supervisor;
 
-    m_trunk->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
-    m_trunk->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);
+    m_control->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
+    m_control->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);
 
     yaml::Node control = nxdnProtocol["control"];
-    m_control = control["enable"].as<bool>(false);
-    if (m_control) {
+    m_enableControl = control["enable"].as<bool>(false);
+    if (m_enableControl) {
         m_dedicatedControl = control["dedicated"].as<bool>(false);
     }
     else {
@@ -246,7 +247,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_voiceOnControl = nxdnProtocol["voiceOnControl"].as<bool>(false);
 
-    m_trunk->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+    m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
     yaml::Node controlCh = rfssConfig["controlCh"];
@@ -280,7 +281,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     */
     bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
-    if (m_control) {
+    if (m_enableControl) {
         serviceClass |= NXDN_SIF1_GRP_REG_SVC;
     }
 
@@ -347,16 +348,16 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
-        if (m_control) {
+        if (m_enableControl) {
             LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
-            if (m_trunk->m_disableGrantSrcIdCheck) {
+            if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
         }
 
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
-        LogInfo("    Verify Affiliation: %s", m_trunk->m_verifyAff ? "yes" : "no");
-        LogInfo("    Verify Registration: %s", m_trunk->m_verifyReg ? "yes" : "no");
+        LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
+        LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
     }
 
     if (m_voice != nullptr) {
@@ -491,7 +492,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     bool ret = false;
 
     if (rfct == NXDN_LICH_RFCT_RCCH) {
-        ret = m_trunk->process(fct, option, data, len);
+        ret = m_control->process(fct, option, data, len);
     }
     else if (rfct == NXDN_LICH_RFCT_RTCH || rfct == NXDN_LICH_RFCT_RDCH) {
         switch (fct) {
@@ -566,7 +567,7 @@ void Control::clock(uint32_t ms)
     }
 
     // if we have control enabled; do clocking to generate a CC data stream
-    if (m_control) {
+    if (m_enableControl) {
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
         }
@@ -653,7 +654,7 @@ void Control::clock(uint32_t ms)
 
             m_networkWatchdog.stop();
 
-            if (m_control) {
+            if (m_enableControl) {
                 m_affiliations.releaseGrant(m_netLC.getDstId(), false);
             }
 
@@ -692,8 +693,8 @@ void Control::clock(uint32_t ms)
     }
 
     // clock data and trunking
-    if (m_trunk != nullptr) {
-        m_trunk->clock(ms);
+    if (m_control != nullptr) {
+        m_control->clock(ms);
     }
 }
 
@@ -722,7 +723,7 @@ void Control::permittedTG(uint32_t dstId)
 /// <param name="grp"></param>
 void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
 {
-    if (!m_control) {
+    if (!m_enableControl) {
         return;
     }
 
@@ -730,7 +731,7 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
         LogMessage(LOG_NXDN, "network TG grant demand, srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    m_trunk->writeRF_Message_Grant(srcId, dstId, 4U, grp);
+    m_control->writeRF_Message_Grant(srcId, dstId, 4U, grp);
 }
 
 /// <summary>
@@ -739,7 +740,7 @@ void Control::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
 /// <param name="dstId"></param>
 void Control::releaseGrantTG(uint32_t dstId)
 {
-    if (!m_control) {
+    if (!m_enableControl) {
         return;
     }
 
@@ -762,7 +763,7 @@ void Control::releaseGrantTG(uint32_t dstId)
 /// <param name="dstId"></param>
 void Control::touchGrantTG(uint32_t dstId)
 {
-    if (!m_control) {
+    if (!m_enableControl) {
         return;
     }
 
@@ -1005,7 +1006,7 @@ void Control::processFrameLoss()
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
-        if (!m_control) {
+        if (!m_enableControl) {
             notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
@@ -1091,7 +1092,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
 /// <returns></returns>
 bool Control::writeRF_ControlData()
 {
-    if (!m_control)
+    if (!m_enableControl)
         return false;
 
     if (m_ccFrameCnt == 254U) {
@@ -1105,14 +1106,14 @@ bool Control::writeRF_ControlData()
         return false;
     }
 
-    const uint8_t maxSeq = m_trunk->m_bcchCnt + (m_trunk->m_ccchPagingCnt + m_trunk->m_ccchMultiCnt) *
-        m_trunk->m_rcchGroupingCnt * m_trunk->m_rcchIterateCnt;
+    const uint8_t maxSeq = m_control->m_bcchCnt + (m_control->m_ccchPagingCnt + m_control->m_ccchMultiCnt) *
+        m_control->m_rcchGroupingCnt * m_control->m_rcchIterateCnt;
     if (m_ccSeq == maxSeq) {
         m_ccSeq = 0U;
     }
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
-        m_trunk->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
+        m_control->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
 
         m_ccSeq++;
         if (m_ccSeq == maxSeq) {

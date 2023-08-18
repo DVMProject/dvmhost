@@ -30,7 +30,7 @@
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/CAC.h"
-#include "nxdn/packet/Trunk.h"
+#include "nxdn/packet/ControlSignaling.h"
 #include "nxdn/acl/AccessControl.h"
 #include "nxdn/lc/rcch/RCCHFactory.h"
 #include "nxdn/Sync.h"
@@ -57,7 +57,7 @@ using namespace nxdn::packet;
 
 // Make sure control data is supported.
 #define IS_SUPPORT_CONTROL_CHECK(_PCKT_STR, _PCKT, _SRCID)                              \
-    if (!m_nxdn->m_control) {                                                           \
+    if (!m_nxdn->m_enableControl) {                                                     \
         LogWarning(LOG_RF, "NXDN, %s denial, unsupported service, srcId = %u", _PCKT_STR.c_str(), _SRCID); \
         writeRF_Message_Deny(0U, _SRCID, NXDN_CAUSE_SVC_UNAVAILABLE, _PCKT);            \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
@@ -151,7 +151,7 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
+bool ControlSignaling::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
@@ -207,7 +207,7 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             if (m_nxdn->m_authoritative) {
                 writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
             } else {
-                m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
+                m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
             }
         }
         break;
@@ -255,11 +255,11 @@ bool Trunk::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
 /// <param name="data">Buffer containing data frame.</param>
 /// <param name="len">Length of data frame.</param>
 /// <returns></returns>
-bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
+bool ControlSignaling::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len)
 {
     assert(data != nullptr);
 
-    if (!m_nxdn->m_control)
+    if (!m_nxdn->m_enableControl)
         return false;
     if (m_nxdn->m_rfState != RS_RF_LISTENING && m_nxdn->m_netState == RS_NET_IDLE)
         return false;
@@ -312,9 +312,9 @@ bool Trunk::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 /// Updates the processor by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>
-void Trunk::clock(uint32_t ms)
+void ControlSignaling::clock(uint32_t ms)
 {
-    if (m_nxdn->m_control) {
+    if (m_nxdn->m_enableControl) {
         // clock all the grant timers
         m_nxdn->m_affiliations.clock(ms);
     }
@@ -325,15 +325,13 @@ void Trunk::clock(uint32_t ms)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the Trunk class.
+/// Initializes a new instance of the ControlSignaling class.
 /// </summary>
 /// <param name="nxdn">Instance of the Control class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
-Trunk::Trunk(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose) :
+ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
-    m_network(network),
     m_bcchCnt(1U),
     m_rcchGroupingCnt(1U),
     m_ccchPagingCnt(2U),
@@ -350,9 +348,9 @@ Trunk::Trunk(Control* nxdn, network::BaseNetwork* network, bool debug, bool verb
 }
 
 /// <summary>
-/// Finalizes a instance of the Trunk class.
+/// Finalizes a instance of the ControlSignaling class.
 /// </summary>
-Trunk::~Trunk()
+ControlSignaling::~ControlSignaling()
 {
     /* stub */
 }
@@ -362,59 +360,17 @@ Trunk::~Trunk()
 /// </summary>
 /// <param name="data"></param>
 /// <param name="len"></param>
-void Trunk::writeNetwork(const uint8_t *data, uint32_t len)
+void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_nxdn->m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
-}
-
-/// <summary>
-/// Helper to write control channel packet data.
-/// </summary>
-/// <param name="frameCnt"></param>
-/// <param name="n"></param>
-/// <param name="adjSS"></param>
-void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
-{
-    uint8_t i = 0U, seqCnt = 0U;
-
-    if (!m_nxdn->m_control)
-        return;
-
-    // don't add any frames if the queue is full
-    uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
-    uint32_t space = m_nxdn->m_txQueue.freeSpace();
-    if (space < (len + 1U)) {
-        return;
-    }
-
-    do
-    {
-        if (m_debug) {
-            LogDebug(LOG_NXDN, "writeRF_ControlData, frameCnt = %u, seq = %u", frameCnt, n);
-        }
-
-        switch (n)
-        {
-        case 0:
-            writeRF_CC_Message_Site_Info();
-            break;
-        default:
-            writeRF_CC_Message_Service_Info();
-            break;
-        }
-
-        if (seqCnt > 0U)
-            n++;
-        i++;
-    } while (i <= seqCnt);
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }
 
 /// <summary>
@@ -424,9 +380,9 @@ void Trunk::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
 /// <param name="noNetwork"></param>
 /// <param name="clearBeforeWrite"></param>
 /// <param name="imm"></param>
-void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, bool imm)
+void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, bool imm)
 {
-    if (!m_nxdn->m_control)
+    if (!m_nxdn->m_enableControl)
         return;
 
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -475,6 +431,48 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, b
 }
 
 /// <summary>
+/// Helper to write control channel packet data.
+/// </summary>
+/// <param name="frameCnt"></param>
+/// <param name="n"></param>
+/// <param name="adjSS"></param>
+void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adjSS)
+{
+    uint8_t i = 0U, seqCnt = 0U;
+
+    if (!m_nxdn->m_enableControl)
+        return;
+
+    // don't add any frames if the queue is full
+    uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
+    uint32_t space = m_nxdn->m_txQueue.freeSpace();
+    if (space < (len + 1U)) {
+        return;
+    }
+
+    do
+    {
+        if (m_debug) {
+            LogDebug(LOG_NXDN, "writeRF_ControlData, frameCnt = %u, seq = %u", frameCnt, n);
+        }
+
+        switch (n)
+        {
+        case 0:
+            writeRF_CC_Message_Site_Info();
+            break;
+        default:
+            writeRF_CC_Message_Service_Info();
+            break;
+        }
+
+        if (seqCnt > 0U)
+            n++;
+        i++;
+    } while (i <= seqCnt);
+}
+
+/// <summary>
 /// Helper to write a grant packet.
 /// </summary>
 /// <param name="srcId"></param>
@@ -485,7 +483,7 @@ void Trunk::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, b
 /// <param name="skip"></param>
 /// <param name="chNo"></param>
 /// <returns></returns>
-bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -660,7 +658,7 @@ bool Trunk::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t servic
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
 /// <param name="service"></param>
-void Trunk::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service)
+void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service)
 {
     std::unique_ptr<RCCH> rcch = nullptr;
 
@@ -690,7 +688,7 @@ void Trunk::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason,
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <param name="locId"></param>
-bool Trunk::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId)
+bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t locId)
 {
     bool ret = false;
 
@@ -748,7 +746,7 @@ bool Trunk::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstId, uint32_t
 /// Helper to write a unit registration response packet.
 /// </summary>
 /// <param name="srcId"></param>
-void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
+void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 {
     std::unique_ptr<rcch::MESSAGE_TYPE_REG> rcch = new_unique(rcch::MESSAGE_TYPE_REG);
     rcch->setCauseResponse(NXDN_CAUSE_MM_REG_ACCEPTED);
@@ -790,7 +788,7 @@ void Trunk::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 /// <summary>
 /// Helper to write a CC SITE_INFO broadcast packet on the RF interface.
 /// </summary>
-void Trunk::writeRF_CC_Message_Site_Info()
+void ControlSignaling::writeRF_CC_Message_Site_Info()
 {
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
@@ -840,7 +838,7 @@ void Trunk::writeRF_CC_Message_Site_Info()
 /// <summary>
 /// Helper to write a CC SRV_INFO broadcast packet on the RF interface.
 /// </summary>
-void Trunk::writeRF_CC_Message_Service_Info()
+void ControlSignaling::writeRF_CC_Message_Service_Info()
 {
     uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
@@ -886,7 +884,7 @@ void Trunk::writeRF_CC_Message_Service_Info()
 /// Helper to add the post field bits on NXDN frame data.
 /// </summary>
 /// <param name="data"></param>
-void Trunk::addPostBits(uint8_t* data)
+void ControlSignaling::addPostBits(uint8_t* data)
 {
     assert(data != nullptr);
 

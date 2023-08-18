@@ -394,12 +394,10 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
 /// Initializes a new instance of the Data class.
 /// </summary>
 /// <param name="nxdn">Instance of the Control class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
-Data::Data(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose) :
+Data::Data(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
-    m_network(network),
     m_lastRejectId(0U),
     m_verbose(verbose),
     m_debug(debug)
@@ -424,11 +422,11 @@ void Data::writeNetwork(const uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_nxdn->m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }

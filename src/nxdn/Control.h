@@ -36,7 +36,7 @@
 #include "nxdn/channel/LICH.h"
 #include "nxdn/lc/RTCH.h"
 #include "nxdn/packet/Voice.h"
-#include "nxdn/packet/Trunk.h"
+#include "nxdn/packet/ControlSignaling.h"
 #include "nxdn/packet/Data.h"
 #include "nxdn/SiteData.h"
 #include "network/Network.h"
@@ -60,7 +60,7 @@ namespace nxdn
     // ---------------------------------------------------------------------------
 
     namespace packet { class HOST_SW_API Voice; }
-    namespace packet { class HOST_SW_API Trunk; }
+    namespace packet { class HOST_SW_API ControlSignaling; }
     namespace packet { class HOST_SW_API Data; }
 
     // ---------------------------------------------------------------------------
@@ -141,8 +141,8 @@ namespace nxdn
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
-        friend class packet::Trunk;
-        packet::Trunk* m_trunk;
+        friend class packet::ControlSignaling;
+        packet::ControlSignaling* m_control;
 
         bool m_authoritative;
         bool m_supervisor;
@@ -154,7 +154,7 @@ namespace nxdn
         network::Network* m_network;
 
         bool m_duplex;
-        bool m_control;
+        bool m_enableControl;
         bool m_dedicatedControl;
         bool m_voiceOnControl;
 

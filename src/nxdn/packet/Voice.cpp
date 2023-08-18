@@ -75,8 +75,8 @@ using namespace nxdn::packet;
             LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId, \
                 m_nxdn->m_netLastDstId);                                                \
             resetNet();                                                                 \
-            if (m_network != nullptr)                                                   \
-                m_network->resetNXDN();                                                 \
+            if (m_nxdn->m_network != nullptr)                                           \
+                m_nxdn->m_network->resetNXDN();                                         \
         }                                                                               \
     }
 
@@ -110,16 +110,16 @@ using namespace nxdn::packet;
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _LAYER3.getSrcId(), _LAYER3.getDstId(), \
                     _SRC_ID, _DST_ID);                                                  \
                 resetNet();                                                             \
-                if (m_network != nullptr)                                               \
-                    m_network->resetNXDN();                                             \
+                if (m_nxdn->m_network != nullptr)                                       \
+                    m_nxdn->m_network->resetNXDN();                                     \
                 return false;                                                           \
             }                                                                           \
             else {                                                                      \
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", _LAYER3.getDstId(), \
                     _DST_ID);                                                           \
                 resetNet();                                                             \
-                if (m_network != nullptr)                                               \
-                    m_network->resetNXDN();                                             \
+                if (m_nxdn->m_network != nullptr)                                       \
+                    m_nxdn->m_network->resetNXDN();                                     \
                 return false;                                                           \
             }                                                                           \
         }                                                                               \
@@ -128,8 +128,8 @@ using namespace nxdn::packet;
     if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != _DST_ID) {              \
         LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", _DST_ID); \
         resetNet();                                                                     \
-        if (m_network != nullptr)                                                       \
-            m_network->resetNXDN();                                                     \
+        if (m_nxdn->m_network != nullptr)                                               \
+            m_nxdn->m_network->resetNXDN();                                             \
         return false;                                                                   \
     }
 
@@ -1040,12 +1040,10 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
 /// Initializes a new instance of the Voice class.
 /// </summary>
 /// <param name="nxdn">Instance of the Control class.</param>
-/// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="debug">Flag indicating whether NXDN debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether NXDN verbose logging is enabled.</param>
-Voice::Voice(Control* nxdn, network::BaseNetwork* network, bool debug, bool verbose) :
+Voice::Voice(Control* nxdn, bool debug, bool verbose) :
     m_nxdn(nxdn),
-    m_network(network),
     m_rfFrames(0U),
     m_rfBits(0U),
     m_rfErrs(0U),
@@ -1077,11 +1075,11 @@ void Voice::writeNetwork(const uint8_t *data, uint32_t len)
 {
     assert(data != nullptr);
 
-    if (m_network == nullptr)
+    if (m_nxdn->m_network == nullptr)
         return;
 
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
 }

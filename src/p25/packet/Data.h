@@ -37,7 +37,6 @@
 #include "p25/data/LowSpeedData.h"
 #include "p25/lc/LC.h"
 #include "p25/Control.h"
-#include "network/BaseNetwork.h"
 #include "Timer.h"
 
 #include <cstdio>
@@ -83,8 +82,6 @@ namespace p25
             friend class p25::Control;
             Control* m_p25;
 
-            network::BaseNetwork* m_network;
-
             RPT_RF_STATE m_prevRfState;
 
             data::DataBlock* m_rfData;
@@ -122,7 +119,7 @@ namespace p25
             bool m_debug;
 
             /// <summary>Initializes a new instance of the Data class.</summary>
-            Data(Control* p25, network::BaseNetwork* network, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose);
+            Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Data class.</summary>
             ~Data();
 
