@@ -82,10 +82,10 @@ IdenTable IdenTableLookup::find(uint32_t id)
     if (chBandwidthKhz == 0.0F)
         chBandwidthKhz = 12.5F;
     float chSpaceKhz = entry.chSpaceKhz();
-    if (chSpaceKhz < 2.5F)    // clamp to 2.5
-        chSpaceKhz = 2.5F;
-    if (chSpaceKhz > 6.25F)   // clamp to 6.25
-        chSpaceKhz = 6.25F;
+    if (chSpaceKhz < 0.125F)    // clamp to 2.5
+        chSpaceKhz = 0.125F;
+    if (chSpaceKhz > 125000.0F)   // clamp to 6.25
+        chSpaceKhz = 125000.0F;
 
     return IdenTable(entry.channelId(), entry.baseFrequency(), chSpaceKhz, entry.txOffsetMhz(), chBandwidthKhz);
 }
