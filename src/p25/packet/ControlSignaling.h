@@ -200,6 +200,8 @@ namespace p25
 
             /// <summary>Helper to write a grant packet.</summary>
             bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            /// <summary>Helper to write a grant update packet.</summary>
+            void writeRF_TSDU_Grant_Update();
             /// <summary>Helper to write a SNDCP grant packet.</summary>
             bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip = false, bool net = false);
             /// <summary>Helper to write a unit to unit answer request packet.</summary>

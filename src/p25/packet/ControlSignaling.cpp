@@ -1798,7 +1798,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     /** update data */
     case 5:
         if (m_p25->m_affiliations.grantSize() > 0) {
-            queueRF_TSBK_Ctrl(TSBK_OSP_GRP_VCH_GRANT_UPD);
+            writeRF_TSDU_Grant_Update();
         }
         break;
     /** extra data */
@@ -1886,55 +1886,6 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
     std::unique_ptr<lc::TSBK> tsbk;
 
     switch (lco) {
-        case TSBK_OSP_GRP_VCH_GRANT_UPD:
-            // write group voice grant update
-            if (m_p25->m_affiliations.grantSize() > 0) {
-                if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())
-                    m_mbfGrpGrntCnt = 0U;
-
-                std::unique_ptr<OSP_GRP_VCH_GRANT_UPD> osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
-                DEBUG_LOG_TSBK(osp->toString());
-
-                bool noData = false;
-                uint8_t i = 0U;
-                std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations.grantTable();
-                for (auto entry : grantTable) {
-                    // no good very bad way of skipping entries...
-                    if (i != m_mbfGrpGrntCnt) {
-                        i++;
-                        continue;
-                    }
-                    else {
-                        uint32_t dstId = entry.first;
-                        uint32_t chNo = entry.second;
-
-                        if (chNo == 0U) {
-                            noData = true;
-                            m_mbfGrpGrntCnt++;
-                            break;
-                        }
-                        else {
-                            // transmit group voice grant update
-                            osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
-                            osp->setDstId(dstId);
-                            osp->setGrpVchNo(chNo);
-
-                            m_mbfGrpGrntCnt++;
-                            break;
-                        }
-                    }
-                }
-
-                if (noData) {
-                    return; // don't create anything
-                } else {
-                    tsbk = std::move(osp);
-                }
-            }
-            else {
-                return; // don't create anything
-            }
-            break;
         case TSBK_OSP_IDEN_UP:
             {
                 std::vector<::lookups::IdenTable> entries = m_p25->m_idenTable->list();
@@ -2396,6 +2347,60 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
 
     return true;
+}
+
+/// <summary>
+/// Helper to write a grant update packet.
+/// </summary>
+void ControlSignaling::writeRF_TSDU_Grant_Update()
+{
+    // write group voice grant update
+    if (m_p25->m_affiliations.grantSize() > 0) {
+        if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())
+            m_mbfGrpGrntCnt = 0U;
+
+        std::unique_ptr<OSP_GRP_VCH_GRANT_UPD> osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
+        DEBUG_LOG_TSBK(osp->toString());
+
+        bool noData = false;
+        uint8_t i = 0U;
+        std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations.grantTable();
+        for (auto entry : grantTable) {
+            // no good very bad way of skipping entries...
+            if (i != m_mbfGrpGrntCnt) {
+                i++;
+                continue;
+            }
+            else {
+                uint32_t dstId = entry.first;
+                uint32_t chNo = entry.second;
+
+                if (chNo == 0U) {
+                    noData = true;
+                    m_mbfGrpGrntCnt++;
+                    break;
+                }
+                else {
+                    // transmit group voice grant update
+                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                    osp->setDstId(dstId);
+                    osp->setGrpVchNo(chNo);
+
+                    m_mbfGrpGrntCnt++;
+                    break;
+                }
+            }
+        }
+
+        if (noData) {
+            return; // don't create anything
+        } else {
+            writeRF_TSDU_SBF(osp.get(), true, false, false, true);
+        }
+    }
+    else {
+        return; // don't create anything
+    }
 }
 
 /// <summary>

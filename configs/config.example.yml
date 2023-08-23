@@ -359,7 +359,7 @@ system:
             # REST API access password for control channel.
             restPassword: "PASSWORD"
             # Flag indicating voice channels will notify the control channel of traffic status.
-            notifyEnable: false
+            notifyEnable: true
 
         #
         # Voice Channels
