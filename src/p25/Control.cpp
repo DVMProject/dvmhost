@@ -1111,6 +1111,8 @@ void Control::processNetwork()
     }
 
     bool grantDemand = (buffer[14U] & 0x80U) == 0x80U;
+    bool grantDenial = (buffer[14U] & 0x40U) == 0x40U;
+    bool unitToUnit = (buffer[14U] & 0x01U) == 0x01U;
 
     // process network message header
     uint8_t duid = buffer[22U];
@@ -1283,7 +1285,15 @@ void Control::processNetwork()
                     LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
                 }
 
-                if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true, true)) {
+                // are we denying the grant?
+                if (grantDenial) {
+                    m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (!unitToUnit) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                    return;
+                }
+
+                // perform grant response logic
+                if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, unitToUnit, true))
+                {
                     LogError(LOG_NET, P25_TSDU_STR " call failure, network call not granted, dstId = %u", dstId);
                     return;
                 }

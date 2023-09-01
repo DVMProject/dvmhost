@@ -2726,11 +2726,14 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
     osp->setDstId(dstId);
     osp->setSrcId(srcId);
 
+    bool noNet = false;
+
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, srcId = %u", osp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "location registration request from %u denied", srcId);
         osp->setResponse(P25_RSP_REFUSED);
+        noNet = true;
     }
 
     // validate the source RID is registered
@@ -2751,6 +2754,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
                 LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID rejection, dstId = %u", osp->toString().c_str(), dstId);
                 ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
                 osp->setResponse(P25_RSP_DENY);
+                noNet = true;
             }
         }
     }
@@ -2764,7 +2768,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
         ret = true;
     }
 
-    writeRF_TSDU_SBF_Imm(osp.get(), false);
+    writeRF_TSDU_SBF_Imm(osp.get(), noNet);
     return ret;
 }
 
