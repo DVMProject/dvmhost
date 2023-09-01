@@ -161,13 +161,14 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 bool AffiliationLookup::groupUnaff(uint32_t srcId)
 {
     // lookup dynamic affiliation table entry
-    try {
+    auto entry = m_grpAffTable.find(srcId);    
+    if (entry != m_grpAffTable.end()) {
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
                 m_name, srcId, tblDstId);
         }
-    } catch (...) {
+    } else {
         return false;
     }
 
@@ -191,7 +192,8 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
 bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 {
     // lookup dynamic affiliation table entry
-    try {
+    auto entry = m_grpAffTable.find(srcId);    
+    if (entry != m_grpAffTable.end()) {
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (tblDstId == dstId) {
             return true;
@@ -199,9 +201,9 @@ bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
         else {
             return false;
         }
-    } catch (...) {
-        return false;
     }
+
+    return false;
 }
 
 /// <summary>

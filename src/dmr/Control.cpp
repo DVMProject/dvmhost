@@ -499,7 +499,6 @@ dmr::lookups::DMRAffiliationLookup Control::affiliations()
         return m_slot1->m_affiliations;
     case 2U:
         return m_slot2->m_affiliations;
-        break;
     default:
         LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
         break;

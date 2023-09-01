@@ -2561,11 +2561,14 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
     iosp->setDstId(dstId);
     iosp->setResponse(P25_RSP_ACCEPT);
 
+    bool noNet = false;
+
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, srcId = %u", iosp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         iosp->setResponse(P25_RSP_REFUSED);
+        noNet = true;
     }
 
     // validate the source RID is registered
@@ -2573,6 +2576,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", iosp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         iosp->setResponse(P25_RSP_REFUSED);
+        noNet = true;
     }
 
     // validate the talkgroup ID
@@ -2584,6 +2588,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
             LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID rejection, dstId = %u", iosp->toString().c_str(), dstId);
             ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
             iosp->setResponse(P25_RSP_DENY);
+            noNet = true;
         }
     }
 
@@ -2600,7 +2605,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         m_p25->m_affiliations.groupAff(srcId, dstId);
     }
 
-    writeRF_TSDU_SBF_Imm(iosp.get(), false);
+    writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
     return ret;
 }
 

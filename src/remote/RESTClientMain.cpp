@@ -74,6 +74,8 @@
 #define RCD_RELEASE_AFFS                "rel-affs"
 #define RCD_RELEASE_AFF                 "rel-aff"
 
+#define RCD_GET_AFFS                    "affs"
+
 #define RCD_DMR_BEACON                  "dmr-beacon"
 #define RCD_P25_CC                      "p25-cc"
 #define RCD_P25_CC_FALLBACK             "p25-cc-fallback"
@@ -199,6 +201,7 @@ void usage(const char* message, const char* arg)
     reply += "  rel-grnts                   Forcibly releases all channel grants\r\n";
     reply += "  rel-affs                    Forcibly releases all group affiliations\r\n";
     reply += "  rel-aff <state> <dstid>     Forcibly releases specified group affiliations\r\n";
+    reply += "  affs                        Retrieves the list of currently affiliated SUs\r\n";
     reply += "\r\n";
     reply += "  dmr-beacon                  Transmits a DMR beacon burst\r\n";
     reply += "  p25-cc                      Transmits a non-continous P25 CC burst\r\n";
@@ -514,6 +517,9 @@ int main(int argc, char** argv)
             }
 
             retCode = client->send(HTTP_PUT, PUT_RELEASE_TG, req, response);
+        }
+        else if (rcom == RCD_GET_AFFS) {
+            retCode = client->send(HTTP_GET, GET_AFF_LIST, json::object(), response);
         }
 
         /*

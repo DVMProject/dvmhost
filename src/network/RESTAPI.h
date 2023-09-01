@@ -143,6 +143,9 @@ private:
     /// <summary></summary>
     void restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
+    /// <summary></summary>
+    void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
     /*
     ** Digital Mobile Radio
     */

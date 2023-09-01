@@ -54,6 +54,7 @@ using namespace modem;
 
 #include <memory>
 #include <stdexcept>
+#include <unordered_map>
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -287,6 +288,8 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(GET_RID_WHITELIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDWhitelist, this));
     m_dispatcher.match(GET_RID_BLACKLIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDBlacklist, this));
+
+    m_dispatcher.match(GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 
     /*
     ** Digital Mobile Radio
@@ -1473,6 +1476,87 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& r
     else {
         errorPayload(reply, "tried to blacklist RID 0");
     }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    std::unordered_map<uint32_t, uint32_t> globalAffTable = std::unordered_map<uint32_t, uint32_t>();
+
+#if defined(ENABLE_DMR)
+    if (m_dmr != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations().grpAffTable();
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            // did we already catalog this affiliation?
+            auto globEntry = globalAffTable.find(srcId);    
+            if (globEntry == globalAffTable.end()) {
+                globalAffTable[srcId] = grpId;
+            }
+        }
+    }
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+    if (m_p25 != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations().grpAffTable();
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            // did we already catalog this affiliation?
+            auto globEntry = globalAffTable.find(srcId);    
+            if (globEntry == globalAffTable.end()) {
+                globalAffTable[srcId] = grpId;
+            }
+        }
+    }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+    if (m_nxdn != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations().grpAffTable();
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            // did we already catalog this affiliation?
+            auto globEntry = globalAffTable.find(srcId);    
+            if (globEntry == globalAffTable.end()) {
+                globalAffTable[srcId] = grpId;
+            }
+        }
+    }
+#endif // defined(ENABLE_NXDN)
+
+    json::array affs = json::array();
+    if (globalAffTable.size() > 0) {
+        for (auto entry : globalAffTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            json::object aff = json::object();
+            aff["srcId"].set<uint32_t>(srcId);
+            aff["grpId"].set<uint32_t>(grpId);
+
+            affs.push_back(json::value(aff));
+        }
+    }
+
+    response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
 }
 
 /*

@@ -72,6 +72,8 @@
 #define GET_RID_BLACKLIST_BASE          "/rid-blacklist/"
 #define GET_RID_BLACKLIST               GET_RID_BLACKLIST_BASE"(\\d+)"
 
+#define GET_AFF_LIST                    "/affs"
+
 #define GET_DMR_BEACON                  "/dmr/beacon"
 #define GET_DMR_DEBUG_BASE              "/dmr/debug/"
 #define GET_DMR_DEBUG                   GET_DMR_DEBUG_BASE"(\\d+)/(\\d+)"
