@@ -524,7 +524,7 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
     ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
 
     for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
-        rs[i] = m_mi[i];                                                            // Message Indicator
+        rs[i] = mi[i];                                                              // Message Indicator
 
     rs[9U] = m_control->getAlgId();                                                 // Algorithm ID
     rs[10U] = (m_control->getKId() >> 8) & 0xFFU;                                   // Key ID
