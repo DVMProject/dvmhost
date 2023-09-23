@@ -1282,7 +1282,7 @@ void Control::processNetwork()
                     (control.getPriority() & 0x07U);                                    // Priority
 
                 if (m_verbose) {
-                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
+                    LogMessage(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u", srcId, dstId, unitToUnit);
                 }
 
                 // are we denying the grant?
@@ -1292,7 +1292,7 @@ void Control::processNetwork()
                 }
 
                 // perform grant response logic
-                if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, unitToUnit, true))
+                if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true))
                 {
                     LogError(LOG_NET, P25_TSDU_STR " call failure, network call not granted, dstId = %u", dstId);
                     return;

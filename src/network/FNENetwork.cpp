@@ -61,14 +61,15 @@ using namespace network::fne;
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
 /// <param name="parrotDelay">Delay for end of call to parrot TG playback.</param>
+/// <param name="parrotGrantDemand">Flag indicating whether a parrot TG will generate a grant demand.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="trafficRepeat">Flag indicating if traffic should be repeated from this master.</param>
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool allowActivityTransfer, bool allowDiagnosticTransfer,
-    uint32_t pingTime, uint32_t updateLookupTime) :
+    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+    bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
@@ -81,6 +82,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
     m_parrotDelay(parrotDelay),
+    m_parrotGrantDemand(parrotGrantDemand),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_status(NET_STAT_INVALID),

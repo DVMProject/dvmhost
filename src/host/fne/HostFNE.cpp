@@ -333,6 +333,7 @@ bool HostFNE::createMasterNetwork()
         LogWarning(LOG_HOST, "Parrot delay cannot be longer then the ping time of a peer. Reducing parrot delay to half the ping time.");
         parrotDelay = (m_pingTime * 1000U) / 2U;
     }
+    bool parrotGrantDemand = masterConf["parrotGrantDemand"].as<bool>(true);
 
     LogInfo("Network Parameters");
     LogInfo("    Peer ID: %u", id);
@@ -342,6 +343,7 @@ bool HostFNE::createMasterNetwork()
     LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
     LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
     LogInfo("    Parrot Repeat Delay: %u ms", parrotDelay);
+    LogInfo("    Parrot Grant Demand: %s", parrotGrantDemand ? "yes" : "no");
 
     if (verbose) {
         LogInfo("    Verbose: yes");
@@ -352,8 +354,8 @@ bool HostFNE::createMasterNetwork()
     }
 
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, parrotDelay,
-        m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
+    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
+        parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
 

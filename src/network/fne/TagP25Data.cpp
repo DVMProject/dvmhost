@@ -36,6 +36,7 @@
 using namespace system_clock;
 using namespace network;
 using namespace network::fne;
+using namespace p25;
 
 #include <cstdio>
 #include <cassert>
@@ -55,6 +56,7 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
     m_parrotFramesReady(false),
+    m_parrotFirstFrame(true),
     m_status(),
     m_debug(debug)
 {
@@ -160,6 +162,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (tg.config().parrot()) {
                     if (m_parrotFrames.size() > 0) {
                         m_parrotFramesReady = true;
+                        m_parrotFirstFrame = true;
                         Thread::sleep(m_network->m_parrotDelay);
                         LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
                     }
@@ -213,7 +216,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t *copy = new uint8_t[len];
             ::memcpy(copy, data, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
+            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId, srcId, dstId));
         }
 
         // repeat traffic to the connected peers
@@ -253,11 +256,42 @@ void TagP25Data::playbackParrot()
 {
     if (m_parrotFrames.size() == 0) {
         m_parrotFramesReady = false;
+        m_parrotFirstFrame = true;
         return;
     }
 
     auto& pkt = m_parrotFrames[0];
     if (std::get<0>(pkt) != nullptr) {
+        if (m_parrotFirstFrame) {
+            if (m_network->m_parrotGrantDemand) {
+                uint32_t srcId = std::get<4>(pkt);
+                uint32_t dstId = std::get<5>(pkt);
+
+                // create control data
+                lc::LC control = lc::LC();
+                control.setSrcId(srcId);
+                control.setDstId(dstId);
+
+                // create empty LSD
+                data::LowSpeedData lsd = data::LowSpeedData();
+
+                uint8_t controlByte = 0x80U;
+
+                // send grant demand
+                uint32_t messageLength = 0U;
+                UInt8Array message = m_network->createP25_TDUMessage(messageLength, control, lsd, controlByte);
+                if (message != nullptr) {
+                    // repeat traffic to the connected peers
+                    for (auto peer : m_network->m_peers) {
+                        LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
+                        m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                    }
+                }
+            }
+
+            m_parrotFirstFrame = false;
+        }
+
         // repeat traffic to the connected peers
         for (auto peer : m_network->m_peers) {
             m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);

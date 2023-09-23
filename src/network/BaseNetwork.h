@@ -212,7 +212,7 @@ namespace network
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
         bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>
-        bool writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
+        bool writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte = 0U);
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
         bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
@@ -286,7 +286,8 @@ namespace network
             const uint8_t* data);
 
         /// <summary>Creates an P25 TDU frame message.</summary>
-        UInt8Array createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd);
+        UInt8Array createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
+            const uint8_t controlByte);
 
         /// <summary>Creates an P25 TSDU frame message.</summary>
         UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);

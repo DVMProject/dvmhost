@@ -67,8 +67,9 @@ namespace network
         private:
             FNENetwork* m_network;
 
-            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t, uint32_t>> m_parrotFrames;
+            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t, uint32_t, uint32_t, uint32_t>> m_parrotFrames;
             bool m_parrotFramesReady;
+            bool m_parrotFirstFrame;
 
             class RxStatus {
             public:

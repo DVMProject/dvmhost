@@ -55,6 +55,8 @@ master:
 
     # Delay from when a call on a parrot TG ends to when the playback starts (in milliseconds).
     parrotDelay: 2000
+    # Flag indicating whether or not a parrot TG call will generate a grant demand.
+    parrotGrantDemand: true
 
     #
     # Talkgroup Rules Configuration

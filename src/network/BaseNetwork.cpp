@@ -438,8 +438,9 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
 /// </summary>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
+/// <param name="controlByte"></param>
 /// <returns></returns>
-bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
+bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -451,7 +452,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_TDUMessage(messageLength, control, lsd);
+    UInt8Array message = createP25_TDUMessage(messageLength, control, lsd, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -916,8 +917,9 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 /// <param name="length"></param>
 /// <param name="control"></param>
 /// <param name="lsd"></param>
+/// <param name="controlByte"></param>
 /// <returns></returns>
-UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd)
+UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte)
 {
     uint8_t* buffer = new uint8_t[MSG_HDR_SIZE + PACKET_PAD];
     ::memset(buffer, 0x00U, MSG_HDR_SIZE + PACKET_PAD);
@@ -925,6 +927,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     // construct P25 message header
     createP25_MessageHdr(buffer, p25::P25_DUID_TDU, control, lsd, p25::P25_FT_TERMINATOR);
 
+    buffer[14U] = controlByte;
     buffer[23U] = MSG_HDR_SIZE;
 
     if (m_debug)
