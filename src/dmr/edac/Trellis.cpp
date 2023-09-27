@@ -345,12 +345,12 @@ void Trellis::pointsToDibits(const uint8_t* points, int8_t* dibits) const
 void Trellis::bitsToTribits(const uint8_t* payload, uint8_t* tribits) const
 {
     for (uint32_t i = 0U; i < 48U; i++) {
-        uint32_t n = 143U - i * 3U;
+        uint32_t n = i * 3U;
 
         bool b1 = READ_BIT(payload, n) != 0x00U;
-        n--;
+        n++;
         bool b2 = READ_BIT(payload, n) != 0x00U;
-        n--;
+        n++;
         bool b3 = READ_BIT(payload, n) != 0x00U;
 
         uint8_t tribit = 0U;
@@ -378,12 +378,12 @@ void Trellis::tribitsToBits(const uint8_t* tribits, uint8_t* payload) const
         bool b2 = (tribit & 0x02U) == 0x02U;
         bool b3 = (tribit & 0x01U) == 0x01U;
 
-        uint32_t n = 143U - i * 3U;
+        uint32_t n = i * 3U;
 
         WRITE_BIT(payload, n, b1);
-        n--;
+        n++;
         WRITE_BIT(payload, n, b2);
-        n--;
+        n++;
         WRITE_BIT(payload, n, b3);
     }
 }
