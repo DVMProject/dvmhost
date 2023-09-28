@@ -1351,28 +1351,31 @@ void Voice::writeNet_LDU1()
             if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
                 LogError(LOG_NET, P25_HDU_STR " call failure, network call not granted, dstId = %u", dstId);
 
-                if (m_p25->m_network != nullptr)
-                    m_p25->m_network->resetP25();
+                if ((!m_p25->m_networkWatchdog.isRunning() || m_p25->m_networkWatchdog.hasExpired()) &&
+                    m_p25->m_netLastDstId != 0U) {
+                    if (m_p25->m_network != nullptr)
+                        m_p25->m_network->resetP25();
 
-                ::memset(m_netLDU1, 0x00U, 9U * 25U);
-                ::memset(m_netLDU2, 0x00U, 9U * 25U);
+                    ::memset(m_netLDU1, 0x00U, 9U * 25U);
+                    ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
-                m_p25->m_netTimeout.stop();
-                m_p25->m_networkWatchdog.stop();
+                    m_p25->m_netTimeout.stop();
+                    m_p25->m_networkWatchdog.stop();
 
-                m_netLC = lc::LC();
-                m_netLastLDU1 = lc::LC();
-                m_netLastFrameType = P25_FT_DATA_UNIT;
+                    m_netLC = lc::LC();
+                    m_netLastLDU1 = lc::LC();
+                    m_netLastFrameType = P25_FT_DATA_UNIT;
 
-                m_p25->m_netState = RS_NET_IDLE;
-                m_p25->m_netLastDstId = 0U;
-                m_p25->m_netLastSrcId = 0U;
+                    m_p25->m_netState = RS_NET_IDLE;
+                    m_p25->m_netLastDstId = 0U;
+                    m_p25->m_netLastSrcId = 0U;
 
-                if (m_p25->m_rfState == RS_RF_REJECTED) {
-                    m_p25->m_rfState = RS_RF_LISTENING;
+                    if (m_p25->m_rfState == RS_RF_REJECTED) {
+                        m_p25->m_rfState = RS_RF_LISTENING;
+                    }
+
+                    return;
                 }
-
-                return;
             }
 
             m_p25->writeRF_Preamble(0, true);

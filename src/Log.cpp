@@ -123,6 +123,9 @@ static bool LogOpen()
 /// <returns>True, if log file is opened, otherwise false.
 static bool ActivityLogOpen()
 {
+    if (m_fileLevel == 0U)
+        return true;
+
     time_t now;
     ::time(&now);
 
@@ -237,15 +240,18 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
     if (!ret)
         return;
 
-    ::fprintf(m_actFpLog, "%s\n", buffer);
-    ::fflush(m_actFpLog);
-
     if (m_network != nullptr) {
         m_network->writeActLog(buffer);
     }
 
+    if (m_fileLevel == 0U)
+        return;
+
+    ::fprintf(m_actFpLog, "%s\n", buffer);
+    ::fflush(m_actFpLog);
+
     if (2U >= m_fileLevel && m_fileLevel != 0U) {
-        bool ret = ::LogOpen();
+        bool ret = ::ActivityLogOpen();
         if (!ret)
             return;
 
