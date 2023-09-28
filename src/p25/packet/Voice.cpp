@@ -1432,6 +1432,12 @@ void Voice::writeNet_LDU1()
     }
     else {
         if (m_p25->m_netTGHang.isRunning()) {
+            if (m_p25->m_netLastDstId == 0U) {
+                m_p25->m_netLastDstId = dstId;
+                m_p25->m_netLastSrcId = srcId;
+                LogWarning(LOG_NET, P25_LDU1_STR ", traffic in progress, with net TG hangtimer running and netLastDstId = 0, netLastDstId = %u", m_p25->m_netLastDstId);
+            }
+
             m_p25->m_netTGHang.start();
         }
     }
