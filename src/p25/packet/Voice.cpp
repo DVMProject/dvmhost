@@ -1430,6 +1430,11 @@ void Voice::writeNet_LDU1()
             }
         }
     }
+    else {
+        if (m_p25->m_netTGHang.isRunning()) {
+            m_p25->m_netTGHang.start();
+        }
+    }
 
     uint32_t netId = control.getNetId();
     uint32_t sysId = control.getSysId();
