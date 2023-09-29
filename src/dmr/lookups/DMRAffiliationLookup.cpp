@@ -63,8 +63,9 @@ DMRAffiliationLookup::~DMRAffiliationLookup()
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="netGranted"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout)
+bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted)
 {
     uint32_t chNo = m_rfChTable.at(0);
     uint8_t slot = getAvailableSlotForChannel(chNo);
@@ -73,7 +74,7 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
         return false;
     }
 
-    return grantChSlot(dstId, srcId, slot, grantTimeout);
+    return grantChSlot(dstId, srcId, slot, grantTimeout, netGranted);
 }
 
 /// <summary>
@@ -83,8 +84,9 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
 /// <param name="srcId"></param>
 /// <param name="slot"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="netGranted"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout)
+bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool netGranted)
 {
     if (dstId == 0U) {
         return false;
@@ -108,6 +110,8 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
     m_grantSrcIdTable[dstId] = srcId;
     m_grantChSlotTable[dstId] = std::make_tuple(chNo, slot);
     m_rfGrantChCnt++;
+
+    m_netGrantedTable[dstId] = netGranted;
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
@@ -166,6 +170,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantChTable.erase(dstId);
         m_grantSrcIdTable.erase(dstId);
         m_grantChSlotTable.erase(dstId);
+        m_netGrantedTable.erase(dstId);
 
         auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
         if (it == m_rfChTable.end()) {

@@ -861,7 +861,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
                     //m_tscc->m_siteData.setChCnt(m_tscc->m_affiliations->getRFChCnt() + m_tscc->m_affiliations->getGrantedRFChCnt());
@@ -1150,7 +1150,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 }
             }
             else {
-                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_tscc->m_affiliations->grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
                     slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 

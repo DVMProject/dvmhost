@@ -49,9 +49,9 @@ namespace dmr
             virtual ~DMRAffiliationLookup();
 
             /// <summary>Helper to grant a channel.</summary>
-            bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout) override;
+            bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted) override;
             /// <summary>Helper to grant a channel and slot.</summary>
-            bool grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout);
+            bool grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool netGranted);
             /// <summary>Helper to release the channel grant for the destination ID.</summary>
             bool releaseGrant(uint32_t dstId, bool releaseAll) override;
             /// <summary>Helper to determine if the channel number is busy.</summary>

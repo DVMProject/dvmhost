@@ -563,7 +563,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
                 }
             }
             else {
-                if (m_nxdn->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_nxdn->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     chNo = m_nxdn->m_affiliations.getGrantedCh(dstId);
                 }
             }

@@ -2190,7 +2190,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     chNo = m_p25->m_affiliations.getGrantedCh(dstId);
                     m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
                 }
@@ -2449,7 +2449,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
                 return false;
             }
             else {
-                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT)) {
+                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
                     osp->setGrpVchNo(chNo);
                     osp->setDataChnNo(chNo);

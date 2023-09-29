@@ -50,6 +50,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_grpAffTable(),
     m_grantChTable(),
     m_grantSrcIdTable(),
+    m_netGrantedTable(),
     m_grantTimers(),
     m_releaseGrant(nullptr),
     m_name(name),
@@ -245,8 +246,9 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="netGranted"></param>
 /// <returns></returns>
-bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout)
+bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted)
 {
     if (dstId == 0U) {
         return false;
@@ -263,6 +265,8 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
     m_grantChTable[dstId] = chNo;
     m_grantSrcIdTable[dstId] = srcId;
     m_rfGrantChCnt++;
+
+    m_netGrantedTable[dstId] = netGranted;
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
@@ -334,6 +338,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
         m_grantChTable.erase(dstId);
         m_grantSrcIdTable.erase(dstId);
+        m_netGrantedTable.erase(dstId);
         m_rfChTable.push_back(chNo);
 
         if (m_rfGrantChCnt > 0U) {
@@ -391,6 +396,26 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
         else {
             return false;
         }
+    } catch (...) {
+        return false;
+    }
+}
+
+/// <summary>
+/// Helper to determine if the destination ID is network granted.
+/// </summary>
+/// <param name="dstId"></param>
+/// <returns></returns>
+bool AffiliationLookup::isNetGranted(uint32_t dstId) const
+{
+    if (dstId == 0U) {
+        return false;
+    }
+
+    // lookup dynamic channel grant table entry
+    try {
+        bool net = m_netGrantedTable.at(dstId);
+        return net;
     } catch (...) {
         return false;
     }
