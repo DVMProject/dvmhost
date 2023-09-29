@@ -134,18 +134,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
     if (duid == P25_DUID_HDU) {
         m_lastDUID = P25_DUID_HDU;
 
-        if (m_p25->m_rfState == RS_RF_LISTENING) {
-            if (!m_p25->m_dedicatedControl) {
-                m_p25->m_modem->clearP25Frame();
-            }
-            m_p25->m_txQueue.clear();
-            resetRF();
-            resetNet();
-        }
-
         if (m_p25->m_rfState == RS_RF_LISTENING || m_p25->m_rfState == RS_RF_AUDIO) {
             resetRF();
-            resetNet();
 
             lc::LC lc = lc::LC();
             bool ret = lc.decodeHDU(data + 2U);
@@ -207,6 +197,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_rfLastSrcId = lc.getSrcId();
 
             m_rfLastHDU = lc;
+
+            if (m_p25->m_rfState == RS_RF_LISTENING) {
+                if (!m_p25->m_dedicatedControl) {
+                    m_p25->m_modem->clearP25Frame();
+                }
+                m_p25->m_txQueue.clear();
+            }
         }
 
         return true;
@@ -222,22 +219,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
         bool alreadyDecoded = false;
         uint8_t frameType = P25_FT_DATA_UNIT;
         if (m_p25->m_rfState == RS_RF_LISTENING) {
-            // if this is a late entry call, clear states
-            if (m_rfLastHDU.getDstId() == 0U) {
-                if (!m_p25->m_dedicatedControl) {
-                    m_p25->m_modem->clearP25Frame();
-                }
-                m_p25->m_txQueue.clear();
-                resetRF();
-                resetNet();
-            }
-
-            if (m_p25->m_enableControl) {
-                if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
-                    m_p25->m_control->writeRF_ControlData(255U, 0U, false);
-                }
-            }
-
             lc::LC lc = lc::LC();
             bool ret = lc.decodeLDU1(data + 2U);
             if (!ret) {
@@ -289,6 +270,22 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_p25->m_netTGHang.stop();
+                }
+            }
+
+            // if this is a late entry call, clear states
+            if (m_rfLastHDU.getDstId() == 0U) {
+                if (!m_p25->m_dedicatedControl) {
+                    m_p25->m_modem->clearP25Frame();
+                }
+                m_p25->m_txQueue.clear();
+
+                resetRF();
+            }
+
+            if (m_p25->m_enableControl) {
+                if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
+                    m_p25->m_control->writeRF_ControlData(255U, 0U, false);
                 }
             }
 
