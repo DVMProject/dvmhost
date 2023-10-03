@@ -61,22 +61,34 @@ using namespace nxdn::packet;
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!"); \
         resetRF();                                                                      \
+        m_nxdn->m_rfState = RS_RF_LISTENING;                                            \
         return false;                                                                   \
     }                                                                                   \
                                                                                         \
     if (m_nxdn->m_netState != RS_NET_IDLE) {                                            \
         if (m_nxdn->m_netLC.getSrcId() == _SRC_ID && m_nxdn->m_netLastDstId == _DST_ID) { \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId, \
+            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
                 m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                    \
             resetRF();                                                                  \
+            m_nxdn->m_rfState = RS_RF_LISTENING;                                        \
             return false;                                                               \
         }                                                                               \
         else {                                                                          \
-            LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId, \
+            LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", _DST_ID, \
                 m_nxdn->m_netLastDstId);                                                \
             resetNet();                                                                 \
             if (m_nxdn->m_network != nullptr)                                           \
                 m_nxdn->m_network->resetNXDN();                                         \
+        }                                                                               \
+                                                                                        \
+        if (m_nxdn->m_enableControl && _DST_ID == m_nxdn->m_netLastDstId) {             \
+            if (m_nxdn->m_affiliations.isNetGranted(_DST_ID)) {                         \
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", _SRC_ID, _DST_ID, \
+                    m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                \
+                resetRF();                                                              \
+                m_nxdn->m_rfState = RS_RF_LISTENING;                                    \
+                return false;                                                           \
+            }                                                                           \
         }                                                                               \
     }
 

@@ -59,6 +59,7 @@ using namespace nxdn::packet;
     if (m_nxdn->m_netState != RS_NET_IDLE && _DST_ID == m_nxdn->m_netLastDstId) {       \
         LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!"); \
         resetRF();                                                                      \
+        m_nxdn->m_rfState = RS_RF_LISTENING;                                            \
         return false;                                                                   \
     }                                                                                   \
                                                                                         \
@@ -67,6 +68,7 @@ using namespace nxdn::packet;
             LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId, \
                 m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLastDstId);                    \
             resetRF();                                                                  \
+            m_nxdn->m_rfState = RS_RF_LISTENING;                                        \
             return false;                                                               \
         }                                                                               \
         else {                                                                          \

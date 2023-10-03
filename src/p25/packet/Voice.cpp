@@ -160,6 +160,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
                 LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
             }
 
@@ -167,6 +168,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_p25->m_netState != RS_NET_IDLE && lc.getDstId() == m_p25->m_netLastDstId) {
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
                 resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
             }
 
@@ -236,6 +238,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
                 LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
             }
 
@@ -243,15 +246,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
                 LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
                 resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
                 return false;
             }
 
             // stop network frames from processing -- RF wants to transmit on a different talkgroup
             if (m_p25->m_netState != RS_NET_IDLE) {
                 if (m_netLC.getSrcId() == srcId && m_p25->m_netLastDstId == dstId) {
-                    LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                    LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
                         m_netLC.getSrcId(), m_p25->m_netLastDstId);
                     resetRF();
+                    m_p25->m_rfState = RS_RF_LISTENING;
                     return false;
                 }
                 else {
@@ -270,6 +275,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     m_p25->m_netTGHang.stop();
+                }
+
+                // is control is enabled, and the group was granted by network already ignore RF traffic
+                if (m_p25->m_enableControl && dstId == m_p25->m_netLastDstId) {
+                    if (m_p25->m_affiliations.isNetGranted(dstId)) {
+                        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", srcId, dstId,
+                            m_netLC.getSrcId(), m_p25->m_netLastDstId);
+                        resetRF();
+                        m_p25->m_rfState = RS_RF_LISTENING;
+                        return false;
+                    }
                 }
             }
 
@@ -486,6 +502,36 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
 
         if (m_p25->m_rfState == RS_RF_AUDIO) {
+            // don't process RF frames if this modem isn't authoritative
+            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != m_rfLC.getDstId()) {
+                LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
+                resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
+                return false;
+            }
+
+            // stop network frames from processing -- RF wants to transmit on a different talkgroup
+            if (m_p25->m_netState != RS_NET_IDLE) {
+                if (m_netLC.getSrcId() == m_rfLC.getSrcId() && m_p25->m_netLastDstId == m_rfLC.getDstId()) {
+                    LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                        m_netLC.getSrcId(), m_p25->m_netLastDstId);
+                    resetRF();
+                    m_p25->m_rfState = RS_RF_LISTENING;
+                    return false;
+                }
+
+                // is control is enabled, and the group was granted by network already ignore RF traffic
+                if (m_p25->m_enableControl && m_rfLC.getDstId() == m_p25->m_netLastDstId) {
+                    if (m_p25->m_affiliations.isNetGranted(m_rfLC.getDstId())) {
+                        LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                            m_netLC.getSrcId(), m_p25->m_netLastDstId);
+                        resetRF();
+                        m_p25->m_rfState = RS_RF_LISTENING;
+                        return false;
+                    }
+                }
+            }
+
             if (!alreadyDecoded) {
                 bool ret = m_rfLC.decodeLDU1(data + 2U);
                 if (!ret) {

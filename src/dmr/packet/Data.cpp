@@ -54,6 +54,7 @@ using namespace dmr::packet;
 #define CHECK_AUTHORITATIVE(_DST_ID)                                                    \
     if (!m_slot->m_authoritative && m_slot->m_permittedDstId != dstId) {                \
         LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!"); \
+        m_slot->m_rfState = RS_RF_LISTENING;                                            \
         return false;                                                                   \
     }
 
@@ -66,7 +67,15 @@ using namespace dmr::packet;
 #define CHECK_TRAFFIC_COLLISION(_DST_ID)                                                \
     if (m_slot->m_netState != RS_NET_IDLE && _DST_ID == m_slot->m_netLastDstId) {       \
         LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing network traffic!", m_slot->m_slotNo); \
+        m_slot->m_rfState = RS_RF_LISTENING;                                            \
         return false;                                                                   \
+    }                                                                                   \
+    if (m_slot->m_enableTSCC && _DST_ID == m_slot->m_netLastDstId) {                    \
+        if (m_slot->m_affiliations->isNetGranted(_DST_ID)) {                            \
+            LogWarning(LOG_RF, "DMR Slot %u, Traffic collision detect, preempting new RF traffic to existing granted network traffic (Are we in a voting condition?)", m_slot->m_slotNo); \
+            m_slot->m_rfState = RS_RF_LISTENING;                                        \
+            return false;                                                               \
+        }                                                                               \
     }
 
 #define CHECK_TG_HANG(_DST_ID)                                                          \
