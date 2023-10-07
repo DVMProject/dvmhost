@@ -373,16 +373,4 @@ namespace p25
 #define P25_TDULC_STR "P25_DUID_TDULC (Terminator Data Unit with Link Control)"
 } // namespace p25
 
-// ---------------------------------------------------------------------------
-//  Namespace Prototypes
-// ---------------------------------------------------------------------------
-namespace edac { }
-namespace p25
-{
-    namespace edac
-    {
-        using namespace ::edac;
-    } // namespace edac
-} // namespace p25
-
 #endif // __P25_DEFINES_H__

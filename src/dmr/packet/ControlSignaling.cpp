@@ -28,7 +28,6 @@
 #include "dmr/acl/AccessControl.h"
 #include "dmr/data/DataHeader.h"
 #include "dmr/data/EMB.h"
-#include "dmr/edac/Trellis.h"
 #include "dmr/lc/ShortLC.h"
 #include "dmr/lc/FullLC.h"
 #include "dmr/lc/CSBK.h"

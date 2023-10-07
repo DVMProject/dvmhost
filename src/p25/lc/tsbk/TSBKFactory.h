@@ -28,7 +28,8 @@
 
 #include "Defines.h"
 
-#include "p25/edac/Trellis.h"
+#include "edac/Trellis.h"
+
 #include "p25/lc/TSBK.h"
 #include "p25/lc/tsbk/IOSP_ACK_RSP.h"
 #include "p25/lc/tsbk/IOSP_CALL_ALRT.h"

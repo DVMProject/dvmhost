@@ -27,7 +27,6 @@
 #include "dmr/packet/Data.h"
 #include "dmr/acl/AccessControl.h"
 #include "dmr/data/EMB.h"
-#include "dmr/edac/Trellis.h"
 #include "dmr/lc/ShortLC.h"
 #include "dmr/lc/FullLC.h"
 #include "dmr/lc/CSBK.h"
@@ -36,6 +35,7 @@
 #include "dmr/Sync.h"
 #include "edac/BPTC19696.h"
 #include "edac/CRC.h"
+#include "edac/Trellis.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -272,13 +272,13 @@ bool Data::process(uint8_t* data, uint32_t len)
         else if (dataType == DT_RATE_34_DATA) {
             // decode the Trellis 3/4 rate FEC
             uint8_t payload[18U];
-            bool ret = trellis.decode(data + 2U, payload);
+            bool ret = trellis.decode34(data + 2U, payload);
             if (ret) {
                 // store payload
                 ::memcpy(m_pduUserData, payload, 18U);
 
                 // encode the Trellis 3/4 rate FEC
-                trellis.encode(payload, data + 2U);
+                trellis.encode34(payload, data + 2U);
             }
             else {
                 LogWarning(LOG_RF, "DMR Slot %u, DT_RATE_34_DATA, unfixable RF rate 3/4 data", m_slot->m_slotNo);
@@ -478,13 +478,13 @@ void Data::processNetwork(const data::Data& dmrData)
             // decode the Trellis 3/4 rate FEC
             edac::Trellis trellis;
             uint8_t payload[18U];
-            bool ret = trellis.decode(data + 2U, payload);
+            bool ret = trellis.decode34(data + 2U, payload);
             if (ret) {
                 // store payload
                 ::memcpy(m_pduUserData, payload, 18U);
 
                 // encode the Trellis 3/4 rate FEC
-                trellis.encode(payload, data + 2U);
+                trellis.encode34(payload, data + 2U);
             }
             else {
                 LogWarning(LOG_NET, "DMR Slot %u, DT_RATE_34_DATA, unfixable network rate 3/4 data", m_slot->m_slotNo);

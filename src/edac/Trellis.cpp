@@ -24,10 +24,10 @@
 *   GNU General Public License for more details.
 */
 #include "Defines.h"
-#include "p25/edac/Trellis.h"
+#include "edac/Trellis.h"
 #include "Log.h"
 
-using namespace p25::edac;
+using namespace edac;
 
 #include <cstdio>
 #include <cassert>

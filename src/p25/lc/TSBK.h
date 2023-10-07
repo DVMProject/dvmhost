@@ -27,7 +27,7 @@
 #define  __P25_LC__TSBK_H__
 
 #include "Defines.h"
-#include "p25/edac/Trellis.h"
+#include "edac/Trellis.h"
 #include "p25/lc/LC.h"
 #include "p25/lc/TDULC.h"
 #include "p25/SiteData.h"

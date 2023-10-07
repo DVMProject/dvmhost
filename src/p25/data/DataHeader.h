@@ -27,7 +27,7 @@
 #define  __P25_DATA__DATA_HEADER_H__
 
 #include "Defines.h"
-#include "p25/edac/Trellis.h"
+#include "edac/Trellis.h"
 
 #include <string>
 

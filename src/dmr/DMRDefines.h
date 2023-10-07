@@ -325,17 +325,4 @@ namespace dmr
     const uint32_t  NO_PREAMBLE_CSBK = 15U;
 } // namespace dmr
 
-// ---------------------------------------------------------------------------
-//  Namespace Prototypes
-// ---------------------------------------------------------------------------
-
-namespace edac { }
-namespace dmr
-{
-    namespace edac
-    {
-        using namespace ::edac;
-    } // namespace edac
-} // namespace dmr
-
 #endif // __DMR_DEFINES_H__
