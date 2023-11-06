@@ -133,6 +133,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_networkWatchdog(1000U, 0U, 1500U),
     m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
+    m_rfLossWatchdog(1000U, 0U, 1500U),
     m_netTimeoutTimer(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_packetTimer(1000U, 0U, 50U),
@@ -212,6 +213,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
             // increment the frame loss count by one for audio or data; otherwise drop
             // packets
             if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+                m_rfLossWatchdog.start();
                 ++m_frameLossCnt;
             }
             else {
@@ -225,6 +227,12 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 
                 return false;
             }
+        }
+    }
+
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+        if (m_rfLossWatchdog.isRunning()) {
+            m_rfLossWatchdog.start();
         }
     }
 
@@ -495,7 +503,10 @@ void Slot::clock()
         }
     }
 
+    // handle timeouts and hang timers
     m_rfTimeoutTimer.clock(ms);
+    m_netTimeoutTimer.clock(ms);
+
     if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
         if (!m_rfTimeout) {
             LogMessage(LOG_RF, "DMR Slot %u, user has timed out", m_slotNo);
@@ -503,11 +514,15 @@ void Slot::clock()
         }
     }
 
-    m_netTimeoutTimer.clock(ms);
-    if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
-        if (!m_netTimeout) {
-            LogMessage(LOG_NET, "DMR Slot %u, user has timed out", m_slotNo);
-            m_netTimeout = true;
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+        if (m_rfLossWatchdog.isRunning()) {
+            m_rfLossWatchdog.clock(ms);
+
+            if (m_rfLossWatchdog.hasExpired()) {
+                m_rfLossWatchdog.stop();
+
+                processFrameLoss();
+            }
         }
     }
 
@@ -526,6 +541,13 @@ void Slot::clock()
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+        }
+    }
+
+    if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
+        if (!m_netTimeout) {
+            LogMessage(LOG_NET, "DMR Slot %u, user has timed out", m_slotNo);
+            m_netTimeout = true;
         }
     }
 
@@ -1007,6 +1029,8 @@ void Slot::processFrameLoss()
                 m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
         }
+
+        clearTSCCActivated();
 
         if (!m_tscc->m_enableTSCC) {
             notifyCC_ReleaseGrant(m_rfLC->getDstId());

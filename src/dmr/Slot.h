@@ -175,6 +175,7 @@ namespace dmr
         Timer m_networkWatchdog;
         Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
+        Timer m_rfLossWatchdog;
         Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_packetTimer;
