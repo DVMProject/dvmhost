@@ -2131,30 +2131,33 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             return false;
         }
 
-        if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
-            if (!net) {
-                LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
-                writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
-
-                ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
-                m_p25->m_rfState = RS_RF_REJECTED;
-            }
-            else {
-                LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
-            }
-
-            return false;
-        }
-
-        // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
-        if (m_p25->m_rfLastDstId != 0U) {
-            if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+        // only do the last destination ID checking if we're operating in non-dedicated mode (e.g. DVRS)
+        if (!m_p25->m_dedicatedControl) {
+            if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
                 if (!net) {
-                    writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
+                    writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_COLLIDE, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+
+                    ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                     m_p25->m_rfState = RS_RF_REJECTED;
+                }
+                else {
+                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic in progress, dstId = %u", dstId);
                 }
 
                 return false;
+            }
+
+            // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
+            if (m_p25->m_rfLastDstId != 0U) {
+                if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+                    if (!net) {
+                        writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                    }
+
+                    return false;
+                }
             }
         }
 
