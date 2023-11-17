@@ -154,6 +154,7 @@ else()
     FetchContent_Declare(
         ASIO
         GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG 7609450f71434bdc9fbd9491a9505b423c2a8496 # asio-1-28-2
     )
     FetchContent_MakeAvailable(ASIO)
     set(ASIO_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/asio-src/asio/include)
