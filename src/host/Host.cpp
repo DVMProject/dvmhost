@@ -1837,7 +1837,7 @@ bool Host::readParams()
             uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = controlCh["restPassword"].as<std::string>();
 
-            VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
+            VoiceChData data = VoiceChData(m_channelId, m_channelNo, restApiAddress, restApiPort, restApiPassword);
             m_controlChData = data;
 
             if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
@@ -1860,6 +1860,18 @@ bool Host::readParams()
         for (size_t i = 0; i < voiceChList.size(); i++) {
             yaml::Node& channel = voiceChList[i];
 
+            uint8_t chId = (uint8_t)channel["channelId"].as<uint32_t>(255U);
+
+            // special case default handling for if the channelId field is missing from the
+            // configuration
+            if (chId == 255U) {
+                chId = m_channelId;
+            }
+
+            if (chId > 15U) { // clamp to 15
+                chId = 15U;
+            }
+
             uint32_t chNo = (uint32_t)::strtoul(channel["channelNo"].as<std::string>("1").c_str(), NULL, 16);
             if (chNo == 0U) { // clamp to 1
                 chNo = 1U;
@@ -1872,19 +1884,21 @@ bool Host::readParams()
             uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = channel["restPassword"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", m_channelId, chNo, restApiAddress.c_str(), restApiPort);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", chId, chNo, restApiAddress.c_str(), restApiPort);
 
-            VoiceChData data = VoiceChData(chNo, restApiAddress, restApiPort, restApiPassword);
+            VoiceChData data = VoiceChData(chId, chNo, restApiAddress, restApiPort, restApiPassword);
             m_voiceChData[chNo] = data;
             m_voiceChNo.push_back(chNo);
         }
 
         std::string strVoiceChNo = "";
         for (auto it = m_voiceChNo.begin(); it != m_voiceChNo.end(); ++it) {
-            int decVal = ::atoi(std::to_string(*it).c_str());
-            char hexStr[23];
+            uint32_t chNo = ::atoi(std::to_string(*it).c_str());
+            ::lookups::VoiceChData voiceChData = m_voiceChData[chNo];
 
-            ::sprintf(hexStr, "$%04X (%u)", decVal, decVal);
+            char hexStr[29];
+
+            ::sprintf(hexStr, "$%01X.%01X (%u.%u)", voiceChData.chId(), chNo, voiceChData.chId(), chNo);
 
             strVoiceChNo.append(std::string(hexStr));
             strVoiceChNo.append(",");

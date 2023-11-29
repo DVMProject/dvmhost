@@ -126,7 +126,7 @@ namespace p25
             __PROTECTED_READONLY_PROPERTY(uint32_t, sysId, SysId);
 
             /// <summary>Voice channel ID.</summary>
-            __PROTECTED_PROPERTY(uint32_t, grpVchId, GrpVchId);
+            __PROTECTED_PROPERTY(uint8_t, grpVchId, GrpVchId);
             /// <summary>Voice channel number.</summary>
             __PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 

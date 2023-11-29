@@ -93,7 +93,12 @@ void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         (m_emergency ? 0x80U : 0x00U) +                                             // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                             // Encrypted Flag
         (m_priority & 0x07U);                                                       // Priority
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
+    if (m_grpVchId != 0U) {
+        tsbkValue = (tsbkValue << 4) + m_grpVchId;                                  // Channel ID
+    }
+    else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel ID
+    }
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target ID
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address

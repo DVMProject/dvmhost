@@ -183,7 +183,7 @@ private:
 
                 ::LogInfoEx(LOG_HOST, "Channel REST API Adddress %s:%u", restApiAddress.c_str(), restApiPort);
 
-                VoiceChData data = VoiceChData(0U, restApiAddress, restApiPort, restApiPassword);
+                VoiceChData data = VoiceChData(0U, 0U, restApiAddress, restApiPort, restApiPassword);
 
                 NodeStatusWnd* wnd = new NodeStatusWnd(this);
                 wnd->setChData(data);

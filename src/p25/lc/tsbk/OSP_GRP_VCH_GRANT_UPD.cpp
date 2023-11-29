@@ -74,7 +74,12 @@ void OSP_GRP_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = m_siteData.channelId();                                             // Channel ID
+    if (m_grpVchId != 0U) {
+        tsbkValue = m_grpVchId;                                                     // Channel ID
+    }
+    else {
+        tsbkValue = m_siteData.channelId();                                         // Channel ID
+    }
     tsbkValue = (tsbkValue << 12) + m_grpVchNo;                                     // Channel Number
     tsbkValue = (tsbkValue << 16) + m_dstId;                                        // Talkgroup Address
     tsbkValue = (tsbkValue << 32) + 0;

@@ -87,9 +87,19 @@ void OSP_SNDCP_CH_GNT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     tsbkValue = 0U;
     tsbkValue = (tsbkValue << 8) + m_dataServiceOptions;                            // Data Service Options
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel (T) ID
+    if (m_grpVchId != 0U) {
+        tsbkValue = (tsbkValue << 4) + m_grpVchId;                                  // Channel (T) ID
+    }
+    else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (T) ID
+    }
     tsbkValue = (tsbkValue << 12) + m_dataChannelNo;                                // Channel (T) Number
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel (R) ID
+    if (m_grpVchId != 0U) {
+        tsbkValue = (tsbkValue << 4) + m_grpVchId;                                  // Channel (R) ID
+    }
+    else {
+        tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                      // Channel (R) ID
+    }
     tsbkValue = (tsbkValue << 12) + (rxChNo & 0xFFFU);                              // Channel (R) Number
     tsbkValue = (tsbkValue << 24) + m_dstId;                                        // Target Radio Address
 

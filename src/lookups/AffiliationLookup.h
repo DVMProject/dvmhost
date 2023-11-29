@@ -46,6 +46,7 @@ namespace lookups
     public:
         /// <summary>Initializes a new instance of the VoiceChData class.</summary>
         VoiceChData() :
+            m_chId(0U),
             m_chNo(0U),
             m_address(),
             m_port(),
@@ -54,11 +55,13 @@ namespace lookups
             /* stub */
         }
         /// <summary>Initializes a new instance of the VoiceChData class.</summary>
+        /// <param name="chId">Voice Channel Identity.</param>
         /// <param name="chNo">Voice Channel Number.</param>
         /// <param name="address">REST API Address.</param>
         /// <param name="port">REST API Port.</param>
         /// <param name="password">REST API Password.</param>
-        VoiceChData(uint32_t chNo, std::string address, uint16_t port, std::string password) :
+        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password) :
+            m_chId(chId),
             m_chNo(chNo),
             m_address(address),
             m_port(port),
@@ -73,6 +76,7 @@ namespace lookups
         VoiceChData & operator=(const VoiceChData & data)
         {
             if (this != &data) {
+                m_chId = data.m_chId;
                 m_chNo = data.m_chNo;
                 m_address = data.m_address;
                 m_port = data.m_port;
@@ -82,10 +86,14 @@ namespace lookups
             return *this;
         }
 
+        /// <summary>Helper to determine if the channel identity is valid.</summary>
+        bool isValidChId() { return m_chId != 0U; }
         /// <summary>Helper to determine if the channel is valid.</summary>
         bool isValidCh() { return m_chNo != 0U; }
 
     public:
+        /// <summary>Voice Channel Identity.</summary>
+        __READONLY_PROPERTY_PLAIN(uint8_t, chId, chId);
         /// <summary>Voice Channel Number.</summary>
         __READONLY_PROPERTY_PLAIN(uint32_t, chNo, chNo);
         /// <summary>REST API Address.</summary>

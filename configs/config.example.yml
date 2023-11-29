@@ -365,8 +365,10 @@ system:
         # Voice Channels
         #
         voiceChNo:
+              # Channel Identity (corresponds to the appropriate entry in the iden_table file).
+            - channelId: 2
               # Channel Number (used to calculate actual host frequency based on the identity table).
-            - channelNo: 1
+              channelNo: 1
               # REST API IP Address for voice channel.
               restAddress: 127.0.0.1
               # REST API Port number for voice channel.

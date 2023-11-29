@@ -2235,6 +2235,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
 
     if (chNo > 0U) {
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+
         if (grp) {
             if (!net) {
                 ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
@@ -2242,7 +2244,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             // callback REST API to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
@@ -2272,6 +2273,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
+            iosp->setGrpVchId(voiceChData.chId());
             iosp->setGrpVchNo(chNo);
             iosp->setEmergency(emergency);
             iosp->setEncrypted(encryption);
@@ -2298,7 +2300,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             // callback REST API to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
@@ -2328,6 +2329,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
+            iosp->setGrpVchId(voiceChData.chId());
             iosp->setGrpVchNo(chNo);
             iosp->setEmergency(emergency);
             iosp->setEncrypted(encryption);
@@ -2378,6 +2380,8 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                 uint32_t dstId = entry.first;
                 uint32_t chNo = entry.second;
 
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+
                 if (chNo == 0U) {
                     noData = true;
                     m_mbfGrpGrntCnt++;
@@ -2387,6 +2391,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                     // transmit group voice grant update
                     osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
                     osp->setDstId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
 
                     m_mbfGrpGrntCnt++;
@@ -2454,6 +2459,9 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
             else {
                 if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, net)) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+
+                    osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
                     osp->setDataChnNo(chNo);
                     m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
@@ -2462,6 +2470,9 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
         }
         else {
             uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
+            ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+
+            osp->setGrpVchId(voiceChData.chId());
             osp->setGrpVchNo(chNo);
             osp->setDataChnNo(chNo);
 
