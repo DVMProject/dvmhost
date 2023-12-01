@@ -206,6 +206,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating the host requires LLA verification before allowing unit registration.
+        requireLLAForReg: false
         # Flag indicating whether verbose dumping of P25 data packets is enabled.
         dumpDataPacket: false
         # Flag indicating whether or not this host will repeat P25 data traffic.
@@ -375,6 +377,12 @@ system:
               restPort: 9990
               # REST API access password for voice channel.
               restPassword: "PASSWORD"
+
+        secure:
+            # AES-128 16-byte Key (used for LLA)
+            #   (This field *must* be 16 hex bytes in length or 32 characters
+            #    0 - 9, A - F.)
+            key: "000102030405060708090A0B0C0D0E0F"
 
         # DMR Color Code.
         colorCode: 1

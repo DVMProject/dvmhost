@@ -36,6 +36,7 @@
 #include "p25/Sync.h"
 #include "edac/CRC.h"
 #include "remote/RESTClient.h"
+#include "AESCrypto.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Thread.h"
@@ -50,6 +51,7 @@ using namespace p25::packet;
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <random>
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -575,7 +577,12 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     writeRF_TSDU_ACK_FNE(srcId, TSBK_IOSP_U_REG, true, true);
                 }
 
-                writeRF_TSDU_U_Reg_Rsp(srcId, tsbk->getSysId());
+                if (m_requireLLAForReg) {
+                    writeRF_TSDU_Auth_Dmd(srcId);
+                }
+                else {
+                    writeRF_TSDU_U_Reg_Rsp(srcId, tsbk->getSysId());
+                }
             }
             break;
             case TSBK_ISP_LOC_REG_REQ:
@@ -587,6 +594,66 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 writeRF_TSDU_Loc_Reg_Rsp(srcId, dstId, tsbk->getGroup());
             }
             break;
+            case TSBK_ISP_AUTH_RESP:
+            {
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBK_ISP_AUTH_RESP, srcId);
+
+                ISP_AUTH_RESP* isp = static_cast<ISP_AUTH_RESP*>(tsbk.get());
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u", 
+                        tsbk->toString(true).c_str(), srcId);
+                }
+
+                ::ActivityLog("P25", true, "authentication response from %u", srcId);
+
+                crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
+
+                // get RES1 from response
+                uint8_t RES1[P25_AUTH_RES_LENGTH_BYTES];
+                isp->getAuthRes(RES1);
+
+                // get challenge for our SU    
+                ulong64_t challenge = 0U;
+                try {
+                    challenge = m_llaDemandTable.at(srcId);
+                }
+                catch (...) {
+                    challenge = 0U;
+                }
+
+                uint8_t RC[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
+                __SET_UINT32(challenge >> 8, RC, 0);
+                RC[4U] = (uint8_t)(challenge & 0xFFU);
+
+                // expand RAND1 to 16 bytes
+                uint8_t expandedRAND1[16];
+                ::memset(expandedRAND1, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+                for (uint32_t i = 0; i < P25_AUTH_RAND_CHLNG_LENGTH_BYTES; i++)
+                    expandedRAND1[i] = RC[i];
+
+                // generate XRES1
+                uint8_t* XRES1 = aes->encryptECB(expandedRAND1, P25_AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_p25->m_llaKS);
+
+                // compare RES1 and XRES1
+                bool authFailed = false;
+                for (uint32_t i = 0; i < P25_AUTH_RES_LENGTH_BYTES; i++) {
+                    if (XRES1[i] != RES1[i]) {
+                        authFailed = true;
+                    }
+                }
+
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_AUTH_RESP, true, true);
+                }
+
+                if (!authFailed) {
+                    writeRF_TSDU_U_Reg_Rsp(srcId, tsbk->getSysId());
+                }
+                else {
+                    writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_SU_FAILED_AUTH, TSBK_IOSP_U_REG);
+                }
+            }
             default:
                 LogError(LOG_RF, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
                 break;
@@ -1193,6 +1260,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_announcementGroup(0xFFFEU),
     m_verifyAff(false),
     m_verifyReg(false),
+    m_requireLLAForReg(false),
     m_rfMBF(nullptr),
     m_mbfCnt(0U),
     m_mbfIdenCnt(0U),
@@ -1203,6 +1271,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_adjSiteUpdateCnt(),
     m_sccbTable(),
     m_sccbUpdateCnt(),
+    m_llaDemandTable(),
     m_lastMFID(P25_MFG_STANDARD),
     m_noStatusAck(false),
     m_noMessageAck(true),
@@ -1230,6 +1299,8 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
 
     m_sccbTable.clear();
     m_sccbUpdateCnt.clear();
+
+    m_llaDemandTable.clear();
 
     m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT;
     m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
@@ -2784,6 +2855,39 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 
     writeRF_TSDU_SBF_Imm(osp.get(), noNet);
     return ret;
+}
+
+/// <summary>
+/// Helper to write a LLA demand.
+/// </summary>
+/// <param name="srcId"></param>
+void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
+{
+    std::unique_ptr<MBT_OSP_AUTH_DMD> osp = new_unique(MBT_OSP_AUTH_DMD);
+    osp->setSrcId(srcId);
+    osp->setAuthRS(m_p25->m_llaRS);
+
+    // generate challenge
+    uint8_t RC[P25_AUTH_RAND_CHLNG_LENGTH_BYTES];
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    uint32_t rnd = dist(m_p25->m_random);
+    __SET_UINT32(rnd, RC, 0U);
+
+    rnd = dist(m_p25->m_random);
+    RC[4U] = (uint8_t)(rnd & 0xFFU);
+
+    ulong64_t challenge = __GET_UINT32(RC, 0U);
+    challenge = (challenge << 8) + RC[4U];
+
+    osp->setAuthRC(RC);
+
+    m_llaDemandTable[srcId] = challenge;
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
+    }
+
+    writeRF_TSDU_AMBT(osp.get());
 }
 
 /// <summary>

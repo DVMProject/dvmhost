@@ -112,6 +112,7 @@ namespace p25
     const uint8_t   P25_AUTH_RES_LENGTH_BYTES = 4U;
     const uint8_t   P25_AUTH_RAND_SEED_LENGTH_BYTES = 10U;
     const uint8_t   P25_AUTH_RAND_CHLNG_LENGTH_BYTES = 5U;
+    const uint8_t   P25_AUTH_KEY_LENGTH_BYTES = 16U;
 
     const uint8_t   P25_ALGO_UNENCRYPT = 0x80U;
 
@@ -170,6 +171,7 @@ namespace p25
     const uint32_t  P25_DENY_RSN_REQ_UNIT_NOT_AUTH = 0x11U;
     const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_VALID = 0x20U;
     const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_AUTH = 0x21U;
+    const uint32_t  P25_DENY_RSN_SU_FAILED_AUTH = 0x22U;
     const uint32_t  P25_DENY_RSN_TGT_UNIT_REFUSED = 0x2FU;
     const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_VALID = 0x30U;
     const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_AUTH = 0x31U;

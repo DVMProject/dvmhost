@@ -51,6 +51,7 @@
 #include <cstdio>
 #include <vector>
 #include <unordered_map>
+#include <random>
 
 namespace p25
 {
@@ -220,6 +221,13 @@ namespace p25
         uint8_t m_ccFrameCnt;
         uint8_t m_ccSeq;
 
+        std::mt19937 m_random;
+
+        uint8_t* m_llaK;
+        uint8_t* m_llaRS;
+        uint8_t* m_llaCRS;
+        uint8_t* m_llaKS;
+
         NID m_nid;
 
         SiteData m_siteData;
@@ -260,6 +268,9 @@ namespace p25
         void writeRF_Preamble(uint32_t preambleCount = 0, bool force = false);
         /// <summary>Helper to write a P25 TDU packet.</summary>
         void writeRF_TDU(bool noNetwork);
+
+        /// <summary>Helper to setup and generate LLA AM1 parameters.</summary>
+        void generateLLA_AM1_Parameters();
     };
 } // namespace p25
 

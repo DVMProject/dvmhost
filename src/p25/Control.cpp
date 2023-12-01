@@ -36,6 +36,7 @@
 #include "p25/Sync.h"
 #include "edac/CRC.h"
 #include "remote/RESTClient.h"
+#include "AESCrypto.h"
 #include "HostMain.h"
 #include "Log.h"
 #include "Utils.h"
@@ -137,6 +138,11 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
+    m_random(),
+    m_llaK(nullptr),
+    m_llaRS(nullptr),
+    m_llaCRS(nullptr),
+    m_llaKS(nullptr),
     m_nid(nac),
     m_siteData(),
     m_rssiMapper(rssiMapper),
@@ -161,6 +167,15 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_voice = new Voice(this, debug, verbose);
     m_control = new ControlSignaling(this, dumpTSBKData, debug, verbose);
     m_data = new Data(this, dumpPDUData, repeatPDU, debug, verbose);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    m_random = mt;
+
+    m_llaK = nullptr;
+    m_llaRS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
+    m_llaCRS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
+    m_llaKS = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
 }
 
 /// <summary>
@@ -233,12 +248,46 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_patchSuperGroup = (uint32_t)::strtoul(rfssConfig["pSuperGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
     m_control->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
 
+    yaml::Node secureConfig = rfssConfig["secure"];
+    std::string key = secureConfig["key"].as<std::string>();
+    if (!key.empty()) {
+        if (key.size() == 32) {
+            if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                const char* keyPtr = key.c_str();
+                m_llaK = new uint8_t[P25_AUTH_KEY_LENGTH_BYTES];
+                ::memset(m_llaK, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+
+                for (uint8_t i = 0; i < P25_AUTH_KEY_LENGTH_BYTES; i++) {
+                    char t[4] = {keyPtr[0], keyPtr[1], 0};
+                    m_llaK[i] = (uint8_t)::strtoul(t, NULL, 16);
+                    keyPtr += 2 * sizeof(char);
+                }
+            }
+            else {
+                LogWarning(LOG_P25, "Invalid characters in the secure key. LLA disabled.");
+            }
+        }
+        else {
+            LogWarning(LOG_P25, "Invalid secure key length, key should be 16 hex pairs, or 32 characters. LLA disabled.");
+        }
+    }
+
+    if (m_llaK != nullptr) {
+        generateLLA_AM1_Parameters();
+    }
+
     m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
     m_legacyGroupGrnt = p25Protocol["legacyGroupGrnt"].as<bool>(true);
     m_legacyGroupReg = p25Protocol["legacyGroupReg"].as<bool>(false);
 
     m_control->m_verifyAff = p25Protocol["verifyAff"].as<bool>(false);
     m_control->m_verifyReg = p25Protocol["verifyReg"].as<bool>(false);
+
+    m_control->m_requireLLAForReg = p25Protocol["requireLLAForReg"].as<bool>(false);
+
+    if (m_llaK == nullptr) {
+        m_control->m_requireLLAForReg = false;
+    }
 
     m_control->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_control->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
@@ -433,11 +482,16 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
         LogInfo("    Time/Date Announcement TSBK: %s", m_control->m_ctrlTimeDateAnn ? "yes" : "no");
 
+        if (m_llaK != nullptr) {
+            LogInfo("    Link Layer Authentication: yes");
+        }
+
         LogInfo("    Inhibit Unauthorized: %s", m_inhibitUnauth ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
         LogInfo("    Legacy Group Registration: %s", m_legacyGroupReg ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
+        LogInfo("    Require LLA for Registration: %s", m_control->m_requireLLAForReg ? "yes" : "no");
 
         LogInfo("    SNDCP Channel Grant: %s", m_control->m_sndcpChGrant ? "yes" : "no");
 
@@ -1581,4 +1635,50 @@ void Control::writeRF_TDU(bool noNetwork)
 
         addFrame(data, P25_TDU_FRAME_LENGTH_BYTES + 2U);
     }
+}
+
+/// <summary>
+/// Helper to setup and generate LLA AM1 parameters.
+/// </summary>
+void Control::generateLLA_AM1_Parameters()
+{
+    ::memset(m_llaRS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+    ::memset(m_llaCRS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+    ::memset(m_llaKS, 0x00U, P25_AUTH_KEY_LENGTH_BYTES);
+
+    if (m_llaK == nullptr) {
+        return;
+    }
+
+    crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
+
+    // generate new RS
+    uint8_t RS[P25_AUTH_RAND_SEED_LENGTH_BYTES];
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    uint32_t rnd = dist(m_random);
+    __SET_UINT32(rnd, RS, 0U);
+
+    rnd = dist(m_random);
+    __SET_UINT32(rnd, RS, 4U);
+
+    rnd = dist(m_random);
+    RS[9U] = (uint8_t)(rnd & 0xFFU);
+
+    // expand RS to 16 bytes
+    for (uint32_t i = 0; i < P25_AUTH_RAND_SEED_LENGTH_BYTES; i++)
+        m_llaRS[i] = RS[i];
+
+    // complement RS
+    for (uint32_t i = 0; i < P25_AUTH_KEY_LENGTH_BYTES; i++)
+        m_llaCRS[i] = ~m_llaRS[i];
+
+    // perform crypto
+    uint8_t* KS = aes->encryptECB(m_llaRS, P25_AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_llaK);
+    ::memcpy(m_llaKS, KS, P25_AUTH_KEY_LENGTH_BYTES);
+
+    if (m_verbose) {
+        LogMessage(LOG_P25, "P25, generated LLA AM1 parameters");
+    }
+
+    delete aes;
 }

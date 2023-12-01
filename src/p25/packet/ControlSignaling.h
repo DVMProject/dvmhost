@@ -112,6 +112,7 @@ namespace p25
 
             bool m_verifyAff;
             bool m_verifyReg;
+            bool m_requireLLAForReg;
 
             uint8_t* m_rfMBF;
             uint8_t m_mbfCnt;
@@ -126,6 +127,8 @@ namespace p25
 
             std::unordered_map<uint8_t, SiteData> m_sccbTable;
             std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
+
+            std::unordered_map<uint32_t, ulong64_t> m_llaDemandTable;
 
             uint8_t m_lastMFID;
 
@@ -182,7 +185,7 @@ namespace p25
             virtual void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
             void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
-            /// <summary>Helper to write a alternate multi-block ControlSignalinging PDU packet.</summary>
+            /// <summary>Helper to write a alternate multi-block PDU packet.</summary>
             virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
 
             /*
@@ -220,6 +223,9 @@ namespace p25
             void writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false, bool group = true);
             /// <summary>Helper to write a location registration response packet.</summary>
             bool writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, bool grp);
+
+            /// <summary>Helper to write a LLA demand.</summary>
+            void writeRF_TSDU_Auth_Dmd(uint32_t srcId);
 
             /// <summary>Helper to write a call termination packet.</summary>
             bool writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId);
