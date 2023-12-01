@@ -82,10 +82,12 @@ bool ISP_AUTH_RESP::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
-    m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
-    m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
-    m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Reason
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
+    m_authStandalone = (((tsbkValue >> 56) & 0xFFU) & 0x01U) == 0x01U;              // Authentication Standalone Flag
+    m_authRes[3U] = tsbk[3U];                                                       // RES1(3)
+    m_authRes[2U] = tsbk[4U];                                                       // RES1(2)
+    m_authRes[1U] = tsbk[5U];                                                       // RES1(1)
+    m_authRes[0U] = tsbk[6U];                                                       // RES1(0)
+
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;
