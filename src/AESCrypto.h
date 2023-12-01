@@ -80,7 +80,7 @@ namespace crypto
         void shiftRows(uint8_t state[4][AES_NB]);
         void invShiftRows(uint8_t state[4][AES_NB]);
     
-        uint8_t xtime(uint8_t b) { return (b << 1) ^ (((b >> 7) & 1) * 0x1bU); }
+        uint8_t xtime(uint8_t b) { return (b << 1) ^ (((b >> 7) & 1) * 0x1BU); }
 
         void mixColumns(uint8_t state[4][AES_NB]);
         void invMixColumns(uint8_t state[4][AES_NB]);
