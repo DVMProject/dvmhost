@@ -26,15 +26,6 @@
 #*/
 cmake_minimum_required(VERSION 3.16.0)
 
-#
-## dvmtest source/header files
-#
-file(GLOB dvmtests_SRC
-    "tests/nulltest.cpp"
-    "tests/edac/*.cpp"
-    "tests/p25/*.cpp"
-)
-
 option(ENABLE_TESTS "Enable compilation of test suite" off)
 message(CHECK_START "Enable compilation of test suite")
 if (ENABLE_TESTS)

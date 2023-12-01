@@ -38,6 +38,8 @@
 
 #include <string>
 
+#if !defined(CATCH2_TEST_COMPILATION)
+
 // ---------------------------------------------------------------------------
 //  Class Declaration
 //      This class implements the interactive calibration mode.
@@ -79,5 +81,7 @@ private:
     /// <summary>Prints the current status of the calibration.</summary>
     void printStatus();
 };
+
+#endif // !defined(CATCH2_TEST_COMPILATION)
 
 #endif // __HOST_CAL_H__

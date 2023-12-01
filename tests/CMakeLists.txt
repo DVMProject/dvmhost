@@ -25,6 +25,16 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 #
+## dvmtest source/header files
+#
+file(GLOB dvmtests_SRC
+    "tests/nulltest.cpp"
+    "tests/crypto/*.cpp"
+    "tests/edac/*.cpp"
+    "tests/p25/*.cpp"
+)
+
+#
 ## dvmtest project
 #
 project(dvmtest)

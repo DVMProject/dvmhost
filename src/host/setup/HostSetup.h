@@ -37,6 +37,8 @@
 
 #include <string>
 
+#if !defined(CATCH2_TEST_COMPILATION)
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -245,5 +247,7 @@ protected:
     /// <summary>Counts the total number of bit errors between bytes.</summary>
     uint8_t countErrs(uint8_t a, uint8_t b);
 };
+
+#endif // !defined(CATCH2_TEST_COMPILATION)
 
 #endif // __HOST_SETUP_H__

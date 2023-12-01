@@ -37,6 +37,8 @@
 using namespace modem;
 using namespace lookups;
 
+#if !defined(CATCH2_TEST_COMPILATION)
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -1053,3 +1055,5 @@ void HostCal::printStatus()
 
     getStatus();
 }
+
+#endif // !defined(CATCH2_TEST_COMPILATION)

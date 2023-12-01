@@ -51,6 +51,8 @@ using namespace lookups;
 
 #include <unistd.h>
 
+#if !defined(CATCH2_TEST_COMPILATION)
+
 #if defined(ENABLE_SETUP_TUI)
 #include "host/setup/SetupApplication.h"
 #include "host/setup/SetupMainWnd.h"
@@ -2298,3 +2300,5 @@ uint8_t HostSetup::countErrs(uint8_t a, uint8_t b)
     }
     return cnt;
 }
+
+#endif // !defined(CATCH2_TEST_COMPILATION)
