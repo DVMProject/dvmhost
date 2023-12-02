@@ -103,23 +103,23 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 
     __SET_UINT16(m_dstId, pduUserData, 2U);                                         // Target Radio Address
 
-    pduUserData[5U] = m_authRS[9U];                                                 // Random Salt b9
-    pduUserData[6U] = m_authRS[8U];                                                 // Random Salt b8
-    pduUserData[7U] = m_authRS[7U];                                                 // Random Salt b7
-    pduUserData[8U] = m_authRS[6U];                                                 // Random Salt b6
-    pduUserData[9U] = m_authRS[5U];                                                 // Random Salt b5
-    pduUserData[10U] = m_authRS[4U];                                                // Random Salt b4
-    pduUserData[11U] = m_authRS[3U];                                                // Random Salt b3
+    pduUserData[5U] = m_authRS[0U];                                                 // Random Salt b9
+    pduUserData[6U] = m_authRS[1U];                                                 // Random Salt b8
+    pduUserData[7U] = m_authRS[2U];                                                 // Random Salt b7
+    pduUserData[8U] = m_authRS[3U];                                                 // Random Salt b6
+    pduUserData[9U] = m_authRS[4U];                                                 // Random Salt b5
+    pduUserData[10U] = m_authRS[5U];                                                // Random Salt b4
+    pduUserData[11U] = m_authRS[6U];                                                // Random Salt b3
 
     /** Block 2 */
-    pduUserData[12U] = m_authRS[2U];                                                // Random Salt b2
-    pduUserData[13U] = m_authRS[1U];                                                // Random Salt b1
-    pduUserData[14U] = m_authRS[0U];                                                // Random Salt b0
-    pduUserData[15U] = m_authRC[4U];                                                // Random Challenge b4
-    pduUserData[16U] = m_authRC[3U];                                                // Random Challenge b3
+    pduUserData[12U] = m_authRS[7U];                                                // Random Salt b2
+    pduUserData[13U] = m_authRS[8U];                                                // Random Salt b1
+    pduUserData[14U] = m_authRS[9U];                                                // Random Salt b0
+    pduUserData[15U] = m_authRC[0U];                                                // Random Challenge b4
+    pduUserData[16U] = m_authRC[1U];                                                // Random Challenge b3
     pduUserData[17U] = m_authRC[2U];                                                // Random Challenge b2
-    pduUserData[18U] = m_authRC[1U];                                                // Random Challenge b1
-    pduUserData[19U] = m_authRC[0U];                                                // Random Challenge b0
+    pduUserData[18U] = m_authRC[3U];                                                // Random Challenge b1
+    pduUserData[19U] = m_authRC[4U];                                                // Random Challenge b0
 
     AMBT::encode(dataHeader, pduUserData);
 }

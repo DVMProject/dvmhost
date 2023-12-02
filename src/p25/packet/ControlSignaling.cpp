@@ -643,14 +643,12 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     }
                 }
 
-                if (m_p25->m_ackTSBKRequests) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_AUTH_RESP, true, true);
-                }
-
                 if (!authFailed) {
                     writeRF_TSDU_U_Reg_Rsp(srcId, tsbk->getSysId());
                 }
                 else {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, AUTH failed, src = %u", isp->toString().c_str(), srcId);
+                    ::ActivityLog("P25", true, "unit registration request from %u denied, authentication failure", srcId);
                     writeRF_TSDU_Deny(P25_WUID_FNE, srcId, P25_DENY_RSN_SU_FAILED_AUTH, TSBK_IOSP_U_REG);
                 }
             }

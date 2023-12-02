@@ -89,10 +89,10 @@ void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = (tsbkValue << 8) + m_authRes[3U];                                   // Result b3
-    tsbkValue = (tsbkValue << 8) + m_authRes[2U];                                   // Result b2
-    tsbkValue = (tsbkValue << 8) + m_authRes[1U];                                   // Result b1
-    tsbkValue = (tsbkValue << 8) + m_authRes[0U];                                   // Result b0
+    tsbkValue = (tsbkValue << 8) + m_authRes[0U];                                   // Result b3
+    tsbkValue = (tsbkValue << 8) + m_authRes[1U];                                   // Result b2
+    tsbkValue = (tsbkValue << 8) + m_authRes[2U];                                   // Result b1
+    tsbkValue = (tsbkValue << 8) + m_authRes[3U];                                   // Result b0
     tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
