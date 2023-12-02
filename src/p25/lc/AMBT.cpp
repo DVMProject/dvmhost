@@ -165,7 +165,10 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
     dataHeader.setSAP(PDU_SAP_TRUNK_CTRL);
     dataHeader.setLLId(m_srcId);
     dataHeader.setFullMessage(true);
-    dataHeader.setBlocksToFollow(1U);
+
+    if (dataHeader.getBlocksToFollow() == 0U) {
+        dataHeader.setBlocksToFollow(1U);
+    }
 
     dataHeader.setAMBTOpcode(m_lco);
 

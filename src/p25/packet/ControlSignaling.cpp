@@ -2864,7 +2864,8 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
 {
     std::unique_ptr<MBT_OSP_AUTH_DMD> osp = new_unique(MBT_OSP_AUTH_DMD);
-    osp->setSrcId(srcId);
+    osp->setSrcId(P25_WUID_FNE);
+    osp->setDstId(srcId);
     osp->setAuthRS(m_p25->m_llaRS);
 
     // generate challenge
