@@ -59,13 +59,19 @@ namespace crypto
         /// <summary>Initializes a new instance of the AES class.</summary>
         explicit AES(const AESKeyLength keyLength = AESKeyLength::AES_256);
 
+        /// <summary></summary>
         uint8_t* encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]);
+        /// <summary></summary>
         uint8_t* decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]);
 
+        /// <summary></summary>
         uint8_t* encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
+        /// <summary></summary>
         uint8_t* decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
 
+        /// <summary></summary>
         uint8_t* encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
+        /// <summary></summary>
         uint8_t* decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
 
     private:
