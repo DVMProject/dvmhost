@@ -31,7 +31,7 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements 1/2 rate and 3/4 rate Trellis for P25.
+    //      Implements 1/2 rate and 3/4 rate Trellis for DMR/P25.
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API Trellis {
