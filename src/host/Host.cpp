@@ -771,6 +771,9 @@ int Host::run()
     /** Digital Mobile Radio */
     ThreadFunc dmrFrameReadThread([&, this]() {
 #if defined(ENABLE_DMR)
+        if (g_killed)
+            return;
+
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started frame processor (modem read)");
             while (!g_killed) {
@@ -836,6 +839,9 @@ int Host::run()
 
     ThreadFunc dmrFrameWriteThread([&, this]() {
 #if defined(ENABLE_DMR)
+        if (g_killed)
+            return;
+
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started frame processor (modem write)");
             while (!g_killed) {
@@ -894,6 +900,9 @@ int Host::run()
     /** Project 25 */
     ThreadFunc p25FrameReadThread([&, this]() {
 #if defined(ENABLE_P25)
+        if (g_killed)
+            return;
+
         if (p25 != nullptr) {
             LogDebug(LOG_HOST, "P25, started frame processor (modem read)");
             while (!g_killed) {
@@ -931,6 +940,9 @@ int Host::run()
 
     ThreadFunc p25FrameWriteThread([&, this]() {
 #if defined(ENABLE_P25)
+        if (g_killed)
+            return;
+
         if (p25 != nullptr) {
             LogDebug(LOG_HOST, "P25, started frame processor (modem write)");
             while (!g_killed) {
@@ -969,6 +981,9 @@ int Host::run()
     /** Next Generation Digital Narrowband */
     ThreadFunc nxdnFrameReadThread([&, this]() {
 #if defined(ENABLE_NXDN)
+        if (g_killed)
+            return;
+
         if (nxdn != nullptr) {
             LogDebug(LOG_HOST, "NXDN, started frame processor (modem read)");
             while (!g_killed) {
@@ -1006,6 +1021,9 @@ int Host::run()
 
     ThreadFunc nxdnFrameWriteThread([&, this]() {
 #if defined(ENABLE_NXDN)
+        if (g_killed)
+            return;
+
         if (nxdn != nullptr) {
             LogDebug(LOG_HOST, "NXDN, started frame processor (modem write)");
             while (!g_killed) {
@@ -1127,6 +1145,7 @@ int Host::run()
                 }
 
                 LogDebug(LOG_HOST, "CW, start transmitting");
+                clockingMutex.lock();
 
                 setState(STATE_IDLE);
                 m_modem->sendCWId(m_cwCallsign);
@@ -1157,6 +1176,7 @@ int Host::run()
                         Thread::sleep(CW_IDLE_SLEEP_MS);
                 } while (true);
 
+                clockingMutex.unlock();
                 m_cwIdTimer.setTimeout(m_cwIdTime);
                 m_cwIdTimer.start();
             }
