@@ -11,7 +11,6 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
 *   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -28,46 +27,38 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__THREAD_H__)
-#define __THREAD_H__
+#if !defined(__THREAD_FUNC_H__)
+#define __THREAD_FUNC_H__
 
 #include "Defines.h"
+#include "Thread.h"
 
-#include <pthread.h>
+#include <cassert>
+#include <functional>
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
-//      Implements a simple threading mechanism.
+//      Implements a simple function threading mechanism.
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API Thread {
+class HOST_SW_API ThreadFunc : public Thread {
 public:
-    /// <summary>Initializes a new instance of the Thread class.</summary>
-    Thread();
-    /// <summary>Finalizes a instance of the Thread class.</summary>
-    virtual ~Thread();
-
-    /// <summary>Starts the thread execution.</summary>
-    virtual bool run();
+    /// <summary>Initializes a new instance of the ThreadFunc class.</summary>
+    ThreadFunc(std::function<void()>&& e) : Thread(),
+        m_entry(e)
+    {
+        assert(e != nullptr);
+    }
 
     /// <summary>User-defined function to run for the thread main.</summary>
-    virtual void entry() = 0;
-
-    /// <summary></summary>
-    virtual void wait();
-
-    /// <summary></summary>
-    static void sleep(uint32_t ms);
+    virtual void entry()
+    {
+        if (m_entry != nullptr)
+            m_entry();
+    }
 
 private:
-    pthread_t m_thread;
-
-    /// <summary></summary>
-    static void* helper(void* arg);
-
-public:
-    /// <summary>Flag indicating if the thread was started.</summary>
-    __READONLY_PROPERTY_PLAIN(bool, started, started);
+    std::function<void()> m_entry;
 };
 
-#endif // __THREAD_H__
+#endif // __THREAD_FUNC_H__

@@ -32,6 +32,9 @@
 #define __HOST_H__
 
 #include "Defines.h"
+#include "dmr/Control.h"
+#include "p25/Control.h"
+#include "nxdn/Control.h"
 #include "network/Network.h"
 #include "network/RESTAPI.h"
 #include "modem/Modem.h"
@@ -44,6 +47,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <functional>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -151,6 +155,10 @@ private:
     bool m_authoritative;
     bool m_supervisor;
 
+    Timer m_dmrBeaconDurationTimer;
+    Timer m_p25BcastDurationTimer;
+    Timer m_nxdnBcastDurationTimer;
+
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;
 
@@ -178,6 +186,37 @@ private:
     void createLockFile(const char* state) const;
     /// <summary>Helper to remove the state lock file.</summary>
     void removeLockFile() const;
+
+    /** Digital Mobile Radio */
+    /// <summary>Helper to interrupt a running DMR beacon.</summary>
+    void interruptDMRBeacon(dmr::Control* control);
+
+    /// <summary>Helper to read DMR slot 1 frames from modem.</summary>
+    void readFramesDMR1(dmr::Control* control, std::function<void()>&& afterReadCallback);
+    /// <summary>Helper to write DMR slot 1 frames to modem.</summary>
+    void writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterWriteCallback);
+    /// <summary>Helper to read DMR slot 2 frames from modem.</summary>
+    void readFramesDMR2(dmr::Control* control, std::function<void()>&& afterReadCallback);
+    /// <summary>Helper to write DMR slot 2 frames to modem.</summary>
+    void writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterWriteCallback);
+
+    /** Project 25 */
+    /// <summary>Helper to interrupt a running P25 control channel.</summary>
+    void interruptP25Control(p25::Control* control);
+
+    /// <summary>Helper to read P25 frames from modem.</summary>
+    void readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback);
+    /// <summary>Helper to write P25 frames to modem.</summary>
+    void writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback);
+
+    /** Next Generation Digital Narrowband */
+    /// <summary>Helper to interrupt a running NXDN control channel.</summary>
+    void interruptNXDNControl(nxdn::Control* control);
+
+    /// <summary>Helper to read NXDN frames from modem.</summary>
+    void readFramesNXDN(nxdn::Control* control, std::function<void()>&& afterReadCallback);
+    /// <summary>Helper to write NXDN frames to modem.</summary>
+    void writeFramesNXDN(nxdn::Control* control, std::function<void()>&& afterWriteCallback);
 };
 
 #endif // __HOST_H__

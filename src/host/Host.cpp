@@ -30,11 +30,8 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "dmr/Control.h"
 #include "dmr/DMRUtils.h"
-#include "p25/Control.h"
 #include "p25/P25Utils.h"
-#include "nxdn/Control.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"
@@ -46,6 +43,7 @@
 #include "Log.h"
 #include "StopWatch.h"
 #include "Thread.h"
+#include "ThreadFunc.h"
 #include "Utils.h"
 
 using namespace network;
@@ -141,6 +139,9 @@ Host::Host(const std::string& confFile) :
     m_nxdnQueueSizeBytes(1488U), // 31 frames
     m_authoritative(true),
     m_supervisor(false),
+    m_dmrBeaconDurationTimer(1000U),
+    m_p25BcastDurationTimer(1000U),
+    m_nxdnBcastDurationTimer(1000U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_RESTAPI(nullptr)
@@ -358,7 +359,6 @@ int Host::run()
 
     // initialize DMR
     Timer dmrBeaconIntervalTimer(1000U);
-    Timer dmrBeaconDurationTimer(1000U);
 
     std::unique_ptr<dmr::Control> dmr = nullptr;
 #if defined(ENABLE_DMR)
@@ -410,7 +410,7 @@ int Host::run()
             LogInfo("    Roaming Beacon Interval: %us", dmrBeaconInterval);
             LogInfo("    Roaming Beacon Duration: %us", dmrBeaconDuration);
 
-            dmrBeaconDurationTimer.setTimeout(dmrBeaconDuration);
+            m_dmrBeaconDurationTimer.setTimeout(dmrBeaconDuration);
 
             dmrBeaconIntervalTimer.setTimeout(dmrBeaconInterval);
             dmrBeaconIntervalTimer.start();
@@ -452,7 +452,6 @@ int Host::run()
 
     // initialize P25
     Timer p25BcastIntervalTimer(1000U);
-    Timer p25BcastDurationTimer(1000U);
 
     std::unique_ptr<p25::Control> p25 = nullptr;
 #if defined(ENABLE_P25)
@@ -492,7 +491,7 @@ int Host::run()
                 LogInfo("    Control Broadcast Duration: %us", p25ControlBcstDuration);
             }
 
-            p25BcastDurationTimer.setTimeout(p25ControlBcstDuration);
+            m_p25BcastDurationTimer.setTimeout(p25ControlBcstDuration);
 
             p25BcastIntervalTimer.setTimeout(p25ControlBcstInterval);
             p25BcastIntervalTimer.start();
@@ -524,7 +523,6 @@ int Host::run()
 
     // initialize NXDN
     Timer nxdnBcastIntervalTimer(1000U);
-    Timer nxdnBcastDurationTimer(1000U);
 
     std::unique_ptr<nxdn::Control> nxdn = nullptr;
 #if defined(ENABLE_NXDN)
@@ -557,7 +555,7 @@ int Host::run()
                 LogInfo("    Control Broadcast Duration: %us", nxdnControlBcstDuration);
             }
 
-            nxdnBcastDurationTimer.setTimeout(nxdnControlBcstDuration);
+            m_nxdnBcastDurationTimer.setTimeout(nxdnControlBcstDuration);
 
             nxdnBcastIntervalTimer.setTimeout(nxdnControlBcstInterval);
             nxdnBcastIntervalTimer.start();
@@ -758,39 +756,6 @@ int Host::run()
 
     bool hasTxShutdown = false;
 
-    // Macro to interrupt a running P25 control channel transmission
-    #define INTERRUPT_P25_CONTROL                                                                                       \
-        if (p25 != nullptr) {                                                                                           \
-            LogDebug(LOG_HOST, "interrupt P25 control, m_state = %u", m_state);                                         \
-            p25->setCCHalted(true);                                                                                     \
-            if (p25BcastDurationTimer.isRunning() && !p25BcastDurationTimer.isPaused()) {                               \
-                p25BcastDurationTimer.pause();                                                                          \
-            }                                                                                                           \
-        }
-
-    // Macro to interrupt a running DMR roaming beacon
-    #define INTERRUPT_DMR_BEACON                                                                                        \
-        if (dmr != nullptr) {                                                                                           \
-            if (dmrBeaconDurationTimer.isRunning() && !dmrBeaconDurationTimer.hasExpired()) {                           \
-                if (m_dmrTSCCData && !m_dmrCtrlChannel) {                                                               \
-                    LogDebug(LOG_HOST, "interrupt DMR control, m_state = %u", m_state);                                 \
-                    dmr->setCCHalted(true);                                                                             \
-                    dmr->setCCRunning(false);                                                                           \
-                }                                                                                                       \
-            }                                                                                                           \
-            dmrBeaconDurationTimer.stop();                                                                              \
-        }
-
-    // Macro to interrupt a running NXDN control channel transmission
-    #define INTERRUPT_NXDN_CONTROL                                                                                      \
-        if (nxdn != nullptr) {                                                                                          \
-            LogDebug(LOG_HOST, "interrupt NXDN control, m_state = %u", m_state);                                        \
-            nxdn->setCCHalted(true);                                                                                    \
-            if (nxdnBcastDurationTimer.isRunning() && !nxdnBcastDurationTimer.isPaused()) {                             \
-                nxdnBcastDurationTimer.pause();                                                                         \
-            }                                                                                                           \
-        }
-
     // Macro to start DMR duplex idle transmission (or beacon)
     #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
         if (dmr != nullptr) {                                                                                           \
@@ -799,6 +764,211 @@ int Host::run()
                 m_dmrTXTimer.start();                                                                                   \
             }                                                                                                           \
         }
+
+    // setup protocol processor threads
+    /** Digital Mobile Radio */
+    ThreadFunc dmrProcessThread([&, this]() {
+#if defined(ENABLE_DMR)
+        if (dmr != nullptr) {
+            LogDebug(LOG_HOST, "DMR, started frame processor");
+            while (!g_killed) {
+                // ------------------------------------------------------
+                //  -- Write to Modem Processing                      --
+                // ------------------------------------------------------
+                
+                // write DMR slot 1 frames to modem
+                writeFramesDMR1(dmr.get(), [&, this]() {
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                // write DMR slot 2 frames to modem
+                writeFramesDMR2(dmr.get(), [&, this]() {
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                // ------------------------------------------------------
+                //  -- Read from Modem Processing                     --
+                // ------------------------------------------------------
+
+                // read DMR slot 1 frames from modem
+                readFramesDMR1(dmr.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                // read DMR slot 2 frames from modem
+                readFramesDMR2(dmr.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                if (m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+#endif // defined(ENABLE_DMR)
+    });
+    dmrProcessThread.run();
+
+    /** Project 25 */
+    ThreadFunc p25ProcessThread([&, this]() {
+#if defined(ENABLE_P25)
+        if (p25 != nullptr) {
+            LogDebug(LOG_HOST, "P25, started frame processor");
+            while (!g_killed) {
+                // ------------------------------------------------------
+                //  -- Write to Modem Processing                      --
+                // ------------------------------------------------------
+
+                // write P25 frames to modem
+                writeFramesP25(p25.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                // ------------------------------------------------------
+                //  -- Read from Modem Processing                     --
+                // ------------------------------------------------------
+
+                // read P25 frames from modem
+                readFramesP25(p25.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a NXDN CC running; halt the CC
+                    if (nxdn != nullptr) {
+                        if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                            this->interruptNXDNControl(nxdn.get());
+                        }
+                    }
+                });
+
+                if (m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+#endif // defined(ENABLE_P25)
+    });
+    p25ProcessThread.run();
+
+    /** Next Generation Digital Narrowband */
+    ThreadFunc nxdnProcessThread([&, this]() {
+#if defined(ENABLE_NXDN)
+        if (nxdn != nullptr) {
+            LogDebug(LOG_HOST, "NXDN, started frame processor");
+            while (!g_killed) {
+                // ------------------------------------------------------
+                //  -- Write to Modem Processing                      --
+                // ------------------------------------------------------
+
+                // write NXDN frames to modem
+                writeFramesNXDN(nxdn.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+                });
+
+                // ------------------------------------------------------
+                //  -- Read from Modem Processing                     --
+                // ------------------------------------------------------
+
+                // read NXDN frames from modem
+                readFramesNXDN(nxdn.get(), [&, this]() {
+                    if (dmr != nullptr) {
+                        this->interruptDMRBeacon(dmr.get());
+                    }
+
+                    // if there is a P25 CC running; halt the CC
+                    if (p25 != nullptr) {
+                        if (p25->getCCRunning() && !p25->getCCHalted()) {
+                            this->interruptP25Control(p25.get());
+                        }
+                    }
+                });
+
+                if (m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+#endif // defined(ENABLE_NXDN)
+    });
+    nxdnProcessThread.run();
 
     // main execution loop
     while (!killed) {
@@ -815,10 +985,6 @@ int Host::run()
         uint32_t ms = stopWatch.elapsed();
         if (ms > 1U)
             m_modem->clock(ms);
-
-        uint8_t data[220U];
-        uint32_t len;
-        bool ret;
 
         if (!m_fixedMode) {
             if (m_modeTimer.isRunning() && m_modeTimer.hasExpired()) {
@@ -842,233 +1008,6 @@ int Host::run()
         }
 
         // ------------------------------------------------------
-        //  -- Write to Modem Processing                      --
-        // ------------------------------------------------------
-
-        /** Digital Mobile Radio */
-#if defined(ENABLE_DMR)
-        if (dmr != nullptr) {
-            // check if there is space on the modem for DMR slot 1 frames,
-            // if there is read frames from the DMR controller and write it
-            // to the modem
-            ret = m_modem->hasDMRSpace1();
-            if (ret) {
-                len = dmr->getFrame(1U, data);
-                if (len > 0U) {
-                    // if the state is idle; set to DMR, start mode timer and start DMR idle frames
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_DMR);
-                        START_DMR_DUPLEX_IDLE(true);
-                    }
-
-                    // if the state is DMR; start DMR idle frames and write DMR slot 1 data
-                    if (m_state == STATE_DMR) {
-                        START_DMR_DUPLEX_IDLE(true);
-
-                        m_modem->writeDMRFrame1(data, len);
-
-                        // if there is no DMR CC running; run the interrupt macro to stop
-                        // any running DMR beacon
-                        if (!dmr->getCCRunning()) {
-                            INTERRUPT_DMR_BEACON;
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                INTERRUPT_P25_CONTROL;
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                INTERRUPT_NXDN_CONTROL;
-                            }
-                        }
-
-                        m_modeTimer.start();
-                    }
-
-                    m_lastDstId = dmr->getLastDstId(1U);
-                    m_lastSrcId = dmr->getLastSrcId(1U);
-                }
-            }
-
-            // check if there is space on the modem for DMR slot 2 frames,
-            // if there is read frames from the DMR controller and write it
-            // to the modem
-            ret = m_modem->hasDMRSpace2();
-            if (ret) {
-                len = dmr->getFrame(2U, data);
-                if (len > 0U) {
-                    // if the state is idle; set to DMR, start mode timer and start DMR idle frames
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_DMR);
-                        START_DMR_DUPLEX_IDLE(true);
-                    }
-
-                    // if the state is DMR; start DMR idle frames and write DMR slot 2 data
-                    if (m_state == STATE_DMR) {
-                        START_DMR_DUPLEX_IDLE(true);
-
-                        m_modem->writeDMRFrame2(data, len);
-
-                        // if there is no DMR CC running; run the interrupt macro to stop
-                        // any running DMR beacon
-                        if (!dmr->getCCRunning()) {
-                            INTERRUPT_DMR_BEACON;
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                INTERRUPT_P25_CONTROL;
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                INTERRUPT_NXDN_CONTROL;
-                            }
-                        }
-
-                        m_modeTimer.start();
-                    }
-
-                    m_lastDstId = dmr->getLastDstId(2U);
-                    m_lastSrcId = dmr->getLastSrcId(2U);
-                }
-            }
-        }
-#endif // defined(ENABLE_DMR)
-
-        /** Project 25 */
-#if defined(ENABLE_P25)
-        // check if there is space on the modem for P25 frames,
-        // if there is read frames from the P25 controller and write it
-        // to the modem
-        if (p25 != nullptr) {
-            uint8_t nextLen = p25->peekFrameLength();
-            if (nextLen > 0U) {
-                ret = m_modem->hasP25Space(nextLen);
-                if (ret) {
-                    len = p25->getFrame(data);
-                    if (len > 0U) {
-                        // if the state is idle; set to P25 and start mode timer
-                        if (m_state == STATE_IDLE) {
-                            m_modeTimer.setTimeout(m_netModeHang);
-                            setState(STATE_P25);
-                        }
-
-                        // if the state is P25; write P25 frame data
-                        if (m_state == STATE_P25) {
-                            m_modem->writeP25Frame(data, len);
-
-                            INTERRUPT_DMR_BEACON;
-
-                            // if there is a NXDN CC running; halt the CC
-                            if (nxdn != nullptr) {
-                                if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                    INTERRUPT_NXDN_CONTROL;
-                                }
-                            }
-
-                            m_modeTimer.start();
-                        }
-
-                        m_lastDstId = p25->getLastDstId();
-                        m_lastSrcId = p25->getLastSrcId();
-                    }
-                    else {
-                        nextLen = 0U;
-                    }
-                }
-            }
-
-            if (nextLen == 0U) {
-                // if we have no P25 data, and we're either idle or P25 state, check if we
-                // need to be starting the CC running flag or writing end of voice call data
-                if (m_state == STATE_IDLE || m_state == STATE_P25) {
-                    if (p25->getCCHalted()) {
-                        p25->setCCHalted(false);
-                    }
-
-                    // write end of voice if necessary
-                    ret = p25->writeRF_VoiceEnd();
-                    if (ret) {
-                        if (m_state == STATE_IDLE) {
-                            m_modeTimer.setTimeout(m_netModeHang);
-                            setState(STATE_P25);
-                        }
-
-                        if (m_state == STATE_P25) {
-                            m_modeTimer.start();
-                        }
-                    }
-                }
-            }
-
-            // if the modem is in duplex -- handle P25 CC burst control
-            if (m_duplex) {
-                if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
-                    p25BcastDurationTimer.resume();
-                }
-
-                if (p25->getCCHalted()) {
-                    p25->setCCHalted(false);
-                }
-
-                if (g_fireP25Control) {
-                    m_modeTimer.stop();
-                }
-            }
-        }
-#endif // defined(ENABLE_P25)
-
-        /** Next Generation Digital Narrowband */
-#if defined(ENABLE_NXDN)
-        // check if there is space on the modem for NXDN frames,
-        // if there is read frames from the NXDN controller and write it
-        // to the modem
-        if (nxdn != nullptr) {
-            ret = m_modem->hasNXDNSpace();
-            if (ret) {
-                len = nxdn->getFrame(data);
-                if (len > 0U) {
-                    // if the state is idle; set to NXDN and start mode timer
-                    if (m_state == STATE_IDLE) {
-                        m_modeTimer.setTimeout(m_netModeHang);
-                        setState(STATE_NXDN);
-                    }
-
-                    // if the state is NXDN; write NXDN data
-                    if (m_state == STATE_NXDN) {
-                        m_modem->writeNXDNFrame(data, len);
-
-                        INTERRUPT_DMR_BEACON;
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                INTERRUPT_P25_CONTROL;
-                            }
-                        }
-
-                        m_modeTimer.start();
-                    }
-
-                    m_lastDstId = nxdn->getLastDstId();
-                    m_lastSrcId = nxdn->getLastSrcId();
-                }
-            }
-        }
-#endif // defined(ENABLE_NXDN)
-
-        // ------------------------------------------------------
         //  -- Modem Clocking                                 --
         // ------------------------------------------------------
 
@@ -1076,243 +1015,6 @@ int Host::run()
         stopWatch.start();
 
         m_modem->clock(ms);
-
-        // ------------------------------------------------------
-        //  -- Read from Modem Processing                     --
-        // ------------------------------------------------------
-
-        /** Digital Mobile Radio */
-#if defined(ENABLE_DMR)
-        if (dmr != nullptr) {
-            // read DMR slot 1 frames from the modem, and if there is any
-            // write those frames to the DMR controller
-            len = m_modem->readDMRFrame1(data);
-            if (len > 0U) {
-                if (m_state == STATE_IDLE) {
-                    // if the modem is in duplex -- process wakeup CSBKs
-                    if (m_duplex) {
-                        bool ret = dmr->processWakeup(data);
-                        if (ret) {
-                            m_modeTimer.setTimeout(m_rfModeHang);
-                            setState(STATE_DMR);
-
-                            START_DMR_DUPLEX_IDLE(true);
-
-                            INTERRUPT_DMR_BEACON;
-                            INTERRUPT_P25_CONTROL;
-                            INTERRUPT_NXDN_CONTROL;
-                        }
-                    }
-                    else {
-                        // in simplex directly process slot 1 frames
-                        m_modeTimer.setTimeout(m_rfModeHang);
-                        setState(STATE_DMR);
-                        START_DMR_DUPLEX_IDLE(true);
-
-                        dmr->processFrame(1U, data, len);
-
-                        INTERRUPT_DMR_BEACON;
-                        INTERRUPT_P25_CONTROL;
-                        INTERRUPT_NXDN_CONTROL;
-                    }
-                }
-                else if (m_state == STATE_DMR) {
-                    // if the modem is in duplex, and hasn't started transmitting
-                    // process wakeup CSBKs
-                    if (m_duplex && !m_modem->hasTX()) {
-                        bool ret = dmr->processWakeup(data);
-                        if (ret) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
-                    }
-                    else {
-                        // process slot 1 frames
-                        bool ret = dmr->processFrame(1U, data, len);
-                        if (ret) {
-                            INTERRUPT_DMR_BEACON;
-                            INTERRUPT_P25_CONTROL;
-                            INTERRUPT_NXDN_CONTROL;
-
-                            m_modeTimer.start();
-                            if (m_duplex)
-                                m_dmrTXTimer.start();
-                        }
-                    }
-                }
-                else if (m_state != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "DMR modem data received, state = %u", m_state);
-                }
-            }
-
-            // read DMR slot 2 frames from the modem, and if there is any
-            // write those frames to the DMR controller
-            len = m_modem->readDMRFrame2(data);
-            if (len > 0U) {
-                if (m_state == STATE_IDLE) {
-                    // if the modem is in duplex -- process wakeup CSBKs
-                    if (m_duplex) {
-                        bool ret = dmr->processWakeup(data);
-                        if (ret) {
-                            m_modeTimer.setTimeout(m_rfModeHang);
-                            setState(STATE_DMR);
-                            START_DMR_DUPLEX_IDLE(true);
-
-                            INTERRUPT_DMR_BEACON;
-                            INTERRUPT_P25_CONTROL;
-                            INTERRUPT_NXDN_CONTROL;
-                        }
-                    }
-                    else {
-                        // in simplex -- directly process slot 2 frames
-                        m_modeTimer.setTimeout(m_rfModeHang);
-                        setState(STATE_DMR);
-                        START_DMR_DUPLEX_IDLE(true);
-
-                        dmr->processFrame(2U, data, len);
-
-                        INTERRUPT_DMR_BEACON;
-                        INTERRUPT_P25_CONTROL;
-                        INTERRUPT_NXDN_CONTROL;
-                    }
-                }
-                else if (m_state == STATE_DMR) {
-                    // if the modem is in duplex, and hasn't started transmitting
-                    // process wakeup CSBKs
-                    if (m_duplex && !m_modem->hasTX()) {
-                        bool ret = dmr->processWakeup(data);
-                        if (ret) {
-                            m_modem->writeDMRStart(true);
-                            m_dmrTXTimer.start();
-                        }
-                    }
-                    else {
-                        // process slot 2 frames
-                        bool ret = dmr->processFrame(2U, data, len);
-                        if (ret) {
-                            INTERRUPT_DMR_BEACON;
-                            INTERRUPT_P25_CONTROL;
-                            INTERRUPT_NXDN_CONTROL;
-
-                            m_modeTimer.start();
-                            if (m_duplex)
-                                m_dmrTXTimer.start();
-                        }
-                    }
-                }
-                else if (m_state != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "DMR modem data received, state = %u", m_state);
-                }
-            }
-        }
-#endif // defined(ENABLE_DMR)
-
-        /** Project 25 */
-#if defined(ENABLE_P25)
-        // read P25 frames from modem, and if there are frames
-        // write those frames to the P25 controller
-        if (p25 != nullptr) {
-            len = m_modem->readP25Frame(data);
-            if (len > 0U) {
-                if (m_state == STATE_IDLE) {
-                    // process P25 frames
-                    bool ret = p25->processFrame(data, len);
-                    if (ret) {
-                        m_modeTimer.setTimeout(m_rfModeHang);
-                        setState(STATE_P25);
-
-                        INTERRUPT_DMR_BEACON;
-                        //INTERRUPT_P25_CONTROL;
-                        INTERRUPT_NXDN_CONTROL;
-                    }
-                    else {
-                        ret = p25->writeRF_VoiceEnd();
-                        if (ret) {
-                            INTERRUPT_DMR_BEACON;
-                            INTERRUPT_NXDN_CONTROL;
-
-                            if (m_state == STATE_IDLE) {
-                                m_modeTimer.setTimeout(m_rfModeHang);
-                                setState(STATE_P25);
-                            }
-
-                            if (m_state == STATE_P25) {
-                                m_modeTimer.start();
-                            }
-
-                            // if the modem is in duplex -- handle P25 CC burst control
-                            if (m_duplex) {
-                                if (p25BcastDurationTimer.isPaused() && !p25->getCCHalted()) {
-                                    p25BcastDurationTimer.resume();
-                                }
-
-                                if (p25->getCCHalted()) {
-                                    p25->setCCHalted(false);
-                                }
-
-                                if (g_fireP25Control) {
-                                    m_modeTimer.stop();
-                                }
-                            }
-                            else {
-                                p25BcastDurationTimer.stop();
-                            }
-                        }
-                    }
-                }
-                else if (m_state == STATE_P25) {
-                    // process P25 frames
-                    bool ret = p25->processFrame(data, len);
-                    if (ret) {
-                        m_modeTimer.start();
-                        //INTERRUPT_P25_CONTROL;
-                    }
-                    else {
-                        ret = p25->writeRF_VoiceEnd();
-                        if (ret) {
-                            m_modeTimer.start();
-                        }
-                    }
-                }
-                else if (m_state != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "P25 modem data received, state = %u", m_state);
-                }
-            }
-        }
-#endif // defined(ENABLE_P25)
-
-        /** Next Generation Digital Narrowband */
-        // read NXDN frames from modem, and if there are frames
-        // write those frames to the NXDN controller
-#if defined(ENABLE_NXDN)
-        if (nxdn != nullptr) {
-            len = m_modem->readNXDNFrame(data);
-            if (len > 0U) {
-                if (m_state == STATE_IDLE) {
-                    // process NXDN frames
-                    bool ret = nxdn->processFrame(data, len);
-                    if (ret) {
-                        m_modeTimer.setTimeout(m_rfModeHang);
-                        setState(STATE_NXDN);
-
-                        INTERRUPT_DMR_BEACON;
-                        INTERRUPT_P25_CONTROL;
-                    }
-                }
-                else if (m_state == STATE_NXDN) {
-                    // process NXDN frames
-                    bool ret = nxdn->processFrame(data, len);
-                    if (ret) {
-                        m_modeTimer.start();
-                        //INTERRUPT_NXDN_CONTROL;
-                    }
-                }
-                else if (m_state != HOST_STATE_LOCKOUT) {
-                    LogWarning(LOG_HOST, "NXDN modem data received, state = %u", m_state);
-                }
-            }
-        }
-#endif // defined(ENABLE_NXDN)
 
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
@@ -1342,11 +1044,11 @@ int Host::run()
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
             if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel) {
-                if (dmrBeaconDurationTimer.isRunning() || p25BcastDurationTimer.isRunning()) {
+                if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning()) {
                     LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
 
-                    dmrBeaconDurationTimer.stop();
-                    p25BcastDurationTimer.stop();
+                    m_dmrBeaconDurationTimer.stop();
+                    m_p25BcastDurationTimer.stop();
                 }
 
                 LogDebug(LOG_HOST, "CW, start transmitting");
@@ -1424,14 +1126,14 @@ int Host::run()
                         LogDebug(LOG_HOST, "DMR, roaming beacon burst");
                     }
                     dmrBeaconIntervalTimer.start();
-                    dmrBeaconDurationTimer.start();
+                    m_dmrBeaconDurationTimer.start();
                 }
             }
 
             // clock and check DMR roaming beacon duration timer
-            dmrBeaconDurationTimer.clock(ms);
-            if (dmrBeaconDurationTimer.isRunning() && dmrBeaconDurationTimer.hasExpired()) {
-                dmrBeaconDurationTimer.stop();
+            m_dmrBeaconDurationTimer.clock(ms);
+            if (m_dmrBeaconDurationTimer.isRunning() && m_dmrBeaconDurationTimer.hasExpired()) {
+                m_dmrBeaconDurationTimer.stop();
 
                 if (!m_fixedMode) {
                     if (m_state == STATE_DMR && !m_modeTimer.isRunning()) {
@@ -1481,23 +1183,23 @@ int Host::run()
 
                             g_fireP25Control = false;
                             p25BcastIntervalTimer.start();
-                            p25BcastDurationTimer.start();
+                            m_p25BcastDurationTimer.start();
 
                             // if the CC is continuous -- clock one cycle into the duration timer
                             if (m_p25CtrlChannel) {
-                                p25BcastDurationTimer.clock(ms);
+                                m_p25BcastDurationTimer.clock(ms);
                             }
                         }
                     }
 
-                    if (p25BcastDurationTimer.isPaused()) {
-                        p25BcastDurationTimer.resume();
+                    if (m_p25BcastDurationTimer.isPaused()) {
+                        m_p25BcastDurationTimer.resume();
                     }
 
                     // clock and check P25 CC broadcast duration timer
-                    p25BcastDurationTimer.clock(ms);
-                    if (p25BcastDurationTimer.isRunning() && p25BcastDurationTimer.hasExpired()) {
-                        p25BcastDurationTimer.stop();
+                    m_p25BcastDurationTimer.clock(ms);
+                    if (m_p25BcastDurationTimer.isRunning() && m_p25BcastDurationTimer.hasExpired()) {
+                        m_p25BcastDurationTimer.stop();
 
                         p25->setCCRunning(false);
 
@@ -1548,23 +1250,23 @@ int Host::run()
 
                             g_fireNXDNControl = false;
                             nxdnBcastIntervalTimer.start();
-                            nxdnBcastDurationTimer.start();
+                            m_nxdnBcastDurationTimer.start();
 
                             // if the CC is continuous -- clock one cycle into the duration timer
                             if (m_nxdnCtrlChannel) {
-                                nxdnBcastDurationTimer.clock(ms);
+                                m_nxdnBcastDurationTimer.clock(ms);
                             }
                         }
                     }
 
-                    if (nxdnBcastDurationTimer.isPaused()) {
-                        nxdnBcastDurationTimer.resume();
+                    if (m_nxdnBcastDurationTimer.isPaused()) {
+                        m_nxdnBcastDurationTimer.resume();
                     }
 
                     // clock and check NXDN CC broadcast duration timer
-                    nxdnBcastDurationTimer.clock(ms);
-                    if (nxdnBcastDurationTimer.isRunning() && nxdnBcastDurationTimer.hasExpired()) {
-                        nxdnBcastDurationTimer.stop();
+                    m_nxdnBcastDurationTimer.clock(ms);
+                    if (m_nxdnBcastDurationTimer.isRunning() && m_nxdnBcastDurationTimer.hasExpired()) {
+                        m_nxdnBcastDurationTimer.stop();
 
                         nxdn->setCCRunning(false);
 
@@ -1589,6 +1291,11 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
 
         if (g_killed) {
+            // shutdown reader threads
+            dmrProcessThread.wait();
+            p25ProcessThread.wait();
+            nxdnProcessThread.wait();
+
 #if defined(ENABLE_DMR)
             if (dmr != nullptr) {
                 if (m_dmrCtrlChannel) {
@@ -1600,7 +1307,7 @@ int Host::run()
                     dmr->setCCRunning(false);
                     dmr->setCCHalted(true);
 
-                    dmrBeaconDurationTimer.stop();
+                    m_dmrBeaconDurationTimer.stop();
                     dmrBeaconIntervalTimer.stop();
                 }
             }
@@ -1616,7 +1323,7 @@ int Host::run()
 
                     p25->setCCRunning(false);
 
-                    p25BcastDurationTimer.stop();
+                    m_p25BcastDurationTimer.stop();
                     p25BcastIntervalTimer.stop();
                 }
             }
@@ -1632,7 +1339,7 @@ int Host::run()
 
                     nxdn->setCCRunning(false);
 
-                    nxdnBcastDurationTimer.stop();
+                    m_nxdnBcastDurationTimer.stop();
                     nxdnBcastIntervalTimer.stop();
                 }
             }

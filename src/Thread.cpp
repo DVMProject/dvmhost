@@ -12,6 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -39,7 +40,8 @@
 /// Initializes a new instance of the Thread class.
 /// </summary>
 Thread::Thread() :
-    m_thread()
+    m_thread(),
+    m_started(false)
 {
     /* stub */
 }
@@ -58,6 +60,10 @@ Thread::~Thread()
 /// <returns>True, if thread started, otherwise false.</returns>
 bool Thread::run()
 {
+    if (m_started)
+        return m_started;
+
+    m_started = true;
     return ::pthread_create(&m_thread, NULL, helper, this) == 0;
 }
 
@@ -90,7 +96,6 @@ void Thread::sleep(uint32_t ms)
 void* Thread::helper(void* arg)
 {
     Thread* p = (Thread*)arg;
-
     p->entry();
 
     return nullptr;
