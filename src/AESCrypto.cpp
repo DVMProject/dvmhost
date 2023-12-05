@@ -469,10 +469,9 @@ uint8_t *AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <param name="state"></param>
 void AES::subBytes(uint8_t state[4][AES_NB]) 
 {
-    uint8_t t;
     for (uint32_t i = 0; i < 4; i++) {
         for (uint32_t j = 0; j < AES_NB; j++) {
-            t = state[i][j];
+            uint8_t t = state[i][j];
             state[i][j] = SBOX[t / 16][t % 16];
         }
     }
@@ -484,10 +483,9 @@ void AES::subBytes(uint8_t state[4][AES_NB])
 /// <param name="state"></param>
 void AES::invSubBytes(uint8_t state[4][AES_NB]) 
 {
-    uint8_t t;
     for (uint32_t i = 0; i < 4; i++) {
         for (uint32_t j = 0; j < AES_NB; j++) {
-            t = state[i][j];
+            uint8_t t = state[i][j];
             state[i][j] = INV_SBOX[t / 16][t % 16];
         }
     }
