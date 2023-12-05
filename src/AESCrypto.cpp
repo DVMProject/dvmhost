@@ -375,7 +375,7 @@ uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <param name="key"></param>
 /// <param name="iv"></param>
 /// <returns></returns>
-uint8_t *AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
+uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % m_blockBytesLen != 0) {
         throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
@@ -405,7 +405,7 @@ uint8_t *AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <param name="key"></param>
 /// <param name="iv"></param>
 /// <returns></returns>
-uint8_t *AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
+uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % m_blockBytesLen != 0) {
         throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
@@ -436,7 +436,7 @@ uint8_t *AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <param name="key"></param>
 /// <param name="iv"></param>
 /// <returns></returns>
-uint8_t *AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
+uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
     if (inLen % m_blockBytesLen != 0) {
         throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
