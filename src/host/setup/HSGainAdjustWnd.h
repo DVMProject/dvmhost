@@ -100,20 +100,36 @@ private:
                     m_setup->writeRFParams();
                 }
             });
+            
+            if (m_setup->m_modem->m_adfGainMode == ADF_GAIN_AUTO_LIN) {
+                m_gainAHL.setChecked();
+            }
+
             m_gainLow.setPos(FPoint(1, 2));
             m_gainLow.addCallback("toggled", [&]() {
-                if (m_gainAuto.isChecked()) {
+                if (m_gainLow.isChecked()) {
                     m_setup->m_modem->m_adfGainMode = ADF_GAIN_LOW;
                     m_setup->writeRFParams();
                 }
             });
+            
+            if (m_setup->m_modem->m_adfGainMode == ADF_GAIN_LOW) {
+                m_gainLow.setChecked();
+            }
+
             m_gainHigh.setPos(FPoint(1, 3));
             m_gainHigh.addCallback("toggled", [&]() {
-                if (m_gainAuto.isChecked()) {
+                if (m_gainHigh.isChecked()) {
                     m_setup->m_modem->m_adfGainMode = ADF_GAIN_HIGH;
                     m_setup->writeRFParams();
                 }
             });
+
+            
+            if (m_setup->m_modem->m_adfGainMode == ADF_GAIN_HIGH) {
+                m_gainHigh.setChecked();
+            }
+
             m_gainAuto.setPos(FPoint(1, 4));
             m_gainAuto.addCallback("toggled", [&]() {
                 if (m_gainAuto.isChecked()) {
@@ -121,6 +137,11 @@ private:
                     m_setup->writeRFParams();
                 }
             });
+
+            
+            if (m_setup->m_modem->m_adfGainMode == ADF_GAIN_AUTO) {
+                m_gainAuto.setChecked();
+            }
         }
 
         // afc
