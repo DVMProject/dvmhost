@@ -1028,12 +1028,12 @@ void Slot::processFrameLoss()
             if (m_tscc->m_enableTSCC && m_rfLC != nullptr) {
                 m_tscc->m_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
-        }
+            
+            clearTSCCActivated();
 
-        clearTSCCActivated();
-
-        if (!m_tscc->m_enableTSCC) {
-            notifyCC_ReleaseGrant(m_rfLC->getDstId());
+            if (!m_tscc->m_enableTSCC) {
+                notifyCC_ReleaseGrant(m_rfLC->getDstId());
+            }
         }
 
         if (m_rfTimeout) {
