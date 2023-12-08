@@ -333,12 +333,12 @@ uint32_t Slot::getFrame(uint8_t* data)
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
-        m_txImmQueue.getData(&len, 1U);
-        m_txImmQueue.getData(data, len);
+        m_txImmQueue.get(&len, 1U);
+        m_txImmQueue.get(data, len);
     }
     else {
-        m_txQueue.getData(&len, 1U);
-        m_txQueue.getData(data, len);
+        m_txQueue.get(&len, 1U);
+        m_txQueue.get(data, len);
     }
 
     return len;

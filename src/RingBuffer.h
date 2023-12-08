@@ -99,7 +99,7 @@ public:
     /// <param name="buffer">Buffer to write data to be retrieved.</param>
     /// <param name="length">Length of data to retrieve.</param>
     /// <returns>True, if data is read from ring buffer, otherwise false.</returns>
-    bool getData(T* buffer, uint32_t length)
+    bool get(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
             LogError(LOG_HOST, "**** Underflow in %s ring buffer, %u < %u", m_name, dataSize(), length);

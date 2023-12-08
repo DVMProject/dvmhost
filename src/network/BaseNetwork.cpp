@@ -276,7 +276,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
     }
 
     uint8_t length = 0U;
-    m_rxDMRData.getData(&length, 1U);
+    m_rxDMRData.get(&length, 1U);
     if (length == 0U) {
         ret = false;
         return nullptr;
@@ -286,7 +286,7 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
     frameLength = length;
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
     ::memset(buffer.get(), 0x00U, length);
-    m_rxDMRData.getData(buffer.get(), length);
+    m_rxDMRData.get(buffer.get(), length);
 
     return buffer;
 }
@@ -363,7 +363,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
     }
 
     uint8_t length = 0U;
-    m_rxP25Data.getData(&length, 1U);
+    m_rxP25Data.get(&length, 1U);
     if (length == 0U) {
         ret = false;
         return nullptr;
@@ -373,7 +373,7 @@ UInt8Array BaseNetwork::readP25(bool& ret, uint32_t& frameLength)
     frameLength = length;
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
     ::memset(buffer.get(), 0x00U, length);
-    m_rxP25Data.getData(buffer.get(), length);
+    m_rxP25Data.get(buffer.get(), length);
 
     return buffer;
 }
@@ -545,7 +545,7 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
     }
 
     uint8_t length = 0U;
-    m_rxNXDNData.getData(&length, 1U);
+    m_rxNXDNData.get(&length, 1U);
     if (length == 0U) {
         ret = false;
         return nullptr;
@@ -555,7 +555,7 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
     frameLength = length;
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
     ::memset(buffer.get(), 0x00U, length);
-    m_rxNXDNData.getData(buffer.get(), length);
+    m_rxNXDNData.get(buffer.get(), length);
 
     return buffer;
 }

@@ -134,7 +134,7 @@ int UDPPort::read(uint8_t* buffer, uint32_t length)
         length = avail;
 
     if (length > 0U)
-        m_buffer.getData(buffer, length);
+        m_buffer.get(buffer, length);
 
     return int(length);
 }

@@ -1010,10 +1010,15 @@ uint32_t Modem::readDMRFrame1(uint8_t* data)
         return 0U;
 
     uint8_t len = 0U;
-    m_rxDMRQueue1.getData(&len, 1U);
-    m_rxDMRQueue1.getData(data, len);
+    m_rxDMRQueue1.peek(&len, 1U);
+    if (m_rxDMRQueue1.dataSize() >= len) {
+        m_rxDMRQueue1.get(&len, 1U); // ensure we pop the length off
+        m_rxDMRQueue1.get(data, len);
+    
+        return len;
+    }
 
-    return len;
+    return 0U;
 }
 
 /// <summary>
@@ -1029,10 +1034,15 @@ uint32_t Modem::readDMRFrame2(uint8_t* data)
         return 0U;
 
     uint8_t len = 0U;
-    m_rxDMRQueue2.getData(&len, 1U);
-    m_rxDMRQueue2.getData(data, len);
+    m_rxDMRQueue2.peek(&len, 1U);
+    if (m_rxDMRQueue2.dataSize() >= len) {
+        m_rxDMRQueue2.get(&len, 1U); // ensure we pop the length off
+        m_rxDMRQueue2.get(data, len);
 
-    return len;
+        return len;
+    }
+
+    return 0U;
 }
 
 /// <summary>
@@ -1048,10 +1058,15 @@ uint32_t Modem::readP25Frame(uint8_t* data)
         return 0U;
 
     uint8_t len = 0U;
-    m_rxP25Queue.getData(&len, 1U);
-    m_rxP25Queue.getData(data, len);
+    m_rxP25Queue.peek(&len, 1U);
+    if (m_rxP25Queue.dataSize() >= len) {
+        m_rxP25Queue.get(&len, 1U); // ensure we pop the length off
+        m_rxP25Queue.get(data, len);
+        
+        return len;
+    }
 
-    return len;
+    return 0U;
 }
 
 /// <summary>
@@ -1067,10 +1082,15 @@ uint32_t Modem::readNXDNFrame(uint8_t* data)
         return 0U;
 
     uint8_t len = 0U;
-    m_rxNXDNQueue.getData(&len, 1U);
-    m_rxNXDNQueue.getData(data, len);
+    m_rxNXDNQueue.peek(&len, 1U);
+    if (m_rxNXDNQueue.dataSize() >= len) {
+        m_rxNXDNQueue.get(&len, 1U); // ensure we pop the length off
+        m_rxNXDNQueue.get(data, len);
 
-    return len;
+        return len;
+    }
+
+    return 0U;
 }
 
 /// <summary>

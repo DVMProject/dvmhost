@@ -340,8 +340,8 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
                     uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES + 2U];
 
                     dataLen = 0U;
-                    m_queue.getData(&dataLen, 1U);
-                    m_queue.getData(data, dataLen);
+                    m_queue.get(&dataLen, 1U);
+                    m_queue.get(data, dataLen);
 
                     uint8_t buffer[250U];
 
