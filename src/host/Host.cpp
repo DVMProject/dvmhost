@@ -1071,7 +1071,7 @@ int Host::run()
         // clock and check CW timer
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
-            if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel) {
+            if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel && !m_nxdnCtrlChannel) {
                 if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning()) {
                     LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
 
