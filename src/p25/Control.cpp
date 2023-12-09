@@ -102,7 +102,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_duplex(duplex),
     m_enableControl(false),
     m_dedicatedControl(false),
-    m_voiceOnControl(false),
     m_ackTSBKRequests(true),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
@@ -304,13 +303,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         m_dedicatedControl = false;
     }
 
-    m_voiceOnControl = p25Protocol["voiceOnControl"].as<bool>(false);
-
-    // if control channel is off for voice on control off
-    if (!m_enableControl) {
-        m_voiceOnControl = false;
-    }
-
     m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
 
     // if we're a dedicated control channel don't set the control only flag
@@ -333,11 +325,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
-
-    // voice on control forcibly disables CC notification
-    if (m_voiceOnControl) {
-        m_notifyCC = false;
-    }
 
     /*
     ** Voice Silence and Frame Loss Thresholds
@@ -381,16 +368,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     /*
     ** CC Service Class
     */
-    bool disableCompositeFlag = p25Protocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = P25_SVC_CLS_VOICE | P25_SVC_CLS_DATA;
     if (m_enableControl) {
         serviceClass |= P25_SVC_CLS_REG;
-    }
-
-    if (m_voiceOnControl) {
-        if (!disableCompositeFlag) {
-            serviceClass |= P25_SVC_CLS_COMPOSITE;
-        }
     }
 
     /*
@@ -456,7 +436,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
         if (m_enableControl) {
-            LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
             LogInfo("    Ack Requests: %s", m_ackTSBKRequests ? "yes" : "no");
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
@@ -654,11 +633,6 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
             if (!m_dedicatedControl || m_control->m_convFallback)
                 ret = m_voice->process(data, len);
-            else {
-                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
-                    ret = m_voice->process(data, len);
-                }
-            }
             break;
 
         case P25_DUID_TDU:
@@ -994,9 +968,13 @@ void Control::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, TG grant released, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, TG grant released, chId = %u, chNo = %u, dstId = %u, address = %s:%u", voiceCh.chId(), chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
+
         m_affiliations.releaseGrant(dstId, false);
     }
 }
@@ -1012,8 +990,11 @@ void Control::touchGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, call in progress, touch TG grant, dstId = %u", dstId);
+            LogMessage(LOG_P25, "REST request, call in progress, touch TG grant, chId = %u, chNo = %u, dstId = %u, address = %s:%u", voiceCh.chId(), chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
 
         m_affiliations.touchGrant(dstId);
@@ -1211,11 +1192,6 @@ void Control::processNetwork()
 
         if (!m_dedicatedControl)
             ret = m_data->processNetwork(data.get(), frameLength, blockLength);
-        else {
-            if (m_voiceOnControl) {
-                ret = m_data->processNetwork(data.get(), frameLength, blockLength);
-            }
-        }
 
         return;
     }

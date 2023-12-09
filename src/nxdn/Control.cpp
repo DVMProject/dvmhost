@@ -104,7 +104,6 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_duplex(duplex),
     m_enableControl(false),
     m_dedicatedControl(false),
-    m_voiceOnControl(false),
     m_rfLastLICH(),
     m_rfLC(),
     m_netLC(),
@@ -246,8 +245,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         m_dedicatedControl = false;
     }
 
-    m_voiceOnControl = nxdnProtocol["voiceOnControl"].as<bool>(false);
-
     m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
 
     yaml::Node rfssConfig = systemConf["config"];
@@ -280,16 +277,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     /*
     ** CC Service Class
     */
-    bool disableCompositeFlag = nxdnProtocol["disableCompositeFlag"].as<bool>(false);
     uint8_t serviceClass = NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC;
     if (m_enableControl) {
         serviceClass |= NXDN_SIF1_GRP_REG_SVC;
-    }
-
-    if (m_voiceOnControl) {
-        if (!disableCompositeFlag) {
-            serviceClass |= NXDN_SIF1_COMPOSITE_CONTROL;
-        }
     }
 
     /*
@@ -350,7 +340,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
 
         if (m_enableControl) {
-            LogInfo("    Voice on Control: %s", m_voiceOnControl ? "yes" : "no");
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
@@ -505,24 +494,12 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     else if (rfct == NXDN_LICH_RFCT_RTCH || rfct == NXDN_LICH_RFCT_RDCH) {
         switch (fct) {
             case NXDN_LICH_USC_UDCH:
-                if (!m_dedicatedControl) {
+                if (!m_dedicatedControl)
                     ret = m_data->process(option, data, len);
-                }
-                else {
-                    if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
-                        ret = m_data->process(option, data, len);
-                    }
-                }
                 break;
             default:
-                if (!m_dedicatedControl) {
+                if (!m_dedicatedControl)
                     ret = m_voice->process(fct, option, data, len);
-                }
-                else {
-                    if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo())) {
-                        ret = m_voice->process(fct, option, data, len);
-                    }
-                }
                 break;
         }
     }
@@ -769,8 +746,11 @@ void Control::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_NXDN, "REST request, TG grant released, dstId = %u", dstId);
+            LogMessage(LOG_NXDN, "REST request, TG grant released, chNo = %u, dstId = %u, address = %s:%u", chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
     
         m_affiliations.releaseGrant(dstId, false);
@@ -788,8 +768,11 @@ void Control::touchGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations.isGranted(dstId)) {
+        uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_NXDN, "REST request, touch TG grant, dstId = %u", dstId);
+            LogMessage(LOG_NXDN, "REST request, touch TG grant, chNo = %u, dstId = %u, address = %s:%u", chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
 
         m_affiliations.touchGrant(dstId);
@@ -1026,7 +1009,7 @@ void Control::processFrameLoss()
             m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
-        if (!m_enableControl) {
+        if (m_notifyCC) {
             notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 

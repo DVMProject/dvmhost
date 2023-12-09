@@ -156,7 +156,6 @@ namespace nxdn
         bool m_duplex;
         bool m_enableControl;
         bool m_dedicatedControl;
-        bool m_voiceOnControl;
 
         channel::LICH m_rfLastLICH;
         lc::RTCH m_rfLC;

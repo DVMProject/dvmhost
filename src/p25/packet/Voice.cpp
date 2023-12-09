@@ -300,7 +300,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_p25->m_enableControl) {
-                if (!m_p25->m_ccRunning && m_p25->m_voiceOnControl) {
+                if (!m_p25->m_ccRunning && !m_p25->m_dedicatedControl) {
                     m_p25->m_control->writeRF_ControlData(255U, 0U, false);
                 }
             }
@@ -421,8 +421,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
             }
 
-            // single-channel trunking or voice on control support?
-            if (m_p25->m_enableControl && m_p25->m_voiceOnControl) {
+            // conventional registration or DVRS support?
+            if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
                 m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true, true);
             }
 
@@ -578,8 +578,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
-            // single-channel trunking or voice on control support?
-            if (m_p25->m_enableControl && m_p25->m_voiceOnControl) {
+            // conventional registration or DVRS support?
+            if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
                 // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
                 m_vocLDU1Count++;
                 if (m_vocLDU1Count > VOC_LDU1_COUNT) {
@@ -764,6 +764,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
     else if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC) {
         if (!m_p25->m_enableControl) {
             m_p25->m_affiliations.releaseGrant(m_rfLC.getDstId(), false);
+        }
+
+        if (m_p25->m_notifyCC) {
             m_p25->notifyCC_ReleaseGrant(m_rfLC.getDstId());
         }
 
@@ -957,7 +960,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
-                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                if (m_p25->m_dedicatedControl) {
                     return true;
                 }
 
@@ -1026,14 +1029,12 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
-                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+                if (m_p25->m_dedicatedControl) {
                     return true;
                 }
 
                 if (m_p25->m_netState == RS_NET_IDLE) {
-                    if (!m_p25->m_voiceOnControl) {
-                        m_p25->m_modem->clearP25Frame();
-                    }
+                    m_p25->m_modem->clearP25Frame();
                     m_p25->m_txQueue.clear();
 
                     resetRF();
@@ -1066,6 +1067,9 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
             if (!m_p25->m_enableControl) {
                 m_p25->m_affiliations.releaseGrant(m_netLC.getDstId(), false);
+            }
+
+            if (m_p25->m_notifyCC) {
                 m_p25->notifyCC_ReleaseGrant(m_netLC.getDstId());
             }
 
@@ -1385,8 +1389,8 @@ void Voice::writeNet_LDU1()
 
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
-        // single-channel trunking or voice on control support?
-        if (m_p25->m_enableControl && m_p25->m_voiceOnControl && !m_p25->m_disableNetworkGrant) {
+        // conventional registration or DVRS support?
+        if (m_p25->m_enableControl && !m_p25->m_dedicatedControl && !m_p25->m_disableNetworkGrant) {
             uint8_t serviceOptions = (m_netLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
@@ -1512,8 +1516,8 @@ void Voice::writeNet_LDU1()
         sysId = lc::LC::getSiteData().sysId();
     }
 
-    // single-channel trunking or voice on control support?
-    if (m_p25->m_enableControl && m_p25->m_voiceOnControl) {
+    // conventional registration or DVRS support?
+    if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
         // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
         m_vocLDU1Count++;
         if (m_vocLDU1Count > VOC_LDU1_COUNT) {

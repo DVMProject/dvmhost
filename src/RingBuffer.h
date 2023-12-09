@@ -76,7 +76,7 @@ public:
     bool addData(const T* buffer, uint32_t length)
     {
         if (length >= freeSpace()) {
-            LogError(LOG_HOST, "[%s] buffer overflow, clearing the buffer. (%u >= %u)", m_name, length, freeSpace());
+            LogError(LOG_HOST, "**** Overflow in %s ring buffer, %u >= %u, clearing the buffer", m_name, length, freeSpace());
             clear();
             return false;
         }
@@ -102,7 +102,7 @@ public:
     bool get(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
-            LogError(LOG_HOST, "**** Underflow in %s ring buffer, %u < %u", m_name, dataSize(), length);
+            LogError(LOG_HOST, "**** Underflow get in %s ring buffer, %u < %u", m_name, dataSize(), length);
             return false;
         }
 #if DEBUG_RINGBUFFER

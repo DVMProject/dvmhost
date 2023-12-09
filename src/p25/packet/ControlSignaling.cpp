@@ -1002,7 +1002,7 @@ void ControlSignaling::writeAdjSSNetwork()
 
     if (m_p25->m_network != nullptr) {
         uint8_t cfva = P25_CFVA_VALID;
-        if (m_p25->m_enableControl && m_p25->m_voiceOnControl) {
+        if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
             cfva |= P25_CFVA_CONV;
         }
 
@@ -1750,7 +1750,7 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     }
 
     uint32_t count = m_p25->m_hangCount / 2;
-    if (m_p25->m_voiceOnControl) {
+    if (!m_p25->m_dedicatedControl) {
         count = count / 2;
     }
     std::unique_ptr<lc::TDULC> lc = nullptr;
@@ -2356,10 +2356,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             // transmit group grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
             if (m_redundantGrant) {
-                if (m_p25->m_dedicatedControl && m_p25->m_voiceOnControl) {
-                    for (int i = 0; i < 3; i++)
-                        writeRF_TSDU_SBF(iosp.get(), net);
-                }
+                for (int i = 0; i < 3; i++)
+                    writeRF_TSDU_SBF(iosp.get(), net);
             }
         }
         else {
@@ -2412,10 +2410,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             // transmit private grant
             writeRF_TSDU_SBF_Imm(iosp.get(), net);
             if (m_redundantGrant) {
-                if (m_p25->m_dedicatedControl && m_p25->m_voiceOnControl) {
-                    for (int i = 0; i < 3; i++)
-                        writeRF_TSDU_SBF(iosp.get(), net);
-                }
+                for (int i = 0; i < 3; i++)
+                    writeRF_TSDU_SBF(iosp.get(), net);
             }
         }
     }

@@ -281,7 +281,7 @@ bool ControlSignaling::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& net
         switch (rcch->getMessageType()) {
             case RTCH_MESSAGE_TYPE_VCALL:
             {
-                if (m_nxdn->m_dedicatedControl && !m_nxdn->m_voiceOnControl) {
+                if (m_nxdn->m_dedicatedControl) {
                     if (!m_nxdn->m_affiliations.isGranted(dstId)) {
                         if (m_verbose) {
                             LogMessage(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",

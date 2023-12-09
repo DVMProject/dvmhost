@@ -155,9 +155,9 @@ protocols:
         # P25 Control Channel Configuration
         #
         control:
-            # Flag indicating whether or not CC is enabled.
+            # Flag indicating whether or not TSBK data support is enabled.
             enable: false
-            # Flag indicating whether or not the CC will optionally acknowledge incoming requests.
+            # Flag indicating whether or not TSBK requets will optionally acknowledge incoming requests.
             ackRequests: true
             # Flag indicating whether or not this CC is a dedicated CC.
             dedicated: false
@@ -176,17 +176,11 @@ protocols:
             # Flag indicating immediate TSDUs will be sent twice.
             redundantImmediate: true
             # Flag indicating whether redundant grant responses should be transmitted.
-            #   (This is useful for single-channel VOC (voice on control) configurations.)
             redundantGrantTransmit: false
 
-        # Flag indicating whether or not VOC (voice on control) support is enabled.
-        voiceOnControl: false
         # Flag indicating whether or not to ignore voice frames on a control channel
-        #   This comes in handy if you're running non-dedicated with an FNE so the CC doesn't repeat voice traffic
+        #   This comes in handy if you're running non-dedicated with an FNE so the CC doesn't repeat voice traffic.
         controlOnly: false
-        # Flag indicating whether or not the composite flag in the CC service options is set.
-        #   (This is useful to disable for some radios when running in VOC mode.)
-        disableCompositeFlag: false
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
         # Flag indicating whether or not network calls will generate a channel grant.
@@ -261,10 +255,6 @@ protocols:
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
 
-        # Flag indicating whether or not VOC (voice on control) support is enabled.
-        voiceOnControl: false
-        # Flag indicating whether or not the composite flag in the CC service options is set.
-        disableCompositeFlag: false
         # Flag indicating the host should verify group affiliation.
         verifyAff: false
         # Flag indicating the host should verify unit registration.

@@ -678,8 +678,11 @@ void Slot::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, REST request, TG grant released, dstId = %u", m_slotNo, dstId);
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, TG grant released, chNo = %u, dstId = %u, address = %s:%u", m_slotNo, chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
     
         m_affiliations->releaseGrant(dstId, false);
@@ -697,8 +700,11 @@ void Slot::touchGrantTG(uint32_t dstId)
     }
 
     if (m_affiliations->isGranted(dstId)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
+
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, REST request, touch TG grant, dstId = %u", m_slotNo, dstId);
+            LogMessage(LOG_DMR, "DMR Slot %u, REST request, touch TG grant, chNo = %u, dstId = %u, address = %s:%u", m_slotNo, chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
         }
 
         m_affiliations->touchGrant(dstId);
