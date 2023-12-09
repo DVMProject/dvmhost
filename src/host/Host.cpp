@@ -1072,11 +1072,13 @@ int Host::run()
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
             if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel && !m_nxdnCtrlChannel) {
-                if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning()) {
+                if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning() ||
+                    m_nxdnBcastDurationTimer.isRunning()) {
                     LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
 
                     m_dmrBeaconDurationTimer.stop();
                     m_p25BcastDurationTimer.stop();
+                    m_nxdnBcastDurationTimer.stop();
                 }
 
                 LogDebug(LOG_HOST, "CW, start transmitting");
