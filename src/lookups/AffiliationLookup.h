@@ -146,7 +146,7 @@ namespace lookups
         /// <summary>Gets the grant table.</summary>
         std::unordered_map<uint32_t, uint32_t> grantTable() const { return m_grantChTable; }
         /// <summary>Helper to grant a channel.</summary>
-        virtual bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted);
+        virtual bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted);
         /// <summary>Helper to start the destination ID grant timer.</summary>
         virtual void touchGrant(uint32_t dstId);
         /// <summary>Helper to release the channel grant for the destination ID.</summary>
@@ -155,6 +155,8 @@ namespace lookups
         virtual bool isChBusy(uint32_t chNo) const;
         /// <summary>Helper to determine if the destination ID is already granted.</summary>
         virtual bool isGranted(uint32_t dstId) const;
+        /// <summary>Helper to determine if the destination ID granted is a group or not.</summary>
+        virtual bool isGroup(uint32_t dstId) const;
         /// <summary>Helper to determine if the destination ID is granted by network traffic.</summary>
         virtual bool isNetGranted(uint32_t dstId) const;
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
@@ -194,6 +196,7 @@ namespace lookups
 
         std::unordered_map<uint32_t, uint32_t> m_grantChTable;
         std::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
+        std::unordered_map<uint32_t, bool> m_uuGrantedTable;
         std::unordered_map<uint32_t, bool> m_netGrantedTable;
         std::unordered_map<uint32_t, Timer> m_grantTimers;
 

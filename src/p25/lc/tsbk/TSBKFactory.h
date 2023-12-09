@@ -80,6 +80,7 @@
 #include "p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "p25/lc/tsbk/OSP_U_DEREG_ACK.h"
 #include "p25/lc/tsbk/OSP_U_REG_CMD.h"
+#include "p25/lc/tsbk/OSP_UU_VCH_GRANT_UPD.h"
 
 #include "p25/lc/AMBT.h"
 #include "p25/lc/tsbk/MBT_IOSP_ACK_RSP.h"

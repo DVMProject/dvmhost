@@ -215,7 +215,7 @@ protocols:
         # Flag indicating whether or not the host will acknowledge message packets.
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
-        unitToUnitAvailCheck: true
+        unitToUnitAvailCheck: false
         # Flag indicating explicit source ID support is enabled.
         allowExplicitSourceId: true
         # Flag indicating whether or not the host will respond to SNDCP data grant requests.

@@ -75,8 +75,8 @@ public:
     /// <returns>True, if data is added to ring buffer, otherwise false.</returns>
     bool addData(const T* buffer, uint32_t length)
     {
-        if (length >= freeSpace()) {
-            LogError(LOG_HOST, "**** Overflow in %s ring buffer, %u >= %u, clearing the buffer", m_name, length, freeSpace());
+        if (length > freeSpace()) {
+            LogError(LOG_HOST, "**** Overflow in %s ring buffer, %u > %u, clearing the buffer", m_name, length, freeSpace());
             clear();
             return false;
         }

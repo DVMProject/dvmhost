@@ -63,9 +63,10 @@ DMRAffiliationLookup::~DMRAffiliationLookup()
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="grp"></param>
 /// <param name="netGranted"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted)
+bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     uint32_t chNo = m_rfChTable.at(0);
     uint8_t slot = getAvailableSlotForChannel(chNo);
@@ -74,7 +75,7 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
         return false;
     }
 
-    return grantChSlot(dstId, srcId, slot, grantTimeout, netGranted);
+    return grantChSlot(dstId, srcId, slot, grantTimeout, grp, netGranted);
 }
 
 /// <summary>
@@ -84,9 +85,10 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
 /// <param name="srcId"></param>
 /// <param name="slot"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="grp"></param>
 /// <param name="netGranted"></param>
 /// <returns></returns>
-bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool netGranted)
+bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     if (dstId == 0U) {
         return false;
@@ -111,14 +113,15 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
     m_grantChSlotTable[dstId] = std::make_tuple(chNo, slot);
     m_rfGrantChCnt++;
 
+    m_uuGrantedTable[dstId] = !grp;
     m_netGrantedTable[dstId] = netGranted;
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u",
-            m_name, chNo, slot, dstId);
+        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u, group = %u",
+            m_name, chNo, slot, dstId, grp);
     }
 
     return true;

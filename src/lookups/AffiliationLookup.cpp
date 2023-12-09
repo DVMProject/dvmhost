@@ -50,6 +50,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
     m_grpAffTable(),
     m_grantChTable(),
     m_grantSrcIdTable(),
+    m_uuGrantedTable(),
     m_netGrantedTable(),
     m_grantTimers(),
     m_releaseGrant(nullptr),
@@ -246,9 +247,10 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
 /// <param name="grantTimeout"></param>
+/// <param name="grp"></param>
 /// <param name="netGranted"></param>
 /// <returns></returns>
-bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool netGranted)
+bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
     if (dstId == 0U) {
         return false;
@@ -266,14 +268,15 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
     m_grantSrcIdTable[dstId] = srcId;
     m_rfGrantChCnt++;
 
+    m_uuGrantedTable[dstId] = !grp;
     m_netGrantedTable[dstId] = netGranted;
 
     m_grantTimers[dstId] = Timer(1000U, grantTimeout);
     m_grantTimers[dstId].start();
 
     if (m_verbose) {
-        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u",
-            m_name, chNo, dstId, srcId);
+        LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u, group = %u",
+            m_name, chNo, dstId, srcId, grp);
     }
 
     return true;
@@ -338,6 +341,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
         m_grantChTable.erase(dstId);
         m_grantSrcIdTable.erase(dstId);
+        m_uuGrantedTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
         m_rfChTable.push_back(chNo);
 
@@ -398,6 +402,26 @@ bool AffiliationLookup::isGranted(uint32_t dstId) const
         }
     } catch (...) {
         return false;
+    }
+}
+
+/// <summary>
+/// Helper to determine if the destination ID is network granted.
+/// </summary>
+/// <param name="dstId"></param>
+/// <returns></returns>
+bool AffiliationLookup::isGroup(uint32_t dstId) const
+{
+    if (dstId == 0U) {
+        return true;
+    }
+
+    // lookup dynamic channel grant table entry
+    try {
+        bool uu = m_uuGrantedTable.at(dstId);
+        return !uu;
+    } catch (...) {
+        return true;
     }
 }
 

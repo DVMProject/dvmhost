@@ -310,10 +310,6 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 if (iosp->getResponse() == P25_ANS_RSP_PROCEED) {
-                    if (m_p25->m_ackTSBKRequests) {
-                        writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
-                    }
-
                     if (m_p25->m_authoritative) {
                         uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
                             (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
@@ -325,12 +321,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     }
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
-                    writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
-                    writeRF_TSDU_Deny(P25_WUID_FNE, dstId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_VCH);
+                    writeRF_TSDU_Deny(P25_WUID_FNE, dstId, P25_DENY_RSN_TGT_UNIT_REFUSED, TSBK_IOSP_UU_ANS);
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_WAIT) {
-                    writeRF_TSDU_ACK_FNE(dstId, TSBK_IOSP_UU_VCH, false, true);
-                    writeRF_TSDU_Queue(P25_WUID_FNE, dstId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_VCH, false, false);
+                    writeRF_TSDU_Queue(P25_WUID_FNE, dstId, P25_QUE_RSN_TGT_UNIT_QUEUED, TSBK_IOSP_UU_ANS, false, false);
                 }
             }
             break;
@@ -2262,7 +2256,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, net)) {
+                if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
                     chNo = m_p25->m_affiliations.getGrantedCh(dstId);
                     m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
                 }
@@ -2429,8 +2423,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
         if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())
             m_mbfGrpGrntCnt = 0U;
 
-        std::unique_ptr<OSP_GRP_VCH_GRANT_UPD> osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
-        DEBUG_LOG_TSBK(osp->toString());
+        std::unique_ptr<lc::TSBK> osp;
 
         bool noData = false;
         uint8_t i = 0U;
@@ -2444,6 +2437,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
             else {
                 uint32_t dstId = entry.first;
                 uint32_t chNo = entry.second;
+                bool grp = m_p25->m_affiliations.isGroup(dstId);
 
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
 
@@ -2453,14 +2447,34 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                     break;
                 }
                 else {
-                    // transmit group voice grant update
-                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
-                    osp->setDstId(dstId);
-                    osp->setGrpVchId(voiceChData.chId());
-                    osp->setGrpVchNo(chNo);
+                    if (grp) {
+                        osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
+                        DEBUG_LOG_TSBK(osp->toString());
 
-                    m_mbfGrpGrntCnt++;
-                    break;
+                        // transmit group voice grant update
+                        osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                        osp->setDstId(dstId);
+                        osp->setGrpVchId(voiceChData.chId());
+                        osp->setGrpVchNo(chNo);
+
+                        m_mbfGrpGrntCnt++;
+                        break;
+                    } else {
+                        uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+
+                        osp = new_unique(OSP_UU_VCH_GRANT_UPD);
+                        DEBUG_LOG_TSBK(osp->toString());
+
+                        // transmit group voice grant update
+                        osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                        osp->setSrcId(srcId);
+                        osp->setDstId(dstId);
+                        osp->setGrpVchId(voiceChData.chId());
+                        osp->setGrpVchNo(chNo);
+
+                        m_mbfGrpGrntCnt++;
+                        break;
+                    }
                 }
             }
         }
@@ -2522,7 +2536,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
                 return false;
             }
             else {
-                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, net)) {
+                if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, net)) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
                     ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
 
