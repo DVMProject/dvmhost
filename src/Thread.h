@@ -33,6 +33,7 @@
 
 #include "Defines.h"
 
+#include <string>
 #include <pthread.h>
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,9 @@ public:
 
     /// <summary></summary>
     virtual void wait();
+
+    /// <summary></summary>
+    virtual void setName(std::string name);
 
     /// <summary></summary>
     static void sleep(uint32_t ms);

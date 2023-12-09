@@ -830,6 +830,7 @@ int Host::run()
 #endif // defined(ENABLE_DMR)
     });
     dmrFrameReadThread.run();
+    dmrFrameReadThread.setName("dmr:frame-r");
 
     ThreadFunc dmrFrameWriteThread([&, this]() {
 #if defined(ENABLE_DMR)
@@ -890,6 +891,7 @@ int Host::run()
 #endif // defined(ENABLE_DMR)
     });
     dmrFrameWriteThread.run();
+    dmrFrameWriteThread.setName("dmr:frame-w");
 
     /** Project 25 */
     ThreadFunc p25FrameReadThread([&, this]() {
@@ -931,6 +933,7 @@ int Host::run()
 #endif // defined(ENABLE_P25)
     });
     p25FrameReadThread.run();
+    p25FrameReadThread.setName("p25:frame-r");
 
     ThreadFunc p25FrameWriteThread([&, this]() {
 #if defined(ENABLE_P25)
@@ -971,6 +974,7 @@ int Host::run()
 #endif // defined(ENABLE_P25)
     });
     p25FrameWriteThread.run();
+    p25FrameWriteThread.setName("p25:frame-w");
 
     /** Next Generation Digital Narrowband */
     ThreadFunc nxdnFrameReadThread([&, this]() {
@@ -1012,6 +1016,7 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
     });
     nxdnFrameReadThread.run();
+    nxdnFrameReadThread.setName("nxdn:frame-r");
 
     ThreadFunc nxdnFrameWriteThread([&, this]() {
 #if defined(ENABLE_NXDN)
@@ -1052,6 +1057,7 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
     });
     nxdnFrameWriteThread.run();
+    nxdnFrameWriteThread.setName("nxdn:frame-w");
 
     // main execution loop
     while (!killed) {

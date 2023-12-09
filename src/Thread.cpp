@@ -30,6 +30,8 @@
 */
 #include "Thread.h"
 
+#include <sys/prctl.h>
+#include <signal.h>
 #include <unistd.h>
 
 // ---------------------------------------------------------------------------
@@ -73,6 +75,21 @@ bool Thread::run()
 void Thread::wait()
 {
     ::pthread_join(m_thread, NULL);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="name"></param>
+void Thread::setName(std::string name)
+{
+    if (!m_started)
+        return;
+    if (pthread_kill(m_thread, 0) != 0)
+        return;
+#ifdef _GNU_SOURCE
+    ::pthread_setname_np(m_thread, name.c_str());
+#endif // _GNU_SOURCE
 }
 
 /// <summary>
