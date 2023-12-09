@@ -173,7 +173,7 @@ private:
     bool rmtPortModemHandler(modem::Modem* modem, uint32_t ms, modem::RESP_TYPE_DVM rspType, bool rspDblLen, const uint8_t* buffer, uint16_t len);
 
     /// <summary>Helper to set the host/modem running state.</summary>
-    void setState(uint8_t mode);
+    void setState(uint8_t state);
 
     /// <summary>Helper to create the state lock file.</summary>
     void createLockFile(const char* state) const;
