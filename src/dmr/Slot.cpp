@@ -674,15 +674,16 @@ void Slot::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_DMR, "DMR Slot %u, REST request, release TG grant, dstId = %u", m_slotNo, dstId);
+        LogMessage(LOG_DMR, "DMR Slot %u, VC request, release TG grant, dstId = %u", m_slotNo, dstId);
     }
 
     if (m_affiliations->isGranted(dstId)) {
         uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, REST request, TG grant released, chNo = %u, dstId = %u, address = %s:%u", m_slotNo, chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
     
         m_affiliations->releaseGrant(dstId, false);
@@ -701,10 +702,11 @@ void Slot::touchGrantTG(uint32_t dstId)
 
     if (m_affiliations->isGranted(dstId)) {
         uint32_t chNo = m_affiliations->getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_DMR, "DMR Slot %u, REST request, touch TG grant, chNo = %u, dstId = %u, address = %s:%u", m_slotNo, chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, call in progress, TG grant, srcId = %u, dstId = %u, chId = %u, chNo = %u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations->touchGrant(dstId);
@@ -1077,6 +1079,10 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
 
     if (!m_notifyCC) {
         return;
+    }
+
+    if (m_verbose) {
+        LogMessage(LOG_DMR, "DMR Slot %u, CC %s:%u, notifying CC of call termination, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel

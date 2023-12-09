@@ -742,15 +742,16 @@ void Control::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_NXDN, "REST request, release TG grant, dstId = %u", dstId);
+        LogMessage(LOG_NXDN, "VC request, release TG grant, dstId = %u", dstId);
     }
 
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_NXDN, "REST request, TG grant released, chNo = %u, dstId = %u, address = %s:%u", chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_NXDN, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
     
         m_affiliations.releaseGrant(dstId, false);
@@ -769,10 +770,11 @@ void Control::touchGrantTG(uint32_t dstId)
 
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_NXDN, "REST request, touch TG grant, chNo = %u, dstId = %u, address = %s:%u", chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_NXDN, "VC %s:%u, call in progress, TG grant, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations.touchGrant(dstId);
@@ -1044,6 +1046,9 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
         return;
     }
 
+    if (m_verbose) {
+        LogMessage(LOG_NXDN, "CC %s:%u, notifying CC of call termination, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
+    }
 
     // callback REST API to release the granted TG on the specified control channel
     json::object req = json::object();

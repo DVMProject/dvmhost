@@ -964,15 +964,16 @@ void Control::releaseGrantTG(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "REST request, release TG grant, dstId = %u", dstId);
+        LogMessage(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
     }
 
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, TG grant released, chId = %u, chNo = %u, dstId = %u, address = %s:%u", voiceCh.chId(), chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations.releaseGrant(dstId, false);
@@ -991,10 +992,11 @@ void Control::touchGrantTG(uint32_t dstId)
 
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
+        uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
         ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
 
         if (m_verbose) {
-            LogMessage(LOG_P25, "REST request, call in progress, touch TG grant, chId = %u, chNo = %u, dstId = %u, address = %s:%u", voiceCh.chId(), chNo, dstId, voiceCh.address().c_str(), voiceCh.port());
+            LogMessage(LOG_P25, "VC %s:%u, call in progress, TG grant, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
         m_affiliations.touchGrant(dstId);
@@ -1420,7 +1422,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     }
 
     if (m_verbose) {
-        LogMessage(LOG_P25, "REST request, notifying CC of call termination, dstId = %u", dstId);
+        LogMessage(LOG_P25, "CC %s:%u, notifying CC of call termination, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
 
     // callback REST API to release the granted TG on the specified control channel
