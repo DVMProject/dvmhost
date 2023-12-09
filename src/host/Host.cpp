@@ -763,75 +763,6 @@ int Host::run()
 
     // setup protocol processor threads
     /** Digital Mobile Radio */
-    ThreadFunc dmrFrameReadThread([&, this]() {
-#if defined(ENABLE_DMR)
-        if (g_killed)
-            return;
-
-        if (dmr != nullptr) {
-            LogDebug(LOG_HOST, "DMR, started frame processor (modem read)");
-            while (!g_killed) {
-                clockingMutex.lock();
-                {
-                    // ------------------------------------------------------
-                    //  -- Read from Modem Processing                     --
-                    // ------------------------------------------------------
-
-                    // read DMR slot 1 frames from modem
-                    readFramesDMR1(dmr.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-
-                    // read DMR slot 2 frames from modem
-                    readFramesDMR2(dmr.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-                }
-                clockingMutex.unlock();
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-#endif // defined(ENABLE_DMR)
-    });
-    dmrFrameReadThread.run();
-    dmrFrameReadThread.setName("dmr:frame-r");
-
     ThreadFunc dmrFrameWriteThread([&, this]() {
 #if defined(ENABLE_DMR)
         if (g_killed)
@@ -894,47 +825,6 @@ int Host::run()
     dmrFrameWriteThread.setName("dmr:frame-w");
 
     /** Project 25 */
-    ThreadFunc p25FrameReadThread([&, this]() {
-#if defined(ENABLE_P25)
-        if (g_killed)
-            return;
-
-        if (p25 != nullptr) {
-            LogDebug(LOG_HOST, "P25, started frame processor (modem read)");
-            while (!g_killed) {
-                clockingMutex.lock();
-                {
-                    // ------------------------------------------------------
-                    //  -- Read from Modem Processing                     --
-                    // ------------------------------------------------------
-
-                    // read P25 frames from modem
-                    readFramesP25(p25.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a NXDN CC running; halt the CC
-                        if (nxdn != nullptr) {
-                            if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
-                                this->interruptNXDNControl(nxdn.get());
-                            }
-                        }
-                    });
-                }
-                clockingMutex.unlock();
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-#endif // defined(ENABLE_P25)
-    });
-    p25FrameReadThread.run();
-    p25FrameReadThread.setName("p25:frame-r");
-
     ThreadFunc p25FrameWriteThread([&, this]() {
 #if defined(ENABLE_P25)
         if (g_killed)
@@ -977,47 +867,6 @@ int Host::run()
     p25FrameWriteThread.setName("p25:frame-w");
 
     /** Next Generation Digital Narrowband */
-    ThreadFunc nxdnFrameReadThread([&, this]() {
-#if defined(ENABLE_NXDN)
-        if (g_killed)
-            return;
-
-        if (nxdn != nullptr) {
-            LogDebug(LOG_HOST, "NXDN, started frame processor (modem read)");
-            while (!g_killed) {
-                clockingMutex.lock();
-                {
-                    // ------------------------------------------------------
-                    //  -- Read from Modem Processing                     --
-                    // ------------------------------------------------------
-
-                    // read NXDN frames from modem
-                    readFramesNXDN(nxdn.get(), [&, this]() {
-                        if (dmr != nullptr) {
-                            this->interruptDMRBeacon(dmr.get());
-                        }
-
-                        // if there is a P25 CC running; halt the CC
-                        if (p25 != nullptr) {
-                            if (p25->getCCRunning() && !p25->getCCHalted()) {
-                                this->interruptP25Control(p25.get());
-                            }
-                        }
-                    });
-                }
-                clockingMutex.unlock();
-
-                if (m_state != STATE_IDLE)
-                    Thread::sleep(m_activeTickDelay);
-                if (m_state == STATE_IDLE)
-                    Thread::sleep(m_idleTickDelay);
-            }
-        }
-#endif // defined(ENABLE_NXDN)
-    });
-    nxdnFrameReadThread.run();
-    nxdnFrameReadThread.setName("nxdn:frame-r");
-
     ThreadFunc nxdnFrameWriteThread([&, this]() {
 #if defined(ENABLE_NXDN)
         if (g_killed)
@@ -1106,28 +955,114 @@ int Host::run()
             stopWatch.start();
 
             m_modem->clock(ms);
-
-            // ------------------------------------------------------
-            //  -- Network, DMR, and P25 Clocking                 --
-            // ------------------------------------------------------
-
-            if (m_network != nullptr)
-                m_network->clock(ms);
-
-#if defined(ENABLE_DMR)
-            if (dmr != nullptr)
-                dmr->clock(ms);
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
-            if (p25 != nullptr)
-                p25->clock(ms);
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
-            if (nxdn != nullptr)
-                nxdn->clock(ms);
-#endif // defined(ENABLE_NXDN)
         }
         clockingMutex.unlock();
+
+        // ------------------------------------------------------
+        //  -- Read from Modem Processing                     --
+        // ------------------------------------------------------
+
+        /** Digital Mobile Radio */
+#if defined(ENABLE_DMR)
+        if (dmr != nullptr) {
+            // read DMR slot 1 frames from modem
+            readFramesDMR1(dmr.get(), [&, this]() {
+                if (dmr != nullptr) {
+                    this->interruptDMRBeacon(dmr.get());
+                }
+
+                // if there is a P25 CC running; halt the CC
+                if (p25 != nullptr) {
+                    if (p25->getCCRunning() && !p25->getCCHalted()) {
+                        this->interruptP25Control(p25.get());
+                    }
+                }
+
+                // if there is a NXDN CC running; halt the CC
+                if (nxdn != nullptr) {
+                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                        this->interruptNXDNControl(nxdn.get());
+                    }
+                }
+            });
+
+            // read DMR slot 2 frames from modem
+            readFramesDMR2(dmr.get(), [&, this]() {
+                if (dmr != nullptr) {
+                    this->interruptDMRBeacon(dmr.get());
+                }
+
+                // if there is a P25 CC running; halt the CC
+                if (p25 != nullptr) {
+                    if (p25->getCCRunning() && !p25->getCCHalted()) {
+                        this->interruptP25Control(p25.get());
+                    }
+                }
+
+                // if there is a NXDN CC running; halt the CC
+                if (nxdn != nullptr) {
+                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                        this->interruptNXDNControl(nxdn.get());
+                    }
+                }
+            });
+        }
+#endif // defined(ENABLE_DMR)
+        /** Project 25 */
+#if defined(ENABLE_P25)
+        if (p25 != nullptr) {
+            // read P25 frames from modem
+            readFramesP25(p25.get(), [&, this]() {
+                if (dmr != nullptr) {
+                    this->interruptDMRBeacon(dmr.get());
+                }
+
+                // if there is a NXDN CC running; halt the CC
+                if (nxdn != nullptr) {
+                    if (nxdn->getCCRunning() && !nxdn->getCCHalted()) {
+                        this->interruptNXDNControl(nxdn.get());
+                    }
+                }
+            });
+        }
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+        if (nxdn != nullptr) {
+            // read NXDN frames from modem
+            readFramesNXDN(nxdn.get(), [&, this]() {
+                if (dmr != nullptr) {
+                    this->interruptDMRBeacon(dmr.get());
+                }
+
+                // if there is a P25 CC running; halt the CC
+                if (p25 != nullptr) {
+                    if (p25->getCCRunning() && !p25->getCCHalted()) {
+                        this->interruptP25Control(p25.get());
+                    }
+                }
+            });
+        }
+#endif // defined(ENABLE_NXDN)
+
+        // ------------------------------------------------------
+        //  -- Network, DMR, and P25 Clocking                 --
+        // ------------------------------------------------------
+
+        if (m_network != nullptr)
+            m_network->clock(ms);
+
+#if defined(ENABLE_DMR)
+        if (dmr != nullptr)
+            dmr->clock(ms);
+#endif // defined(ENABLE_DMR)
+#if defined(ENABLE_P25)
+        if (p25 != nullptr)
+            p25->clock(ms);
+#endif // defined(ENABLE_P25)
+#if defined(ENABLE_NXDN)
+        if (nxdn != nullptr)
+            nxdn->clock(ms);
+#endif // defined(ENABLE_NXDN)
 
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --
@@ -1386,12 +1321,9 @@ int Host::run()
 #endif // defined(ENABLE_NXDN)
 
         if (g_killed) {
-            // shutdown reader threads
-            dmrFrameReadThread.wait();
+            // shutdown writer threads
             dmrFrameWriteThread.wait();
-            p25FrameReadThread.wait();
             p25FrameWriteThread.wait();
-            nxdnFrameReadThread.wait();
             nxdnFrameWriteThread.wait();
 
 #if defined(ENABLE_DMR)
