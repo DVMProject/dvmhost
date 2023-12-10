@@ -34,6 +34,8 @@
 #include "p25/packet/ControlSignaling.h"
 #include "p25/acl/AccessControl.h"
 #include "p25/dfsi/DFSIDefines.h"
+#include "p25/lc/tsbk/OSP_GRP_VCH_GRANT_UPD.h"
+#include "p25/lc/tsbk/OSP_UU_VCH_GRANT_UPD.h"
 #include "p25/lc/tdulc/TDULCFactory.h"
 #include "p25/P25Utils.h"
 #include "p25/Sync.h"
@@ -422,8 +424,42 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // conventional registration or DVRS support?
-            if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
+            if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
                 m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true, true);
+
+                // if voice on control; insert grant updates before voice traffic
+                if (m_p25->m_voiceOnControl) {
+                    uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                    bool grp = m_p25->m_affiliations.isGroup(dstId);
+
+                    std::unique_ptr<lc::TSBK> osp;
+
+                    if (grp) {
+                        osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+
+                        // transmit group voice grant update
+                        osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                        osp->setDstId(dstId);
+                        osp->setGrpVchId(voiceChData.chId());
+                        osp->setGrpVchNo(chNo);
+                    }
+                    else {
+                        uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+
+                        osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+
+                        // transmit group voice grant update
+                        osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                        osp->setSrcId(srcId);
+                        osp->setDstId(dstId);
+                        osp->setGrpVchId(voiceChData.chId());
+                        osp->setGrpVchNo(chNo);
+                    }
+
+                    for (int i = 0; i < 3; i++)
+                        m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+                }
             }
 
             m_hadVoice = true;
@@ -487,6 +523,40 @@ bool Voice::process(uint8_t* data, uint32_t len)
             else {
                 frameType = P25_FT_HDU_LATE_ENTRY;
                 LogWarning(LOG_RF, P25_HDU_STR ", not transmitted; possible late entry, dstId = %u, algo = $%02X, kid = $%04X", m_rfLastHDU.getDstId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
+            }
+
+            // if voice on control; insert group voice channel updates directly after HDU but before LDUs
+            if (m_p25->m_voiceOnControl) {
+                uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                bool grp = m_p25->m_affiliations.isGroup(dstId);
+
+                std::unique_ptr<lc::TSBK> osp;
+
+                if (grp) {
+                    osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+
+                    // transmit group voice grant update
+                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                    osp->setDstId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                }
+                else {
+                    uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+
+                    osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+
+                    // transmit group voice grant update
+                    osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                    osp->setSrcId(srcId);
+                    osp->setDstId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                }
+
+                for (int i = 0; i < 3; i++)
+                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
             }
 
             m_rfFrames = 0U;
@@ -579,7 +649,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // conventional registration or DVRS support?
-            if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
+            if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
                 // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
                 m_vocLDU1Count++;
                 if (m_vocLDU1Count > VOC_LDU1_COUNT) {
@@ -1390,7 +1460,7 @@ void Voice::writeNet_LDU1()
         ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
 
         // conventional registration or DVRS support?
-        if (m_p25->m_enableControl && !m_p25->m_dedicatedControl && !m_p25->m_disableNetworkGrant) {
+        if (((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) && !m_p25->m_disableNetworkGrant) {
             uint8_t serviceOptions = (m_netLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
@@ -1426,6 +1496,40 @@ void Voice::writeNet_LDU1()
             }
 
             m_p25->writeRF_Preamble(0, true);
+
+            // if voice on control; insert grant updates before voice traffic
+            if (m_p25->m_voiceOnControl) {
+                uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                bool grp = m_p25->m_affiliations.isGroup(dstId);
+
+                std::unique_ptr<lc::TSBK> osp;
+
+                if (grp) {
+                    osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+
+                    // transmit group voice grant update
+                    osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+                    osp->setDstId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                }
+                else {
+                    uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+
+                    osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+
+                    // transmit group voice grant update
+                    osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+                    osp->setSrcId(srcId);
+                    osp->setDstId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                }
+
+                for (int i = 0; i < 3; i++)
+                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, true);
+            }
         }
 
         m_hadVoice = true;
@@ -1489,6 +1593,40 @@ void Voice::writeNet_LDU1()
         }
     }
 
+    // if voice on control; insert group voice channel updates directly after HDU but before LDUs
+    if (m_p25->m_voiceOnControl) {
+        uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+        bool grp = m_p25->m_affiliations.isGroup(dstId);
+
+        std::unique_ptr<lc::TSBK> osp;
+
+        if (grp) {
+            osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+
+            // transmit group voice grant update
+            osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
+            osp->setDstId(dstId);
+            osp->setGrpVchId(voiceChData.chId());
+            osp->setGrpVchNo(chNo);
+        }
+        else {
+            uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
+
+            osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+
+            // transmit group voice grant update
+            osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
+            osp->setSrcId(srcId);
+            osp->setDstId(dstId);
+            osp->setGrpVchId(voiceChData.chId());
+            osp->setGrpVchNo(chNo);
+        }
+
+        for (int i = 0; i < 3; i++)
+            m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+    }
+
     uint32_t netId = control.getNetId();
     uint32_t sysId = control.getSysId();
 
@@ -1517,7 +1655,7 @@ void Voice::writeNet_LDU1()
     }
 
     // conventional registration or DVRS support?
-    if (m_p25->m_enableControl && !m_p25->m_dedicatedControl) {
+    if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
         // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
         m_vocLDU1Count++;
         if (m_vocLDU1Count > VOC_LDU1_COUNT) {

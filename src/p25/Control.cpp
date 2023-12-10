@@ -102,6 +102,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_duplex(duplex),
     m_enableControl(false),
     m_dedicatedControl(false),
+    m_voiceOnControl(false),
     m_ackTSBKRequests(true),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
@@ -303,6 +304,17 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         m_dedicatedControl = false;
     }
 
+    m_voiceOnControl = control["voiceOnControl"].as<bool>(false);
+
+    if (m_voiceOnControl) {
+        LogWarning(LOG_P25, "HERE BE DRAGONS! Voice on Control is an unsupported/undocumented configuration; are you sure you should be doing this?");
+    }
+
+    // if control channel is off for voice on control off
+    if (!m_enableControl) {
+        m_voiceOnControl = false;
+    }
+
     m_controlOnly = p25Protocol["controlOnly"].as<bool>(false);
 
     // if we're a dedicated control channel don't set the control only flag
@@ -325,6 +337,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
+
+    // voice on control forcibly disables CC notification
+    if (m_voiceOnControl) {
+        m_notifyCC = false;
+    }
 
     /*
     ** Voice Silence and Frame Loss Thresholds
@@ -633,6 +650,10 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
             if (!m_dedicatedControl || m_control->m_convFallback)
                 ret = m_voice->process(data, len);
+            else {
+                if (m_voiceOnControl && m_affiliations.isChBusy(m_siteData.channelNo()))
+                    ret = m_voice->process(data, len);
+            }
             break;
 
         case P25_DUID_TDU:

@@ -2418,6 +2418,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 /// </summary>
 void ControlSignaling::writeRF_TSDU_Grant_Update()
 {
+    if (m_p25->m_voiceOnControl)
+        return;
+
     // write group voice grant update
     if (m_p25->m_affiliations.grantSize() > 0) {
         if (m_mbfGrpGrntCnt >= m_p25->m_affiliations.grantSize())

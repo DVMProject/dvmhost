@@ -171,11 +171,13 @@ namespace p25
         bool m_duplex;
         bool m_enableControl;
         bool m_dedicatedControl;
+        bool m_voiceOnControl;
         bool m_controlOnly;
         bool m_ackTSBKRequests;
         bool m_disableNetworkGrant;
         bool m_disableNetworkHDU;
         bool m_allowExplicitSourceId;
+
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
