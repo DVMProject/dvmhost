@@ -338,8 +338,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     yaml::Node controlCh = rfssConfig["controlCh"];
     m_notifyCC = controlCh["notifyEnable"].as<bool>(false);
 
-    // voice on control forcibly disables CC notification
+    // voice on control forcibly disables CC notification; and force enable redundant grant
     if (m_voiceOnControl) {
+        m_control->m_redundantGrant = true;
         m_notifyCC = false;
     }
 
