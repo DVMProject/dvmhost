@@ -128,6 +128,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                 LogMessage(LOG_NET, "NXDN, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
                     peerId, srcId, dstId, duration / 1000, streamId);
+                m_network->m_callInProgress = false;
             }
 
             // is this a new call stream?
@@ -165,6 +166,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     status.streamId = streamId;
                     m_status[dstId] = status;
                     LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    m_network->m_callInProgress = true;
                 }
             }
         }
@@ -190,6 +192,9 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId);
                 }
+
+                if (!m_network->m_callInProgress)
+                    m_network->m_callInProgress = true;
             }
         }
 

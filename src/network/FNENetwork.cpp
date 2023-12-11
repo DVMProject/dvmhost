@@ -89,6 +89,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peers(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
+    m_callInProgress(false),
     m_verbose(verbose)
 {
     assert(host != nullptr);
@@ -154,6 +155,11 @@ void FNENetwork::clock(uint32_t ms)
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
             m_peers.erase(peerId);
+        }
+
+        // roll the RTP timestamp if no call is in progress
+        if (!m_callInProgress) {
+            frame::RTPHeader::resetStartTime();
         }
 
         m_maintainenceTimer.start();

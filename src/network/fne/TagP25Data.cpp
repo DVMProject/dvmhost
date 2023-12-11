@@ -170,6 +170,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                 LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
                     peerId, srcId, dstId, duration / 1000, streamId);
+                m_network->m_callInProgress = false;
             }
 
             // is this a new call stream?
@@ -207,6 +208,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     status.streamId = streamId;
                     m_status[dstId] = status;
                     LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    m_network->m_callInProgress = true;
                 }
             }
         }
@@ -232,6 +234,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
                 }
+
+                if (!m_network->m_callInProgress)
+                    m_network->m_callInProgress = true;
             }
         }
 

@@ -248,6 +248,13 @@ void Network::clock(uint32_t ms)
         return;
     }
 
+    // roll the RTP timestamp if no call is in progress
+    if ((m_status == NET_STAT_RUNNING) &&
+        (m_rxDMRStreamId[0U] == 0U && m_rxDMRStreamId[1U] == 0U) &&
+        m_rxP25StreamId == 0U && m_rxNXDNStreamId == 0U) {
+        frame::RTPHeader::resetStartTime();
+    }
+
     sockaddr_storage address;
     uint32_t addrLen;
 

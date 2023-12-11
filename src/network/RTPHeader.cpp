@@ -119,3 +119,11 @@ void RTPHeader::encode(uint8_t* data)
     __SET_UINT32(m_timestamp, data, 4U);                                        // Timestamp
     __SET_UINT32(m_ssrc, data, 8U);                                             // Synchronization Source Identifier
 }
+
+/// <summary>
+/// Helper to reset the start timestamp.
+/// </summary>
+void RTPHeader::resetStartTime()
+{
+    m_wcStart = hrc::hrc_t();
+}

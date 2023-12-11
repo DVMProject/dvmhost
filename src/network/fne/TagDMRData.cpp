@@ -156,6 +156,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
             LogMessage(LOG_NET, "DMR, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
                         peerId, srcId, dstId, duration / 1000, streamId);
+            m_network->m_callInProgress = false;
         }
 
         // is this a new call stream?
@@ -194,6 +195,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 status.streamId = streamId;
                 m_status[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
                 LogMessage(LOG_NET, "DMR, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                m_network->m_callInProgress = true;
             }
         }
 
@@ -218,6 +220,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId);
                 }
+
+                if (!m_network->m_callInProgress)
+                    m_network->m_callInProgress = true;
             }
         }
 

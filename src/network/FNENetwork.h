@@ -237,6 +237,8 @@ namespace network
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;
 
+        bool m_callInProgress;
+
         bool m_verbose;
 
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>

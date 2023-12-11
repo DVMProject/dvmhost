@@ -62,6 +62,9 @@ namespace network
             /// <summary>Encode a RTP header.</summary>
             virtual void encode(uint8_t* data);
 
+            /// <summary>Helper to reset the start timestamp.</summary>
+            static void resetStartTime();
+
         public:
             /// <summary>RTP Protocol Version.</summary>
             __READONLY_PROPERTY(uint8_t, version, Version);
