@@ -13,7 +13,7 @@
 /*
 *   Copyright (C) 2012 by Ian Wraith
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp N2PLL
+*   Copyright (C) 2021,2023 Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -371,15 +371,26 @@ void DataHeader::encode(uint8_t* data) const
         break;
     }
 
-    // compute CRC-CCITT 16
-    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
-    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+    if (m_DPF == DPF_UDT) {
+        m_data[9U] &= 0xFEU;
 
-    edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
+        edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
 
-    // restore the checksum
-    m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
-    m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+        // restore the checksum
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+    }
+    else {
+        // compute CRC-CCITT 16
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+
+        edac::CRC::addCCITT162(m_data, DMR_LC_HEADER_LENGTH_BYTES);
+
+        // restore the checksum
+        m_data[10U] ^= DATA_HEADER_CRC_MASK[0U];
+        m_data[11U] ^= DATA_HEADER_CRC_MASK[1U];
+    }
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;

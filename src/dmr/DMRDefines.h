@@ -99,6 +99,7 @@ namespace dmr
     const uint8_t   PI_HEADER_CRC_MASK[] = { 0x69U, 0x69U };
     const uint8_t   DATA_HEADER_CRC_MASK[] = { 0xCCU, 0xCCU };
     const uint8_t   CSBK_CRC_MASK[] = { 0xA5U, 0xA5U };
+    const uint8_t   CSBK_MBC_CRC_MASK[] = { 0xAAU, 0xAAU };
 
     const uint16_t  TSCC_MAX_CSC_CNT = 511U;
 
@@ -193,6 +194,8 @@ namespace dmr
     const uint8_t   DT_TERMINATOR_WITH_LC = 0x02U;
 #define DMR_DT_TERMINATOR_WITH_LC "DMR_DT_TERMINATOR_WITH_LC (Terminator with Link Control)"
     const uint8_t   DT_CSBK = 0x03U;
+    const uint8_t   DT_MBC_HEADER = 0x04U;
+    const uint8_t   DT_MBC_DATA = 0x05U;
     const uint8_t   DT_DATA_HEADER = 0x06U;
 #define DMR_DT_DATA_HEADER "DMR_DT_DATA_HEADER (Data Header)"
     const uint8_t   DT_RATE_12_DATA = 0x07U;
@@ -303,6 +306,7 @@ namespace dmr
     const uint8_t   CSBKO_EXT_FNCT = 0x24U;                 // (DMRA) EXT FNCT - Extended Function
     const uint8_t   CSBKO_NACK_RSP = 0x26U;                 // NACK RSP - Negative Acknowledgement Response
     const uint8_t   CSBKO_BROADCAST = 0x28U;                // BCAST - Announcement PDU
+    const uint8_t   CSBKO_MAINT = 0x2AU;                    // MAINT - Call Maintainence PDU
     const uint8_t   CSBKO_P_CLEAR = 0x2EU;                  // P_CLEAR - Payload Channel Clear
     const uint8_t   CSBKO_PV_GRANT = 0x30U;                 // PV_GRANT - Private Voice Channel Grant
     const uint8_t   CSBKO_TV_GRANT = 0x31U;                 // TV_GRANT - Talkgroup Voice Channel Grant

@@ -80,6 +80,8 @@ namespace p25
             /// <summary>Returns a string that represents the current TSBK.</summary>
             virtual std::string toString(bool isp = false);
 
+            /// <summary>Gets the flag indicating verbose log output.</summary>
+            static bool getVerbose() { return m_verbose; }
             /// <summary>Sets the flag indicating verbose log output.</summary>
             static void setVerbose(bool verbose) { m_verbose = verbose; }
             /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>

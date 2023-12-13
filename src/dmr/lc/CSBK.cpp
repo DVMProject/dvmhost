@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -76,6 +76,7 @@ CSBK::CSBK() :
     m_dstId(0U),
     m_dataContent(false),
     m_CBF(0U),
+    m_dataType(DT_CSBK),
     m_emergency(false),
     m_privacy(false),
     m_supplementData(false),
@@ -114,8 +115,9 @@ std::string CSBK::toString()
 /// Regenerate a DMR CSBK without decoding.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="dataType"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool CSBK::regenerate(uint8_t* data)
+bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 {
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
     ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
@@ -125,8 +127,16 @@ bool CSBK::regenerate(uint8_t* data)
     bptc.decode(data, csbk);
 
     // validate the CRC-CCITT 16
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
@@ -135,17 +145,41 @@ bool CSBK::regenerate(uint8_t* data)
     }
 
     // restore the checksum
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     // calculate checksum
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     edac::CRC::addCCITT162(csbk, 12U);
 
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     // encode BPTC (196,96) FEC
     bptc.encode(csbk, data);
@@ -217,8 +251,16 @@ bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
     bptc.decode(data, csbk);
 
     // validate the CRC-CCITT 16
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (m_dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
@@ -227,8 +269,16 @@ bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
     }
 
     // restore the checksum
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (m_dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     if (m_verbose) {
         Utils::dump(2U, "Decoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
@@ -269,13 +319,29 @@ void CSBK::encode(uint8_t* data, const uint8_t* csbk)
         outCsbk[1U] = m_colorCode & 0x0FU;                                          // Cdef uses Color Code
     }
 
-    outCsbk[10U] ^= CSBK_CRC_MASK[0U];
-    outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (m_dataType) {
+        case DT_CSBK:
+            outCsbk[10U] ^= CSBK_CRC_MASK[0U];
+            outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            outCsbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            outCsbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     edac::CRC::addCCITT162(outCsbk, 12U);
 
-    outCsbk[10U] ^= CSBK_CRC_MASK[0U];
-    outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (m_dataType) {
+        case DT_CSBK:
+            outCsbk[10U] ^= CSBK_CRC_MASK[0U];
+            outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            outCsbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            outCsbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     if (m_verbose) {
         Utils::dump(2U, "Encoded CSBK", outCsbk, DMR_CSBK_LENGTH_BYTES);

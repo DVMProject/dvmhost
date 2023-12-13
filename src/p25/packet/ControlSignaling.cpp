@@ -1795,6 +1795,11 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     if (!m_p25->m_enableControl)
         return;
 
+    // disable verbose tSBK dumping during control data writes (if necessary)
+    bool tsbkVerbose = lc::TSBK::getVerbose();
+    if (tsbkVerbose)
+        lc::TSBK::setVerbose(false);
+
     if (m_convFallback) {
         bool fallbackTx = (frameCnt % 253U) == 0U;
         if (fallbackTx && n == 8U) {
@@ -1935,6 +1940,8 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
         // reset MBF count
         m_mbfCnt = 0U;
     }
+
+    lc::TSBK::setVerbose(tsbkVerbose);
 }
 
 /// <summary>

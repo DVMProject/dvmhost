@@ -751,6 +751,13 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     m_tsccPayloadDstId = dstId;
     m_tsccPayloadGroup = group;
     m_tsccPayloadVoice = voice;
+
+    // start payload channel transmit
+    if (!m_modem->hasTX()) {
+        m_modem->writeDMRStart(true);
+    }
+
+    m_control->writeRF_CSBK_Payload_Activate(dstId, srcId, group, voice);
 }
 
 /// <summary>
@@ -1312,6 +1319,11 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
     if (!m_enableTSCC)
         return;
 
+    // disable verbose CSBK dumping during control data writes (if necessary)
+    bool csbkVerbose = lc::CSBK::getVerbose();
+    if (csbkVerbose)
+        lc::CSBK::setVerbose(false);
+
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_txQueue.freeSpace();
@@ -1393,6 +1405,8 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
             n++;
         i++;
     } while (i <= seqCnt);
+
+    lc::CSBK::setVerbose(csbkVerbose);
 }
 
 /// <summary>

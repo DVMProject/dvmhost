@@ -60,8 +60,9 @@ CSBKFactory::~CSBKFactory()
 /// Create an instance of a CSBK.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="dataType"></param>
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
-std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
+std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, uint8_t dataType)
 {
     assert(data != nullptr);
 
@@ -72,8 +73,16 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
     bptc.decode(data, csbk);
 
     // validate the CRC-CCITT 16
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
@@ -82,8 +91,16 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
     }
 
     // restore the checksum
-    csbk[10U] ^= CSBK_CRC_MASK[0U];
-    csbk[11U] ^= CSBK_CRC_MASK[1U];
+    switch (dataType) {
+        case DT_CSBK:
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
+            break;
+        case DT_MBC_HEADER:
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+    }
 
     uint8_t CSBKO = csbk[0U] & 0x3FU;                                               // CSBKO
     uint8_t FID = csbk[1U];                                                         // Feature ID
@@ -114,6 +131,8 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data)
     /** Tier 3 */
     case CSBKO_ACK_RSP:
         return decode(new CSBK_ACK_RSP(), data);
+    case CSBKO_MAINT:
+        return decode(new CSBK_MAINT(), data);
 
     default:
         LogError(LOG_DMR, "CSBKFactory::create(), unknown CSBK type, csbko = $%02X", CSBKO);

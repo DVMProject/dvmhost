@@ -36,6 +36,7 @@
 #include "dmr/lc/csbk/CSBK_CALL_ALRT.h"
 #include "dmr/lc/csbk/CSBK_DVM_GIT_HASH.h"
 #include "dmr/lc/csbk/CSBK_EXT_FNCT.h"
+#include "dmr/lc/csbk/CSBK_MAINT.h"
 #include "dmr/lc/csbk/CSBK_NACK_RSP.h"
 #include "dmr/lc/csbk/CSBK_P_CLEAR.h"
 #include "dmr/lc/csbk/CSBK_P_GRANT.h"
@@ -68,7 +69,7 @@ namespace dmr
                 ~CSBKFactory();
 
                 /// <summary>Create an instance of a CSBK.</summary>
-                static std::unique_ptr<CSBK> createCSBK(const uint8_t* data);
+                static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, uint8_t dataType);
 
             private:
                 /// <summary></summary>

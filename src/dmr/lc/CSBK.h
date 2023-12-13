@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
-*   Copyright (C) 2019-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2019-2023 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -64,8 +64,10 @@ namespace dmr
 
             /// <summary>Regenerate a DMR CSBK without decoding.</summary>
             /// <remarks>This is because the DMR archeticture allows fall-thru of unsupported CSBKs.</remarks>
-            static bool regenerate(uint8_t* data);
+            static bool regenerate(uint8_t* data, uint8_t dataType);
 
+            /// <summary>Gets the flag indicating verbose log output.</summary>
+            static bool getVerbose() { return m_verbose; }
             /// <summary>Sets the flag indicating verbose log output.</summary>
             static void setVerbose(bool verbose) { m_verbose = verbose; }
 
@@ -103,6 +105,9 @@ namespace dmr
 
             /// <summary>Number of blocks to follow.</summary>
             __PROTECTED_PROPERTY(uint8_t, CBF, CBF);
+
+            /// <summary>Data type for this CSBK.</summary>
+            __PROTECTED_PROPERTY(uint8_t, dataType, DataType);
 
             /** Common Service Options */
             /// <summary>Flag indicating the emergency bits are set.</summary>

@@ -161,7 +161,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
     if (dataType == DT_CSBK) {
         // generate a new CSBK and check validity
-        std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U);
+        std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr)
             return false;
 
@@ -367,7 +367,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
         if (!handled) {
             // regenerate the CSBK data
-            lc::CSBK::regenerate(data + 2U);
+            lc::CSBK::regenerate(data + 2U, dataType);
 
             // regenerate the Slot Type
             slotType.encode(data + 2U);
@@ -404,7 +404,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
     dmrData.getData(data + 2U);
 
     if (dataType == DT_CSBK) {
-        std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U);
+        std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr) {
             LogError(LOG_NET, "DMR Slot %u, DT_CSBK, unable to decode the network CSBK", m_slot->m_slotNo);
             return;
@@ -555,7 +555,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 
         if (!handled) {
             // regenerate the CSBK data
-            lc::CSBK::regenerate(data + 2U);
+            lc::CSBK::regenerate(data + 2U, dataType);
 
             // regenerate the Slot Type
             SlotType slotType;
@@ -1341,11 +1341,13 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
 }
 
 /// <summary>
-/// Helper to write a payload grant to a TSCC payload channel on the RF interface.
+/// Helper to write a payload random access to a TSCC payload channel on the RF interface.
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
-void ControlSignaling::writeRF_CSBK_Payload_Grant(uint32_t dstId, uint32_t srcId, bool grp, bool voice)
+/// <param name="grp"></param>
+/// <param name="voice"></param>
+void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice)
 {
     std::unique_ptr<CSBK_P_GRANT> csbk = new_unique(CSBK_P_GRANT);
     if (voice) {
@@ -1365,6 +1367,8 @@ void ControlSignaling::writeRF_CSBK_Payload_Grant(uint32_t dstId, uint32_t srcId
         }
     }
 
+    csbk->setLastBlock(true);
+
     csbk->setLogicalCh1(m_slot->m_channelNo);
     csbk->setSlotNo(m_slot->m_slotNo);
 
@@ -1372,11 +1376,16 @@ void ControlSignaling::writeRF_CSBK_Payload_Grant(uint32_t dstId, uint32_t srcId
     csbk->setDstId(dstId);
 
     if (m_verbose) {
-        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, chNo = %u, slot = %u, srcId = %u, dstId = %u",
-            m_slot->m_slotNo, csbk->toString().c_str(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, csbko = $%02X, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->toString().c_str(), csbk->getCSBKO(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
     }
 
-    writeRF_CSBK(csbk.get());
+    m_slot->setShortLC_Payload(m_slot->m_siteData, 1U);
+    for (int i = 0; i < 3; i++) {
+        writeRF_CSBK(csbk.get(), false, true);
+        for (int i = 0; i < 3; i++)
+            writeRF_CSBK(csbk.get());
+    }
 }
 
 /// <summary>

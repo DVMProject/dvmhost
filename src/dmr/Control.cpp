@@ -97,6 +97,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
     Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
+    lc::CSBK::setVerbose(m_dumpCSBKData);
 
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
     m_slot2 = new Slot(2U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
@@ -297,7 +298,7 @@ bool Control::processWakeup(const uint8_t* data)
         return false;
 
     // generate a new CSBK and check validity
-    std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U);
+    std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DT_CSBK);
     if (csbk == nullptr)
         return false;
 

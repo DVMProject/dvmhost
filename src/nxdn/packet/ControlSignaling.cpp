@@ -451,6 +451,11 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
     if (!m_nxdn->m_enableControl)
         return;
 
+    // disable verbose RCCH dumping during control data writes (if necessary)
+    bool rcchVerbose = lc::RCCH::getVerbose();
+    if (rcchVerbose)
+        lc::RCCH::setVerbose(false);
+
     // don't add any frames if the queue is full
     uint8_t len = NXDN_FRAME_LENGTH_BYTES + 2U;
     uint32_t space = m_nxdn->m_txQueue.freeSpace();
@@ -478,6 +483,8 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
             n++;
         i++;
     } while (i <= seqCnt);
+
+    lc::RCCH::setVerbose(rcchVerbose);
 }
 
 /// <summary>
