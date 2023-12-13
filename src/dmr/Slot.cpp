@@ -1371,12 +1371,13 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
                     if (j == m_lastLateEntry) {
                         uint32_t dstId = entry.first;
                         uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+                        bool grp = m_affiliations->isGroup(dstId);
 
                         if (m_debug) {
                             LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
                         }
 
-                        m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId);
+                        m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId, grp);
                         m_lastLateEntry = j++;
                         break;
                     }

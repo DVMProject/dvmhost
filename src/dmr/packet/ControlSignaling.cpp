@@ -1323,21 +1323,34 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
-void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId)
+/// <param name="grp"></param>
+void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId, bool grp)
 {
     Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
 
     uint32_t chNo = m_tscc->m_affiliations->getGrantedCh(dstId);
     uint8_t slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
-    std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
-    csbk->setLogicalCh1(chNo);
-    csbk->setSlotNo(slot);
+    if (grp) {
+        std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
+        csbk->setLogicalCh1(chNo);
+        csbk->setSlotNo(slot);
 
-    csbk->setSrcId(srcId);
-    csbk->setDstId(dstId);
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
 
-    writeRF_CSBK(csbk.get());
+        writeRF_CSBK(csbk.get());
+    }
+    else {
+        std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
+        csbk->setLogicalCh1(chNo);
+        csbk->setSlotNo(slot);
+
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
+
+        writeRF_CSBK(csbk.get());
+    }
 }
 
 /// <summary>
@@ -1381,10 +1394,9 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     }
 
     m_slot->setShortLC_Payload(m_slot->m_siteData, 1U);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         writeRF_CSBK(csbk.get(), false, true);
-        for (int i = 0; i < 3; i++)
-            writeRF_CSBK(csbk.get());
+        writeRF_CSBK(csbk.get());
     }
 }
 

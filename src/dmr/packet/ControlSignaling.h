@@ -110,7 +110,7 @@ namespace dmr
             void writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOptions);
 
             /// <summary>Helper to write a TSCC late entry channel grant packet on the RF interface.</summary>
-            void writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId);
+            void writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId, bool grp);
             /// <summary>Helper to write a payload random access to a TSCC payload channel on the RF interface.</summary>
             void writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice);
 
