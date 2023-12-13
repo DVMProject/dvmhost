@@ -158,7 +158,6 @@ namespace network
                             //what = matcher.first;
 
                             // ensure CORS headers are added
-                            
                             reply.headers.add("Access-Control-Allow-Origin", "*");
                             reply.headers.add("Access-Control-Allow-Methods", "*");
                             reply.headers.add("Access-Control-Allow-Headers", "*");
