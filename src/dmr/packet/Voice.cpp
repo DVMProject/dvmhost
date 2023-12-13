@@ -133,8 +133,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             CHECK_AUTHORITATIVE(dstId);
             CHECK_TRAFFIC_COLLISION(dstId);
 
-            if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
-                m_slot->m_tsccPayloadActRetransmit.stop();
+            if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
+                m_slot->m_tsccPayloadActRetry.stop();
             }
 
             // validate source RID
@@ -683,8 +683,8 @@ void Voice::processNetwork(const data::Data& dmrData)
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_NET_TRAFFIC_COLLISION(dstId);
 
-        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
-            m_slot->m_tsccPayloadActRetransmit.stop();
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
+            m_slot->m_tsccPayloadActRetry.stop();
         }
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())

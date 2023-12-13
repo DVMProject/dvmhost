@@ -168,7 +168,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
-    m_tsccPayloadActRetransmit(1000U, 1U),
+    m_tsccPayloadActRetry(1000U, 0U, 250U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
     m_supervisor(false),
@@ -495,12 +495,12 @@ void Slot::clock()
     if (m_dmr->m_tsccPayloadActive) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
-                if (m_tsccPayloadActRetransmit.isRunning()) {
-                    m_tsccPayloadActRetransmit.clock(ms);
+                if (m_tsccPayloadActRetry.isRunning()) {
+                    m_tsccPayloadActRetry.clock(ms);
 
-                    if (m_tsccPayloadActRetransmit.hasExpired()) {
-                        m_control->writeRF_CSBK_Payload_Activate(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup, m_tsccPayloadVoice);
-                        m_tsccPayloadActRetransmit.start();
+                    if (m_tsccPayloadActRetry.hasExpired()) {
+                        m_control->writeRF_CSBK_Payload_Activate(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup, m_tsccPayloadVoice, true);
+                        m_tsccPayloadActRetry.start(0U, 500U);
                     }
                 }
 
@@ -769,9 +769,8 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
         m_modem->writeDMRStart(true);
     }
 
-    m_control->writeRF_CSBK_Payload_Activate(dstId, srcId, group, voice, true);
-    if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetransmit.isRunning()) {
-        m_tsccPayloadActRetransmit.start();
+    if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetry.isRunning()) {
+        m_tsccPayloadActRetry.start();
     }
 }
 
@@ -1435,7 +1434,7 @@ void Slot::clearTSCCActivated()
     m_tsccPayloadGroup = false;
     m_tsccPayloadVoice = true;
 
-    m_tsccPayloadActRetransmit.stop();
+    m_tsccPayloadActRetry.stop();
 }
 
 /// <summary>

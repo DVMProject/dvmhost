@@ -221,7 +221,7 @@ namespace dmr
         uint32_t m_tsccPayloadSrcId;
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
-        Timer m_tsccPayloadActRetransmit;
+        Timer m_tsccPayloadActRetry;
 
         bool m_disableGrantSrcIdCheck;
 

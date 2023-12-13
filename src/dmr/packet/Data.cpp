@@ -186,8 +186,8 @@ bool Data::process(uint8_t* data, uint32_t len)
         CHECK_AUTHORITATIVE(dstId);
         CHECK_TRAFFIC_COLLISION(dstId);
 
-        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
-            m_slot->m_tsccPayloadActRetransmit.stop();
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
+            m_slot->m_tsccPayloadActRetry.stop();
         }
 
         // validate the source RID
@@ -411,8 +411,8 @@ void Data::processNetwork(const data::Data& dmrData)
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_TG_HANG(dstId);
 
-        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
-            m_slot->m_tsccPayloadActRetransmit.stop();
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
+            m_slot->m_tsccPayloadActRetry.stop();
         }
 
         m_slot->m_netFrames = dataHeader->getBlocks();
