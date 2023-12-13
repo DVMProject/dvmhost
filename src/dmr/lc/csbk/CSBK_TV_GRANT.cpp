@@ -74,7 +74,7 @@ void CSBK_TV_GRANT::encode(uint8_t* data)
 
     csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                        // Logical Physical Channel 1
     csbkValue = (csbkValue << 1) + ((m_slotNo == 2U) ? 1U : 0U);                    // Logical Slot Number
-    csbkValue = (csbkValue << 1) + ((m_lateEntry) ? 1U : 0U);;                      // Late Entry
+    csbkValue = (csbkValue << 1) + ((m_lateEntry) ? 1U : 0U);                       // Late Entry
     csbkValue = (csbkValue << 1) + ((m_emergency) ? 1U : 0U);                       // Emergency
     csbkValue = (csbkValue << 1) + ((m_siteOffsetTiming) ? 1U : 0U);                // Site Timing: Aligned or Offset
     csbkValue = (csbkValue << 24) + m_dstId;                                        // Talkgroup ID

@@ -1339,9 +1339,12 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
         csbk->setSrcId(srcId);
         csbk->setDstId(dstId);
 
+        csbk->setLateEntry(true);
+
         writeRF_CSBK(csbk.get());
     }
     else {
+/*        
         std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
@@ -1350,6 +1353,7 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
         csbk->setDstId(dstId);
 
         writeRF_CSBK(csbk.get());
+*/
     }
 }
 
