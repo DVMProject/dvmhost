@@ -42,7 +42,8 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the CSBK_MAINT class.
 /// </summary>
-CSBK_MAINT::CSBK_MAINT() : CSBK()
+CSBK_MAINT::CSBK_MAINT() : CSBK(),
+    m_maintKind(0U)
 {
     m_CSBKO = CSBKO_MAINT;
 }
@@ -65,6 +66,7 @@ bool CSBK_MAINT::decode(const uint8_t* data)
 
     ulong64_t csbkValue = CSBK::toValue(csbk);
 
+    m_maintKind = (uint8_t)(((csbkValue >> 48) & 0xFFU) >> 1);                      // Maintainence Kind
     m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
@@ -81,6 +83,7 @@ void CSBK_MAINT::encode(uint8_t* data)
 
     ulong64_t csbkValue = 0U;
 
+    csbkValue = (csbkValue << 3) + (m_maintKind & 0x07U);                           // Maintainence Kind
     csbkValue = (csbkValue << 25) + m_dstId;                                        // Target Radio Address
     csbkValue = (csbkValue << 24) + m_srcId;                                        // Source Radio Address
 
@@ -95,4 +98,19 @@ void CSBK_MAINT::encode(uint8_t* data)
 std::string CSBK_MAINT::toString()
 {
     return std::string("CSBKO_MAINT (Call Maintainence)");
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void CSBK_MAINT::copy(const CSBK_MAINT& data)
+{
+    CSBK::copy(data);
+
+    m_maintKind = data.m_maintKind;
 }

@@ -52,6 +52,12 @@ namespace dmr
 
                 /// <summary>Returns a string that represents the current CSBK.</summary>
                 virtual std::string toString() override;
+            
+            public:
+                /// <summary>Maintainence Kind.</summary>
+                __PROPERTY(uint8_t, maintKind, MaintKind);
+
+                __COPY(CSBK_MAINT);
             };
         } // namespace csbk
     } // namespace lc

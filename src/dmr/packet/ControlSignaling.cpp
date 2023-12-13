@@ -351,6 +351,15 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
         }
         break;
+        case CSBKO_MAINT:
+        {
+            CSBK_MAINT* isp = static_cast<CSBK_MAINT*>(csbk.get());
+            if (m_verbose) {
+                LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, kind = $%02X, srcId = %u",
+                    m_slot->m_slotNo, csbk->toString().c_str(), isp->getMaintKind(), srcId);
+            }
+        }
+        break;
         case CSBKO_PRECCSBK:
         {
             if (m_verbose) {
