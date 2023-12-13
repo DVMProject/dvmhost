@@ -509,9 +509,6 @@ void Slot::clock()
                 }
             }
         }
-        else {
-            clearTSCCActivated();
-        }
     }
 
     // handle timeouts and hang timers
@@ -1429,6 +1426,10 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 /// </summary>
 void Slot::clearTSCCActivated() 
 {
+    if (m_tsccPayloadDstId != 0U && m_tsccPayloadSrcId != 0U) {
+        m_control->writeRF_CSBK_Payload_Clear(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup);
+    }
+
     m_tsccPayloadDstId = 0U;
     m_tsccPayloadSrcId = 0U;
     m_tsccPayloadGroup = false;

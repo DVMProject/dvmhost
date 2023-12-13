@@ -82,7 +82,7 @@ namespace dmr
             /// <summary>DMR access color code.</summary>
             __PROTECTED_PROPERTY(uint8_t, colorCode, ColorCode);
 
-            /// <summary>Flag indicating this is the last TSBK in a sequence of TSBKs.</summary>
+            /// <summary>Flag indicating this is the last CSBK in a sequence of CSBKs.</summary>
             __PROTECTED_PROPERTY(bool, lastBlock, LastBlock);
             /// <summary>Flag indicating whether the CSBK is a Cdef block.</summary>
             __PROTECTED_PROPERTY(bool, Cdef, Cdef);

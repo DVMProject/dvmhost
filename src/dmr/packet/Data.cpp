@@ -141,6 +141,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
+                m_slot->clearTSCCActivated();
             }
         }
 
@@ -380,6 +381,15 @@ void Data::processNetwork(const data::Data& dmrData)
 
         if (m_verbose) {
             LogMessage(LOG_RF, DMR_DT_TERMINATOR_WITH_LC ", slot = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_netLC->getDstId());
+        }
+
+        // release trunked grant (if necessary)
+        Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
+        if (m_tscc != nullptr) {
+            if (m_tscc->m_enableTSCC) {
+                m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
+                m_slot->clearTSCCActivated();
+            }
         }
 
         // We've received the voice header and terminator haven't we?

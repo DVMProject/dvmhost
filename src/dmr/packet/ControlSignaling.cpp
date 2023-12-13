@@ -1367,7 +1367,7 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
 }
 
 /// <summary>
-/// Helper to write a payload random access to a TSCC payload channel on the RF interface.
+/// Helper to write a payload activation to a TSCC payload channel on the RF interface.
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="srcId"></param>
@@ -1408,6 +1408,36 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     }
 
     m_slot->setShortLC_Payload(m_slot->m_siteData, 1U);
+    for (uint8_t i = 0; i < 2U; i++)
+        writeRF_CSBK(csbk.get(), false, imm);
+}
+
+/// <summary>
+/// Helper to write a payload clear to a TSCC payload channel on the RF interface.
+/// </summary>
+/// <param name="dstId"></param>
+/// <param name="srcId"></param>
+/// <param name="grp"></param>
+/// <param name="imm"></param>
+void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId, bool grp, bool imm)
+{
+    std::unique_ptr<CSBK_P_CLEAR> csbk = new_unique(CSBK_P_CLEAR);
+
+    csbk->setGI(grp);
+
+    csbk->setLastBlock(true);
+
+    csbk->setLogicalCh1(m_slot->m_channelNo);
+    csbk->setSlotNo(m_slot->m_slotNo);
+
+    csbk->setSrcId(srcId);
+    csbk->setDstId(dstId);
+
+    if (m_verbose) {
+        LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->toString().c_str(), csbk->getGI(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
+    }
+
     for (uint8_t i = 0; i < 2U; i++)
         writeRF_CSBK(csbk.get(), false, imm);
 }
