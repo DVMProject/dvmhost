@@ -186,6 +186,10 @@ bool Data::process(uint8_t* data, uint32_t len)
         CHECK_AUTHORITATIVE(dstId);
         CHECK_TRAFFIC_COLLISION(dstId);
 
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
+            m_slot->m_tsccPayloadActRetransmit.stop();
+        }
+
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
             LogWarning(LOG_RF, "DMR Slot %u, DT_DATA_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
@@ -406,6 +410,10 @@ void Data::processNetwork(const data::Data& dmrData)
 
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_TG_HANG(dstId);
+
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
+            m_slot->m_tsccPayloadActRetransmit.stop();
+        }
 
         m_slot->m_netFrames = dataHeader->getBlocks();
         m_slot->m_netLC = new_unique(lc::LC, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);

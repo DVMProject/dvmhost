@@ -218,8 +218,10 @@ namespace dmr
         bool m_dedicatedTSCC;
 
         uint32_t m_tsccPayloadDstId;
+        uint32_t m_tsccPayloadSrcId;
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
+        Timer m_tsccPayloadActRetransmit;
 
         bool m_disableGrantSrcIdCheck;
 
@@ -304,7 +306,7 @@ namespace dmr
         void writeRF_ControlData(uint16_t frameCnt, uint8_t n);
 
         /// <summary>Clears the flag indicating whether the slot is a TSCC payload slot.</summary>
-        void clearTSCCActivated() { m_tsccPayloadDstId = 0U; m_tsccPayloadGroup = false; m_tsccPayloadVoice = true; }
+        void clearTSCCActivated();
 
         /// <summary>Helper to set the DMR short LC.</summary>
         static void setShortLC(uint32_t slotNo, uint32_t id, uint8_t flco = FLCO_GROUP, bool voice = true);

@@ -112,7 +112,7 @@ namespace dmr
             /// <summary>Helper to write a TSCC late entry channel grant packet on the RF interface.</summary>
             void writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t srcId, bool grp);
             /// <summary>Helper to write a payload random access to a TSCC payload channel on the RF interface.</summary>
-            void writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice);
+            void writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice, bool imm = false);
 
             /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Aloha();

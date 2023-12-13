@@ -1360,7 +1360,8 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
 /// <param name="srcId"></param>
 /// <param name="grp"></param>
 /// <param name="voice"></param>
-void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice)
+/// <param name="imm"></param>
+void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice, bool imm)
 {
     std::unique_ptr<CSBK_P_GRANT> csbk = new_unique(CSBK_P_GRANT);
     if (voice) {
@@ -1394,10 +1395,8 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
     }
 
     m_slot->setShortLC_Payload(m_slot->m_siteData, 1U);
-    for (int i = 0; i < 2; i++) {
-        writeRF_CSBK(csbk.get(), false, true);
-        writeRF_CSBK(csbk.get());
-    }
+    for (uint8_t i = 0; i < 2U; i++)
+        writeRF_CSBK(csbk.get(), false, imm);
 }
 
 /// <summary>

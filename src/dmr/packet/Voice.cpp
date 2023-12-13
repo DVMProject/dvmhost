@@ -133,6 +133,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
             CHECK_AUTHORITATIVE(dstId);
             CHECK_TRAFFIC_COLLISION(dstId);
 
+            if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
+                m_slot->m_tsccPayloadActRetransmit.stop();
+            }
+
             // validate source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == srcId) {
@@ -678,6 +682,10 @@ void Voice::processNetwork(const data::Data& dmrData)
 
         CHECK_NET_AUTHORITATIVE(dstId);
         CHECK_NET_TRAFFIC_COLLISION(dstId);
+
+        if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetransmit.isRunning()) {
+            m_slot->m_tsccPayloadActRetransmit.stop();
+        }
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, header doesn't match the DMR RF header: %u->%s%u %u->%s%u", m_slot->m_slotNo,

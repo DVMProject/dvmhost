@@ -165,8 +165,10 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
     m_tsccPayloadDstId(0U),
+    m_tsccPayloadSrcId(0U),
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
+    m_tsccPayloadActRetransmit(1000U, 1U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
     m_supervisor(false),
@@ -493,6 +495,15 @@ void Slot::clock()
     if (m_dmr->m_tsccPayloadActive) {
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
+                if (m_tsccPayloadActRetransmit.isRunning()) {
+                    m_tsccPayloadActRetransmit.clock(ms);
+
+                    if (m_tsccPayloadActRetransmit.hasExpired()) {
+                        m_control->writeRF_CSBK_Payload_Activate(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup, m_tsccPayloadVoice);
+                        m_tsccPayloadActRetransmit.start();
+                    }
+                }
+
                 if ((m_dmr->m_tsccCnt % 2) > 0) {
                     setShortLC(m_slotNo, m_tsccPayloadDstId, m_tsccPayloadGroup ? FLCO_GROUP : FLCO_PRIVATE, m_tsccPayloadVoice);
                 }
@@ -749,6 +760,7 @@ void Slot::setTSCC(bool enable, bool dedicated)
 void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voice)
 {
     m_tsccPayloadDstId = dstId;
+    m_tsccPayloadSrcId = srcId;
     m_tsccPayloadGroup = group;
     m_tsccPayloadVoice = voice;
 
@@ -757,7 +769,10 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
         m_modem->writeDMRStart(true);
     }
 
-    m_control->writeRF_CSBK_Payload_Activate(dstId, srcId, group, voice);
+    m_control->writeRF_CSBK_Payload_Activate(dstId, srcId, group, voice, true);
+    if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetransmit.isRunning()) {
+        m_tsccPayloadActRetransmit.start();
+    }
 }
 
 /// <summary>
@@ -1408,6 +1423,19 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
     } while (i <= seqCnt);
 
     lc::CSBK::setVerbose(csbkVerbose);
+}
+
+/// <summary>
+/// Clears the flag indicating whether the slot is a TSCC payload slot.
+/// </summary>
+void Slot::clearTSCCActivated() 
+{
+    m_tsccPayloadDstId = 0U;
+    m_tsccPayloadSrcId = 0U;
+    m_tsccPayloadGroup = false;
+    m_tsccPayloadVoice = true;
+
+    m_tsccPayloadActRetransmit.stop();
 }
 
 /// <summary>
