@@ -168,9 +168,13 @@ namespace network
                         }
                         else {
                             if (!ec) {
-                                // initiate graceful connection closure
-                                asio::error_code ignored_ec;
-                                m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                                try
+                                {
+                                    // initiate graceful connection closure
+                                    asio::error_code ignored_ec;
+                                    m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                                }
+                                catch(const std::exception& e) { ::LogError(LOG_REST, "%s", ec.message().c_str()); }
                             }
 
                             if (ec != asio::error::operation_aborted) {

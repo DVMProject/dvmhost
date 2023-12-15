@@ -95,9 +95,19 @@ namespace network
                 /// <summary>Helper to enable the SO_LINGER socket option during shutdown.</summary>
                 void ensureNoLinger()
                 {
-                    // enable SO_LINGER timeout 0
-                    asio::socket_base::linger linger(true, 0);
-                    m_socket.set_option(linger);
+                    try
+                    {
+                        // enable SO_LINGER timeout 0
+                        asio::socket_base::linger linger(true, 0);
+                        m_socket.set_option(linger);
+                    }
+                    catch(const asio::system_error& e)
+                    {
+                        asio::error_code ec = e.code();
+                        if (ec) {
+                            ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                        }
+                    }
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
@@ -158,9 +168,13 @@ namespace network
                         if (ec) {
                             ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
 
-                            // initiate graceful connection closure
-                            asio::error_code ignored_ec;
-                            m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                            try
+                            {
+                                // initiate graceful connection closure
+                                asio::error_code ignored_ec;
+                                m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                            }
+                            catch(const std::exception& e) { ::LogError(LOG_REST, "%s", ec.message().c_str()); }
                         }
                     }
                 }
