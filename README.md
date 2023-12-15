@@ -64,7 +64,7 @@ Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in
 
 ### Compiled Protocol Options
 
-These are the protocols that are compiled-in to the host for data processing. By default, support for both DMR and P25 protocols are enabled. And, support for the NXDN protocol is disabled. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
+These are the protocols that are compiled-in to the host for data processing. By default, support for DMR, P25 and NXDN protocols are enabled. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
 
 In order to change what protocol support is compiled into the host, these are the CMake options to supply:
 
@@ -72,29 +72,38 @@ In order to change what protocol support is compiled into the host, these are th
 - `-DENABLE_P25=1` - This will enable compiled-in P25 protocol support.
 - `-DENABLE_NXDN=1` - This will enable compiled-in NXDN protocol support.
 
-**NXDN Support Note**: NXDN support is currently experimental.
-
 ## Configuration
 
 When first setting up a DVM instance, it is required to properly set the "Logical Channel ID" (or LCN ID) data and then calibrate the modem.
 
 ### Initial Setup
 
+The following setups assume the host is compiled with the setup TUI mode (if availble). It is possible to setup the modem without the setup TUI, and requires manually modifying `config.yml` and the `iden_table.dat` files.
+
 1. Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart protocol has the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
-2. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup mode.
-3. Set the channel ID using the "i" command. This will select the identity table bandplan entry to use for frequency selection. The bandplan information is contained within the `iden_table.dat` file. The identity table information will also appear during dvmhost startup like this:
+2. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode.
+3. Using the TUI user interface, use the "Setup" menu to set default parameters.
+    3.1. The "Logging & Data Configuration" submenu allows you to alter the various logging file paths and levels, as well as paths to data files (such as the `iden_table.dat` file).
+    3.2. The "System Configuration" submenu allows you to alter various modem port and speed, system settings, and mode settings configuration.
+    3.3. The "Site Parameters" submenu allows you to alter various CW morse identification, and site parameters.
+    3.4. The "Channel Configuration" submenu allows you to alter the configured channel for the modem you are configuring.
+4. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
+5. Quit setup mode (some settings changes require a restart of the software to be effective) using, "File" menu, "Quit".
 
-```
-M: ... (HOST) Channel Id 0: BaseFrequency = 851006250Hz, TXOffsetMhz = -45.000000MHz, BandwidthKhz = 12.500000KHz, SpaceKhz = 6.250000KHz
-M: ... (HOST) Channel Id 1: BaseFrequency = 762006250Hz, TXOffsetMhz = 30.000000MHz, BandwidthKhz = 12.500000KHz, SpaceKhz = 6.250000KHz
-M: ... (HOST) Channel Id 15: BaseFrequency = 935001250Hz, TXOffsetMhz = -39.000000MHz, BandwidthKhz = 12.500000KHz, SpaceKhz = 6.250000KHz
-M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000MHz, BandwidthKhz = 12.500000KHz, SpaceKhz = 6.250000KHz
-```
+### Transmit Calibration (using setup TUI, if available)
 
-4. Set the channel number using either the "c" or "f" command. The "f" command is recommended as it will automatically calculate the appropriate channel number from the DVM's transmit frequency.
-5. Save the configuration using "s" and quit setup mode with "q".
+1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Bit Error Rate" functions under Performance Testing).
+2. Depending on which protocol you are calibration with, use the "Calibrate" menu, and select the appropriate mode using the "Operational Mode" submenu. (For example, select [Tx] DMR BS 1031 Hz Test Pattern for DMR or [Tx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1) for P25.)
+3. Open the "Level Adjustment" window by either, using the "Calibrate" menu and selecting "Level Adjustment" or if capable, pressing F5 on the keyboard.
+4. Ensure the TX Level is set to 50 (it should be by default, you can use the spinbox in the "Level Adjustment" window to change the value, if necessary to set it to 50).
+5. If the hardware in use has a TX potentiometer, set it to the to minimum level.
+6. Start Tx (click "Transmit" or press F12 on the keyboard).
+7. While observing the BER via whatever means available, adjust the TX potentiometer for the lowest received BER. If necessary also adjust the software TX Level for some fine tuning with the spinbox in the "Level Adjustment" window.
+8. Stop Tx (click "Transmit" or press F12 on the keyboard).
+9. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
+10. Quit setup mode, if done doing calibration, using, "File" menu, "Quit".
 
-### Transmit Calibration
+### Transmit Calibration (using old calibration CLI)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --cal`. This will start the dvmhost calibration mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Bit Error Rate" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, enter DMR BS 1031 Hz Test Pattern (M) or P25 1011 Hz Test Pattern (NAC293 ID1 TG1) (P).
@@ -105,7 +114,18 @@ M: ... (HOST) Channel Id 2: BaseFrequency = 450000000Hz, TXOffsetMhz = 5.000000M
 7. Stop Tx (press spacebar to toggle Tx).
 8. Save the configuration using "s" and quit calibration mode with "q".
 
-### Receive Calibration
+### Receive Calibration (using setup TUI, if available)
+
+1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Transmitter Test Pattern" functions under Performance Testing).
+2. Depending on which protocol you are calibration with, use the "Calibrate" menu, and select the appropriate mode using the "Operational Mode" submenu. (For example, select [Rx] DMR BS 1031 Hz Test Pattern for DMR or [Rx] P25 1011 Hz Test Pattern (NAC293 ID1 TG1) for P25.)
+3. Open the "Level Adjustment" window by either, using the "Calibrate" menu and selecting "Level Adjustment" or if capable, pressing F5 on the keyboard.
+4. Ensure the RX Level is set to 50 (it should be by default, you can use the spinbox in the "Level Adjustment" window to change the value, if necessary to set it to 50).
+5. If the hardware in use has a RX potentiometer, set it to the to minimum level. (If using something like the RepeaterBuilder STM32 board, decrease both the coarse and fine potentiometers to minimum level.)
+7. While observing the BER via the setup TUI (Receive BER shows a large window in the top-right corner of the TUI when in a Rx BER test mode), adjust the RX potentiometer(s) for the lowest received BER. If necessary also adjust the software RX Level for some fine tuning with the spinbox in the "Level Adjustment" window.
+8. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
+9. Quit setup mode, if done doing calibration, using, "File" menu, "Quit".
+
+### Receive Calibration (using old calibration CLI)
 
 1. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --cal`. This will start the dvmhost calibration mode. The best way to calibrate the DVM is to use a radio from which you can receive and transmit the appropriate test patterns (for example using ASTRO25 Tuner and an XTS radio to use the "Transmitter Test Pattern" functions under Performance Testing).
 2. Depending on which protocol you are calibration with, enter DMR BS 1031 Hz Test Pattern (M) or P25 1011 Hz Test Pattern (P).
