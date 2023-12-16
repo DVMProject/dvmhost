@@ -160,15 +160,15 @@ namespace p25
             static uint8_t* m_siteCallsign;
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert TSBK bytes to a 64-bit long value.</summary>
-            static ulong64_t toValue(const uint8_t* tsbk);
-            /// <summary>Internal helper to convert a 64-bit long value to TSBK bytes.</summary>
-            static UInt8Array fromValue(const ulong64_t tsbkValue);
+            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            static ulong64_t toValue(const uint8_t* payload);
+            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            static UInt8Array fromValue(const ulong64_t value);
 
             /// <summary>Internal helper to decode a trunking signalling block.</summary>
-            bool decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK = false);
+            bool decode(const uint8_t* data, uint8_t* payload, bool rawTSBK = false);
             /// <summary>Internal helper to encode a trunking signalling block.</summary>
-            void encode(uint8_t* data, const uint8_t* tsbk, bool rawTSBK = false, bool noTrellis = false);
+            void encode(uint8_t* data, const uint8_t* payload, bool rawTSBK = false, bool noTrellis = false);
 
             __PROTECTED_COPY(TSBK);
         };

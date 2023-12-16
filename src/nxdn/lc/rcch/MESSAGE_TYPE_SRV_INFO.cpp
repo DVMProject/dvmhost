@@ -57,7 +57,7 @@ void MESSAGE_TYPE_SRV_INFO::decode(const uint8_t* data, uint32_t length, uint32_
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
@@ -73,7 +73,7 @@ void MESSAGE_TYPE_SRV_INFO::encode(uint8_t* data, uint32_t length, uint32_t offs
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = (m_siteData.locId() >> 16) & 0xFFU;                                  // Location ID

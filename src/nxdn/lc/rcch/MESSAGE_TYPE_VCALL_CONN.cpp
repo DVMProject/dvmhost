@@ -57,7 +57,7 @@ void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint3
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
@@ -81,7 +81,7 @@ void MESSAGE_TYPE_VCALL_CONN::encode(uint8_t* data, uint32_t length, uint32_t of
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = (m_emergency ? 0x80U : 0x00U) +                                      // Emergency Flag

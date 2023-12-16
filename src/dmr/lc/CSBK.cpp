@@ -192,59 +192,62 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Internal helper to convert CSBK bytes to a 64-bit long value.
+/// Internal helper to convert payload bytes to a 64-bit long value.
 /// </summary>
-/// <param name="tsbk"></param>
+/// <param name="payload"></param>
 /// <returns></returns>
-ulong64_t CSBK::toValue(const uint8_t* csbk)
+ulong64_t CSBK::toValue(const uint8_t* payload)
 {
-    ulong64_t csbkValue = 0U;
+    ulong64_t value = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
-    csbkValue = csbk[2U];
-    csbkValue = (csbkValue << 8) + csbk[3U];
-    csbkValue = (csbkValue << 8) + csbk[4U];
-    csbkValue = (csbkValue << 8) + csbk[5U];
-    csbkValue = (csbkValue << 8) + csbk[6U];
-    csbkValue = (csbkValue << 8) + csbk[7U];
-    csbkValue = (csbkValue << 8) + csbk[8U];
-    csbkValue = (csbkValue << 8) + csbk[9U];
+    value = payload[0U];
+    value = (value << 8) + payload[1U];
+    value = (value << 8) + payload[2U];
+    value = (value << 8) + payload[3U];
+    value = (value << 8) + payload[4U];
+    value = (value << 8) + payload[5U];
+    value = (value << 8) + payload[6U];
+    value = (value << 8) + payload[7U];
 
-    return csbkValue;
+    return value;
 }
 
 /// <summary>
-/// Internal helper to convert a 64-bit long value to CSBK bytes.
+/// Internal helper to convert a 64-bit long value to payload bytes.
 /// </summary>
-/// <param name="csbkValue"></param>
+/// <param name="value"></param>
 /// <returns></returns>
-UInt8Array CSBK::fromValue(const ulong64_t csbkValue)
+UInt8Array CSBK::fromValue(const ulong64_t value)
 {
-    __UNIQUE_UINT8_ARRAY(csbk, DMR_CSBK_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(payload, DMR_CSBK_LENGTH_BYTES - 4U);
 
     // split ulong64_t (8 byte) value into bytes
-    csbk[2U] = (uint8_t)((csbkValue >> 56) & 0xFFU);
-    csbk[3U] = (uint8_t)((csbkValue >> 48) & 0xFFU);
-    csbk[4U] = (uint8_t)((csbkValue >> 40) & 0xFFU);
-    csbk[5U] = (uint8_t)((csbkValue >> 32) & 0xFFU);
-    csbk[6U] = (uint8_t)((csbkValue >> 24) & 0xFFU);
-    csbk[7U] = (uint8_t)((csbkValue >> 16) & 0xFFU);
-    csbk[8U] = (uint8_t)((csbkValue >> 8) & 0xFFU);
-    csbk[9U] = (uint8_t)((csbkValue >> 0) & 0xFFU);
+    payload[0U] = (uint8_t)((value >> 56) & 0xFFU);
+    payload[1U] = (uint8_t)((value >> 48) & 0xFFU);
+    payload[2U] = (uint8_t)((value >> 40) & 0xFFU);
+    payload[3U] = (uint8_t)((value >> 32) & 0xFFU);
+    payload[4U] = (uint8_t)((value >> 24) & 0xFFU);
+    payload[5U] = (uint8_t)((value >> 16) & 0xFFU);
+    payload[6U] = (uint8_t)((value >> 8) & 0xFFU);
+    payload[7U] = (uint8_t)((value >> 0) & 0xFFU);
 
-    return csbk;
+    return payload;
 }
 
 /// <summary>
 /// Internal helper to decode a control signalling block.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="tsbk"></param>
-/// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
+/// <param name="payload"></param>
+/// <returns>True, if CSBK was decoded, otherwise false.</returns>
+bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
-    assert(csbk != nullptr);
+    assert(payload != nullptr);
+
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
 
     // decode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
@@ -291,6 +294,7 @@ bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
     m_dataContent = false;
     m_CBF = 0U;
 
+    ::memcpy(payload, csbk + 2U, DMR_CSBK_LENGTH_BYTES - 4U);
     return true;
 }
 
@@ -298,58 +302,56 @@ bool CSBK::decode(const uint8_t* data, uint8_t* csbk)
 /// Internal helper to encode a control signalling block.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="tsbk"></param>
-/// <param name="rawTSBK"></param>
-/// <param name="noTrellis"></param>
-void CSBK::encode(uint8_t* data, const uint8_t* csbk)
+/// <param name="payload"></param>
+void CSBK::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
-    assert(csbk != nullptr);
+    assert(payload != nullptr);
 
-    uint8_t outCsbk[DMR_CSBK_LENGTH_BYTES];
-    ::memset(outCsbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
-    ::memcpy(outCsbk, csbk, DMR_CSBK_LENGTH_BYTES);
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+    ::memcpy(csbk + 2U, payload, DMR_CSBK_LENGTH_BYTES - 4U);
 
-    outCsbk[0U] = m_CSBKO;                                                          // CSBKO
-    outCsbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                   // Last Block Marker
+    csbk[0U] = m_CSBKO;                                                             // CSBKO
+    csbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                      // Last Block Marker
     if (!m_Cdef) {
-        outCsbk[1U] = m_FID;                                                        // Feature ID
+        csbk[1U] = m_FID;                                                           // Feature ID
     }
     else {
-        outCsbk[1U] = m_colorCode & 0x0FU;                                          // Cdef uses Color Code
+        csbk[1U] = m_colorCode & 0x0FU;                                             // Cdef uses Color Code
     }
 
     switch (m_dataType) {
         case DT_CSBK:
-            outCsbk[10U] ^= CSBK_CRC_MASK[0U];
-            outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
         case DT_MBC_HEADER:
-            outCsbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
-            outCsbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
     }
 
-    edac::CRC::addCCITT162(outCsbk, 12U);
+    edac::CRC::addCCITT162(csbk, 12U);
 
     switch (m_dataType) {
         case DT_CSBK:
-            outCsbk[10U] ^= CSBK_CRC_MASK[0U];
-            outCsbk[11U] ^= CSBK_CRC_MASK[1U];
+            csbk[10U] ^= CSBK_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_CRC_MASK[1U];
             break;
         case DT_MBC_HEADER:
-            outCsbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
-            outCsbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
+            csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
     }
 
     if (m_verbose) {
-        Utils::dump(2U, "Encoded CSBK", outCsbk, DMR_CSBK_LENGTH_BYTES);
+        Utils::dump(2U, "Encoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
 
     // encode BPTC (196,96) FEC
     edac::BPTC19696 bptc;
-    bptc.encode(outCsbk, data);
+    bptc.encode(csbk, data);
 }
 
 /// <summary>

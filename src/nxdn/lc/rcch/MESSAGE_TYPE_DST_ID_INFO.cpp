@@ -57,7 +57,7 @@ void MESSAGE_TYPE_DST_ID_INFO::decode(const uint8_t* data, uint32_t length, uint
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
@@ -73,7 +73,7 @@ void MESSAGE_TYPE_DST_ID_INFO::encode(uint8_t* data, uint32_t length, uint32_t o
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[1U] = 0xC0U + NXDN_CALLSIGN_LENGTH_BYTES;                                  // Station ID Option - Start / End / Character Count

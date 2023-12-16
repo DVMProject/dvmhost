@@ -120,59 +120,64 @@ TDULC::~TDULC()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Internal helper to convert RS bytes to a 64-bit long value.
+/// Internal helper to convert payload bytes to a 64-bit long value.
 /// </summary>
 /// <param name="tsbk"></param>
 /// <returns></returns>
-ulong64_t TDULC::toValue(const uint8_t* rs)
+ulong64_t TDULC::toValue(const uint8_t* payload)
 {
-    ulong64_t rsValue = 0U;
+    assert(payload != nullptr);
+
+    ulong64_t value = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
-    rsValue = rs[1U];
-    rsValue = (rsValue << 8) + rs[2U];
-    rsValue = (rsValue << 8) + rs[3U];
-    rsValue = (rsValue << 8) + rs[4U];
-    rsValue = (rsValue << 8) + rs[5U];
-    rsValue = (rsValue << 8) + rs[6U];
-    rsValue = (rsValue << 8) + rs[7U];
-    rsValue = (rsValue << 8) + rs[8U];
+    value = payload[0U];
+    value = (value << 8) + payload[1U];
+    value = (value << 8) + payload[2U];
+    value = (value << 8) + payload[3U];
+    value = (value << 8) + payload[4U];
+    value = (value << 8) + payload[5U];
+    value = (value << 8) + payload[6U];
+    value = (value << 8) + payload[7U];
 
-    return rsValue;
+    return value;
 }
 
 /// <summary>
-/// Internal helper to convert a 64-bit long value to RS bytes.
+/// Internal helper to convert a 64-bit long value to payload bytes.
 /// </summary>
 /// <param name="rsValue"></param>
 /// <returns></returns>
-UInt8Array TDULC::fromValue(const ulong64_t rsValue)
+UInt8Array TDULC::fromValue(const ulong64_t value)
 {
-    __UNIQUE_UINT8_ARRAY(rs, P25_TDULC_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
-    rs[1U] = (uint8_t)((rsValue >> 56) & 0xFFU);
-    rs[2U] = (uint8_t)((rsValue >> 48) & 0xFFU);
-    rs[3U] = (uint8_t)((rsValue >> 40) & 0xFFU);
-    rs[4U] = (uint8_t)((rsValue >> 32) & 0xFFU);
-    rs[5U] = (uint8_t)((rsValue >> 24) & 0xFFU);
-    rs[6U] = (uint8_t)((rsValue >> 16) & 0xFFU);
-    rs[7U] = (uint8_t)((rsValue >> 8) & 0xFFU);
-    rs[8U] = (uint8_t)((rsValue >> 0) & 0xFFU);
+    payload[0U] = (uint8_t)((value >> 56) & 0xFFU);
+    payload[1U] = (uint8_t)((value >> 48) & 0xFFU);
+    payload[2U] = (uint8_t)((value >> 40) & 0xFFU);
+    payload[3U] = (uint8_t)((value >> 32) & 0xFFU);
+    payload[4U] = (uint8_t)((value >> 24) & 0xFFU);
+    payload[5U] = (uint8_t)((value >> 16) & 0xFFU);
+    payload[6U] = (uint8_t)((value >> 8) & 0xFFU);
+    payload[7U] = (uint8_t)((value >> 0) & 0xFFU);
 
-    return rs;
+    return payload;
 }
 
 /// <summary>
 /// Internal helper to decode a terminator data unit w/ link control.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="rs"></param>
+/// <param name="payload"></param>
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
-bool TDULC::decode(const uint8_t* data, uint8_t* rs)
+bool TDULC::decode(const uint8_t* data, uint8_t* payload)
 {
     assert(data != nullptr);
-    assert(rs != nullptr);
+    assert(payload != nullptr);
+
+    uint8_t rs[P25_TDULC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
 
     // deinterleave
     uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
@@ -202,6 +207,7 @@ bool TDULC::decode(const uint8_t* data, uint8_t* rs)
         Utils::dump(2U, "TDULC::decode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
     }
 
+    ::memcpy(payload, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
     return true;
 }
 
@@ -209,36 +215,36 @@ bool TDULC::decode(const uint8_t* data, uint8_t* rs)
 /// Internal helper to encode a terminator data unit w/ link control.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="rs"></param>
-void TDULC::encode(uint8_t* data, const uint8_t* rs)
+/// <param name="payload"></param>
+void TDULC::encode(uint8_t* data, const uint8_t* payload)
 {
     assert(data != nullptr);
-    assert(rs != nullptr);
+    assert(payload != nullptr);
 
-    uint8_t outRs[P25_TDULC_LENGTH_BYTES];
-    ::memset(outRs, 0x00U, P25_TDULC_LENGTH_BYTES);
-    ::memcpy(outRs, rs, P25_TDULC_LENGTH_BYTES);
+    uint8_t rs[P25_TDULC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
+    ::memcpy(rs + 1U, payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 
-    outRs[0U] = m_lco;                                                              // LCO
+    rs[0U] = m_lco;                                                                 // LCO
     if (m_implicit)
-        outRs[0U] |= 0x40U;                                                         // Implicit Operation
+        rs[0U] |= 0x40U;                                                            // Implicit Operation
 
     if (m_verbose) {
-        Utils::dump(2U, "TDULC::encode(), TDULC Value", outRs, P25_TDULC_LENGTH_BYTES);
+        Utils::dump(2U, "TDULC::encode(), TDULC Value", rs, P25_TDULC_LENGTH_BYTES);
     }
 
     // encode RS (24,12,13) FEC
-    m_rs.encode241213(outRs);
+    m_rs.encode241213(rs);
 
 #if DEBUG_P25_TDULC
-    Utils::dump(2U, "TDULC::encode(), TDULC RS", outRs, P25_TDULC_LENGTH_BYTES);
+    Utils::dump(2U, "TDULC::encode(), TDULC RS", rs, P25_TDULC_LENGTH_BYTES);
 #endif
 
     uint8_t raw[P25_TDULC_FEC_LENGTH_BYTES + 1U];
     ::memset(raw, 0x00U, P25_TDULC_FEC_LENGTH_BYTES + 1U);
 
     // encode Golay (24,12,8) FEC
-    edac::Golay24128::encode24128(raw, outRs, P25_TDULC_LENGTH_BYTES);
+    edac::Golay24128::encode24128(raw, rs, P25_TDULC_LENGTH_BYTES);
 
     // interleave
     P25Utils::encode(raw, data, 114U, 410U);

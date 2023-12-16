@@ -149,15 +149,15 @@ namespace dmr
             /** Local Site data */
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert CSBK bytes to a 64-bit long value.</summary>
-            static ulong64_t toValue(const uint8_t* Csbk);
-            /// <summary>Internal helper to convert a 64-bit long value to CSBK bytes.</summary>
-            static UInt8Array fromValue(const ulong64_t csbkValue);
+            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            static ulong64_t toValue(const uint8_t* payload);
+            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            static UInt8Array fromValue(const ulong64_t value);
 
             /// <summary>Internal helper to decode a control signalling block.</summary>
-            bool decode(const uint8_t* data, uint8_t* csbk);
+            bool decode(const uint8_t* data, uint8_t* payload);
             /// <summary>Internal helper to encode a control signalling block.</summary>
-            void encode(uint8_t* data, const uint8_t* csbk);
+            void encode(uint8_t* data, const uint8_t* payload);
 
             __PROTECTED_COPY(CSBK);
         };

@@ -121,15 +121,15 @@ namespace p25
             /** Local Site data */
             static SiteData m_siteData;
 
-            /// <summary>Internal helper to convert RS bytes to a 64-bit long value.</summary>
-            static ulong64_t toValue(const uint8_t* rs);
-            /// <summary>Internal helper to convert a 64-bit long value to RS bytes.</summary>
-            static UInt8Array fromValue(const ulong64_t rsValue);
+            /// <summary>Internal helper to convert payload bytes to a 64-bit long value.</summary>
+            static ulong64_t toValue(const uint8_t* payload);
+            /// <summary>Internal helper to convert a 64-bit long value to payload bytes.</summary>
+            static UInt8Array fromValue(const ulong64_t value);
 
             /// <summary>Internal helper to decode terminator data unit w/ link control.</summary>
-            bool decode(const uint8_t* data, uint8_t* rs);
+            bool decode(const uint8_t* data, uint8_t* payload);
             /// <summary>Internal helper to encode terminator data unit w/ link control.</summary>
-            void encode(uint8_t* data, const uint8_t* rs);
+            void encode(uint8_t* data, const uint8_t* payload);
 
             __PROTECTED_COPY(TDULC);
         };

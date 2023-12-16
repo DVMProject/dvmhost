@@ -78,6 +78,7 @@ namespace p25
 
     const uint32_t  P25_TDULC_FEC_LENGTH_BYTES = 36U;
     const uint32_t  P25_TDULC_LENGTH_BYTES = 18U;
+    const uint32_t  P25_TDULC_PAYLOAD_LENGTH_BYTES = 8U;
 
     const uint32_t  P25_TSBK_FEC_LENGTH_BYTES = 25U;
     const uint32_t  P25_TSBK_FEC_LENGTH_BITS = P25_TSBK_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits

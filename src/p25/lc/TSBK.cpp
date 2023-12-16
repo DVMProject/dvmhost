@@ -47,7 +47,7 @@ bool TSBK::m_warnCRC = true;
 bool TSBK::m_warnCRC = false;
 #endif
 
-uint8_t *TSBK::m_siteCallsign = nullptr;
+uint8_t* TSBK::m_siteCallsign = nullptr;
 SiteData TSBK::m_siteData = SiteData();
 
 // ---------------------------------------------------------------------------
@@ -163,62 +163,67 @@ void TSBK::setCallsign(std::string callsign)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Internal helper to convert TSBK bytes to a 64-bit long value.
+/// Internal helper to convert payload bytes to a 64-bit long value.
 /// </summary>
 /// <param name="tsbk"></param>
 /// <returns></returns>
-ulong64_t TSBK::toValue(const uint8_t* tsbk)
+ulong64_t TSBK::toValue(const uint8_t* payload)
 {
-    ulong64_t tsbkValue = 0U;
+    assert(payload != nullptr);
+
+    ulong64_t value = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
-    tsbkValue = tsbk[2U];
-    tsbkValue = (tsbkValue << 8) + tsbk[3U];
-    tsbkValue = (tsbkValue << 8) + tsbk[4U];
-    tsbkValue = (tsbkValue << 8) + tsbk[5U];
-    tsbkValue = (tsbkValue << 8) + tsbk[6U];
-    tsbkValue = (tsbkValue << 8) + tsbk[7U];
-    tsbkValue = (tsbkValue << 8) + tsbk[8U];
-    tsbkValue = (tsbkValue << 8) + tsbk[9U];
+    value = payload[0U];
+    value = (value << 8) + payload[1U];
+    value = (value << 8) + payload[2U];
+    value = (value << 8) + payload[3U];
+    value = (value << 8) + payload[4U];
+    value = (value << 8) + payload[5U];
+    value = (value << 8) + payload[6U];
+    value = (value << 8) + payload[7U];
 
-    return tsbkValue;
+    return value;
 }
 
 /// <summary>
-/// Internal helper to convert a 64-bit long value to TSBK bytes.
+/// Internal helper to convert a 64-bit long value to payload bytes.
 /// </summary>
-/// <param name="tsbkValue"></param>
+/// <param name="value"></param>
 /// <returns></returns>
-UInt8Array TSBK::fromValue(const ulong64_t tsbkValue)
+UInt8Array TSBK::fromValue(const ulong64_t value)
 {
-    __UNIQUE_UINT8_ARRAY(tsbk, P25_TSBK_LENGTH_BYTES);
+    __UNIQUE_UINT8_ARRAY(payload, P25_TSBK_LENGTH_BYTES - 4U);
 
     // split ulong64_t (8 byte) value into bytes
-    tsbk[2U] = (uint8_t)((tsbkValue >> 56) & 0xFFU);
-    tsbk[3U] = (uint8_t)((tsbkValue >> 48) & 0xFFU);
-    tsbk[4U] = (uint8_t)((tsbkValue >> 40) & 0xFFU);
-    tsbk[5U] = (uint8_t)((tsbkValue >> 32) & 0xFFU);
-    tsbk[6U] = (uint8_t)((tsbkValue >> 24) & 0xFFU);
-    tsbk[7U] = (uint8_t)((tsbkValue >> 16) & 0xFFU);
-    tsbk[8U] = (uint8_t)((tsbkValue >> 8) & 0xFFU);
-    tsbk[9U] = (uint8_t)((tsbkValue >> 0) & 0xFFU);
+    payload[0U] = (uint8_t)((value >> 56) & 0xFFU);
+    payload[1U] = (uint8_t)((value >> 48) & 0xFFU);
+    payload[2U] = (uint8_t)((value >> 40) & 0xFFU);
+    payload[3U] = (uint8_t)((value >> 32) & 0xFFU);
+    payload[4U] = (uint8_t)((value >> 24) & 0xFFU);
+    payload[5U] = (uint8_t)((value >> 16) & 0xFFU);
+    payload[6U] = (uint8_t)((value >> 8) & 0xFFU);
+    payload[7U] = (uint8_t)((value >> 0) & 0xFFU);
 
-    return tsbk;
+    return payload;
 }
 
 /// <summary>
 /// Internal helper to decode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="tsbk"></param>
+/// <param name="payload"></param>
 /// <param name="rawTSBK"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
+bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
 {
     assert(data != nullptr);
-    assert(tsbk != nullptr);
+    assert(payload != nullptr);
 
-    if (rawTSBK) {
+    uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
+    ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
+    if (rawTSBK)
+    {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
 
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
@@ -274,6 +279,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker
     m_mfId = tsbk[1U];                                                              // Mfg Id.
 
+    ::memcpy(payload, tsbk + 2U, P25_TSBK_LENGTH_BYTES - 4U);
     return true;
 }
 
@@ -281,40 +287,39 @@ bool TSBK::decode(const uint8_t* data, uint8_t* tsbk, bool rawTSBK)
 /// Internal helper to eecode a trunking signalling block.
 /// </summary>
 /// <param name="data"></param>
-/// <param name="tsbk"></param>
+/// <param name="payload"></param>
 /// <param name="rawTSBK"></param>
 /// <param name="noTrellis"></param>
-void TSBK::encode(uint8_t* data, const uint8_t* tsbk, bool rawTSBK, bool noTrellis)
+void TSBK::encode(uint8_t* data, const uint8_t* payload, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
-    assert(tsbk != nullptr);
+    assert(payload != nullptr);
 
-    uint8_t outTsbk[P25_TSBK_LENGTH_BYTES];
-    ::memset(outTsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
-    ::memcpy(outTsbk, tsbk, P25_TSBK_LENGTH_BYTES);
+    uint8_t tsbk[P25_TSBK_LENGTH_BYTES];
+    ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
+    ::memcpy(tsbk + 2U, payload, P25_TSBK_LENGTH_BYTES - 4U);
 
-    outTsbk[0U] = m_lco;                                                            // LCO
-    outTsbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                   // Last Block Marker
-
-    outTsbk[1U] = m_mfId;
+    tsbk[0U] = m_lco;                                                               // LCO
+    tsbk[0U] |= (m_lastBlock) ? 0x80U : 0x00U;                                      // Last Block Marker
+    tsbk[1U] = m_mfId;                                                              // Mfg Id.
 
     // compute CRC-CCITT 16
-    edac::CRC::addCCITT162(outTsbk, P25_TSBK_LENGTH_BYTES);
+    edac::CRC::addCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
 
     if (m_verbose) {
-        Utils::dump(2U, "TSBK::encode(), TSBK Value", outTsbk, P25_TSBK_LENGTH_BYTES);
+        Utils::dump(2U, "TSBK::encode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
 
     uint8_t raw[P25_TSBK_FEC_LENGTH_BYTES];
     ::memset(raw, 0x00U, P25_TSBK_FEC_LENGTH_BYTES);
 
     // encode 1/2 rate Trellis
-    m_trellis.encode12(outTsbk, raw);
+    m_trellis.encode12(tsbk, raw);
 
     // are we encoding a raw TSBK?
     if (rawTSBK) {
         if (noTrellis) {
-            ::memcpy(data, outTsbk, P25_TSBK_LENGTH_BYTES);
+            ::memcpy(data, tsbk, P25_TSBK_LENGTH_BYTES);
         }
         else {
             ::memcpy(data, raw, P25_TSBK_FEC_LENGTH_BYTES);

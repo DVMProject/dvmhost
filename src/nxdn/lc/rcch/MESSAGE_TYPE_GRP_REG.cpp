@@ -57,7 +57,7 @@ void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
@@ -77,7 +77,7 @@ void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offse
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     rcch[2U] = (m_srcId >> 8U) & 0xFFU;                                             // Source Radio Address

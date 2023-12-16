@@ -57,7 +57,7 @@ void MESSAGE_TYPE_IDLE::decode(const uint8_t* data, uint32_t length, uint32_t of
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
@@ -73,7 +73,7 @@ void MESSAGE_TYPE_IDLE::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != NULL);
 
-    uint8_t rcch[22U];
+    uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::encode(data, rcch, length, offset);

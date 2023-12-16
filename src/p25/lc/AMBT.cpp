@@ -81,9 +81,10 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Internal helper to convert TSBK bytes to a 64-bit long value.
+/// Internal helper to convert AMBT bytes to a 64-bit long value.
 /// </summary>
-/// <param name="tsbk"></param>
+/// <param name="dataHeader"></param>
+/// <param name="pduUserData"></param>
 /// <returns></returns>
 ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUserData)
 {
@@ -125,7 +126,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     }
 
     m_lco = dataHeader.getAMBTOpcode();                                             // LCO
-    m_lastBlock = true;
+    m_lastBlock = true;                                                             // Last Block Marker
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
 
     if (dataHeader.getOutbound()) {
@@ -159,7 +160,7 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
     assert(pduUserData != nullptr);
 
     dataHeader.setFormat(PDU_FMT_AMBT);
-    dataHeader.setMFId(m_mfId);
+    dataHeader.setMFId(m_mfId);                                                     // Mfg Id.
     dataHeader.setAckNeeded(false);
     dataHeader.setOutbound(true);
     dataHeader.setSAP(PDU_SAP_TRUNK_CTRL);
@@ -170,7 +171,7 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
         dataHeader.setBlocksToFollow(1U);
     }
 
-    dataHeader.setAMBTOpcode(m_lco);
+    dataHeader.setAMBTOpcode(m_lco);                                                // LCO
 
     // generate packet CRC-32 and set data blocks
     if (dataHeader.getBlocksToFollow() > 1U) {
