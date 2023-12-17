@@ -409,7 +409,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         break;
 
         case CMD_P25_DATA:
-            processP25BER(buffer + 3U);
+            processP25BER(buffer + 4U);
             break;
 
         case CMD_P25_LOST:
@@ -427,7 +427,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         break;
 
         case CMD_NXDN_DATA:
-            processNXDNBER(buffer + 3U);
+            processNXDNBER(buffer + 4U);
             break;
 
         case CMD_NXDN_LOST:
@@ -1071,7 +1071,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     using namespace p25;
 
     uint8_t sync[P25_SYNC_LENGTH_BYTES];
-    ::memcpy(sync, buffer + 1U, P25_SYNC_LENGTH_BYTES);
+    ::memcpy(sync, buffer, P25_SYNC_LENGTH_BYTES);
 
     uint8_t syncErrs = 0U;
     for (uint8_t i = 0U; i < P25_SYNC_LENGTH_BYTES; i++)
@@ -1081,7 +1081,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
-    P25Utils::decode(buffer + 1U, nid, 48U, 114U);
+    P25Utils::decode(buffer, nid, 48U, 114U);
     uint8_t duid = nid[1U] & 0x0FU;
 
     uint32_t errs = 0U;
@@ -1092,7 +1092,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     if (duid == P25_DUID_HDU) {
         timerStart();
 
-        bool ret = lc.decodeHDU(buffer + 1U);
+        bool ret = lc.decodeHDU(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_HDU_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1128,7 +1128,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_LDU1) {
         timerStart();
 
-        bool ret = lc.decodeLDU1(buffer + 1U);
+        bool ret = lc.decodeLDU1(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_LDU1_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1138,31 +1138,31 @@ void HostSetup::processP25BER(const uint8_t* buffer)
                 lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
-        P25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+        P25Utils::decode(buffer, imbe, 114U, 262U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+        P25Utils::decode(buffer, imbe, 262U, 410U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+        P25Utils::decode(buffer, imbe, 452U, 600U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+        P25Utils::decode(buffer, imbe, 640U, 788U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+        P25Utils::decode(buffer, imbe, 830U, 978U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+        P25Utils::decode(buffer, imbe, 1020U, 1168U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+        P25Utils::decode(buffer, imbe, 1208U, 1356U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+        P25Utils::decode(buffer, imbe, 1398U, 1546U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+        P25Utils::decode(buffer, imbe, 1578U, 1726U);
         errs += m_fec.measureP25BER(imbe);
 
         float ber = float(errs) / 12.33F;
@@ -1183,7 +1183,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_LDU2) {
         timerStart();
 
-        bool ret = lc.decodeLDU2(buffer + 1U);
+        bool ret = lc.decodeLDU2(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_LDU2_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1193,31 +1193,31 @@ void HostSetup::processP25BER(const uint8_t* buffer)
                 lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
-        P25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+        P25Utils::decode(buffer, imbe, 114U, 262U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+        P25Utils::decode(buffer, imbe, 262U, 410U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+        P25Utils::decode(buffer, imbe, 452U, 600U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+        P25Utils::decode(buffer, imbe, 640U, 788U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+        P25Utils::decode(buffer, imbe, 830U, 978U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+        P25Utils::decode(buffer, imbe, 1020U, 1168U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+        P25Utils::decode(buffer, imbe, 1208U, 1356U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+        P25Utils::decode(buffer, imbe, 1398U, 1546U);
         errs += m_fec.measureP25BER(imbe);
 
-        P25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+        P25Utils::decode(buffer, imbe, 1578U, 1726U);
         errs += m_fec.measureP25BER(imbe);
 
         float ber = float(errs) / 12.33F;
@@ -1240,7 +1240,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
 
         // note: for the calibrator we will only process the PDU header -- and not the PDU data
         uint8_t pduBuffer[P25_LDU_FRAME_LENGTH_BYTES];
-        uint32_t bits = P25Utils::decode(buffer + 1U, pduBuffer, 0, P25_LDU_FRAME_LENGTH_BITS);
+        uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_LDU_FRAME_LENGTH_BITS);
 
         uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
         ::memset(rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
@@ -1268,9 +1268,9 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     else if (duid == P25_DUID_TSDU) {
         timerStop();
 
-        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer + 1U);
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(buffer);
 
-        Utils::dump(1U, "Raw TSBK Dump", buffer + 1U, P25_TSDU_FRAME_LENGTH_BYTES);
+        Utils::dump(1U, "Raw TSBK Dump", buffer, P25_TSDU_FRAME_LENGTH_BYTES);
 
         if (tsbk == nullptr) {
             LogWarning(LOG_CAL, P25_TSDU_STR ", undecodable LC");
@@ -1292,7 +1292,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     using namespace p25;
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
-    P25Utils::decode(buffer + 1U, nid, 48U, 114U);
+    P25Utils::decode(buffer, nid, 48U, 114U);
     uint8_t duid = nid[1U] & 0x0FU;
 
     uint32_t errs = 0U;
@@ -1301,7 +1301,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     if (duid == P25_DUID_HDU) {
         timerStart();
 
-        bool ret = lc.decodeHDU(buffer + 1U);
+        bool ret = lc.decodeHDU(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_HDU_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1337,7 +1337,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     else if (duid == P25_DUID_LDU1) {
         timerStart();
 
-        bool ret = lc.decodeLDU1(buffer + 1U);
+        bool ret = lc.decodeLDU1(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_LDU1_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1348,7 +1348,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
         }
 
         for (uint32_t i = 0U; i < 216U; i++)
-            errs += countErrs(buffer[i + 1U], LDU1_1K[i]);
+            errs += countErrs(buffer[i], LDU1_1K[i]);
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
@@ -1368,7 +1368,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     else if (duid == P25_DUID_LDU2) {
         timerStart();
 
-        bool ret = lc.decodeLDU2(buffer + 1U);
+        bool ret = lc.decodeLDU2(buffer);
         if (!ret) {
             LogWarning(LOG_CAL, P25_LDU2_STR ", undecodable LC");
             m_berUndecodableLC++;
@@ -1379,7 +1379,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
         }
 
         for (uint32_t i = 0U; i < 216U; i++)
-            errs += countErrs(buffer[i + 1U], LDU2_1K[i]);
+            errs += countErrs(buffer[i], LDU2_1K[i]);
 
         float ber = float(errs) / 12.33F;
         if (ber < 10.0F)
@@ -1444,10 +1444,10 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
 
             uint32_t errors = 0U;
 
-            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
-            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
-            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
-            errors += m_fec.regenerateNXDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+            errors += m_fec.measureNXDNBER(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
+            errors += m_fec.measureNXDNBER(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
+            errors += m_fec.measureNXDNBER(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
+            errors += m_fec.measureNXDNBER(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
 
             m_berBits += 188U;
             m_berErrs += errors;

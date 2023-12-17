@@ -534,7 +534,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
 
     uint32_t c = 0U;
     MASK = 0x1000000U;
-    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
         uint32_t cPos = AMBE_C_TABLE[i];
         if (READ_BIT(bytes, cPos))
             c |= MASK;
@@ -555,7 +555,7 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     }
 
     MASK = 0x1000000U;
-    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
         uint32_t cPos = AMBE_C_TABLE[i];
         WRITE_BIT(bytes, cPos, c & MASK);
     }
@@ -591,7 +591,7 @@ uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 
     uint32_t c = 0U;
     MASK = 0x1000000U;
-    for (uint32_t i = 0U; i < 24U; i++, MASK >>= 1) {
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
         uint32_t cPos = AMBE_C_TABLE[i];
         if (READ_BIT(bytes, cPos))
             c |= MASK;
