@@ -387,7 +387,7 @@ void Data::processNetwork(const data::Data& dmrData)
         Slot *m_tscc = m_slot->m_dmr->getTSCCSlot();
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
-                m_tscc->m_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
+                m_tscc->m_affiliations->releaseGrant(m_slot->m_netLC->getDstId(), false);
                 m_slot->clearTSCCActivated();
             }
         }
