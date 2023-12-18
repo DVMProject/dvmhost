@@ -33,6 +33,7 @@
 #include "edac/AMBEFEC.h"
 #include "edac/Golay24128.h"
 #include "edac/Hamming.h"
+#include "Log.h"
 #include "Utils.h"
 
 using namespace edac;
@@ -105,21 +106,21 @@ uint32_t AMBEFEC::regenerateDMR(uint8_t* bytes) const
             b3 |= MASK;
     }
 
-	MASK = 0x1000000U;
-	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
-		uint32_t c1Pos = AMBE_C_TABLE[i];
-		uint32_t c2Pos = c1Pos + 72U;
-		if (c2Pos >= 108U)
-			c2Pos += 48U;
-		uint32_t c3Pos = c1Pos + 192U;
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+        uint32_t c1Pos = AMBE_C_TABLE[i];
+        uint32_t c2Pos = c1Pos + 72U;
+        if (c2Pos >= 108U)
+            c2Pos += 48U;
+        uint32_t c3Pos = c1Pos + 192U;
 
-		if (READ_BIT(bytes, c1Pos))
-			c1 |= MASK;
-		if (READ_BIT(bytes, c2Pos))
-			c2 |= MASK;
-		if (READ_BIT(bytes, c3Pos))
-			c3 |= MASK;
-	}
+        if (READ_BIT(bytes, c1Pos))
+            c1 |= MASK;
+        if (READ_BIT(bytes, c2Pos))
+            c2 |= MASK;
+        if (READ_BIT(bytes, c3Pos))
+            c3 |= MASK;
+    }
 
     uint32_t errors = regenerate(a1, b1, c1);
     errors += regenerate(a2, b2, c2);
@@ -212,21 +213,21 @@ uint32_t AMBEFEC::measureDMRBER(const uint8_t* bytes) const
             b3 |= MASK;
     }
 
-	MASK = 0x1000000U;
-	for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
-		uint32_t c1Pos = AMBE_C_TABLE[i];
-		uint32_t c2Pos = c1Pos + 72U;
-		if (c2Pos >= 108U)
-			c2Pos += 48U;
-		uint32_t c3Pos = c1Pos + 192U;
+    MASK = 0x1000000U;
+    for (uint32_t i = 0U; i < 25U; i++, MASK >>= 1) {
+        uint32_t c1Pos = AMBE_C_TABLE[i];
+        uint32_t c2Pos = c1Pos + 72U;
+        if (c2Pos >= 108U)
+            c2Pos += 48U;
+        uint32_t c3Pos = c1Pos + 192U;
 
-		if (READ_BIT(bytes, c1Pos))
-			c1 |= MASK;
-		if (READ_BIT(bytes, c2Pos))
-			c2 |= MASK;
-		if (READ_BIT(bytes, c3Pos))
-			c3 |= MASK;
-	}
+        if (READ_BIT(bytes, c1Pos))
+            c1 |= MASK;
+        if (READ_BIT(bytes, c2Pos))
+            c2 |= MASK;
+        if (READ_BIT(bytes, c3Pos))
+            c3 |= MASK;
+    }
 
     uint32_t errors = regenerate(a1, b1, c1);
     errors += regenerate(a2, b2, c2);
@@ -611,44 +612,49 @@ uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 /// <param name="a"></param>
 /// <param name="b"></param>
 /// <param name="c"></param>
-/// <param name="ignoreParity"></param>
 /// <returns></returns>
-uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c, bool ignoreParity) const
+uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
 {
-	uint32_t old_a = a;
-	uint32_t old_b = b;
+    uint32_t old_a = a;
+    uint32_t old_b = b;
 
-	uint32_t data;
-	bool valid = Golay24128::decode24128(a, data);
-	if (!valid && !ignoreParity) {
-		a = 0xF00292U;
-		b = 0x0E0B20U;
-		c = 0x000000U;
-		return 10U;		// An invalid A block gives an error count of 10
-	}
+    uint32_t data;
+    bool valid = Golay24128::decode24128(a, data);
+    if (!valid) {
+        uint32_t errsA = Utils::countBits32(data ^ a);
+#if DEBUG_AMBEFEC
+        LogDebug(LOG_HOST, "AMBEFEC::regnerate() invalid A block, errsA = %u, a = %6X, b = %6X, c = %6X", errsA, a, b, c);
+#endif
+        a = 0xF00292U;
+        b = 0x0E0B20U;
+        c = 0x000000U;
+        return errsA;
+    }
 
-	a = Golay24128::encode24128(data);
+    a = Golay24128::encode24128(data);
 
-	// PRNG
-	uint32_t p = PRNG_TABLE[data] >> 1;
-	b ^= p;
+    // PRNG
+    uint32_t p = PRNG_TABLE[data] >> 1;
+    b ^= p;
 
-	uint32_t datb = Golay24128::decode23127(b);
-	b = Golay24128::encode23127(datb) >> 1;
+    uint32_t datb = Golay24128::decode23127(b);
+    b = Golay24128::encode23127(datb) >> 1;
 
-	b ^= p;
+    b ^= p;
 
-	uint32_t v = a ^ old_a;
-	uint32_t errsA = Utils::countBits32(v);
+    uint32_t v = a ^ old_a;
+    uint32_t errsA = Utils::countBits32(v);
 
-	v = b ^ old_b;
-	uint32_t errsB = Utils::countBits32(v);
+    v = b ^ old_b;
+    uint32_t errsB = Utils::countBits32(v);
+#if DEBUG_AMBEFEC
+    LogDebug(LOG_HOST, "AMBEFEC::regnerate() errsA = %u, a = %6X, errsB = %u, b = %6X, c = %6X", errsA, a, errsB, b, c);
+#endif
+    if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
+        a = 0xF00292U;
+        b = 0x0E0B20U;
+        c = 0x000000U;
+    }
 
-	if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
-		a = 0xF00292U;
-		b = 0x0E0B20U;
-		c = 0x000000U;
-	}
-
-	return errsA + errsB;
+    return errsA + errsB;
 }

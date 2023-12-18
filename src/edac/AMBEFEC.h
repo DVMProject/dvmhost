@@ -499,7 +499,7 @@ namespace edac
 
     private:
         /// <summary></summary>
-        uint32_t regenerate(uint32_t& a, uint32_t& b, uint32_t& c, bool ignoreParity = true) const;
+        uint32_t regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const;
     };
 } // namespace edac
 
