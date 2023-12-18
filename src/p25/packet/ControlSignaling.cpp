@@ -1744,7 +1744,7 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     }
 
     uint32_t count = m_p25->m_hangCount / 2;
-    if (!m_p25->m_dedicatedControl) {
+    if (!m_p25->m_dedicatedControl || m_p25->m_voiceOnControl) {
         count = count / 2;
     }
     std::unique_ptr<lc::TDULC> lc = nullptr;

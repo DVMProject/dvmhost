@@ -1129,7 +1129,7 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
         return;
     }
 
-    // resize immediate queue if necessary (this shouldn't really ever happen)
+    // resize queue if necessary (this shouldn't really ever happen)
     uint32_t space = m_txQueue.freeSpace();
     if (space < (length + 1U)) {
         if (!net) {
