@@ -121,6 +121,10 @@ int HostCal::run(int argc, char **argv)
         m_channelId = 15U;
     }
 
+    // if modem debug is being forced from the commandline -- enable modem debug
+    if (g_modemDebug)
+        m_debug = true;
+
     if (!calculateRxTxFreq()) {
         return false;
     }

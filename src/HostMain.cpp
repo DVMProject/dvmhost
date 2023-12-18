@@ -101,6 +101,8 @@ bool g_fireNXDNControl = false;
 
 uint8_t* g_gitHashBytes = nullptr;
 
+bool g_modemDebug = false;
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
@@ -163,6 +165,7 @@ void usage(const char* message, const char* arg)
         "\n\n"
         "  -v        show version information\n"
         "  -h        show this screen\n"
+        "  -d        force modem debug\n"
         "  -f        foreground mode\n"
         "\n"
         "  --setup   setup and calibration mode\n"
@@ -203,6 +206,9 @@ int checkArgs(int argc, char* argv[])
         else if (IS("--")) {
             ++p;
             break;
+        }
+        else if (IS("-d")) {
+            g_modemDebug = true;
         }
         else if (IS("-f")) {
             g_foreground = true;

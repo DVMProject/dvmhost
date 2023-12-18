@@ -492,6 +492,10 @@ bool Host::createModem()
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
 
+    // if modem debug is being forced from the commandline -- enable modem debug
+    if (g_modemDebug)
+        debug = true;
+
     if (rfPower == 0U) { // clamp to 1
         rfPower = 1U;
     }

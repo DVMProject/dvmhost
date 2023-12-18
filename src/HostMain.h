@@ -57,6 +57,8 @@ extern bool g_fireNXDNControl;
 
 extern uint8_t* g_gitHashBytes;
 
+extern bool g_modemDebug;
+
 extern HOST_SW_API void fatal(const char* msg, ...);
 
 #endif // __HOST_MAIN_H__
