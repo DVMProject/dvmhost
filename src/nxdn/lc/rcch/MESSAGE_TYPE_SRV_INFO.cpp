@@ -83,9 +83,9 @@ void MESSAGE_TYPE_SRV_INFO::encode(uint8_t* data, uint32_t length, uint32_t offs
     rcch[5U] = (m_siteData.netActive() ? NXDN_SIF2_IP_NETWORK : 0x00U);             // ...
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
-    rcch[6U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction
-    rcch[7U] = 0x08U;                                                               // ...                     - No group restriction / GMS; Location Registration Restriction
-    rcch[8U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                           // ...                     - No group ratio restriction / No delay time extension / ISO
+    rcch[8U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction
+    rcch[9U] = 0U;                                                                  // ...                     - No group restriction / No Location Registration Restriction
+    rcch[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                          // ...                     - No group ratio restriction / No delay time extension / ISO
 
     RCCH::encode(data, rcch, length, offset);
 }

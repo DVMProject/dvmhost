@@ -286,11 +286,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     ** Site Data
     */
     // calculate the NXDN location ID
-    uint32_t locId = NXDN_LOC_CAT_LOCAL; // DVM is currently fixed to "local" category
-    locId = (locId << 17) + sysId;
-    locId = (locId << 5) + (siteId & 0x1FU);
+    uint32_t locId = NXDN_LOC_CAT_GLOBAL; // DVM is currently fixed to "global" category
+    locId = (locId << 10) + (sysId & 0x3FFU);
+    locId = (locId << 12) + (siteId & 0xFFFU);
 
-    m_siteData = SiteData(locId, channelId, channelNo, serviceClass, false);
+    m_siteData = SiteData(locId, channelId, (channelNo & 0x3FF), serviceClass, false);
     m_siteData.setCallsign(cwCallsign);
 
     for (uint32_t ch : voiceChNo) {

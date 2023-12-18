@@ -96,11 +96,11 @@ void MESSAGE_TYPE_SITE_INFO::encode(uint8_t* data, uint32_t length, uint32_t off
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
     rcch[8U] = 0U;                                                                  // Restriction Information - No access restriction / No cycle restriction
-    rcch[9U] = 0x08U;                                                               // ...                     - No group restriction / GMS; Location Registration Restriction
+    rcch[9U] = 0U;                                                                  // ...                     - No group restriction / No Location Registration Restriction
     rcch[10U] = (!m_siteData.netActive() ? 0x01U : 0x00U);                          // ...                     - No group ratio restriction / No delay time extension / ISO
 
     // bryanb: this is currently fixed -- maybe dynamic in the future
-    rcch[11U] = NXDN_CH_ACCESS_BASE_FREQ_SYS_DEFINED;                               // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
+    rcch[11U] = NXDN_CH_ACCESS_BASE_FREQ_SYS_DEFINED << 2;                          // Channel Access Information - Channel Version / Sys Defined Step / Sys Defined Base Freq
 
     rcch[14U] = 1U;                                                                 // Version
 

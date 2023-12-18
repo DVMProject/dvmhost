@@ -63,8 +63,8 @@ namespace nxdn
         /// <param name="requireReg"></param>
         SiteData(uint32_t locId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass, bool requireReq) :
             m_locId(locId),
-            m_channelId(1U),
-            m_channelNo(1U),
+            m_channelId(channelId),
+            m_channelNo(channelNo),
             m_serviceClass(NXDN_SIF1_VOICE_CALL_SVC | NXDN_SIF1_DATA_CALL_SVC),
             m_isAdjSite(false),
             m_callsign("CHANGEME"),
@@ -75,8 +75,8 @@ namespace nxdn
                 m_locId = 0xFFFFFFU;
 
             // channel id clamping
-            if (channelId > 15U)
-                channelId = 15U;
+            if (m_channelId > 15U)
+                m_channelId = 15U;
 
             // channel number clamping
             if (m_channelNo == 0U) { // clamp to 1
