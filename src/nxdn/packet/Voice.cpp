@@ -573,7 +573,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/188 (%.1f%%)", errors, float(errors) / 1.88F);
+                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/188 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch11;
@@ -603,7 +603,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -628,7 +628,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
+                LogMessage(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", srcId = %u, dstId = %u, audio, errs = %u/94 (%.1f%%)", m_nxdn->m_rfLC.getSrcId(), m_nxdn->m_rfLC.getDstId(), errors, float(errors) / 0.94F);
             }
 
             channel::FACCH1 facch12;
@@ -975,7 +975,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 188U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/141 (%.1f%%)", errors, float(errors) / 1.88F);
+                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/141 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 1.88F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_1) {
             channel::FACCH1 facch1;
@@ -994,7 +994,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
+                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
             }
         } else if (option == NXDN_LICH_STEAL_FACCH1_2) {
             edac::AMBEFEC ambe;
@@ -1008,7 +1008,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             m_rfBits += 94U;
 
             if (m_verbose) {
-                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, errs = %u/94 (%.1f%%)", errors, float(errors) / 0.94F);
+                LogMessage(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u, errs = %u/94 (%.1f%%)", m_nxdn->m_netLC.getSrcId(), m_nxdn->m_netLC.getDstId(), errors, float(errors) / 0.94F);
             }
             channel::FACCH1 facch1;
             bool valid = facch1.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);

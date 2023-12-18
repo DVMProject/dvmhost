@@ -1406,7 +1406,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
 {
     using namespace nxdn;
 
-    unsigned char data[NXDN_FRAME_LENGTH_BYTES];
+    uint8_t data[NXDN_FRAME_LENGTH_BYTES];
     ::memcpy(data, buffer, NXDN_FRAME_LENGTH_BYTES);
     NXDNUtils::scrambler(data);
 
@@ -1419,7 +1419,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
 
         if (usc == NXDN_LICH_USC_SACCH_NS) {
             if (m_berFrames == 0U) {
-                LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), 1031 Test Pattern Start");
+                LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), BER Start");
 
                 timerStart();
                 m_berErrs = 0U;
@@ -1428,7 +1428,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
                 return;
             } else {
                 float ber = float(m_berErrs * 100U) / float(m_berBits);
-                LogMessage(LOG_CAL, "NXDN TX_REL (Transmission Release), 1031 Test Pattern BER, frames: %u, errs: %.3f%% (%u/%u)", m_berFrames, ber, m_berErrs, m_berBits);
+                LogMessage(LOG_CAL, "NXDN TX_REL (Transmission Release), BER Test, frames: %u, errs: %.3f%% (%u/%u)", m_berFrames, ber, m_berErrs, m_berBits);
 
                 // handle displaying TUI
                 updateTUIBER(ber);
@@ -1454,7 +1454,7 @@ void HostSetup::processNXDNBER(const uint8_t* buffer)
             m_berFrames++;
 
             float ber = float(errors) / 1.88F;
-            LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), 1031 Test Pattern BER, (errs): %.3f%% (%u/188)", ber, errors);
+            LogMessage(LOG_CAL, "NXDN VCALL (Voice Call), BER Test, (errs): %.3f%% (%u/188)", ber, errors);
 
             // handle displaying TUI
             updateTUIBER(ber);

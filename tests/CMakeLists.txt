@@ -32,6 +32,7 @@ file(GLOB dvmtests_SRC
     "tests/crypto/*.cpp"
     "tests/edac/*.cpp"
     "tests/p25/*.cpp"
+    "tests/nxdn/*.cpp"
 )
 
 #

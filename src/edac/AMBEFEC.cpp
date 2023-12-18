@@ -564,7 +564,6 @@ uint32_t AMBEFEC::regenerateNXDN(uint8_t* bytes) const
     return errors;
 }
 
-
 /// <summary>
 /// Returns the number of errors on the NXDN BER input bytes.
 /// </summary>
