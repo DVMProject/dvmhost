@@ -2026,6 +2026,11 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
                     else {
                         SiteData site = entry.second;
 
+                        // this should never happen -- but prevent announcing ourselves as a neighbor
+                        if (site.channelId() == m_p25->m_siteData.channelId() && site.channelNo() == m_p25->m_siteData.channelNo() &&
+                            site.siteId() == m_p25->m_siteData.siteId() && site.sysId() == m_p25->m_siteData.sysId())
+                            continue;
+
                         uint8_t cfva = P25_CFVA_NETWORK;
                         if (m_adjSiteUpdateCnt[site.siteId()] == 0U) {
                             cfva |= P25_CFVA_FAILURE;

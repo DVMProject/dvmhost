@@ -1205,7 +1205,6 @@ int Host::run()
                             if (m_state != STATE_P25)
                                 setState(STATE_P25);
 
-                            p25->writeAdjSSNetwork();
                             p25->setCCRunning(true);
 
                             // hide this message for continuous CC -- otherwise display every time we process
@@ -1238,16 +1237,6 @@ int Host::run()
                         if (m_state == STATE_P25 && !m_modeTimer.isRunning()) {
                             m_modeTimer.setTimeout(m_rfModeHang);
                             m_modeTimer.start();
-                        }
-                    }
-                }
-                else {
-                    // simply use the P25 CC interval timer in a non-broadcast state to transmit adjacent site data over
-                    // the network
-                    if (p25BcastIntervalTimer.isRunning() && p25BcastIntervalTimer.hasExpired()) {
-                        if ((m_state == STATE_IDLE || m_state == STATE_P25) && !m_modem->hasTX()) {
-                            p25->writeAdjSSNetwork();
-                            p25BcastIntervalTimer.start();
                         }
                     }
                 }

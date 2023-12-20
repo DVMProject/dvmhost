@@ -103,9 +103,6 @@ namespace p25
         /// <summary>Get frame data from data ring buffer.</summary>
         uint32_t getFrame(uint8_t* data);
 
-        /// <summary>Helper to write P25 adjacent site information to the network.</summary>
-        void writeAdjSSNetwork();
-
         /// <summary>Helper to write end of voice call frame data.</summary>
         bool writeRF_VoiceEnd();
 
@@ -210,6 +207,8 @@ namespace p25
         Timer m_netTimeout;
         Timer m_netTGHang;
         Timer m_networkWatchdog;
+
+        Timer m_adjSiteUpdate;
 
         Timer m_ccPacketInterval;
 

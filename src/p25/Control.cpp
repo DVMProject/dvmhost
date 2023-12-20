@@ -131,6 +131,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netTimeout(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
+    m_adjSiteUpdate(1000U, 75U),
     m_ccPacketInterval(1000U, 0U, 10U),
     m_hangCount(3U * 8U),
     m_tduPreambleCount(8U),
@@ -729,14 +730,6 @@ uint32_t Control::getFrame(uint8_t* data)
 }
 
 /// <summary>
-/// Helper to write P25 adjacent site information to the network.
-/// </summary>
-void Control::writeAdjSSNetwork()
-{
-    m_control->writeAdjSSNetwork();
-}
-
-/// <summary>
 /// Helper to write end of voice call frame data.
 /// </summary>
 /// <returns></returns>
@@ -796,6 +789,10 @@ void Control::clock(uint32_t ms)
     if (m_enableControl) {
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
+            if (!m_adjSiteUpdate.isRunning()) {
+                m_control->writeAdjSSNetwork();
+                m_adjSiteUpdate.start();
+            }
         }
 
         if (m_ccHalted) {
@@ -822,6 +819,13 @@ void Control::clock(uint32_t ms)
         if (m_ccPrevRunning && !m_ccRunning) {
             writeRF_ControlEnd();
             m_ccPrevRunning = m_ccRunning;
+        }
+
+        // do we need to network announce ourselves?
+        m_adjSiteUpdate.clock(ms);
+        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
+            m_control->writeAdjSSNetwork();
+            m_adjSiteUpdate.start();
         }
     }
 
@@ -1501,7 +1505,6 @@ bool Control::writeRF_ControlData()
         return false;
 
     if (m_ccFrameCnt == 254U) {
-        m_control->writeAdjSSNetwork();
         m_ccFrameCnt = 0U;
     }
 
@@ -1542,6 +1545,7 @@ bool Control::writeRF_ControlEnd()
 
     m_txQueue.clear();
     m_ccPacketInterval.stop();
+    m_adjSiteUpdate.stop();
 
     if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
         for (uint32_t i = 0; i < TSBK_PCH_CCH_CNT; i++) {

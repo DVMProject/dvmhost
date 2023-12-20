@@ -95,14 +95,13 @@ void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     ulong64_t tsbkValue = 0U;
 
     tsbkValue = m_siteData.lra();                                                   // Location Registration Area
-    tsbkValue = (tsbkValue << 4) +
-        (m_siteData.netActive()) ? P25_CFVA_NETWORK : 0U;                           // CFVA
+    tsbkValue = (tsbkValue << 4) + m_adjCFVA;                                       // CFVA
     tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
-    tsbkValue = (tsbkValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
-    tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                             // Site ID
-    tsbkValue = (tsbkValue << 4) + m_siteData.channelId();                          // Channel ID
-    tsbkValue = (tsbkValue << 12) + m_siteData.channelNo();                         // Channel Number
-    tsbkValue = (tsbkValue << 8) + m_siteData.serviceClass();                       // System Service Class
+    tsbkValue = (tsbkValue << 8) + m_adjRfssId;                                     // RF Sub-System ID
+    tsbkValue = (tsbkValue << 8) + m_adjSiteId;                                     // Site ID
+    tsbkValue = (tsbkValue << 4) + m_adjChannelId;                                  // Channel ID
+    tsbkValue = (tsbkValue << 12) + m_adjChannelNo;                                 // Channel Number
+    tsbkValue = (tsbkValue << 8) + m_adjServiceClass;                               // System Service Class
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
