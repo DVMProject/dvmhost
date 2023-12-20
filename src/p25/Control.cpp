@@ -825,8 +825,10 @@ void Control::clock(uint32_t ms)
 
         m_adjSiteUpdate.clock(ms);
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
-            m_control->writeAdjSSNetwork();
-            m_adjSiteUpdate.start();
+            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_control->writeAdjSSNetwork();
+                m_adjSiteUpdate.start();
+            }
         }
     }
 
