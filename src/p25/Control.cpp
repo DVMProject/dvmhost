@@ -789,10 +789,6 @@ void Control::clock(uint32_t ms)
     if (m_enableControl) {
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
-            if (!m_adjSiteUpdate.isRunning()) {
-                m_control->writeAdjSSNetwork();
-                m_adjSiteUpdate.start();
-            }
         }
 
         if (m_ccHalted) {
@@ -822,6 +818,11 @@ void Control::clock(uint32_t ms)
         }
 
         // do we need to network announce ourselves?
+        if (!m_adjSiteUpdate.isRunning()) {
+            m_control->writeAdjSSNetwork();
+            m_adjSiteUpdate.start();
+        }
+
         m_adjSiteUpdate.clock(ms);
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
             m_control->writeAdjSSNetwork();
