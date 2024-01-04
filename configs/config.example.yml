@@ -196,6 +196,8 @@ protocols:
         legacyGroupGrnt: true
         # Flag indicating the fallback legacy group registration. (Same as above except for group affiliations.)
         legacyGroupReg: false
+        # Flag indicating the host should send a network grant demand TDU for conventional traffic.
+        convNetGrantDemand: false
         # Flag indicating the host should verify group affiliation.
         verifyAff: false
         # Flag indicating the host should verify unit registration.

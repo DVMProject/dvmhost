@@ -148,7 +148,7 @@ void fatal(const char* msg, ...)
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
-    ::fprintf(stdout, "Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+    ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
     if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
@@ -157,8 +157,12 @@ void usage(const char* message, const char* arg)
     }
 
     ::fprintf(stdout, 
-        "usage: %s [-vhf]"
+        "usage: %s [-vhdf]"
+#if defined(ENABLE_SETUP_TUI)
         "[--setup]"
+#else
+        "[--cal]"
+#endif
         "[--fne]"
         "[-c <configuration file>]"
         "[--remote [-a <address>] [-p <port>]]"
@@ -168,7 +172,11 @@ void usage(const char* message, const char* arg)
         "  -d        force modem debug\n"
         "  -f        foreground mode\n"
         "\n"
+#if defined(ENABLE_SETUP_TUI)
         "  --setup   setup and calibration mode\n"
+#else
+        "  --cal     old calibration mode\n"
+#endif
         "\n"
         "  --fne     fixed network equipment mode (conference bridge)\n"
         "\n"

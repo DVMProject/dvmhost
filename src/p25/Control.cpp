@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -106,6 +106,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ackTSBKRequests(true),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
+    m_allowExplicitSourceId(true),
+    m_convNetGrantDemand(false),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
@@ -300,6 +302,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_enableControl = control["enable"].as<bool>(false);
     if (m_enableControl) {
         m_dedicatedControl = control["dedicated"].as<bool>(false);
+        m_convNetGrantDemand = false;
     }
     else {
         m_dedicatedControl = false;
@@ -330,6 +333,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_redundantGrant = control["redundantGrantTransmit"].as<bool>(false);
 
     m_allowExplicitSourceId = p25Protocol["allowExplicitSourceId"].as<bool>(true);
+    m_convNetGrantDemand = p25Protocol["convNetGrantDemand"].as<bool>(false);
 
     uint32_t ccBcstInterval = p25Protocol["control"]["interval"].as<uint32_t>(300U);
     m_control->m_adjSiteUpdateInterval += ccBcstInterval;
@@ -497,6 +501,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
+        LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
 
         LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");
         if (m_control->m_redundantGrant) {

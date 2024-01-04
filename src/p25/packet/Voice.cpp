@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -388,6 +388,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_p25->m_rfState = RS_RF_REJECTED;
                     return false;
                 }
+            }
+
+            // send network grant demand TDU
+            if (!m_p25->m_control && m_p25->m_convNetGrantDemand) {
+                uint8_t controlByte = 0x80U | (group) ? 0x00U : 0x01U;
+                m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
             }
 
             m_rfLC = lc;
