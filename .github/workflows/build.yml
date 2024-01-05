@@ -52,8 +52,8 @@ jobs:
     needs: [setup]
     strategy:
       matrix:
-        arch: ["amd64", "arm", "aarch64"]
-#        arch: ["amd64", "arm", "aarch64", "armhf"]
+#        arch: ["amd64", "arm", "aarch64"]
+        arch: ["amd64", "arm", "aarch64", "armhf"]
     runs-on: ubuntu-20.04
     env:
       PACKAGENAME: ${{ needs.setup.outputs.APPNAME }}-${{ needs.setup.outputs.DATE }}-${{ matrix.arch }}
@@ -94,7 +94,7 @@ jobs:
       - name: Package
         run: |
           mkdir -p ${{ env.PACKAGENAME }}
-          cp dvmcmd dvmhost ${{ env.PACKAGENAME }}
+          cp dvmcmd dvmhost dvmfne ${{ env.PACKAGENAME }}
           zip -9 -r ${{ env.PACKAGENAME }}.zip ${{ env.PACKAGENAME }}
       - name: Upload artifact
         uses: actions/upload-artifact@v2
