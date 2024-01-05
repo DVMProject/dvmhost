@@ -6,6 +6,12 @@ This project is a direct fork of the MMDVMHost (https://github.com/g4klx/MMDVMHo
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
+The main executable program for this project is `dvmhost`, this is the host software that connects to the DVM modems (both repeater and hotspot). However, it is important to note this project will also contains the following:
+
+- `dvmcmd` a simple command-line utility to send remote control commands to a DVM host instance with REST API configured.
+- `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of DVM host instances (this tool is only available when project wide TUI support is enabled!).
+- `dvmfne` a conference bridge FNE. (See the Conference Bridge FNE section below.)
+
 ## Building
 
 This project utilizes CMake for its build system. (All following information assumes familiarity with the standard Linux make system.)
@@ -143,15 +149,13 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 ## Command Line Parameters
 
 ```
-usage: ./dvmhost [-vhf] [--setup] [--fne] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
+usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
   -v        show version information
   -h        show this screen
   -f        foreground mode
 
   --setup   setup mode
-
-  --fne     fixed network equipment mode (conference bridge)
 
   -c <file> specifies the configuration file to use
 
@@ -162,13 +166,13 @@ usage: ./dvmhost [-vhf] [--setup] [--fne] [-c <configuration file>] [--remote [-
   --        stop handling options
 ```
 
-## Embedded FNE Mode
+## Conference Bridge FNE
 
-DVMHost contains its own "embedded FNE" or "mini-FNE", which is a simple conference bridge style FNE that can be activated using the `--fne` command line options. This FNE mode does not use the standard DVMHost configuration file and uses its own configuration file (see `fne-config.example.yml`). 
+The DVMHost project will also build `dvmfne` which is a simple conference bridge style FNE. This FNE uses its own configuration file (see `fne-config.example.yml`). 
 
-The "embedded FNE" is a simplistic FNE, meant for simple single-master small-scale deployments. It, like the full-scale FNE, defines rules for available talkgroups and manages calls. Unlike the full-scale FNE, the "embedded FNE" does not have multi-system routing or support multiple masters. It can peer to other FNEs, however, unlike full-scale FNE the "embedded FNE" does not have provisioning for talkgroup mutuation (i.e. talkgroup number rewriting, where on System A TG123 routes to System B TG456), all TGs must be one to one across peers. 
+The conference bridge FNE is a simplistic FNE, meant for simple single-master small-scale deployments. It, like the full-scale FNE, defines rules for available talkgroups and manages calls. Unlike the full-scale FNE, the conference bridge FNE does not have multi-system routing or support multiple masters. It can peer to other FNEs, however, unlike full-scale FNE the "embedded FNE" does not have provisioning for talkgroup mutuation (i.e. talkgroup number rewriting, where on System A TG123 routes to System B TG456), all TGs must be one to one across peers. 
 
-The "embedded FNE" is meant as an easier alternative to a full-scale FNE where complex routing or multiple masters are not required.
+The conference bridge FNE is meant as an easier alternative to a full-scale FNE where complex routing or multiple masters are not required.
 
 ## Build Notes
 
