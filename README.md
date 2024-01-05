@@ -70,13 +70,9 @@ Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in
 
 ### Compiled Protocol Options
 
-These are the protocols that are compiled-in to the host for data processing. By default, support for DMR, P25 and NXDN protocols are enabled. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
+Support for DMR, P25 and NXDN protocols are enabled out of the box. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
 
-In order to change what protocol support is compiled into the host, these are the CMake options to supply:
-
-- `-DENABLE_DMR=1` - This will enable compiled-in DMR protocol support.
-- `-DENABLE_P25=1` - This will enable compiled-in P25 protocol support.
-- `-DENABLE_NXDN=1` - This will enable compiled-in NXDN protocol support.
+The abiliy to enable/disable protocols was removed in 3.6.
 
 ## Configuration
 
