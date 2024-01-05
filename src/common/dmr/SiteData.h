@@ -1,5 +1,5 @@
 /**
-* Digital Voice Modem - Host Software
+* Digital Voice Modem - Common Library
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *

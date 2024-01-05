@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Host Software
+* Digital Voice Modem - Remote Command Client
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Host Software
+* @package DVM / Remote Command Client
 *
 */
 /*
@@ -34,7 +34,7 @@
 // ---------------------------------------------------------------------------
 
 #undef __PROG_NAME__
-#define __PROG_NAME__ "Digital Voice Modem (DVM) CLI"
+#define __PROG_NAME__ "Digital Voice Modem (DVM) Remote Command Client"
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "dvmcmd"
 

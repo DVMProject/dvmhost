@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Monitor
+* Digital Voice Modem - Host Monitor Software
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Monitor
+* @package DVM / Host Monitor Software
 *
 */
 /*

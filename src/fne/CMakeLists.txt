@@ -1,9 +1,9 @@
 #/**
-#* Digital Voice Modem - Host Software
+#* Digital Voice Modem - Conference FNE Software
 #* GPLv2 Open Source. Use is subject to license terms.
 #* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #*
-#* @package DVM / Host Software
+#* @package DVM / Conference FNE Software
 #*
 #*/
 #/*
