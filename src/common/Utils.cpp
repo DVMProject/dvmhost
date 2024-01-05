@@ -41,20 +41,6 @@ const uint8_t BITS_TABLE[] = {
 };
 
 // ---------------------------------------------------------------------------
-//  Global Functions
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// Displays the host version.
-/// </summary>
-void getHostVersion()
-{
-    LogInfo(__PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
-    LogInfo("Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
-    LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
-}
-
-// ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
