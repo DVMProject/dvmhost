@@ -51,26 +51,6 @@ using namespace lookups;
 #include <pwd.h>
 
 // ---------------------------------------------------------------------------
-//	Constants
-// ---------------------------------------------------------------------------
-
-#if defined(ENABLE_DMR)
-#define DESCR_DMR        "DMR, "
-#else
-#define DESCR_DMR        ""
-#endif
-#if defined(ENABLE_P25)
-#define DESCR_P25        "P25, "
-#else
-#define DESCR_P25        ""
-#endif
-#if defined(ENABLE_NXDN)
-#define DESCR_NXDN       "NXDN, "
-#else
-#define DESCR_NXDN       ""
-#endif
-
-// ---------------------------------------------------------------------------
 //	Macros
 // ---------------------------------------------------------------------------
 
@@ -146,7 +126,7 @@ void fatal(const char* msg, ...)
 /// <param name="arg">Error message arguments.</param>
 void usage(const char* message, const char* arg)
 {
-    ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
+    ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
     ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
     if (message != nullptr) {
@@ -261,7 +241,7 @@ int checkArgs(int argc, char* argv[])
             p += 2;
         }
         else if (IS("-v")) {
-            ::fprintf(stdout, __PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)\n", __VER__, __BUILD__);
+            ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
             ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
             ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n");
             if (argc == 2)

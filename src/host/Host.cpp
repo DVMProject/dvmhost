@@ -224,7 +224,7 @@ int Host::run()
         ::close(STDERR_FILENO);
     }
 
-    ::LogInfo(__PROG_NAME__ " %s (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built %s)", __VER__, __BUILD__);
+    ::LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
     ::LogInfo("Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
     ::LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
     ::LogInfo(">> Modem Controller");
@@ -359,7 +359,6 @@ int Host::run()
     Timer dmrBeaconIntervalTimer(1000U);
 
     std::unique_ptr<dmr::Control> dmr = nullptr;
-#if defined(ENABLE_DMR)
     LogInfo("DMR Parameters");
     LogInfo("    Enabled: %s", m_dmrEnabled ? "yes" : "no");
     if (m_dmrEnabled) {
@@ -446,13 +445,11 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
-#endif // defined(ENABLE_DMR)
 
     // initialize P25
     Timer p25BcastIntervalTimer(1000U);
 
     std::unique_ptr<p25::Control> p25 = nullptr;
-#if defined(ENABLE_P25)
     LogInfo("P25 Parameters");
     LogInfo("    Enabled: %s", m_p25Enabled ? "yes" : "no");
     if (m_p25Enabled) {
@@ -517,13 +514,11 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
-#endif // defined(ENABLE_P25)
 
     // initialize NXDN
     Timer nxdnBcastIntervalTimer(1000U);
 
     std::unique_ptr<nxdn::Control> nxdn = nullptr;
-#if defined(ENABLE_NXDN)
     LogInfo("NXDN Parameters");
     LogInfo("    Enabled: %s", m_nxdnEnabled ? "yes" : "no");
     if (m_nxdnEnabled) {
@@ -581,10 +576,9 @@ int Host::run()
             LogInfo("    Debug: yes");
         }
     }
-#endif // defined(ENABLE_NXDN)
 
     if (!m_dmrEnabled && !m_p25Enabled && !m_nxdnEnabled) {
-        ::LogError(LOG_HOST, "No modes enabled? DMR, P25 and/or NXDN must be enabled!");
+        ::LogError(LOG_HOST, "No protocols enabled? DMR, P25 and/or NXDN must be enabled!");
         g_killed = true;
     }
 
@@ -669,38 +663,30 @@ int Host::run()
     if (!g_killed) {
         // fixed mode will force a state change
         if (m_fixedMode) {
-#if defined(ENABLE_DMR)
             if (dmr != nullptr)
                 setState(STATE_DMR);
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
             if (p25 != nullptr)
                 setState(STATE_P25);
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
             if (nxdn != nullptr)
                 setState(STATE_NXDN);
-#endif // defined(ENABLE_NXDN)
         }
         else {
-#if defined(ENABLE_DMR)
             if (m_dmrCtrlChannel) {
                 m_fixedMode = true;
                 setState(STATE_DMR);
             }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
             if (m_p25CtrlChannel) {
                 m_fixedMode = true;
                 setState(STATE_P25);
             }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
             if (m_nxdnCtrlChannel) {
                 m_fixedMode = true;
                 setState(STATE_NXDN);
             }
-#endif // defined(ENABLE_NXDN)
 
             setState(STATE_IDLE);
         }
@@ -767,7 +753,6 @@ int Host::run()
     // setup protocol processor threads
     /** Digital Mobile Radio */
     ThreadFunc dmrFrameWriteThread([&, this]() {
-#if defined(ENABLE_DMR)
         if (g_killed)
             return;
 
@@ -822,14 +807,12 @@ int Host::run()
                     Thread::sleep(m_idleTickDelay);
             }
         }
-#endif // defined(ENABLE_DMR)
     });
     dmrFrameWriteThread.run();
     dmrFrameWriteThread.setName("dmr:frame-w");
 
     /** Project 25 */
     ThreadFunc p25FrameWriteThread([&, this]() {
-#if defined(ENABLE_P25)
         if (g_killed)
             return;
 
@@ -864,14 +847,12 @@ int Host::run()
                     Thread::sleep(m_idleTickDelay);
             }
         }
-#endif // defined(ENABLE_P25)
     });
     p25FrameWriteThread.run();
     p25FrameWriteThread.setName("p25:frame-w");
 
     /** Next Generation Digital Narrowband */
     ThreadFunc nxdnFrameWriteThread([&, this]() {
-#if defined(ENABLE_NXDN)
         if (g_killed)
             return;
 
@@ -906,7 +887,6 @@ int Host::run()
                     Thread::sleep(m_idleTickDelay);
             }
         }
-#endif // defined(ENABLE_NXDN)
     });
     nxdnFrameWriteThread.run();
     nxdnFrameWriteThread.setName("nxdn:frame-w");
@@ -966,7 +946,6 @@ int Host::run()
         // ------------------------------------------------------
 
         /** Digital Mobile Radio */
-#if defined(ENABLE_DMR)
         if (dmr != nullptr) {
             // read DMR slot 1 frames from modem
             readFramesDMR1(dmr.get(), [&, this]() {
@@ -1010,9 +989,8 @@ int Host::run()
                 }
             });
         }
-#endif // defined(ENABLE_DMR)
+
         /** Project 25 */
-#if defined(ENABLE_P25)
         if (p25 != nullptr) {
             // read P25 frames from modem
             readFramesP25(p25.get(), [&, this]() {
@@ -1028,8 +1006,8 @@ int Host::run()
                 }
             });
         }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
+        /** Next Generation Digital Narrowband */
         if (nxdn != nullptr) {
             // read NXDN frames from modem
             readFramesNXDN(nxdn.get(), [&, this]() {
@@ -1045,7 +1023,6 @@ int Host::run()
                 }
             });
         }
-#endif // defined(ENABLE_NXDN)
 
         // ------------------------------------------------------
         //  -- Network, DMR, and P25 Clocking                 --
@@ -1054,18 +1031,12 @@ int Host::run()
         if (m_network != nullptr)
             m_network->clock(ms);
 
-#if defined(ENABLE_DMR)
         if (dmr != nullptr)
             dmr->clock(ms);
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
         if (p25 != nullptr)
             p25->clock(ms);
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
         if (nxdn != nullptr)
             nxdn->clock(ms);
-#endif // defined(ENABLE_NXDN)
 
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --
@@ -1123,7 +1094,6 @@ int Host::run()
         }
 
         /** Digial Mobile Radio */
-#if defined(ENABLE_DMR)
         if (dmr != nullptr) {
             if (m_dmrTSCCData && m_dmrCtrlChannel) {
                 if (m_state != STATE_DMR)
@@ -1189,10 +1159,8 @@ int Host::run()
                 m_dmrTXTimer.stop();
             }
         }
-#endif // defined(ENABLE_DMR)
 
         /** Project 25 */
-#if defined(ENABLE_P25)
         if (p25 != nullptr) {
             if (m_p25CCData) {
                 p25BcastIntervalTimer.clock(ms);
@@ -1245,10 +1213,8 @@ int Host::run()
                 }
             }
         }
-#endif // defined(ENABLE_P25)
 
         /** Next Generation Digital Narrowband */
-#if defined(ENABLE_NXDN)
         if (nxdn != nullptr) {
             if (m_nxdnCCData) {
                 nxdnBcastIntervalTimer.clock(ms);
@@ -1312,7 +1278,6 @@ int Host::run()
                 }
             }
         }
-#endif // defined(ENABLE_NXDN)
 
         if (g_killed) {
             // shutdown writer threads
@@ -1320,7 +1285,6 @@ int Host::run()
             p25FrameWriteThread.wait();
             nxdnFrameWriteThread.wait();
 
-#if defined(ENABLE_DMR)
             if (dmr != nullptr) {
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
@@ -1335,9 +1299,7 @@ int Host::run()
                     dmrBeaconIntervalTimer.stop();
                 }
             }
-#endif // defined(ENABLE_DMR)
 
-#if defined(ENABLE_P25)
             if (p25 != nullptr) {
                 if (m_p25CtrlChannel) {
                     if (!hasTxShutdown) {
@@ -1351,9 +1313,7 @@ int Host::run()
                     p25BcastIntervalTimer.stop();
                 }
             }
-#endif // defined(ENABLE_P25)
 
-#if defined(ENABLE_NXDN)
             if (nxdn != nullptr) {
                 if (m_nxdnCtrlChannel) {
                     if (!hasTxShutdown) {
@@ -1367,7 +1327,6 @@ int Host::run()
                     nxdnBcastIntervalTimer.stop();
                 }
             }
-#endif // defined(ENABLE_NXDN)
 
             hasTxShutdown = true;
             if (!m_modem->hasTX()) {

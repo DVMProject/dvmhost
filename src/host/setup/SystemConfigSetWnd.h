@@ -73,15 +73,9 @@ private:
     FSpinBox m_rfTalkgroup{this};
 
     FCheckBox m_fixedMode{"Fixed Mode", this};
-#if defined(ENABLE_DMR)
     FCheckBox m_dmrEnabled{"DMR", this};
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
     FCheckBox m_p25Enabled{"P25", this};
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
     FCheckBox m_nxdnEnabled{"NXDN", this};
-#endif // defined(ENABLE_NXDN)
 
     /// <summary>
     ///
@@ -207,7 +201,6 @@ private:
                 m_setup->m_conf["system"]["fixedMode"] = __BOOL_STR(m_fixedMode.isChecked());
             });
 
-#if defined(ENABLE_DMR)
             bool dmrEnabled = m_setup->m_conf["protocols"]["dmr"]["enable"].as<bool>(true);
 
             m_dmrEnabled.setGeometry(FPoint(2, 17), FSize(10, 1));
@@ -215,8 +208,7 @@ private:
             m_dmrEnabled.addCallback("toggled", [&]() {
                 m_setup->m_conf["protocols"]["dmr"]["enable"] = __BOOL_STR(m_dmrEnabled.isChecked());
             });
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
             bool p25Enabled = m_setup->m_conf["protocols"]["p25"]["enable"].as<bool>(true);
 
             m_p25Enabled.setGeometry(FPoint(12, 17), FSize(10, 1));
@@ -224,8 +216,7 @@ private:
             m_p25Enabled.addCallback("toggled", [&]() {
                 m_setup->m_conf["protocols"]["p25"]["enable"] = __BOOL_STR(m_p25Enabled.isChecked());
             });
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
             bool nxdnEnabled = m_setup->m_conf["protocols"]["nxdn"]["enable"].as<bool>(true);
 
             m_nxdnEnabled.setGeometry(FPoint(22, 17), FSize(10, 1));
@@ -233,7 +224,6 @@ private:
             m_nxdnEnabled.addCallback("toggled", [&]() {
                 m_setup->m_conf["protocols"]["nxdn"]["enable"] = __BOOL_STR(m_nxdnEnabled.isChecked());
             });
-#endif // defined(ENABLE_NXDN)
         }
 
         CloseWndBase::initControls();

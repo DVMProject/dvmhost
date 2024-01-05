@@ -301,7 +301,6 @@ void Network::clock(uint32_t ms)
         case NET_FUNC_PROTOCOL:
             {
                 if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
-#if defined(ENABLE_DMR)
                     if (m_enabled && m_dmrEnabled) {
                         uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
                         if (m_rxDMRStreamId[slotNo] == 0U) {
@@ -327,10 +326,8 @@ void Network::clock(uint32_t ms)
                         m_rxDMRData.addData(&len, 1U);
                         m_rxDMRData.addData(buffer.get(), len);
                     }
-#endif // defined(ENABLE_DMR)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
-#if defined(ENABLE_P25)
                     if (m_enabled && m_p25Enabled) {
                         if (m_rxP25StreamId == 0U) {
                             m_rxP25StreamId = streamId;
@@ -355,10 +352,8 @@ void Network::clock(uint32_t ms)
                         m_rxP25Data.addData(&len, 1U);
                         m_rxP25Data.addData(buffer.get(), len);
                     }
-#endif // defined(ENABLE_P25)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
-#if defined(ENABLE_NXDN)
                     if (m_enabled && m_nxdnEnabled) {
                         if (m_rxNXDNStreamId == 0U) {
                             m_rxNXDNStreamId = streamId;
@@ -383,7 +378,6 @@ void Network::clock(uint32_t ms)
                         m_rxNXDNData.addData(&len, 1U);
                         m_rxNXDNData.addData(buffer.get(), len);
                     }
-#endif // defined(ENABLE_NXDN)
                 }
                 else {
                     Utils::dump("Unknown protocol opcode from the master", buffer.get(), length);

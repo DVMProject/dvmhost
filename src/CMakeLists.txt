@@ -99,16 +99,6 @@ file(GLOB common_INCLUDE
     "src/common/*.h"
 )
 
-# Digital mode options and other compilation features
-add_definitions(-DENABLE_DMR)
-message(CHECK_START "DMR Digital Mode - enabled")
-
-add_definitions(-DENABLE_P25)
-message(CHECK_START "P25 Digital Mode - enabled")
-
-add_definitions(-DENABLE_NXDN)
-message(CHECK_START "NXDN Digital Mode - enabled")
-
 if (ENABLE_TUI_SUPPORT)
     option(ENABLE_SETUP_TUI "Enable interactive setup TUI" on)
     if (ENABLE_SETUP_TUI)

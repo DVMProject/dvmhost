@@ -64,21 +64,9 @@ bool Host::readParams()
     }
 
     yaml::Node protocolConf = m_conf["protocols"];
-#if defined(ENABLE_DMR)
     m_dmrEnabled = protocolConf["dmr"]["enable"].as<bool>(false);
-#else
-    m_dmrEnabled = false; // hardcode to false when no DMR support is compiled in
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
     m_p25Enabled = protocolConf["p25"]["enable"].as<bool>(false);
-#else
-    m_p25Enabled = false; // hardcode to false when no P25 support is compiled in
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
     m_nxdnEnabled = protocolConf["nxdn"]["enable"].as<bool>(false);
-#else
-    m_nxdnEnabled = false; // hardcode to false when no NXDN support is compiled in
-#endif // defined(ENABLE_NXDN)
 
     yaml::Node systemConf = m_conf["system"];
     m_duplex = systemConf["duplex"].as<bool>(true);

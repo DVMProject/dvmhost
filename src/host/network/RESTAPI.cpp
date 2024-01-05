@@ -468,7 +468,7 @@ void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply,
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-    response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (" DESCR_DMR DESCR_P25 DESCR_NXDN "CW Id, Network) (built " __BUILD__ ")")));
+    response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")")));
 
     reply.payload(response);
 }
@@ -704,7 +704,6 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
 
         reply.payload(response);
     }
-#if defined(ENABLE_DMR)
     else if (mode == MODE_OPT_FDMR) {
         if (m_dmr != nullptr) {
             m_host->m_fixedMode = true;
@@ -720,8 +719,6 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
     else if (mode == MODE_OPT_FP25) {
         if (m_p25 != nullptr) {
             m_host->m_fixedMode = true;
@@ -737,8 +734,6 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
     else if (mode == MODE_OPT_FNXDN) {
         if (m_nxdn != nullptr) {
             m_host->m_fixedMode = true;
@@ -754,7 +749,6 @@ void RESTAPI::restAPI_PutModemMode(const HTTPPayload& request, HTTPPayload& repl
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#endif // defined(ENABLE_NXDN)
     else {
         errorPayload(reply, "invalid mode");
     }
@@ -837,7 +831,6 @@ void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& 
 
     switch (state) {
     case STATE_DMR:
-#if defined(ENABLE_DMR)
     {
         if (m_dmr != nullptr) {
             m_dmr->setSupervisor(enable);
@@ -846,14 +839,8 @@ void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& 
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_DMR)
     break;
     case STATE_P25:
-#if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
             m_p25->setSupervisor(enable);
@@ -862,14 +849,8 @@ void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& 
           errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_P25)
     break;
     case STATE_NXDN:
-#if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
             m_nxdn->setSupervisor(enable);
@@ -878,11 +859,6 @@ void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& 
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_NXDN)
     break;
     default:
         errorPayload(reply, "invalid mode");
@@ -932,7 +908,6 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
 
     switch (state) {
     case STATE_DMR:
-#if defined(ENABLE_DMR)
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
@@ -954,14 +929,8 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_DMR)
     break;
     case STATE_P25:
-#if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
             m_p25->permittedTG(dstId);
@@ -970,14 +939,8 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
           errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_P25)
     break;
     case STATE_NXDN:
-#if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
             m_nxdn->permittedTG(dstId);
@@ -986,11 +949,6 @@ void RESTAPI::restAPI_PutPermitTG(const HTTPPayload& request, HTTPPayload& reply
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_NXDN)
     break;
     default:
         errorPayload(reply, "invalid mode");
@@ -1064,7 +1022,6 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
 
     switch (state) {
     case STATE_DMR:
-#if defined(ENABLE_DMR)
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
@@ -1086,14 +1043,8 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_DMR)
     break;
     case STATE_P25:
-#if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
             m_p25->grantTG(srcId, dstId, !unitToUnit);
@@ -1102,14 +1053,8 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_P25)
     break;
     case STATE_NXDN:
-#if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
             m_nxdn->grantTG(srcId, dstId, !unitToUnit);
@@ -1118,11 +1063,6 @@ void RESTAPI::restAPI_PutGrantTG(const HTTPPayload& request, HTTPPayload& reply,
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_NXDN)
     break;
     default:
         errorPayload(reply, "invalid mode");
@@ -1142,21 +1082,17 @@ void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& 
     }
 
     errorPayload(reply, "OK", HTTPPayload::OK);
-#if defined(ENABLE_DMR)
     if (m_dmr != nullptr) {
         m_dmr->affiliations().releaseGrant(0, true);
     }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
     if (m_p25 != nullptr) {
         m_p25->affiliations().releaseGrant(0, true);
     }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
     if (m_nxdn != nullptr) {
         m_nxdn->affiliations().releaseGrant(0, true);
     }
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1172,21 +1108,17 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
     }
 
     errorPayload(reply, "OK", HTTPPayload::OK);
-#if defined(ENABLE_DMR)
     if (m_dmr != nullptr) {
         m_dmr->affiliations().clearGroupAff(0, true);
     }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
     if (m_p25 != nullptr) {
         m_p25->affiliations().clearGroupAff(0, true);
     }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
     if (m_nxdn != nullptr) {
         m_nxdn->affiliations().clearGroupAff(0, true);
     }
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -1238,7 +1170,6 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
 
     switch (state) {
     case STATE_DMR:
-#if defined(ENABLE_DMR)
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
@@ -1260,14 +1191,8 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_DMR)
     break;
     case STATE_P25:
-#if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
             m_p25->releaseGrantTG(dstId);
@@ -1276,14 +1201,8 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_P25)
     break;
     case STATE_NXDN:
-#if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
             m_nxdn->releaseGrantTG(dstId);
@@ -1292,11 +1211,6 @@ void RESTAPI::restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& r
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_NXDN)
     break;
     default:
         errorPayload(reply, "invalid mode");
@@ -1352,7 +1266,6 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
 
     switch (state) {
     case STATE_DMR:
-#if defined(ENABLE_DMR)
     {
         // validate slot is a integer within the JSON blob
         if (!req["slot"].is<int>()) {
@@ -1374,14 +1287,8 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
             errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_DMR)
     break;
     case STATE_P25:
-#if defined(ENABLE_P25)
     {
         if (m_p25 != nullptr) {
             m_p25->touchGrantTG(dstId);
@@ -1390,14 +1297,8 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
             errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_P25)
     break;
     case STATE_NXDN:
-#if defined(ENABLE_NXDN)
     {
         if (m_nxdn != nullptr) {
             m_nxdn->touchGrantTG(dstId);
@@ -1406,11 +1307,6 @@ void RESTAPI::restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& rep
             errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         }
     }
-#else
-    {
-        errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-    }
-#endif // defined(ENABLE_NXDN)
     break;
     default:
         errorPayload(reply, "invalid mode");
@@ -1490,7 +1386,6 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 
     std::unordered_map<uint32_t, uint32_t> globalAffTable = std::unordered_map<uint32_t, uint32_t>();
 
-#if defined(ENABLE_DMR)
     if (m_dmr != nullptr) {
         std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations().grpAffTable();
         for (auto entry : affTable) {
@@ -1504,8 +1399,7 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
             }
         }
     }
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
+
     if (m_p25 != nullptr) {
         std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations().grpAffTable();
         for (auto entry : affTable) {
@@ -1519,8 +1413,7 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
             }
         }
     }
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
+
     if (m_nxdn != nullptr) {
         std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations().grpAffTable();
         for (auto entry : affTable) {
@@ -1534,7 +1427,6 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
             }
         }
     }
-#endif // defined(ENABLE_NXDN)
 
     json::array affs = json::array();
     if (globalAffTable.size() > 0) {
@@ -1570,7 +1462,6 @@ void RESTAPI::restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& repl
         return;
     }
 
-#if defined(ENABLE_DMR)
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (m_host->m_dmrBeacons) {
@@ -1585,9 +1476,6 @@ void RESTAPI::restAPI_GetDMRBeacon(const HTTPPayload& request, HTTPPayload& repl
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1604,7 +1492,7 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_DMR)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
@@ -1629,9 +1517,6 @@ void RESTAPI::restAPI_GetDMRDebug(const HTTPPayload& request, HTTPPayload& reply
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1648,7 +1533,7 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& re
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_DMR)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
@@ -1670,9 +1555,6 @@ void RESTAPI::restAPI_GetDMRDumpCSBK(const HTTPPayload& request, HTTPPayload& re
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1691,7 +1573,7 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
-#if defined(ENABLE_DMR)
+
     if (m_dmr == nullptr) {
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
@@ -1746,9 +1628,6 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         errorPayload(reply, "invalid command");
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1762,7 +1641,7 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
     if (!validateAuth(request, reply)) {
         return;
     }
-#if defined(ENABLE_DMR)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (m_host->m_dmrTSCCData) {
@@ -1786,9 +1665,6 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1802,7 +1678,7 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload&
     if (!validateAuth(request, reply)) {
         return;
     }
-#if defined(ENABLE_DMR)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         m_host->m_dmrTSCCData = !m_host->m_dmrTSCCData;
@@ -1812,9 +1688,6 @@ void RESTAPI::restAPI_GetDMRCCBroadcast(const HTTPPayload& request, HTTPPayload&
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /// <summary>
@@ -1833,7 +1706,7 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
-#if defined(ENABLE_DMR)
+
     if (m_dmr == nullptr) {
         errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
@@ -1900,9 +1773,6 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
 
         m_dmr->tsccActivateSlot(slot, dstId, srcId, group, voice);
     }
-#else
-    errorPayload(reply, "DMR operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_DMR)
 }
 
 /*
@@ -1921,7 +1791,6 @@ void RESTAPI::restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, c
         return;
     }
 
-#if defined(ENABLE_P25)
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (m_host->m_p25CCData) {
@@ -1936,9 +1805,6 @@ void RESTAPI::restAPI_GetP25CC(const HTTPPayload& request, HTTPPayload& reply, c
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -1955,7 +1821,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_P25)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
@@ -1980,9 +1846,6 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -1999,7 +1862,7 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_P25)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (match.size() <= 1) {
@@ -2021,9 +1884,6 @@ void RESTAPI::restAPI_GetP25DumpTSBK(const HTTPPayload& request, HTTPPayload& re
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -2042,7 +1902,7 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
-#if defined(ENABLE_P25)
+
     if (m_p25 == nullptr) {
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
@@ -2122,9 +1982,6 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
         errorPayload(reply, "invalid command");
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -2138,7 +1995,7 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& re
     if (!validateAuth(request, reply)) {
         return;
     }
-#if defined(ENABLE_P25)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (m_host->m_p25CCData) {
@@ -2167,9 +2024,6 @@ void RESTAPI::restAPI_GetP25CCEnable(const HTTPPayload& request, HTTPPayload& re
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -2183,7 +2037,7 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
     if (!validateAuth(request, reply)) {
         return;
     }
-#if defined(ENABLE_P25)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (m_host->m_p25CCData) {
@@ -2208,9 +2062,6 @@ void RESTAPI::restAPI_GetP25CCBroadcast(const HTTPPayload& request, HTTPPayload&
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /// <summary>
@@ -2229,7 +2080,7 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     if (!parseRequestBody(request, reply, req)) {
         return;
     }
-#if defined(ENABLE_P25)
+
     if (m_p25 == nullptr) {
         errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
@@ -2268,9 +2119,6 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     }
 
     m_p25->control()->writeRF_TSDU_Raw(tsbk);
-#else
-    errorPayload(reply, "P25 operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_P25)
 }
 
 /*
@@ -2289,7 +2137,6 @@ void RESTAPI::restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-#if defined(ENABLE_NXDN)
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_nxdn != nullptr) {
         if (m_host->m_nxdnCCData) {
@@ -2304,9 +2151,6 @@ void RESTAPI::restAPI_GetNXDNCC(const HTTPPayload& request, HTTPPayload& reply, 
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -2323,7 +2167,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_NXDN)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
         if (match.size() <= 1) {
@@ -2348,9 +2192,6 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -2367,7 +2208,7 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-#if defined(ENABLE_NXDN)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_p25 != nullptr) {
         if (match.size() <= 1) {
@@ -2389,9 +2230,6 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_NXDN)
 }
 
 /// <summary>
@@ -2405,7 +2243,7 @@ void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& r
     if (!validateAuth(request, reply)) {
         return;
     }
-#if defined(ENABLE_NXDN)
+
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_nxdn != nullptr) {
         if (m_host->m_nxdnCCData) {
@@ -2434,7 +2272,4 @@ void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& r
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
-#else
-    errorPayload(reply, "NXDN operations are unavailable", HTTPPayload::SERVICE_UNAVAILABLE);
-#endif // defined(ENABLE_NXDN)
 }

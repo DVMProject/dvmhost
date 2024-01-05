@@ -61,33 +61,23 @@ private:
     FLabel m_cwTimeLabel{"CW Interval: ", this};
     FSpinBox m_cwTime{this};
 
-#if defined(ENABLE_DMR)
     FLabel m_dmrColorCodeLabel{"DMR CC: ", this};
     FSpinBox m_dmrColorCode{this};
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
     FLabel m_p25NACLabel{"P25 NAC: ", this};
     FLineEdit m_p25NAC{this};
-#endif // defined(ENABLE_P25)
-#if defined(ENABLE_NXDN)
     FLabel m_nxdnRANLabel{"NXDN RAN: ", this};
     FSpinBox m_nxdnRAN{this};
-#endif // defined(ENABLE_NXDN)
 
     FLabel m_siteIdLabel{"Site ID: ", this};
     FLineEdit m_siteId{this};
-#if defined(ENABLE_DMR)
     FLabel m_dmrNetIdLabel{"DMR Net. ID: ", this};
     FLineEdit m_dmrNetId{this};
-#endif // defined(ENABLE_DMR)
-#if defined(ENABLE_P25)
     FLabel m_p25NetIdLabel{"P25 Net. ID: ", this};
     FLineEdit m_p25NetId{this};
     FLabel m_p25SysIdLabel{"P25 System ID: ", this};
     FLineEdit m_p25SysId{this};
     FLabel m_p25RfssIdLabel{"P25 RFSS ID: ", this};
     FLineEdit m_p25RfssId{this};
-#endif // defined(ENABLE_P25)
 
     /// <summary>
     ///
@@ -149,7 +139,6 @@ private:
             m_siteParams.setEmphasis();
             m_siteParams.setAlignment(Align::Center);
 
-#if defined(ENABLE_DMR)
             uint32_t dmrColorCode = rfssConfig["colorCode"].as<uint32_t>(2U);
             m_dmrColorCodeLabel.setGeometry(FPoint(2, 9), FSize(8, 1));
             m_dmrColorCode.setGeometry(FPoint(12, 9), FSize(8, 1));
@@ -159,9 +148,7 @@ private:
             m_dmrColorCode.addCallback("changed", [&]() {
                 m_setup->m_conf["system"]["config"]["colorCode"] = __INT_STR(m_dmrColorCode.getValue());
             });
-#endif // defined(ENABLE_DMR)
 
-#if defined(ENABLE_P25)
             m_p25NACLabel.setGeometry(FPoint(23, 9), FSize(10, 1));
             m_p25NAC.setGeometry(FPoint(33, 9), FSize(8, 1));
             m_p25NAC.setText(m_setup->m_conf["system"]["config"]["nac"].as<std::string>("1").c_str());
@@ -174,9 +161,7 @@ private:
 
                 m_setup->m_conf["system"]["config"]["nac"] = __INT_HEX_STR(nac);
             });
-#endif // defined(ENABLE_P25)
 
-#if defined(ENABLE_NXDN)
             uint32_t nxdnRAN = rfssConfig["ran"].as<uint32_t>(1U);
             m_nxdnRANLabel.setGeometry(FPoint(42, 9), FSize(10, 1));
             m_nxdnRAN.setGeometry(FPoint(53, 9), FSize(8, 1));
@@ -186,7 +171,6 @@ private:
             m_nxdnRAN.addCallback("changed", [&]() {
                 m_setup->m_conf["system"]["config"]["ran"] = __INT_STR(m_nxdnRAN.getValue());
             });
-#endif // defined(ENABLE_NXDN)
 
             m_siteIdLabel.setGeometry(FPoint(2, 10), FSize(20, 1));
             m_siteId.setGeometry(FPoint(23, 10), FSize(10, 1));
@@ -201,7 +185,6 @@ private:
                 m_setup->m_conf["system"]["config"]["siteId"] = __INT_HEX_STR(id);
             });
 
-#if defined(ENABLE_DMR)
             m_dmrNetIdLabel.setGeometry(FPoint(2, 11), FSize(20, 1));
             m_dmrNetId.setGeometry(FPoint(23, 11), FSize(10, 1));
             m_dmrNetId.setText(rfssConfig["dmrNetId"].as<std::string>("1").c_str());
@@ -214,9 +197,7 @@ private:
 
                 m_setup->m_conf["system"]["config"]["dmrNetId"] = __INT_HEX_STR(id);
             });
-#endif // defined(ENABLE_DMR)
 
-#if defined(ENABLE_P25)
             m_p25NetIdLabel.setGeometry(FPoint(2, 12), FSize(20, 1));
             m_p25NetId.setGeometry(FPoint(23, 12), FSize(10, 1));
             m_p25NetId.setText(rfssConfig["netId"].as<std::string>("1").c_str());
@@ -255,7 +236,6 @@ private:
 
                 m_setup->m_conf["system"]["config"]["rfssId"] = __INT_HEX_STR(id);
             });
-#endif // defined(ENABLE_P25)
         }
 
         CloseWndBase::initControls();

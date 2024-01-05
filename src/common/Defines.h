@@ -39,10 +39,6 @@
 #include <algorithm>
 #include <string>
 
-#if !defined(ENABLE_DMR) && !defined(ENABLE_P25) && !defined(ENABLE_NXDN)
-#error "No protocol support compiled in? Must enable at least one: ENABLE_DMR, ENABLE_P25 and/or ENABLE_NXDN."
-#endif
-
 // ---------------------------------------------------------------------------
 //  Types
 // ---------------------------------------------------------------------------

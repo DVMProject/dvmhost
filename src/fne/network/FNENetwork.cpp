@@ -231,13 +231,11 @@ void FNENetwork::clock(uint32_t ms)
 
                         // validate peer (simple validation really)
                         if (connection.connected() && connection.address() == ip) {
-#if defined(ENABLE_DMR)
                             if (m_dmrEnabled) {
                                 if (m_tagDMR != nullptr) {
                                     m_tagDMR->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
-#endif // defined(ENABLE_DMR)
                         }
                     }
                 }
@@ -248,13 +246,11 @@ void FNENetwork::clock(uint32_t ms)
 
                         // validate peer (simple validation really)
                         if (connection.connected() && connection.address() == ip) {
-#if defined(ENABLE_P25)
                             if (m_p25Enabled) {
                                 if (m_tagP25 != nullptr) {
                                     m_tagP25->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
-#endif // defined(ENABLE_P25)
                         }
                     }
                 }
@@ -265,13 +261,11 @@ void FNENetwork::clock(uint32_t ms)
 
                         // validate peer (simple validation really)
                         if (connection.connected() && connection.address() == ip) {
-#if defined(ENABLE_NXDN)        
                             if (m_nxdnEnabled) {
                                 if (m_tagNXDN != nullptr) {
                                     m_tagNXDN->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
                                 }
                             }
-#endif // defined(ENABLE_NXDN)
                         }
                     }
                 }
@@ -588,26 +582,20 @@ void FNENetwork::clock(uint32_t ms)
         }
     }
     else {
-#if defined(ENABLE_DMR)
         // if the DMR handler has parrot frames to playback, playback a frame
         if (m_tagDMR->hasParrotFrames()) {
             m_tagDMR->playbackParrot();
         }
-#endif // defined(ENABLE_DMR)
 
-#if defined(ENABLE_P25)
         // if the P25 handler has parrot frames to playback, playback a frame
         if (m_tagP25->hasParrotFrames()) {
             m_tagP25->playbackParrot();
         }
-#endif // defined(ENABLE_P25)
 
-#if defined(ENABLE_NXDN)
         // if the NXDN handler has parrot frames to playback, playback a frame
         if (m_tagNXDN->hasParrotFrames()) {
             m_tagNXDN->playbackParrot();
         }
-#endif // defined(ENABLE_NXDN)
    }
 
     return;
