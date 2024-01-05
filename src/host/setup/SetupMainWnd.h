@@ -26,27 +26,27 @@
 #if !defined(__SETUP_WND_H__)
 #define __SETUP_WND_H__
 
+#include "common/Log.h"
+#include "common/Thread.h"
 #include "modem/Modem.h"
-#include "host/setup/HostSetup.h"
-#include "Log.h"
-#include "Thread.h"
+#include "setup/HostSetup.h"
 
 using namespace modem;
 
-#include "host/setup/LogDisplayWnd.h"
-#include "host/setup/ModemStatusWnd.h"
-#include "host/setup/BERDisplayWnd.h"
+#include "setup/LogDisplayWnd.h"
+#include "setup/ModemStatusWnd.h"
+#include "setup/BERDisplayWnd.h"
 
-#include "host/setup/LevelAdjustWnd.h"
-#include "host/setup/SymbLevelAdjustWnd.h"
-#include "host/setup/HSBandwidthAdjustWnd.h"
-#include "host/setup/HSGainAdjustWnd.h"
-#include "host/setup/FIFOBufferAdjustWnd.h"
+#include "setup/LevelAdjustWnd.h"
+#include "setup/SymbLevelAdjustWnd.h"
+#include "setup/HSBandwidthAdjustWnd.h"
+#include "setup/HSGainAdjustWnd.h"
+#include "setup/FIFOBufferAdjustWnd.h"
 
-#include "host/setup/LoggingAndDataSetWnd.h"
-#include "host/setup/SystemConfigSetWnd.h"
-#include "host/setup/SiteParamSetWnd.h"
-#include "host/setup/ChannelConfigSetWnd.h"
+#include "setup/LoggingAndDataSetWnd.h"
+#include "setup/SystemConfigSetWnd.h"
+#include "setup/SiteParamSetWnd.h"
+#include "setup/ChannelConfigSetWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;

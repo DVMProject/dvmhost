@@ -23,10 +23,10 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "Defines.h"
-#include "AESCrypto.h"
-#include "Log.h"
-#include "Utils.h"
+#include "host/Defines.h"
+#include "common/AESCrypto.h"
+#include "common/Log.h"
+#include "common/Utils.h"
 
 using namespace crypto;
 

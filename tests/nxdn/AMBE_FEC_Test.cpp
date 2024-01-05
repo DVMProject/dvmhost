@@ -23,13 +23,13 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "Defines.h"
-#include "edac/AMBEFEC.h"
-#include "edac/Golay24128.h"
-#include "nxdn/NXDNDefines.h"
-#include "nxdn/NXDNUtils.h"
-#include "Log.h"
-#include "Utils.h"
+#include "host/Defines.h"
+#include "common/edac/AMBEFEC.h"
+#include "common/edac/Golay24128.h"
+#include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/NXDNUtils.h"
+#include "common/Log.h"
+#include "common/Utils.h"
 
 using namespace edac;
 using namespace nxdn;

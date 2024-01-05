@@ -26,9 +26,11 @@
 #if !defined(__TRANSMIT_WND_BASE_H__)
 #define __TRANSMIT_WND_BASE_H__
 
-#include "lookups/AffiliationLookup.h"
-#include "network/RESTDefines.h"
+#include "common/lookups/AffiliationLookup.h"
+#include "host/network/RESTDefines.h"
+#include "host/modem/Modem.h"
 #include "remote/RESTClient.h"
+#include "MonitorMain.h"
 
 #include <final/final.h>
 using namespace finalcut;

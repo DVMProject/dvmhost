@@ -31,7 +31,7 @@
 #if !defined(__BER_DISPLAY_WND_H__)
 #define __BER_DISPLAY_WND_H__
 
-#include "host/setup/HostSetup.h"
+#include "setup/HostSetup.h"
 
 #include <array>
 #include <map>

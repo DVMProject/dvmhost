@@ -26,9 +26,9 @@
 #if !defined(__SETUP_APPLICATION_H__)
 #define __SETUP_APPLICATION_H__
 
-#include "host/setup/HostSetup.h"
-#include "host/setup/SetupMainWnd.h"
-#include "Log.h"
+#include "common/Log.h"
+#include "setup/HostSetup.h"
+#include "setup/SetupMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;

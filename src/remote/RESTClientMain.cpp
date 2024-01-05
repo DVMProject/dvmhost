@@ -24,10 +24,10 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "remote/RESTClient.h"
-#include "network/RESTDefines.h"
-#include "Thread.h"
-#include "Log.h"
-#include "Utils.h"
+#include "host/network/RESTDefines.h"
+#include "common/Thread.h"
+#include "common/Log.h"
+#include "common/Utils.h"
 
 #include <cstdio>
 #include <cassert>
@@ -152,7 +152,7 @@ void fatal(const char* message)
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-    ::fprintf(stdout, "Copyright (c) 2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+    ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
     ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
     if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
@@ -300,7 +300,8 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-            ::fprintf(stdout, "Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n");
+            ::fprintf(stdout, "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+            ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
             if (argc == 2)
                 exit(EXIT_SUCCESS);
         }

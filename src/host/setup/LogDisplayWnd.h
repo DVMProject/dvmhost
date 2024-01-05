@@ -26,7 +26,7 @@
 #if !defined(__LOG_DISPLAY_WND_H__)
 #define __LOG_DISPLAY_WND_H__
 
-#include "host/setup/HostSetup.h"
+#include "setup/HostSetup.h"
 
 #include <final/final.h>
 using namespace finalcut;

@@ -26,9 +26,9 @@
 #if !defined(__MONITOR_WND_H__)
 #define __MONITOR_WND_H__
 
-#include "lookups/AffiliationLookup.h"
-#include "Log.h"
-#include "Thread.h"
+#include "common/lookups/AffiliationLookup.h"
+#include "common/Log.h"
+#include "common/Thread.h"
 
 using namespace lookups;
 
@@ -36,15 +36,15 @@ using namespace lookups;
 using namespace finalcut;
 #undef null
 
-#include "monitor/MonitorMain.h"
+#include "MonitorMain.h"
 
-#include "monitor/LogDisplayWnd.h"
-#include "monitor/NodeStatusWnd.h"
-#include "monitor/SelectedNodeWnd.h"
-#include "monitor/PageSubscriberWnd.h"
-#include "monitor/RadioCheckSubscriberWnd.h"
-#include "monitor/InhibitSubscriberWnd.h"
-#include "monitor/UninhibitSubscriberWnd.h"
+#include "LogDisplayWnd.h"
+#include "NodeStatusWnd.h"
+#include "SelectedNodeWnd.h"
+#include "PageSubscriberWnd.h"
+#include "RadioCheckSubscriberWnd.h"
+#include "InhibitSubscriberWnd.h"
+#include "UninhibitSubscriberWnd.h"
 
 #include <vector>
 
@@ -110,7 +110,7 @@ public:
             const FString line(2, UniChar::BoxDrawingsHorizontal);
             FMessageBox info("About", line + __PROG_NAME__ + line + L"\n\n"
                 L"Version " + __VER__ + L"\n\n"
-                L"Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
+                L"Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
                 L"Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others", 
                 FMessageBox::ButtonType::Ok, FMessageBox::ButtonType::Reject, FMessageBox::ButtonType::Reject, this);
             info.setCenterText();

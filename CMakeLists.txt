@@ -186,7 +186,11 @@ endif (ENABLE_TESTS)
 #
 install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-install(FILES configs/config.example.yml configs/fne-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
+install(TARGETS dvmfne DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+install(FILES configs/config.example.yml configs/fne-config.example.yml configs/monitor-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
@@ -261,6 +265,7 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
         COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
         COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
         COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
         COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
         COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
         COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -275,6 +280,7 @@ else()
         COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
         COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
         COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+        COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
         COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
         COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
         COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
@@ -298,8 +304,10 @@ add_custom_target(old_install
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
+    COMMAND install -m 755 dvmfne ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 644 ../configs/config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND install -m 644 ../configs/fne-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
+    COMMAND install -m 644 ../configs/monitor-config.example.yml ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
     COMMAND install -m 644 ../configs/iden_table.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
     COMMAND install -m 644 ../configs/RSSI.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND install -m 644 ../configs/rid_acl.example.dat ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat
@@ -321,6 +329,7 @@ add_custom_target(old_install-service
     COMMAND usermod --groups dialout --append dvmhost || true
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/fne-config.example.yml
+    COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/monitor-config.example.yml
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/iden_table.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/RSSI.dat
     COMMAND chown dvmhost:dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/rid_acl.dat

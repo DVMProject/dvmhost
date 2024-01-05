@@ -26,9 +26,9 @@
 #if !defined(__MONITOR_APPLICATION_H__)
 #define __MONITOR_APPLICATION_H__
 
-#include "monitor/MonitorMain.h"
-#include "monitor/MonitorMainWnd.h"
-#include "Log.h"
+#include "common/Log.h"
+#include "MonitorMain.h"
+#include "MonitorMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;

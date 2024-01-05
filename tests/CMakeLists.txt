@@ -24,20 +24,15 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-#
-## dvmtest source/header files
-#
 file(GLOB dvmtests_SRC
-    "tests/nulltest.cpp"
+    "tests/*.h"
+    "tests/*.cpp"
     "tests/crypto/*.cpp"
     "tests/edac/*.cpp"
     "tests/p25/*.cpp"
     "tests/nxdn/*.cpp"
 )
 
-#
-## dvmtest project
-#
 project(dvmtest)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 Include(FetchContent)
@@ -56,7 +51,7 @@ target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
 target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
 target_link_libraries(asio::asio INTERFACE Threads::Threads)
 
-add_executable(dvmtests ${dvmhost_SRC} ${dvmtests_SRC})
+add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmtests_SRC})
 target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
-target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain asio::asio Threads::Threads util)
-target_include_directories(dvmtests PRIVATE src)
+target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common asio::asio Threads::Threads util)
+target_include_directories(dvmtests PRIVATE src src/host tests)

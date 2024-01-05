@@ -26,7 +26,7 @@
 #if !defined(__SELECTED_NODE_WND_H__)
 #define __SELECTED_NODE_WND_H__
 
-#include "monitor/MonitorMainWnd.h"
+#include "MonitorMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;

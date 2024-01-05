@@ -30,16 +30,17 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "dmr/DMRUtils.h"
-#include "p25/P25Utils.h"
-#include "lookups/RSSIInterpolator.h"
+#include "common/dmr/DMRUtils.h"
+#include "common/p25/P25Utils.h"
+#include "common/lookups/RSSIInterpolator.h"
+#include "common/Log.h"
+#include "common/StopWatch.h"
+#include "common/Thread.h"
+#include "common/ThreadFunc.h"
+#include "common/Utils.h"
 #include "host/Host.h"
+#include "ActivityLog.h"
 #include "HostMain.h"
-#include "Log.h"
-#include "StopWatch.h"
-#include "Thread.h"
-#include "ThreadFunc.h"
-#include "Utils.h"
 
 using namespace modem;
 using namespace lookups;

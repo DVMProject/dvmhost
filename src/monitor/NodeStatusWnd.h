@@ -26,12 +26,12 @@
 #if !defined(__NODE_STATUS_WND_H__)
 #define __NODE_STATUS_WND_H__
 
-#include "lookups/AffiliationLookup.h"
-#include "modem/Modem.h"
-#include "network/RESTDefines.h"
+#include "common/lookups/AffiliationLookup.h"
+#include "host/network/RESTDefines.h"
+#include "host/modem/Modem.h"
 #include "remote/RESTClient.h"
 
-#include "monitor/MonitorMainWnd.h"
+#include "MonitorMainWnd.h"
 
 #include <final/final.h>
 using namespace finalcut;

@@ -29,10 +29,10 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "host/calibrate/HostCal.h"
+#include "calibrate/HostCal.h"
 #include "modem/Modem.h"
 #include "HostMain.h"
-#include "Log.h"
+#include "common/Log.h"
 
 using namespace modem;
 using namespace lookups;

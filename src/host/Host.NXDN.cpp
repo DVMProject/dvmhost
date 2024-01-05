@@ -28,7 +28,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "host/Host.h"
+#include "Host.h"
 
 using namespace modem;
 

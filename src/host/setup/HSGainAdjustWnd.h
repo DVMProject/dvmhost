@@ -26,10 +26,10 @@
 #if !defined(__HS_GAIN_ADJUST_WND_H__)
 #define __HS_GAIN_ADJUST_WND_H__
 
-#include "host/setup/HostSetup.h"
-#include "Thread.h"
+#include "common/Thread.h"
+#include "setup/HostSetup.h"
 
-#include "host/setup/AdjustWndBase.h"
+#include "setup/AdjustWndBase.h"
 
 #include <final/final.h>
 using namespace finalcut;

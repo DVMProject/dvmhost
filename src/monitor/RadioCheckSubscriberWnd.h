@@ -26,7 +26,7 @@
 #if !defined(__RADIO_CHECK_SUBSCRIBER_WND_H__)
 #define __RADIO_CHECK_SUBSCRIBER_WND_H__
 
-#include "monitor/TransmitWndBase.h"
+#include "TransmitWndBase.h"
 
 #include <final/final.h>
 using namespace finalcut;

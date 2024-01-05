@@ -28,12 +28,12 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "common/network/UDPSocket.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"
 #include "modem/port/UDPPort.h"
-#include "network/UDPSocket.h"
-#include "host/Host.h"
+#include "Host.h"
 #include "HostMain.h"
 
 using namespace network;

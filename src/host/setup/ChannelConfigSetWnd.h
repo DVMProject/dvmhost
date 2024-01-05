@@ -26,10 +26,10 @@
 #if !defined(__CHANNEL_CONFIG_SET_WND_H__)
 #define __CHANNEL_CONFIG_SET_WND_H__
 
-#include "host/setup/HostSetup.h"
-#include "Thread.h"
+#include "common/Thread.h"
+#include "setup/HostSetup.h"
 
-#include "host/setup/CloseWndBase.h"
+#include "setup/CloseWndBase.h"
 
 #include <final/final.h>
 using namespace finalcut;

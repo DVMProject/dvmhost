@@ -23,11 +23,11 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "Defines.h"
-#include "edac/RS634717.h"
-#include "p25/P25Defines.h"
-#include "Log.h"
-#include "Utils.h"
+#include "host/Defines.h"
+#include "common/edac/RS634717.h"
+#include "common/p25/P25Defines.h"
+#include "common/Log.h"
+#include "common/Utils.h"
 
 using namespace edac;
 using namespace p25;

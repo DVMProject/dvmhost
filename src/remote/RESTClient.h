@@ -27,8 +27,8 @@
 #define __REST_CLIENT_H__
 
 #include "Defines.h"
-#include "network/json/json.h"
-#include "network/rest/http/HTTPPayload.h"
+#include "common/network/json/json.h"
+#include "common/network/rest/http/HTTPPayload.h"
 
 #include <string>
 

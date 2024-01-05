@@ -27,8 +27,8 @@
 #define __MONITOR_MAIN_H__
 
 #include "Defines.h"
-#include "lookups/IdenTableLookup.h"
-#include "yaml/Yaml.h"
+#include "common/lookups/IdenTableLookup.h"
+#include "common/yaml/Yaml.h"
 
 #include <string>
 

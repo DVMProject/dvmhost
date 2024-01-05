@@ -23,25 +23,25 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "dmr/DMRDefines.h"
-#include "dmr/DMRUtils.h"
+#include "common/dmr/DMRDefines.h"
+#include "common/dmr/DMRUtils.h"
+#include "common/p25/P25Defines.h"
+#include "common/p25/data/DataHeader.h"
+#include "common/p25/lc/LC.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/NID.h"
+#include "common/p25/Sync.h"
+#include "common/p25/P25Utils.h"
+#include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/channel/LICH.h"
+#include "common/nxdn/NXDNUtils.h"
+#include "common/edac/CRC.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
-#include "p25/P25Defines.h"
-#include "p25/data/DataHeader.h"
-#include "p25/lc/LC.h"
-#include "p25/lc/tsbk/TSBKFactory.h"
-#include "p25/NID.h"
-#include "p25/Sync.h"
-#include "p25/P25Utils.h"
-#include "nxdn/NXDNDefines.h"
-#include "nxdn/channel/LICH.h"
-#include "nxdn/NXDNUtils.h"
-#include "edac/CRC.h"
-#include "host/setup/HostSetup.h"
+#include "common/Log.h"
+#include "common/Utils.h"
+#include "setup/HostSetup.h"
 #include "HostMain.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace modem;
 using namespace lookups;
@@ -54,8 +54,8 @@ using namespace lookups;
 #if !defined(CATCH2_TEST_COMPILATION)
 
 #if defined(ENABLE_SETUP_TUI)
-#include "host/setup/SetupApplication.h"
-#include "host/setup/SetupMainWnd.h"
+#include "setup/SetupApplication.h"
+#include "setup/SetupMainWnd.h"
 
 #include <final/final.h>
 #endif // defined(ENABLE_SETUP_TUI)

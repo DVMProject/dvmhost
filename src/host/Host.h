@@ -32,18 +32,18 @@
 #define __HOST_H__
 
 #include "Defines.h"
+#include "common/Timer.h"
+#include "common/lookups/AffiliationLookup.h"
+#include "common/lookups/IdenTableLookup.h"
+#include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/yaml/Yaml.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
 #include "nxdn/Control.h"
 #include "network/Network.h"
 #include "network/RESTAPI.h"
 #include "modem/Modem.h"
-#include "Timer.h"
-#include "lookups/AffiliationLookup.h"
-#include "lookups/IdenTableLookup.h"
-#include "lookups/RadioIdLookup.h"
-#include "lookups/TalkgroupRulesLookup.h"
-#include "yaml/Yaml.h"
 
 #include <string>
 #include <unordered_map>

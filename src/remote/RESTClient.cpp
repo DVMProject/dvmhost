@@ -28,14 +28,14 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "edac/SHA256.h"
-#include "network/json/json.h"
-#include "network/rest/http/HTTPClient.h"
-#include "network/rest/RequestDispatcher.h"
+#include "common/edac/SHA256.h"
+#include "common/network/json/json.h"
+#include "common/network/rest/http/HTTPClient.h"
+#include "common/network/rest/RequestDispatcher.h"
+#include "common/Thread.h"
+#include "common/Log.h"
+#include "common/Utils.h"
 #include "remote/RESTClient.h"
-#include "Thread.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace network;
 using namespace network::rest::http;

@@ -27,13 +27,13 @@
 #define __HOST_SETUP_H__
 
 #include "Defines.h"
-#include "edac/AMBEFEC.h"
+#include "common/edac/AMBEFEC.h"
+#include "common/lookups/IdenTableLookup.h"
+#include "common/yaml/Yaml.h"
+#include "common/RingBuffer.h"
+#include "common/StopWatch.h"
 #include "modem/Modem.h"
-#include "host/Host.h"
-#include "lookups/IdenTableLookup.h"
-#include "yaml/Yaml.h"
-#include "RingBuffer.h"
-#include "StopWatch.h"
+#include "Host.h"
 
 #include <string>
 
