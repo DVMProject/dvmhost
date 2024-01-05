@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_IOSP_EXT_FNCT.h"
+#include "p25/lc/tsbk/mbt/MBT_IOSP_ACK_RSP.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,12 +40,11 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_IOSP_EXT_FNCT class.
+/// Initializes a new instance of the MBT_IOSP_ACK_RSP class.
 /// </summary>
-MBT_IOSP_EXT_FNCT::MBT_IOSP_EXT_FNCT() : AMBT(),
-    m_extendedFunction(P25_EXT_FNCT_CHECK)
+MBT_IOSP_ACK_RSP::MBT_IOSP_ACK_RSP() : AMBT()
 {
-    m_lco = TSBK_IOSP_EXT_FNCT;
+    m_lco = TSBK_IOSP_ACK_RSP;
 }
 
 /// <summary>
@@ -54,7 +53,7 @@ MBT_IOSP_EXT_FNCT::MBT_IOSP_EXT_FNCT() : AMBT(),
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_ACK_RSP::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
@@ -67,10 +66,11 @@ bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data
 
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
-    m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
-    m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID
-    m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) +                 // Extended Function
-        pduUserData[6U];
+    m_aivFlag = false;
+    m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
+    m_netId = (uint32_t)((tsbkValue >> 36) & 0xFFFFFU);                             // Network ID
+    m_sysId = (uint32_t)((tsbkValue >> 24) & 0xFFFU);                               // System ID
+    m_dstId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Target Radio Address
     m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
@@ -81,7 +81,7 @@ bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_IOSP_EXT_FNCT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_IOSP_ACK_RSP::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
@@ -95,25 +95,10 @@ void MBT_IOSP_EXT_FNCT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_IOSP_EXT_FNCT::toString(bool isp)
+std::string MBT_IOSP_ACK_RSP::toString(bool isp)
 {
     if (isp)
-        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
+        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
     else    
-        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
-void MBT_IOSP_EXT_FNCT::copy(const MBT_IOSP_EXT_FNCT& data)
-{
-    TSBK::copy(data);
-
-    m_extendedFunction = data.m_extendedFunction;
+        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
 }

@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_IOSP_GRP_AFF.h"
+#include "p25/lc/tsbk/mbt/MBT_IOSP_MSG_UPDT.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,11 +40,12 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_IOSP_GRP_AFF class.
+/// Initializes a new instance of the MBT_IOSP_MSG_UPDT class.
 /// </summary>
-MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT()
+MBT_IOSP_MSG_UPDT::MBT_IOSP_MSG_UPDT() : AMBT(),
+    m_messageValue(0U)
 {
-    m_lco = TSBK_IOSP_GRP_AFF;
+    m_lco = TSBK_IOSP_MSG_UPDT;
 }
 
 /// <summary>
@@ -53,7 +54,7 @@ MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_MSG_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
@@ -66,9 +67,10 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data:
 
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
-    m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
-    m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Talkgroup Address
+    m_messageValue  = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                       // Message Value
+    m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                             // Network ID
+    m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                               // System ID
+    m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];           // Target Radio Address
     m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
@@ -79,7 +81,7 @@ bool MBT_IOSP_GRP_AFF::decodeMBT(const data::DataHeader& dataHeader, const data:
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_IOSP_MSG_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
@@ -93,10 +95,25 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_IOSP_GRP_AFF::toString(bool isp)
+std::string MBT_IOSP_MSG_UPDT::toString(bool isp)
 {
     if (isp)
-        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
+        return std::string("TSBK_IOSP_MSG_UPDT (Message Update Request)");
     else    
-        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+        return std::string("TSBK_IOSP_MSG_UPDT (Message Update)");
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void MBT_IOSP_MSG_UPDT::copy(const MBT_IOSP_MSG_UPDT& data)
+{
+    TSBK::copy(data);
+
+    m_messageValue = data.m_messageValue;
 }

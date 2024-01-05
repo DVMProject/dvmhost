@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_ISP_AUTH_SU_DMD.h"
+#include "p25/lc/tsbk/mbt/MBT_IOSP_EXT_FNCT.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,11 +40,12 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_ISP_AUTH_SU_DMD class.
+/// Initializes a new instance of the MBT_IOSP_EXT_FNCT class.
 /// </summary>
-MBT_ISP_AUTH_SU_DMD::MBT_ISP_AUTH_SU_DMD() : AMBT()
+MBT_IOSP_EXT_FNCT::MBT_IOSP_EXT_FNCT() : AMBT(),
+    m_extendedFunction(P25_EXT_FNCT_CHECK)
 {
-    m_lco = TSBK_IOSP_GRP_AFF;
+    m_lco = TSBK_IOSP_EXT_FNCT;
 }
 
 /// <summary>
@@ -53,7 +54,7 @@ MBT_ISP_AUTH_SU_DMD::MBT_ISP_AUTH_SU_DMD() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
@@ -68,6 +69,8 @@ bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader& dataHeader, const da
 
     m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID
+    m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) +                 // Extended Function
+        pduUserData[6U];
     m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
@@ -78,7 +81,7 @@ bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader& dataHeader, const da
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_ISP_AUTH_SU_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_IOSP_EXT_FNCT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
@@ -92,7 +95,25 @@ void MBT_ISP_AUTH_SU_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUs
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_ISP_AUTH_SU_DMD::toString(bool isp)
+std::string MBT_IOSP_EXT_FNCT::toString(bool isp)
 {
-    return std::string("TSBK_ISP_AUTH_SU_DMD (Authentication SU Demand)");
+    if (isp)
+        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
+    else    
+        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void MBT_IOSP_EXT_FNCT::copy(const MBT_IOSP_EXT_FNCT& data)
+{
+    TSBK::copy(data);
+
+    m_extendedFunction = data.m_extendedFunction;
 }

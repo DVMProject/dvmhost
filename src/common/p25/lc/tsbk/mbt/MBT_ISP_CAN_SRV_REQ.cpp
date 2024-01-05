@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_IOSP_MSG_UPDT.h"
+#include "p25/lc/tsbk/mbt/MBT_ISP_CAN_SRV_REQ.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,12 +40,11 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_IOSP_MSG_UPDT class.
+/// Initializes a new instance of the MBT_ISP_CAN_SRV_REQ class.
 /// </summary>
-MBT_IOSP_MSG_UPDT::MBT_IOSP_MSG_UPDT() : AMBT(),
-    m_messageValue(0U)
+MBT_ISP_CAN_SRV_REQ::MBT_ISP_CAN_SRV_REQ() : AMBT()
 {
-    m_lco = TSBK_IOSP_MSG_UPDT;
+    m_lco = TSBK_ISP_CAN_SRV_REQ;
 }
 
 /// <summary>
@@ -54,7 +53,7 @@ MBT_IOSP_MSG_UPDT::MBT_IOSP_MSG_UPDT() : AMBT(),
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_IOSP_MSG_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
@@ -67,10 +66,13 @@ bool MBT_IOSP_MSG_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data
 
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
-    m_messageValue  = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                       // Message Value
-    m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                             // Network ID
-    m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                               // System ID
-    m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];           // Target Radio Address
+    m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
+    m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
+    m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Reason
+    m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                             // Network ID
+    m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                                // System ID
+    m_dstId = (uint32_t)((((tsbkValue) & 0xFFU) << 16) +                            // Target Radio Address
+        (pduUserData[6U] << 8) + (pduUserData[7U]));
     m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
@@ -81,7 +83,7 @@ bool MBT_IOSP_MSG_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_IOSP_MSG_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_ISP_CAN_SRV_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
@@ -95,25 +97,7 @@ void MBT_IOSP_MSG_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_IOSP_MSG_UPDT::toString(bool isp)
+std::string MBT_ISP_CAN_SRV_REQ::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_MSG_UPDT (Message Update Request)");
-    else    
-        return std::string("TSBK_IOSP_MSG_UPDT (Message Update)");
-}
-
-// ---------------------------------------------------------------------------
-//  Private Class Members
-// ---------------------------------------------------------------------------
-
-/// <summary>
-/// Internal helper to copy the the class.
-/// </summary>
-/// <param name="data"></param>
-void MBT_IOSP_MSG_UPDT::copy(const MBT_IOSP_MSG_UPDT& data)
-{
-    TSBK::copy(data);
-
-    m_messageValue = data.m_messageValue;
+    return std::string("TSBK_ISP_CAN_SRV_REQ (Cancel Service Request)");
 }

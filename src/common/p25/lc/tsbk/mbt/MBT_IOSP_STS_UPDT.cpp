@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_OSP_NET_STS_BCAST.h"
+#include "p25/lc/tsbk/mbt/MBT_IOSP_STS_UPDT.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,11 +40,12 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_OSP_NET_STS_BCAST class.
+/// Initializes a new instance of the MBT_IOSP_STS_UPDT class.
 /// </summary>
-MBT_OSP_NET_STS_BCAST::MBT_OSP_NET_STS_BCAST() : AMBT()
+MBT_IOSP_STS_UPDT::MBT_IOSP_STS_UPDT() : AMBT(),
+    m_statusValue(0U)
 {
-    m_lco = TSBK_OSP_NET_STS_BCAST;
+    m_lco = TSBK_IOSP_STS_UPDT;
 }
 
 /// <summary>
@@ -53,11 +54,24 @@ MBT_OSP_NET_STS_BCAST::MBT_OSP_NET_STS_BCAST() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_IOSP_STS_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
-    /* stub */
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+
+    bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
+    if (!ret)
+        return false;
+
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
+
+    m_statusValue = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                         // Message Value
+    m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                             // Network ID
+    m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                               // System ID
+    m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];           // Target Radio Address
+    m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
 }
@@ -67,28 +81,13 @@ bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const 
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_IOSP_STS_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
-    // pack LRA and system ID into LLID
-    uint32_t llId = m_siteData.lra();                                               // Location Registration Area
-    llId = (llId << 12) + m_siteData.siteId();                                      // System ID
-    dataHeader.setLLId(llId);
+    /* stub */
 
-    /** Block 1 */
-    pduUserData[0U] = (m_siteData.netId() >> 12) & 0xFFU;                           // Network ID (b19-12)
-    pduUserData[1U] = (m_siteData.netId() >> 4) & 0xFFU;                            // Network ID (b11-b4)
-    pduUserData[2U] = (m_siteData.netId() & 0x0FU) << 4;                            // Network ID (b3-b0)
-    pduUserData[3U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[4U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Transmit Channel Number LSB
-    pduUserData[5U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[6U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Receive Channel Number LSB
-    pduUserData[7U] = m_siteData.serviceClass();                                    // System Service Class
-
-    AMBT::encode(dataHeader, pduUserData);
+    return;
 }
 
 /// <summary>
@@ -96,7 +95,25 @@ void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_OSP_NET_STS_BCAST::toString(bool isp)
+std::string MBT_IOSP_STS_UPDT::toString(bool isp)
 {
-    return std::string("TSBK_OSP_NET_STS_BCAST (Network Status Broadcast - Explicit)");
+    if (isp)
+        return std::string("TSBK_IOSP_STS_UPDT (Status Update Request)");
+    else    
+        return std::string("TSBK_IOSP_STS_UPDT (Status Update)");
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Internal helper to copy the the class.
+/// </summary>
+/// <param name="data"></param>
+void MBT_IOSP_STS_UPDT::copy(const MBT_IOSP_STS_UPDT& data)
+{
+    TSBK::copy(data);
+
+    m_statusValue = data.m_statusValue;
 }

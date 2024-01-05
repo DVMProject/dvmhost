@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_ISP_CAN_SRV_REQ.h"
+#include "p25/lc/tsbk/mbt/MBT_OSP_NET_STS_BCAST.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,11 +40,11 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_ISP_CAN_SRV_REQ class.
+/// Initializes a new instance of the MBT_OSP_NET_STS_BCAST class.
 /// </summary>
-MBT_ISP_CAN_SRV_REQ::MBT_ISP_CAN_SRV_REQ() : AMBT()
+MBT_OSP_NET_STS_BCAST::MBT_OSP_NET_STS_BCAST() : AMBT()
 {
-    m_lco = TSBK_ISP_CAN_SRV_REQ;
+    m_lco = TSBK_OSP_NET_STS_BCAST;
 }
 
 /// <summary>
@@ -53,27 +53,11 @@ MBT_ISP_CAN_SRV_REQ::MBT_ISP_CAN_SRV_REQ() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_OSP_NET_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
-
-    bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
-    if (!ret)
-        return false;
-
-    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
-
-    m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
-    m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
-    m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Reason
-    m_netId = (uint32_t)((tsbkValue >> 20) & 0xFFFFFU);                             // Network ID
-    m_sysId = (uint32_t)((tsbkValue >> 8) & 0xFFFU);                                // System ID
-    m_dstId = (uint32_t)((((tsbkValue) & 0xFFU) << 16) +                            // Target Radio Address
-        (pduUserData[6U] << 8) + (pduUserData[7U]));
-    m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
+    /* stub */
 
     return true;
 }
@@ -83,13 +67,28 @@ bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const da
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_ISP_CAN_SRV_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_OSP_NET_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
-    /* stub */
+    // pack LRA and system ID into LLID
+    uint32_t llId = m_siteData.lra();                                               // Location Registration Area
+    llId = (llId << 12) + m_siteData.siteId();                                      // System ID
+    dataHeader.setLLId(llId);
 
-    return;
+    /** Block 1 */
+    pduUserData[0U] = (m_siteData.netId() >> 12) & 0xFFU;                           // Network ID (b19-12)
+    pduUserData[1U] = (m_siteData.netId() >> 4) & 0xFFU;                            // Network ID (b11-b4)
+    pduUserData[2U] = (m_siteData.netId() & 0x0FU) << 4;                            // Network ID (b3-b0)
+    pduUserData[3U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
+        ((m_siteData.channelNo() >> 8) & 0xFFU);
+    pduUserData[4U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Transmit Channel Number LSB
+    pduUserData[5U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
+        ((m_siteData.channelNo() >> 8) & 0xFFU);
+    pduUserData[6U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Receive Channel Number LSB
+    pduUserData[7U] = m_siteData.serviceClass();                                    // System Service Class
+
+    AMBT::encode(dataHeader, pduUserData);
 }
 
 /// <summary>
@@ -97,7 +96,7 @@ void MBT_ISP_CAN_SRV_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUs
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_ISP_CAN_SRV_REQ::toString(bool isp)
+std::string MBT_OSP_NET_STS_BCAST::toString(bool isp)
 {
-    return std::string("TSBK_ISP_CAN_SRV_REQ (Cancel Service Request)");
+    return std::string("TSBK_OSP_NET_STS_BCAST (Network Status Broadcast - Explicit)");
 }

@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_OSP_RFSS_STS_BCAST.h"
+#include "p25/lc/tsbk/mbt/MBT_ISP_AUTH_SU_DMD.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -40,11 +40,11 @@ using namespace p25;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the MBT_OSP_RFSS_STS_BCAST class.
+/// Initializes a new instance of the MBT_ISP_AUTH_SU_DMD class.
 /// </summary>
-MBT_OSP_RFSS_STS_BCAST::MBT_OSP_RFSS_STS_BCAST() : AMBT()
+MBT_ISP_AUTH_SU_DMD::MBT_ISP_AUTH_SU_DMD() : AMBT()
 {
-    m_lco = TSBK_OSP_RFSS_STS_BCAST;
+    m_lco = TSBK_IOSP_GRP_AFF;
 }
 
 /// <summary>
@@ -53,11 +53,22 @@ MBT_OSP_RFSS_STS_BCAST::MBT_OSP_RFSS_STS_BCAST() : AMBT()
 /// <param name="dataHeader"></param>
 /// <param name="blocks"></param>
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
-bool MBT_OSP_RFSS_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
+bool MBT_ISP_AUTH_SU_DMD::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != NULL);
 
-    /* stub */
+    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
+    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+
+    bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
+    if (!ret)
+        return false;
+
+    ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
+
+    m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
+    m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID
+    m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
 
     return true;
 }
@@ -67,30 +78,13 @@ bool MBT_OSP_RFSS_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
+void MBT_ISP_AUTH_SU_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != NULL);
 
-    // pack LRA and system ID into LLID
-    uint32_t llId = m_siteData.lra();                                               // Location Registration Area
-    llId = (llId << 12) + m_siteData.siteId();                                      // System ID
-    if (m_siteData.netActive()) {
-        llId |= 0x1000U;                                                            // Network Active Flag
-    }
-    dataHeader.setLLId(llId);
+    /* stub */
 
-    /** Block 1 */
-    pduUserData[0U] = (m_siteData.rfssId()) & 0xFFU;                                // RF Sub-System ID
-    pduUserData[1U] = (m_siteData.siteId()) & 0xFFU;                                // Site ID
-    pduUserData[2U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Transmit Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[3U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Transmit Channel Number LSB
-    pduUserData[4U] = ((m_siteData.channelId() & 0x0FU) << 4) +                     // Receive Channel ID & Channel Number MSB
-        ((m_siteData.channelNo() >> 8) & 0xFFU);
-    pduUserData[5U] = (m_siteData.channelNo() >> 0) & 0xFFU;                        // Receive Channel Number LSB
-    pduUserData[6U] = m_siteData.serviceClass();                                    // System Service Class
-
-    AMBT::encode(dataHeader, pduUserData);
+    return;
 }
 
 /// <summary>
@@ -98,7 +92,7 @@ void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pd
 /// </summary>
 /// <param name="isp"></param>
 /// <returns></returns>
-std::string MBT_OSP_RFSS_STS_BCAST::toString(bool isp)
+std::string MBT_ISP_AUTH_SU_DMD::toString(bool isp)
 {
-    return std::string("TSBK_OSP_RFSS_STS_BCAST (RFSS Status Broadcast)");
+    return std::string("TSBK_ISP_AUTH_SU_DMD (Authentication SU Demand)");
 }

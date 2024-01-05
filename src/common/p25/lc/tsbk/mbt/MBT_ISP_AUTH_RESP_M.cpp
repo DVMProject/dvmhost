@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_ISP_AUTH_RESP_M.h"
+#include "p25/lc/tsbk/mbt/MBT_ISP_AUTH_RESP_M.h"
 #include "Log.h"
 #include "Utils.h"
 

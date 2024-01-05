@@ -24,7 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "p25/lc/tsbk/MBT_IOSP_CALL_ALRT.h"
+#include "p25/lc/tsbk/mbt/MBT_IOSP_CALL_ALRT.h"
 #include "Log.h"
 #include "Utils.h"
 
