@@ -148,6 +148,8 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 
 ## Command Line Parameters
 
+### dvmhost Command Line Parameters
+
 ```
 usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <address>] [-p <port>]]
 
@@ -164,6 +166,54 @@ usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <addre
   -p        remote modem command port
 
   --        stop handling options
+```
+
+### dvmcmd Command Line Parameters
+
+```
+usage: ./dvmcmd [-dvh][-a <address>][-p <port>][-P <password>] <command> <arguments ...>
+
+  -d                          enable debug
+  -v                          show version information
+  -h                          show this screen
+
+  -a                          remote modem command address
+  -p                          remote modem command port
+  -P                          remote modem authentication password
+
+  --                          stop handling options
+```
+
+NOTE: See `dvmcmd -h` for full help for commands and arguments.
+
+### dvmfne Command Line Parameters
+
+```
+usage: ./dvmfne [-vhf][-c <configuration file>]
+
+  -v        show version information
+  -h        show this screen
+  -f        foreground mode
+
+  -c <file> specifies the configuration file to use
+
+  --        stop handling options
+```
+
+### dvmmon Command Line Parameters
+
+```
+usage: ./dvmmon [-dvh][--hide-log][-c <configuration file>]
+
+  -d                          enable debug
+  -v                          show version information
+  -h                          show this screen
+
+  --hide-log                  hide interactive logging window on startup
+
+  -c <file>                   specifies the monitor configuration file to use
+
+  --                          stop handling options
 ```
 
 ## Conference Bridge FNE
