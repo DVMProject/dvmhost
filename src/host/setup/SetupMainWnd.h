@@ -121,6 +121,7 @@ public:
         // calibrate menu
         m_calibrateMenuSeparator1.setSeparator();
         m_calibrateMenuSeparator2.setSeparator();
+        m_calibrateMenuSeparator3.setSeparator();
         m_dmrCal.addCallback("toggled", [&]() {
             m_setup->m_mode = STATE_DMR_CAL;
             m_setup->m_modeStr = DMR_CAL_STR;
@@ -132,6 +133,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -148,6 +150,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -164,6 +167,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -180,6 +184,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -196,6 +201,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -212,6 +218,7 @@ public:
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -226,6 +233,7 @@ public:
             m_setup->m_p25TduTest = true;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd();
 
             m_setup->m_queue.clear();
@@ -246,6 +254,7 @@ public:
                 m_setup->m_p25TduTest = false;
                 m_setup->m_nxdnEnabled = false;
 
+                updateDuplexState();
                 resetBERWnd();
 
                 LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -259,18 +268,12 @@ public:
             m_setup->m_mode = STATE_DMR;
             m_setup->m_modeStr = DMR_FEC_STR;
             m_setup->m_dmrRx1K = false;
-/*
-            if (c == ')') {
-                m_setup->m_duplex = true;
-            } else {
-                m_setup->m_duplex = false;
-            }
-*/
-            m_setup->m_duplex = false;
+            m_setup->m_duplex = m_setup->m_startupDuplex;
             m_setup->m_dmrEnabled = true;
             m_setup->m_p25Enabled = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -280,18 +283,12 @@ public:
             m_setup->m_mode = STATE_DMR;
             m_setup->m_modeStr = DMR_FEC_1K_STR;
             m_setup->m_dmrRx1K = true;
-/*
-            if (c == ')') {
-                m_setup->m_duplex = true;
-            } else {
-                m_setup->m_duplex = false;
-            }
-*/
-            m_setup->m_duplex = false;
+            m_setup->m_duplex = m_setup->m_startupDuplex;
             m_setup->m_dmrEnabled = true;
             m_setup->m_p25Enabled = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -301,12 +298,13 @@ public:
             m_setup->m_mode = STATE_P25;
             m_setup->m_modeStr = P25_FEC_STR;
             m_setup->m_p25Rx1K = false;
-            m_setup->m_duplex = false;
+            m_setup->m_duplex = m_setup->m_startupDuplex;
             m_setup->m_dmrEnabled = false;
             m_setup->m_p25Enabled = true;
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -316,12 +314,13 @@ public:
             m_setup->m_mode = STATE_P25;
             m_setup->m_modeStr = P25_FEC_1K_STR;
             m_setup->m_p25Rx1K = true;
-            m_setup->m_duplex = false;
+            m_setup->m_duplex = m_setup->m_startupDuplex;
             m_setup->m_dmrEnabled = false;
             m_setup->m_p25Enabled = true;
             m_setup->m_p25TduTest = false;
             m_setup->m_nxdnEnabled = false;
 
+            updateDuplexState();
             resetBERWnd(true);
 
             LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -332,13 +331,14 @@ public:
             if (m_setup->m_modem->getVersion() >= 3U) {
                 m_setup->m_mode = STATE_NXDN;
                 m_setup->m_modeStr = NXDN_FEC_STR;
-                m_setup->m_duplex = false;
+                m_setup->m_duplex = m_setup->m_startupDuplex;
                 m_setup->m_dmrEnabled = false;
                 m_setup->m_p25Enabled = false;
                 m_setup->m_p25Rx1K = false;
                 m_setup->m_p25TduTest = false;
                 m_setup->m_nxdnEnabled = true;
 
+                updateDuplexState();
                 resetBERWnd(true);
 
                 LogMessage(LOG_CAL, " - %s", m_setup->m_modeStr.c_str());
@@ -389,6 +389,13 @@ public:
             if (!m_setup->m_isHotspot) {
                 m_setup->m_modem->m_dcBlocker = !m_setup->m_modem->m_dcBlocker;
                 LogMessage(LOG_CAL, "DC Blocker: %s", m_setup->m_modem->m_dcBlocker ? "on" : "off");
+                m_setup->writeConfig();
+            }
+        });
+        m_toggleDuplex.addCallback("toggled", this, [&]() {
+            if (m_setup->m_isHotspot && m_setup->m_isConnected) {
+                m_setup->m_duplex = !m_setup->m_duplex;
+                LogMessage(LOG_CAL, "Hotspot Rx: %s", m_setup->m_duplex ? "Rx Antenna" : "Tx Antenna");
                 m_setup->writeConfig();
             }
         });
@@ -472,7 +479,7 @@ public:
             const FString line(2, UniChar::BoxDrawingsHorizontal);
             FMessageBox info("About", line + __PROG_NAME__ + line + L"\n\n"
                 L"Version " + __VER__ + L"\n\n"
-                L"Copyright (c) 2017-2023 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
+                L"Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors." + L"\n"
                 L"Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others", 
                 FMessageBox::ButtonType::Ok, FMessageBox::ButtonType::Reject, FMessageBox::ButtonType::Reject, this);
             info.setCenterText();
@@ -506,7 +513,18 @@ public:
             m_toggleDCBlocker.setChecked();
         }
 
+        updateDuplexState();
         updateMenuStates();
+    }
+
+    /// <summary>
+    /// Helper to update duplex toggle menu state.
+    /// </summary>
+    void updateDuplexState()
+    {
+        if (m_setup->m_duplex) {
+            m_toggleDuplex.setChecked();
+        }
     }
 
     /// <summary>
@@ -530,6 +548,8 @@ public:
                 m_togglePTTInvert.setDisable();
                 m_toggleDCBlocker.setDisable();
 
+                m_toggleDuplex.setEnable();
+
                 m_adjSymLevel.setDisable();
                 m_adjHSBandwidth.setEnable();
                 m_adjHSGain.setEnable();
@@ -539,6 +559,8 @@ public:
                 m_toggleRxInvert.setEnable();
                 m_togglePTTInvert.setEnable();
                 m_toggleDCBlocker.setEnable();
+
+                m_toggleDuplex.setDisable();
 
                 m_adjSymLevel.setEnable();
                 m_adjHSBandwidth.setDisable();
@@ -601,6 +623,8 @@ private:
     FCheckMenuItem m_togglePTTInvert{"PTT Invert", &m_calibrateMenu};
     FCheckMenuItem m_toggleDCBlocker{"DC Blocker", &m_calibrateMenu};
     FMenuItem m_calibrateMenuSeparator2{&m_calibrateMenu};
+    FCheckMenuItem m_toggleDuplex{"Rx on Hotspot Rx Antenna", &m_calibrateMenu};
+    FMenuItem m_calibrateMenuSeparator3{&m_calibrateMenu};
     FMenuItem m_adjustLevel{"&Level Adjustment", &m_calibrateMenu};
 
     FMenu m_engineeringMenu{"&Engineering", &m_menuBar};
@@ -678,6 +702,14 @@ private:
     void cb_connectToModemClick()
     {
         if (!m_setup->m_isConnected) {
+            bool modemDebugState = g_modemDebug;
+            if (g_modemDebug) {
+                g_modemDebug = false;
+            }
+
+            m_setup->m_debug = false;
+            m_setup->m_modem->m_debug = false;
+
             FMessageBox wait("Wait", L"Please wait...\nConnecting to modem...",
                 FMessageBox::ButtonType::Reject, FMessageBox::ButtonType::Reject, FMessageBox::ButtonType::Reject, this);
             wait.setCenterText();
@@ -725,6 +757,13 @@ private:
 
                 m_setup->m_modem->close();
                 return;
+            }
+
+            if (g_modemDebug != modemDebugState) {
+                g_modemDebug = modemDebugState;
+                m_setup->m_debug = g_modemDebug;
+                m_setup->m_modem->m_debug = g_modemDebug;
+                m_setup->writeConfig();
             }
 
             m_setup->m_isConnected = true;

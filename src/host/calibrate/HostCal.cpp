@@ -93,7 +93,7 @@ int HostCal::run(int argc, char **argv)
     ::LogInfo(">> Modem Calibration");
 
     yaml::Node systemConf = m_conf["system"];
-    m_duplex = systemConf["duplex"].as<bool>(true);
+    m_startupDuplex = m_duplex = systemConf["duplex"].as<bool>(true);
 
     // try to load bandplan identity table
     std::string idenLookupFile = systemConf["iden_table"]["file"].as<std::string>();
@@ -428,6 +428,13 @@ int HostCal::run(int argc, char **argv)
         }
         break;
 
+        case ')':
+        {
+            m_duplex = !m_duplex;
+            writeConfig();
+        }
+        break;
+
         /** Mode Commands */
         case 'Z':
         {
@@ -549,7 +556,6 @@ int HostCal::run(int argc, char **argv)
         break;
         case 'B':
         case 'J':
-        case ')':
         {
             m_mode = STATE_DMR;
             if (c == 'J') {
@@ -560,11 +566,8 @@ int HostCal::run(int argc, char **argv)
                 m_modeStr = DMR_FEC_STR;
                 m_dmrRx1K = false;
             }
-            if (c == ')') {
-                m_duplex = true;
-            } else {
-                m_duplex = false;
-            }
+
+            m_duplex = m_startupDuplex;
             m_dmrEnabled = true;
             m_p25Enabled = false;
             m_nxdnEnabled = false;
@@ -585,7 +588,8 @@ int HostCal::run(int argc, char **argv)
                 m_modeStr = P25_FEC_STR;
                 m_p25Rx1K = false;
             }
-            m_duplex = false;
+
+            m_duplex = m_startupDuplex;
             m_dmrEnabled = false;
             m_p25Enabled = true;
             m_p25TduTest = false;
@@ -601,7 +605,8 @@ int HostCal::run(int argc, char **argv)
             if (m_modem->getVersion() >= 3U) {
                 m_mode = STATE_NXDN;
                 m_modeStr = NXDN_FEC_STR;
-                m_duplex = false;
+
+                m_duplex = m_startupDuplex;
                 m_dmrEnabled = false;
                 m_p25Enabled = false;
                 m_p25Rx1K = false;
@@ -620,6 +625,7 @@ int HostCal::run(int argc, char **argv)
         {
             m_mode = STATE_RSSI_CAL;
             m_modeStr = RSSI_CAL_STR;
+
             m_duplex = true;
             m_dmrEnabled = false;
             m_dmrRx1K = false;
@@ -720,6 +726,7 @@ void HostCal::displayHelp()
     if (!m_modem->m_flashDisabled) {
         LogMessage(LOG_CAL, "    U        Read modem configuration area and reset local configuration");
     }
+    LogMessage(LOG_CAL, "    )        Swap Duplex Flag (depending on mode this will enable/disable duplex)");
     LogMessage(LOG_CAL, "    Q/q      Quit");
     LogMessage(LOG_CAL, "Level Adjustment Commands:");
     if (!m_isHotspot) {

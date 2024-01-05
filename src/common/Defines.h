@@ -109,7 +109,7 @@ typedef unsigned long long  ulong64_t;
 #define __PROG_NAME__ ""
 #define __NET_NAME__ "DVM_DMR_P25"
 #define __EXE_NAME__ ""
-#define __VER__ "D03.60.00-alpha (" __GIT_VER__ ")"
+#define __VER__ "D03.60.00 (" __GIT_VER__ ")"
 #define __BUILD__ __DATE__ " " __TIME__
 
 #define HOST_SW_API
