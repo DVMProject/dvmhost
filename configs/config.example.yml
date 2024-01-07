@@ -508,12 +508,12 @@ system:
         # [Note: This only applies to DVM board which include such support.]
         #
         softpot:
-            rxCoarse: 127
-            rxFine: 127
-            txCoarse: 127
-            txFine: 127
-            rssiCoarse: 127
-            rssiFine: 127
+            rxCoarse: 127 # Valid values between 0 and 255
+            rxFine: 127 # Valid values between 0 and 255
+            txCoarse: 127 # Valid values between 0 and 255
+            txFine: 127 # Valid values between 0 and 255
+            rssiCoarse: 127 # Valid values between 0 and 255
+            rssiFine: 127 # Valid values between 0 and 255
 
         # Sets received the signal offset from DC.
         rxDCOffset: 0 # Valid values between -128 and 128

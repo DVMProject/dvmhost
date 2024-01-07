@@ -205,7 +205,7 @@ private:
 
             m_rxCoarseLabel.setGeometry(FPoint(2, 10), FSize(20, 1));
             m_rxCoarseLevel.setGeometry(FPoint(18, 10), FSize(10, 1));
-            m_rxCoarseLevel.setRange(-127, 127);
+            m_rxCoarseLevel.setRange(0, 255);
             m_rxCoarseLevel.setValue(m_setup->m_modem->m_rxCoarsePot);
             m_rxCoarseLevel.setShadow(false);
             m_rxCoarseLevel.addCallback("changed", [&]() {
@@ -216,7 +216,7 @@ private:
 
             m_rxFineLabel.setGeometry(FPoint(2, 11), FSize(20, 1));
             m_rxFineLevel.setGeometry(FPoint(18, 11), FSize(10, 1));
-            m_rxFineLevel.setRange(-127, 127);
+            m_rxFineLevel.setRange(0, 255);
             m_rxFineLevel.setValue(m_setup->m_modem->m_rxFinePot);
             m_rxFineLevel.setShadow(false);
             m_rxFineLevel.addCallback("changed", [&]() {
@@ -227,7 +227,7 @@ private:
 
             m_txCoarseLabel.setGeometry(FPoint(2, 12), FSize(20, 1));
             m_txCoarseLevel.setGeometry(FPoint(18, 12), FSize(10, 1));
-            m_txCoarseLevel.setRange(-127, 127);
+            m_txCoarseLevel.setRange(0, 255);
             m_txCoarseLevel.setValue(m_setup->m_modem->m_txCoarsePot);
             m_txCoarseLevel.setShadow(false);
             m_txCoarseLevel.addCallback("changed", [&]() {
@@ -238,7 +238,7 @@ private:
 
             m_rssiCoarseLabel.setGeometry(FPoint(2, 13), FSize(20, 1));
             m_rssiCoarseLevel.setGeometry(FPoint(18, 13), FSize(10, 1));
-            m_rssiCoarseLevel.setRange(-127, 127);
+            m_rssiCoarseLevel.setRange(0, 255);
             m_rssiCoarseLevel.setValue(m_setup->m_modem->m_rssiCoarsePot);
             m_rssiCoarseLevel.setShadow(false);
             m_rssiCoarseLevel.addCallback("changed", [&]() {
