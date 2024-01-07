@@ -920,7 +920,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         // callback REST API to permit the granted TG on the specified voice channel
-        if (m_tscc->m_authoritative && m_tscc->m_supervisor) {
+        if (m_tscc->m_authoritative && m_tscc->m_supervisor &&
+            m_tscc->m_channelNo != chNo) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
@@ -997,7 +998,8 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         // callback REST API to permit the granted TG on the specified voice channel
-        if (m_tscc->m_authoritative && m_tscc->m_supervisor) {
+        if (m_tscc->m_authoritative && m_tscc->m_supervisor &&
+            m_tscc->m_channelNo != chNo) {
             ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
