@@ -1178,7 +1178,7 @@ int Host::run()
             }
 
             // clock and check DMR Tx timer
-            if (!m_dmrTSCCData) {
+            if (!m_dmrCtrlChannel) {
                 m_dmrTXTimer.clock(ms);
                 if (m_dmrTXTimer.isRunning() && m_dmrTXTimer.hasExpired()) {
                     m_modem->writeDMRStart(false);
