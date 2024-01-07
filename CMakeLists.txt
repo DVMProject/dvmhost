@@ -344,7 +344,7 @@ add_custom_target(old_install-service
 #
 project(dvmfw)
 add_custom_target(dvmfw
-    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32fx
+    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 add_custom_target(dvmfw-clean
@@ -371,6 +371,13 @@ add_custom_target(dvmfw-stm32f4-eda
     COMMAND make -f Makefile.STM32F4_EDA
     COMMAND cp dvm-firmware_eda.elf ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND cp dvm-firmware_eda.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-stm32f4-dvmv1
+    COMMAND make -f Makefile.STM32F4_DVMV1 clean
+    COMMAND make -f Makefile.STM32F4_DVMV1
+    COMMAND cp dvm-firmware_f4-dvmv1.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware_f4-dvmv1.bin ${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
 )
 add_custom_target(dvmfw-sam3x8
