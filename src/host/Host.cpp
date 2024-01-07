@@ -752,12 +752,12 @@ int Host::run()
 
     // setup protocol processor threads
     /** Digital Mobile Radio */
-    ThreadFunc dmrFrameWriteThread([&, this]() {
+    ThreadFunc dmrFrame1WriteThread([&, this]() {
         if (g_killed)
             return;
 
         if (dmr != nullptr) {
-            LogDebug(LOG_HOST, "DMR, started frame processor (modem write)");
+            LogDebug(LOG_HOST, "DMR, started slot 1 frame processor (modem write)");
             while (!g_killed) {
                 clockingMutex.lock();
                 {
@@ -781,6 +781,31 @@ int Host::run()
                             }
                         }
                     });
+                }
+                clockingMutex.unlock();
+
+                if (m_state != STATE_IDLE)
+                    Thread::sleep(m_activeTickDelay);
+                if (m_state == STATE_IDLE)
+                    Thread::sleep(m_idleTickDelay);
+            }
+        }
+    });
+    dmrFrame1WriteThread.run();
+    dmrFrame1WriteThread.setName("dmr:frame1-w");
+
+    ThreadFunc dmrFrame2WriteThread([&, this]() {
+        if (g_killed)
+            return;
+
+        if (dmr != nullptr) {
+            LogDebug(LOG_HOST, "DMR, started slot 2 frame processor (modem write)");
+            while (!g_killed) {
+                clockingMutex.lock();
+                {
+                    // ------------------------------------------------------
+                    //  -- Write to Modem Processing                      --
+                    // ------------------------------------------------------
 
                     // write DMR slot 2 frames to modem
                     writeFramesDMR2(dmr.get(), [&, this]() {
@@ -808,8 +833,8 @@ int Host::run()
             }
         }
     });
-    dmrFrameWriteThread.run();
-    dmrFrameWriteThread.setName("dmr:frame-w");
+    dmrFrame2WriteThread.run();
+    dmrFrame2WriteThread.setName("dmr:frame2-w");
 
     /** Project 25 */
     ThreadFunc p25FrameWriteThread([&, this]() {
@@ -1153,9 +1178,13 @@ int Host::run()
             }
 
             // clock and check DMR Tx timer
-            m_dmrTXTimer.clock(ms);
-            if (m_dmrTXTimer.isRunning() && m_dmrTXTimer.hasExpired()) {
-                m_modem->writeDMRStart(false);
+            if (!m_dmrTSCCData) {
+                m_dmrTXTimer.clock(ms);
+                if (m_dmrTXTimer.isRunning() && m_dmrTXTimer.hasExpired()) {
+                    m_modem->writeDMRStart(false);
+                    m_dmrTXTimer.stop();
+                }
+            } else {
                 m_dmrTXTimer.stop();
             }
         }
@@ -1281,11 +1310,17 @@ int Host::run()
 
         if (g_killed) {
             // shutdown writer threads
-            dmrFrameWriteThread.wait();
+            dmrFrame1WriteThread.wait();
+            dmrFrame2WriteThread.wait();
             p25FrameWriteThread.wait();
             nxdnFrameWriteThread.wait();
 
             if (dmr != nullptr) {
+                if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {
+                    m_modem->writeDMRStart(false);
+                    m_dmrTXTimer.stop();
+                }
+
                 if (m_dmrCtrlChannel) {
                     if (!hasTxShutdown) {
                         m_modem->clearDMRFrame1();
