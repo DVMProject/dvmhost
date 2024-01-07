@@ -1,0 +1,6 @@
+[submodule "src/fw/modem"]
+	path = src/fw/modem
+	url = https://github.com/DVMProject/dvmfirmware.git
+[submodule "src/fw/hotspot"]
+	path = src/fw/hotspot
+	url = https://github.com/DVMProject/dvmfirmware-hs.git

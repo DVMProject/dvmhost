@@ -338,3 +338,65 @@ add_custom_target(old_install-service
     COMMAND cp ../linux/dvmhost.service /lib/systemd/system/
     COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/bin/\\\\/opt\\\\/dvm\\\\/bin/' /lib/systemd/system/dvmhost.service\"
     COMMAND bash \"-c\" \"sed -i 's/\\\\/usr\\\\/local\\\\/etc/\\\\/opt\\\\/dvm/' /lib/systemd/system/dvmhost.service\")
+
+#
+# Firmware compilation
+#
+project(dvmfw)
+add_custom_target(dvmfw
+    DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32fx
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-clean
+    DEPENDS dvmfw-stm32f4-clean dvmfw-stm32fx-clean
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+
+add_custom_target(dvmfw-stm32f4
+    COMMAND make -f Makefile.STM32F4 clean
+    COMMAND make -f Makefile.STM32F4
+    COMMAND cp dvm-firmware_f4.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware_f4.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-stm32f4-pog
+    COMMAND make -f Makefile.STM32F4_POG clean
+    COMMAND make -f Makefile.STM32F4_POG
+    COMMAND cp dvm-firmware_f4-pog.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware_f4-pog.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-stm32f4-eda
+    COMMAND make -f Makefile.STM32F4_EDA clean
+    COMMAND make -f Makefile.STM32F4_EDA
+    COMMAND cp dvm-firmware_eda.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware_eda.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-sam3x8
+    COMMAND make -f Makefile.SAM3X8_DUE clean
+    COMMAND make -f Makefile.SAM3X8_DUE
+    COMMAND cp dvm-firmware_due.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware_due.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+add_custom_target(dvmfw-stm32f4-clean
+    COMMAND make -f Makefile clean
+    COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.elf
+    COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.bin
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem
+)
+
+add_custom_target(dvmfw-stm32fx
+    COMMAND make -f Makefile.STM32FX clean
+    COMMAND make -f Makefile.STM32FX mmdvm-hs-hat-dual
+    COMMAND cp dvm-firmware-hs_f1.elf ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND cp dvm-firmware-hs_f1.bin ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/hotspot
+)
+add_custom_target(dvmfw-stm32fx-clean
+    COMMAND make -f Makefile clean
+    COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.elf
+    COMMAND rm -f ${CMAKE_CURRENT_BINARY_DIR}/dvm-firmware*.bin
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/hotspot
+)
