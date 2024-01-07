@@ -389,6 +389,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         m_disableNetworkGrant = false;
     }
 
+    if (m_disableNetworkGrant && m_voiceOnControl) {
+        LogWarning(LOG_P25, "Cannot disable network traffic grants for voice on control configuration.");
+        m_disableNetworkGrant = false;
+    }
+
     /*
     ** CC Service Class
     */
