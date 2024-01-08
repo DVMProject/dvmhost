@@ -158,6 +158,9 @@ int checkArgs(int argc, char* argv[])
             ++p;
             break;
         }
+        else if (IS("-f")) {
+            g_foreground = true;
+        }
         else if (IS("-c")) {
             if (argc-- <= 0)
                 usage("error: %s", "must specify the configuration file to use");

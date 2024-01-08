@@ -392,8 +392,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // send network grant demand TDU
-            if (!m_p25->m_control && m_p25->m_convNetGrantDemand) {
-                uint8_t controlByte = 0x80U | (group) ? 0x00U : 0x01U;
+            if (!m_p25->m_enableControl && m_p25->m_convNetGrantDemand) {
+                uint8_t controlByte = 0x80U + ((group) ? 0x00U : 0x01U);
+                LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
                 m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
             }
 
@@ -466,6 +467,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     for (int i = 0; i < 3; i++)
                         m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+
+                    m_p25->m_txQueue.clear();
+                    m_p25->m_ccHalted = true;
                 }
             }
 
@@ -888,6 +892,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
         }
 
+        // if voice on control; and CC is halted restart CC
+        if (m_p25->m_voiceOnControl && m_p25->m_ccHalted) {
+            m_p25->m_ccHalted = false;
+            m_p25->writeRF_ControlData();
+        }
+
         m_p25->m_rfState = RS_RF_LISTENING;
         return true;
     }
@@ -943,7 +953,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
         // don't process network frames if the RF modem isn't in a listening state
         if (m_p25->m_rfState != RS_RF_LISTENING) {
             if (m_rfLC.getSrcId() == srcId && m_rfLC.getDstId() == dstId) {
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
+                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic (Are we in a voting condition?), rfSrcId = %u, rfDstId = %u, netSrcId = %u, netDstId = %u", m_rfLC.getSrcId(), m_rfLC.getDstId(),
                     srcId, dstId);
                 resetNet();
                 if (m_p25->m_network != nullptr)
@@ -951,7 +961,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 return false;
             }
             else {
-                LogWarning(LOG_RF, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
+                LogWarning(LOG_NET, "Traffic collision detect, preempting new network traffic to existing RF traffic, rfDstId = %u, netDstId = %u", m_rfLC.getDstId(),
                     dstId);
                 resetNet();
                 if (m_p25->m_network != nullptr)
@@ -1037,7 +1047,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
-                if (m_p25->m_dedicatedControl) {
+                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                     return true;
                 }
 
@@ -1106,7 +1116,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     m_p25->notifyCC_TouchGrant(control.getDstId());
                 }
 
-                if (m_p25->m_dedicatedControl) {
+                if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                     return true;
                 }
 
@@ -1330,6 +1340,12 @@ void Voice::writeNet_TDU()
     resetNet();
     m_p25->m_netState = RS_NET_IDLE;
     m_p25->m_tailOnIdle = true;
+
+    // if voice on control; and CC is halted restart CC
+    if (m_p25->m_voiceOnControl && m_p25->m_ccHalted) {
+        m_p25->m_ccHalted = false;
+        m_p25->writeRF_ControlData();
+    }
 }
 
 /// <summary>
@@ -1632,6 +1648,9 @@ void Voice::writeNet_LDU1()
 
         for (int i = 0; i < 3; i++)
             m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+
+        m_p25->m_txQueue.clear();
+        m_p25->m_ccHalted = true;
     }
 
     uint32_t netId = control.getNetId();

@@ -1441,6 +1441,12 @@ void Control::processFrameLoss()
 
     m_voice->resetRF();
     m_data->resetRF();
+
+    // if voice on control; and CC is halted restart CC
+    if (m_voiceOnControl && m_ccHalted) {
+        m_ccHalted = false;
+        writeRF_ControlData();
+    }
 }
 
 /// <summary>
