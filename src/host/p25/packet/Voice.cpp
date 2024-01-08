@@ -120,11 +120,6 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
     uint8_t duid = m_p25->m_nid.getDUID();
 
-    // are we interrupting a running CC?
-    if (m_p25->m_ccRunning) {
-        m_p25->m_ccHalted = true;
-    }
-
     if (m_p25->m_rfState != RS_RF_LISTENING) {
         m_p25->m_rfTGHang.start();
     }
@@ -465,11 +460,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         osp->setGrpVchNo(chNo);
                     }
 
+                    if (!m_p25->m_ccHalted) {
+                        m_p25->m_txQueue.clear();
+                        m_p25->m_ccHalted = true;
+                    }
+
                     for (int i = 0; i < 3; i++)
                         m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
-
-                    m_p25->m_txQueue.clear();
-                    m_p25->m_ccHalted = true;
                 }
             }
 
@@ -564,6 +561,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     osp->setDstId(dstId);
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
+                }
+
+                if (!m_p25->m_ccHalted) {
+                    m_p25->m_txQueue.clear();
+                    m_p25->m_ccHalted = true;
                 }
 
                 for (int i = 0; i < 3; i++)
@@ -1049,13 +1051,6 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
 
                 if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
                     return true;
-                }
-
-                if (m_p25->m_netState == RS_NET_IDLE) {
-                    // are we interrupting a running CC?
-                    if (m_p25->m_ccRunning) {
-                        m_p25->m_ccHalted = true;
-                    }
                 }
 
                 checkNet_LDU2();
@@ -1550,7 +1545,12 @@ void Voice::writeNet_LDU1()
                     osp->setGrpVchNo(chNo);
                 }
 
-                for (int i = 0; i < 3; i++)
+                if (!m_p25->m_ccHalted) {
+                    m_p25->m_txQueue.clear();
+                    m_p25->m_ccHalted = true;
+                }
+
+                for (int i = 0; i < 6; i++)
                     m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, true);
             }
         }
@@ -1614,43 +1614,6 @@ void Voice::writeNet_LDU1()
 
             m_p25->m_netTGHang.start();
         }
-    }
-
-    // if voice on control; insert group voice channel updates directly after HDU but before LDUs
-    if (m_p25->m_voiceOnControl) {
-        uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
-        bool grp = m_p25->m_affiliations.isGroup(dstId);
-
-        std::unique_ptr<lc::TSBK> osp;
-
-        if (grp) {
-            osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
-
-            // transmit group voice grant update
-            osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
-            osp->setDstId(dstId);
-            osp->setGrpVchId(voiceChData.chId());
-            osp->setGrpVchNo(chNo);
-        }
-        else {
-            uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
-
-            osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
-
-            // transmit group voice grant update
-            osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
-            osp->setSrcId(srcId);
-            osp->setDstId(dstId);
-            osp->setGrpVchId(voiceChData.chId());
-            osp->setGrpVchNo(chNo);
-        }
-
-        for (int i = 0; i < 3; i++)
-            m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
-
-        m_p25->m_txQueue.clear();
-        m_p25->m_ccHalted = true;
     }
 
     uint32_t netId = control.getNetId();
