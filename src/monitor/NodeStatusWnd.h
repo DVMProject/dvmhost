@@ -318,19 +318,13 @@ private:
                                 bool dmrCC = rsp["dmrCC"].get<bool>();
                                 bool p25CtrlEnable = rsp["p25CtrlEnable"].get<bool>();
                                 bool p25CC = rsp["p25CC"].get<bool>();
-                                bool p25VOC = rsp["p25VOC"].get<bool>();
                                 bool nxdnCtrlEnable = rsp["nxdnCtrlEnable"].get<bool>();
                                 bool nxdnCC = rsp["nxdnCC"].get<bool>();
 
                                 // are we a dedicated control channel?
                                 if (dmrCC || p25CC || nxdnCC) {
                                     m_control = true;
-                                    if (p25CC && p25VOC) {
-                                        setText("CONTROL (VOC)");
-                                    }
-                                    else {
-                                        setText("CONTROL");
-                                    }
+                                    setText("CONTROL");
                                 }
 
                                 // if we aren't a dedicated control channel; set our
@@ -398,8 +392,8 @@ private:
                                 ::LogWarning(LOG_HOST, "%s:%u, does not report last source information");
                             }
                         }
-                        catch (std::exception&) {
-                            ::LogWarning(LOG_HOST, "%s:%u, failed to properly handle status", m_chData.address().c_str(), m_chData.port());
+                        catch (std::exception& e) {
+                            ::LogWarning(LOG_HOST, "%s:%u, failed to properly handle status, %s", m_chData.address().c_str(), m_chData.port(), e.what());
                         }
                     }
                 }
