@@ -229,6 +229,13 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // repeat traffic to upstream peers
         if (m_network->m_host->m_peerNetworks.size() > 0) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
+                uint32_t peerId = peer.second->getPeerId();
+
+                // is this peer ignored?
+                if (!isPeerPermitted(peerId, dmrData, streamId)) {
+                    continue;
+                }
+
                 peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
             }
         }
