@@ -87,6 +87,8 @@ private:
 
     uint8_t m_state;
 
+    bool m_isTxCW;
+
     Timer m_modeTimer;
     Timer m_dmrTXTimer;
     Timer m_cwIdTimer;

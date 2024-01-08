@@ -499,6 +499,8 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         bool nxdnEnabled = m_nxdn != nullptr;
         response["nxdnEnabled"].set<bool>(nxdnEnabled);
 
+        response["isTxCW"].set<bool>(m_host->m_isTxCW);
+
         response["fixedMode"].set<bool>(m_host->m_fixedMode);
 
         response["dmrTSCCEnable"].set<bool>(m_host->m_dmrTSCCData);

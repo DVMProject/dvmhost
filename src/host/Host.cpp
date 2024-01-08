@@ -81,6 +81,7 @@ Host::Host(const std::string& confFile) :
     m_network(nullptr),
     m_modemRemotePort(nullptr),
     m_state(STATE_IDLE),
+    m_isTxCW(false),
     m_modeTimer(1000U),
     m_dmrTXTimer(1000U),
     m_cwIdTimer(1000U),
@@ -1081,6 +1082,7 @@ int Host::run()
                 }
 
                 LogDebug(LOG_HOST, "CW, start transmitting");
+                m_isTxCW = true;
                 clockingMutex.lock();
 
                 setState(STATE_IDLE);
@@ -1113,6 +1115,7 @@ int Host::run()
                 } while (true);
 
                 clockingMutex.unlock();
+                m_isTxCW = false;
                 m_cwIdTimer.setTimeout(m_cwIdTime);
                 m_cwIdTimer.start();
             }
