@@ -341,7 +341,20 @@ add_custom_target(old_install
     COMMAND install -m 755 ../tools/start-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
-    COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX})
+    COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/fw
+    COMMAND if [ -e dvm-firmware_f4.elf ]\; then install -m 644 dvm-firmware_f4.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.elf\; fi
+    COMMAND if [ -e dvm-firmware_f4.bin ]\; then install -m 644 dvm-firmware_f4.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.bin\; fi
+    COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then install -m 644 dvm-firmware_f4-pog.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4-pog.elf\; fi
+    COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then install -m 644 dvm-firmware_f4-pog.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fwdvm-firmware_f4-pog.bin\; fi
+    COMMAND if [ -e dvm-firmware_eda.elf ]\; then install -m 644 dvm-firmware_eda.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_eda.elf\; fi
+    COMMAND if [ -e dvm-firmware_eda.bin ]\; then install -m 644 dvm-firmware_eda.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_eda.bin\; fi
+    COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then install -m 644 dvm-firmware_f4-dvmv1.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4-dvmv1.elf\; fi
+    COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then install -m 644 dvm-firmware_f4-dvmv1.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4-dvmv1.bin\; fi
+    COMMAND if [ -e dvm-firmware_due.elf ]\; then install -m 644 dvm-firmware_due.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_due.elf\; fi
+    COMMAND if [ -e dvm-firmware_due.bin ]\; then install -m 644 dvm-firmware_due.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_due.bin\; fi
+    COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then install -m 644 dvm-firmware-hs_f1.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.elf\; fi
+    COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then install -m 644 dvm-firmware-hs_f1.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware-hs_f1.bin\; fi)
 
 #
 # Custom make target to perform non-standard legacy service install. This is meant
