@@ -270,6 +270,19 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
         COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
         COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
         COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+        COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
         COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
         COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
 else()
@@ -285,6 +298,19 @@ else()
         COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
         COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
         COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+        COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+        COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
         COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
         COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
