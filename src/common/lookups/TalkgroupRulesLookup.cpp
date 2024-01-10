@@ -271,7 +271,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 /// <param name="id">Unique identifier for table entry.</param>
 /// <param name="slot">DMR slot this talkgroup is valid on.</param>
 /// <returns>Table entry.</returns>
-TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByMutation(uint32_t peerId, uint32_t id, uint8_t slot)
+TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
 
@@ -280,11 +280,11 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByMutation(uint32_t peerId, ui
         auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
             [&](TalkgroupRuleGroupVoice x)
             {
-                if (x.config().mutation().size() == 0)
+                if (x.config().rewrite().size() == 0)
                     return false;
 
-                auto innerIt = std::find_if(x.config().mutation().begin(), x.config().mutation().end(),
-                    [&](TalkgroupRuleMutation y)
+                auto innerIt = std::find_if(x.config().rewrite().begin(), x.config().rewrite().end(),
+                    [&](TalkgroupRuleRewrite y)
                     {
                         if (slot != 0U) {
                             return y.peerId() == peerId && y.tgId() == id && y.tgSlot() == slot;
@@ -293,7 +293,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByMutation(uint32_t peerId, ui
                         return y.peerId() == peerId && y.tgId() == id;
                     });
 
-                if (innerIt != x.config().mutation().end())
+                if (innerIt != x.config().rewrite().end())
                     return true;
                 return false;
             });
@@ -367,12 +367,13 @@ bool TalkgroupRulesLookup::load()
 
             uint32_t incCount = groupVoice.config().inclusion().size();
             uint32_t excCount = groupVoice.config().exclusion().size();
+            uint32_t rewrCount = groupVoice.config().rewrite().size();
 
             if (incCount > 0 && excCount > 0) {
                 ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
             }
 
-            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount);
+            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
         }
     }
     m_mutex.unlock();

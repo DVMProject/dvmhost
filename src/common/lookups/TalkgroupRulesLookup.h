@@ -81,31 +81,31 @@ namespace lookups
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //     Represents an mutation block for a routing rule.
+    //     Represents an rewrite block for a routing rule rewrites.
     // ---------------------------------------------------------------------------
 
-    class HOST_SW_API TalkgroupRuleMutation {
+    class HOST_SW_API TalkgroupRuleRewrite {
     public:
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleMutation class.</summary>
-        TalkgroupRuleMutation() :
+        /// <summary>Initializes a new insatnce of the TalkgroupRuleRewrite class.</summary>
+        TalkgroupRuleRewrite() :
             m_peerId(0U),
             m_tgId(0U),
             m_tgSlot(0U)
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleMutation class.</summary>
+        /// <summary>Initializes a new insatnce of the TalkgroupRuleRewrite class.</summary>
         /// <param name="node"></param>
-        TalkgroupRuleMutation(yaml::Node& node) :
-            TalkgroupRuleMutation()
+        TalkgroupRuleRewrite(yaml::Node& node) :
+            TalkgroupRuleRewrite()
         {
             m_peerId = node["peerId"].as<uint32_t>(0U);
             m_tgId = node["tgid"].as<uint32_t>(0U);
             m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
         }
 
-        /// <summary>Equals operator. Copies this TalkgroupRuleMutation to another TalkgroupRuleMutation.</summary>
-        virtual TalkgroupRuleMutation& operator=(const TalkgroupRuleMutation& data)
+        /// <summary>Equals operator. Copies this TalkgroupRuleRewrite to another TalkgroupRuleRewrite.</summary>
+        virtual TalkgroupRuleRewrite& operator=(const TalkgroupRuleRewrite& data)
         {
             if (this != &data) {
                 m_peerId = data.m_peerId;
@@ -138,7 +138,7 @@ namespace lookups
             m_parrot(false),
             m_inclusion(),
             m_exclusion(),
-            m_mutation()
+            m_rewrite()
         {
             /* stub */
         }
@@ -166,11 +166,11 @@ namespace lookups
                 }
             }
 
-            yaml::Node& mutationList = node["mutations"];
-            if (mutationList.size() > 0U) {
-                for (size_t i = 0; i < mutationList.size(); i++) {
-                    TalkgroupRuleMutation mutation = TalkgroupRuleMutation(mutationList[i]);
-                    m_mutation.push_back(mutation);
+            yaml::Node& rewriteList = node["rewrite"];
+            if (rewriteList.size() > 0U) {
+                for (size_t i = 0; i < rewriteList.size(); i++) {
+                    TalkgroupRuleRewrite rewrite = TalkgroupRuleRewrite(rewriteList[i]);
+                    m_rewrite.push_back(rewrite);
                 }
             }
         }
@@ -197,8 +197,8 @@ namespace lookups
         __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion, inclusion);
         /// <summary>List of peer IDs excluded by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion, exclusion);
-        /// <summary>List of mutations performed by this rule.</summary>
-        __PROPERTY_PLAIN(std::vector<TalkgroupRuleMutation>, mutation, mutation);
+        /// <summary>List of rewrites performed by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite, rewrite);
     };
 
     // ---------------------------------------------------------------------------
@@ -287,8 +287,8 @@ namespace lookups
         void eraseEntry(uint32_t id, uint8_t slot);
         /// <summary>Finds a table entry in this lookup table.</summary>
         virtual TalkgroupRuleGroupVoice find(uint32_t id, uint8_t slot = 0U);
-        /// <summary>Finds a table entry in this lookup table by mutation.</summary>
-        virtual TalkgroupRuleGroupVoice findByMutation(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
+        /// <summary>Finds a table entry in this lookup table by rewrite.</summary>
+        virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
 
         /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
         bool getACL();

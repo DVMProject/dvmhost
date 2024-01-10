@@ -77,10 +77,10 @@ namespace network
 
             bool m_debug;
 
-            /// <summary>Helper to mutate the network data buffer.</summary>
-            void mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
-            /// <summary>Helper to mutate destination ID and slot.</summary>
-            bool peerMutate(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
+            /// <summary>Helper to route rewrite the network data buffer.</summary>
+            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
+            /// <summary>Helper to route rewrite destination ID and slot.</summary>
+            bool peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);

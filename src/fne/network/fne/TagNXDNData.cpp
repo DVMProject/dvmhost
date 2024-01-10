@@ -104,8 +104,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
     // is this data from a peer connection?
     if (fromPeer) {
-        // perform TGID mutations if configured
-        mutateBuffer(buffer, peerId, messageType, dstId, false);
+        // perform TGID route rewrites if configured
+        routeRewrite(buffer, peerId, messageType, dstId, false);
     }
 
     // is the stream valid?
@@ -224,8 +224,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 ::memset(outboundPeerBuffer, 0x00U, len);
                 ::memcpy(outboundPeerBuffer, buffer, len);
 
-                // perform TGID mutations if configured
-                mutateBuffer(outboundPeerBuffer, peerId, messageType, dstId);
+                // perform TGID route rewrites if configured
+                routeRewrite(outboundPeerBuffer, peerId, messageType, dstId);
 
                 peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
             }
@@ -270,45 +270,45 @@ void TagNXDNData::playbackParrot()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Helper to mutate the network data buffer.
+/// Helper to route rewrite the network data buffer.
 /// </summary>
 /// <param name="buffer"></param>
 /// <param name="peerId">Peer ID</param>
 /// <param name="duid"></param>
 /// <param name="dstId"></param>
 /// <param name="outbound"></param>
-void TagNXDNData::mutateBuffer(uint8_t* buffer, uint32_t peerId, uint8_t messageType, uint32_t dstId, bool outbound)
+void TagNXDNData::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t messageType, uint32_t dstId, bool outbound)
 {
-    uint32_t mutatedDstId = dstId;
+    uint32_t rewriteDstId = dstId;
 
-    // does the data require mutation?
-    if (peerMutate(peerId, mutatedDstId, outbound)) {
+    // does the data require route writing?
+    if (peerRewrite(peerId, rewriteDstId, outbound)) {
         // rewrite destination TGID in the frame
-        __SET_UINT16(mutatedDstId, buffer, 8U);
+        __SET_UINT16(rewriteDstId, buffer, 8U);
     }
 }
 
 /// <summary>
-/// Helper to mutate destination ID.
+/// Helper to route rewrite destination ID.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
 /// <param name="dstId"></param>
 /// <param name="outbound"></param>
-bool TagNXDNData::peerMutate(uint32_t peerId, uint32_t& dstId, bool outbound)
+bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 {
     lookups::TalkgroupRuleGroupVoice tg;
     if (outbound) {
         tg = m_network->m_tidLookup->find(dstId);
     }
     else {
-        tg = m_network->m_tidLookup->findByMutation(peerId, dstId);
+        tg = m_network->m_tidLookup->findByRewrite(peerId, dstId);
     }
 
-    std::vector<lookups::TalkgroupRuleMutation> mutations = tg.config().mutation();
+    std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
 
-    bool mutated = false;
-    if (mutations.size() > 0) {
-        for (auto entry : mutations) {
+    bool rewrote = false;
+    if (rewrites.size() > 0) {
+        for (auto entry : rewrites) {
             if (entry.peerId() == peerId) {
                 if (outbound) {
                     dstId = tg.source().tgId();
@@ -316,13 +316,13 @@ bool TagNXDNData::peerMutate(uint32_t peerId, uint32_t& dstId, bool outbound)
                 else {
                     dstId = entry.tgId();
                 }
-                mutated = true;
+                rewrote = true;
                 break;
             }
         }
     }
 
-    return mutated;
+    return rewrote;
 }
 
 /// <summary>

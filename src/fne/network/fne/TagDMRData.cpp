@@ -129,8 +129,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     // is this data from a peer connection?
     if (fromPeer) {
-        // perform TGID mutations if configured
-        mutateBuffer(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
+        // perform TGID route rewrites if configured
+        routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
     }
 
     // is the stream valid?
@@ -254,8 +254,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 ::memset(outboundPeerBuffer, 0x00U, len);
                 ::memcpy(outboundPeerBuffer, buffer, len);
 
-                // perform TGID mutations if configured
-                mutateBuffer(outboundPeerBuffer, peerId, dmrData, dataType, dstId, slotNo);
+                // perform TGID route rewrites if configured
+                routeRewrite(outboundPeerBuffer, peerId, dmrData, dataType, dstId, slotNo);
 
                 peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
             }
@@ -300,7 +300,7 @@ void TagDMRData::playbackParrot()
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Helper to mutate the network data buffer.
+/// Helper to route rewrite the network data buffer.
 /// </summary>
 /// <param name="buffer"></param>
 /// <param name="peerId">Peer ID</param>
@@ -309,20 +309,20 @@ void TagDMRData::playbackParrot()
 /// <param name="dstId"></param>
 /// <param name="slotNo"></param>
 /// <param name="outbound"></param>
-void TagDMRData::mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
+void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
 {
-    uint32_t mutatedDstId = dstId;
-    uint32_t mutatedSlotNo = slotNo;
+    uint32_t rewriteDstId = dstId;
+    uint32_t rewriteSlotNo = slotNo;
 
-    // does the data require mutation?
-    if (peerMutate(peerId, mutatedDstId, mutatedSlotNo, outbound)) {
+    // does the data require route rewriting?
+    if (peerRewrite(peerId, rewriteDstId, rewriteSlotNo, outbound)) {
         // rewrite destination TGID in the frame
-        __SET_UINT16(mutatedDstId, buffer, 8U);
+        __SET_UINT16(rewriteDstId, buffer, 8U);
 
         // set or clear the e.Slot flag (if 0x80 is set Slot 2 otherwise Slot 1)
-        if (mutatedSlotNo == 2 && (buffer[15U] & 0x80U) == 0x00U)
+        if (rewriteSlotNo == 2 && (buffer[15U] & 0x80U) == 0x00U)
             buffer[15U] |= 0x80;
-        if (mutatedSlotNo == 1 && (buffer[15U] & 0x80U) == 0x80U)
+        if (rewriteSlotNo == 1 && (buffer[15U] & 0x80U) == 0x80U)
             buffer[15U] = buffer[15U] & ~0x80U;
 
         uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
@@ -335,10 +335,10 @@ void TagDMRData::mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data 
             std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, dataType);
             if (lc == nullptr) {
                 LogWarning(LOG_NET, "DMR Slot %u, bad LC received from the network, replacing", slotNo);
-                lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), mutatedDstId);
+                lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), rewriteDstId);
             }
 
-            lc->setDstId(mutatedDstId);
+            lc->setDstId(rewriteDstId);
 
             // Regenerate the LC data
             fullLC.encode(*lc, data + 2U, dataType);
@@ -353,7 +353,7 @@ void TagDMRData::mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data 
                 lc = new_unique(lc::PrivacyLC);
             }
 
-            lc->setDstId(mutatedDstId);
+            lc->setDstId(rewriteDstId);
 
             // Regenerate the LC data
             fullLC.encodePI(*lc, data + 2U);
@@ -365,27 +365,27 @@ void TagDMRData::mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data 
 }
 
 /// <summary>
-/// Helper to mutate destination ID and slot.
+/// Helper to route rewrite destination ID and slot.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
 /// <param name="dstId"></param>
 /// <param name="slotNo"></param>
 /// <param name="outbound"></param>
-bool TagDMRData::peerMutate(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound)
+bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound)
 {
     lookups::TalkgroupRuleGroupVoice tg;
     if (outbound) {
         tg = m_network->m_tidLookup->find(dstId, slotNo);
     }
     else {
-        tg = m_network->m_tidLookup->findByMutation(peerId, dstId, slotNo);
+        tg = m_network->m_tidLookup->findByRewrite(peerId, dstId, slotNo);
     }
 
-    std::vector<lookups::TalkgroupRuleMutation> mutations = tg.config().mutation();
+    std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
 
-    bool mutated = false;
-    if (mutations.size() > 0) {
-        for (auto entry : mutations) {
+    bool rewrote = false;
+    if (rewrites.size() > 0) {
+        for (auto entry : rewrites) {
             if (entry.peerId() == peerId) {
                 if (outbound) {
                     dstId = tg.source().tgId();
@@ -395,13 +395,13 @@ bool TagDMRData::peerMutate(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, 
                     dstId = entry.tgId();
                     slotNo = entry.tgSlot();
                 }
-                mutated = true;
+                rewrote = true;
                 break;
             }
         }
     }
 
-    return mutated;
+    return rewrote;
 }
 
 /// <summary>

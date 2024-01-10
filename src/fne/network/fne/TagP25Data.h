@@ -83,10 +83,10 @@ namespace network
 
             bool m_debug;
 
-            /// <summary>Helper to mutate the network data buffer.</summary>
-            void mutateBuffer(uint8_t* buffer, uint32_t peerId, uint8_t duid, uint32_t dstId, bool outbound = true);
-            /// <summary>Helper to mutate destination ID.</summary>
-            bool peerMutate(uint32_t peerId, uint32_t& dstId, bool outbound = true);
+            /// <summary>Helper to route rewrite the network data buffer.</summary>
+            void routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, uint32_t dstId, bool outbound = true);
+            /// <summary>Helper to route rewrite destination ID.</summary>
+            bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);

@@ -20,8 +20,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations: []
+      # List of peer talkgroup rewrites.
+      rewrite: []
     #
     # Source Configuration
     #
@@ -45,8 +45,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations: []
+      # List of peer talkgroup rewrites.
+      rewrite: []
     #
     # Source Configuration
     #
@@ -70,9 +70,9 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations:
-          # Network Peer ID to mutate.
+      # List of peer talkgroup rewrites.
+      rewrite:
+          # Network Peer ID to rewrite this TGID for.
         - peerid: 9000990
           # Numerical talkgroup ID number.
           tgid: 9999
@@ -99,8 +99,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations: []
+      # List of peer talkgroup rewrites.
+      rewrite: []
     #
     # Source Configuration
     #
@@ -122,8 +122,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations: []
+      # List of peer talkgroup rewrites.
+      rewrite: []
     #
     # Source Configuration
     #
@@ -145,8 +145,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
-      # List of peer talkgroup mutations.
-      mutations: []
+      # List of peer talkgroup rewrites.
+      rewrite: []
     #
     # Source Configuration
     #
