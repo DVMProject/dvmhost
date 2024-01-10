@@ -83,7 +83,7 @@ groupVoice:
     #
     source:
       # Numerical talkgroup ID number.
-      tgid: 9999
+      tgid: 9990
       # DMR slot number.
       slot: 1
 
