@@ -33,6 +33,8 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define GET_PEERLIST                    "/peerlist"
+#define FNE_GET_PEERLIST                "/peerlist"
+
+#define FNE_GET_FORCE_UPDATE            "/force-update"
 
 #endif // __FNE_REST_DEFINES_H__

@@ -89,6 +89,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peers(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
+    m_forceListUpdate(false),
     m_callInProgress(false),
     m_verbose(verbose)
 {
@@ -166,7 +167,7 @@ void FNENetwork::clock(uint32_t ms)
     }
 
     m_updateLookupTimer.clock(ms);
-    if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
+    if ((m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) || m_forceListUpdate) {
         writeWhitelistRIDs();
         writeBlacklistRIDs();
         m_frameQueue->flushQueue();
@@ -176,6 +177,7 @@ void FNENetwork::clock(uint32_t ms)
         m_frameQueue->flushQueue();
 
         m_updateLookupTimer.start();
+        m_forceListUpdate = false;
     }
 
     sockaddr_storage address;

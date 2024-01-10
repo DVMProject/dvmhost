@@ -256,7 +256,9 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(GET_VERSION).get(REST_API_BIND(RESTAPI::restAPI_GetVersion, this));
     m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
-    m_dispatcher.match(GET_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
+    m_dispatcher.match(FNE_GET_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
+
+    m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 }
 
 /// <summary>
@@ -487,5 +489,26 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
     }
 
     response["peers"].set<json::array>(peers);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+
     reply.payload(response);
 }
