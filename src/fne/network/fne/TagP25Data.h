@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ namespace network
             ~TagP25Data();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer = false);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();
@@ -82,6 +82,11 @@ namespace network
             std::unordered_map<uint32_t, RxStatus> m_status;
 
             bool m_debug;
+
+            /// <summary>Helper to mutate the network data buffer.</summary>
+            void mutateBuffer(uint8_t* buffer, uint32_t peerId, uint8_t duid, uint32_t dstId, bool outbound = true);
+            /// <summary>Helper to mutate destination ID.</summary>
+            bool peerMutate(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);

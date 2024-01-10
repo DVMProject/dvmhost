@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -81,6 +81,52 @@ namespace lookups
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
+    //     Represents an mutation block for a routing rule.
+    // ---------------------------------------------------------------------------
+
+    class HOST_SW_API TalkgroupRuleMutation {
+    public:
+        /// <summary>Initializes a new insatnce of the TalkgroupRuleMutation class.</summary>
+        TalkgroupRuleMutation() :
+            m_peerId(0U),
+            m_tgId(0U),
+            m_tgSlot(0U)
+        {
+            /* stub */
+        }
+        /// <summary>Initializes a new insatnce of the TalkgroupRuleMutation class.</summary>
+        /// <param name="node"></param>
+        TalkgroupRuleMutation(yaml::Node& node) :
+            TalkgroupRuleMutation()
+        {
+            m_peerId = node["peerId"].as<uint32_t>(0U);
+            m_tgId = node["tgid"].as<uint32_t>(0U);
+            m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
+        }
+
+        /// <summary>Equals operator. Copies this TalkgroupRuleMutation to another TalkgroupRuleMutation.</summary>
+        virtual TalkgroupRuleMutation& operator=(const TalkgroupRuleMutation& data)
+        {
+            if (this != &data) {
+                m_peerId = data.m_peerId;
+                m_tgId = data.m_tgId;
+                m_tgSlot = data.m_tgSlot;
+            }
+
+            return *this;
+        }
+
+    public:
+        /// <summary>Peer ID.</summary>
+        __PROPERTY_PLAIN(uint32_t, peerId, peerId);
+        /// <summary>Talkgroup ID.</summary>
+        __PROPERTY_PLAIN(uint32_t, tgId, tgId);
+        /// <summary>Talkgroup DMR slot.</summary>
+        __PROPERTY_PLAIN(uint8_t, tgSlot, tgSlot);
+    };
+
+    // ---------------------------------------------------------------------------
+    //  Class Declaration
     //     Represents an configuration block for a routing rule.
     // ---------------------------------------------------------------------------
 
@@ -91,7 +137,8 @@ namespace lookups
             m_active(false),
             m_parrot(false),
             m_inclusion(),
-            m_exclusion()
+            m_exclusion(),
+            m_mutation()
         {
             /* stub */
         }
@@ -118,6 +165,14 @@ namespace lookups
                     m_exclusion.push_back(peerId);
                 }
             }
+
+            yaml::Node& mutationList = node["mutations"];
+            if (mutationList.size() > 0U) {
+                for (size_t i = 0; i < mutationList.size(); i++) {
+                    TalkgroupRuleMutation mutation = TalkgroupRuleMutation(mutationList[i]);
+                    m_mutation.push_back(mutation);
+                }
+            }
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleConfig to another TalkgroupRuleConfig.</summary>
@@ -142,6 +197,8 @@ namespace lookups
         __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion, inclusion);
         /// <summary>List of peer IDs excluded by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion, exclusion);
+        /// <summary>List of mutations performed by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<TalkgroupRuleMutation>, mutation, mutation);
     };
 
     // ---------------------------------------------------------------------------
@@ -230,6 +287,8 @@ namespace lookups
         void eraseEntry(uint32_t id, uint8_t slot);
         /// <summary>Finds a table entry in this lookup table.</summary>
         virtual TalkgroupRuleGroupVoice find(uint32_t id, uint8_t slot = 0U);
+        /// <summary>Finds a table entry in this lookup table by mutation.</summary>
+        virtual TalkgroupRuleGroupVoice findByMutation(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
 
         /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
         bool getACL();

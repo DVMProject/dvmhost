@@ -319,6 +319,13 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
 
+    // overwrite the destination ID if the network message header and
+    // decoded network LC data don't agree (this can happen if the network is dynamically
+    // altering the destination ID in-flight)
+    if (lc.getDstId() != netLC.getDstId()) {
+        lc.setDstId(netLC.getDstId());
+    }
+
     if (m_nxdn->m_netState == RS_NET_IDLE) {
         uint8_t type = lc.getMessageType();
         if (type != RTCH_MESSAGE_TYPE_DCALL_HDR)

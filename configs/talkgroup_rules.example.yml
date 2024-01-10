@@ -20,6 +20,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
+      # List of peer talkgroup mutations.
+      mutations: []
     #
     # Source Configuration
     #
@@ -43,12 +45,45 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
+      # List of peer talkgroup mutations.
+      mutations: []
     #
     # Source Configuration
     #
     source:
       # Numerical talkgroup ID number.
       tgid: 9990
+      # DMR slot number.
+      slot: 1
+
+    # Textual name of the talkgroup.
+  - name: Parrot Mutation Example
+    #
+    # Talkgroup Configuration
+    #
+    config:
+      # Flag indicating whether this talkgroup is active or not.
+      active: true
+      # Flag indicating whether or not this talkgroup is a parrot talkgroup.
+      parrot: true
+      # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
+      inclusion: []
+      # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
+      exclusion: []
+      # List of peer talkgroup mutations.
+      mutations:
+          # Network Peer ID to mutate.
+        - peerid: 9000990
+          # Numerical talkgroup ID number.
+          tgid: 9999
+          # DMR slot number.
+          slot: 1
+    #
+    # Source Configuration
+    #
+    source:
+      # Numerical talkgroup ID number.
+      tgid: 9999
       # DMR slot number.
       slot: 1
 
@@ -64,6 +99,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
+      # List of peer talkgroup mutations.
+      mutations: []
     #
     # Source Configuration
     #
@@ -85,6 +122,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
+      # List of peer talkgroup mutations.
+      mutations: []
     #
     # Source Configuration
     #
@@ -106,6 +145,8 @@ groupVoice:
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
       exclusion: []
+      # List of peer talkgroup mutations.
+      mutations: []
     #
     # Source Configuration
     #

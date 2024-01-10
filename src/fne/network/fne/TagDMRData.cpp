@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "common/dmr/lc/LC.h"
+#include "common/dmr/lc/FullLC.h"
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
@@ -35,6 +37,7 @@
 using namespace system_clock;
 using namespace network;
 using namespace network::fne;
+using namespace dmr;
 
 #include <cstdio>
 #include <cassert>
@@ -76,23 +79,28 @@ TagDMRData::~TagDMRData()
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="fromPeer">Flag indicating whether this traffic is from a peer connection or not.</param>
 /// <returns></returns>
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer)
 {
     hrc::hrc_t pktTime = hrc::now();
+
+    uint8_t buffer[len];
+    ::memset(buffer, 0x00U, len);
+    ::memcpy(buffer, data, len);
 
     uint8_t seqNo = data[4U];
 
     uint32_t srcId = __GET_UINT16(data, 5U);
     uint32_t dstId = __GET_UINT16(data, 8U);
 
-    uint8_t flco = (data[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+    uint8_t flco = (data[15U] & 0x40U) == 0x40U ? FLCO_PRIVATE : FLCO_GROUP;
 
     uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
 
     uint8_t dataType = data[15U] & 0x0FU;
 
-    dmr::data::Data dmrData;
+    data::Data dmrData;
     dmrData.setSeqNo(seqNo);
     dmrData.setSlotNo(slotNo);
     dmrData.setSrcId(srcId);
@@ -109,14 +117,20 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     }
     else if (voiceSync) {
         dmrData.setData(data + 20U);
-        dmrData.setDataType(dmr::DT_VOICE_SYNC);
+        dmrData.setDataType(DT_VOICE_SYNC);
         dmrData.setN(0U);
     }
     else {
         uint8_t n = data[15U] & 0x0FU;
         dmrData.setData(data + 20U);
-        dmrData.setDataType(dmr::DT_VOICE);
+        dmrData.setDataType(DT_VOICE);
         dmrData.setN(n);
+    }
+
+    // is this data from a peer connection?
+    if (fromPeer) {
+        // perform TGID mutations if configured
+        mutateBuffer(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
     }
 
     // is the stream valid?
@@ -127,7 +141,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // is this the end of the call stream?
-        if (dataSync && (dataType == dmr::DT_TERMINATOR_WITH_LC)) {
+        if (dataSync && (dataType == DT_TERMINATOR_WITH_LC)) {
             RxStatus status;
             auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
             if (it == m_status.end()) {
@@ -160,7 +174,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // is this a new call stream?
-        if (dataSync && (dataType == dmr::DT_VOICE_LC_HEADER)) {
+        if (dataSync && (dataType == DT_VOICE_LC_HEADER)) {
             auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
             if (it != m_status.end()) {
                 RxStatus status = it->second;
@@ -203,7 +217,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
         if (tg.config().parrot()) {
             uint8_t* copy = new uint8_t[len];
-            ::memcpy(copy, data, len);
+            ::memcpy(copy, buffer, len);
             m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
         }
 
@@ -215,7 +229,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId, true);
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, buffer, len, pktSeq, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId);
@@ -227,7 +241,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // repeat traffic to upstream peers
-        if (m_network->m_host->m_peerNetworks.size() > 0) {
+        if (m_network->m_host->m_peerNetworks.size() > 0 && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t peerId = peer.second->getPeerId();
 
@@ -236,7 +250,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 }
 
-                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
+                uint8_t outboundPeerBuffer[len];
+                ::memset(outboundPeerBuffer, 0x00U, len);
+                ::memcpy(outboundPeerBuffer, buffer, len);
+
+                // perform TGID mutations if configured
+                mutateBuffer(outboundPeerBuffer, peerId, dmrData, dataType, dstId, slotNo);
+
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
             }
         }
 
@@ -279,22 +300,127 @@ void TagDMRData::playbackParrot()
 // ---------------------------------------------------------------------------
 
 /// <summary>
+/// Helper to mutate the network data buffer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="dmrData"></param>
+/// <param name="dataType"></param>
+/// <param name="dstId"></param>
+/// <param name="slotNo"></param>
+/// <param name="outbound"></param>
+void TagDMRData::mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
+{
+    uint32_t mutatedDstId = dstId;
+    uint32_t mutatedSlotNo = slotNo;
+
+    // does the data require mutation?
+    if (peerMutate(peerId, mutatedDstId, mutatedSlotNo, outbound)) {
+        // rewrite destination TGID in the frame
+        __SET_UINT16(mutatedDstId, buffer, 8U);
+
+        // set or clear the e.Slot flag (if 0x80 is set Slot 2 otherwise Slot 1)
+        if (mutatedSlotNo == 2 && (buffer[15U] & 0x80U) == 0x00U)
+            buffer[15U] |= 0x80;
+        if (mutatedSlotNo == 1 && (buffer[15U] & 0x80U) == 0x80U)
+            buffer[15U] = buffer[15U] & ~0x80U;
+
+        uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+        dmrData.getData(data + 2U);
+
+        if (dataType == DT_VOICE_LC_HEADER ||
+            dataType == DT_TERMINATOR_WITH_LC) {
+            // decode and reconstruct embedded DMR data
+            lc::FullLC fullLC;
+            std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, dataType);
+            if (lc == nullptr) {
+                LogWarning(LOG_NET, "DMR Slot %u, bad LC received from the network, replacing", slotNo);
+                lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), mutatedDstId);
+            }
+
+            lc->setDstId(mutatedDstId);
+
+            // Regenerate the LC data
+            fullLC.encode(*lc, data + 2U, dataType);
+            dmrData.setData(data + 2U);
+        }
+        else if (dataType == DT_VOICE_PI_HEADER) {
+            // decode and reconstruct embedded DMR data
+            lc::FullLC fullLC;
+            std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
+            if (lc == nullptr) {
+                LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", slotNo);
+                lc = new_unique(lc::PrivacyLC);
+            }
+
+            lc->setDstId(mutatedDstId);
+
+            // Regenerate the LC data
+            fullLC.encodePI(*lc, data + 2U);
+            dmrData.setData(data + 2U);
+        }
+
+        dmrData.getData(buffer + 20U);
+    }
+}
+
+/// <summary>
+/// Helper to mutate destination ID and slot.
+/// </summary>
+/// <param name="peerId">Peer ID</param>
+/// <param name="dstId"></param>
+/// <param name="slotNo"></param>
+/// <param name="outbound"></param>
+bool TagDMRData::peerMutate(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound)
+{
+    lookups::TalkgroupRuleGroupVoice tg;
+    if (outbound) {
+        tg = m_network->m_tidLookup->find(dstId, slotNo);
+    }
+    else {
+        tg = m_network->m_tidLookup->findByMutation(peerId, dstId, slotNo);
+    }
+
+    std::vector<lookups::TalkgroupRuleMutation> mutations = tg.config().mutation();
+
+    bool mutated = false;
+    if (mutations.size() > 0) {
+        for (auto entry : mutations) {
+            if (entry.peerId() == peerId) {
+                if (outbound) {
+                    dstId = tg.source().tgId();
+                    slotNo = tg.source().tgSlot();
+                }
+                else {
+                    dstId = entry.tgId();
+                    slotNo = entry.tgSlot();
+                }
+                mutated = true;
+                break;
+            }
+        }
+    }
+
+    return mutated;
+}
+
+/// <summary>
 /// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
 /// <param name="data"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
+bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId)
 {
     // private calls are always permitted
-    if (data.getDataType() == dmr::FLCO_PRIVATE) {
+    if (data.getDataType() == FLCO_PRIVATE) {
         return true;
     }
 
     // is this a group call?
-    if (data.getDataType() == dmr::FLCO_GROUP) {
-        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
+    if (data.getDataType() == FLCO_GROUP) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId(), data.getSlotNo());
 
         std::vector<uint32_t> inclusion = tg.config().inclusion();
         std::vector<uint32_t> exclusion = tg.config().exclusion();
@@ -326,7 +452,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_
 /// <param name="data"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId)
+bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     lookups::RadioId rid = m_network->m_ridLookup->find(data.getSrcId());
@@ -337,11 +463,11 @@ bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t strea
     }
 
     // always validate a terminator if the source is valid
-    if (data.getDataType() == dmr::DT_TERMINATOR_WITH_LC)
+    if (data.getDataType() == DT_TERMINATOR_WITH_LC)
         return true;
 
     // is this a private call?
-    if (data.getDataType() == dmr::FLCO_PRIVATE) {
+    if (data.getDataType() == FLCO_PRIVATE) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(data.getDstId());
         if (!rid.radioDefault()) {
@@ -352,7 +478,7 @@ bool TagDMRData::validate(uint32_t peerId, dmr::data::Data& data, uint32_t strea
     }
 
     // is this a group call?
-    if (data.getDataType() == dmr::FLCO_GROUP) {
+    if (data.getDataType() == FLCO_GROUP) {
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
 
         // check the DMR slot number

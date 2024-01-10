@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ namespace network
             ~TagDMRData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer = false);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();
@@ -76,6 +76,11 @@ namespace network
             std::unordered_map<uint32_t, RxStatus> m_status;
 
             bool m_debug;
+
+            /// <summary>Helper to mutate the network data buffer.</summary>
+            void mutateBuffer(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
+            /// <summary>Helper to mutate destination ID and slot.</summary>
+            bool peerMutate(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);

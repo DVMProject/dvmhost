@@ -91,7 +91,6 @@ namespace network
 
         sockaddr_storage address;
         uint32_t addrLen;
-
     };
 
     /* Vector of buffers that contain a full frames */

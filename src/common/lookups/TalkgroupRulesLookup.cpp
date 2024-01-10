@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -244,14 +244,58 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 
     m_mutex.lock();
     {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
-            [&](TalkgroupRuleGroupVoice x) 
-            { 
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+            [&](TalkgroupRuleGroupVoice x)
+            {
                 if (slot != 0U) {
                     return x.source().tgId() == id && x.source().tgSlot() == slot;
                 }
 
-                return x.source().tgId() == id; 
+                return x.source().tgId() == id;
+            });
+        if (it != m_groupVoice.end()) {
+            entry = *it;
+        } else {
+            entry = TalkgroupRuleGroupVoice();
+        }
+    }
+    m_mutex.unlock();
+
+    return entry;
+}
+
+/// <summary>
+/// Finds a table entry in this lookup table.
+/// </summary>
+/// <param name="peerId">Unique identifier for table entry.</param>
+/// <param name="id">Unique identifier for table entry.</param>
+/// <param name="slot">DMR slot this talkgroup is valid on.</param>
+/// <returns>Table entry.</returns>
+TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByMutation(uint32_t peerId, uint32_t id, uint8_t slot)
+{
+    TalkgroupRuleGroupVoice entry;
+
+    m_mutex.lock();
+    {
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+            [&](TalkgroupRuleGroupVoice x)
+            {
+                if (x.config().mutation().size() == 0)
+                    return false;
+
+                auto innerIt = std::find_if(x.config().mutation().begin(), x.config().mutation().end(),
+                    [&](TalkgroupRuleMutation y)
+                    {
+                        if (slot != 0U) {
+                            return y.peerId() == peerId && y.tgId() == id && y.tgSlot() == slot;
+                        }
+
+                        return y.peerId() == peerId && y.tgId() == id;
+                    });
+
+                if (innerIt != x.config().mutation().end())
+                    return true;
+                return false;
             });
         if (it != m_groupVoice.end()) {
             entry = *it;

@@ -710,6 +710,13 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         bool group = lc.getGroup();
         bool encrypted = lc.getEncrypted();
 
+        // overwrite the destination ID if the network message header and
+        // decoded network LC data don't agree (this can happen if the network is dynamically
+        // altering the destination ID in-flight)
+        if (lc.getDstId() != netLC.getDstId()) {
+            lc.setDstId(netLC.getDstId());
+        }
+
         // don't process network frames if this modem isn't authoritative
         if (!m_nxdn->m_authoritative && m_nxdn->m_permittedDstId != dstId) {
             if (m_nxdn->m_netState != RS_NET_AUDIO) {

@@ -782,23 +782,6 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                 // handle standard P25 reference opcodes
                 switch (tsbk->getLCO()) {
                     case TSBK_IOSP_GRP_VCH:
-                    {
-                        if (m_p25->m_enableControl) {
-                            if (!m_p25->m_affiliations.isGranted(dstId)) {
-                                if (m_verbose) {
-                                    LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",
-                                        tsbk->toString(true).c_str(), tsbk->getEmergency(), tsbk->getEncrypted(), tsbk->getPriority(), tsbk->getGrpVchNo(), srcId, dstId);
-                                }
-
-                                uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                                    (tsbk->getPriority() & 0x07U);                                  // Priority
-
-                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true, true);
-                            }
-                        }
-                    }
-                    return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_VCH:
                     {
                         if (m_p25->m_enableControl) {
@@ -812,7 +795,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                                     (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false, true);
+                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, (tsbk->getLCO() == TSBK_IOSP_GRP_VCH), true);
                             }
                         }
                     }

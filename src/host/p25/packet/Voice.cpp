@@ -1034,6 +1034,13 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                 m_dfsiLC.control()->setNetId(control.getNetId());
                 m_dfsiLC.control()->setSysId(control.getSysId());
 
+                // overwrite the destination ID if the network message header and
+                // decoded DFSI data don't agree (this can happen if the network is dynamically
+                // altering the destination ID in-flight)
+                if (m_dfsiLC.control()->getDstId() != control.getDstId()) {
+                    m_dfsiLC.control()->setDstId(control.getDstId());
+                }
+
                 m_netLastLDU1 = control;
                 m_netLastFrameType = frameType;
 

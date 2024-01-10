@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 using namespace system_clock;
 using namespace network;
 using namespace network::fne;
+using namespace nxdn;
 
 #include <cstdio>
 #include <cassert>
@@ -77,17 +78,22 @@ TagNXDNData::~TagNXDNData()
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="fromPeer">Flag indicating whether this traffic is from a peer connection or not.</param>
 /// <returns></returns>
-bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer)
 {
     hrc::hrc_t pktTime = hrc::now();
+
+    uint8_t buffer[len];
+    ::memset(buffer, 0x00U, len);
+    ::memcpy(buffer, data, len);
 
     uint8_t messageType = data[4U];
 
     uint32_t srcId = __GET_UINT16(data, 5U);
     uint32_t dstId = __GET_UINT16(data, 8U);
 
-    nxdn::lc::RTCH lc;
+    lc::RTCH lc;
 
     lc.setMessageType(messageType);
     lc.setSrcId((uint16_t)srcId & 0xFFFFU);
@@ -95,6 +101,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
     bool group = (data[15U] & 0x40U) == 0x40U ? false : true;
     lc.setGroup(group);
+
+    // is this data from a peer connection?
+    if (fromPeer) {
+        // perform TGID mutations if configured
+        mutateBuffer(buffer, peerId, messageType, dstId, false);
+    }
 
     // is the stream valid?
     if (validate(peerId, lc, messageType, streamId)) {
@@ -104,11 +116,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         }
 
         // specifically only check the following logic for end of call, voice or data frames
-        if ((messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL || messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX) ||
-            (messageType == nxdn::RTCH_MESSAGE_TYPE_VCALL || messageType == nxdn::RTCH_MESSAGE_TYPE_DCALL_HDR ||
-             messageType == nxdn::RTCH_MESSAGE_TYPE_DCALL_DATA)) {
+        if ((messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) ||
+            (messageType == RTCH_MESSAGE_TYPE_VCALL || messageType == RTCH_MESSAGE_TYPE_DCALL_HDR ||
+             messageType == RTCH_MESSAGE_TYPE_DCALL_DATA)) {
             // is this the end of the call stream?
-            if (messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL || messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX) {
+            if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) {
                 RxStatus status = m_status[dstId];
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
@@ -132,7 +144,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             }
 
             // is this a new call stream?
-            if ((messageType != nxdn::RTCH_MESSAGE_TYPE_TX_REL && messageType != nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX)) {
+            if ((messageType != RTCH_MESSAGE_TYPE_TX_REL && messageType != RTCH_MESSAGE_TYPE_TX_REL_EX)) {
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
@@ -175,7 +187,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
         if (tg.config().parrot()) {
             uint8_t *copy = new uint8_t[len];
-            ::memcpy(copy, data, len);
+            ::memcpy(copy, buffer, len);
             m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
         }
 
@@ -187,7 +199,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     continue;
                 }
 
-                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, data, len, pktSeq, streamId, true);
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, buffer, len, pktSeq, streamId, true);
                 if (m_network->m_debug) {
                     LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId);
@@ -199,7 +211,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         }
 
         // repeat traffic to upstream peers
-        if (m_network->m_host->m_peerNetworks.size() > 0) {
+        if (m_network->m_host->m_peerNetworks.size() > 0 && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t peerId = peer.second->getPeerId();
 
@@ -208,7 +220,14 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     continue;
                 }
 
-                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, data, len, pktSeq, streamId);
+                uint8_t outboundPeerBuffer[len];
+                ::memset(outboundPeerBuffer, 0x00U, len);
+                ::memcpy(outboundPeerBuffer, buffer, len);
+
+                // perform TGID mutations if configured
+                mutateBuffer(outboundPeerBuffer, peerId, messageType, dstId);
+
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
             }
         }
 
@@ -251,6 +270,62 @@ void TagNXDNData::playbackParrot()
 // ---------------------------------------------------------------------------
 
 /// <summary>
+/// Helper to mutate the network data buffer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="duid"></param>
+/// <param name="dstId"></param>
+/// <param name="outbound"></param>
+void TagNXDNData::mutateBuffer(uint8_t* buffer, uint32_t peerId, uint8_t messageType, uint32_t dstId, bool outbound)
+{
+    uint32_t mutatedDstId = dstId;
+
+    // does the data require mutation?
+    if (peerMutate(peerId, mutatedDstId, outbound)) {
+        // rewrite destination TGID in the frame
+        __SET_UINT16(mutatedDstId, buffer, 8U);
+    }
+}
+
+/// <summary>
+/// Helper to mutate destination ID.
+/// </summary>
+/// <param name="peerId">Peer ID</param>
+/// <param name="dstId"></param>
+/// <param name="outbound"></param>
+bool TagNXDNData::peerMutate(uint32_t peerId, uint32_t& dstId, bool outbound)
+{
+    lookups::TalkgroupRuleGroupVoice tg;
+    if (outbound) {
+        tg = m_network->m_tidLookup->find(dstId);
+    }
+    else {
+        tg = m_network->m_tidLookup->findByMutation(peerId, dstId);
+    }
+
+    std::vector<lookups::TalkgroupRuleMutation> mutations = tg.config().mutation();
+
+    bool mutated = false;
+    if (mutations.size() > 0) {
+        for (auto entry : mutations) {
+            if (entry.peerId() == peerId) {
+                if (outbound) {
+                    dstId = tg.source().tgId();
+                }
+                else {
+                    dstId = entry.tgId();
+                }
+                mutated = true;
+                break;
+            }
+        }
+    }
+
+    return mutated;
+}
+
+/// <summary>
 /// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
@@ -258,7 +333,7 @@ void TagNXDNData::playbackParrot()
 /// <param name="messageType"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
     // private calls are always permitted
     if (!lc.getGroup()) {
@@ -300,7 +375,7 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t m
 /// <param name="messageType"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     lookups::RadioId rid = m_network->m_ridLookup->find(lc.getSrcId());
@@ -311,7 +386,7 @@ bool TagNXDNData::validate(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageT
     }
 
     // always validate a terminator if the source is valid
-    if (messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL || messageType == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX)
+    if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX)
         return true;
 
     // is this a private call?

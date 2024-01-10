@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -431,7 +431,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
             uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
 
-            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
+            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
     }
 
@@ -444,7 +444,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getP25StreamId();
 
-            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
+            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
     }
 
@@ -457,7 +457,7 @@ void HostFNE::processPeer(network::Network* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getNXDNStreamId();
 
-            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
+            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
         }
     }
 }
