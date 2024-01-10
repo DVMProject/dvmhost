@@ -26,7 +26,7 @@
 #if !defined(__FNE__TAG_DMR_DATA_H__)
 #define __FNE__TAG_DMR_DATA_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/Data.h"
 #include "common/Clock.h"

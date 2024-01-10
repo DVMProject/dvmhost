@@ -32,6 +32,7 @@
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
+#include "network/RESTAPI.h"
 #include "host/network/Network.h"
 
 #include <string>
@@ -87,8 +88,13 @@ private:
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
 
+    friend class RESTAPI;
+    RESTAPI* m_RESTAPI;
+
     /// <summary>Reads basic configuration parameters from the INI.</summary>
     bool readParams();
+    /// <summary>Initializes REST API serivces.</summary>
+    bool initializeRESTAPI();
     /// <summary>Initializes master FNE network connectivity.</summary>
     bool createMasterNetwork();
     /// <summary>Initializes peer FNE network connectivity.</summary>

@@ -26,7 +26,7 @@
 #if !defined(__FNE_NETWORK_H__)
 #define __FNE_NETWORK_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
 #include "common/lookups/RadioIdLookup.h"

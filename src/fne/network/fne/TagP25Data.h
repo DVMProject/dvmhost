@@ -26,7 +26,7 @@
 #if !defined(__FNE__TAG_P25_DATA_H__)
 #define __FNE__TAG_P25_DATA_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 #include "common/Clock.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/DataHeader.h"

@@ -123,6 +123,17 @@ system:
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
 
+    # Flag indicating whether or not REST API is enabled.
+    restEnable: false
+    # IP address of the network interface to listen for REST API on (or 0.0.0.0 for all).
+    restAddress: 127.0.0.1
+    # Port number for REST API to listen on.
+    restPort: 9990
+    # REST API authentication password.
+    restPassword: "PASSWORD"
+    # Flag indicating whether or not verbose REST API debug logging is enabled.
+    restDebug: false
+
     #
     # Radio ID ACL Configuration
     #

@@ -26,7 +26,7 @@
 #if !defined(__FNE__TAG_NXDN_DATA_H__)
 #define __FNE__TAG_NXDN_DATA_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 #include "common/Clock.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/lc/RTCH.h"

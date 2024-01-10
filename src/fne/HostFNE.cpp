@@ -78,7 +78,8 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_maxMissedPings(5U),
     m_updateLookupTime(10U),
     m_allowActivityTransfer(false),
-    m_allowDiagnosticTransfer(false)
+    m_allowDiagnosticTransfer(false),
+    m_RESTAPI(nullptr)
 {
     /* stub */
 }
@@ -177,6 +178,9 @@ int HostFNE::run()
     m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, true);
     m_ridLookup->read();
 
+    // initialize REST API
+    initializeRESTAPI();
+
     // initialize master networking
     ret = createMasterNetwork();
     if (!ret)
@@ -234,6 +238,11 @@ int HostFNE::run()
     }
     m_peerNetworks.clear();
 
+    if (m_RESTAPI != nullptr) {
+        m_RESTAPI->close();
+        delete m_RESTAPI;
+    }
+
     if (m_tidLookup != nullptr) {
         m_tidLookup->stop();
         delete m_tidLookup;
@@ -253,6 +262,7 @@ int HostFNE::run()
 /// <summary>
 /// Reads basic configuration parameters from the YAML configuration file.
 /// </summary>
+/// <returns></returns>
 bool HostFNE::readParams()
 {
     yaml::Node systemConf = m_conf["system"];
@@ -305,8 +315,70 @@ bool HostFNE::readParams()
 }
 
 /// <summary>
+/// Initializes REST API serivces.
+/// </summary>
+/// <returns></returns>
+bool HostFNE::initializeRESTAPI()
+{
+    yaml::Node systemConf = m_conf["system"];
+    bool restApiEnable = systemConf["restEnable"].as<bool>(false);
+
+    // dump out if both networking and REST API are disabled
+    if (!restApiEnable) {
+        return true;
+    }
+
+    std::string restApiAddress = systemConf["restAddress"].as<std::string>("127.0.0.1");
+    uint16_t restApiPort = (uint16_t)systemConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
+    std::string restApiPassword = systemConf["restPassword"].as<std::string>();
+    bool restApiDebug = systemConf["restDebug"].as<bool>(false);
+
+    if (restApiPassword.length() > 64) {
+        std::string password = restApiPassword;
+        restApiPassword = password.substr(0, 64);
+
+        ::LogWarning(LOG_HOST, "REST API password is too long; truncating to the first 64 characters.");
+    }
+
+    if (restApiPassword.empty() && restApiEnable) {
+        ::LogWarning(LOG_HOST, "REST API password not provided; REST API disabled.");
+        restApiEnable = false;
+    }
+
+    LogInfo("REST API Parameters");
+    LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
+    if (restApiEnable) {
+        LogInfo("    REST API Address: %s", restApiAddress.c_str());
+        LogInfo("    REST API Port: %u", restApiPort);
+
+        if (restApiDebug) {
+            LogInfo("    REST API Debug: yes");
+        }
+    }
+
+    // initialize network remote command
+    if (restApiEnable) {
+        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, this, restApiDebug);
+        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
+        bool ret = m_RESTAPI->open();
+        if (!ret) {
+            delete m_RESTAPI;
+            m_RESTAPI = nullptr;
+            LogError(LOG_HOST, "failed to initialize REST API networking! REST API will be unavailable!");
+            // REST API failing isn't fatal -- we'll allow this to return normally
+        }
+    }
+    else {
+        m_RESTAPI = nullptr;
+    }
+
+    return true;
+}
+
+/// <summary>
 /// Initializes master FNE network connectivity.
 /// </summary>
+/// <returns></returns>
 bool HostFNE::createMasterNetwork()
 {
     yaml::Node masterConf = m_conf["master"];
@@ -316,6 +388,11 @@ bool HostFNE::createMasterNetwork()
     std::string password = masterConf["password"].as<std::string>();
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
+
+    if (id > 999999999U) {
+        ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
+        return false;
+    }
 
     m_dmrEnabled = masterConf["allowDMRTraffic"].as<bool>(true);
     m_p25Enabled = masterConf["allowP25Traffic"].as<bool>(true);
@@ -366,6 +443,7 @@ bool HostFNE::createMasterNetwork()
 /// <summary>
 /// Initializes peer FNE network connectivity.
 /// </summary>
+/// <returns></returns>
 bool HostFNE::createPeerNetworks()
 {
     yaml::Node& peerList = m_conf["peers"];
@@ -388,6 +466,11 @@ bool HostFNE::createPeerNetworks()
             std::string location = peerConf["location"].as<std::string>();
 
             ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled);
+
+            if (id > 999999999U) {
+                ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
+                continue;
+            }
 
             // initialize networking
             network::Network* network = new Network(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);

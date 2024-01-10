@@ -23,7 +23,7 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "Defines.h"
+#include "fne/Defines.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/Sync.h"
 #include "common/Clock.h"
