@@ -23,82 +23,6 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-file(GLOB common_SRC
-    # DMR module
-    "src/common/dmr/*.cpp"
-    "src/common/dmr/acl/*.cpp"
-    "src/common/dmr/data/*.cpp"
-    "src/common/dmr/lc/*.cpp"
-    "src/common/dmr/lc/csbk/*.cpp"
-    "src/common/dmr/lookups/*.cpp"
-
-    # P25 module
-    "src/common/p25/*.cpp"
-    "src/common/p25/acl/*.cpp"
-    "src/common/p25/data/*.cpp"
-    "src/common/p25/dfsi/*.cpp"
-    "src/common/p25/lc/*.cpp"
-    "src/common/p25/lc/tdulc/*.cpp"
-    "src/common/p25/lc/tsbk/*.cpp"
-    "src/common/p25/lookups/*.cpp"
-
-    # NXDN module
-    "src/common/nxdn/*.cpp"
-    "src/common/nxdn/acl/*.cpp"
-    "src/common/nxdn/channel/*.cpp"
-    "src/common/nxdn/edac/*.cpp"
-    "src/common/nxdn/lc/*.cpp"
-    "src/common/nxdn/lc/rcch/*.cpp"
-
-    # Core
-    "src/common/edac/*.cpp"
-    "src/common/lookups/*.cpp"
-    "src/common/network/*.cpp"
-    "src/common/network/rest/*.cpp"
-    "src/common/network/rest/http/*.cpp"
-    "src/common/yaml/*.cpp"
-    "src/common/*.cpp"
-)
-
-file(GLOB common_INCLUDE
-    # DMR module
-    "src/common/dmr/*.h"
-    "src/common/dmr/acl/*.h"
-    "src/common/dmr/data/*.h"
-    "src/common/dmr/lc/*.h"
-    "src/common/dmr/lc/csbk/*.h"
-    "src/common/dmr/lookups/*.h"
-
-    # P25 module
-    "src/common/p25/*.h"
-    "src/common/p25/acl/*.h"
-    "src/common/p25/data/*.h"
-    "src/common/p25/dfsi/*.h"
-    "src/common/p25/lc/*.h"
-    "src/common/p25/lc/tdulc/*.h"
-    "src/common/p25/lc/tsbk/*.h"
-    "src/common/p25/lookups/*.h"
-
-    # NXDN module
-    "src/common/nxdn/*.h"
-    "src/common/nxdn/acl/*.h"
-    "src/common/nxdn/channel/*.h"
-    "src/common/nxdn/edac/*.h"
-    "src/common/nxdn/lc/*.h"
-    "src/common/nxdn/lc/rcch/*.h"
-
-    # Core
-    "src/common/edac/*.h"
-    "src/common/edac/rs/*.h"
-    "src/common/lookups/*.h"
-    "src/common/network/*.h"
-    "src/common/network/json/*.h"
-    "src/common/network/rest/*.h"
-    "src/common/network/rest/http/*.h"
-    "src/common/yaml/*.h"
-    "src/common/*.h"
-)
-
 if (ENABLE_TUI_SUPPORT)
     option(ENABLE_SETUP_TUI "Enable interactive setup TUI" on)
     if (ENABLE_SETUP_TUI)
@@ -260,8 +184,80 @@ if (HAVE_SENDMMSG)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DHAVE_SENDMMSG=1")
 endif (HAVE_SENDMMSG)
 
+#
+## common
+#
+project(common)
 include(src/common/CMakeLists.txt)
+add_library(common STATIC ${common_SRC} ${common_INCLUDE})
+target_link_libraries(common PRIVATE asio::asio Threads::Threads util)
+target_include_directories(common PRIVATE src src/common)
+
+#
+## dvmhost
+#
+project(dvmhost)
 include(src/host/CMakeLists.txt)
+if (ENABLE_SETUP_TUI)
+    # add finalcut
+    target_include_directories(finalcut INTERFACE ${FINALCUT_INCLUDE_DIR})
+endif (ENABLE_SETUP_TUI)
+
+add_executable(dvmhost ${common_INCLUDE} ${dvmhost_SRC})
+if (ENABLE_SETUP_TUI)
+    target_link_libraries(dvmhost PRIVATE common asio::asio finalcut Threads::Threads util)
+else()
+    target_link_libraries(dvmhost PRIVATE common asio::asio Threads::Threads util)
+endif (ENABLE_SETUP_TUI)
+target_include_directories(dvmhost PRIVATE src src/host)
+
+set(CPACK_SET_DESTDIR true)
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "dvmhost")
+set(CPACK_DEBIAN_PACKAGE_NAME "dvmhost")
+
+set(CPACK_PACKAGE_VENDOR "DVMProject")
+
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
+set(CPACK_DEBIAN_PACKAGE_VERSION "3.6.0")
+set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
+
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    "${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst;${CMAKE_CURRENT_SOURCE_DIR}/debian/postrm")
+
+set(CPACK_DEBIAN_FILE_NAME ${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_DEBIAN_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb)
+
+include(CPack)
+
+#
+## dvmfne
+#
+project(dvmfne)
 include(src/fne/CMakeLists.txt)
-include(src/monitor/CMakeLists.txt)
+add_executable(dvmfne ${common_INCLUDE} ${dvmfne_SRC})
+target_link_libraries(dvmfne PRIVATE common asio::asio Threads::Threads)
+target_include_directories(dvmfne PRIVATE src src/host src/fne)
+
+#
+## dvmmon
+#
+if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    project(dvmmon)
+    include(src/monitor/CMakeLists.txt)
+    add_executable(dvmmon ${common_INCLUDE} ${dvmmon_SRC})
+    target_link_libraries(dvmmon PRIVATE common asio::asio finalcut Threads::Threads)
+    target_include_directories(dvmmon PRIVATE src src/host src/monitor)
+endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+
+#
+## dvmcmd
+#
+project(dvmcmd)
 include(src/remote/CMakeLists.txt)
+add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
+target_link_libraries(dvmcmd PRIVATE common asio::asio Threads::Threads)
+target_include_directories(dvmcmd PRIVATE src src/remote)

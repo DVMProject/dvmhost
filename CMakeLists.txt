@@ -47,21 +47,21 @@ option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(CROSS_COMPILE_RPI_ARM "Cross-compile for (old RPi) 32-bit ARM" off)
 
-set(CMAKE_C_COMPILER gcc)
-set(CMAKE_CXX_COMPILER g++)
+set(CMAKE_C_COMPILER /usr/bin/gcc)
+set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(ARCH amd64)
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
 
 if (CROSS_COMPILE_ARM)
-    set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
-    set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+    set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc)
+    set(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabihf-g++)
     set(ARCH arm)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm)
     message(CHECK_START "Cross compiling for 32-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_ARM)
 if (CROSS_COMPILE_AARCH64)
-    set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-    set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+    set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
+    set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
     set(ARCH arm64)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)
     message(CHECK_START "Cross compiling for 64-bit ARM - ${CMAKE_C_COMPILER}")
@@ -76,7 +76,7 @@ endif (WITH_RPI_ARM_TOOLS)
 if (CROSS_COMPILE_RPI_ARM)
     if (NOT WITH_RPI_ARM_TOOLS)
         message("-- Cloning legacy Raspberry Pi compilation toolchain")
-        Include(FetchContent)
+        include(FetchContent)
         FetchContent_Declare(
             RPiTools
             GIT_REPOSITORY https://github.com/raspberrypi/tools.git
@@ -135,33 +135,37 @@ set(CMAKE_INSTALL_PREFIX "/usr/local")
 #
 # Library Inclusions
 #
-option(WITH_ASIO "Manually specify the location for the ASIO library" off)
-if (WITH_ASIO)
-    set(ASIO_INCLUDE_DIR ${WITH_ASIO}/include)
-    message(CHECK_START "With ASIO: ${ASIO_INCLUDE_DIR}")
-else()
-    message("-- Cloning ASIO")
-    Include(FetchContent)
-    FetchContent_Declare(
-        ASIO
-        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-        GIT_TAG 7609450f71434bdc9fbd9491a9505b423c2a8496 # asio-1-28-2
-    )
-    FetchContent_MakeAvailable(ASIO)
-    set(ASIO_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/asio-src/asio/include)
-endif (WITH_ASIO)
+if (NOT ASIO_INCLUDED)
+    option(WITH_ASIO "Manually specify the location for the ASIO library" off)
+    if (WITH_ASIO)
+        set(ASIO_INCLUDE_DIR ${WITH_ASIO}/include)
+        message(CHECK_START "With ASIO: ${ASIO_INCLUDE_DIR}")
+    else()
+        message("-- Cloning ASIO")
+        include(FetchContent)
+        FetchContent_Declare(
+            ASIO
+            GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+            GIT_TAG 7609450f71434bdc9fbd9491a9505b423c2a8496 # asio-1-28-2
+        )
+        FetchContent_MakeAvailable(ASIO)
+        set(ASIO_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/asio-src/asio/include)
+        set(ASIO_INCLUDED 1)
+    endif (WITH_ASIO)
+endif (NOT ASIO_INCLUDED)
 
-if (ENABLE_TUI_SUPPORT)
-message("-- Cloning finalcut")
-Include(FetchContent)
-FetchContent_Declare(
-    FINALCUT
-    GIT_REPOSITORY https://github.com/gatekeep/finalcut-cmake.git
-)
-set(F_COMPILE_STATIC 1)
-FetchContent_MakeAvailable(FINALCUT)
-set(FINALCUT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/finalcut-src/src)
-endif (ENABLE_TUI_SUPPORT)
+if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
+    message("-- Cloning finalcut")
+    include(FetchContent)
+    FetchContent_Declare(
+        FINALCUT
+        GIT_REPOSITORY https://github.com/gatekeep/finalcut-cmake.git
+    )
+    set(FC_INCLUDED 1)
+    set(F_COMPILE_STATIC 1)
+    FetchContent_MakeAvailable(FINALCUT)
+    set(FINALCUT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/finalcut-src/src)
+endif (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
 
 #
 # Set GIT_VER compiler directive
@@ -178,7 +182,7 @@ project(dvmhost)
 include(src/CMakeLists.txt)
 
 if (ENABLE_TESTS)
-include(tests/CMakeLists.txt)
+    include(tests/CMakeLists.txt)
 endif (ENABLE_TESTS)
 
 #
@@ -201,50 +205,60 @@ install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: talkgroup_ru
 #
 # Helper target to force strip binaries.
 #
-if (CROSS_COMPILE_ARM)
-    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-        add_custom_target(strip
-                COMMAND arm-linux-gnueabihf-strip -s dvmhost
-                COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                COMMAND arm-linux-gnueabihf-strip -s dvmmon)
+if (NOT TARGET strip)
+    if (CROSS_COMPILE_ARM)
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+            add_custom_target(strip
+                    COMMAND arm-linux-gnueabihf-strip -s dvmhost
+                    COMMAND arm-linux-gnueabihf-strip -s dvmfne
+                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd
+                    COMMAND arm-linux-gnueabihf-strip -s dvmmon)
+        else()
+            add_custom_target(strip
+                    COMMAND arm-linux-gnueabihf-strip -s dvmhost
+                    COMMAND arm-linux-gnueabihf-strip -s dvmfne
+                    COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    elseif (CROSS_COMPILE_AARCH64)
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+            add_custom_target(strip
+                COMMAND aarch64-linux-gnu-strip -s dvmhost
+                COMMAND aarch64-linux-gnu-strip -s dvmfne
+                COMMAND aarch64-linux-gnu-strip -s dvmcmd
+                COMMAND aarch64-linux-gnu-strip -s dvmmon)
+        else()
+            add_custom_target(strip
+                COMMAND aarch64-linux-gnu-strip -s dvmhost
+                COMMAND aarch64-linux-gnu-strip -s dvmfne
+                COMMAND aarch64-linux-gnu-strip -s dvmcmd)
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    elseif (CROSS_COMPILE_RPI_ARM)
+        if (NOT WITH_RPI_ARM_TOOLS)
+            add_custom_target(strip
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+        else()
+            add_custom_target(strip
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmfne
+                COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
+        endif ()
     else()
-        add_custom_target(strip
-                COMMAND arm-linux-gnueabihf-strip -s dvmhost
-                COMMAND arm-linux-gnueabihf-strip -s dvmcmd)
-    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-elseif (CROSS_COMPILE_AARCH64)
-    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-        add_custom_target(strip
-            COMMAND aarch64-linux-gnu-strip -s dvmhost
-            COMMAND aarch64-linux-gnu-strip -s dvmcmd
-            COMMAND aarch64-linux-gnu-strip -s dvmmon)
-    else()
-        add_custom_target(strip
-            COMMAND aarch64-linux-gnu-strip -s dvmhost
-            COMMAND aarch64-linux-gnu-strip -s dvmcmd)
-    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-elseif (CROSS_COMPILE_RPI_ARM)
-    if (NOT WITH_RPI_ARM_TOOLS)
-        add_custom_target(strip
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
-    else()
-        add_custom_target(strip
-            COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmhost
-            COMMAND ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip -s dvmcmd)
-    endif ()
-else()
-    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-        add_custom_target(strip
-            COMMAND strip -s dvmhost
-            COMMAND strip -s dvmcmd
-            COMMAND strip -s dvmmon)
-    else()
-        add_custom_target(strip
-            COMMAND strip -s dvmhost
-            COMMAND strip -s dvmcmd)
-    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-endif (CROSS_COMPILE_ARM)
+        if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+            add_custom_target(strip
+                COMMAND strip -s dvmhost
+                COMMAND strip -s dvmfne
+                COMMAND strip -s dvmcmd
+                COMMAND strip -s dvmmon)
+        else()
+            add_custom_target(strip
+                COMMAND strip -s dvmhost
+                COMMAND strip -s dvmfne
+                COMMAND strip -s dvmcmd)
+        endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+    endif (CROSS_COMPILE_ARM)
+endif (NOT TARGET strip)
 
 #/*
 #** bryanb: Please do not change the following section unless adding or removing paths that need to be part of a build
@@ -255,65 +269,67 @@ endif (CROSS_COMPILE_ARM)
 # Custom make target to perform a tarball packaging. This will ultimately contain the same type of pathing
 # the non-standard legacy install to "/opt/dvm" does.
 # 
-set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
-if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-    add_custom_target(tarball
-        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
-        COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
-        COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-        COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
-        COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
-        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
-else()
-    add_custom_target(tarball
-        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
-        COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
-        COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-        COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
-        COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
-        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
-        COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
-        COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
-        COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
-endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+if (NOT TARGET tarball)
+    set(CMAKE_INSTALL_PREFIX_TARBALL "tar_build")
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+        add_custom_target(tarball
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+            COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+            COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
+            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+            COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+    else()
+        add_custom_target(tarball
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL}
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log
+            COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
+            COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp -v dvmfne ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
+            COMMAND cp ../tools/*.sh ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND chmod +x ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/*.sh
+            COMMAND cp -v ../configs/*.yml ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND cp -v ../configs/*.dat ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm
+            COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw
+            COMMAND if [ -e dvm-firmware_f4.elf ]\; then cp -v dvm-firmware_f4.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4.bin ]\; then cp -v dvm-firmware_f4.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.elf ]\; then cp -v dvm-firmware_f4-pog.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-pog.bin ]\; then cp -v dvm-firmware_f4-pog.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.elf ]\; then cp -v dvm-firmware_eda.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_eda.bin ]\; then cp -v dvm-firmware_eda.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.elf ]\; then cp -v dvm-firmware_f4-dvmv1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_f4-dvmv1.bin ]\; then cp -v dvm-firmware_f4-dvmv1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.elf ]\; then cp -v dvm-firmware_due.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware_due.bin ]\; then cp -v dvm-firmware_due.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.elf ]\; then cp -v dvm-firmware-hs_f1.elf ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND if [ -e dvm-firmware-hs_f1.bin ]\; then cp -v dvm-firmware-hs_f1.bin ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/fw\; fi
+            COMMAND cd ${CMAKE_INSTALL_PREFIX_TARBALL} && tar czvf ../dvmhost_${CPACK_DEBIAN_PACKAGE_VERSION}_${ARCH}.tar.gz *
+            COMMAND rm -rf ${CMAKE_INSTALL_PREFIX_TARBALL})
+    endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
+endif (NOT TARGET tarball)
 
 #
 # Custom make target to perform non-standard legacy install to "/opt/dvm". This is meant

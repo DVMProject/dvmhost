@@ -67,39 +67,3 @@ file(GLOB dvmhost_SRC
     "src/remote/RESTClient.cpp"
     "src/remote/RESTClient.h"
 )
-
-project(dvmhost)
-if (ENABLE_SETUP_TUI)
-    # add finalcut
-    target_include_directories(finalcut INTERFACE ${FINALCUT_INCLUDE_DIR})
-endif (ENABLE_SETUP_TUI)
-
-add_executable(dvmhost ${common_INCLUDE} ${dvmhost_SRC})
-if (ENABLE_SETUP_TUI)
-    target_link_libraries(dvmhost PRIVATE common asio::asio finalcut Threads::Threads util)
-else()
-    target_link_libraries(dvmhost PRIVATE common asio::asio Threads::Threads util)
-endif (ENABLE_SETUP_TUI)
-target_include_directories(dvmhost PRIVATE src src/host)
-
-set(CPACK_SET_DESTDIR true)
-set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
-
-set(CPACK_GENERATOR "DEB")
-set(CPACK_PACKAGE_NAME "dvmhost")
-set(CPACK_DEBIAN_PACKAGE_NAME "dvmhost")
-
-set(CPACK_PACKAGE_VENDOR "DVMProject")
-
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "The DVM Host software provides the host computer implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system that talks to the actual modem hardware. The host software; is the portion of a complete Over-The-Air modem implementation that performs the data processing, decision making and FEC correction for a digital repeater.")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "DVMProject Authors")
-set(CPACK_DEBIAN_PACKAGE_VERSION "3.5.5")
-set(CPACK_DEBIAN_PACKAGE_RELEASE "0")
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dvmproject")
-
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-    "${CMAKE_CURRENT_SOURCE_DIR}/debian/postinst;${CMAKE_CURRENT_SOURCE_DIR}/debian/postrm")
-
-set(CPACK_DEBIAN_FILE_NAME ${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_DEBIAN_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb)
-
-include(CPack)

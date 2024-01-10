@@ -26,6 +26,7 @@
 file(GLOB dvmfne_SRC
     "src/host/network/Network.h"
     "src/host/network/Network.cpp"
+    
     "src/fne/network/fne/*.h"
     "src/fne/network/fne/*.cpp"
     "src/fne/network/*.h"
@@ -33,8 +34,3 @@ file(GLOB dvmfne_SRC
     "src/fne/*.h"
     "src/fne/*.cpp"
 )
-
-project(dvmfne)
-add_executable(dvmfne ${common_INCLUDE} ${dvmfne_SRC})
-target_link_libraries(dvmfne PRIVATE common asio::asio Threads::Threads)
-target_include_directories(dvmfne PRIVATE src src/host src/fne)

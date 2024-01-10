@@ -100,8 +100,3 @@ file(GLOB common_INCLUDE
     "src/common/yaml/*.h"
     "src/common/*.h"
 )
-
-project(common)
-add_library(common STATIC ${common_SRC} ${common_INCLUDE})
-target_link_libraries(common PRIVATE asio::asio Threads::Threads util)
-target_include_directories(common PRIVATE src src/common)

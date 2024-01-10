@@ -27,8 +27,3 @@ file(GLOB dvmcmd_SRC
     "src/remote/*.h"
     "src/remote/*.cpp"
 )
-
-project(dvmcmd)
-add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
-target_link_libraries(dvmcmd PRIVATE common asio::asio Threads::Threads)
-target_include_directories(dvmcmd PRIVATE src src/remote)

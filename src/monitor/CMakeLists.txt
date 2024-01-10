@@ -26,15 +26,10 @@
 #*/
 file(GLOB dvmmon_SRC
     "src/host/modem/Modem.h"
+
     "src/remote/RESTClient.cpp"
     "src/remote/RESTClient.h"
+    
     "src/monitor/*.h"
     "src/monitor/*.cpp"
 )
-
-if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
-project(dvmmon)
-add_executable(dvmmon ${common_INCLUDE} ${dvmmon_SRC})
-target_link_libraries(dvmmon PRIVATE common asio::asio finalcut Threads::Threads)
-target_include_directories(dvmmon PRIVATE src src/host src/monitor)
-endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
