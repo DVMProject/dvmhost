@@ -34,6 +34,7 @@
 // ---------------------------------------------------------------------------
 
 #define FNE_GET_PEERLIST                "/peerlist"
+#define FNE_GET_TGID_LIST               "/tgidlist"
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 

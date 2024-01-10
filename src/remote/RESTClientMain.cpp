@@ -56,6 +56,7 @@
 #define RCD_GET_VOICE_CH                "voice-ch"
 
 #define RCD_FNE_GET_PEERLIST            "fne-peerlist"
+#define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
 
 #define RCD_MODE                        "mdm-mode"
@@ -192,7 +193,8 @@ void usage(const char* message, const char* arg)
     reply += "  status                      Display current settings and operation mode\r\n";
     reply += "  voice-ch                    Retrieves the list of configured voice channels\r\n";
     reply += "\r\n";
-    reply += "  peerlist                    Retrieves the list of connected peers (Conference FNE only)\r\n";
+    reply += "  fne-peerlist                Retrieves the list of connected peers (Conference FNE only)\r\n";
+    reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Conference FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Conference FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
@@ -438,6 +440,9 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_GET_PEERLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_PEERLIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_TGIDLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_TGID_LIST, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
             retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);

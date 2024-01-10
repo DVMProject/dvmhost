@@ -257,6 +257,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_VERSION).get(REST_API_BIND(RESTAPI::restAPI_GetVersion, this));
     m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
     m_dispatcher.match(FNE_GET_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
+    m_dispatcher.match(FNE_GET_TGID_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetTGIDList, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 }
@@ -489,6 +490,96 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
     }
 
     response["peers"].set<json::array>(peers);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetTGIDList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array tgs = json::array();
+    if (m_tidLookup != nullptr) {
+        if (m_tidLookup->groupVoice().size() > 0) {
+            for (auto entry : m_tidLookup->groupVoice()) {
+                json::object tg = json::object();
+
+                std::string tgName = entry.name();
+                tg["name"].set<std::string>(tgName);
+                bool invalid = entry.isInvalid();
+                tg["invalid"].set<bool>(invalid);
+
+                {
+                    json::object source = json::object();
+                    uint32_t tgId = entry.source().tgId();
+                    source["tgid"].set<uint32_t>(tgId);
+                    uint8_t tgSlot = entry.source().tgSlot();
+                    source["slot"].set<uint8_t>(tgSlot);
+                    tg["source"].set<json::object>(source);
+                }
+
+                {
+                    json::object config = json::object();
+                    bool active = entry.config().active();
+                    config["active"].set<bool>(active);
+                    bool parrot = entry.config().parrot();
+                    config["parrot"].set<bool>(parrot);
+
+                    json::array inclusions = json::array();
+                    std::vector<uint32_t> inclusion = entry.config().inclusion();
+                    if (inclusion.size() > 0) {
+                        for (auto inclEntry : inclusion) {
+                            uint32_t peerId = inclEntry;
+                            inclusions.push_back(json::value((double)peerId));
+                        }
+                    }
+                    config["inclusion"].set<json::array>(inclusions);
+
+                    json::array exclusions = json::array();
+                    std::vector<uint32_t> exclusion = entry.config().exclusion();
+                    if (exclusion.size() > 0) {
+                        for (auto exclEntry : exclusion) {
+                            uint32_t peerId = exclEntry;
+                            exclusions.push_back(json::value((double)peerId));
+                        }
+                    }
+                    config["exclusion"].set<json::array>(exclusions);
+
+                    json::array rewrites = json::array();
+                    std::vector<lookups::TalkgroupRuleRewrite> rewrite = entry.config().rewrite();
+                    if (rewrite.size() > 0) {
+                        for (auto rewrEntry : rewrite) {
+                            json::object rewrite = json::object();
+                            uint32_t peerId = rewrEntry.peerId();
+                            rewrite["peerId"].set<uint32_t>(peerId);
+                            uint32_t tgId = rewrEntry.tgId();
+                            rewrite["tgid"].set<uint32_t>(tgId);
+                            uint8_t tgSlot = rewrEntry.tgSlot();
+                            rewrite["slot"].set<uint8_t>(tgSlot);
+
+                            exclusions.push_back(json::value(rewrite));
+                        }
+                    }
+                    config["rewrite"].set<json::array>(rewrites);
+                    tg["config"].set<json::object>(config);
+                }
+
+                tgs.push_back(json::value(tg));
+            }
+        }
+    }
+
+    response["tgs"].set<json::array>(tgs);
     reply.payload(response);
 }
 
