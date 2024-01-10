@@ -219,7 +219,7 @@ int HostFNE::run()
 
         // clock peers
         for (auto network : m_peerNetworks) {
-            network::Network* peerNetwork = network.second;
+            network::PeerNetwork* peerNetwork = network.second;
             if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
 
@@ -483,7 +483,7 @@ bool HostFNE::createPeerNetworks()
             }
 
             // initialize networking
-            network::Network* network = new Network(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
+            network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
 
             network->enable(enabled);
@@ -507,7 +507,7 @@ bool HostFNE::createPeerNetworks()
 /// Processes any peer network traffic.
 /// </summary>
 /// <param name="peerNetwork"></param>
-void HostFNE::processPeer(network::Network* peerNetwork)
+void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
 {
     if (peerNetwork == nullptr)
         return; // this shouldn't happen...

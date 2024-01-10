@@ -32,8 +32,8 @@
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
+#include "network/PeerNetwork.h"
 #include "network/RESTAPI.h"
-#include "host/network/Network.h"
 
 #include <string>
 #include <unordered_map>
@@ -79,7 +79,7 @@ private:
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
 
-    std::unordered_map<std::string, network::Network*> m_peerNetworks;
+    std::unordered_map<std::string, network::PeerNetwork*> m_peerNetworks;
 
     uint32_t m_pingTime;
     uint32_t m_maxMissedPings;
@@ -101,7 +101,7 @@ private:
     bool createPeerNetworks();
 
     /// <summary>Processes any peer network traffic.</summary>
-    void processPeer(network::Network* peerNetwork);
+    void processPeer(network::PeerNetwork* peerNetwork);
 };
 
 #endif // __HOST_FNE_H__

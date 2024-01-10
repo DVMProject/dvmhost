@@ -85,7 +85,7 @@ namespace network
         /// <summary>Last received RTP sequence number.</summary>
         __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
 
-    private:
+    protected:
         std::string m_address;
         uint16_t m_port;
 
@@ -140,7 +140,7 @@ namespace network
         /// <summary>Writes network authentication challenge.</summary>
         bool writeAuthorisation();
         /// <summary>Writes modem configuration to the network.</summary>
-        bool writeConfig();
+        virtual bool writeConfig();
         /// <summary>Writes a network stay-alive ping.</summary>
         bool writePing();
     };

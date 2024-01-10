@@ -630,7 +630,7 @@ void Network::close()
 }
 
 // ---------------------------------------------------------------------------
-//  Private Class Members
+//  Protected Class Members
 // ---------------------------------------------------------------------------
 
 /// <summary>
@@ -732,7 +732,7 @@ bool Network::writeConfig()
     rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["software"].set<std::string>(std::string(software));                     // Software ID
+    config["software"].set<std::string>(std::string(software));                 // Software ID
 
     json::value v = json::value(config);
     std::string json = v.serialize();

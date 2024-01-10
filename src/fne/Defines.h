@@ -42,6 +42,9 @@
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "dvmfne"
 
+#undef __NETVER__
+#define __NETVER__ "FNE_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
+
 #undef DEFAULT_CONF_FILE
 #define DEFAULT_CONF_FILE "fne-config.yml"
 #undef DEFAULT_LOCK_FILE

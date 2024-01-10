@@ -443,6 +443,12 @@ void FNENetwork::clock(uint32_t ms)
                                 writeTGIDs(peerId, true);
                                 writeDeactiveTGIDs(peerId, true);
                                 m_frameQueue->flushQueue();
+
+                                json::object peerConfig = connection.config();
+                                if (peerConfig["software"].is<std::string>()) {
+                                    std::string software = peerConfig["software"].get<std::string>();
+                                    LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());
+                                }
                             }
                         }
                     }
