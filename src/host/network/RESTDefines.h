@@ -103,4 +103,4 @@
 #define GET_NXDN_DUMP_RCCH              GET_NXDN_DUMP_RCCH_BASE"(\\d+)"
 #define GET_NXDN_CC_DEDICATED           "/nxdn/cc-enable"
 
-#endif // __REST_API_H__
+#endif // __REST_DEFINES_H__

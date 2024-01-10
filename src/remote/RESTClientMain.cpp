@@ -25,6 +25,7 @@
 */
 #include "remote/RESTClient.h"
 #include "host/network/RESTDefines.h"
+#include "fne/network/RESTDefines.h"
 #include "common/Thread.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -53,6 +54,7 @@
 #define RCD_GET_VERSION                 "version"
 #define RCD_GET_STATUS                  "status"
 #define RCD_GET_VOICE_CH                "voice-ch"
+#define RCD_GET_PEERLIST                "peerlist"
 
 #define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
@@ -187,6 +189,7 @@ void usage(const char* message, const char* arg)
     reply += "  version                     Display current version of host\r\n";
     reply += "  status                      Display current settings and operation mode\r\n";
     reply += "  voice-ch                    Retrieves the list of configured voice channels\r\n";
+    reply += "  peerlist                    Retrieves the list of connected peers (FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                    Causes the host to quit\r\n";
@@ -428,6 +431,9 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_GET_VOICE_CH) {
             retCode = client->send(HTTP_GET, GET_VOICE_CH, json::object(), response);
+        }
+        else if (rcom == RCD_GET_PEERLIST) {
+            retCode = client->send(HTTP_GET, GET_PEERLIST, json::object(), response);
         }
         else if (rcom == RCD_MODE && argCnt >= 1U) {
             std::string mode = getArgString(args, 0U);

@@ -42,6 +42,7 @@
 // ---------------------------------------------------------------------------
 
 class HOST_SW_API HostFNE;
+class HOST_SW_API RESTAPI;
 namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
 namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
 namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
@@ -212,6 +213,7 @@ namespace network
         friend class fne::TagNXDNData;
         fne::TagNXDNData* m_tagNXDN;
         
+        friend class ::RESTAPI;
         HostFNE* m_host;
 
         std::string m_address;

@@ -154,6 +154,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_passwordHash(nullptr),
     m_debug(debug),
     m_host(host),
+    m_network(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_authTokens()
@@ -205,6 +206,15 @@ void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRu
 }
 
 /// <summary>
+/// Sets the instance of the FNE network.
+/// </summary>
+/// <param name="network">FNE Network Instance</param>
+void RESTAPI::setNetwork(network::FNENetwork* network)
+{
+    m_network = network;
+}
+
+/// <summary>
 /// Opens connection to the network.
 /// </summary>
 /// <returns></returns>
@@ -245,6 +255,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(PUT_AUTHENTICATE).put(REST_API_BIND(RESTAPI::restAPI_PutAuth, this));
 
     m_dispatcher.match(GET_VERSION).get(REST_API_BIND(RESTAPI::restAPI_GetVersion, this));
+    m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
+    m_dispatcher.match(GET_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
 }
 
 /// <summary>
@@ -392,5 +404,88 @@ void RESTAPI::restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply,
     setResponseDefaultStatus(response);
     response["version"].set<std::string>(std::string((__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")")));
 
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    yaml::Node systemConf = m_host->m_conf["system"];
+    yaml::Node masterConf = m_host->m_conf["master"];
+    {
+        uint8_t state = FNE_STATE;
+        response["state"].set<uint8_t>(state);
+        response["dmrEnabled"].set<bool>(m_host->m_dmrEnabled);
+        response["p25Enabled"].set<bool>(m_host->m_p25Enabled);
+        response["nxdnEnabled"].set<bool>(m_host->m_nxdnEnabled);
+
+        uint32_t peerId = masterConf["peerId"].as<uint32_t>();
+        response["peerId"].set<uint32_t>(peerId);
+    }
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array peers = json::array();
+    if (m_network != nullptr) {
+        if (m_network->m_peers.size() > 0) {
+            for (auto entry : m_network->m_peers) {
+                uint32_t peerId = entry.first;
+                network::FNEPeerConnection peer = entry.second;
+
+                json::object peerObj = json::object();
+                peerObj["peerId"].set<uint32_t>(peerId);
+
+                std::string address = peer.address();
+                peerObj["address"].set<std::string>(address);
+                uint16_t port = peer.port();
+                peerObj["port"].set<uint16_t>(port);
+                bool connected = peer.connected();
+                peerObj["connected"].set<bool>(connected);
+                uint32_t connectionState = (uint32_t)peer.connectionState();
+                peerObj["connectionState"].set<uint32_t>(connectionState);
+                uint32_t pingsReceived = peer.pingsReceived();
+                peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
+                uint64_t lastPing = peer.lastPing();
+                peerObj["lastPing"].set<uint64_t>(lastPing);
+
+                json::object peerConfig = peer.config();
+                if (peerConfig["rcon"].is<json::object>())
+                    peerConfig.erase("rcon");
+                peerObj["config"].set<json::object>(peerConfig);
+
+                peers.push_back(json::value(peerObj));
+            }
+        }
+    }
+
+    response["peers"].set<json::array>(peers);
     reply.payload(response);
 }

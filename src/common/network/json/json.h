@@ -11,7 +11,7 @@
 // Licensed under the BSD-2-Clause License (https://opensource.org/licenses/BSD-2-Clause)
 //
 /*
- * Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+ * Copyright (C) 2023,2024 by Bryan Biedenkapp N2PLL
  * Copyright 2009-2010 Cybozu Labs, Inc.
  * Copyright 2011-2014 Kazuho Oku
  * All rights reserved.
@@ -57,6 +57,8 @@
 #include <vector>
 #include <utility>
 
+#include <inttypes.h>
+
 // for isnan/isinf
 #if __cplusplus >= 201103L
 #include <cmath>
@@ -85,19 +87,6 @@ extern "C" {
 #define PICOJSON_NOEXCEPT noexcept
 #else
 #define PICOJSON_NOEXCEPT throw()
-#endif
-#endif
-
-// experimental support for int64_t (see README.mkdn for detail)
-#ifdef PICOJSON_USE_INT64
-#define __STDC_FORMAT_MACROS
-#include <cerrno>
-#if __cplusplus >= 201103L
-#include <cinttypes>
-#else
-extern "C" {
-#include <inttypes.h>
-}
 #endif
 #endif
 
@@ -136,10 +125,8 @@ namespace json
         null_type,
         boolean_type,
         number_type,
-#ifdef PICOJSON_USE_INT64
-        int64_type,
-#endif
         int32_type,
+        uint64_type,
         uint32_type,
         uint16_type,
         uint8_type,
@@ -165,10 +152,8 @@ namespace json
         union _storage {
             bool boolean_;
             double number_;
-#ifdef PICOJSON_USE_INT64
-            int64_t int64_;
-#endif
             int int32_;
+            uint64_t uint64_;
             uint32_t uint32_;
             uint16_t uint16_;
             uint8_t uint8_;
@@ -186,9 +171,6 @@ namespace json
         value();
         value(int type, bool);
         explicit value(bool b);
-#ifdef PICOJSON_USE_INT64
-        explicit value(int64_t i);
-#endif
         explicit value(double n);
         explicit value(const std::string &s);
         explicit value(const array &a);
@@ -260,10 +242,8 @@ namespace json
 
         INIT(boolean_, false);
         INIT(number_, 0.0);
-#ifdef PICOJSON_USE_INT64
-        INIT(int64_, 0);
-#endif
         INIT(int32_, 0);
+        INIT(uint64_, 0);
         INIT(uint32_, 0);
         INIT(uint16_, 0);
         INIT(uint8_, 0);
@@ -280,12 +260,6 @@ namespace json
     inline value::value(bool b) : type_(boolean_type), u_() {
         u_.boolean_ = b;
     }
-
-#ifdef PICOJSON_USE_INT64
-    inline value::value(int64_t i) : type_(int64_type), u_() {
-        u_.int64_ = i;
-    }
-#endif
 
     inline value::value(double n) : type_(number_type), u_() {
         if (
@@ -409,10 +383,8 @@ namespace json
 
     IS(null, null)
     IS(bool, boolean)
-#ifdef PICOJSON_USE_INT64
-    IS(int64_t, int64)
-#endif
     IS_NUMBER(int, int32)
+    IS_NUMBER(uint64_t, uint64)
     IS_NUMBER(uint32_t, uint32)
     IS_NUMBER(uint16_t, uint16)
     IS_NUMBER(uint8_t, uint8)
@@ -424,11 +396,7 @@ namespace json
     #undef IS_NUMBER
 
     template <> inline bool value::is<double>() const {
-        return type_ == number_type
-#ifdef PICOJSON_USE_INT64
-            || type_ == int64_type
-#endif
-        ;
+        return type_ == number_type;
     }
 
     #define GET(ctype, var)                                                         \
@@ -445,17 +413,13 @@ namespace json
     GET(std::string, *u_.string_)
     GET(array, *u_.array_)
     GET(object, *u_.object_)
-#ifdef PICOJSON_USE_INT64
-    GET(double,
-        (type_ == int64_type && (const_cast<value *>(this)->type_ = number_type, (const_cast<value *>(this)->u_.number_ = u_.int64_)),
-            u_.number_))
-    GET(int64_t, u_.int64_)
-#else
     GET(double, u_.number_)
-#endif
     GET(int,
         (type_ == number_type && (const_cast<value *>(this)->type_ = int32_type, (const_cast<value *>(this)->u_.int32_ = u_.number_)),
             u_.int32_))
+    GET(uint64_t,
+        (type_ == number_type && (const_cast<value *>(this)->type_ = uint64_type, (const_cast<value *>(this)->u_.uint64_ = u_.number_)),
+            u_.uint64_))
     GET(uint32_t,
         (type_ == number_type && (const_cast<value *>(this)->type_ = uint32_type, (const_cast<value *>(this)->u_.uint32_ = u_.number_)),
             u_.uint32_))
@@ -484,13 +448,11 @@ namespace json
     SET(double, number, u_.number_ = _val;)
     SET(int8_t, int32, u_.int32_ = _val;)
     SET(int, int32, u_.int32_ = _val;)
+    SET(uint64_t, uint64, u_.uint64_ = _val;)
     SET(uint32_t, uint32, u_.uint32_ = _val;)
     SET(uint16_t, uint16, u_.uint16_ = _val;)
     SET(uint8_t, uint8, u_.uint8_ = _val;)
     SET(float, float, u_.float_ = _val;)
-#ifdef PICOJSON_USE_INT64
-    SET(int64_t, int64, u_.int64_ = _val;)
-#endif
     #undef SET
 
 #if PICOJSON_USE_RVALUE_REFERENCE
@@ -515,18 +477,16 @@ namespace json
             return u_.boolean_;
         case number_type:
             return u_.number_ != 0;
-#ifdef PICOJSON_USE_INT64
-        case int64_type:
-            return u_.int64_ != 0;
-#endif
         case int32_type:
             return u_.int32_ != 0;
+        case uint64_type:
+            return u_.uint64_ != 0;
         case uint32_type:
             return u_.uint32_ != 0;
         case uint16_type:
-            return u_.uint32_ != 0;
+            return u_.uint16_ != 0;
         case uint8_type:
-            return u_.uint32_ != 0;
+            return u_.uint8_ != 0;
         case float_type:
             return u_.float_ != 0;
         case string_type:
@@ -579,13 +539,6 @@ namespace json
                 return "null";
             case boolean_type:
                 return u_.boolean_ ? "true" : "false";
-#ifdef PICOJSON_USE_INT64
-            case int64_type: {
-                char buf[sizeof("-9223372036854775808")];
-                SNPRINTF(buf, sizeof(buf), "%" PRId64, u_.int64_);
-                return buf;
-            }
-#endif
             case number_type: {
                 char buf[256];
                 double tmp;
@@ -606,6 +559,11 @@ namespace json
             case int32_type: {
                 char buf[256];
                 SNPRINTF(buf, sizeof(buf), "%d", u_.int32_);
+                return buf;
+            }
+            case uint64_type: {
+                char buf[256];
+                SNPRINTF(buf, sizeof(buf), "%" PRId64, u_.uint64_);
                 return buf;
             }
             case uint32_type: {
@@ -650,14 +608,12 @@ namespace json
                 return "null";
             case boolean_type:
                 return "boolean";
-#ifdef PICOJSON_USE_INT64
-            case int64_type:
-                return "int64";
-#endif
             case number_type:
                 return "number";
             case int32_type:
                 return "int32";
+            case uint64_type:
+                return "uint64";
             case uint32_type:
                 return "uint32";
             case uint16_type:
@@ -1113,18 +1069,6 @@ namespace json
                     return false;
                 }
 
-#ifdef PICOJSON_USE_INT64
-                {
-                    errno = 0;
-                    intmax_t ival = strtoimax(num_str.c_str(), &endp, 10);
-                    if (errno == 0 && std::numeric_limits<int64_t>::min() <= ival && ival <= std::numeric_limits<int64_t>::max() &&
-                        endp == num_str.c_str() + num_str.size()) {
-                        ctx.set_int64(ival);
-                        return true;
-                    }
-                }
-#endif
-
                 f = strtod(num_str.c_str(), &endp);
                 if (endp == num_str.c_str() + num_str.size()) {
                     ctx.set_number(f);
@@ -1153,12 +1097,6 @@ namespace json
         bool set_bool(bool) {
             return false;
         }
-
-#ifdef PICOJSON_USE_INT64
-        bool set_int64(int64_t) {
-            return false;
-        }
-#endif
 
         bool set_number(double) {
             return false;
@@ -1211,13 +1149,6 @@ namespace json
             *out_ = value(b);
             return true;
         }
-
-#ifdef PICOJSON_USE_INT64
-        bool set_int64(int64_t i) {
-            *out_ = value(i);
-            return true;
-        }
-#endif
 
         bool set_number(double f) {
             *out_ = value(f);
@@ -1299,12 +1230,6 @@ namespace json
         bool set_bool(bool) {
             return true;
         }
-
-#ifdef PICOJSON_USE_INT64
-        bool set_int64(int64_t) {
-            return true;
-        }
-#endif
 
         bool set_number(double) {
             return true;

@@ -429,6 +429,10 @@ bool HostFNE::createMasterNetwork()
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
 
+    if (m_RESTAPI != nullptr) {
+        m_RESTAPI->setNetwork(m_network);
+    }
+
     bool ret = m_network->open();
     if (!ret) {
         delete m_network;

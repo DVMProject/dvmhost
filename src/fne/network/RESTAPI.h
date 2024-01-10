@@ -44,6 +44,7 @@
 // ---------------------------------------------------------------------------
 
 class HOST_SW_API HostFNE;
+namespace network { class HOST_SW_API FNENetwork; }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -59,6 +60,8 @@ public:
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
     void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup);
+    /// <summary>Sets the instance of the FNE network.</summary>
+    void setNetwork(::network::FNENetwork* network);
 
     /// <summary>Opens connection to the network.</summary>
     bool open();
@@ -79,6 +82,7 @@ private:
     bool m_debug;
 
     HostFNE* m_host;
+    network::FNENetwork *m_network;
 
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupRulesLookup* m_tidLookup;
@@ -102,6 +106,10 @@ private:
 
     /// <summary></summary>
     void restAPI_GetVersion(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

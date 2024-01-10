@@ -23,19 +23,16 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#if !defined(__REST_DEFINES_H__)
-#define __REST_DEFINES_H__
+#if !defined(__FNE_REST_DEFINES_H__)
+#define __FNE_REST_DEFINES_H__
 
 #include "fne/Defines.h"
+#include "host/network/RESTDefines.h"
 
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define DVM_REST_RAND_MAX 0xfffffffffffffffe
+#define GET_PEERLIST                    "/peerlist"
 
-#define PUT_AUTHENTICATE                "/auth"
-
-#define GET_VERSION                     "/version"
-
-#endif // __REST_API_H__
+#endif // __FNE_REST_DEFINES_H__

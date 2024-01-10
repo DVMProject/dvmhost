@@ -485,7 +485,9 @@ void FNENetwork::clock(uint32_t ms)
                     // validate peer (simple validation really)
                     if (connection.connected() && connection.address() == ip) {
                         uint32_t pingsRx = connection.pingsReceived();
-                        connection.pingsReceived(pingsRx++);
+                        pingsRx++;
+                        
+                        connection.pingsReceived(pingsRx);
                         connection.lastPing(now);
                         connection.pktLastSeq(connection.pktLastSeq() + 1);
 
@@ -493,7 +495,7 @@ void FNENetwork::clock(uint32_t ms)
                         writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
 
                         if (m_debug) {
-                            LogDebug(LOG_NET, "PEER %u ping received and answered", peerId);
+                            LogDebug(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection.pingsReceived());
                         }
                     }
                     else {
