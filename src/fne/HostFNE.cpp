@@ -32,6 +32,7 @@
 #include "network/fne/TagDMRData.h"
 #include "network/fne/TagP25Data.h"
 #include "network/fne/TagNXDNData.h"
+#include "ActivityLog.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
 
@@ -119,6 +120,11 @@ int HostFNE::run()
         logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U));
     if (!ret) {
         ::fatal("unable to open the log file\n");
+    }
+
+    ret = ::ActivityLogInitialise(logConf["activityFilePath"].as<std::string>(), logConf["fileRoot"].as<std::string>());
+    if (!ret) {
+        ::fatal("unable to open the activity log file\n");
     }
 
     // handle POSIX process forking

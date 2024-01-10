@@ -209,6 +209,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     m_network->m_callInProgress = true;
             }
         }
+        m_network->m_frameQueue->flushQueue();
 
         // repeat traffic to upstream peers
         if (m_network->m_host->m_peerNetworks.size() > 0 && !tg.config().parrot()) {
@@ -227,11 +228,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 // perform TGID route rewrites if configured
                 routeRewrite(outboundPeerBuffer, peerId, messageType, dstId);
 
-                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
+                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
             }
         }
-
         m_network->m_frameQueue->flushQueue();
+
         return true;
     }
 

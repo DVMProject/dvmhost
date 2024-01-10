@@ -192,7 +192,7 @@ namespace network
 
         /// <summary>Helper to send a data message to the master.</summary>
         bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
 
         /** Digital Mobile Radio */
         /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>

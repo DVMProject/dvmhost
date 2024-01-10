@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "network/fne/TagDMRData.h"
 #include "network/fne/TagP25Data.h"
 #include "network/fne/TagNXDNData.h"
+#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;
@@ -539,10 +540,7 @@ void FNENetwork::clock(uint32_t ms)
                                 ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
                                 std::string payload(rawPayload, rawPayload + (length - 11U));
 
-                                std::stringstream ss;
-                                ss << peerId << " " << payload;
-
-                                ::Log(9999U, nullptr, "%s", ss.str().c_str());
+                                ::ActivityLog("%u %s", peerId, payload.c_str());
                             }
                             else {
                                 writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG);

@@ -252,9 +252,12 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 /// <param name="length">Length of buffer to write.</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId"></param>
-bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId)
+/// <param name="queueOnly"></param>
+bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly)
 {
     m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+    if (queueOnly)
+        return true;
     return m_frameQueue->flushQueue();
 }
 

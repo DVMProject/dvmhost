@@ -30,6 +30,7 @@
 */
 #include "Defines.h"
 #include "common/Log.h"
+#include "ActivityLog.h"
 #include "FNEMain.h"
 #include "HostFNE.h"
 
@@ -248,6 +249,7 @@ int main(int argc, char** argv)
     } while (g_signal == 1);
 
     ::LogFinalise();
+    ::ActivityLogFinalise();
 
     return ret;
 }
