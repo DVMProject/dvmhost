@@ -193,9 +193,9 @@ void usage(const char* message, const char* arg)
     reply += "  status                      Display current settings and operation mode\r\n";
     reply += "  voice-ch                    Retrieves the list of configured voice channels\r\n";
     reply += "\r\n";
-    reply += "  fne-peerlist                Retrieves the list of connected peers (Conference FNE only)\r\n";
-    reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Conference FNE only)\r\n";
-    reply += "  fne-force-update            Forces the FNE to send list update (Conference FNE only)\r\n";
+    reply += "  fne-peerlist                Retrieves the list of connected peers (Converged FNE only)\r\n";
+    reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
+    reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                    Causes the host to quit\r\n";

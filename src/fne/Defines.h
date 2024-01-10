@@ -1,9 +1,9 @@
 /**
-* Digital Voice Modem - Conference FNE Software
+* Digital Voice Modem - Converged FNE Software
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Conference FNE Software
+* @package DVM / Converged FNE Software
 *
 */
 //
@@ -38,7 +38,7 @@
 // ---------------------------------------------------------------------------
 
 #undef __PROG_NAME__
-#define __PROG_NAME__ "Digital Voice Modem (DVM) Conference FNE"
+#define __PROG_NAME__ "Digital Voice Modem (DVM) Converged FNE"
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "dvmfne"
 

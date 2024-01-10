@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 
 hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
+uint32_t RTPHeader::m_prevTimestamp = INVALID_TS;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -112,9 +113,16 @@ void RTPHeader::encode(uint8_t* data)
     data[2U] = (m_seq >> 8) & 0xFFU;                                            // Sequence MSB
     data[3U] = (m_seq >> 0) & 0xFFU;                                            // Sequence LSB
 
-    uint64_t timeSinceStart = hrc::diffNow(m_wcStart);
-    uint64_t microSeconds = timeSinceStart * RTP_GENERIC_CLOCK_RATE;
-    m_timestamp = uint32_t(microSeconds / 1000000);
+    if (m_prevTimestamp == INVALID_TS) {
+        uint64_t timeSinceStart = hrc::diffNow(m_wcStart);
+        uint64_t microSeconds = timeSinceStart * RTP_GENERIC_CLOCK_RATE;
+        m_timestamp = uint32_t(microSeconds / 1000000);
+        m_prevTimestamp = m_timestamp;
+    }
+    else {
+        m_timestamp = m_prevTimestamp + (RTP_GENERIC_CLOCK_RATE / 133);
+        m_prevTimestamp = m_timestamp;
+    }
 
     __SET_UINT32(m_timestamp, data, 4U);                                        // Timestamp
     __SET_UINT32(m_ssrc, data, 8U);                                             // Synchronization Source Identifier
@@ -126,4 +134,5 @@ void RTPHeader::encode(uint8_t* data)
 void RTPHeader::resetStartTime()
 {
     m_wcStart = hrc::hrc_t();
+    m_prevTimestamp = INVALID_TS;
 }

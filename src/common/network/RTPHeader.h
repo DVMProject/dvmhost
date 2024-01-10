@@ -81,12 +81,13 @@ namespace network
             /// <summary>Sequence number for the RTP packet.</summary>
             __PROPERTY(uint16_t, seq, Sequence);
             /// <summary>RTP packet timestamp.</summary>
-            __READONLY_PROPERTY(uint32_t, timestamp, Timestamp);
+            __PROPERTY(uint32_t, timestamp, Timestamp);
             /// <summary>Synchronization Source ID.</summary>
             __PROPERTY(uint32_t, ssrc, SSRC);
         
         private:
             static std::chrono::time_point<std::chrono::high_resolution_clock> m_wcStart;
+            static uint32_t m_prevTimestamp;
 
             std::mt19937 m_random;
         };

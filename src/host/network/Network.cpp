@@ -699,7 +699,7 @@ bool Network::writeConfig()
         return false;
     }
 
-    const char* software = __NET_NAME__;
+    const char* software = __NETVER__;
 
     json::object config = json::object();
 

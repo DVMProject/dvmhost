@@ -2011,7 +2011,7 @@ bool HostSetup::writeFlash()
 
     // software signature
     std::string software;
-    software.append(__NET_NAME__ " " __VER__ " (built " __BUILD__ ")");
+    software.append(__NETVER__ " (built " __BUILD__ ")");
     for (uint8_t i = 0; i < software.length(); i++) {
         buffer[176U + i] = software[i];
     }
