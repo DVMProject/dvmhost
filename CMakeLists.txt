@@ -178,11 +178,32 @@ execute_process(COMMAND git describe --abbrev=8 --always WORKING_DIRECTORY ${CMA
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
-project(dvmhost)
+project(dvmcore)
 include(src/CMakeLists.txt)
 
 if (ENABLE_TESTS)
     include(tests/CMakeLists.txt)
+    set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+    Include(FetchContent)
+    
+    FetchContent_Declare(
+      Catch2
+      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+      GIT_TAG        v3.0.1 # or a later release
+    )
+    
+    FetchContent_MakeAvailable(Catch2)
+    find_package(Threads REQUIRED)
+    
+    # add ASIO
+    target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
+    target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
+    target_link_libraries(asio::asio INTERFACE Threads::Threads)
+    
+    add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmtests_SRC})
+    target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
+    target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common asio::asio Threads::Threads util)
+    target_include_directories(dvmtests PRIVATE src src/host tests)
 endif (ENABLE_TESTS)
 
 #
@@ -397,7 +418,6 @@ add_custom_target(old_install-service
 #
 # Firmware compilation
 #
-project(dvmfw)
 add_custom_target(dvmfw
     DEPENDS dvmfw-stm32f4 dvmfw-stm32f4-pog dvmfw-stm32f4-eda dvmfw-stm32f4-dvmv1 dvmfw-stm32fx
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/fw/modem

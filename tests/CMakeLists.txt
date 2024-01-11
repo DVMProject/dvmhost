@@ -32,26 +32,3 @@ file(GLOB dvmtests_SRC
     "tests/p25/*.cpp"
     "tests/nxdn/*.cpp"
 )
-
-project(dvmtest)
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-Include(FetchContent)
-
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.0.1 # or a later release
-)
-
-FetchContent_MakeAvailable(Catch2)
-find_package(Threads REQUIRED)
-
-# add ASIO
-target_include_directories(asio::asio INTERFACE ${ASIO_INCLUDE_DIR})
-target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
-target_link_libraries(asio::asio INTERFACE Threads::Threads)
-
-add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmtests_SRC})
-target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
-target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common asio::asio Threads::Threads util)
-target_include_directories(dvmtests PRIVATE src src/host tests)
