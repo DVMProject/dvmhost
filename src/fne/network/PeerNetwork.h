@@ -51,4 +51,4 @@ namespace network
     };
 } // namespace network
 
-#endif // __NETWORK_H__
+#endif // __PEER_NETWORK_H__
