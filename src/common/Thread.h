@@ -71,7 +71,7 @@ private:
 
 public:
     /// <summary>Flag indicating if the thread was started.</summary>
-    __READONLY_PROPERTY_PLAIN(bool, started, started);
+    __PROTECTED_READONLY_PROPERTY_PLAIN(bool, started, started);
 };
 
 #endif // __THREAD_H__

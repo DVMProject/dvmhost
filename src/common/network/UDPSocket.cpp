@@ -459,14 +459,14 @@ bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& add
     if (type == IMT_ADDRESS_AND_PORT) {
         switch (addr1.ss_family) {
         case AF_INET:
-            struct sockaddr_in* in_1, * in_2;
-            in_1 = (struct sockaddr_in*) & addr1;
-            in_2 = (struct sockaddr_in*) & addr2;
+            struct sockaddr_in* in_1, *in_2;
+            in_1 = (struct sockaddr_in*)& addr1;
+            in_2 = (struct sockaddr_in*)& addr2;
             return (in_1->sin_addr.s_addr == in_2->sin_addr.s_addr) && (in_1->sin_port == in_2->sin_port);
         case AF_INET6:
             struct sockaddr_in6* in6_1, *in6_2;
-            in6_1 = (struct sockaddr_in6*) & addr1;
-            in6_2 = (struct sockaddr_in6*) & addr2;
+            in6_1 = (struct sockaddr_in6*)& addr1;
+            in6_2 = (struct sockaddr_in6*)& addr2;
             return IN6_ARE_ADDR_EQUAL(&in6_1->sin6_addr, &in6_2->sin6_addr) && (in6_1->sin6_port == in6_2->sin6_port);
         default:
             return false;
@@ -475,14 +475,14 @@ bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& add
     else if (type == IMT_ADDRESS_ONLY) {
         switch (addr1.ss_family) {
         case AF_INET:
-            struct sockaddr_in* in_1, * in_2;
-            in_1 = (struct sockaddr_in*) & addr1;
-            in_2 = (struct sockaddr_in*) & addr2;
+            struct sockaddr_in* in_1, *in_2;
+            in_1 = (struct sockaddr_in*)& addr1;
+            in_2 = (struct sockaddr_in*)& addr2;
             return in_1->sin_addr.s_addr == in_2->sin_addr.s_addr;
         case AF_INET6:
-            struct sockaddr_in6* in6_1, * in6_2;
-            in6_1 = (struct sockaddr_in6*) & addr1;
-            in6_2 = (struct sockaddr_in6*) & addr2;
+            struct sockaddr_in6* in6_1, *in6_2;
+            in6_1 = (struct sockaddr_in6*)& addr1;
+            in6_2 = (struct sockaddr_in6*)& addr2;
             return IN6_ARE_ADDR_EQUAL(&in6_1->sin6_addr, &in6_2->sin6_addr);
         default:
             return false;
@@ -507,7 +507,7 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
     case AF_INET:
     {
         struct sockaddr_in* in;
-        in = (struct sockaddr_in*) & addr;
+        in = (struct sockaddr_in*)& addr;
         inet_ntop(AF_INET, &(in->sin_addr), str, INET_ADDRSTRLEN);
         address = std::string(str);
     }
@@ -515,7 +515,7 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
     case AF_INET6:
     {
         struct sockaddr_in6* in6;
-        in6 = (struct sockaddr_in6*) & addr;
+        in6 = (struct sockaddr_in6*)& addr;
         inet_ntop(AF_INET6, &(in6->sin6_addr), str, INET_ADDRSTRLEN);
         address = std::string(str);
     }
@@ -540,14 +540,14 @@ uint16_t UDPSocket::port(const sockaddr_storage& addr)
     case AF_INET:
     {
         struct sockaddr_in* in;
-        in = (struct sockaddr_in*) & addr;
+        in = (struct sockaddr_in*)& addr;
         port = ntohs(in->sin_port);
     }
     break;
     case AF_INET6:
     {
         struct sockaddr_in6* in6;
-        in6 = (struct sockaddr_in6*) & addr;
+        in6 = (struct sockaddr_in6*)& addr;
         port = ntohs(in6->sin6_port);
     }
     break;
@@ -565,7 +565,7 @@ uint16_t UDPSocket::port(const sockaddr_storage& addr)
 /// <returns></returns>
 bool UDPSocket::isNone(const sockaddr_storage& addr)
 {
-    struct sockaddr_in* in = (struct sockaddr_in*) & addr;
+    struct sockaddr_in* in = (struct sockaddr_in*)& addr;
 
     return ((addr.ss_family == AF_INET) && (in->sin_addr.s_addr == htonl(INADDR_NONE)));
 }

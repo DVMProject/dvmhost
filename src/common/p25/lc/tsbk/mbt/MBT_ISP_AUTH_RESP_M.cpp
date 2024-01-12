@@ -57,14 +57,14 @@ MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT()
 /// </summary>
 MBT_ISP_AUTH_RESP_M::~MBT_ISP_AUTH_RESP_M()
 {
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
-        m_authRes = NULL;
+        m_authRes = nullptr;
     }
 
-    if (m_authRC != NULL) {
+    if (m_authRC != nullptr) {
         delete[] m_authRC;
-        m_authRC = NULL;
+        m_authRC = nullptr;
     }
 }
 
@@ -76,7 +76,7 @@ MBT_ISP_AUTH_RESP_M::~MBT_ISP_AUTH_RESP_M()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
     ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
@@ -120,7 +120,7 @@ bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const da
 /// <param name="pduUserData"></param>
 void MBT_ISP_AUTH_RESP_M::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     /* stub */
 
@@ -141,7 +141,7 @@ std::string MBT_ISP_AUTH_RESP_M::toString(bool isp)
 /// <returns></returns>
 void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const
 {
-    assert(res != NULL);
+    assert(res != nullptr);
 
     ::memcpy(res, m_authRes, P25_AUTH_RES_LENGTH_BYTES);
 }
@@ -150,7 +150,7 @@ void MBT_ISP_AUTH_RESP_M::getAuthRes(uint8_t* res) const
 /// <param name="rc"></param>
 void MBT_ISP_AUTH_RESP_M::setAuthRC(const uint8_t* rc)
 {
-    assert(rc != NULL);
+    assert(rc != nullptr);
 
     ::memcpy(m_authRC, rc, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
@@ -159,7 +159,7 @@ void MBT_ISP_AUTH_RESP_M::setAuthRC(const uint8_t* rc)
 /// <returns></returns>
 void MBT_ISP_AUTH_RESP_M::getAuthRC(uint8_t* rc) const
 {
-    assert(rc != NULL);
+    assert(rc != nullptr);
 
     ::memcpy(rc, m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
@@ -178,14 +178,14 @@ void MBT_ISP_AUTH_RESP_M::copy(const MBT_ISP_AUTH_RESP_M& data)
 
     m_authStandalone = data.m_authStandalone;
 
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
     }
 
     m_authRes = new uint8_t[P25_AUTH_RES_LENGTH_BYTES];
     ::memcpy(m_authRes, data.m_authRes, P25_AUTH_RES_LENGTH_BYTES);
 
-    if (m_authRC != NULL) {
+    if (m_authRC != nullptr) {
         delete[] m_authRC;
     }
 

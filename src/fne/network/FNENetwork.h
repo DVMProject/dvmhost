@@ -68,6 +68,7 @@ namespace network
             m_connected(false),
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
+            m_lastPing(0U),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)
@@ -89,6 +90,7 @@ namespace network
             m_connected(false),
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
+            m_lastPing(0U),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)

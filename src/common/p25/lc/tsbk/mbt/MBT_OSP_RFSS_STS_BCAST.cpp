@@ -55,7 +55,7 @@ MBT_OSP_RFSS_STS_BCAST::MBT_OSP_RFSS_STS_BCAST() : AMBT()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool MBT_OSP_RFSS_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     /* stub */
 
@@ -69,7 +69,7 @@ bool MBT_OSP_RFSS_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const
 /// <param name="pduUserData"></param>
 void MBT_OSP_RFSS_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     // pack LRA and system ID into LLID
     uint32_t llId = m_siteData.lra();                                               // Location Registration Area

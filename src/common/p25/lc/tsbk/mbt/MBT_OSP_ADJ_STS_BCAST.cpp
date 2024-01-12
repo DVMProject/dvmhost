@@ -61,7 +61,7 @@ MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     /* stub */
 
@@ -75,7 +75,7 @@ bool MBT_OSP_ADJ_STS_BCAST::decodeMBT(const data::DataHeader& dataHeader, const 
 /// <param name="pduUserData"></param>
 void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     if ((m_adjRfssId != 0U) && (m_adjSiteId != 0U) && (m_adjChannelNo != 0U)) {
         if (m_adjSysId == 0U) {

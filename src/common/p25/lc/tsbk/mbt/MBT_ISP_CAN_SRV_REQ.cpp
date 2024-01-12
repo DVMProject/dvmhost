@@ -55,7 +55,7 @@ MBT_ISP_CAN_SRV_REQ::MBT_ISP_CAN_SRV_REQ() : AMBT()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow()];
     ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
@@ -85,7 +85,7 @@ bool MBT_ISP_CAN_SRV_REQ::decodeMBT(const data::DataHeader& dataHeader, const da
 /// <param name="pduUserData"></param>
 void MBT_ISP_CAN_SRV_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     /* stub */
 

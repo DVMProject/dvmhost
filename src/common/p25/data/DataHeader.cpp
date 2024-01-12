@@ -86,13 +86,20 @@ DataHeader::~DataHeader()
 /// Decodes P25 PDU data header.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="noTrellis"></param>
 /// <returns>True, if PDU data header was decoded, otherwise false.</returns>
-bool DataHeader::decode(const uint8_t* data)
+bool DataHeader::decode(const uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
 
     // decode 1/2 rate Trellis & check CRC-CCITT 16
-    bool valid = m_trellis.decode12(data, m_data);
+    bool valid = true;
+    if (noTrellis) {
+        ::memcpy(m_data, data, P25_PDU_HEADER_LENGTH_BYTES);
+    }
+    else {
+        valid = m_trellis.decode12(data, m_data);
+    }
     if (valid)
         valid = edac::CRC::checkCCITT162(m_data, P25_PDU_HEADER_LENGTH_BYTES);
     if (!valid) {
@@ -171,7 +178,7 @@ bool DataHeader::decode(const uint8_t* data)
 /// Encodes P25 PDU data header.
 /// </summary>
 /// <param name="data"></param>
-void DataHeader::encode(uint8_t* data)
+void DataHeader::encode(uint8_t* data, bool noTrellis)
 {
     assert(data != nullptr);
 
@@ -243,8 +250,10 @@ void DataHeader::encode(uint8_t* data)
     Utils::dump(1U, "P25, DataHeader::encode(), PDU Header Data", header, P25_PDU_HEADER_LENGTH_BYTES);
 #endif
 
-    // encode 1/2 rate Trellis
-    m_trellis.encode12(header, data);
+    if (!noTrellis) {
+        // encode 1/2 rate Trellis
+        m_trellis.encode12(header, data);
+    }
 }
 
 /// <summary>

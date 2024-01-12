@@ -48,9 +48,9 @@ namespace p25
             ~DataHeader();
 
             /// <summary>Decodes P25 PDU data header.</summary>
-            bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data, bool noTrellis = false);
             /// <summary>Encodes P25 PDU data header.</summary>
-            void encode(uint8_t* data);
+            void encode(uint8_t* data, bool noTrellis = false);
 
             /// <summary>Helper to reset data values to defaults.</summary>
             void reset();

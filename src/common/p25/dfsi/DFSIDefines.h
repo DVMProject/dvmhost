@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -44,6 +44,26 @@ namespace p25
         //  Constants
         // ---------------------------------------------------------------------------
 
+        const uint8_t   P25_DFSI_STATUS_NO_ERROR = 0x00;   //
+        const uint8_t   P25_DFSI_STATUS_ERASE = 0x02;      //
+
+        const uint8_t   P25_DFSI_RT_ENABLED = 0x02;        //
+        const uint8_t   P25_DFSI_RT_DISABLED = 0x04;       //
+
+        const uint8_t   P25_DFSI_START_FLAG = 0x0C;        //
+        const uint8_t   P25_DFSI_STOP_FLAG = 0x25;         //
+
+        const uint8_t   P25_DFSI_TYPE_DATA_PAYLOAD = 0x06; //
+        const uint8_t   P25_DFSI_TYPE_VOICE = 0x0B;        //
+
+        const uint8_t   P25_DFSI_DEF_ICW_SOURCE = 0x00;    // Infrastructure Source - Default Source
+        const uint8_t   P25_DFSI_DEF_SOURCE = 0x00;        //
+
+        const uint8_t   P25_DFSI_MOT_START_STOP = 0x00;    // Motorola Start/Stop Frame
+
+        const uint32_t  P25_DFSI_VHDR_RAW_LEN = 36U;
+        const uint32_t  P25_DFSI_VHDR_LEN = 27U;
+
         const uint32_t  P25_DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES = 22U;
         const uint32_t  P25_DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES = 14U;
         const uint32_t  P25_DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES = 17U;
@@ -65,6 +85,9 @@ namespace p25
         const uint32_t  P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES = 16U;
 
         // Frame Type(s)
+        const uint8_t   P25_DFSI_MOT_VHDR_1 = 0x60;        // Motorola Voice Header 1
+        const uint8_t   P25_DFSI_MOT_VHDR_2 = 0x61;        // Motorola Voice Header 2
+
         const uint8_t   P25_DFSI_LDU1_VOICE1 = 0x62U;       // IMBE LDU1 - Voice 1
         const uint8_t   P25_DFSI_LDU1_VOICE2 = 0x63U;       // IMBE LDU1 - Voice 2
         const uint8_t   P25_DFSI_LDU1_VOICE3 = 0x64U;       // IMBE LDU1 - Voice 3 + Link Control

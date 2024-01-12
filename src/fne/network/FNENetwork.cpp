@@ -65,7 +65,6 @@ using namespace network::fne;
 /// <param name="parrotGrantDemand">Flag indicating whether a parrot TG will generate a grant demand.</param>
 /// <param name="allowActivityTransfer">Flag indicating that the system activity logs will be sent to the network.</param>
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
-/// <param name="trafficRepeat">Flag indicating if traffic should be repeated from this master.</param>
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,

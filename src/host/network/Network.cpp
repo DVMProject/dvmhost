@@ -53,7 +53,7 @@ using namespace network;
 /// </summary>
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
-/// <param name="local"></param>
+/// <param name="localPort"></param>
 /// <param name="peerId">Unique ID on the network.</param>
 /// <param name="password">Network authentication password.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
@@ -598,15 +598,6 @@ bool Network::open()
 }
 
 /// <summary>
-/// Sets flag enabling network communication.
-/// </summary>
-/// <param name="enabled"></param>
-void Network::enable(bool enabled)
-{
-    m_enabled = enabled;
-}
-
-/// <summary>
 /// Closes connection to the network.
 /// </summary>
 void Network::close()
@@ -627,6 +618,15 @@ void Network::close()
     m_timeoutTimer.stop();
 
     m_status = NET_STAT_WAITING_CONNECT;
+}
+
+/// <summary>
+/// Sets flag enabling network communication.
+/// </summary>
+/// <param name="enabled"></param>
+void Network::enable(bool enabled)
+{
+    m_enabled = enabled;
 }
 
 // ---------------------------------------------------------------------------

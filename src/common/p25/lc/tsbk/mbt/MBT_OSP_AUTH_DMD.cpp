@@ -57,14 +57,14 @@ MBT_OSP_AUTH_DMD::MBT_OSP_AUTH_DMD() : AMBT()
 /// </summary>
 MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
 {
-    if (m_authRS != NULL) {
+    if (m_authRS != nullptr) {
         delete[] m_authRS;
-        m_authRS = NULL;
+        m_authRS = nullptr;
     }
 
-    if (m_authRC != NULL) {
+    if (m_authRC != nullptr) {
         delete[] m_authRC;
-        m_authRC = NULL;
+        m_authRC = nullptr;
     }
 }
 
@@ -76,7 +76,7 @@ MBT_OSP_AUTH_DMD::~MBT_OSP_AUTH_DMD()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
-    assert(blocks != NULL);
+    assert(blocks != nullptr);
 
     /* stub */
 
@@ -90,7 +90,7 @@ bool MBT_OSP_AUTH_DMD::decodeMBT(const data::DataHeader& dataHeader, const data:
 /// <param name="pduUserData"></param>
 void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
-    assert(pduUserData != NULL);
+    assert(pduUserData != nullptr);
 
     dataHeader.setBlocksToFollow(2U);
 
@@ -138,7 +138,7 @@ std::string MBT_OSP_AUTH_DMD::toString(bool isp)
 /// <param name="mi"></param>
 void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 {
-    assert(rs != NULL);
+    assert(rs != nullptr);
 
     ::memcpy(m_authRS, rs, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 }
@@ -147,7 +147,7 @@ void MBT_OSP_AUTH_DMD::setAuthRS(const uint8_t* rs)
 /// <returns></returns>
 void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 {
-    assert(rs != NULL);
+    assert(rs != nullptr);
 
     ::memcpy(rs, m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 }
@@ -156,7 +156,7 @@ void MBT_OSP_AUTH_DMD::getAuthRS(uint8_t* rs) const
 /// <param name="rc"></param>
 void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 {
-    assert(rc != NULL);
+    assert(rc != nullptr);
 
     ::memcpy(m_authRC, rc, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
@@ -165,7 +165,7 @@ void MBT_OSP_AUTH_DMD::setAuthRC(const uint8_t* rc)
 /// <returns></returns>
 void MBT_OSP_AUTH_DMD::getAuthRC(uint8_t* rc) const
 {
-    assert(rc != NULL);
+    assert(rc != nullptr);
 
     ::memcpy(rc, m_authRC, P25_AUTH_RAND_CHLNG_LENGTH_BYTES);
 }
@@ -182,14 +182,14 @@ void MBT_OSP_AUTH_DMD::copy(const MBT_OSP_AUTH_DMD& data)
 {
     TSBK::copy(data);
 
-    if (m_authRS != NULL) {
+    if (m_authRS != nullptr) {
         delete[] m_authRS;
     }
 
     m_authRS = new uint8_t[P25_AUTH_RAND_SEED_LENGTH_BYTES];
     ::memcpy(m_authRS, data.m_authRS, P25_AUTH_RAND_SEED_LENGTH_BYTES);
 
-    if (m_authRC != NULL) {
+    if (m_authRC != nullptr) {
         delete[] m_authRC;
     }
 
