@@ -352,6 +352,43 @@ uint32_t Utils::setBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uin
 }
 
 /// <summary>
+///
+/// </summary>
+/// <param name="input"></param>
+/// <param name="offset"></param>
+/// <returns></returns>
+uint8_t Utils::bin2Hex(const uint8_t* input, uint32_t offset)
+{
+    uint8_t output = 0x00U;
+
+    output |= READ_BIT(input, offset + 0U) ? 0x20U : 0x00U;
+    output |= READ_BIT(input, offset + 1U) ? 0x10U : 0x00U;
+    output |= READ_BIT(input, offset + 2U) ? 0x08U : 0x00U;
+    output |= READ_BIT(input, offset + 3U) ? 0x04U : 0x00U;
+    output |= READ_BIT(input, offset + 4U) ? 0x02U : 0x00U;
+    output |= READ_BIT(input, offset + 5U) ? 0x01U : 0x00U;
+
+    return output;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="input"></param>
+/// <param name="output"></param>
+/// <param name="offset"></param>
+/// <returns></returns>
+void Utils::hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset)
+{
+    WRITE_BIT(output, offset + 0U, input & 0x20U);
+    WRITE_BIT(output, offset + 1U, input & 0x10U);
+    WRITE_BIT(output, offset + 2U, input & 0x08U);
+    WRITE_BIT(output, offset + 3U, input & 0x04U);
+    WRITE_BIT(output, offset + 4U, input & 0x02U);
+    WRITE_BIT(output, offset + 5U, input & 0x01U);
+}
+
+/// <summary>
 /// Returns the count of bits in the passed 8 byte value.
 /// </summary>
 /// <param name="bits"></param>

@@ -66,11 +66,6 @@ namespace edac
 
     private:
         /// <summary></summary>
-        static uint8_t bin2Hex(const uint8_t* input, uint32_t offset);
-        /// <summary></summary>
-        static void hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset);
-
-        /// <summary></summary>
         uint8_t gf6Mult(uint8_t a, uint8_t b) const;
     };
 } // namespace edac

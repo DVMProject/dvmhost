@@ -69,6 +69,11 @@ public:
     /// <summary></summary>
     static uint32_t setBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t length);
 
+    /// <summary></summary>
+    static uint8_t bin2Hex(const uint8_t* input, uint32_t offset);
+    /// <summary></summary>
+    static void hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset);
+
     /// <summary>Returns the count of bits in the passed 8 byte value.</summary>
     static uint8_t countBits8(uint8_t bits);
     /// <summary>Returns the count of bits in the passed 32 byte value.</summary>

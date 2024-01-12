@@ -32,6 +32,7 @@
 #include "edac/RS634717.h"
 #include "edac/rs/RS.h"
 #include "Log.h"
+#include "Utils.h"
 
 using namespace edac;
 
@@ -170,7 +171,7 @@ bool RS634717::decode241213(uint8_t* data)
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 24U; i++, offset += 6)
-        codeword[39 + i] = bin2Hex(data, offset);
+        codeword[39 + i] = Utils::bin2Hex(data, offset);
 
     int ec = rs241213.decode(codeword);
 #if DEBUG_RS
@@ -178,7 +179,7 @@ bool RS634717::decode241213(uint8_t* data)
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 12U; i++, offset += 6)
-        hex2Bin(codeword[39 + i], data, offset);
+        Utils::hex2Bin(codeword[39 + i], data, offset);
 
     if ((ec == -1) || (ec >= 6)) {
         return false;
@@ -202,14 +203,14 @@ void RS634717::encode241213(uint8_t* data)
 
         uint32_t offset = 0U;
         for (uint32_t j = 0U; j < 12U; j++, offset += 6U) {
-            uint8_t hexbit = bin2Hex(data, offset);
+            uint8_t hexbit = Utils::bin2Hex(data, offset);
             codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX[j][i]);
         }
     }
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 24U; i++, offset += 6U)
-        hex2Bin(codeword[i], data, offset);
+        Utils::hex2Bin(codeword[i], data, offset);
 }
 
 /// <summary>
@@ -225,7 +226,7 @@ bool RS634717::decode24169(uint8_t* data)
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 24U; i++, offset += 6)
-        codeword[39 + i] = bin2Hex(data, offset);
+        codeword[39 + i] = Utils::bin2Hex(data, offset);
 
     int ec = rs24169.decode(codeword);
 #if DEBUG_RS
@@ -233,7 +234,7 @@ bool RS634717::decode24169(uint8_t* data)
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 16U; i++, offset += 6)
-        hex2Bin(codeword[39 + i], data, offset);
+        Utils::hex2Bin(codeword[39 + i], data, offset);
 
     if ((ec == -1) || (ec >= 4)) {
         return false;
@@ -257,14 +258,14 @@ void RS634717::encode24169(uint8_t* data)
 
         uint32_t offset = 0U;
         for (uint32_t j = 0U; j < 16U; j++, offset += 6U) {
-            uint8_t hexbit = bin2Hex(data, offset);
+            uint8_t hexbit = Utils::bin2Hex(data, offset);
             codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_24169[j][i]);
         }
     }
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 24U; i++, offset += 6U)
-        hex2Bin(codeword[i], data, offset);
+        Utils::hex2Bin(codeword[i], data, offset);
 }
 
 /// <summary>
@@ -280,7 +281,7 @@ bool RS634717::decode362017(uint8_t* data)
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 36U; i++, offset += 6)
-        codeword[27 + i] = bin2Hex(data, offset);
+        codeword[27 + i] = Utils::bin2Hex(data, offset);
 
     int ec = rs634717.decode(codeword);
 #if DEBUG_RS
@@ -288,7 +289,7 @@ bool RS634717::decode362017(uint8_t* data)
 #endif
     offset = 0U;
     for (uint32_t i = 0U; i < 20U; i++, offset += 6)
-        hex2Bin(codeword[27 + i], data, offset);
+        Utils::hex2Bin(codeword[27 + i], data, offset);
 
     if ((ec == -1) || (ec >= 8)) {
         return false;
@@ -312,56 +313,19 @@ void RS634717::encode362017(uint8_t* data)
 
         uint32_t offset = 0U;
         for (uint32_t j = 0U; j < 20U; j++, offset += 6U) {
-            uint8_t hexbit = bin2Hex(data, offset);
+            uint8_t hexbit = Utils::bin2Hex(data, offset);
             codeword[i] ^= gf6Mult(hexbit, ENCODE_MATRIX_362017[j][i]);
         }
     }
 
     uint32_t offset = 0U;
     for (uint32_t i = 0U; i < 36U; i++, offset += 6U)
-        hex2Bin(codeword[i], data, offset);
+        Utils::hex2Bin(codeword[i], data, offset);
 }
 
 // ---------------------------------------------------------------------------
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
-
-/// <summary>
-///
-/// </summary>
-/// <param name="input"></param>
-/// <param name="offset"></param>
-/// <returns></returns>
-uint8_t RS634717::bin2Hex(const uint8_t* input, uint32_t offset)
-{
-    uint8_t output = 0x00U;
-
-    output |= READ_BIT(input, offset + 0U) ? 0x20U : 0x00U;
-    output |= READ_BIT(input, offset + 1U) ? 0x10U : 0x00U;
-    output |= READ_BIT(input, offset + 2U) ? 0x08U : 0x00U;
-    output |= READ_BIT(input, offset + 3U) ? 0x04U : 0x00U;
-    output |= READ_BIT(input, offset + 4U) ? 0x02U : 0x00U;
-    output |= READ_BIT(input, offset + 5U) ? 0x01U : 0x00U;
-
-    return output;
-}
-
-/// <summary>
-///
-/// </summary>
-/// <param name="input"></param>
-/// <param name="output"></param>
-/// <param name="offset"></param>
-/// <returns></returns>
-void RS634717::hex2Bin(const uint8_t input, uint8_t* output, uint32_t offset)
-{
-    WRITE_BIT(output, offset + 0U, input & 0x20U);
-    WRITE_BIT(output, offset + 1U, input & 0x10U);
-    WRITE_BIT(output, offset + 2U, input & 0x08U);
-    WRITE_BIT(output, offset + 3U, input & 0x04U);
-    WRITE_BIT(output, offset + 4U, input & 0x02U);
-    WRITE_BIT(output, offset + 5U, input & 0x01U);
-}
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
