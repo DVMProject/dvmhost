@@ -263,24 +263,51 @@ inline std::string strtoupper(const std::string value) {
 #define WRITE_BIT(p, i, b) p[(i) >> 3] = (b) ? (p[(i) >> 3] | BIT_MASK_TABLE[(i) & 7]) : (p[(i) >> 3] & ~BIT_MASK_TABLE[(i) & 7])
 #define READ_BIT(p, i)     (p[(i) >> 3] & BIT_MASK_TABLE[(i) & 7])
 
+/// <summary>Sets a uint32_t into 4 bytes.</summary>
+/// <param name="val">uint32_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
 #define __SET_UINT32(val, buffer, offset)               \
             buffer[0U + offset] = (val >> 24) & 0xFFU;  \
             buffer[1U + offset] = (val >> 16) & 0xFFU;  \
             buffer[2U + offset] = (val >> 8) & 0xFFU;   \
             buffer[3U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint32_t consisting of 4 bytes.</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
 #define __GET_UINT32(buffer, offset)                    \
             (buffer[offset + 0U] << 24)     |           \
-                (buffer[offset + 1U] << 16) |           \
-                (buffer[offset + 2U] << 8)  |           \
-                (buffer[offset + 3U] << 0);
+            (buffer[offset + 1U] << 16)     |           \
+            (buffer[offset + 2U] << 8)      |           \
+            (buffer[offset + 3U] << 0);
+/// <summary>Sets a uint32_t into 3 bytes.</summary>
+/// <param name="val">uint32_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
 #define __SET_UINT16(val, buffer, offset)               \
             buffer[0U + offset] = (val >> 16) & 0xFFU;  \
             buffer[1U + offset] = (val >> 8) & 0xFFU;   \
             buffer[2U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint32_t consisting of 3 bytes. (This is a shortened uint32_t).</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
 #define __GET_UINT16(buffer, offset)                    \
             (buffer[offset + 0U] << 16)     |           \
-                (buffer[offset + 1U] << 8)  |           \
-                (buffer[offset + 2U] << 0);
+            (buffer[offset + 1U] << 8)      |           \
+            (buffer[offset + 2U] << 0);
+/// <summary>Sets a uint16_t into 2 bytes.</summary>
+/// <param name="val">uint16_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __SET_UINT16B(val, buffer, offset)              \
+            buffer[0U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[1U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint16_t consisting of 2 bytes.</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __GET_UINT16B(buffer, offset)                   \
+            ((buffer[offset + 0U] << 8) & 0xFF00U)  |   \
+            ((buffer[offset + 1U] << 0) & 0x00FFU);
 
 #define new_unique(type, ...) std::unique_ptr<type>(new type(__VA_ARGS__))
 
