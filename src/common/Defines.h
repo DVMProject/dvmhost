@@ -208,6 +208,7 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
 #define __PROTECTED_READONLY_PROPERTY(type, variableName, propName)                     \
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
+
 /// <summary>Creates a read-only get property, does not use "get"/"set".</summary>
 #define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName, propName)               \
         protected: type m_##variableName;                                               \
@@ -216,10 +217,6 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
 #define __READONLY_PROPERTY_PLAIN(type, variableName, propName)                         \
         private: type m_##variableName;                                                 \
         public: __forceinline type propName(void) const { return m_##variableName; }
-/// <summary>Creates a read-only get property by reference.</summary>
-#define __READONLY_PROPERTY_BYREF(type, variableName, propName)                         \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type& get##propName(void) const { return m_##variableName; }
 
 /// <summary>Creates a get and set private property.</summary>
 #define __PROPERTY(type, variableName, propName)                                        \
@@ -231,6 +228,7 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; } \
                 __forceinline void set##propName(type val) { m_##variableName = val; }
+
 /// <summary>Creates a get and set private property, does not use "get"/"set".</summary>
 #define __PROPERTY_PLAIN(type, variableName, propName)                                  \
         private: type m_##variableName;                                                 \
@@ -241,10 +239,5 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
         protected: type m_##variableName;                                               \
         public: __forceinline type propName(void) const { return m_##variableName; }    \
                 __forceinline void propName(type val) { m_##variableName = val; }
-/// <summary>Creates a get and set property by reference.</summary>
-#define __PROPERTY_BYREF(type, variableName, propName)                                  \
-        private: type m_##variableName;                                                 \
-        public: __forceinline type& get##propName(void) const { return m_##variableName; } \
-                __forceinline void set##propName(type& val) { m_##variableName = val; }
 
 #endif // __COMMON_DEFINES_H__

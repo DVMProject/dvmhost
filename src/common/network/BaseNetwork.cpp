@@ -716,8 +716,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25:
     __SET_UINT16(dstId, buffer, 8U);
 
     uint16_t sysId = control.getSiteData().sysId();                                 // System ID
-    buffer[11U] = (sysId >> 8) & 0xFFU;
-    buffer[12U] = (sysId >> 0) & 0xFFU;
+    __SET_UINT16B(sysId, buffer, 11U);
 
     buffer[14U] = 0U;                                                               // Control Bits
 
@@ -740,8 +739,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, uint8_t duid, const p25:
         buffer[181U] = control.getAlgId();                                          // Algorithm ID
 
         uint32_t kid = control.getKId();
-        buffer[182U] = (kid >> 8) & 0xFFU;                                          // Key ID
-        buffer[183U] = (kid >> 0) & 0xFFU;
+        __SET_UINT16B(kid, buffer, 182U);                                           // Key ID
 
         // copy MI data
         uint8_t mi[p25::P25_MI_LENGTH_BYTES];
