@@ -196,27 +196,27 @@ namespace network
 
         /** Digital Mobile Radio */
         /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>
-        UInt8Array readDMR(bool& ret, uint32_t& frameLength);
+        virtual UInt8Array readDMR(bool& ret, uint32_t& frameLength);
         /// <summary>Writes DMR frame data to the network.</summary>
-        bool writeDMR(const dmr::data::Data& data);
+        virtual bool writeDMR(const dmr::data::Data& data);
 
         /// <summary>Helper to test if the DMR ring buffer has data.</summary>
         bool hasDMRData() const;
 
         /** Project 25 */
         /// <summary>Reads P25 raw frame data from the P25 ring buffer.</summary>
-        UInt8Array readP25(bool& ret, uint32_t& frameLength);
+        virtual UInt8Array readP25(bool& ret, uint32_t& frameLength);
         /// <summary>Writes P25 LDU1 frame data to the network.</summary>
-        bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
+        virtual bool writeP25LDU1(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, 
             uint8_t frameType);
         /// <summary>Writes P25 LDU2 frame data to the network.</summary>
-        bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
+        virtual bool writeP25LDU2(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data);
         /// <summary>Writes P25 TDU frame data to the network.</summary>
-        bool writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte = 0U);
+        virtual bool writeP25TDU(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t controlByte = 0U);
         /// <summary>Writes P25 TSDU frame data to the network.</summary>
-        bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
+        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
-        bool writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data, 
+        virtual bool writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data, 
             const uint32_t len);
 
         /// <summary>Helper to test if the P25 ring buffer has data.</summary>
@@ -224,9 +224,9 @@ namespace network
 
         /** Next Generation Digital Narrowband */
         /// <summary>Reads NXDN raw frame data from the NXDN ring buffer.</summary>
-        UInt8Array readNXDN(bool& ret, uint32_t& frameLength);
+        virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength);
         /// <summary>Writes NXDN frame data to the network.</summary>
-        bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
+        virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
 
         /// <summary>Helper to test if the NXDN ring buffer has data.</summary>
         bool hasNXDNData() const;
@@ -265,6 +265,10 @@ namespace network
 
         std::mt19937 m_random;
 
+        uint32_t* m_dmrStreamId;
+        uint32_t m_p25StreamId;
+        uint32_t m_nxdnStreamId;
+
         /// <summary>Helper to update the RTP packet sequence.</summary>
         uint16_t pktSeq(bool reset = false);
 
@@ -300,10 +304,6 @@ namespace network
         UInt8Array createNXDN_Message(uint32_t& length, const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
     
     private:
-        uint32_t* m_dmrStreamId;
-        uint32_t m_p25StreamId;
-        uint32_t m_nxdnStreamId;
-
         uint16_t m_pktSeq;
 
         p25::Audio m_audio;
