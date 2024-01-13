@@ -490,13 +490,14 @@ bool HostFNE::createPeerNetworks()
             if (enabled) {
                 bool ret = network->open();
                 if (!ret) {
+                    delete m_network;
+                    m_network = nullptr;
                     LogError(LOG_HOST, "failed to initialize traffic networking for PEER %u", id);
-                    network->enable(false);
-                    network->close();
                 }
             }
 
-            m_peerNetworks[identity] = network;
+            if (network != nullptr)
+                m_peerNetworks[identity] = network;
         }
     }
 
