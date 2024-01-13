@@ -1576,6 +1576,7 @@ void Host::setState(uint8_t state)
                     delete m_modem;
                 }
 
+                ::LogSetNetwork(nullptr);
                 if (m_network != nullptr) {
                     m_network->close();
                     delete m_network;
