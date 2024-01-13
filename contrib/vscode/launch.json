@@ -29,8 +29,8 @@
             "type": "cppdbg",
             "request": "launch",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/build/dvmhost",
-            "args": ["-c", "./fne-config.yml", "--fne", "-f"],
+            "program": "${workspaceFolder}/build/dvmfne",
+            "args": ["-c", "./fne-config.yml", "-f"],
             "cwd": "${workspaceFolder}/build",
             "stopAtEntry": false,
             "logging": {
