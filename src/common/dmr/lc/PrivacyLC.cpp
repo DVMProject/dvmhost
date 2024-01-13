@@ -24,6 +24,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "dmr/DMRDefines.h"
 #include "dmr/lc/PrivacyLC.h"
 #include "edac/CRC.h"
 #include "Utils.h"

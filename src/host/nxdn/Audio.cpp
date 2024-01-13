@@ -30,6 +30,7 @@
 
 #include "nxdn/Audio.h"
 #include "common/edac/Golay24128.h"
+#include "common/Utils.h"
 
 using namespace nxdn;
 using namespace edac;

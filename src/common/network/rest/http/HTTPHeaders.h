@@ -39,6 +39,7 @@
 
 #include "common/Defines.h"
 #include "common/Log.h"
+#include "common/Utils.h"
 
 #include <string>
 #include <vector>

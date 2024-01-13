@@ -29,6 +29,9 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "common/dmr/DMRDefines.h"
+#include "common/p25/dfsi/DFSIDefines.h"
+#include "common/p25/dfsi/LC.h"
 #include "edac/SHA256.h"
 #include "network/BaseNetwork.h"
 #include "Log.h"

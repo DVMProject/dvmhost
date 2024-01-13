@@ -32,6 +32,7 @@
 #include "p25/P25Utils.h"
 #include "edac/Golay24128.h"
 #include "edac/Hamming.h"
+#include "Utils.h"
 
 using namespace p25;
 

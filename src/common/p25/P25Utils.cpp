@@ -30,6 +30,7 @@
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/P25Utils.h"
+#include "Utils.h"
 
 using namespace p25;
 

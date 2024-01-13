@@ -288,10 +288,42 @@ void Utils::bitsToByteLE(const bool* bits, uint8_t& byte)
 /// <summary>
 ///
 /// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+uint16_t Utils::reverseEndian(uint16_t value)
+{
+    return (value << 8 & 0xff00) | (value >> 8);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+uint32_t Utils::reverseEndian(uint32_t value)
+{
+    return (value << 24 | (value & 0xFF00U) << 8 | (value & 0xFF0000U) >> 8 | value >> 24);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+uint64_t Utils::reverseEndian(uint64_t value)
+{
+    return (value << 56 | (value & 0xFF00U) << 40 | (value & 0xFF0000U) << 24 | (value & 0xFF000000U) << 8 | 
+           (value & 0xFF00000000U) >> 8 | (value & 0xFF0000000000U) >> 24 | (value & 0xFF000000000000U) >> 40 | value >> 56);
+}
+
+/// <summary>
+///
+/// </summary>
 /// <param name="in"></param>
 /// <param name="out"></param>
 /// <param name="start"></param>
 /// <param name="stop"></param>
+/// <returns></returns>
 uint32_t Utils::getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -313,6 +345,7 @@ uint32_t Utils::getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_
 /// <param name="out"></param>
 /// <param name="start"></param>
 /// <param name="length"></param>
+/// <returns></returns>
 uint32_t Utils::getBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t length)
 {
     return getBits(in, out, start, start + length);
@@ -325,6 +358,7 @@ uint32_t Utils::getBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uin
 /// <param name="out"></param>
 /// <param name="start"></param>
 /// <param name="stop"></param>
+/// <returns></returns>
 uint32_t Utils::setBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop)
 {
     assert(in != nullptr);
@@ -346,6 +380,7 @@ uint32_t Utils::setBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_
 /// <param name="out"></param>
 /// <param name="start"></param>
 /// <param name="length"></param>
+/// <returns></returns>
 uint32_t Utils::setBitRange(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t length)
 {
     return setBits(in, out, start, start + length);

@@ -28,6 +28,7 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
+#include "dmr/DMRDefines.h"
 #include "dmr/data/EmbeddedData.h"
 #include "edac/Hamming.h"
 #include "edac/CRC.h"

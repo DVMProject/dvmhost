@@ -31,7 +31,6 @@
 #endif
 
 #include "common/Defines.h"
-#include "common/Log.h"
 #include "common/Thread.h"
 #include "common/Timer.h"
 

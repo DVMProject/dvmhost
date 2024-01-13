@@ -33,7 +33,6 @@
 
 #include "common/Defines.h"
 #include "common/lookups/LookupTable.h"
-#include "common/Thread.h"
 
 #include <string>
 #include <unordered_map>

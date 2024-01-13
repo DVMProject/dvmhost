@@ -33,6 +33,7 @@
 #include "common/p25/SiteData.h"
 #include "common/edac/RS634717.h"
 #include "common/lookups/IdenTableLookup.h"
+#include "common/Utils.h"
 
 #include <string>
 

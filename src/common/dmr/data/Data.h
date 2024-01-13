@@ -26,7 +26,6 @@
 #define __DMR_DATA__DATA_H__
 
 #include "common/Defines.h"
-#include "common/dmr/DMRDefines.h"
 
 namespace dmr
 {

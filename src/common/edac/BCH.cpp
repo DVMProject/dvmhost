@@ -82,6 +82,7 @@
 */
 #include "Defines.h"
 #include "edac/BCH.h"
+#include "Utils.h"
 
 using namespace edac;
 

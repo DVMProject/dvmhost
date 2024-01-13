@@ -31,6 +31,7 @@
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/channel/LICH.h"
 #include "Log.h"
+#include "Utils.h"
 
 using namespace nxdn;
 using namespace nxdn::channel;

@@ -25,6 +25,7 @@
 */
 #include "Defines.h"
 #include "network/RTPFNEHeader.h"
+#include "Utils.h"
 
 using namespace network::frame;
 

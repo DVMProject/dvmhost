@@ -27,6 +27,9 @@
 #include "edac/CRC.h"
 #include "network/BaseNetwork.h"
 #include "network/FrameQueue.h"
+#include "network/RTPHeader.h"
+#include "network/RTPExtensionHeader.h"
+#include "network/RTPFNEHeader.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -47,11 +50,8 @@ using namespace network::frame;
 /// </FrameQueue>
 /// <param name="socket">Local port used to listen for incoming data.</param>
 /// <param name="peerId">Unique ID of this modem on the network.</param>
-FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) :
-    m_peerId(peerId),
-    m_socket(socket),
-    m_buffers(),
-    m_debug(debug)
+FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
+    m_peerId(peerId)
 {
     assert(peerId < 999999999U);
 }
@@ -231,46 +231,4 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     dgram->addrLen = addrLen;
 
     m_buffers.push_back(dgram);
-}
-
-/// <summary>
-/// Flush the message queue.
-/// </summary>
-/// <returns></returns>
-bool FrameQueue::flushQueue()
-{
-    if (m_buffers.empty()) {
-        return false;
-    }
-
-    // bryanb: this is the same as above -- but for some assinine reason prevents
-    // weirdness
-    if (m_buffers.size() == 0U) {
-        return false;
-    }
-
-    // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
-
-    bool ret = true;
-    if (!m_socket->write(m_buffers)) {
-        LogError(LOG_NET, "Failed writing data to the network");
-        ret = false;
-    }
-
-    for (auto& buffer : m_buffers) {
-        if (buffer != nullptr) {
-            // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
-            if (buffer->buffer != nullptr) {
-                delete buffer->buffer;
-                buffer->length = 0;
-                buffer->buffer = nullptr;
-            }
-
-            delete buffer;
-            buffer = nullptr;
-        }
-    }
-    m_buffers.clear();
-
-    return ret;
 }

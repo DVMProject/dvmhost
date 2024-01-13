@@ -26,6 +26,7 @@
 #include "Defines.h"
 #include "edac/Trellis.h"
 #include "Log.h"
+#include "Utils.h"
 
 using namespace edac;
 

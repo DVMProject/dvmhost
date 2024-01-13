@@ -28,7 +28,6 @@
 
 #include "common/Defines.h"
 #include "common/lookups/LookupTable.h"
-#include "common/Thread.h"
 #include "common/yaml/Yaml.h"
 
 #include <string>

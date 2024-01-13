@@ -27,7 +27,6 @@
 *   along with this program; if not, write to the Free Software
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#include "common/Defines.h"
 #include "common/dmr/SlotType.h"
 #include "common/edac/Golay2087.h"
 

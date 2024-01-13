@@ -32,7 +32,6 @@
 #define __DMR_LC__LC_H__
 
 #include "common/Defines.h"
-#include "common/dmr/DMRDefines.h"
 
 namespace dmr
 {

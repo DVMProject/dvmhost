@@ -27,28 +27,25 @@
 #define __FRAME_QUEUE_H__
 
 #include "common/Defines.h"
-#include "common/network/UDPSocket.h"
 #include "common/network/RTPHeader.h"
-#include "common/network/RTPExtensionHeader.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/RawFrameQueue.h"
 
 namespace network
 {
     // ---------------------------------------------------------------------------
     //  Constants
     // ---------------------------------------------------------------------------
-
-    const uint32_t DATA_PACKET_LENGTH = 8192U;
     
     const uint8_t DVM_RTP_PAYLOAD_TYPE = 0x56U;
     const uint8_t DVM_CTRL_RTP_PAYLOAD_TYPE = 0x57U; // these are still RTP, but do not carry stream IDs or sequence data
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements the network frame queuing logic.
+    //      Implements the network RTP frame queuing logic.
     // ---------------------------------------------------------------------------
 
-    class HOST_SW_API FrameQueue {
+    class HOST_SW_API FrameQueue : public RawFrameQueue {
     public: typedef std::pair<const uint8_t, const uint8_t> OpcodePair;
     public:
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
@@ -67,19 +64,8 @@ namespace network
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
             uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
-        /// <summary>Flush the message queue.</summary>
-        bool flushQueue();
-
     private:
         uint32_t m_peerId;
-
-        sockaddr_storage m_addr;
-        uint32_t m_addrLen;
-        UDPSocket* m_socket;
-
-        BufferVector m_buffers;
-
-        bool m_debug;
     };
 } // namespace network
 

@@ -30,7 +30,6 @@
 #if !defined(__THREAD_FUNC_H__)
 #define __THREAD_FUNC_H__
 
-#include "common/Defines.h"
 #include "common/Thread.h"
 
 #include <cassert>

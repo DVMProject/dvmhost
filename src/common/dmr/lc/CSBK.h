@@ -32,9 +32,9 @@
 #define __DMR_LC__CSBK_H__
 
 #include "common/Defines.h"
-#include "common/dmr/DMRDefines.h"
 #include "common/dmr/SiteData.h"
 #include "common/lookups/IdenTableLookup.h"
+#include "common/Utils.h"
 
 namespace dmr
 {

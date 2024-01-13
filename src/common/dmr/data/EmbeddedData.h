@@ -31,7 +31,6 @@
 #define __DMR_DATA__EMBEDDED_DATA_H__
 
 #include "common/Defines.h"
-#include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/LC.h"
 
 namespace dmr

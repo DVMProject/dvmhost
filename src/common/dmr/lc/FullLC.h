@@ -34,7 +34,6 @@
 #include "common/Defines.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
-#include "common/dmr/SlotType.h"
 #include "common/edac/BPTC19696.h"
 
 namespace dmr

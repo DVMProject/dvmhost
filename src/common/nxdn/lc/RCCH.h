@@ -31,7 +31,6 @@
 #define  __NXDN_LC__RCCH_H__
 
 #include "common/Defines.h"
-#include "common/nxdn/lc/PacketInformation.h"
 #include "common/nxdn/SiteData.h"
 #include "common/lookups/IdenTableLookup.h"
 

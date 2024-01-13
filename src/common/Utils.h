@@ -31,6 +31,159 @@
 #include <string>
 
 // ---------------------------------------------------------------------------
+//  Inlines
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// String from boolean.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string __BOOL_STR(const bool& value) {
+    std::stringstream ss;
+    ss << std::boolalpha << value;
+    return ss.str();
+}
+
+/// <summary>
+/// String from integer number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string __INT_STR(const int& value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+/// <summary>
+/// String from hex integer number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string __INT_HEX_STR(const int& value) {
+    std::stringstream ss;
+    ss << std::hex << value;
+    return ss.str();
+}
+
+/// <summary>
+/// String from floating point number.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string __FLOAT_STR(const float& value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+/// <summary>
+/// IP address from ulong64_t value.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string __IP_FROM_ULONG(const ulong64_t& value) {
+    std::stringstream ss;
+    ss << ((value >> 24) & 0xFFU) << "." << ((value >> 16) & 0xFFU) << "." << ((value >> 8) & 0xFFU) << "." << (value & 0xFFU);
+    return ss.str();
+}
+
+/// <summary>
+/// Helper to lower-case an input string.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string strtolower(const std::string value) {
+    std::string v = value;
+    std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+    return v;
+}
+
+/// <summary>
+/// Helper to upper-case an input string.
+/// </summary>
+/// <param name="value"></param>
+/// <returns></returns>
+inline std::string strtoupper(const std::string value) {
+    std::string v = value;
+    std::transform(v.begin(), v.end(), v.begin(), ::toupper);
+    return v;
+}
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+
+/// <summary>Pointer magic to get the memory address of a floating point number.</summary>
+/// <param name="x">Floating Point Variable</param>
+#define __FLOAT_ADDR(x)  (*(uint32_t*)& x)
+/// <summary>Pointer magic to get the memory address of a double precision number.</summary>
+/// <param name="x">Double Precision Variable</param>
+#define __DOUBLE_ADDR(x) (*(uint64_t*)& x)
+
+#define WRITE_BIT(p, i, b) p[(i) >> 3] = (b) ? (p[(i) >> 3] | BIT_MASK_TABLE[(i) & 7]) : (p[(i) >> 3] & ~BIT_MASK_TABLE[(i) & 7])
+#define READ_BIT(p, i)     (p[(i) >> 3] & BIT_MASK_TABLE[(i) & 7])
+
+/// <summary>Sets a uint32_t into 4 bytes.</summary>
+/// <param name="val">uint32_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __SET_UINT32(val, buffer, offset)               \
+            buffer[0U + offset] = (val >> 24) & 0xFFU;  \
+            buffer[1U + offset] = (val >> 16) & 0xFFU;  \
+            buffer[2U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[3U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint32_t consisting of 4 bytes.</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __GET_UINT32(buffer, offset)                    \
+            (buffer[offset + 0U] << 24)     |           \
+            (buffer[offset + 1U] << 16)     |           \
+            (buffer[offset + 2U] << 8)      |           \
+            (buffer[offset + 3U] << 0);
+/// <summary>Sets a uint32_t into 3 bytes.</summary>
+/// <param name="val">uint32_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __SET_UINT16(val, buffer, offset)               \
+            buffer[0U + offset] = (val >> 16) & 0xFFU;  \
+            buffer[1U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[2U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint32_t consisting of 3 bytes. (This is a shortened uint32_t).</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __GET_UINT16(buffer, offset)                    \
+            (buffer[offset + 0U] << 16)     |           \
+            (buffer[offset + 1U] << 8)      |           \
+            (buffer[offset + 2U] << 0);
+/// <summary>Sets a uint16_t into 2 bytes.</summary>
+/// <param name="val">uint16_t value to set</param>
+/// <param name="buffer">uint8_t buffer to set value on</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __SET_UINT16B(val, buffer, offset)              \
+            buffer[0U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[1U + offset] = (val >> 0) & 0xFFU;
+/// <summary>Gets a uint16_t consisting of 2 bytes.</summary>
+/// <param name="buffer">uint8_t buffer to get value from</param>
+/// <param name="offset">Offset within uint8_t buffer</param>
+#define __GET_UINT16B(buffer, offset)                   \
+            ((buffer[offset + 0U] << 8) & 0xFF00U)  |   \
+            ((buffer[offset + 1U] << 0) & 0x00FFU);
+
+#define new_unique(type, ...) std::unique_ptr<type>(new type(__VA_ARGS__))
+
+/// <summary>Creates a named unique buffer.</summary>
+#define __UNIQUE_BUFFER(name, type, length)                                             \
+        std::unique_ptr<type[]> name = std::unique_ptr<type[]>(new type[length]);       \
+        ::memset(name.get(), 0x00U, length);
+
+typedef std::unique_ptr<uint8_t[]> UInt8Array;
+
+/// <summary>Creates a named uint8_t array buffer.</summary>
+#define __UNIQUE_UINT8_ARRAY(name, length) __UNIQUE_BUFFER(name, uint8_t, length)
+
+// ---------------------------------------------------------------------------
 //  Class Declaration
 //      Implements various helper utilities.
 // ---------------------------------------------------------------------------
@@ -59,6 +212,13 @@ public:
     static void bitsToByteBE(const bool* bits, uint8_t& byte);
     /// <summary></summary>
     static void bitsToByteLE(const bool* bits, uint8_t& byte);
+
+    /// <summary></summary>
+    static uint16_t reverseEndian(uint16_t value);
+    /// <summary></summary>
+    static uint32_t reverseEndian(uint32_t value);
+    /// <summary></summary>
+    static uint64_t reverseEndian(uint64_t value);
 
     /// <summary></summary>
     static uint32_t getBits(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop);
