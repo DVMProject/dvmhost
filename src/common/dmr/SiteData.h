@@ -155,17 +155,17 @@ namespace dmr
 
     public:
         /// <summary>DMR site model type.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteModel, siteModel);
+        __READONLY_PROPERTY_PLAIN(uint8_t, siteModel);
         /// <summary>DMR site network ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, netId, netId);
+        __READONLY_PROPERTY_PLAIN(uint16_t, netId);
         /// <summary>DMR site ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, siteId, siteId);
+        __READONLY_PROPERTY_PLAIN(uint16_t, siteId);
         /// <summary>DMR partition ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, parId, parId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, parId);
         /// <summary>DMR require registration.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, requireReg, requireReg);
+        __READONLY_PROPERTY_PLAIN(bool, requireReg);
         /// <summary>Flag indicating whether this site is a linked active network member.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, netActive, netActive);
+        __READONLY_PROPERTY_PLAIN(bool, netActive);
     };
 } // namespace dmr
 

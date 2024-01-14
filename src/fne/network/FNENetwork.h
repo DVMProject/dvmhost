@@ -134,41 +134,41 @@ namespace network
 
     public:
         /// <summary>Peer ID.</summary>
-        __PROPERTY_PLAIN(uint32_t, id, id);
+        __PROPERTY_PLAIN(uint32_t, id);
 
         /// <summary>Current Stream ID.</summary>
-        __PROPERTY_PLAIN(uint32_t, currStreamId, currStreamId);
+        __PROPERTY_PLAIN(uint32_t, currStreamId);
 
         /// <summary>Unix socket storage containing the connected address.</summary>
-        __PROPERTY_PLAIN(sockaddr_storage, socketStorage, socketStorage);
+        __PROPERTY_PLAIN(sockaddr_storage, socketStorage);
         /// <summary>Length of the sockaddr_storage structure.</summary>
-        __PROPERTY_PLAIN(uint32_t, sockStorageLen, sockStorageLen);
+        __PROPERTY_PLAIN(uint32_t, sockStorageLen);
 
         /// <summary>IP address peer connected with.</<summary>
-        __PROPERTY_PLAIN(std::string, address, address);
+        __PROPERTY_PLAIN(std::string, address);
         /// <summary>Port number peer connected with.</summary>
-        __PROPERTY_PLAIN(uint16_t, port, port);
+        __PROPERTY_PLAIN(uint16_t, port);
 
         /// <summary>Salt value used for peer authentication.</summary>
-        __PROPERTY_PLAIN(uint32_t, salt, salt);
+        __PROPERTY_PLAIN(uint32_t, salt);
 
         /// <summary>Flag indicating whether or not the peer is connected.</summary>
-        __PROPERTY_PLAIN(bool, connected, connected);
+        __PROPERTY_PLAIN(bool, connected);
         /// <summary>Connection state.</summary>
-        __PROPERTY_PLAIN(NET_CONN_STATUS, connectionState, connectionState);
+        __PROPERTY_PLAIN(NET_CONN_STATUS, connectionState);
 
         /// <summary>Number of pings received.</summary>
-        __PROPERTY_PLAIN(uint32_t, pingsReceived, pingsReceived);
+        __PROPERTY_PLAIN(uint32_t, pingsReceived);
         /// <summary>Last ping received.</summary>
-        __PROPERTY_PLAIN(uint64_t, lastPing, lastPing);
+        __PROPERTY_PLAIN(uint64_t, lastPing);
 
         /// <summary>JSON objecting containing peer configuration information.</summary>
-        __PROPERTY_PLAIN(json::object, config, config);
+        __PROPERTY_PLAIN(json::object, config);
 
         /// <summary>Last received RTP sequence.</summary>
-        __PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
+        __PROPERTY_PLAIN(uint16_t, pktLastSeq);
         /// <summary>Calculated next RTP sequence.</summary>
-        __PROPERTY_PLAIN(uint16_t, pktNextSeq, pktNextSeq);
+        __PROPERTY_PLAIN(uint16_t, pktNextSeq);
     };
 
     // ---------------------------------------------------------------------------

@@ -78,7 +78,7 @@ namespace dmr
 
         public:
             /// <summary>Flag indicating whether or not the embedded data is valid.</summary>
-            __READONLY_PROPERTY_PLAIN(bool, valid, isValid);
+            __READONLY_PROPERTY_PLAIN(bool, valid);
             /// <summary>Full-link control opcode.</summary>
             __READONLY_PROPERTY(uint8_t, FLCO, FLCO);
 

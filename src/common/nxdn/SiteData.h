@@ -165,21 +165,21 @@ namespace nxdn
 
     public:
         /// <summary>NXDN location ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, locId, locId);
+        __READONLY_PROPERTY_PLAIN(uint32_t, locId);
         /// <summary>Channel ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId, channelId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
         /// <summary>Channel number.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo, channelNo);
+        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
         /// <summary>Service class.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass, serviceClass);
+        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass);
         /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, isAdjSite, isAdjSite);
+        __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
         /// <summary>Callsign.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, callsign, callsign);
+        __READONLY_PROPERTY_PLAIN(std::string, callsign);
         /// <summary>NXDN require registration.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, requireReg, requireReg);
+        __READONLY_PROPERTY_PLAIN(bool, requireReg);
         /// <summary>Flag indicating whether this site is a linked active network member.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, netActive, netActive);
+        __READONLY_PROPERTY_PLAIN(bool, netActive);
     };
 } // namespace nxdn
 

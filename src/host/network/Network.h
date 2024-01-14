@@ -83,7 +83,7 @@ namespace network
 
     public:
         /// <summary>Last received RTP sequence number.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq, pktLastSeq);
+        __READONLY_PROPERTY_PLAIN(uint16_t, pktLastSeq);
 
     protected:
         std::string m_address;

@@ -85,9 +85,9 @@ namespace lookups
 
     public:
         /// <summary>Flag indicating if the radio is enabled.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, radioEnabled, radioEnabled);
+        __READONLY_PROPERTY_PLAIN(bool, radioEnabled);
         /// <summary>Flag indicating if the radio is default.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, radioDefault, radioDefault);
+        __READONLY_PROPERTY_PLAIN(bool, radioDefault);
     };
 
     // ---------------------------------------------------------------------------

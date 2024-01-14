@@ -231,9 +231,9 @@ namespace network
         __PROTECTED_READONLY_PROPERTY(NET_CONN_STATUS, status, Status);
 
         /// <summary>Unix socket storage containing the connected address.</summary>
-        __PROTECTED_READONLY_PROPERTY_PLAIN(sockaddr_storage, addr, addr);
+        __PROTECTED_READONLY_PROPERTY_PLAIN(sockaddr_storage, addr);
         /// <summary>Length of the sockaddr_storage structure.</summary>
-        __PROTECTED_READONLY_PROPERTY_PLAIN(uint32_t, addrLen, addrLen);
+        __PROTECTED_READONLY_PROPERTY_PLAIN(uint32_t, addrLen);
 
         /// <summary>Flag indicating whether network DMR slot 1 traffic is permitted.</summary>
         __PROTECTED_READONLY_PROPERTY(bool, slot1, DMRSlot1);

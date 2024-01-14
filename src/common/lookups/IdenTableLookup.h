@@ -86,15 +86,15 @@ namespace lookups
 
     public:
         /// <summary>Channel ID for this entry.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId, channelId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
         /// <summary>Base frequency for this entry.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, baseFrequency, baseFrequency);
+        __READONLY_PROPERTY_PLAIN(uint32_t, baseFrequency);
         /// <summary>Channel spacing in kHz for this entry.</summary>
-        __READONLY_PROPERTY_PLAIN(float, chSpaceKhz, chSpaceKhz);
+        __READONLY_PROPERTY_PLAIN(float, chSpaceKhz);
         /// <summary>Channel transmit offset in MHz for this entry.</summary>
-        __READONLY_PROPERTY_PLAIN(float, txOffsetMhz, txOffsetMhz);
+        __READONLY_PROPERTY_PLAIN(float, txOffsetMhz);
         /// <summary>Channel bandwith in kHz for this entry.</summary>
-        __READONLY_PROPERTY_PLAIN(float, chBandwidthKhz, chBandwidthKhz);
+        __READONLY_PROPERTY_PLAIN(float, chBandwidthKhz);
     };
 
     // ---------------------------------------------------------------------------

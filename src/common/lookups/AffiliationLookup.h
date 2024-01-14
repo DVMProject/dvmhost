@@ -93,15 +93,15 @@ namespace lookups
 
     public:
         /// <summary>Voice Channel Identity.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, chId, chId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, chId);
         /// <summary>Voice Channel Number.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, chNo, chNo);
+        __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
         /// <summary>REST API Address.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, address, address);
+        __READONLY_PROPERTY_PLAIN(std::string, address);
         /// <summary>REST API Port.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, port, port);
+        __READONLY_PROPERTY_PLAIN(uint16_t, port);
         /// <summary>REST API Password.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, password, password);
+        __READONLY_PROPERTY_PLAIN(std::string, password);
     };
 
     // ---------------------------------------------------------------------------

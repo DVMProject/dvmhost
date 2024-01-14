@@ -209,14 +209,14 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
         protected: type m_##variableName;                                               \
         public: __forceinline type get##propName(void) const { return m_##variableName; }
 
-/// <summary>Creates a read-only get property, does not use "get"/"set".</summary>
-#define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName, propName)               \
-        protected: type m_##variableName;                                               \
-        public: __forceinline type propName(void) const { return m_##variableName; }
 /// <summary>Creates a read-only get property, does not use "get".</summary>
-#define __READONLY_PROPERTY_PLAIN(type, variableName, propName)                         \
+#define __PROTECTED_READONLY_PROPERTY_PLAIN(type, variableName)                         \
+        protected: type m_##variableName;                                               \
+        public: __forceinline type variableName(void) const { return m_##variableName; }
+/// <summary>Creates a read-only get property, does not use "get".</summary>
+#define __READONLY_PROPERTY_PLAIN(type, variableName)                                   \
         private: type m_##variableName;                                                 \
-        public: __forceinline type propName(void) const { return m_##variableName; }
+        public: __forceinline type variableName(void) const { return m_##variableName; }
 
 /// <summary>Creates a get and set private property.</summary>
 #define __PROPERTY(type, variableName, propName)                                        \
@@ -230,14 +230,14 @@ const uint8_t   IP_COMPRESS_RFC1144_UNCOMPRESS = 0x02U;
                 __forceinline void set##propName(type val) { m_##variableName = val; }
 
 /// <summary>Creates a get and set private property, does not use "get"/"set".</summary>
-#define __PROPERTY_PLAIN(type, variableName, propName)                                  \
+#define __PROPERTY_PLAIN(type, variableName)                                            \
         private: type m_##variableName;                                                 \
-        public: __forceinline type propName(void) const { return m_##variableName; }    \
-                __forceinline void propName(type val) { m_##variableName = val; }
+        public: __forceinline type variableName(void) const { return m_##variableName; }\
+                __forceinline void variableName(type val) { m_##variableName = val; }
 /// <summary>Creates a get and set protected property, does not use "get"/"set".</summary>
-#define __PROTECTED_PROPERTY_PLAIN(type, variableName, propName)                        \
+#define __PROTECTED_PROPERTY_PLAIN(type, variableName)                                  \
         protected: type m_##variableName;                                               \
-        public: __forceinline type propName(void) const { return m_##variableName; }    \
-                __forceinline void propName(type val) { m_##variableName = val; }
+        public: __forceinline type variableName(void) const { return m_##variableName; }\
+                __forceinline void variableName(type val) { m_##variableName = val; }
 
 #endif // __COMMON_DEFINES_H__

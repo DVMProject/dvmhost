@@ -107,7 +107,7 @@ namespace p25
 
             /** Local Site data */
             /// <summary>Local Site Identity Entry.</summary>
-            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry, siteIdenEntry);
+            __PROTECTED_PROPERTY_PLAIN(::lookups::IdenTable, siteIdenEntry);
 
         protected:
             friend class LC;

@@ -73,9 +73,9 @@ namespace lookups
 
     public:
         /// <summary>Talkgroup ID.</summary>
-        __PROPERTY_PLAIN(uint32_t, tgId, tgId);
+        __PROPERTY_PLAIN(uint32_t, tgId);
         /// <summary>Talkgroup DMR slot.</summary>
-        __PROPERTY_PLAIN(uint8_t, tgSlot, tgSlot);
+        __PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
@@ -117,11 +117,11 @@ namespace lookups
 
     public:
         /// <summary>Peer ID.</summary>
-        __PROPERTY_PLAIN(uint32_t, peerId, peerId);
+        __PROPERTY_PLAIN(uint32_t, peerId);
         /// <summary>Talkgroup ID.</summary>
-        __PROPERTY_PLAIN(uint32_t, tgId, tgId);
+        __PROPERTY_PLAIN(uint32_t, tgId);
         /// <summary>Talkgroup DMR slot.</summary>
-        __PROPERTY_PLAIN(uint8_t, tgSlot, tgSlot);
+        __PROPERTY_PLAIN(uint8_t, tgSlot);
     };
 
     // ---------------------------------------------------------------------------
@@ -189,15 +189,15 @@ namespace lookups
 
     public:
         /// <summary>Flag indicating whether the rule is active.</summary>
-        __PROPERTY_PLAIN(bool, active, active);
+        __PROPERTY_PLAIN(bool, active);
         /// <summary>Flag indicating whether or not the talkgroup is a parrot.</summary>
-        __PROPERTY_PLAIN(bool, parrot, parrot);
+        __PROPERTY_PLAIN(bool, parrot);
         /// <summary>List of peer IDs included by this rule.</summary>
-        __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion, inclusion);
+        __PROPERTY_PLAIN(std::vector<uint32_t>, inclusion);
         /// <summary>List of peer IDs excluded by this rule.</summary>
-        __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion, exclusion);
+        __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
         /// <summary>List of rewrites performed by this rule.</summary>
-        __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite, rewrite);
+        __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
     };
 
     // ---------------------------------------------------------------------------
@@ -247,11 +247,11 @@ namespace lookups
 
     public:
         /// <summary>Textual name for the routing rule.</summary>
-        __PROPERTY_PLAIN(std::string, name, name);
+        __PROPERTY_PLAIN(std::string, name);
         /// <summary>Configuration for the routing rule.</summary>
-        __PROPERTY_PLAIN(TalkgroupRuleConfig, config, config);
+        __PROPERTY_PLAIN(TalkgroupRuleConfig, config);
         /// <summary>Source talkgroup information for the routing rule.</summary>
-        __PROPERTY_PLAIN(TalkgroupRuleGroupVoiceSource, source, source);
+        __PROPERTY_PLAIN(TalkgroupRuleGroupVoiceSource, source);
     };
 
     // ---------------------------------------------------------------------------
@@ -308,11 +308,11 @@ namespace lookups
 
     public:
         /// <summary>Number indicating the number of seconds to hang on a talkgroup.</summary>
-        __PROPERTY_PLAIN(uint32_t, groupHangTime, groupHangTime);
+        __PROPERTY_PLAIN(uint32_t, groupHangTime);
         /// <summary>Flag indicating whether or not the network layer should send the talkgroups to peers.</summary>
-        __PROPERTY_PLAIN(bool, sendTalkgroups, sendTalkgroups);
+        __PROPERTY_PLAIN(bool, sendTalkgroups);
         /// <summary>List of group voice rules.</summary>
-        __PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice, groupVoice);
+        __PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
     };
 } // namespace lookups
 

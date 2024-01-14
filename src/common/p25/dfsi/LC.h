@@ -78,9 +78,9 @@ namespace p25
             __PROPERTY(uint8_t, rssi, RSSI);
 
             /// <summary>Link control data.</summary>
-            __READONLY_PROPERTY_PLAIN(p25::lc::LC*, control, control);
+            __READONLY_PROPERTY_PLAIN(p25::lc::LC*, control);
             /// <summary>Low speed data.</summary>
-            __READONLY_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd, lsd);
+            __READONLY_PROPERTY_PLAIN(p25::data::LowSpeedData*, lsd);
 
         private:
             edac::RS634717 m_rs;

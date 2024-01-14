@@ -467,7 +467,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // Regenerate the previous super blocks Embedded Data or substitude the LC for it
-            if (m_rfEmbeddedData[m_rfEmbeddedReadN].isValid())
+            if (m_rfEmbeddedData[m_rfEmbeddedReadN].valid())
                 lcss = m_rfEmbeddedData[m_rfEmbeddedReadN].getData(data + 2U, m_rfN);
             else
                 lcss = m_rfEmbeddedLC.getData(data + 2U, m_rfN);
@@ -1077,7 +1077,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         }
         else {
             // Regenerate the previous super blocks Embedded Data or substitude the LC for it
-            if (m_netEmbeddedData[m_netEmbeddedReadN].isValid())
+            if (m_netEmbeddedData[m_netEmbeddedReadN].valid())
                 lcss = m_netEmbeddedData[m_netEmbeddedReadN].getData(data + 2U, dmrData.getN());
             else
                 lcss = m_netEmbeddedLC.getData(data + 2U, dmrData.getN());

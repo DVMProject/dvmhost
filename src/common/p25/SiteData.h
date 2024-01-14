@@ -253,31 +253,31 @@ namespace p25
 
     public:
         /// <summary>P25 location resource area.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, lra, lra);
+        __READONLY_PROPERTY_PLAIN(uint8_t, lra);
         /// <summary>P25 network ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, netId, netId);
+        __READONLY_PROPERTY_PLAIN(uint32_t, netId);
         /// <summary>Gets the P25 system ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, sysId, sysId);
+        __READONLY_PROPERTY_PLAIN(uint32_t, sysId);
         /// <summary>P25 RFSS ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, rfssId, rfssId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, rfssId);
         /// <summary>P25 site ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, siteId, siteId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, siteId);
         /// <summary>Channel ID.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, channelId, channelId);
+        __READONLY_PROPERTY_PLAIN(uint8_t, channelId);
         /// <summary>Channel number.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo, channelNo);
+        __READONLY_PROPERTY_PLAIN(uint32_t, channelNo);
         /// <summary>Service class.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass, serviceClass);
+        __READONLY_PROPERTY_PLAIN(uint8_t, serviceClass);
         /// <summary>Flag indicating whether this site data is for an adjacent site.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, isAdjSite, isAdjSite);
+        __READONLY_PROPERTY_PLAIN(bool, isAdjSite);
         /// <summary>Callsign.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, callsign, callsign);
+        __READONLY_PROPERTY_PLAIN(std::string, callsign);
         /// <summary>Count of available channels.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, chCnt, chCnt);
+        __READONLY_PROPERTY_PLAIN(uint8_t, chCnt);
         /// <summary>Flag indicating whether this site is a linked active network member.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, netActive, netActive);
+        __READONLY_PROPERTY_PLAIN(bool, netActive);
         /// <summary>Local Time Offset.</summary>
-        __READONLY_PROPERTY_PLAIN(int8_t, lto, lto);
+        __READONLY_PROPERTY_PLAIN(int8_t, lto);
     };
 } // namespace p25
 
