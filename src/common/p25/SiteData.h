@@ -158,7 +158,7 @@ namespace p25
         /// <param name="chCnt">Channel count.</param>
         void setChCnt(uint8_t chCnt)
         {
-            m_chCnt = m_chCnt;
+            m_chCnt = chCnt;
         }
 
         /// <summary>Helper to set the site network active flag.</summary>
