@@ -48,9 +48,9 @@ namespace dmr
                 ~CSBK_RAW();
 
                 /// <summary>Decode a trunking signalling block.</summary>
-                bool decode(const uint8_t* data);
+                bool decode(const uint8_t* data) override;
                 /// <summary>Encode a trunking signalling block.</summary>
-                void encode(uint8_t* data);
+                void encode(uint8_t* data) override;
 
                 /// <summary>Sets the CSBK to encode.</summary>
                 void setCSBK(const uint8_t* csbk);

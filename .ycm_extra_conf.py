@@ -9,8 +9,6 @@ BASE_FLAGS = [
         '-Wall',
         '-Wextra',
         '-Werror',
-        '-Wno-long-long',
-        '-Wno-variadic-macros',
         '-fexceptions',
         '-ferror-limit=10000',
         '-DASIO_STANDALONE',

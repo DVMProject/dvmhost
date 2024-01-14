@@ -47,9 +47,9 @@ namespace nxdn
                 MESSAGE_TYPE_GRP_REG();
 
                 /// <summary>Decode layer 3 data.</summary>
-                void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void decode(const uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
                 /// <summary>Encode layer 3 data.</summary>
-                void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U);
+                void encode(uint8_t* data, uint32_t length, uint32_t offset = 0U) override;
 
                 /// <summary>Returns a string that represents the current RCCH.</summary>
                 virtual std::string toString(bool isp = false) override;

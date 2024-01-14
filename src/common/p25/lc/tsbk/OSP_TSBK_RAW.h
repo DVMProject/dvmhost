@@ -48,9 +48,9 @@ namespace p25
                 ~OSP_TSBK_RAW();
 
                 /// <summary>Decode a trunking signalling block.</summary>
-                bool decode(const uint8_t* data, bool rawTSBK = false);
+                bool decode(const uint8_t* data, bool rawTSBK = false) override;
                 /// <summary>Encode a trunking signalling block.</summary>
-                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
 
                 /// <summary>Sets the TSBK to encode.</summary>
                 void setTSBK(const uint8_t* tsbk);

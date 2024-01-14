@@ -46,9 +46,9 @@ namespace p25
                 OSP_IDEN_UP_VU();
 
                 /// <summary>Decode a trunking signalling block.</summary>
-                bool decode(const uint8_t* data, bool rawTSBK = false);
+                bool decode(const uint8_t* data, bool rawTSBK = false) override;
                 /// <summary>Encode a trunking signalling block.</summary>
-                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 virtual std::string toString(bool isp = false) override;

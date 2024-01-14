@@ -48,9 +48,9 @@ namespace p25
                 ~MBT_ISP_AUTH_RESP_M();
 
                 /// <summary>Decode a alternate trunking signalling block.</summary>
-                bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks);
+                bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) override;
                 /// <summary>Encode a alternate trunking signalling block.</summary>
-                void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData);
+                void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 virtual std::string toString(bool isp = false) override;

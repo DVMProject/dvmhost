@@ -46,9 +46,9 @@ namespace p25
                 LC_NET_STS_BCAST();
 
                 /// <summary>Decode a terminator data unit w/ link control.</summary>
-                bool decode(const uint8_t* data);
+                bool decode(const uint8_t* data) override;
                 /// <summary>Encode a terminator data unit w/ link control.</summary>
-                void encode(uint8_t* data);
+                void encode(uint8_t* data) override;
             };
         } // namespace tdulc
     } // namespace lc
