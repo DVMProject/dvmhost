@@ -53,6 +53,10 @@ namespace p25
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 virtual std::string toString(bool isp = false) override;
+
+            public:
+                /// <summary>Flag forcing the use of the group voice channel ID regardless of value.</summary>
+                __PROPERTY(bool, forceChannelId, ForceChannelId);
             };
         } // namespace tsbk
     } // namespace lc

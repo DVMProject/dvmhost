@@ -42,7 +42,8 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the IOSP_GRP_VCH class.
 /// </summary>
-IOSP_GRP_VCH::IOSP_GRP_VCH() : TSBK()
+IOSP_GRP_VCH::IOSP_GRP_VCH() : TSBK(),
+    m_forceChannelId(false)
 {
     m_lco = TSBK_IOSP_GRP_VCH;
 }
@@ -93,7 +94,7 @@ void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         (m_emergency ? 0x80U : 0x00U) +                                             // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                             // Encrypted Flag
         (m_priority & 0x07U);                                                       // Priority
-    if (m_grpVchId != 0U) {
+    if ((m_grpVchId != 0U) || m_forceChannelId) {
         tsbkValue = (tsbkValue << 4) + m_grpVchId;                                  // Channel ID
     }
     else {

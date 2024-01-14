@@ -100,6 +100,8 @@ TSBK::TSBK() :
     m_response(P25_RSP_ACCEPT),
     m_netId(P25_WACN_STD_DEFAULT),
     m_sysId(P25_SID_STD_DEFAULT),
+    m_grpVchId(0U),
+    m_grpVchNo(0U),
     m_emergency(false),
     m_encrypted(false),
     m_priority(4U),
