@@ -142,20 +142,25 @@ void FNENetwork::clock(uint32_t ms)
         std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
         for (auto peer : m_peers) {
             uint32_t id = peer.first;
-            FNEPeerConnection connection = peer.second;
-
-            if (connection.connected()) {
-                uint64_t dt = connection.lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
-                if (dt < now) {
-                    LogInfoEx(LOG_NET, "PEER %u timed out, dt = %u, now = %u", id, dt, now);
-                    peersToRemove.push_back(id);
+            FNEPeerConnection* connection = peer.second;
+            if (connection != nullptr) {
+                if (connection->connected()) {
+                    uint64_t dt = connection->lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
+                    if (dt < now) {
+                        LogInfoEx(LOG_NET, "PEER %u timed out, dt = %u, now = %u", id, dt, now);
+                        peersToRemove.push_back(id);
+                    }
                 }
             }
         }
 
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
+            FNEPeerConnection* connection = m_peers[peerId];
             m_peers.erase(peerId);
+            if (connection != nullptr) {
+                delete connection;
+            }
         }
 
         // roll the RTP timestamp if no call is in progress
@@ -197,19 +202,20 @@ void FNENetwork::clock(uint32_t ms)
 
         // update current peer packet sequence and stream ID
         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end()) && streamId != 0U) {
-            FNEPeerConnection connection = m_peers[peerId];
-
+            FNEPeerConnection* connection = m_peers[peerId];
             uint16_t pktSeq = rtpHeader.getSequence();
 
-            if ((connection.currStreamId() == streamId) && (pktSeq != connection.pktNextSeq())) {
-                LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection.pktNextSeq());
-            }
+            if (connection != nullptr) {
+                if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq())) {
+                    LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
+                }
 
-            connection.currStreamId(streamId);
-            connection.pktLastSeq(pktSeq);
-            connection.pktNextSeq(pktSeq + 1);
-            if (connection.pktNextSeq() > UINT16_MAX) {
-                connection.pktNextSeq(0U);
+                connection->currStreamId(streamId);
+                connection->pktLastSeq(pktSeq);
+                connection->pktNextSeq(pktSeq + 1);
+                if (connection->pktNextSeq() > UINT16_MAX) {
+                    connection->pktNextSeq(0U);
+                }
             }
 
             m_peers[peerId] = connection;
@@ -228,14 +234,16 @@ void FNENetwork::clock(uint32_t ms)
             {
                 if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        FNEPeerConnection connection = m_peers[peerId];
-                        std::string ip = UDPSocket::address(address);
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
 
-                        // validate peer (simple validation really)
-                        if (connection.connected() && connection.address() == ip) {
-                            if (m_dmrEnabled) {
-                                if (m_tagDMR != nullptr) {
-                                    m_tagDMR->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                if (m_dmrEnabled) {
+                                    if (m_tagDMR != nullptr) {
+                                        m_tagDMR->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                                    }
                                 }
                             }
                         }
@@ -243,14 +251,16 @@ void FNENetwork::clock(uint32_t ms)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        FNEPeerConnection connection = m_peers[peerId];
-                        std::string ip = UDPSocket::address(address);
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
 
-                        // validate peer (simple validation really)
-                        if (connection.connected() && connection.address() == ip) {
-                            if (m_p25Enabled) {
-                                if (m_tagP25 != nullptr) {
-                                    m_tagP25->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                if (m_p25Enabled) {
+                                    if (m_tagP25 != nullptr) {
+                                        m_tagP25->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                                    }
                                 }
                             }
                         }
@@ -258,14 +268,16 @@ void FNENetwork::clock(uint32_t ms)
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        FNEPeerConnection connection = m_peers[peerId];
-                        std::string ip = UDPSocket::address(address);
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
 
-                        // validate peer (simple validation really)
-                        if (connection.connected() && connection.address() == ip) {
-                            if (m_nxdnEnabled) {
-                                if (m_tagNXDN != nullptr) {
-                                    m_tagNXDN->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                if (m_nxdnEnabled) {
+                                    if (m_tagNXDN != nullptr) {
+                                        m_tagNXDN->processFrame(buffer.get(), length, peerId, rtpHeader.getSequence(), streamId);
+                                    }
                                 }
                             }
                         }
@@ -280,22 +292,22 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_RPTL:                                                             // Repeater Login
             {
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
-                    FNEPeerConnection connection = FNEPeerConnection(peerId, address, addrLen);
-                    connection.lastPing(now);
-                    connection.currStreamId(streamId);
+                    FNEPeerConnection* connection = new FNEPeerConnection(peerId, address, addrLen);
+                    connection->lastPing(now);
+                    connection->currStreamId(streamId);
 
                     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-                    connection.salt(dist(m_random));
+                    connection->salt(dist(m_random));
 
-                    LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection.address().c_str(), connection.port());
+                    LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection->address().c_str(), connection->port());
 
-                    connection.connectionState(NET_STAT_WAITING_AUTHORISATION);
+                    connection->connectionState(NET_STAT_WAITING_AUTHORISATION);
                     m_peers[peerId] = connection;
 
                     // transmit salt to peer
                     uint8_t salt[4U];
                     ::memset(salt, 0x00U, 4U);
-                    __SET_UINT32(connection.salt(), salt, 0U);
+                    __SET_UINT32(connection->salt(), salt, 0U);
 
                     writePeerACK(peerId, salt, 4U);
                     LogInfoEx(LOG_NET, "Challenge response send to PEER %u for login", peerId);
@@ -306,13 +318,16 @@ void FNENetwork::clock(uint32_t ms)
                     // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
                     // the login sequence
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        FNEPeerConnection connection = m_peers[peerId];
-                        connection.lastPing(now);
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            connection->lastPing(now);
 
-                        if (connection.connectionState() != NET_STAT_RUNNING) {
-                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                            if (it != m_peers.end()) {
-                                m_peers.erase(peerId);
+                            if (connection->connectionState() != NET_STAT_RUNNING) {
+                                auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                                if (it != m_peers.end()) {
+                                    m_peers.erase(peerId);
+                                    delete connection;
+                                }
                             }
                         }
                     }
@@ -322,66 +337,68 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_RPTK:                                                             // Repeater Authentication
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    connection.lastPing(now);
+                    FNEPeerConnection* connection = m_peers[peerId];
+                    if (connection != nullptr) {
+                        connection->lastPing(now);
 
-                    if (connection.connectionState() == NET_STAT_WAITING_AUTHORISATION) {
-                        // get the hash from the frame message
-                        uint8_t hash[length - 8U];
-                        ::memset(hash, 0x00U, length - 8U);
-                        ::memcpy(hash, buffer.get() + 8U, length - 8U);
+                        if (connection->connectionState() == NET_STAT_WAITING_AUTHORISATION) {
+                            // get the hash from the frame message
+                            uint8_t hash[length - 8U];
+                            ::memset(hash, 0x00U, length - 8U);
+                            ::memcpy(hash, buffer.get() + 8U, length - 8U);
 
-                        // generate our own hash
-                        uint8_t salt[4U];
-                        ::memset(salt, 0x00U, 4U);
-                        __SET_UINT32(connection.salt(), salt, 0U);
+                            // generate our own hash
+                            uint8_t salt[4U];
+                            ::memset(salt, 0x00U, 4U);
+                            __SET_UINT32(connection->salt(), salt, 0U);
 
-                        size_t size = m_password.size();
-                        uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
-                        ::memcpy(in, salt, sizeof(uint32_t));
-                        for (size_t i = 0U; i < size; i++)
-                            in[i + sizeof(uint32_t)] = m_password.at(i);
+                            size_t size = m_password.size();
+                            uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
+                            ::memcpy(in, salt, sizeof(uint32_t));
+                            for (size_t i = 0U; i < size; i++)
+                                in[i + sizeof(uint32_t)] = m_password.at(i);
 
-                        uint8_t out[32U];
-                        edac::SHA256 sha256;
-                        sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
+                            uint8_t out[32U];
+                            edac::SHA256 sha256;
+                            sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
 
-                        delete[] in;
+                            delete[] in;
 
-                        // validate hash
-                        bool valid = false;
-                        if (length - 8U == 32U) {
-                            valid = true;
-                            for (uint8_t i = 0; i < 32U; i++) {
-                                if (hash[i] != out[i]) {
-                                    valid = false;
-                                    break;
+                            // validate hash
+                            bool valid = false;
+                            if (length - 8U == 32U) {
+                                valid = true;
+                                for (uint8_t i = 0; i < 32U; i++) {
+                                    if (hash[i] != out[i]) {
+                                        valid = false;
+                                        break;
+                                    }
                                 }
                             }
-                        }
 
-                        if (valid) {
-                            connection.connectionState(NET_STAT_WAITING_CONFIG);
-                            writePeerACK(peerId);
-                            LogInfoEx(LOG_NET, "PEER %u has completed the login exchange", peerId);
+                            if (valid) {
+                                connection->connectionState(NET_STAT_WAITING_CONFIG);
+                                writePeerACK(peerId);
+                                LogInfoEx(LOG_NET, "PEER %u has completed the login exchange", peerId);
+                            }
+                            else {
+                                LogWarning(LOG_NET, "PEER %u has failed the login exchange", peerId);
+                                writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                                auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                                if (it != m_peers.end()) {
+                                    m_peers.erase(peerId);
+                                }
+                            }
+
+                            m_peers[peerId] = connection;
                         }
                         else {
-                            LogWarning(LOG_NET, "PEER %u has failed the login exchange", peerId);
+                            LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
                             writePeerNAK(peerId, TAG_REPEATER_AUTH);
                             auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
                             if (it != m_peers.end()) {
                                 m_peers.erase(peerId);
                             }
-                        }
-
-                        m_peers[peerId] = connection;
-                    }
-                    else {
-                        LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
-                        writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                        if (it != m_peers.end()) {
-                            m_peers.erase(peerId);
                         }
                     }
                 }
@@ -393,29 +410,20 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_RPTC:                                                             // Repeater Configuration
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    connection.lastPing(now);
+                    FNEPeerConnection* connection = m_peers[peerId];
+                    if (connection != nullptr) {
+                        connection->lastPing(now);
 
-                    if (connection.connectionState() == NET_STAT_WAITING_CONFIG) {
-                        uint8_t rawPayload[length - 8U];
-                        ::memset(rawPayload, 0x00U, length - 8U);
-                        ::memcpy(rawPayload, buffer.get() + 8U, length - 8U);
-                        std::string payload(rawPayload, rawPayload + (length - 8U));
+                        if (connection->connectionState() == NET_STAT_WAITING_CONFIG) {
+                            uint8_t rawPayload[length - 8U];
+                            ::memset(rawPayload, 0x00U, length - 8U);
+                            ::memcpy(rawPayload, buffer.get() + 8U, length - 8U);
+                            std::string payload(rawPayload, rawPayload + (length - 8U));
 
-                        // parse JSON body
-                        json::value v;
-                        std::string err = json::parse(v, payload);
-                        if (!err.empty()) {
-                            LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
-                            writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                            if (it != m_peers.end()) {
-                                m_peers.erase(peerId);
-                            }
-                        }
-                        else  {
-                            // ensure parsed JSON is an object
-                            if (!v.is<json::object>()) {
+                            // parse JSON body
+                            json::value v;
+                            std::string err = json::parse(v, payload);
+                            if (!err.empty()) {
                                 LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
                                 writePeerNAK(peerId, TAG_REPEATER_AUTH);
                                 auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
@@ -423,40 +431,51 @@ void FNENetwork::clock(uint32_t ms)
                                     m_peers.erase(peerId);
                                 }
                             }
-                            else {
-                                connection.config(v.get<json::object>());
-                                connection.connectionState(NET_STAT_RUNNING);
-                                connection.connected(true);
-                                connection.pingsReceived(0U);
-                                connection.lastPing(now);
-                                m_peers[peerId] = connection;
+                            else  {
+                                // ensure parsed JSON is an object
+                                if (!v.is<json::object>()) {
+                                    LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
+                                    writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                                    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                                    if (it != m_peers.end()) {
+                                        m_peers.erase(peerId);
+                                    }
+                                }
+                                else {
+                                    connection->config(v.get<json::object>());
+                                    connection->connectionState(NET_STAT_RUNNING);
+                                    connection->connected(true);
+                                    connection->pingsReceived(0U);
+                                    connection->lastPing(now);
+                                    m_peers[peerId] = connection;
 
-                                writePeerACK(peerId);
-                                LogInfoEx(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
+                                    writePeerACK(peerId);
+                                    LogInfoEx(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
 
-                                // queue final update messages and flush
-                                writeWhitelistRIDs(peerId, true);
-                                writeBlacklistRIDs(peerId, true);
-                                m_frameQueue->flushQueue();
+                                    // queue final update messages and flush
+                                    writeWhitelistRIDs(peerId, true);
+                                    writeBlacklistRIDs(peerId, true);
+                                    m_frameQueue->flushQueue();
 
-                                writeTGIDs(peerId, true);
-                                writeDeactiveTGIDs(peerId, true);
-                                m_frameQueue->flushQueue();
+                                    writeTGIDs(peerId, true);
+                                    writeDeactiveTGIDs(peerId, true);
+                                    m_frameQueue->flushQueue();
 
-                                json::object peerConfig = connection.config();
-                                if (peerConfig["software"].is<std::string>()) {
-                                    std::string software = peerConfig["software"].get<std::string>();
-                                    LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());
+                                    json::object peerConfig = connection->config();
+                                    if (peerConfig["software"].is<std::string>()) {
+                                        std::string software = peerConfig["software"].get<std::string>();
+                                        LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());
+                                    }
                                 }
                             }
                         }
-                    }
-                    else {
-                        LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
-                        writePeerNAK(peerId, TAG_REPEATER_CONFIG);
-                        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                        if (it != m_peers.end()) {
-                            m_peers.erase(peerId);
+                        else {
+                            LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
+                            writePeerNAK(peerId, TAG_REPEATER_CONFIG);
+                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                            if (it != m_peers.end()) {
+                                m_peers.erase(peerId);
+                            }
                         }
                     }
                 }
@@ -469,16 +488,19 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_RPT_CLOSING:                                                      // Repeater Closing (Disconnect)
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    std::string ip = UDPSocket::address(address);
+                    FNEPeerConnection* connection = m_peers[peerId];
+                    if (connection != nullptr) {
+                        std::string ip = UDPSocket::address(address);
 
-                    // validate peer (simple validation really)
-                    if (connection.connected() && connection.address() == ip) {
-                        LogInfoEx(LOG_NET, "PEER %u is closing down", peerId);
+                        // validate peer (simple validation really)
+                        if (connection->connected() && connection->address() == ip) {
+                            LogInfoEx(LOG_NET, "PEER %u is closing down", peerId);
 
-                        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                        if (it != m_peers.end()) {
-                            m_peers.erase(peerId);
+                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+                            if (it != m_peers.end()) {
+                                m_peers.erase(peerId);
+                                delete connection;
+                            }
                         }
                     }
                 }
@@ -487,27 +509,29 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_PING:                                                             // Repeater Ping
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    std::string ip = UDPSocket::address(address);
+                    FNEPeerConnection* connection = m_peers[peerId];
+                    if (connection != nullptr) {
+                        std::string ip = UDPSocket::address(address);
 
-                    // validate peer (simple validation really)
-                    if (connection.connected() && connection.address() == ip) {
-                        uint32_t pingsRx = connection.pingsReceived();
-                        pingsRx++;
-                        
-                        connection.pingsReceived(pingsRx);
-                        connection.lastPing(now);
-                        connection.pktLastSeq(connection.pktLastSeq() + 1);
+                        // validate peer (simple validation really)
+                        if (connection->connected() && connection->address() == ip) {
+                            uint32_t pingsRx = connection->pingsReceived();
+                            pingsRx++;
 
-                        m_peers[peerId] = connection;
-                        writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
+                            connection->pingsReceived(pingsRx);
+                            connection->lastPing(now);
+                            connection->pktLastSeq(connection->pktLastSeq() + 1);
 
-                        if (m_debug) {
-                            LogDebug(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection.pingsReceived());
+                            m_peers[peerId] = connection;
+                            writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
+
+                            if (m_debug) {
+                                LogDebug(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection->pingsReceived());
+                            }
                         }
-                    }
-                    else {
-                        writePeerNAK(peerId, TAG_REPEATER_PING);
+                        else {
+                            writePeerNAK(peerId, TAG_REPEATER_PING);
+                        }
                     }
                 }
             }
@@ -516,15 +540,17 @@ void FNENetwork::clock(uint32_t ms)
         case NET_FUNC_GRANT_REQ:                                                        // Repeater Grant Request
             {
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                    FNEPeerConnection connection = m_peers[peerId];
-                    std::string ip = UDPSocket::address(address);
+                    FNEPeerConnection* connection = m_peers[peerId];
+                    if (connection != nullptr) {
+                        std::string ip = UDPSocket::address(address);
 
-                    // validate peer (simple validation really)
-                    if (connection.connected() && connection.address() == ip) {
-                        /* ignored */
-                    }
-                    else {
-                        writePeerNAK(peerId, TAG_REPEATER_GRANT);
+                        // validate peer (simple validation really)
+                        if (connection->connected() && connection->address() == ip) {
+                            /* ignored */
+                        }
+                        else {
+                            writePeerNAK(peerId, TAG_REPEATER_GRANT);
+                        }
                     }
                 }
             }
@@ -535,20 +561,22 @@ void FNENetwork::clock(uint32_t ms)
                 if (fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_ACTIVITY) {      // Peer Activity Log Transfer
                     if (m_allowActivityTransfer) {
                         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                            FNEPeerConnection connection = m_peers[peerId];
-                            std::string ip = UDPSocket::address(address);
+                            FNEPeerConnection* connection = m_peers[peerId];
+                            if (connection != nullptr) {
+                                std::string ip = UDPSocket::address(address);
 
-                            // validate peer (simple validation really)
-                            if (connection.connected() && connection.address() == ip) {
-                                uint8_t rawPayload[length - 11U];
-                                ::memset(rawPayload, 0x00U, length - 11U);
-                                ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
-                                std::string payload(rawPayload, rawPayload + (length - 11U));
+                                // validate peer (simple validation really)
+                                if (connection->connected() && connection->address() == ip) {
+                                    uint8_t rawPayload[length - 11U];
+                                    ::memset(rawPayload, 0x00U, length - 11U);
+                                    ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
+                                    std::string payload(rawPayload, rawPayload + (length - 11U));
 
-                                ::ActivityLog("%u %s", peerId, payload.c_str());
-                            }
-                            else {
-                                writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG);
+                                    ::ActivityLog("%u %s", peerId, payload.c_str());
+                                }
+                                else {
+                                    writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG);
+                                }
                             }
                         }
                     }
@@ -556,23 +584,25 @@ void FNENetwork::clock(uint32_t ms)
                 else if (fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_DIAG) {     // Peer Diagnostic Log Transfer
                     if (m_allowDiagnosticTransfer) {
                         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                            FNEPeerConnection connection = m_peers[peerId];
-                            std::string ip = UDPSocket::address(address);
+                            FNEPeerConnection* connection = m_peers[peerId];
+                            if (connection != nullptr) {
+                                std::string ip = UDPSocket::address(address);
 
-                            // validate peer (simple validation really)
-                            if (connection.connected() && connection.address() == ip) {
-                                uint8_t rawPayload[length - 11U];
-                                ::memset(rawPayload, 0x00U, length - 11U);
-                                ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
-                                std::string payload(rawPayload, rawPayload + (length - 11U));
+                                // validate peer (simple validation really)
+                                if (connection->connected() && connection->address() == ip) {
+                                    uint8_t rawPayload[length - 11U];
+                                    ::memset(rawPayload, 0x00U, length - 11U);
+                                    ::memcpy(rawPayload, buffer.get() + 11U, length - 11U);
+                                    std::string payload(rawPayload, rawPayload + (length - 11U));
 
-                                bool currState = g_disableTimeDisplay;
-                                g_disableTimeDisplay = true;
-                                ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
-                                g_disableTimeDisplay = currState;
-                            }
-                            else {
-                                writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);
+                                    bool currState = g_disableTimeDisplay;
+                                    g_disableTimeDisplay = true;
+                                    ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
+                                    g_disableTimeDisplay = currState;
+                                }
+                                else {
+                                    writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);
+                                }
                             }
                         }
                     }
@@ -931,17 +961,20 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
-        uint32_t peerStreamId = m_peers[peerId].currStreamId();
-        if (streamId == 0U) {
-            streamId = peerStreamId;
+        FNEPeerConnection* connection = m_peers[peerId];
+        if (connection != nullptr) {
+            uint32_t peerStreamId = connection->currStreamId();
+            if (streamId == 0U) {
+                streamId = peerStreamId;
+            }
+            sockaddr_storage addr = connection->socketStorage();
+            uint32_t addrLen = connection->sockStorageLen();
+
+            m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+            if (queueOnly)
+                return true;
+            return m_frameQueue->flushQueue();
         }
-        sockaddr_storage addr = m_peers[peerId].socketStorage();
-        uint32_t addrLen = m_peers[peerId].sockStorageLen();
-        
-        m_frameQueue->enqueueMessage(data, length, streamId, peerId, m_peerId, opcode, pktSeq, addr, addrLen);
-        if (queueOnly)
-            return true;
-        return m_frameQueue->flushQueue();
     }
 
     return false;
@@ -961,12 +994,15 @@ bool FNENetwork::writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const
 {
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
-        if (incPktSeq) {
-            m_peers[peerId].pktLastSeq(m_peers[peerId].pktLastSeq() + 1);
-        }
-        uint16_t pktSeq = m_peers[peerId].pktLastSeq();
+        FNEPeerConnection* connection = m_peers[peerId];
+        if (connection != nullptr) {
+            if (incPktSeq) {
+                connection->pktLastSeq(connection->pktLastSeq() + 1);
+            }
+            uint16_t pktSeq = connection->pktLastSeq();
 
-        return writePeer(peerId, opcode, data, length, pktSeq, streamId, queueOnly);
+            return writePeer(peerId, opcode, data, length, pktSeq, streamId, queueOnly);
+        }
     }
 
     return false;

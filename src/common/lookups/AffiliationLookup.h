@@ -161,6 +161,8 @@ namespace lookups
         virtual bool isNetGranted(uint32_t dstId) const;
         /// <summary>Helper to get the channel granted for the given destination ID.</summary>
         virtual uint32_t getGrantedCh(uint32_t dstId);
+        /// <summary>Helper to get the destination ID granted to the given source ID.</summary>
+        virtual uint32_t getGrantedBySrcId(uint32_t srcId);
         /// <summary>Helper to get the source ID granted for the given destination ID.</summary>
         virtual uint32_t getGrantedSrcId(uint32_t dstId);
 

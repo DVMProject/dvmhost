@@ -77,8 +77,8 @@ void OSP_RFSS_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     tsbkValue = m_siteData.lra();                                                   // Location Registration Area
     tsbkValue = (tsbkValue << 4) +
-        (m_roamerReaccess) ? 0x02U : 0x00U +                                        // Roamer Reaccess Method
-        (m_siteData.netActive()) ? 0x01U : 0x00U;                                   // Network Active
+        ((m_roamerReaccess) ? 0x02U : 0x00U) +                                      // Roamer Reaccess Method
+        ((m_siteData.netActive()) ? 0x01U : 0x00U);                                 // Network Active
     tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
     tsbkValue = (tsbkValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
     tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                             // Site ID

@@ -56,6 +56,10 @@ namespace network
 
     class HOST_SW_API FNEPeerConnection {
     public:
+        auto operator=(FNEPeerConnection&) -> FNEPeerConnection& = delete;
+        auto operator=(FNEPeerConnection&&) -> FNEPeerConnection& = delete;
+        FNEPeerConnection(FNEPeerConnection&) = delete;
+
         /// <summary>Initializes a new insatnce of the FNEPeerConnection class.</summary>
         FNEPeerConnection() :
             m_id(0U),
@@ -99,37 +103,6 @@ namespace network
             assert(sockStorageLen > 0U);
             assert(!m_address.empty());
             assert(m_port > 0U);
-        }
-
-        /// <summary>Equals operator. Copies this FNEPeerConnection to another FNEPeerConnection.</summary>
-        virtual FNEPeerConnection& operator=(const FNEPeerConnection& data)
-        {
-            if (this != &data) {
-                m_id = data.m_id;
-
-                m_currStreamId = data.m_currStreamId;
-
-                m_socketStorage = data.m_socketStorage;
-                m_sockStorageLen = data.m_sockStorageLen;
-
-                m_address = data.m_address;
-                m_port = data.m_port;
-
-                m_salt = data.m_salt;
-
-                m_connected = data.m_connected;
-                m_connectionState = data.m_connectionState;
-
-                m_pingsReceived = data.m_pingsReceived;
-                m_lastPing = data.m_lastPing;
-
-                m_config = data.m_config;
-
-                m_pktLastSeq = data.m_pktLastSeq;
-                m_pktNextSeq = data.m_pktNextSeq;
-            }
-
-            return *this;
         }
 
     public:
@@ -235,8 +208,8 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        typedef std::pair<const uint32_t, network::FNEPeerConnection> PeerMapPair;
-        std::unordered_map<uint32_t, FNEPeerConnection> m_peers;
+        typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
+        std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
 
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;

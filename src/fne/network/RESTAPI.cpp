@@ -461,30 +461,31 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
         if (m_network->m_peers.size() > 0) {
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection peer = entry.second;
+                network::FNEPeerConnection* peer = entry.second;
+                if (peer != nullptr) {
+                    json::object peerObj = json::object();
+                    peerObj["peerId"].set<uint32_t>(peerId);
 
-                json::object peerObj = json::object();
-                peerObj["peerId"].set<uint32_t>(peerId);
+                    std::string address = peer->address();
+                    peerObj["address"].set<std::string>(address);
+                    uint16_t port = peer->port();
+                    peerObj["port"].set<uint16_t>(port);
+                    bool connected = peer->connected();
+                    peerObj["connected"].set<bool>(connected);
+                    uint32_t connectionState = (uint32_t)peer->connectionState();
+                    peerObj["connectionState"].set<uint32_t>(connectionState);
+                    uint32_t pingsReceived = peer->pingsReceived();
+                    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
+                    uint64_t lastPing = peer->lastPing();
+                    peerObj["lastPing"].set<uint64_t>(lastPing);
 
-                std::string address = peer.address();
-                peerObj["address"].set<std::string>(address);
-                uint16_t port = peer.port();
-                peerObj["port"].set<uint16_t>(port);
-                bool connected = peer.connected();
-                peerObj["connected"].set<bool>(connected);
-                uint32_t connectionState = (uint32_t)peer.connectionState();
-                peerObj["connectionState"].set<uint32_t>(connectionState);
-                uint32_t pingsReceived = peer.pingsReceived();
-                peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
-                uint64_t lastPing = peer.lastPing();
-                peerObj["lastPing"].set<uint64_t>(lastPing);
+                    json::object peerConfig = peer->config();
+                    if (peerConfig["rcon"].is<json::object>())
+                        peerConfig.erase("rcon");
+                    peerObj["config"].set<json::object>(peerConfig);
 
-                json::object peerConfig = peer.config();
-                if (peerConfig["rcon"].is<json::object>())
-                    peerConfig.erase("rcon");
-                peerObj["config"].set<json::object>(peerConfig);
-
-                peers.push_back(json::value(peerObj));
+                    peers.push_back(json::value(peerObj));
+                }
             }
         }
     }

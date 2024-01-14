@@ -464,6 +464,27 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
 }
 
 /// <summary>
+/// Helper to get the destination ID granted to the given source ID.
+/// </summary>
+/// <param name="srcId"></param>
+/// <returns></returns>
+uint32_t AffiliationLookup::getGrantedBySrcId(uint32_t srcId)
+{
+    if (srcId == 0U) {
+        return 0U;
+    }
+
+    // lookup dynamic channel grant table entry
+    for (auto entry : m_grantSrcIdTable) {
+        if (entry.second == srcId) {
+            return entry.first;
+        }
+    }
+
+    return 0U;
+}
+
+/// <summary>
 /// Helper to get the source ID granted for the given destination ID.
 /// </summary>
 /// <param name="dstId"></param>
