@@ -86,11 +86,16 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
             if (m_warnCRC) {
-                LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                // case where no CRC is defined
+                if ((tsbk[P25_TSBK_LENGTH_BYTES - 2U] != 0x00U) && (tsbk[P25_TSBK_LENGTH_BYTES - 1U] != 0x00U)) {
+                    LogWarning(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
+                }
+
                 ret = true; // ignore CRC error
             }
             else {
-                LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                LogError(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
             }
         }
     }
@@ -103,18 +108,18 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         try {
             bool ret = trellis.decode12(raw, tsbk);
             if (!ret) {
-                LogError(LOG_P25, "TSBK::decode(), failed to decode Trellis 1/2 rate coding");
+                LogError(LOG_P25, "TSBKFactory::createTSBK(), failed to decode Trellis 1/2 rate coding");
             }
 
             if (ret) {
                 ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
                 if (!ret) {
                     if (m_warnCRC) {
-                        LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                        LogWarning(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
                         ret = true; // ignore CRC error
                     }
                     else {
-                        LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                        LogError(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
                     }
                 }
             }
@@ -155,7 +160,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
             mfId = P25_MFG_STANDARD;
             break;
         default:
-            LogError(LOG_P25, "TSBK::decode(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
+            LogError(LOG_P25, "TSBKFactory::createTSBK(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
             break;
         }
 

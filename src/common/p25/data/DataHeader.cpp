@@ -38,6 +38,16 @@ using namespace p25;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+#if FORCE_TSBK_CRC_WARN
+bool DataHeader::m_warnCRC = true;
+#else
+bool DataHeader::m_warnCRC = false;
+#endif
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -100,8 +110,25 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
     else {
         valid = m_trellis.decode12(data, m_data);
     }
-    if (valid)
+
+    if (valid) {
         valid = edac::CRC::checkCCITT162(m_data, P25_PDU_HEADER_LENGTH_BYTES);
+        if (!valid) {
+            if (m_warnCRC) {
+                // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                // case where no CRC is defined
+                if ((m_data[P25_PDU_HEADER_LENGTH_BYTES - 2U] != 0x00U) && (m_data[P25_PDU_HEADER_LENGTH_BYTES - 1U] != 0x00U)) {
+                    LogWarning(LOG_P25, "DataHeader::decode(), failed CRC CCITT-162 check");
+                }
+
+                valid = true; // ignore CRC error
+            }
+            else {
+                LogError(LOG_P25, "DataHeader::decode(), failed CRC CCITT-162 check");
+            }
+        }
+    }
+
     if (!valid) {
         return false;
     }
@@ -253,6 +280,8 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
     if (!noTrellis) {
         // encode 1/2 rate Trellis
         m_trellis.encode12(header, data);
+    } else {
+        ::memcpy(data, header, P25_PDU_HEADER_LENGTH_BYTES);
     }
 }
 

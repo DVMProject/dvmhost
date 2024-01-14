@@ -52,6 +52,10 @@ namespace p25
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 virtual std::string toString(bool isp = false) override;
+
+            public:
+                /// <summary>Roamer Reaccess Method.</summary>
+                __PROPERTY(bool, roamerReaccess, RoamerReaccess);
             };
         } // namespace tsbk
     } // namespace lc

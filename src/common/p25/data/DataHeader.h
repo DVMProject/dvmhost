@@ -71,6 +71,9 @@ namespace p25
             /// <summary>Gets the count of block padding.</summary>
             uint8_t getPadCount() const;
 
+            /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
+            static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+
         public:
             /// <summary>Flag indicating if acknowledgement is needed.</summary>
             __PROPERTY(bool, ackNeeded, AckNeeded);
@@ -124,6 +127,8 @@ namespace p25
             uint32_t m_dataOctets;
 
             uint8_t* m_data;
+        
+            static bool m_warnCRC;
         };
     } // namespace data
 } // namespace p25

@@ -42,7 +42,8 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the OSP_RFSS_STS_BCAST class.
 /// </summary>
-OSP_RFSS_STS_BCAST::OSP_RFSS_STS_BCAST() : TSBK()
+OSP_RFSS_STS_BCAST::OSP_RFSS_STS_BCAST() : TSBK(),
+    m_roamerReaccess(false)
 {
     m_lco = TSBK_OSP_RFSS_STS_BCAST;
 }
@@ -76,7 +77,8 @@ void OSP_RFSS_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     tsbkValue = m_siteData.lra();                                                   // Location Registration Area
     tsbkValue = (tsbkValue << 4) +
-        (m_siteData.netActive()) ? P25_CFVA_NETWORK : 0U;                           // CFVA
+        (m_roamerReaccess) ? 0x02U : 0x00U +                                        // Roamer Reaccess Method
+        (m_siteData.netActive()) ? 0x01U : 0x00U;                                   // Network Active
     tsbkValue = (tsbkValue << 12) + m_siteData.sysId();                             // System ID
     tsbkValue = (tsbkValue << 8) + m_siteData.rfssId();                             // RF Sub-System ID
     tsbkValue = (tsbkValue << 8) + m_siteData.siteId();                             // Site ID

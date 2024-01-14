@@ -229,7 +229,12 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
         bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
         if (!ret) {
             if (m_warnCRC) {
-                LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
+                // case where no CRC is defined
+                if ((tsbk[P25_TSBK_LENGTH_BYTES - 2U] != 0x00U) && (tsbk[P25_TSBK_LENGTH_BYTES - 1U] != 0x00U)) {
+                    LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                }
+
                 ret = true; // ignore CRC error
             }
             else {
