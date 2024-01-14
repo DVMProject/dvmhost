@@ -25,6 +25,7 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 cmake_minimum_required(VERSION 3.16.0)
+set(CMAKE_EXPORT_COMPILE_COMMANDS on) 
 
 option(ENABLE_TESTS "Enable compilation of test suite" off)
 message(CHECK_START "Enable compilation of test suite")
