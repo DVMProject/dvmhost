@@ -55,7 +55,7 @@ namespace network
         //      Represents the FNE RTP Extension header.
         // ---------------------------------------------------------------------------
 
-        class RTPFNEHeader : public RTPExtensionHeader {
+        class HOST_SW_API RTPFNEHeader : public RTPExtensionHeader {
         public:
             /// <summary>Initializes a new instance of the RTPFNEHeader class.</summary>
             RTPFNEHeader();

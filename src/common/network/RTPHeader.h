@@ -50,7 +50,7 @@ namespace network
         //      Represents an RTP header.
         // ---------------------------------------------------------------------------
 
-        class RTPHeader {
+        class HOST_SW_API RTPHeader {
         public:
             /// <summary>Initializes a new instance of the RTPHeader class.</summary>
             RTPHeader();

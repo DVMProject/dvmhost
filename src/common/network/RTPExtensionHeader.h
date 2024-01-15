@@ -47,7 +47,7 @@ namespace network
         //      Represents an RTP Extension header.
         // ---------------------------------------------------------------------------
 
-        class RTPExtensionHeader {
+        class HOST_SW_API RTPExtensionHeader {
         public:
             /// <summary>Initializes a new instance of the RTPExtensionHeader class.</summary>
             RTPExtensionHeader();
