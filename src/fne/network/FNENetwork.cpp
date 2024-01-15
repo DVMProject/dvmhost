@@ -326,8 +326,6 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            connection->lastPing(now);
-
                             if (connection->connectionState() != NET_STAT_RUNNING) {
                                 auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
                                 if (it != m_peers.end()) {
