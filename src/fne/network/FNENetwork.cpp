@@ -166,6 +166,7 @@ void FNENetwork::clock(uint32_t ms)
         // roll the RTP timestamp if no call is in progress
         if (!m_callInProgress) {
             frame::RTPHeader::resetStartTime();
+            m_frameQueue->clearTimestamps();
         }
 
         m_maintainenceTimer.start();
@@ -206,15 +207,20 @@ void FNENetwork::clock(uint32_t ms)
             uint16_t pktSeq = rtpHeader.getSequence();
 
             if (connection != nullptr) {
-                if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq())) {
-                    LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
-                }
-
-                connection->currStreamId(streamId);
-                connection->pktLastSeq(pktSeq);
-                connection->pktNextSeq(pktSeq + 1);
-                if (connection->pktNextSeq() > UINT16_MAX) {
+                if (pktSeq == RTP_END_OF_CALL_SEQ) {
+                    connection->pktLastSeq(pktSeq);
                     connection->pktNextSeq(0U);
+                } else {
+                    if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq())) {
+                        LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
+                    }
+
+                    connection->currStreamId(streamId);
+                    connection->pktLastSeq(pktSeq);
+                    connection->pktNextSeq(pktSeq + 1);
+                    if (connection->pktNextSeq() > UINT16_MAX) {
+                        connection->pktNextSeq(0U);
+                    }
                 }
             }
 
@@ -1048,7 +1054,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, length + 10U, 0U, false, true);
+    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /// <summary>
@@ -1067,7 +1073,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
 
     LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
-    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, 0U, false, true);
+    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /// <summary>

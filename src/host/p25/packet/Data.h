@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -124,7 +124,7 @@ namespace p25
             ~Data();
 
             /// <summary>Write data processed from RF to the network.</summary>
-            void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len);
+            void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len, bool lastBlock);
 
             /// <summary>Helper to write a P25 PDU packet.</summary>
             void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls = false);

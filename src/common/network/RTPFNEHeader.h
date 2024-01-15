@@ -40,6 +40,8 @@
 #define RTP_FNE_HEADER_LENGTH_BYTES 16
 #define RTP_FNE_HEADER_LENGTH_EXT_LEN 4
 
+#define RTP_END_OF_CALL_SEQ 65535
+
 namespace network
 {
     namespace frame

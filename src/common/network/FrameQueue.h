@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RawFrameQueue.h"
+
+#include <unordered_map>
 
 namespace network
 {
@@ -64,8 +66,12 @@ namespace network
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
             uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
+        /// <summary>Helper method to clear any tracked stream timestamps.</summary>
+        void clearTimestamps();
+
     private:
         uint32_t m_peerId;
+        std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
     };
 } // namespace network
 

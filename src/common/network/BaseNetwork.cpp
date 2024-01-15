@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2020-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2020-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 */
 #include "Defines.h"
 #include "common/dmr/DMRDefines.h"
+#include "common/nxdn/NXDNDefines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
 #include "edac/SHA256.h"
@@ -301,8 +302,9 @@ UInt8Array BaseNetwork::readDMR(bool& ret, uint32_t& frameLength)
 /// Writes DMR frame data to the network.
 /// </summary>
 /// <param name="data"></param>
+/// <param name="noSequence"></param>
 /// <returns></returns>
-bool BaseNetwork::writeDMR(const dmr::data::Data& data)
+bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -336,7 +338,16 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data)
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, pktSeq(resetSeq), m_dmrStreamId[slotIndex]);
+    uint16_t seq = pktSeq(resetSeq);
+    if (dataType == dmr::DT_TERMINATOR_WITH_LC) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    if (noSequence) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, seq, m_dmrStreamId[slotIndex]);
 }
 
 /// <summary>
@@ -463,7 +474,12 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
+    uint16_t seq = pktSeq(resetSeq);
+    if (controlByte == 0x00U) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
 /// <summary>
@@ -489,7 +505,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
 }
 
 /// <summary>
@@ -499,9 +515,10 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
+/// <param name="lastBlock"></param>
 /// <returns></returns>
 bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data,
-    const uint32_t len)
+    const uint32_t len, bool lastBlock)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -518,7 +535,12 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
+    uint16_t seq = pktSeq(resetSeq);
+    if (lastBlock) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
 /// <summary>
@@ -572,8 +594,9 @@ UInt8Array BaseNetwork::readNXDN(bool& ret, uint32_t& frameLength)
 /// <param name="lc"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
+/// <param name="noSequence"></param>
 /// <returns></returns>
-bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len)
+bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len, bool noSequence)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -590,7 +613,17 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, pktSeq(resetSeq), m_nxdnStreamId);
+    uint16_t seq = pktSeq(resetSeq);
+    if (lc.getMessageType() == nxdn::RTCH_MESSAGE_TYPE_TX_REL ||
+        lc.getMessageType() == nxdn::RTCH_MESSAGE_TYPE_TX_REL_EX) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    if (noSequence) {
+        seq = RTP_END_OF_CALL_SEQ;
+    }
+
+    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, seq, m_nxdnStreamId);
 }
 
 /// <summary>
@@ -622,7 +655,7 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 
     uint16_t curr = m_pktSeq;
     ++m_pktSeq;
-    if (m_pktSeq > UINT16_MAX) {
+    if (m_pktSeq >= RTP_END_OF_CALL_SEQ - 1U) {
         m_pktSeq = 0U;
     }
 

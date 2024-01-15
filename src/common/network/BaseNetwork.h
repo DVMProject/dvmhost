@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2020-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2020-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -191,7 +191,7 @@ namespace network
         /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>
         virtual UInt8Array readDMR(bool& ret, uint32_t& frameLength);
         /// <summary>Writes DMR frame data to the network.</summary>
-        virtual bool writeDMR(const dmr::data::Data& data);
+        virtual bool writeDMR(const dmr::data::Data& data, bool noSequence = false);
 
         /// <summary>Helper to test if the DMR ring buffer has data.</summary>
         bool hasDMRData() const;
@@ -210,7 +210,7 @@ namespace network
         virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
         /// <summary>Writes P25 PDU frame data to the network.</summary>
         virtual bool writeP25PDU(const p25::data::DataHeader& header, const uint8_t currentBlock, const uint8_t* data, 
-            const uint32_t len);
+            const uint32_t len, bool lastBlock);
 
         /// <summary>Helper to test if the P25 ring buffer has data.</summary>
         bool hasP25Data() const;
@@ -219,7 +219,7 @@ namespace network
         /// <summary>Reads NXDN raw frame data from the NXDN ring buffer.</summary>
         virtual UInt8Array readNXDN(bool& ret, uint32_t& frameLength);
         /// <summary>Writes NXDN frame data to the network.</summary>
-        virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len);
+        virtual bool writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const uint32_t len, bool noSequence = false);
 
         /// <summary>Helper to test if the NXDN ring buffer has data.</summary>
         bool hasNXDNData() const;

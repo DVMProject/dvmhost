@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2016,2017,2018 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2022 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -185,7 +185,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             if ((m_rfDataHeader.getFormat() != PDU_FMT_AMBT) &&
                 (m_rfDataHeader.getFormat() != PDU_FMT_RSP) &&
                 (m_rfDataHeader.getSAP() != PDU_SAP_REG)) {
-                writeNetwork(0, buffer, P25_PDU_FEC_LENGTH_BYTES);
+                writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
             }
         }
 
@@ -225,7 +225,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 if ((m_rfDataHeader.getFormat() != PDU_FMT_AMBT) &&
                     (m_rfDataHeader.getFormat() != PDU_FMT_RSP) &&
                     (m_rfDataHeader.getSAP() != PDU_SAP_REG)) {
-                    writeNetwork(1, buffer, P25_PDU_FEC_LENGTH_BYTES);
+                    writeNetwork(1U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
                 }
 
                 offset += P25_PDU_FEC_LENGTH_BITS;
@@ -292,7 +292,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if ((m_rfDataHeader.getFormat() != PDU_FMT_AMBT) &&
                             (m_rfDataHeader.getFormat() != PDU_FMT_RSP) &&
                             (m_rfDataHeader.getSAP() != PDU_SAP_REG)) {
-                            writeNetwork(m_rfDataBlockCnt, buffer, P25_PDU_FEC_LENGTH_BYTES);
+                            writeNetwork(m_rfDataBlockCnt, buffer, P25_PDU_FEC_LENGTH_BYTES, m_rfData[i].getLastBlock());
                         }
 
                         m_rfDataBlockCnt++;
@@ -874,7 +874,8 @@ Data::~Data()
 /// <param name="currentBlock"></param>
 /// <param name="data"></param>
 /// <param name="len"></param>
-void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len)
+/// <param name="lastBlock"></param>
+void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_t len, bool lastBlock)
 {
     assert(data != nullptr);
 
@@ -886,7 +887,7 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 
     // Utils::dump(1U, "Outgoing Network PDU Frame", data, len);
 
-    m_p25->m_network->writeP25PDU(m_rfDataHeader, currentBlock, data, len);
+    m_p25->m_network->writeP25PDU(m_rfDataHeader, currentBlock, data, len, lastBlock);
 }
 
 /// <summary>

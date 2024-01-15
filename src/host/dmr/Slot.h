@@ -292,10 +292,10 @@ namespace dmr
         void notifyCC_TouchGrant(uint32_t dstId);
 
         /// <summary>Write data frame to the network.</summary>
-        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U);
+        void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors = 0U, bool noSequence = false);
         /// <summary>Write data frame to the network.</summary>
         void writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
-            uint32_t dstId, uint8_t errors = 0U);
+            uint32_t dstId, uint8_t errors = 0U, bool noSequence = false);
 
         /// <summary>Helper to write RF end of frame data.</summary>
         void writeEndRF(bool writeEnd = false);

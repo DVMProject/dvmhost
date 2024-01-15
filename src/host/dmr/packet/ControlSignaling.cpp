@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -394,7 +394,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             if (m_slot->m_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+            m_slot->writeNetwork(data, DT_CSBK, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId, 0U, true);
         }
 
         return true;

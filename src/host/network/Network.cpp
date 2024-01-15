@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -295,6 +295,11 @@ void Network::clock(uint32_t ms)
         }
 
         m_pktSeq = rtpHeader.getSequence();
+        
+        if (m_pktSeq == RTP_END_OF_CALL_SEQ) {
+            m_pktSeq = 0U;
+            m_pktLastSeq = 0U;
+        }
 
         // process incoming message frame opcodes
         switch (fneHeader.getFunction()) {
@@ -732,7 +737,7 @@ bool Network::writeConfig()
     rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["software"].set<std::string>(std::string(software));                 // Software ID
+    config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);
     std::string json = v.serialize();
@@ -746,7 +751,7 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    return writeMaster({ NET_FUNC_RPTC, NET_SUBFUNC_NOP }, (uint8_t*)buffer, json.length() + 8U, pktSeq(), m_loginStreamId);
+    return writeMaster({ NET_FUNC_RPTC, NET_SUBFUNC_NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
 }
 
 /// <summary>
@@ -760,5 +765,5 @@ bool Network::writePing()
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    return writeMaster({ NET_FUNC_PING, NET_SUBFUNC_NOP }, buffer, 1U, 0U, createStreamId());
+    return writeMaster({ NET_FUNC_PING, NET_SUBFUNC_NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, createStreamId());
 }

@@ -38,7 +38,6 @@ using namespace network::frame;
 // ---------------------------------------------------------------------------
 
 hrc::hrc_t RTPHeader::m_wcStart = hrc::hrc_t();
-uint32_t RTPHeader::m_prevTimestamp = INVALID_TS;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -57,9 +56,7 @@ RTPHeader::RTPHeader() :
     m_timestamp(INVALID_TS),
     m_ssrc(0U)
 {
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    m_random = mt;
+    /* stub */
 }
 
 /// <summary>
@@ -114,15 +111,10 @@ void RTPHeader::encode(uint8_t* data)
     data[2U] = (m_seq >> 8) & 0xFFU;                                            // Sequence MSB
     data[3U] = (m_seq >> 0) & 0xFFU;                                            // Sequence LSB
 
-    if (m_prevTimestamp == INVALID_TS) {
+    if (m_timestamp == INVALID_TS) {
         uint64_t timeSinceStart = hrc::diffNow(m_wcStart);
         uint64_t microSeconds = timeSinceStart * RTP_GENERIC_CLOCK_RATE;
         m_timestamp = uint32_t(microSeconds / 1000000);
-        m_prevTimestamp = m_timestamp;
-    }
-    else {
-        m_timestamp = m_prevTimestamp + (RTP_GENERIC_CLOCK_RATE / 133);
-        m_prevTimestamp = m_timestamp;
     }
 
     __SET_UINT32(m_timestamp, data, 4U);                                        // Timestamp
@@ -135,5 +127,4 @@ void RTPHeader::encode(uint8_t* data)
 void RTPHeader::resetStartTime()
 {
     m_wcStart = hrc::hrc_t();
-    m_prevTimestamp = INVALID_TS;
 }

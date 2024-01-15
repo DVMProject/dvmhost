@@ -29,7 +29,6 @@
 #include "common/Defines.h"
 
 #include <chrono>
-#include <random>
 #include <string>
 
 // ---------------------------------------------------------------------------
@@ -87,9 +86,6 @@ namespace network
         
         private:
             static std::chrono::time_point<std::chrono::high_resolution_clock> m_wcStart;
-            static uint32_t m_prevTimestamp;
-
-            std::mt19937 m_random;
         };
     } // namespace frame
 } // namespace network

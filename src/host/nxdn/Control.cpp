@@ -1217,5 +1217,5 @@ void Control::writeEndNet()
     m_networkWatchdog.stop();
 
     if (m_network != nullptr)
-        m_network->resetP25();
+        m_network->resetNXDN();
 }

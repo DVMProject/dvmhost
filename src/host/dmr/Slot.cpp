@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -1158,7 +1158,8 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
 /// <param name="data"></param>
 /// <param name="dataType"></param>
 /// <param name="errors"></param>
-void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors)
+/// <param name="noSequence"></param>
+void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
     assert(m_rfLC != nullptr);
@@ -1175,8 +1176,9 @@ void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t errors)
 /// <param name="srcId"></param>
 /// <param name="dstId"></param>
 /// <param name="errors"></param>
+/// <param name="noSequence"></param>
 void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uint32_t srcId,
-    uint32_t dstId, uint8_t errors)
+    uint32_t dstId, uint8_t errors, bool noSequence)
 {
     assert(data != nullptr);
 
@@ -1201,7 +1203,7 @@ void Slot::writeNetwork(const uint8_t* data, uint8_t dataType, uint8_t flco, uin
 
     dmrData.setData(data + 2U);
 
-    m_network->writeDMR(dmrData);
+    m_network->writeDMR(dmrData, noSequence);
 }
 
 /// <summary>

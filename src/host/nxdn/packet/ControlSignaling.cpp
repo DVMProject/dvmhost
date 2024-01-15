@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2022-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2022-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -371,7 +371,7 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
         return;
 
-    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len, true);
 }
 
 /*

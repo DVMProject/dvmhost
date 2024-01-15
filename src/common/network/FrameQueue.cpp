@@ -7,7 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -51,7 +51,8 @@ using namespace network::frame;
 /// <param name="socket">Local port used to listen for incoming data.</param>
 /// <param name="peerId">Unique ID of this modem on the network.</param>
 FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
-    m_peerId(peerId)
+    m_peerId(peerId),
+    m_streamTimestamps()
 {
     assert(peerId < 999999999U);
 }
@@ -189,6 +190,21 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     assert(message != nullptr);
     assert(length > 0U);
 
+    uint32_t timestamp = INVALID_TS;
+    if (streamId != 0U) {
+        auto entry = m_streamTimestamps.find(streamId);
+        if (entry != m_streamTimestamps.end()) {
+            timestamp = entry->second;
+        }
+
+        if (timestamp != INVALID_TS) {
+            timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
+            if (m_debug)
+                LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
+            m_streamTimestamps[streamId] = timestamp;
+        }
+    }
+
     uint32_t bufferLen = RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES + length;
     uint8_t* buffer = new uint8_t[bufferLen];
     ::memset(buffer, 0x00U, bufferLen);
@@ -197,6 +213,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     header.setExtension(true);
 
     header.setPayloadType(DVM_RTP_PAYLOAD_TYPE);
+    header.setTimestamp(timestamp);
     header.setSequence(rtpSeq);
     header.setSSRC(ssrc);
 
@@ -207,6 +224,21 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     }
 
     header.encode(buffer);
+
+    if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
+        if (m_debug)
+            LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
+        m_streamTimestamps[streamId] = header.getTimestamp();
+    }
+
+    if (streamId != 0U && rtpSeq == RTP_END_OF_CALL_SEQ) {
+        auto entry = m_streamTimestamps.find(streamId);
+        if (entry != m_streamTimestamps.end()) {
+            if (m_debug)
+                LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+            m_streamTimestamps.erase(streamId);
+        }
+    }
 
     RTPFNEHeader fneHeader = RTPFNEHeader();
     fneHeader.setCRC(edac::CRC::createCRC16(message, length * 8U));
@@ -224,11 +256,19 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     if (m_debug)
         Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 
-    UDPDatagram* dgram = new UDPDatagram;
+    UDPDatagram *dgram = new UDPDatagram;
     dgram->buffer = buffer;
     dgram->length = bufferLen;
     dgram->address = addr;
     dgram->addrLen = addrLen;
 
     m_buffers.push_back(dgram);
+}
+
+/// <summary>
+/// Helper method to clear any tracked stream timestamps.
+/// </summary>
+void FrameQueue::clearTimestamps()
+{
+    m_streamTimestamps.clear();
 }

@@ -1408,7 +1408,6 @@ void Control::processFrameLoss()
 
         writeRF_TDU(false);
         m_voice->m_lastDUID = P25_DUID_TDU;
-        //m_voice->writeNetwork(data + 2U, P25_DUID_TDU);
         m_voice->writeNet_TDU();
 
         m_rfState = RS_RF_LISTENING;
