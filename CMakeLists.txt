@@ -217,7 +217,7 @@ if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 install(FILES configs/config.example.yml configs/fne-config.example.yml configs/monitor-config.example.yml configs/iden_table.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
-install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/activityFilePath: ./activityFilePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/file: iden_table.dat/file: \\\\/usr\\\\/local\\\\/etc\\\\/iden_table.dat/' /usr/local/etc/config.example.yml\")")
@@ -380,6 +380,8 @@ add_custom_target(old_install
     COMMAND install -m 755 ../tools/stop-dvm.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/dvm-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND install -m 755 ../tools/stop-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ../tools/fne-watchdog.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
+    COMMAND install -m 755 ../tools/start-dvm-fne.sh ${CMAKE_LEGACY_INSTALL_PREFIX}
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/fw
     COMMAND if [ -e dvm-firmware_f4.elf ]\; then install -m 644 dvm-firmware_f4.elf ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.elf\; fi
     COMMAND if [ -e dvm-firmware_f4.bin ]\; then install -m 644 dvm-firmware_f4.bin ${CMAKE_LEGACY_INSTALL_PREFIX}/fw/dvm-firmware_f4.bin\; fi
