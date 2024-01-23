@@ -57,8 +57,13 @@ UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
     m_address_save(address),
     m_port_save(port),
     m_isOpen(false),
+    m_aes(nullptr),
+    m_isCryptoWrapped(false),
+    m_presharedKey(nullptr),
     m_counter(0U)
 {
+    m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
+    m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
         m_address[i] = "";
         m_port[i] = 0U;
@@ -75,8 +80,13 @@ UDPSocket::UDPSocket(uint16_t port) :
     m_address_save(),
     m_port_save(port),
     m_isOpen(false),
+    m_aes(nullptr),
+    m_isCryptoWrapped(false),
+    m_presharedKey(nullptr),
     m_counter(0U)
 {
+    m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
+    m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
         m_address[i] = "";
         m_port[i] = 0U;
@@ -90,7 +100,10 @@ UDPSocket::UDPSocket(uint16_t port) :
 /// </summary>
 UDPSocket::~UDPSocket()
 {
-    /* stub */
+    if (m_aes != nullptr)
+        delete m_aes;
+    if (m_presharedKey != nullptr)
+        delete[] m_presharedKey;
 }
 
 /// <summary>
@@ -233,6 +246,36 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
         return -1;
     }
 
+    // are we crypto wrapped?
+    if (m_isCryptoWrapped) {
+        // does the network packet contain the appropriate magic leader?
+        uint16_t magic = __GET_UINT16B(buffer, 0U);
+        if (magic == AES_WRAPPED_PCKT_MAGIC) {
+            uint32_t cryptedLen = (len - 2U) * sizeof(uint8_t);
+            // Utils::dump(1U, "UDPSocket::read() crypted", buffer + 2U, cryptedLen);
+
+            // decrypt
+            uint8_t* decrypted = m_aes->decryptECB(buffer + 2U, cryptedLen, m_presharedKey);
+
+            // Utils::dump(1U, "UDPSocket::read() decrypted", decrypted, cryptedLen);
+
+            // finalize, cleanup buffers and replace with new
+            if (decrypted != nullptr) {
+                ::memset(buffer, 0x00U, len);
+                ::memcpy(buffer, decrypted, len - 2U);
+
+                delete[] decrypted;
+                len -= 2U;
+            } else {
+                delete[] decrypted;
+                return 0;
+            }
+        }
+        else {
+            return 0; // this will effectively discard packets without the packet magic
+        }
+    }
+
     m_counter++;
     addrLen = size;
     return len;
@@ -254,11 +297,54 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
 
     bool result = false;
 
+    UInt8Array out = nullptr;
+    // are we crypto wrapped?
+    if (m_isCryptoWrapped) {
+        uint32_t cryptedLen = length * sizeof(uint8_t);
+        uint8_t* cryptoBuffer = new uint8_t[length];
+        ::memcpy(cryptoBuffer, buffer, length);
+
+        // do we need to pad the original buffer to be block aligned?
+        if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
+            uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
+            cryptedLen += alignment;
+
+            // reallocate buffer and copy
+            cryptoBuffer = new uint8_t[cryptedLen];
+            ::memset(cryptoBuffer, 0x00U, cryptedLen);
+            ::memcpy(cryptoBuffer, buffer, length);
+        }
+
+        // encrypt
+        uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
+
+        // Utils::dump(1U, "UDPSocket::write() crypted", crypted, cryptedLen);
+
+        // finalize, cleanup buffers and replace with new
+        out = std::unique_ptr<uint8_t[]>(new uint8_t[cryptedLen + 2U]);
+        delete[] cryptoBuffer;
+        if (crypted != nullptr) {
+            ::memcpy(out.get() + 2U, crypted, cryptedLen);
+            __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out.get(), 0U);
+            delete[] crypted;
+        } else {
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
+
+            delete[] crypted;
+            return false;
+        }
+    } else {
+        out = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+        ::memcpy(out.get(), buffer, length);
+    }
+
     for (int i = 0; i < UDP_SOCKET_MAX; i++) {
         if (m_fd[i] < 0 || m_af[i] != address.ss_family)
             continue;
 
-        ssize_t sent = ::sendto(m_fd[i], (char*)buffer, length, 0, (sockaddr*)& address, addrLen);
+        ssize_t sent = ::sendto(m_fd[i], (char*)out.get(), length, 0, (sockaddr*)& address, addrLen);
         if (sent < 0) {
             LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
 
@@ -319,6 +405,53 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
         if (buffers.at(i) == nullptr) {
             --size;
             continue;
+        }
+
+        uint32_t length = buffers.at(i)->length;
+        if (buffers.at(i)->buffer == nullptr) {
+            LogError(LOG_NET, "discarding buffered message with len = %u, but deleted buffer?", length);
+            --size;
+            continue;
+        }
+
+        // are we crypto wrapped?
+        if (m_isCryptoWrapped) {
+            uint32_t cryptedLen = length * sizeof(uint8_t);
+            uint8_t* cryptoBuffer = buffers.at(i)->buffer;
+
+            // do we need to pad the original buffer to be block aligned?
+            if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
+                uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
+                cryptedLen += alignment;
+
+                // reallocate buffer and copy
+                cryptoBuffer = new uint8_t[cryptedLen];
+                ::memset(cryptoBuffer, 0x00U, cryptedLen);
+                ::memcpy(cryptoBuffer, buffers.at(i)->buffer, length);
+            }
+
+            // encrypt
+            uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
+            delete[] cryptoBuffer;
+
+            if (crypted == nullptr) {
+                --size;
+                continue;
+            }
+
+            // Utils::dump(1U, "UDPSocket::write() crypted", crypted, cryptedLen);
+
+            // finalize
+            uint8_t out[cryptedLen + 2U];
+            ::memcpy(out + 2U, crypted, cryptedLen);
+            __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out, 0U);
+
+            // cleanup buffers and replace with new
+            delete[] crypted;
+            //delete buffers[i]->buffer;
+            buffers[i]->buffer = new uint8_t[cryptedLen + 2U];
+            ::memcpy(buffers[i]->buffer, out, cryptedLen + 2U);
+            buffers[i]->length = cryptedLen + 2U;
         }
 
         chunks[i].iov_len = buffers.at(i)->length;
@@ -390,6 +523,22 @@ void UDPSocket::close(const uint32_t index)
     if ((index < UDP_SOCKET_MAX) && (m_fd[index] >= 0)) {
         ::close(m_fd[index]);
         m_fd[index] = -1;
+    }
+}
+
+/// <summary>
+/// Sets the preshared encryption key.
+/// </summary>
+/// <param name="presharedKey"></param>
+void UDPSocket::setPresharedKey(const uint8_t* presharedKey)
+{
+    if (presharedKey != nullptr) {
+        ::memset(m_presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+        ::memcpy(m_presharedKey, presharedKey, AES_WRAPPED_PCKT_KEY_LEN);
+        m_isCryptoWrapped = true;
+    } else {
+        ::memset(m_presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+        m_isCryptoWrapped = false;
     }
 }
 

@@ -150,7 +150,8 @@ ulong64_t TDULC::toValue(const uint8_t* payload)
 /// <returns></returns>
 UInt8Array TDULC::fromValue(const ulong64_t value)
 {
-    __UNIQUE_UINT8_ARRAY(payload, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+    UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES]);
+    ::memset(payload.get(), 0x00U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 
     // split ulong64_t (8 byte) value into bytes
     payload[0U] = (uint8_t)((value >> 56) & 0xFFU);

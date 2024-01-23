@@ -395,6 +395,38 @@ bool HostFNE::createMasterNetwork()
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
 
+    bool encrypted = masterConf["encrypted"].as<bool>(false);
+    std::string key = masterConf["presharedKey"].as<std::string>();
+    uint8_t presharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+    if (!key.empty()) {
+        if (key.size() == 32) {
+            // bryanb: shhhhhhh....dirty nasty hacks
+            key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+            LogWarning(LOG_HOST, "Half-length master network preshared encryption key detected, doubling key on itself.");
+        }
+
+        if (key.size() == 64) {
+            if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                const char* keyPtr = key.c_str();
+                ::memset(presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+                for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                    char t[4] = {keyPtr[0], keyPtr[1], 0};
+                    presharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                    keyPtr += 2 * sizeof(char);
+                }
+            }
+            else {
+                LogWarning(LOG_HOST, "Invalid characters in the master network preshared encryption key. Encryption disabled.");
+                encrypted = false;
+            }
+        }
+        else {
+            LogWarning(LOG_HOST, "Invalid master  network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+            encrypted = false;
+        }
+    }
+
     if (id > 999999999U) {
         ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
         return false;
@@ -420,6 +452,8 @@ bool HostFNE::createMasterNetwork()
     LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
     LogInfo("    Parrot Repeat Delay: %u ms", parrotDelay);
     LogInfo("    Parrot Grant Demand: %s", parrotGrantDemand ? "yes" : "no");
+
+    LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
     if (verbose) {
         LogInfo("    Verbose: yes");
@@ -447,6 +481,10 @@ bool HostFNE::createMasterNetwork()
         return false;
     }
 
+    if (encrypted) {
+        m_network->setPresharedKey(presharedKey);
+    }
+
     return true;
 }
 
@@ -468,6 +506,38 @@ bool HostFNE::createPeerNetworks()
             uint32_t id = peerConf["peerId"].as<uint32_t>(1001U);
             bool debug = peerConf["debug"].as<bool>(false);
 
+            bool encrypted = peerConf["encrypted"].as<bool>(false);
+            std::string key = peerConf["presharedKey"].as<std::string>();
+            uint8_t presharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+            if (!key.empty()) {
+                if (key.size() == 32) {
+                    // bryanb: shhhhhhh....dirty nasty hacks
+                    key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+                    LogWarning(LOG_HOST, "Half-length peer  network preshared encryption key detected, doubling key on itself.");
+                }
+
+                if (key.size() == 64) {
+                    if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                        const char* keyPtr = key.c_str();
+                        ::memset(presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+                        for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                            char t[4] = {keyPtr[0], keyPtr[1], 0};
+                            presharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                            keyPtr += 2 * sizeof(char);
+                        }
+                    }
+                    else {
+                        LogWarning(LOG_HOST, "Invalid characters in the peer network preshared encryption key. Encryption disabled.");
+                        encrypted = false;
+                    }
+                }
+                else {
+                    LogWarning(LOG_HOST, "Invalid peer network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+                    encrypted = false;
+                }
+            }
+
             std::string identity = peerConf["identity"].as<std::string>();
             uint32_t rxFrequency = peerConf["rxFrequency"].as<uint32_t>(0U);
             uint32_t txFrequency = peerConf["txFrequency"].as<uint32_t>(0U);
@@ -475,7 +545,7 @@ bool HostFNE::createPeerNetworks()
             float longitude = peerConf["longitude"].as<float>(0.0F);
             std::string location = peerConf["location"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled);
+            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Identity %s Enabled %u Encrypted %u", id, masterAddress.c_str(), masterPort, identity.c_str(), enabled, encrypted);
 
             if (id > 999999999U) {
                 ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
@@ -485,6 +555,9 @@ bool HostFNE::createPeerNetworks()
             // initialize networking
             network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
+            if (encrypted) {
+                m_network->setPresharedKey(presharedKey);
+            }
 
             network->enable(enabled);
             if (enabled) {

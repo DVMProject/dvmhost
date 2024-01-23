@@ -32,6 +32,7 @@
 #define __UDP_SOCKET_H__
 
 #include "common/Defines.h"
+#include "common/AESCrypto.h"
 
 #include <string>
 #include <vector>
@@ -49,6 +50,9 @@
 #if !defined(UDP_SOCKET_MAX)
 #define UDP_SOCKET_MAX	1
 #endif
+
+#define AES_WRAPPED_PCKT_MAGIC 0xC0FEU
+#define AES_WRAPPED_PCKT_KEY_LEN 32
 
 enum IPMATCHTYPE {
     IMT_ADDRESS_AND_PORT,
@@ -130,6 +134,9 @@ namespace network
         /// <summary>Closes the UDP socket connection.</summary>
         void close(const uint32_t index);
 
+        /// <summary>Sets the preshared encryption key.</summary>
+        void setPresharedKey(const uint8_t* presharedKey);
+
         /// <summary>Flag indicating the UDP socket(s) are open.</summary>
         bool isOpen() const { return m_isOpen; }
 
@@ -158,6 +165,10 @@ namespace network
 
         uint32_t m_af[UDP_SOCKET_MAX];
         int m_fd[UDP_SOCKET_MAX];
+
+        crypto::AES* m_aes;
+        bool m_isCryptoWrapped;
+        uint8_t* m_presharedKey;
 
         uint32_t m_counter;
     };

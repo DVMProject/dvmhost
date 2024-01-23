@@ -220,7 +220,8 @@ ulong64_t CSBK::toValue(const uint8_t* payload)
 /// <returns></returns>
 UInt8Array CSBK::fromValue(const ulong64_t value)
 {
-    __UNIQUE_UINT8_ARRAY(payload, DMR_CSBK_LENGTH_BYTES - 4U);
+    UInt8Array payload = std::unique_ptr<uint8_t[]>(new uint8_t[DMR_CSBK_LENGTH_BYTES - 4U]);
+    ::memset(payload.get(), 0x00U, DMR_CSBK_LENGTH_BYTES - 4U);
 
     // split ulong64_t (8 byte) value into bytes
     payload[0U] = (uint8_t)((value >> 56) & 0xFFU);

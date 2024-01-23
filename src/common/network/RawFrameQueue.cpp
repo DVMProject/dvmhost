@@ -87,7 +87,7 @@ UInt8Array RawFrameQueue::read(int& messageLength, sockaddr_storage& address, ui
 
         // copy message
         messageLength = length;
-        __UNIQUE_UINT8_ARRAY(message, length);
+        UInt8Array message = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
         ::memcpy(message.get(), buffer, length);
 
         return message;

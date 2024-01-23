@@ -1703,5 +1703,7 @@ void Control::generateLLA_AM1_Parameters()
         LogMessage(LOG_P25, "P25, generated LLA AM1 parameters");
     }
 
+    // cleanup
+    delete[] KS;
     delete aes;
 }

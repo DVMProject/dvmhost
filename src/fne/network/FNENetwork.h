@@ -170,6 +170,8 @@ namespace network
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
+        /// <summary>Sets endpoint preshared encryption key.</summary>
+        void setPresharedKey(const uint8_t* presharedKey);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);

@@ -34,6 +34,8 @@
 */
 #include "Defines.h"
 #include "AESCrypto.h"
+#include "Log.h"
+#include "Utils.h"
 
 using namespace crypto;
 
@@ -272,15 +274,15 @@ static const uint8_t INV_CMDS[4][4] = { {14, 11, 13, 9}, {9, 14, 11, 13}, {13, 9
 /// </summary>
 AES::AES(const AESKeyLength keyLength) {
     switch (keyLength) {
-        case AESKeyLength::AES_128:
+    case AESKeyLength::AES_128:
         this->m_Nk = 4;
         this->m_Nr = 10;
         break;
-        case AESKeyLength::AES_192:
+    case AESKeyLength::AES_192:
         this->m_Nk = 6;
         this->m_Nr = 12;
         break;
-        case AESKeyLength::AES_256:
+    case AESKeyLength::AES_256:
         this->m_Nk = 8;
         this->m_Nr = 14;
         break;
@@ -294,17 +296,20 @@ AES::AES(const AESKeyLength keyLength) {
 /// <param name="inLen"></param>
 /// <param name="key"></param>
 /// <returns></returns>
-uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]) 
+uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[])
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::encryptECB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
+    ::memset(out, 0x00U, inLen);
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         encryptBlock(in + i, out + i, roundKeys);
     }
 
@@ -321,15 +326,18 @@ uint8_t* AES::encryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <returns></returns>
 uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]) 
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::decryptECB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
+    ::memset(out, 0x00U, inLen);
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         decryptBlock(in + i, out + i, roundKeys);
     }
 
@@ -347,20 +355,23 @@ uint8_t* AES::decryptECB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <returns></returns>
 uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv) 
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::encryptCBC() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
-    uint8_t block[m_blockBytesLen];
+    ::memset(out, 0x00U, inLen);
+    uint8_t block[BLOCK_BYTES_LEN];
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, m_blockBytesLen);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
-        xorBlocks(block, in + i, block, m_blockBytesLen);
+    memcpy(block, iv, BLOCK_BYTES_LEN);
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
+        xorBlocks(block, in + i, block, BLOCK_BYTES_LEN);
         encryptBlock(block, out + i, roundKeys);
-        memcpy(block, out + i, m_blockBytesLen);
+        memcpy(block, out + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -377,20 +388,23 @@ uint8_t* AES::encryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <returns></returns>
 uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::decryptCBC() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
-    uint8_t block[m_blockBytesLen];
+    ::memset(out, 0x00U, inLen);
+    uint8_t block[BLOCK_BYTES_LEN];
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, m_blockBytesLen);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
+    memcpy(block, iv, BLOCK_BYTES_LEN);
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         decryptBlock(in + i, out + i, roundKeys);
-        xorBlocks(block, out + i, out + i, m_blockBytesLen);
-        memcpy(block, in + i, m_blockBytesLen);
+        xorBlocks(block, out + i, out + i, BLOCK_BYTES_LEN);
+        memcpy(block, in + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -407,21 +421,24 @@ uint8_t* AES::decryptCBC(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <returns></returns>
 uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::encryptCFB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
-    uint8_t block[m_blockBytesLen];
-    uint8_t encryptedBlock[m_blockBytesLen];
+    ::memset(out, 0x00U, inLen);
+    uint8_t block[BLOCK_BYTES_LEN];
+    uint8_t encryptedBlock[BLOCK_BYTES_LEN];
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, m_blockBytesLen);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
+    memcpy(block, iv, BLOCK_BYTES_LEN);
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         encryptBlock(block, encryptedBlock, roundKeys);
-        xorBlocks(in + i, encryptedBlock, out + i, m_blockBytesLen);
-        memcpy(block, out + i, m_blockBytesLen);
+        xorBlocks(in + i, encryptedBlock, out + i, BLOCK_BYTES_LEN);
+        memcpy(block, out + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -438,21 +455,24 @@ uint8_t* AES::encryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 /// <returns></returns>
 uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t *iv) 
 {
-    if (inLen % m_blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " + std::to_string(m_blockBytesLen));
+    if (inLen % BLOCK_BYTES_LEN != 0) {
+        LogDebug(LOG_HOST, "AES::decryptCFB() Plaintext length must be divisible by %u, inLen = %u", BLOCK_BYTES_LEN, inLen);
+        return nullptr;
     }
 
     uint8_t* out = new uint8_t[inLen];
-    uint8_t block[m_blockBytesLen];
-    uint8_t encryptedBlock[m_blockBytesLen];
+    ::memset(out, 0x00U, inLen);
+    uint8_t block[BLOCK_BYTES_LEN];
+    uint8_t encryptedBlock[BLOCK_BYTES_LEN];
     uint8_t* roundKeys = new uint8_t[4 * AES_NB * (m_Nr + 1)];
+    ::memset(roundKeys, 0x00U, 4 * AES_NB * (m_Nr + 1));
 
     keyExpansion(key, roundKeys);
-    memcpy(block, iv, m_blockBytesLen);
-    for (uint32_t i = 0; i < inLen; i += m_blockBytesLen) {
+    memcpy(block, iv, BLOCK_BYTES_LEN);
+    for (uint32_t i = 0; i < inLen; i += BLOCK_BYTES_LEN) {
         encryptBlock(block, encryptedBlock, roundKeys);
-        xorBlocks(in + i, encryptedBlock, out + i, m_blockBytesLen);
-        memcpy(block, in + i, m_blockBytesLen);
+        xorBlocks(in + i, encryptedBlock, out + i, BLOCK_BYTES_LEN);
+        memcpy(block, in + i, BLOCK_BYTES_LEN);
     }
 
     delete[] roundKeys;
@@ -633,7 +653,7 @@ void AES::xorWords(uint8_t* a, uint8_t* b, uint8_t* c)
 /// </summary>
 /// <param name="a"></param>
 /// <param name="n"></param>
-void AES::rcon(uint8_t *a, uint32_t n) 
+void AES::rCon(uint8_t *a, uint32_t n) 
 {
     uint8_t c = 1;
     for (uint32_t i = 0; i < n - 1; i++) {
@@ -668,7 +688,7 @@ void AES::keyExpansion(const uint8_t key[], uint8_t w[]) {
         if (i / 4 % m_Nk == 0) {
             rotWord(temp);
             subWord(temp);
-            this->rcon(rcon, i / (m_Nk * 4));
+            rCon(rcon, i / (m_Nk * 4));
             xorWords(temp, rcon, temp);
         } else if (m_Nk > 6 && i / 4 % m_Nk == 4) {
             subWord(temp);

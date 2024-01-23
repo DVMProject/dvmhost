@@ -215,6 +215,14 @@ void Network::setRESTAPIData(const std::string& password, uint16_t port)
 }
 
 /// <summary>
+/// Sets endpoint preshared encryption key.
+/// </summary>
+void Network::setPresharedKey(const uint8_t* presharedKey)
+{
+    m_socket->setPresharedKey(presharedKey);
+}
+
+/// <summary>
 /// Updates the timer by the passed number of milliseconds.
 /// </summary>
 /// <param name="ms"></param>

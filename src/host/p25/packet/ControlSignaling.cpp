@@ -639,6 +639,9 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     }
                 }
 
+                // cleanup buffers
+                delete[] XRES1;
+
                 if (!authFailed) {
                     writeRF_TSDU_U_Reg_Rsp(srcId, tsbk->getSysId());
                 }

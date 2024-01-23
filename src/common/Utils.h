@@ -173,15 +173,8 @@ inline std::string strtoupper(const std::string value) {
 
 #define new_unique(type, ...) std::unique_ptr<type>(new type(__VA_ARGS__))
 
-/// <summary>Creates a named unique buffer.</summary>
-#define __UNIQUE_BUFFER(name, type, length)                                             \
-        std::unique_ptr<type[]> name = std::unique_ptr<type[]>(new type[length]);       \
-        ::memset(name.get(), 0x00U, length);
-
+/// <summary>Unique uint8_t array.</summary>
 typedef std::unique_ptr<uint8_t[]> UInt8Array;
-
-/// <summary>Creates a named uint8_t array buffer.</summary>
-#define __UNIQUE_UINT8_ARRAY(name, length) __UNIQUE_BUFFER(name, uint8_t, length)
 
 // ---------------------------------------------------------------------------
 //  Class Declaration

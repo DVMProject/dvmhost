@@ -46,6 +46,13 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Flag indicating whether or not master endpoint networking is encrypted.
+    encrypted: false
+    # AES-256 32-byte Preshared Key
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
     # Flag indicating whether or not DMR traffic will be passed.
     allowDMRTraffic: true
     # Flag indicating whether or not P25 traffic will be passed.
@@ -88,6 +95,13 @@ peers:
       identity: PARROT
       # Network Peer ID
       peerId: 9000990
+
+      # Flag indicating whether or not peer endpoint networking is encrypted.
+      encrypted: false
+      # AES-256 32-byte Preshared Key
+      #   (This field *must* be 32 hex bytes in length or 64 characters
+      #    0 - 9, A - F.)
+      presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
       # 
       rxFrequency: 0

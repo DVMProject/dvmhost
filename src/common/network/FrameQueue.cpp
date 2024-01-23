@@ -136,7 +136,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 
         // copy message
         messageLength = _fneHeader.getMessageLength();
-        __UNIQUE_UINT8_ARRAY(message, messageLength);
+        UInt8Array message = std::unique_ptr<uint8_t[]>(new uint8_t[messageLength]);
         ::memcpy(message.get(), buffer + (RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES), messageLength);
 
         uint16_t calc = edac::CRC::createCRC16(message.get(), messageLength * 8U);

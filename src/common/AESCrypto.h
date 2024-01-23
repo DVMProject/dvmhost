@@ -74,9 +74,9 @@ namespace crypto
         /// <summary></summary>
         uint8_t* decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[], const uint8_t* iv);
 
-    private:
-        static constexpr uint32_t m_blockBytesLen = 4 * AES_NB * sizeof(uint8_t);
+        static constexpr uint32_t BLOCK_BYTES_LEN = 4 * AES_NB * sizeof(uint8_t);
 
+    private:
         uint32_t m_Nk;
         uint32_t m_Nr;
 
@@ -96,7 +96,7 @@ namespace crypto
         void rotWord(uint8_t* a);
         void xorWords(uint8_t* a, uint8_t* b, uint8_t* c);
 
-        void rcon(uint8_t* a, uint32_t n);
+        void rCon(uint8_t* a, uint32_t n);
 
         void keyExpansion(const uint8_t key[], uint8_t w[]);
 

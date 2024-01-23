@@ -686,6 +686,38 @@ bool Host::createNetwork()
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
+    bool encrypted = networkConf["encrypted"].as<bool>(false);
+    std::string key = networkConf["presharedKey"].as<std::string>();
+    uint8_t presharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+    if (!key.empty()) {
+        if (key.size() == 32) {
+            // bryanb: shhhhhhh....dirty nasty hacks
+            key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+            LogWarning(LOG_HOST, "Half-length network preshared encryption key detected, doubling key on itself.");
+        }
+
+        if (key.size() == 64) {
+            if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                const char* keyPtr = key.c_str();
+                ::memset(presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+                for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                    char t[4] = {keyPtr[0], keyPtr[1], 0};
+                    presharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                    keyPtr += 2 * sizeof(char);
+                }
+            }
+            else {
+                LogWarning(LOG_HOST, "Invalid characters in the network preshared encryption key. Encryption disabled.");
+                encrypted = false;
+            }
+        }
+        else {
+            LogWarning(LOG_HOST, "Invalid  network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+            encrypted = false;
+        }
+    }
+
     if (id > 999999999U) {
         ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
         return false;
@@ -722,6 +754,8 @@ bool Host::createNetwork()
         LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
 
+        LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
+
         if (debug) {
             LogInfo("    Debug: yes");
         }
@@ -745,6 +779,9 @@ bool Host::createNetwork()
             m_power, m_latitude, m_longitude, m_height, m_location);
         if (restApiEnable) {
             m_network->setRESTAPIData(restApiPassword, restApiPort);
+        }
+        if (encrypted) {
+            m_network->setPresharedKey(presharedKey);
         }
 
         m_network->enable(true);

@@ -68,6 +68,8 @@ namespace network
             uint8_t channelId, uint32_t channelNo, uint32_t power, float latitude, float longitude, int height, const std::string& location);
         /// <summary>Sets REST API configuration settings from the modem.</summary>
         void setRESTAPIData(const std::string& password, uint16_t port);
+        /// <summary>Sets endpoint preshared encryption key.</summary>
+        void setPresharedKey(const uint8_t* presharedKey);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
