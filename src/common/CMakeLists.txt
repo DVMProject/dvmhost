@@ -97,6 +97,7 @@ file(GLOB common_INCLUDE
     "src/common/network/json/*.h"
     "src/common/network/rest/*.h"
     "src/common/network/rest/http/*.h"
+    "src/common/network/tcp/*.h"
     "src/common/yaml/*.h"
     "src/common/*.h"
 )
