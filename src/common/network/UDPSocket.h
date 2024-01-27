@@ -12,7 +12,7 @@
 //
 /*
 *   Copyright (C) 2006-2016,2020 by Jonathan Naylor G4KLX
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2024 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by

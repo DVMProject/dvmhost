@@ -11,7 +11,7 @@
 // Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 //
 /*
-*   Copyright (C) 2005, 2006, 2008 Free Software Foundation, Inc.
+*   Copyright (C) 2005,2006,2008 Free Software Foundation, Inc.
 *   Copyright (C) 2011,2015 by Jonathan Naylor G4KLX
 *
 *   This program is free software; you can redistribute it and/or modify

@@ -6,10 +6,6 @@
 * @package DVM / Host Software
 *
 */
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
 *   Copyright (C) 2022-2024 by Bryan Biedenkapp N2PLL
 *

@@ -7,8 +7,7 @@
 *
 */
 /*
-*   Copyright (C) 2021 Bryan Biedenkapp N2PLL <gatekeep@gmail.com>
-*   Copyright (C) 2020-2021 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2021 by Bryan Biedenkapp N2PLL
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by

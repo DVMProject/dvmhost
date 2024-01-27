@@ -35,9 +35,6 @@
 using namespace modem::port;
 using namespace modem;
 
-#include <cstdio>
-#include <cassert>
-
 const char* HARDWARE = "Null Modem Controller";
 
 // ---------------------------------------------------------------------------

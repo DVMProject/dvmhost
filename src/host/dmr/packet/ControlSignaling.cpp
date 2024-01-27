@@ -25,16 +25,10 @@
 */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"
-#include "common/dmr/data/DataHeader.h"
-#include "common/dmr/data/EMB.h"
-#include "common/dmr/lc/ShortLC.h"
-#include "common/dmr/lc/FullLC.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBKFactory.h"
 #include "common/dmr/SlotType.h"
 #include "common/dmr/Sync.h"
-#include "common/edac/BPTC19696.h"
-#include "common/edac/CRC.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "dmr/lc/csbk/CSBK_DVM_GIT_HASH.h"
@@ -48,9 +42,6 @@ using namespace dmr::lc::csbk;
 using namespace dmr::packet;
 
 #include <cassert>
-#include <ctime>
-#include <algorithm>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Macros

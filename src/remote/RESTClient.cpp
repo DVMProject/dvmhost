@@ -6,10 +6,6 @@
 * @package DVM / Remote Command Client
 *
 */
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
 *   Copyright (C) 2023 by Bryan Biedenkapp <gatekeep@gmail.com>
 *

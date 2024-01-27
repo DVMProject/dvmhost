@@ -41,13 +41,7 @@
 
 using namespace modem;
 
-#include <cmath>
-#include <cstdio>
 #include <cassert>
-#include <cstdint>
-#include <ctime>
-
-#include <unistd.h>
 
 // ---------------------------------------------------------------------------
 //  Constants
