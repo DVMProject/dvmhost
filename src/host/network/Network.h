@@ -52,7 +52,7 @@ namespace network
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
-        ~Network();
+        ~Network() override;
 
         /// <summary>Resets the DMR ring buffer for the given slot.</summary>
         void resetDMR(uint32_t slotNo) override;
@@ -72,13 +72,13 @@ namespace network
         void setPresharedKey(const uint8_t* presharedKey);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
-        void clock(uint32_t ms);
+        void clock(uint32_t ms) override;
 
         /// <summary>Opens connection to the network.</summary>
-        bool open();
+        bool open() override;
 
         /// <summary>Closes connection to the network.</summary>
-        void close();
+        void close() override;
 
         /// <summary>Sets flag enabling network communication.</summary>
         void enable(bool enabled);

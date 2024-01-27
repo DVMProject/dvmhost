@@ -33,7 +33,6 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cstring>
 #include <cassert>
 
@@ -114,7 +113,7 @@ static inline void set_uint32(uint8_t* cp, uint32_t v)
 /// </summary>
 /// <remarks>
 /// Takes a pointer to a 256 bit block of data (eight 32 bit ints) and
-/// intializes it to the start constants of the SHA256 algorithm.  This
+/// initializes it to the start constants of the SHA256 algorithm.  This
 /// must be called before using hash in the call to sha256_hash
 /// </remarks>
 SHA256::SHA256() :
@@ -332,7 +331,7 @@ void SHA256::processBytes(const uint8_t* buffer, uint32_t len)
 }
 
 /// <summary>
-/// Process the remaining bytes in the bufferand put result from context
+/// Process the remaining bytes in the buffer and put result from context
 /// in first 32 bytes following buffer. The result is always in little
 /// endian byte order, so that a byte - wise output yields to the wanted
 /// ASCII representation of the message digest.

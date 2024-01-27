@@ -32,9 +32,7 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
-#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Constants

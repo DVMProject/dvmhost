@@ -42,7 +42,7 @@ namespace lookups
 
     class HOST_SW_API IdenTable {
     public:
-        /// <summary>Initializes a new insatnce of the IdenTable class.</summary>
+        /// <summary>Initializes a new instance of the IdenTable class.</summary>
         IdenTable() :
             m_channelId(0U),
             m_baseFrequency(0U),
@@ -52,7 +52,7 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the IdenTable class.</summary>
+        /// <summary>Initializes a new instance of the IdenTable class.</summary>
         /// <param name="channelId"></param>
         /// <param name="baseFrequency"></param>
         /// <param name="chSpaceKhz"></param>
@@ -107,18 +107,16 @@ namespace lookups
     public:
         /// <summary>Initializes a new instance of the IdenTableLookup class.</summary>
         IdenTableLookup(const std::string& filename, uint32_t reloadTime);
-        /// <summary>Finalizes a instance of the IdenTableLookup class.</summary>
-        virtual ~IdenTableLookup();
 
         /// <summary>Finds a table entry in this lookup table.</summary>
-        virtual IdenTable find(uint32_t id);
+        IdenTable find(uint32_t id) override;
         /// <summary>Returns the list of entries in this lookup table.</summary>
         std::vector<IdenTable> list();
 
     protected:
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
-        virtual bool load();
+        bool load() override;
     };
 } // namespace lookups
 

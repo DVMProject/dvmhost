@@ -61,9 +61,9 @@ namespace p25
         class HOST_SW_API ControlSignaling {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK = nullptr);
+            bool process(uint8_t* data, uint32_t len, std::unique_ptr<lc::TSBK> preDecodedTSBK = nullptr);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid);
 
             /// <summary>Helper used to process AMBTs from PDU data.</summary>
             bool processMBT(data::DataHeader& dataHeader, data::DataBlock* blocks);
@@ -173,20 +173,20 @@ namespace p25
             */
 
             /// <summary>Helper to write a P25 TDU w/ link control packet.</summary>
-            virtual void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
+            void writeRF_TDULC(lc::TDULC* lc, bool noNetwork);
             /// <summary>Helper to write a network P25 TDU w/ link control packet.</summary>
-            virtual void writeNet_TDULC(lc::TDULC* lc);
+            void writeNet_TDULC(lc::TDULC* lc);
 
             /// <summary>Helper to write a immediate single-block P25 TSDU packet.</summary>
-            virtual void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, false, true); }
+            void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, false, true); }
             /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-            virtual void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false, bool imm = false);
+            void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false, bool imm = false);
             /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
-            virtual void writeNet_TSDU(lc::TSBK* tsbk);
+            void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
             void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
             /// <summary>Helper to write a alternate multi-block PDU packet.</summary>
-            virtual void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
+            void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
 
             /*
             ** Control Signalling Logic

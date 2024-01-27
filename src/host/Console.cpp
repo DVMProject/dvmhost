@@ -52,10 +52,7 @@ Console::Console() :
 /// <summary>
 /// Finalizes a instance of the Console class.
 /// </summary>
-Console::~Console()
-{
-    /* stub */
-}
+Console::~Console() = default;
 
 /// <summary>
 /// Opens the terminal console.

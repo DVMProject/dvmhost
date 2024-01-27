@@ -30,13 +30,8 @@
 */
 #include "Defines.h"
 #include "nxdn/acl/AccessControl.h"
-#include "Log.h"
 
 using namespace nxdn::acl;
-
-#include <algorithm>
-#include <vector>
-#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -64,7 +59,7 @@ void AccessControl::init(RadioIdLookup* ridLookup, TalkgroupRulesLookup* tidLook
 bool AccessControl::validateSrcId(uint32_t id)
 {
     // check if RID ACLs are enabled
-    if (m_ridLookup->getACL() == false) {
+    if (!m_ridLookup->getACL()) {
         RadioId rid = m_ridLookup->find(id);
         if (!rid.radioDefault() && !rid.radioEnabled()) {
             return false;
@@ -94,7 +89,7 @@ bool AccessControl::validateTGId(uint32_t id)
         return false;
 
     // check if TID ACLs are enabled
-    if (m_tidLookup->getACL() == false) {
+    if (!m_tidLookup->getACL()) {
         return true;
     }
 

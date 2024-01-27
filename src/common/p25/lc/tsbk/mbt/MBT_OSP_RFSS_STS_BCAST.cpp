@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_RFSS_STS_BCAST.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

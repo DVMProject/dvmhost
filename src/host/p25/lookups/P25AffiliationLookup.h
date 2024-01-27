@@ -50,7 +50,7 @@ namespace p25
             /// <summary>Initializes a new instance of the P25AffiliationLookup class.</summary>
             P25AffiliationLookup(Control* p25, bool verbose);
             /// <summary>Finalizes a instance of the P25AffiliationLookup class.</summary>
-            virtual ~P25AffiliationLookup();
+            ~P25AffiliationLookup() override;
 
             /// <summary>Helper to release the channel grant for the destination ID.</summary>
             bool releaseGrant(uint32_t dstId, bool releaseAll) override;

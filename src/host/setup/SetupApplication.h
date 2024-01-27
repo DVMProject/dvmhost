@@ -56,7 +56,7 @@ protected:
     /// <summary>
     ///
     /// </summary>
-    virtual void processExternalUserEvent()
+    void processExternalUserEvent() override
     {
         if (m_setup->m_isConnected) {
             if (m_setup->m_p25TduTest && m_setup->m_queue.hasSpace(p25::P25_TDU_FRAME_LENGTH_BYTES + 2U)) {
@@ -67,7 +67,7 @@ protected:
                 p25::Sync::addP25Sync(data + 2U);
 
                 // Generate NID
-                std::unique_ptr<p25::NID> nid = new_unique(p25::NID, 1U);
+                std::unique_ptr<p25::NID> nid = std::make_unique<p25::NID>(1U);
                 nid->encode(data + 2U, p25::P25_DUID_TDU);
 
                 // Add busy bits

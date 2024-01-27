@@ -67,7 +67,7 @@ namespace edac
         /// that LEN is a multiple of 64.</summary>
         void processBytes(const uint8_t* buffer, uint32_t len);
 
-        /// <summary>Process the remaining bytes in the bufferand put result from context in first 32
+        /// <summary>Process the remaining bytes in the buffer and put result from context in first 32
         /// bytes following buffer. The result is always in little endian byte order, so that a byte-wise
         /// output yields to the wanted ASCII representation of the message digest.</summary>
         uint8_t* finish(uint8_t* buffer);

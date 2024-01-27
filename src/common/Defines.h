@@ -31,8 +31,7 @@
 #if !defined(__COMMON_DEFINES_H__)
 #define __COMMON_DEFINES_H__
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <ios>

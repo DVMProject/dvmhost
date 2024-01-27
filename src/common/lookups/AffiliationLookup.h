@@ -87,9 +87,9 @@ namespace lookups
         }
 
         /// <summary>Helper to determine if the channel identity is valid.</summary>
-        bool isValidChId() { return m_chId != 0U; }
+        bool isValidChId() const { return m_chId != 0U; }
         /// <summary>Helper to determine if the channel is valid.</summary>
-        bool isValidCh() { return m_chNo != 0U; }
+        bool isValidCh() const { return m_chNo != 0U; }
 
     public:
         /// <summary>Voice Channel Identity.</summary>

@@ -52,10 +52,7 @@ SlotType::SlotType() :
 /// <summary>
 /// Finalizes a instance of the SlotType class.
 /// </summary>
-SlotType::~SlotType()
-{
-    /* stub */
-}
+SlotType::~SlotType() = default;
 
 /// <summary>
 /// Decodes DMR slot type.

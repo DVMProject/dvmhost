@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_ADJ_STS_BCAST.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -44,6 +41,7 @@ using namespace p25;
 /// </summary>
 OSP_ADJ_STS_BCAST::OSP_ADJ_STS_BCAST() : TSBK(),
     m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjSysId(0U),
     m_adjRfssId(0U),
     m_adjSiteId(0U),
     m_adjChannelId(0U),
@@ -61,7 +59,7 @@ OSP_ADJ_STS_BCAST::OSP_ADJ_STS_BCAST() : TSBK(),
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -90,7 +88,7 @@ bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -130,6 +128,7 @@ void OSP_ADJ_STS_BCAST::copy(const OSP_ADJ_STS_BCAST& data)
     TSBK::copy(data);
 
     m_adjCFVA = data.m_adjCFVA;
+    m_adjSysId = data.m_adjSysId;
     m_adjRfssId = data.m_adjRfssId;
     m_adjSiteId = data.m_adjSiteId;
     m_adjChannelId = data.m_adjChannelId;

@@ -62,11 +62,17 @@ enum IPMATCHTYPE {
 namespace network
 {
 #if defined(HAVE_SENDMSG) && !defined(HAVE_SENDMMSG)
+    /* For `sendmmsg'.  */
     struct mmsghdr {
-        struct msghdr msg_hdr;
-        unsigned int msg_len;
+        struct msghdr msg_hdr;  /* Actual message header.  */
+        unsigned int msg_len;   /* Number of received or sent bytes for the entry.  */
     };
 
+    /* Send a VLEN messages as described by VMESSAGES to socket FD.
+       Returns the number of datagrams successfully written or -1 for errors.
+
+       This function is a cancellation point and therefore not marked with
+       __THROW.  */
     static inline int sendmmsg(int sockfd, struct mmsghdr* msgvec, unsigned int vlen, int flags)
     {
         ssize_t n = 0;

@@ -36,9 +36,7 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
-#include <cstring>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -145,18 +143,12 @@ RS6355 rs24169;     // 8 bit / 4 bit corrections max / 2 bytes total
 /// <summary>
 /// Initializes a new instance of the RS634717 class.
 /// </summary>
-RS634717::RS634717()
-{
-    /* stub */
-}
+RS634717::RS634717() = default;
 
 /// <summary>
 /// Finalizes a instance of the RS634717 class.
 /// </summary>
-RS634717::~RS634717()
-{
-    /* stub */
-}
+RS634717::~RS634717() = default;
 
 /// <summary>
 /// Decode RS (24,12,13) FEC.

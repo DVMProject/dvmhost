@@ -28,11 +28,9 @@
 #include "common/lookups/AffiliationLookup.h"
 #include "common/network/json/json.h"
 #include "common/Log.h"
-#include "common/Thread.h"
 #include "common/Utils.h"
 #include "fne/network/RESTAPI.h"
 #include "HostFNE.h"
-#include "FNEMain.h"
 
 using namespace network;
 using namespace network::rest;
@@ -189,10 +187,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
 /// <summary>
 /// Finalizes a instance of the RESTAPI class.
 /// </summary>
-RESTAPI::~RESTAPI()
-{
-    /* stub */
-}
+RESTAPI::~RESTAPI() = default;
 
 /// <summary>
 /// Sets the instances of the Radio ID and Talkgroup ID lookup tables.
@@ -285,7 +280,7 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
 #if DEBUG_HTTP_PAYLOAD
     ::LogDebug(LOG_REST, "RESTAPI::validateAuth() token, host = %s, token = %s", host.c_str(), headerToken.c_str());
 #endif
-    if (headerToken == "") {
+    if (headerToken.empty()) {
         errorPayload(reply, "no authentication token", HTTPPayload::UNAUTHORIZED);
         return false;
     }

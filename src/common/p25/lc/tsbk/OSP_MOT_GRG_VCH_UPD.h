@@ -51,7 +51,7 @@ namespace p25
                 void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
-                virtual std::string toString(bool isp = false) override;
+                std::string toString(bool isp = false) override;
 
             public:
                 /// <summary>1st patch group ID.</summary>

@@ -60,14 +60,14 @@ namespace p25
         class HOST_SW_API Voice {
         public:
             /// <summary>Resets the data states for the RF interface.</summary>
-            virtual void resetRF();
+            void resetRF();
             /// <summary>Resets the data states for the network.</summary>
-            virtual void resetNet();
+            void resetNet();
 
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t* data, uint32_t len);
+            bool process(uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, uint8_t& duid, uint8_t& frameType);
 
         protected:
             friend class packet::ControlSignaling;
@@ -117,7 +117,7 @@ namespace p25
             /// <summary>Initializes a new instance of the Voice class.</summary>
             Voice(Control* p25, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Voice class.</summary>
-            virtual ~Voice();
+            ~Voice();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint8_t duid, uint8_t frameType = P25_FT_DATA_UNIT);
@@ -126,15 +126,15 @@ namespace p25
             void writeRF_EndOfVoice();
 
             /// <summary>Helper to write a network P25 TDU packet.</summary>
-            virtual void writeNet_TDU();
+            void writeNet_TDU();
             /// <summary>Helper to check for an unflushed LDU1 packet.</summary>
             void checkNet_LDU1();
             /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-            virtual void writeNet_LDU1();
+            void writeNet_LDU1();
             /// <summary>Helper to check for an unflushed LDU2 packet.</summary>
             void checkNet_LDU2();
             /// <summary>Helper to write a network P25 LDU1 packet.</summary>
-            virtual void writeNet_LDU2();
+            void writeNet_LDU2();
 
             /// <summary>Helper to insert IMBE silence frames for missing audio.</summary>
             void insertMissingAudio(uint8_t* data);

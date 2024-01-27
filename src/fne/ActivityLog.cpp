@@ -24,21 +24,16 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "ActivityLog.h"
-#include "common/network/BaseNetwork.h"
 #include "common/Log.h" // for CurrentLogFileLevel() and LogGetNetwork()
-
-#include <sys/time.h>
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
 #endif
 
 #include <cstdio>
-#include <cstdlib>
 #include <cstdarg>
 #include <ctime>
 #include <cassert>
-#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Constants

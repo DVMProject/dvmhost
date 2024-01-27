@@ -35,13 +35,12 @@
 #include "edac/RS129.h"
 #include "edac/CRC.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace dmr::lc;
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
+#include <memory>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -59,10 +58,7 @@ FullLC::FullLC() :
 /// <summary>
 /// Finalizes a instance of the FullLC class.
 /// </summary>
-FullLC::~FullLC()
-{
-    /* stub */
-}
+FullLC::~FullLC() = default;
 
 /// <summary>
 /// Decode DMR full-link control data.
@@ -100,7 +96,7 @@ std::unique_ptr<LC> FullLC::decode(const uint8_t* data, uint8_t type)
     if (!edac::RS129::check(lcData))
         return nullptr;
 
-    return std::unique_ptr<LC>(new LC(lcData));
+    return std::make_unique<LC>(lcData);
 }
 
 /// <summary>
@@ -170,7 +166,7 @@ std::unique_ptr<PrivacyLC> FullLC::decodePI(const uint8_t* data)
         lcData[11U] ^= PI_HEADER_CRC_MASK[1U];
     }
 
-    return std::unique_ptr<PrivacyLC>(new PrivacyLC(lcData));
+    return std::make_unique<PrivacyLC>(lcData);
 }
 
 /// <summary>

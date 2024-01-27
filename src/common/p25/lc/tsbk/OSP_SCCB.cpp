@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_SCCB.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -57,7 +54,7 @@ OSP_SCCB::OSP_SCCB() : TSBK(),
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_SCCB::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -72,7 +69,7 @@ bool OSP_SCCB::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_SCCB::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 

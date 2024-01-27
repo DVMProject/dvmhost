@@ -29,13 +29,11 @@
 */
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/lc/RCCH.h"
-#include "Log.h"
 #include "Utils.h"
 
 using namespace nxdn;
 using namespace nxdn::lc;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

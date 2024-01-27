@@ -27,15 +27,12 @@
 #include "p25/P25Defines.h"
 #include "p25/dfsi/DFSIDefines.h"
 #include "p25/dfsi/LC.h"
-#include "p25/lc/tsbk/TSBKFactory.h"
-#include "p25/P25Utils.h"
 #include "Log.h"
 #include "Utils.h"
 
 using namespace p25::dfsi;
 using namespace p25;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

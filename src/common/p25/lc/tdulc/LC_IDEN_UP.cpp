@@ -26,7 +26,6 @@
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_IDEN_UP.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tdulc;
 using namespace p25::lc;
@@ -54,7 +53,7 @@ LC_IDEN_UP::LC_IDEN_UP() : TDULC()
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
 bool LC_IDEN_UP::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -67,7 +66,7 @@ bool LC_IDEN_UP::decode(const uint8_t* data)
 /// <param name="data"></param>
 void LC_IDEN_UP::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t rsValue = 0U;
 
@@ -110,7 +109,7 @@ void LC_IDEN_UP::encode(uint8_t* data)
         }
     }
     else {
-        LogError(LOG_P25, "TDULC::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+        LogError(LOG_P25, "LC_IDEN_UP::encodeLC(), invalid values for LC_IDEN_UP, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
             m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
             m_siteIdenEntry.chSpaceKhz());
         return; // blatently ignore creating this TSBK

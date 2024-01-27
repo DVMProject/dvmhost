@@ -36,7 +36,6 @@
 using namespace nxdn;
 using namespace nxdn::lc;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

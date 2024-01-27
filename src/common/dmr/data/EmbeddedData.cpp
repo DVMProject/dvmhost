@@ -37,9 +37,9 @@
 using namespace dmr::data;
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <memory>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -85,49 +85,49 @@ bool EmbeddedData::addData(const uint8_t* data, uint8_t lcss)
     Utils::byteToBitsBE(data[17U], rawData + 24U);
     Utils::byteToBitsBE(data[18U], rawData + 32U);
 
-    // Is this the first block of a 4 block embedded LC ?
+    // is this the first block of a 4 block embedded LC ?
     if (lcss == 1U) {
         for (uint32_t a = 0U; a < 32U; a++)
             m_raw[a] = rawData[a + 4U];
 
-        // Show we are ready for the next LC block
+        // show we are ready for the next LC block
         m_state = LCS_FIRST;
         m_valid = false;
 
         return false;
     }
 
-    // Is this the 2nd block of a 4 block embedded LC ?
+    // is this the 2nd block of a 4 block embedded LC ?
     if (lcss == 3U && m_state == LCS_FIRST) {
         for (uint32_t a = 0U; a < 32U; a++)
             m_raw[a + 32U] = rawData[a + 4U];
 
-        // Show we are ready for the next LC block
+        // show we are ready for the next LC block
         m_state = LCS_SECOND;
 
         return false;
     }
 
-    // Is this the 3rd block of a 4 block embedded LC ?
+    // is this the 3rd block of a 4 block embedded LC ?
     if (lcss == 3U && m_state == LCS_SECOND) {
         for (uint32_t a = 0U; a < 32U; a++)
             m_raw[a + 64U] = rawData[a + 4U];
 
-        // Show we are ready for the final LC block
+        // show we are ready for the final LC block
         m_state = LCS_THIRD;
 
         return false;
     }
 
-    // Is this the final block of a 4 block embedded LC ?
+    // is this the final block of a 4 block embedded LC ?
     if (lcss == 2U && m_state == LCS_THIRD) {
         for (uint32_t a = 0U; a < 32U; a++)
             m_raw[a + 96U] = rawData[a + 4U];
 
-        // Show that we're not ready for any more data
+        // show that we're not ready for any more data
         m_state = LCS_NONE;
 
-        // Process the complete data block
+        // process the complete data block
         decodeEmbeddedData();
         if (m_valid)
             encodeEmbeddedData();
@@ -188,7 +188,9 @@ uint8_t EmbeddedData::getData(uint8_t* data, uint8_t n) const
     }
 }
 
-/// <summary>Sets link control data.</summary>
+/// <summary>
+/// Sets link control data.
+/// </summary>
 /// <param name="lc"></param>
 void EmbeddedData::setLC(const lc::LC& lc)
 {
@@ -200,7 +202,9 @@ void EmbeddedData::setLC(const lc::LC& lc)
     encodeEmbeddedData();
 }
 
-/// <summary>Gets link control data.</summary>
+/// <summary>
+/// Gets link control data.
+/// </summary>
 /// <returns></returns>
 std::unique_ptr<lc::LC> EmbeddedData::getLC() const
 {
@@ -210,7 +214,7 @@ std::unique_ptr<lc::LC> EmbeddedData::getLC() const
     if (m_FLCO != FLCO_GROUP && m_FLCO != FLCO_PRIVATE)
         return nullptr;
 
-    return std::unique_ptr<lc::LC>(new lc::LC(m_data));
+    return std::make_unique<lc::LC>(m_data);
 }
 
 /// <summary>
@@ -256,7 +260,7 @@ void EmbeddedData::reset()
 /// </summary>
 void EmbeddedData::decodeEmbeddedData()
 {
-    // The data is unpacked downwards in columns
+    // the data is unpacked downwards in columns
     bool data[128U];
     ::memset(data, 0x00U, 128U * sizeof(bool));
 
@@ -274,14 +278,14 @@ void EmbeddedData::decodeEmbeddedData()
             return;
     }
 
-    // Check the parity bits
+    // check the parity bits
     for (uint32_t a = 0U; a < 16U; a++) {
         bool parity = data[a + 0U] ^ data[a + 16U] ^ data[a + 32U] ^ data[a + 48U] ^ data[a + 64U] ^ data[a + 80U] ^ data[a + 96U] ^ data[a + 112U];
         if (parity)
             return;
     }
 
-    // We have passed the Hamming check so extract the actual payload
+    // we have passed the Hamming check so extract the actual payload
     b = 0U;
     for (uint32_t a = 0U; a < 11U; a++, b++)
         m_data[b] = data[a];
@@ -298,7 +302,7 @@ void EmbeddedData::decodeEmbeddedData()
     for (uint32_t a = 96U; a < 106U; a++, b++)
         m_data[b] = data[a];
 
-    // Extract the 5 bit CRC
+    // extract the 5 bit CRC
     uint32_t crc = 0U;
     if (data[42])  crc += 16U;
     if (data[58])  crc += 8U;
@@ -306,13 +310,13 @@ void EmbeddedData::decodeEmbeddedData()
     if (data[90])  crc += 2U;
     if (data[106]) crc += 1U;
 
-    // Now CRC check this
+    // now CRC check this
     if (!edac::CRC::checkFiveBit(m_data, crc))
         return;
 
     m_valid = true;
 
-    // Extract the FLCO
+    // extract the FLCO
     uint8_t flco;
     Utils::bitsToByteBE(m_data + 0U, flco);
     m_FLCO = flco & 0x3FU;
@@ -355,11 +359,11 @@ void EmbeddedData::encodeEmbeddedData()
     for (uint32_t a = 0U; a < 112U; a += 16U)
         edac::Hamming::encode16114(data + a);
 
-    // Add the parity bits for each column
+    // add the parity bits for each column
     for (uint32_t a = 0U; a < 16U; a++)
         data[a + 112U] = data[a + 0U] ^ data[a + 16U] ^ data[a + 32U] ^ data[a + 48U] ^ data[a + 64U] ^ data[a + 80U] ^ data[a + 96U];
 
-    // The data is packed downwards in columns
+    // the data is packed downwards in columns
     b = 0U;
     for (uint32_t a = 0U; a < 128U; a++) {
         m_raw[a] = data[b];

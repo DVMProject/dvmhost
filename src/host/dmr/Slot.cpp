@@ -29,7 +29,6 @@
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/SlotType.h"
 #include "common/dmr/Sync.h"
-#include "common/edac/BPTC19696.h"
 #include "common/edac/CRC.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -42,7 +41,6 @@ using namespace dmr;
 using namespace dmr::packet;
 
 #include <cassert>
-#include <ctime>
 #include <algorithm>
 #include <cmath>
 
@@ -700,7 +698,7 @@ void Slot::releaseGrantTG(uint32_t dstId)
 }
 
 /// <summary>
-/// Touchs a granted TG to keep a channel grant alive.
+/// Touches a granted TG to keep a channel grant alive.
 /// </summary>
 /// <param name="dstId"></param>
 void Slot::touchGrantTG(uint32_t dstId)

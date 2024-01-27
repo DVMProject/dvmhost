@@ -26,7 +26,6 @@
 #include "Defines.h"
 #include "common/yaml/Yaml.h"
 #include "common/Log.h"
-#include "common/Utils.h"
 #include "MonitorMain.h"
 #include "MonitorApplication.h"
 #include "MonitorMainWnd.h"
@@ -146,7 +145,7 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "must specify the monitor configuration file to use");
             g_iniFile = std::string(argv[++i]);
 
-            if (g_iniFile == "")
+            if (g_iniFile.empty())
                 usage("error: %s", "monitor configuration file cannot be blank!");
 
             p += 2;

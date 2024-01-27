@@ -26,14 +26,12 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_ISP_AUTH_RESP_M.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -42,7 +40,8 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the MBT_ISP_AUTH_RESP_M class.
 /// </summary>
-MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT()
+MBT_ISP_AUTH_RESP_M::MBT_ISP_AUTH_RESP_M() : AMBT(),
+    m_authStandalone(false)
 {
     m_lco = TSBK_ISP_AUTH_RESP_M;
 
@@ -88,7 +87,7 @@ bool MBT_ISP_AUTH_RESP_M::decodeMBT(const data::DataHeader& dataHeader, const da
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
     if (dataHeader.getBlocksToFollow() != 2) {
-        LogError(LOG_P25, "TSBK::decodeMBT(), PDU does not contain the appropriate amount of data blocks");
+        LogError(LOG_P25, "MBT_ISP_AUTH_RESP_M::decodeMBT(), PDU does not contain the appropriate amount of data blocks");
         return false;
     }
 

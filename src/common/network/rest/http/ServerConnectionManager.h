@@ -59,7 +59,7 @@ namespace network
             class ServerConnectionManager {
             public:
                 /// <summary>Initializes a new instance of the ServerConnectionManager class.</summary>
-                ServerConnectionManager() { /* stub */ }
+                ServerConnectionManager() = default;
                 /// <summary>Initializes a copy instance of the ServerConnectionManager class.</summary>
                 ServerConnectionManager(const ServerConnectionManager&) = delete;
 

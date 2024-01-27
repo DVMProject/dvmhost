@@ -33,14 +33,12 @@
 #include "dmr/DMRDefines.h"
 #include "dmr/data/DataHeader.h"
 #include "edac/BPTC19696.h"
-#include "edac/RS129.h"
 #include "edac/CRC.h"
 #include "Utils.h"
 
 using namespace dmr::data;
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

@@ -69,7 +69,7 @@ namespace network
             __READONLY_PROPERTY(uint8_t, version, Version);
             /// <summary>Flag indicating if the packet has trailing padding.</summary>
             __READONLY_PROPERTY(bool, padding, Padding);
-            /// <summary>Flag indicating the presense of an extension header.</summary>
+            /// <summary>Flag indicating the presence of an extension header.</summary>
             __PROPERTY(bool, extension, Extension);
             /// <summary>Count of contributing source IDs that follow the SSRC.</summary>
             __READONLY_PROPERTY(uint8_t, cc, CSRCCount);

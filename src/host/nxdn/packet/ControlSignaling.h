@@ -57,9 +57,9 @@ namespace nxdn
         class HOST_SW_API ControlSignaling {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
+            bool process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
+            bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
 
             /// <summary>Updates the processor by the passed number of milliseconds.</summary>
             void clock(uint32_t ms);
@@ -89,7 +89,7 @@ namespace nxdn
             /// <summary>Initializes a new instance of the ControlSignaling class.</summary>
             ControlSignaling(Control* nxdn, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the ControlSignaling class.</summary>
-            virtual ~ControlSignaling();
+            ~ControlSignaling();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint32_t len);

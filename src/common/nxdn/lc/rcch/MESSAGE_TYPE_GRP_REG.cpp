@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "nxdn/lc/rcch/MESSAGE_TYPE_GRP_REG.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace nxdn::lc::rcch;
 using namespace nxdn::lc;
 using namespace nxdn;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ MESSAGE_TYPE_GRP_REG::MESSAGE_TYPE_GRP_REG() : RCCH()
 /// <param name="offset"></param>
 void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
@@ -75,7 +72,7 @@ void MESSAGE_TYPE_GRP_REG::decode(const uint8_t* data, uint32_t length, uint32_t
 /// <param name="offset"></param>
 void MESSAGE_TYPE_GRP_REG::encode(uint8_t* data, uint32_t length, uint32_t offset)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rcch[NXDN_RCCH_LC_LENGTH_BYTES + 4U];
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);

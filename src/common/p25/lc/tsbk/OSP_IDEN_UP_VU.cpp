@@ -26,7 +26,6 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_IDEN_UP_VU.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
@@ -55,7 +54,7 @@ OSP_IDEN_UP_VU::OSP_IDEN_UP_VU() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_IDEN_UP_VU::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -70,7 +69,7 @@ bool OSP_IDEN_UP_VU::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_IDEN_UP_VU::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -93,10 +92,10 @@ void OSP_IDEN_UP_VU::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         tsbkValue = (tsbkValue << 32) + calcBaseFreq;                               // Base Frequency
     }
     else {
-        LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
+        LogError(LOG_P25, "OSP_IDEN_UP_VU::encode(), invalid values for TSBK_OSP_IDEN_UP_VU, baseFrequency = %uHz, txOffsetMhz = %fMHz, chBandwidthKhz = %fKHz, chSpaceKhz = %fKHz",
             m_siteIdenEntry.baseFrequency(), m_siteIdenEntry.txOffsetMhz(), m_siteIdenEntry.chBandwidthKhz(),
             m_siteIdenEntry.chSpaceKhz());
-        return; // blatently ignore creating this TSBK
+        return; // blatantly ignore creating this TSBK
     }
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);

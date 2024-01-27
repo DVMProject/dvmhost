@@ -28,7 +28,6 @@
 #include "common/p25/Sync.h"
 #include "common/Clock.h"
 #include "common/Log.h"
-#include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
@@ -40,9 +39,7 @@ using namespace network;
 using namespace network::fne;
 using namespace p25;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 #include <chrono>
 
 // ---------------------------------------------------------------------------
@@ -68,10 +65,7 @@ TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
 /// <summary>
 /// Finalizes a instance of the TagP25Data class.
 /// </summary>
-TagP25Data::~TagP25Data()
-{
-    /* stub */
-}
+TagP25Data::~TagP25Data() = default;
 
 /// <summary>
 /// Process a data frame from the network.

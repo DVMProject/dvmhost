@@ -29,12 +29,10 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "nxdn/edac/Convolution.h"
-#include "Log.h"
 #include "Utils.h"
 
 using namespace nxdn::edac;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 #include <cstdlib>

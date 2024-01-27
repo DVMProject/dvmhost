@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_UU_VCH_GRANT_UPD.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ OSP_UU_VCH_GRANT_UPD::OSP_UU_VCH_GRANT_UPD() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_UU_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -70,7 +67,7 @@ bool OSP_UU_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_UU_VCH_GRANT_UPD::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 

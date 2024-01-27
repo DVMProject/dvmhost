@@ -33,7 +33,6 @@
 
 using namespace p25;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

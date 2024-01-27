@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_GRP_VCH.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -56,7 +53,7 @@ IOSP_GRP_VCH::IOSP_GRP_VCH() : TSBK(),
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool IOSP_GRP_VCH::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -86,7 +83,7 @@ bool IOSP_GRP_VCH::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -115,8 +112,6 @@ void IOSP_GRP_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_GRP_VCH::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_GRP_VCH (Group Voice Channel Request)");
-    else    
-        return std::string("TSBK_IOSP_GRP_VCH (Group Voice Channel Grant)");
+    if (isp) return std::string("TSBK_IOSP_GRP_VCH (Group Voice Channel Request)");
+    else return std::string("TSBK_IOSP_GRP_VCH (Group Voice Channel Grant)");
 }

@@ -26,14 +26,12 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_OSP_ADJ_STS_BCAST.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -44,6 +42,7 @@ using namespace p25;
 /// </summary>
 MBT_OSP_ADJ_STS_BCAST::MBT_OSP_ADJ_STS_BCAST() : AMBT(),
     m_adjCFVA(P25_CFVA_FAILURE),
+    m_adjSysId(0U),
     m_adjRfssId(0U),
     m_adjSiteId(0U),
     m_adjChannelId(0U),
@@ -104,9 +103,9 @@ void MBT_OSP_ADJ_STS_BCAST::encodeMBT(data::DataHeader& dataHeader, uint8_t* pdu
         pduUserData[7U] = (m_siteData.netId() & 0x0FU) << 4;                        // Network ID (b3-b0)
     }
     else {
-        LogError(LOG_P25, "TSBK::encodeMBT(), invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
+        LogError(LOG_P25, "MBT_OSP_ADJ_STS_BCAST::encodeMBT(), invalid values for OSP_ADJ_STS_BCAST, adjRfssId = $%02X, adjSiteId = $%02X, adjChannelId = %u, adjChannelNo = $%02X, adjSvcClass = $%02X",
             m_adjRfssId, m_adjSiteId, m_adjChannelId, m_adjChannelNo, m_adjServiceClass);
-        return; // blatently ignore creating this TSBK
+        return; // blatantly ignore creating this TSBK
     }
 
     AMBT::encode(dataHeader, pduUserData);
@@ -135,6 +134,7 @@ void MBT_OSP_ADJ_STS_BCAST::copy(const MBT_OSP_ADJ_STS_BCAST& data)
     TSBK::copy(data);
 
     m_adjCFVA = data.m_adjCFVA;
+    m_adjSysId = data.m_adjSysId;
     m_adjRfssId = data.m_adjRfssId;
     m_adjSiteId = data.m_adjSiteId;
     m_adjChannelId = data.m_adjChannelId;

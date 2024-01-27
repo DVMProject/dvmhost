@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_GRP_AFF.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -95,8 +92,6 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// <returns></returns>
 std::string MBT_IOSP_GRP_AFF::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
-    else    
-        return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
+    if (isp) return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Request)");
+    else return std::string("TSBK_IOSP_GRP_AFF (Group Affiliation Response)");
 }

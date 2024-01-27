@@ -46,7 +46,7 @@ namespace dmr
             /// <summary>Initializes a new instance of the DMRAffiliationLookup class.</summary>
             DMRAffiliationLookup(bool verbose);
             /// <summary>Finalizes a instance of the DMRAffiliationLookup class.</summary>
-            virtual ~DMRAffiliationLookup();
+            ~DMRAffiliationLookup() override;
 
             /// <summary>Helper to grant a channel.</summary>
             bool grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted) override;

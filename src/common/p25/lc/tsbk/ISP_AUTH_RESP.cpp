@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/ISP_AUTH_RESP.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -44,7 +41,7 @@ using namespace p25;
 /// </summary>
 ISP_AUTH_RESP::ISP_AUTH_RESP() : TSBK(),
     m_authStandalone(false),
-    m_authRes(NULL)
+    m_authRes(nullptr)
 {
     m_lco = TSBK_ISP_AUTH_RESP;
 
@@ -57,9 +54,9 @@ ISP_AUTH_RESP::ISP_AUTH_RESP() : TSBK(),
 /// </summary>
 ISP_AUTH_RESP::~ISP_AUTH_RESP()
 {
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
-        m_authRes = NULL;
+        m_authRes = nullptr;
     }
 }
 
@@ -71,7 +68,7 @@ ISP_AUTH_RESP::~ISP_AUTH_RESP()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool ISP_AUTH_RESP::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -101,7 +98,7 @@ bool ISP_AUTH_RESP::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void ISP_AUTH_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 }
@@ -120,7 +117,7 @@ std::string ISP_AUTH_RESP::toString(bool isp)
 /// <returns></returns>
 void ISP_AUTH_RESP::getAuthRes(uint8_t* res) const
 {
-    assert(res != NULL);
+    assert(res != nullptr);
 
     ::memcpy(res, m_authRes, P25_AUTH_RES_LENGTH_BYTES);
 }
@@ -139,7 +136,7 @@ void ISP_AUTH_RESP::copy(const ISP_AUTH_RESP& data)
 
     m_authStandalone = data.m_authStandalone;
 
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
     }
 

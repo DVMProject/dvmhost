@@ -70,7 +70,7 @@ namespace dmr
             /// <summary>Gets link control data.</summary>
             std::unique_ptr<lc::LC> getLC() const;
 
-            /// <summary>Get raw embeded data buffer.</summary>
+            /// <summary>Get raw embedded data buffer.</summary>
             bool getRawData(uint8_t* data) const;
 
             /// <summary>Helper to reset data values to defaults.</summary>

@@ -48,18 +48,12 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the TDULCFactory class.
 /// </summary>
-TDULCFactory::TDULCFactory()
-{
-    /* stub */
-}
+TDULCFactory::TDULCFactory() = default;
 
 /// <summary>
 /// Finalizes a instance of TDULCFactory class.
 /// </summary>
-TDULCFactory::~TDULCFactory()
-{
-    /* stub */
-}
+TDULCFactory::~TDULCFactory() = default;
 
 /// <summary>
 /// Create an instance of a TDULC.

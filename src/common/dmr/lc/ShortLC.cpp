@@ -74,18 +74,18 @@ bool ShortLC::decode(const uint8_t* in, uint8_t* out)
     assert(in != nullptr);
     assert(out != nullptr);
 
-    //  Get the raw binary
+    // get the raw binary
     decodeExtractBinary(in);
 
-    // Deinterleave
+    // deinterleave
     decodeDeInterleave();
 
-    // Error check
+    // error check
     bool ret = decodeErrorCheck();
     if (!ret)
         return false;
 
-    // Extract Data
+    // extract Data
     decodeExtractData(out);
 
     return true;
@@ -101,16 +101,16 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
     assert(in != nullptr);
     assert(out != nullptr);
 
-    // Extract Data
+    // extract Data
     encodeExtractData(in);
 
-    // Error check
+    // error check
     encodeErrorCheck();
 
-    // Deinterleave
+    // interleave
     encodeInterleave();
 
-    //  Get the raw binary
+    // get the raw binary
     encodeExtractBinary(out);
 }
 
@@ -146,9 +146,9 @@ void ShortLC::decodeDeInterleave()
         m_deInterData[i] = false;
 
     for (uint32_t a = 0U; a < 67U; a++) {
-        // Calculate the interleave sequence
+        // calculate the interleave sequence
         uint32_t interleaveSequence = (a * 4U) % 67U;
-        // Shuffle the data
+        // shuffle the data
         m_deInterData[a] = m_rawData[interleaveSequence];
     }
 
@@ -161,12 +161,12 @@ void ShortLC::decodeDeInterleave()
 /// <returns></returns>
 bool ShortLC::decodeErrorCheck()
 {
-    // Run through each of the 3 rows containing data
+    // run through each of the 3 rows containing data
     edac::Hamming::decode17123(m_deInterData + 0U);
     edac::Hamming::decode17123(m_deInterData + 17U);
     edac::Hamming::decode17123(m_deInterData + 34U);
 
-    // Run through each of the 17 columns
+    // run through each of the 17 columns
     for (uint32_t c = 0U; c < 17U; c++) {
         bool bit = m_deInterData[c + 0U] ^ m_deInterData[c + 17U] ^ m_deInterData[c + 34U];
         if (bit != m_deInterData[c + 51U])
@@ -240,12 +240,12 @@ void ShortLC::encodeExtractData(const uint8_t* in) const
 /// </summary>
 void ShortLC::encodeErrorCheck()
 {
-    // Run through each of the 3 rows containing data
+    // run through each of the 3 rows containing data
     edac::Hamming::encode17123(m_deInterData + 0U);
     edac::Hamming::encode17123(m_deInterData + 17U);
     edac::Hamming::encode17123(m_deInterData + 34U);
 
-    // Run through each of the 17 columns
+    // run through each of the 17 columns
     for (uint32_t c = 0U; c < 17U; c++)
         m_deInterData[c + 51U] = m_deInterData[c + 0U] ^ m_deInterData[c + 17U] ^ m_deInterData[c + 34U];
 }
@@ -259,10 +259,10 @@ void ShortLC::encodeInterleave()
         m_rawData[i] = false;
 
     for (uint32_t a = 0U; a < 67U; a++) {
-        // Calculate the interleave sequence
+        // calculate the interleave sequence
         uint32_t interleaveSequence = (a * 4U) % 67U;
 
-        // Unshuffle the data
+        // unshuffle the data
         m_rawData[interleaveSequence] = m_deInterData[a];
     }
 

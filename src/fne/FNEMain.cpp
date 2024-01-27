@@ -41,14 +41,10 @@ using namespace lookups;
 #include <cstdarg>
 #include <vector>
 
-#include <sys/types.h>
-#include <unistd.h>
 #include <signal.h>
-#include <fcntl.h>
-#include <pwd.h>
 
 // ---------------------------------------------------------------------------
-//	Macros
+//  Macros
 // ---------------------------------------------------------------------------
 
 #define IS(s) (::strcmp(argv[i], s) == 0)
@@ -167,7 +163,7 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "must specify the configuration file to use");
             g_iniFile = std::string(argv[++i]);
 
-            if (g_iniFile == "")
+            if (g_iniFile.empty())
                 usage("error: %s", "configuration file cannot be blank!");
 
             p += 2;

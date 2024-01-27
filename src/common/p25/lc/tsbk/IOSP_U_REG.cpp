@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_U_REG.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -101,8 +98,6 @@ void IOSP_U_REG::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_U_REG::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_U_REG (Unit Registration Request)");
-    else    
-        return std::string("TSBK_IOSP_U_REG (Unit Registration Response)");
+    if (isp) return std::string("TSBK_IOSP_U_REG (Unit Registration Request)");
+    else return std::string("TSBK_IOSP_U_REG (Unit Registration Response)");
 }

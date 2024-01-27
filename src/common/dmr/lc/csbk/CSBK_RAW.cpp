@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_RAW.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace dmr::lc::csbk;
 using namespace dmr::lc;
 using namespace dmr;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -65,7 +62,7 @@ CSBK_RAW::~CSBK_RAW()
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
 bool CSBK_RAW::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -78,8 +75,8 @@ bool CSBK_RAW::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CSBK_RAW::encode(uint8_t* data)
 {
-    assert(data != NULL);
-    assert(m_csbk != NULL);
+    assert(data != nullptr);
+    assert(m_csbk != nullptr);
 
     /* stub */
 
@@ -92,7 +89,7 @@ void CSBK_RAW::encode(uint8_t* data)
 /// <param name="csbk"></param>
 void CSBK_RAW::setCSBK(const uint8_t* csbk)
 {
-    assert(csbk != NULL);
+    assert(csbk != nullptr);
 
     m_CSBKO = csbk[0U] & 0x3FU;                                                     // CSBKO
     m_lastBlock = (csbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker

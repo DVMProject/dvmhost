@@ -27,7 +27,6 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/Clock.h"
 #include "common/Log.h"
-#include "common/StopWatch.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagNXDNData.h"
@@ -38,9 +37,7 @@ using namespace network;
 using namespace network::fne;
 using namespace nxdn;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 #include <chrono>
 
 // ---------------------------------------------------------------------------
@@ -65,10 +62,7 @@ TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
 /// <summary>
 /// Finalizes a instance of the TagNXDNData class.
 /// </summary>
-TagNXDNData::~TagNXDNData()
-{
-    /* stub */
-}
+TagNXDNData::~TagNXDNData() = default;
 
 /// <summary>
 /// Process a data frame from the network.

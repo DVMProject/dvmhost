@@ -46,10 +46,7 @@ RTPExtensionHeader::RTPExtensionHeader() :
 /// <summary>
 /// Finalizes a instance of the RTPExtensionHeader class.
 /// </summary>
-RTPExtensionHeader::~RTPExtensionHeader()
-{
-    /* stub */
-}
+RTPExtensionHeader::~RTPExtensionHeader() = default;
 
 /// <summary>
 /// Decode a RTP header.

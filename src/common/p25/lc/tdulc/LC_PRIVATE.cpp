@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_PRIVATE.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tdulc;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -54,7 +51,7 @@ LC_PRIVATE::LC_PRIVATE() : TDULC()
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
 bool LC_PRIVATE::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t rs[P25_TDULC_LENGTH_BYTES + 1U];
     ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
@@ -82,7 +79,7 @@ bool LC_PRIVATE::decode(const uint8_t* data)
 /// <param name="data"></param>
 void LC_PRIVATE::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t rsValue = 0U;
 

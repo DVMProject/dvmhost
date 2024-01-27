@@ -26,8 +26,6 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_TIME_DATE_ANN.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
@@ -58,7 +56,7 @@ OSP_TIME_DATE_ANN::OSP_TIME_DATE_ANN() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_TIME_DATE_ANN::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -73,7 +71,7 @@ bool OSP_TIME_DATE_ANN::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_TIME_DATE_ANN::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 

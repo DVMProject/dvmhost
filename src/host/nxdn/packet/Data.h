@@ -55,14 +55,14 @@ namespace nxdn
         class HOST_SW_API Data {
         public:
             /// <summary>Resets the data states for the RF interface.</summary>
-            virtual void resetRF();
+            void resetRF();
             /// <summary>Resets the data states for the network.</summary>
-            virtual void resetNet();
+            void resetNet();
 
             /// <summary>Process a data frame from the RF interface.</summary>
-            virtual bool process(uint8_t option, uint8_t* data, uint32_t len);
+            bool process(uint8_t option, uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
-            virtual bool processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
+            bool processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
 
         protected:
             friend class nxdn::Control;
@@ -76,7 +76,7 @@ namespace nxdn
             /// <summary>Initializes a new instance of the Data class.</summary>
             Data(Control* nxdn, bool debug, bool verbose);
             /// <summary>Finalizes a instance of the Data class.</summary>
-            virtual ~Data();
+            ~Data();
 
             /// <summary>Write data processed from RF to the network.</summary>
             void writeNetwork(const uint8_t* data, uint32_t len);

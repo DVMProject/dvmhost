@@ -177,9 +177,7 @@ namespace yaml
         /// <summary>
         /// Finalizes a new instance of the TypeImp class.
         /// </summary>
-        virtual ~TypeImp()
-        {
-        }
+        virtual ~TypeImp() = default;
 
         /// <summary></summary>
         /// <returns></returns>
@@ -231,7 +229,7 @@ namespace yaml
         /// <summary>
         /// Finalizes a new instance of the SequenceImp class.
         /// </summary>
-        ~SequenceImp()
+        ~SequenceImp() override
         {
             for (auto it = m_Sequence.begin(); it != m_Sequence.end(); it++) {
                 delete it->second;
@@ -240,7 +238,7 @@ namespace yaml
 
         /// <summary></summary>
         /// <returns></returns>
-        virtual const std::string & getData() const
+        virtual const std::string& getData() const
         {
             return g_EmptyString;
         }
@@ -368,7 +366,7 @@ namespace yaml
         /// <summary>
         /// Finalizes a new instance of the SequenceImp class.
         /// </summary>
-        ~MapImp()
+        ~MapImp() override
         {
             for (auto it = m_Map.begin(); it != m_Map.end(); it++) {
                 delete it->second;
@@ -468,7 +466,7 @@ namespace yaml
         /// <summary>
         /// Finalizes a new instance of the ScalarImp class.
         /// </summary>
-        ~ScalarImp()
+        ~ScalarImp() override
         {
             /* stub */
         }
@@ -629,10 +627,7 @@ namespace yaml
         /// <summary>
         /// Finalizes a new instance of the IteratorImp class.
         /// </summary>
-        virtual ~IteratorImp()
-        {
-            /* stub */
-        }
+        virtual ~IteratorImp() = default;
 
         /// <summary></summary>
         /// <returns></returns>
@@ -660,31 +655,31 @@ namespace yaml
     public:
         /// <summary></summary>
         /// <returns></returns>
-        virtual Node::eType type() const
+        Node::eType type() const override
         {
             return Node::SequenceType;
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initBegin(SequenceImp* pSequenceImp)
+        void initBegin(SequenceImp* pSequenceImp) override
         {
             m_Iterator = pSequenceImp->m_Sequence.begin();
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initEnd(SequenceImp* pSequenceImp)
+        void initEnd(SequenceImp* pSequenceImp) override
         {
             m_Iterator = pSequenceImp->m_Sequence.end();
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initBegin(MapImp* pMapImp)
+        void initBegin(MapImp* pMapImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initEnd(MapImp* pMapImp)
+        void initEnd(MapImp* pMapImp) override
         {
             /* stub */
         }
@@ -708,31 +703,31 @@ namespace yaml
     public:
         /// <summary></summary>
         /// <returns></returns>
-        virtual Node::eType type() const
+        Node::eType type() const override
         {
             return Node::MapType;
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initBegin(SequenceImp* pSequenceImp)
+        void initBegin(SequenceImp* pSequenceImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initEnd(SequenceImp* pSequenceImp)
+        void initEnd(SequenceImp* pSequenceImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initBegin(MapImp* pMapImp)
+        void initBegin(MapImp* pMapImp) override
         {
             m_Iterator = pMapImp->m_Map.begin();
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initEnd(MapImp* pMapImp)
+        void initEnd(MapImp* pMapImp) override
         {
             m_Iterator = pMapImp->m_Map.end();
         }
@@ -756,31 +751,31 @@ namespace yaml
     public:
         /// <summary></summary>
         /// <returns></returns>
-        virtual Node::eType type() const
+        Node::eType type() const override
         {
             return Node::SequenceType;
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initBegin(SequenceImp* pSequenceImp)
+        void initBegin(SequenceImp* pSequenceImp) override
         {
             m_Iterator = pSequenceImp->m_Sequence.begin();
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initEnd(SequenceImp* pSequenceImp)
+        void initEnd(SequenceImp* pSequenceImp) override
         {
             m_Iterator = pSequenceImp->m_Sequence.end();
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initBegin(MapImp* pMapImp)
+        void initBegin(MapImp* pMapImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initEnd(MapImp* pMapImp)
+        void initEnd(MapImp* pMapImp) override
         {
             /* stub */
         }
@@ -804,31 +799,31 @@ namespace yaml
     public:
         /// <summary></summary>
         /// <returns></returns>
-        virtual Node::eType type() const
+        Node::eType type() const override
         {
             return Node::MapType;
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initBegin(SequenceImp* pSequenceImp)
+        void initBegin(SequenceImp* pSequenceImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pSequenceImp"></param>
-        virtual void initEnd(SequenceImp* pSequenceImp)
+        void initEnd(SequenceImp* pSequenceImp) override
         {
             /* stub */
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initBegin(MapImp* pMapImp)
+        void initBegin(MapImp* pMapImp) override
         {
             m_Iterator = pMapImp->m_Map.begin();
         }
         /// <summary></summary>
         /// <param name="pMapImp"></param>
-        virtual void initEnd(MapImp* pMapImp)
+        void initEnd(MapImp* pMapImp) override
         {
             m_Iterator = pMapImp->m_Map.end();
         }
@@ -887,7 +882,7 @@ namespace yaml
     }
 
     /// <summary>Assignment operator.</summary>
-    Iterator& Iterator::operator = (const Iterator& it)
+    Iterator& Iterator::operator= (const Iterator& it)
     {
         if (m_pImp) {
             switch (m_Type) {
@@ -945,7 +940,7 @@ namespace yaml
     }
 
     /// <summary>Post-increment operator.</summary>
-    Iterator& Iterator::operator ++ (int dummy)
+    Iterator& Iterator::operator++ (int dummy)
     {
         switch (m_Type) {
         case SequenceType:
@@ -961,7 +956,7 @@ namespace yaml
     }
 
     /// <summary>Post-decrement operator.</summary>
-    Iterator& Iterator::operator -- (int dummy)
+    Iterator& Iterator::operator-- (int dummy)
     {
         switch(m_Type) {
         case SequenceType:
@@ -977,7 +972,7 @@ namespace yaml
     }
 
     /// <summary>Check if iterator is equal to other iterator.</summary>
-    bool Iterator::operator == (const Iterator& it)
+    bool Iterator::operator== (const Iterator& it)
     {
         if (m_Type != it.m_Type) {
             return false;
@@ -998,7 +993,7 @@ namespace yaml
     }
 
     /// <summary>Check if iterator is not equal to other iterator.</summary>
-    bool Iterator::operator != (const Iterator& it)
+    bool Iterator::operator!= (const Iterator& it)
     {
         return !(*this == it);
     }
@@ -1047,7 +1042,7 @@ namespace yaml
     }
 
     /// <summary>Assignment operator.</summary>
-    ConstIterator& ConstIterator::operator = (const ConstIterator& it)
+    ConstIterator& ConstIterator::operator= (const ConstIterator& it)
     {
         if (m_pImp) {
             switch (m_Type) {
@@ -1104,7 +1099,7 @@ namespace yaml
     }
 
     /// <summary>Post-increment operator.</summary>
-    ConstIterator& ConstIterator::operator ++ (int dummy)
+    ConstIterator& ConstIterator::operator++ (int dummy)
     {
         switch (m_Type) {
         case SequenceType:
@@ -1120,7 +1115,7 @@ namespace yaml
     }
 
     /// <summary>Post-decrement operator.</summary>
-    ConstIterator& ConstIterator::operator -- (int dummy)
+    ConstIterator& ConstIterator::operator-- (int dummy)
     {
         switch (m_Type) {
         case SequenceType:
@@ -1136,7 +1131,7 @@ namespace yaml
     }
 
     /// <summary>Check if iterator is equal to other iterator.</summary>
-    bool ConstIterator::operator == (const ConstIterator& it)
+    bool ConstIterator::operator== (const ConstIterator& it)
     {
         if (m_Type != it.m_Type) {
             return false;
@@ -1157,7 +1152,7 @@ namespace yaml
     }
 
     /// <summary>Check if iterator is not equal to other iterator.</summary>
-    bool ConstIterator::operator != (const ConstIterator & it)
+    bool ConstIterator::operator!= (const ConstIterator & it)
     {
         return !(*this == it);
     }
@@ -1331,21 +1326,21 @@ namespace yaml
     }
 
     /// <summary>Assignment operator.</summary>
-    Node& Node::operator = (const Node& node)
+    Node& Node::operator= (const Node& node)
     {
         NODE_IMP->clear();
         CopyNode(node, *this);
         return *this;
     }
     /// <summary>Assignment operator.</summary>
-    Node& Node::operator = (const std::string& value)
+    Node& Node::operator= (const std::string& value)
     {
         NODE_IMP->initScalar();
         TYPE_IMP->setData(value);
         return *this;
     }
     /// <summary>Assignment operator.</summary>
-    Node& Node::operator = (const char* value)
+    Node& Node::operator= (const char* value)
     {
         NODE_IMP->initScalar();
         TYPE_IMP->setData(value ? std::string(value) : "");
@@ -1505,8 +1500,7 @@ namespace yaml
             /* stub */
         }
 
-        enum eFlag
-        {
+        enum eFlag {
             LiteralScalarFlag,      // Literal scalar type, defined as "|".
             FoldedScalarFlag,       // Folded scalar type, defined as "<".
             ScalarNewlineFlag       // Scalar ends with a newline.
@@ -1573,7 +1567,7 @@ namespace yaml
     // ---------------------------------------------------------------------------
     //  Class Declaration
     //      Implementation class of Yaml parsing.
-    //      Parsing incoming streamand outputs a root node.
+    //      Parsing incoming stream and outputs a root node.
     // ---------------------------------------------------------------------------
 
     class ParseImp {
@@ -1581,10 +1575,7 @@ namespace yaml
         /// <summary>
         /// Initializes a new instance of the ParseImp class.
         /// </summary>
-        ParseImp()
-        {
-            /* stub */
-        }
+        ParseImp() = default;
         /// <summary>
         /// Finalizes a new instance of the ParseImp class.
         /// </summary>
@@ -1646,7 +1637,7 @@ namespace yaml
                 }
 
                 // start of document
-                if (documentStartFound == false && line == "---") {
+                if (!documentStartFound && line == "---") {
                     // erase all lines before this line
                     clearLines();
                     documentStartFound = true;
@@ -1695,7 +1686,7 @@ namespace yaml
                 }
 
                 // add line
-                if (foundFirstNotEmpty == false) {
+                if (!foundFirstNotEmpty) {
                     if (line.size()) {
                         foundFirstNotEmpty = true;
                     }
@@ -1714,12 +1705,12 @@ namespace yaml
         {
             for (auto it = m_Lines.begin(); it != m_Lines.end();) {
                 // sequence
-                if (postProcessSequenceLine(it) == true) {
+                if (postProcessSequenceLine(it)) {
                     continue;
                 }
 
                 // mapping
-                if (postProcessMappingLine(it) == true) {
+                if (postProcessMappingLine(it)) {
                     continue;
                 }
 
@@ -1755,7 +1746,7 @@ namespace yaml
             ReaderLine* pLine = *it;
 
             // sequence split
-            if (isSequenceStart(pLine->Data) == false) {
+            if (!isSequenceStart(pLine->Data)) {
                 return false;
             }
 
@@ -1824,7 +1815,7 @@ namespace yaml
             }
 
             // make sure the value is not a sequence start
-            if (isSequenceStart(value) == true) {
+            if (isSequenceStart(value)) {
                 throw ParsingException(ExceptionMessage(g_ErrorBlockSequenceNotAllowed, *pLine, valueStart));
             }
 
@@ -1848,7 +1839,7 @@ namespace yaml
 
             // add new line with value
             unsigned char dummyBlockFlags = 0;
-            if (isBlockScalar(value, pLine->No, dummyBlockFlags) == true) {
+            if (isBlockScalar(value, pLine->No, dummyBlockFlags)) {
                 newLineOffset = pLine->Offset;
             }
 
@@ -1960,7 +1951,7 @@ namespace yaml
                 }
 
                 // check next line; if sequence and correct level, go on, else exit
-                // if same level but but of type map = error
+                // if same level but of type map = error
                 if (it == m_Lines.end() || ((pNextLine = *it)->Offset < pLine->Offset)) {
                     break;
                 }
@@ -2008,7 +1999,7 @@ namespace yaml
                 }
 
                 // check next line; if map and correct level, go on, else exit
-                // if same level but but of type map = error
+                // if same level but of type map = error
                 if (it == m_Lines.end() || ((pNextLine = *it)->Offset < pLine->Offset)) {
                     break;
                 }
@@ -2056,7 +2047,7 @@ namespace yaml
             }
 
             // not a block scalar, cut end spaces/tabs
-            if (blockScalar == false) {
+            if (!blockScalar) {
                 while (true) {
                     pLine = *it;
                     if (parentOffset != 0 && pLine->Offset <= parentOffset) {
@@ -2071,7 +2062,7 @@ namespace yaml
                         data += pLine->Data.substr(0, endOffset + 1);
                     }
 
-                    // Move to next line
+                    // move to next line
                     ++it;
                     if (it == m_Lines.end() || (*it)->Type != Node::ScalarType) {
                         break;
@@ -2080,7 +2071,7 @@ namespace yaml
                     data += " ";
                 }
 
-                if (ValidateQuote(data) == false) {
+                if (!ValidateQuote(data)) {
                     throw ParsingException(ExceptionMessage(g_ErrorInvalidQuote, *pFirstLine));
                 }
             }
@@ -2250,7 +2241,7 @@ namespace yaml
     bool Parse(Node& root, const char* filename)
     {
         std::ifstream f(filename, std::ifstream::binary);
-        if (f.is_open() == false) {
+        if (!f.is_open()) {
             throw OperationException(g_ErrorCannotOpenFile);
         }
 
@@ -2337,7 +2328,7 @@ namespace yaml
         Serialize(root, stream, config);
 
         std::ofstream f(filename);
-        if (f.is_open() == false) {
+        if (!f.is_open()) {
             throw OperationException(g_ErrorCannotOpenFile);
         }
 
@@ -2403,7 +2394,7 @@ namespace yaml
                 }
                 stream << std::string(level, ' ') << "- ";
                 useLevel = false;
-                if (value.isSequence() || (value.isMap() && config.SequenceMapNewline == true)) {
+                if (value.isSequence() || (value.isMap() && config.SequenceMapNewline)) {
                     useLevel = true;
                     stream << "\n";
                 }
@@ -2437,7 +2428,7 @@ namespace yaml
 
 
                 useLevel = false;
-                if (value.isScalar() == false || (value.isScalar() && config.MapScalarNewline)) {
+                if (!value.isScalar() || (value.isScalar() && config.MapScalarNewline)) {
                     useLevel = true;
                     stream << "\n";
                 }
@@ -2464,7 +2455,7 @@ namespace yaml
             std::string line = "";
             std::vector<std::string> lines;
             std::istringstream iss(value);
-            while (iss.eof() == false) {
+            while (!iss.eof()) {
                 std::getline(iss, line);
                 lines.push_back(line);
             }
@@ -2501,7 +2492,7 @@ namespace yaml
                 }
             }
 
-            if (endNewline == false) {
+            if (!endNewline) {
                 stream << "-";
             }
             stream << "\n";
@@ -2581,7 +2572,7 @@ namespace yaml
             const char token = input[qPos];
             if (token == '"' && (qPos == 0 || input[qPos-1] != '\\')) {
                 // found start quote
-                if (foundStart == false) {
+                if (!foundStart) {
                     start = qPos;
                     foundStart = true;
                 }

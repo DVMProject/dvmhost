@@ -57,7 +57,7 @@ public:
 
     /// <summary>Gets the currently remaining time for the timer.</summary>
     /// <returns>Amount of time remaining before the timeout.</returns>
-    uint32_t getRemaining()
+    uint32_t getRemaining() const
     {
         if (m_timeout == 0U || m_timer == 0U)
             return 0U;
@@ -70,14 +70,14 @@ public:
 
     /// <summary>Flag indicating whether the timer is running.</summary>
     /// <returns>True, if the timer is still running, otherwise false.</returns>
-    bool isRunning()
+    bool isRunning() const
     {
         return m_timer > 0U;
     }
 
     /// <summary>Flag indicating whether the timer is paused.</summary>
     /// <returns>True, if the timer is paused, otherwise false.</returns>
-    bool isPaused()
+    bool isPaused() const
     {
         return m_paused;
     }
@@ -121,7 +121,7 @@ public:
 
     /// <summary>Flag indicating whether or not the timer has reached timeout and expired.</summary>
     /// <returns>True, if the timer is expired, otherwise false.</returns>
-    bool hasExpired()
+    bool hasExpired() const
     {
         if (m_timeout == 0U || m_timer == 0U)
             return false;

@@ -27,7 +27,6 @@
 #include "common/edac/SHA256.h"
 #include "common/network/json/json.h"
 #include "common/Log.h"
-#include "common/StopWatch.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
 #include "network/fne/TagDMRData.h"
@@ -39,9 +38,7 @@
 using namespace network;
 using namespace network::fne;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 #include <chrono>
 
 // ---------------------------------------------------------------------------

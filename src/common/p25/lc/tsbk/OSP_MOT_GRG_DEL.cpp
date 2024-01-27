@@ -26,14 +26,12 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_MOT_GRG_DEL.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -42,7 +40,11 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the OSP_MOT_GRG_DEL class.
 /// </summary>
-OSP_MOT_GRG_DEL::OSP_MOT_GRG_DEL() : TSBK()
+OSP_MOT_GRG_DEL::OSP_MOT_GRG_DEL() : TSBK(),
+    m_patchSuperGroupId(0U),
+    m_patchGroup1Id(0U),
+    m_patchGroup2Id(0U),
+    m_patchGroup3Id(0U)
 {
     m_lco = TSBK_OSP_MOT_GRG_DEL;
 }
@@ -55,7 +57,7 @@ OSP_MOT_GRG_DEL::OSP_MOT_GRG_DEL() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_MOT_GRG_DEL::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -70,7 +72,7 @@ bool OSP_MOT_GRG_DEL::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_MOT_GRG_DEL::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -95,9 +97,9 @@ void OSP_MOT_GRG_DEL::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         }
     }
     else {
-        LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
+        LogError(LOG_P25, "OSP_MOT_GRG_DEL::encode(), invalid values for TSBK_OSP_MOT_GRG_DEL, patchSuperGroupId = $%02X, patchGroup1Id = $%02X",
             m_patchSuperGroupId, m_patchGroup1Id);
-        return; // blatently ignore creating this TSBK
+        return; // blatantly ignore creating this TSBK
     }
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);

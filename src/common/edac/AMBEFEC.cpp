@@ -48,21 +48,15 @@ using namespace edac;
 /// <summary>
 /// Initializes a new instance of the AMBEFEC class.
 /// </summary>
-AMBEFEC::AMBEFEC()
-{
-    /* stub */
-}
+AMBEFEC::AMBEFEC() = default;
 
 /// <summary>
 /// Finalizes a instance of the AMBEFEC class.
 /// </summary>
-AMBEFEC::~AMBEFEC()
-{
-    /* stub */
-}
+AMBEFEC::~AMBEFEC() = default;
 
 /// <summary>
-/// Regnerates the DMR AMBE FEC for the input bytes.
+/// Regenerates the DMR AMBE FEC for the input bytes.
 /// </summary>
 /// <param name="bytes"></param>
 /// <returns>Count of errors.</returns>

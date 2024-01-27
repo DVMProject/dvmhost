@@ -77,6 +77,7 @@ namespace network
                     m_socket(std::move(socket)),
                     m_connectionManager(manager),
                     m_requestHandler(handler),
+                    m_buffer(),
                     m_lexer(HTTPLexer(false)),
                     m_persistent(persistent)
                 {

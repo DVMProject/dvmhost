@@ -25,15 +25,9 @@
 */
 #include "common/Log.h"
 #include "p25/lookups/P25AffiliationLookup.h"
-#include "p25/packet/ControlSignaling.h"
 #include "p25/Control.h"
 
 using namespace p25::lookups;
-
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -53,10 +47,7 @@ P25AffiliationLookup::P25AffiliationLookup(Control* p25, bool verbose) : ::looku
 /// <summary>
 /// Finalizes a instance of the P25AffiliationLookup class.
 /// </summary>
-P25AffiliationLookup::~P25AffiliationLookup()
-{
-    /* stub */
-}
+P25AffiliationLookup::~P25AffiliationLookup() = default;
 
 /// <summary>
 /// Helper to release the channel grant for the destination ID.

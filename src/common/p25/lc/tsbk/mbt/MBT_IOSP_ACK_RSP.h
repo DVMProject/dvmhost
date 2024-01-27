@@ -52,7 +52,7 @@ namespace p25
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
-                virtual std::string toString(bool isp = false) override;
+                std::string toString(bool isp = false) override;
             };
         } // namespace tsbk
     } // namespace lc

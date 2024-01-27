@@ -36,7 +36,6 @@
 
 using namespace p25;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -55,10 +54,7 @@ Audio::Audio() :
 /// <summary>
 /// Finalizes a instance of the Audio class.
 /// </summary>
-Audio::~Audio()
-{
-    /* stub */
-}
+Audio::~Audio() = default;
 
 /// <summary>
 /// Process P25 IMBE audio data.

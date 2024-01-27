@@ -35,10 +35,7 @@
 
 using namespace edac;
 
-#include <cstdint>
-#include <cstdio>
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Constants

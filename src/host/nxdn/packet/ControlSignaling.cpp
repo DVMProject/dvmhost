@@ -351,10 +351,7 @@ ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
 /// <summary>
 /// Finalizes a instance of the ControlSignaling class.
 /// </summary>
-ControlSignaling::~ControlSignaling()
-{
-    /* stub */
-}
+ControlSignaling::~ControlSignaling() = default;
 
 /// <summary>
 /// Write data processed from RF to the network.
@@ -505,7 +502,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
+    std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_CONN> rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_CONN>();
 
     // are we skipping checking?
     if (!skip) {
@@ -680,7 +677,7 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
 
     switch (service) {
     case RTCH_MESSAGE_TYPE_VCALL:
-        rcch = new_unique(rcch::MESSAGE_TYPE_VCALL_CONN);
+        rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_CONN>();
         rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
     default:
         return;
@@ -708,7 +705,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
 {
     bool ret = false;
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_GRP_REG> rcch = new_unique(rcch::MESSAGE_TYPE_GRP_REG);
+    std::unique_ptr<rcch::MESSAGE_TYPE_GRP_REG> rcch = std::make_unique<rcch::MESSAGE_TYPE_GRP_REG>();
     rcch->setCauseResponse(NXDN_CAUSE_MM_REG_ACCEPTED);
 
     // validate the location ID
@@ -764,7 +761,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
 /// <param name="srcId"></param>
 void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
 {
-    std::unique_ptr<rcch::MESSAGE_TYPE_REG> rcch = new_unique(rcch::MESSAGE_TYPE_REG);
+    std::unique_ptr<rcch::MESSAGE_TYPE_REG> rcch = std::make_unique<rcch::MESSAGE_TYPE_REG>();
     rcch->setCauseResponse(NXDN_CAUSE_MM_REG_ACCEPTED);
 
     // validate the location ID
@@ -822,7 +819,7 @@ void ControlSignaling::writeRF_CC_Message_Site_Info()
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_SITE_INFO> rcch = new_unique(rcch::MESSAGE_TYPE_SITE_INFO);
+    std::unique_ptr<rcch::MESSAGE_TYPE_SITE_INFO> rcch = std::make_unique<rcch::MESSAGE_TYPE_SITE_INFO>();
     DEBUG_LOG_MSG(rcch->toString());
     rcch->setBcchCnt(m_bcchCnt);
     rcch->setRcchGroupingCnt(m_rcchGroupingCnt);
@@ -872,7 +869,7 @@ void ControlSignaling::writeRF_CC_Message_Service_Info()
     uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
 
-    std::unique_ptr<rcch::MESSAGE_TYPE_SRV_INFO> rcch = new_unique(rcch::MESSAGE_TYPE_SRV_INFO);
+    std::unique_ptr<rcch::MESSAGE_TYPE_SRV_INFO> rcch = std::make_unique<rcch::MESSAGE_TYPE_SRV_INFO>();
     DEBUG_LOG_MSG(rcch->toString());
     rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U);
     //rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS / 2U, NXDN_RCCH_LC_LENGTH_BITS / 2U);

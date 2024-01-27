@@ -37,21 +37,17 @@
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/Sync.h"
 #include "common/nxdn/NXDNUtils.h"
-#include "common/edac/AMBEFEC.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "nxdn/Control.h"
 #include "remote/RESTClient.h"
 #include "ActivityLog.h"
-#include "HostMain.h"
 
 using namespace nxdn;
 using namespace nxdn::packet;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -60,10 +56,10 @@ using namespace nxdn::packet;
 const uint8_t MAX_SYNC_BYTES_ERRS = 0U;
 
 const uint8_t SCRAMBLER[] = {
-	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
-	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
-	0x28U, 0x28U, 0x00U, 0x0AU, 0x02U, 0x82U, 0x20U, 0x28U, 0x82U, 0x2AU, 0xAAU, 0x20U, 0x22U, 0x80U,
-	0xA8U, 0x8AU, 0x08U, 0xA0U, 0xAAU, 0x02U };
+    0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
+    0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
+    0x28U, 0x28U, 0x00U, 0x0AU, 0x02U, 0x82U, 0x20U, 0x28U, 0x82U, 0x2AU, 0xAAU, 0x20U, 0x22U, 0x80U,
+    0xA8U, 0x8AU, 0x08U, 0xA0U, 0xAAU, 0x02U };
 
 
 // ---------------------------------------------------------------------------
@@ -406,7 +402,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         }
     }
 
-	// have we got RSSI bytes on the end?
+    // have we got RSSI bytes on the end?
     if (len == (NXDN_FRAME_LENGTH_BYTES + 4U)) {
         uint16_t raw = 0U;
         raw |= (data[50U] << 8) & 0xFF00U;
@@ -448,7 +444,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
             LogWarning(LOG_RF, "NXDN, possible sync word, errs = %u, sync word = %02X %02X %02X", errs,
                 syncBytes[0U], syncBytes[1U], syncBytes[2U]);
 
-            sync = true; // we found a completly valid sync with no errors...
+            sync = true; // we found a completely valid sync with no errors...
         }
     }
 
@@ -515,12 +511,12 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <returns>Length of frame data retreived.</returns>
 uint32_t Control::getFrame(uint8_t* data)
 {
-	assert(data != nullptr);
+    assert(data != nullptr);
 
-	if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
-		return 0U;
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return 0U;
 
-	uint8_t len = 0U;
+    uint8_t len = 0U;
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
@@ -532,7 +528,7 @@ uint32_t Control::getFrame(uint8_t* data)
         m_txQueue.get(data, len);
     }
 
-	return len;
+    return len;
 }
 
 /// <summary>
@@ -760,7 +756,7 @@ void Control::releaseGrantTG(uint32_t dstId)
 }
 
 /// <summary>
-/// Touchs a granted TG to keep a channel grant alive.
+/// Touches a granted TG to keep a channel grant alive.
 /// </summary>
 /// <param name="dstId"></param>
 void Control::touchGrantTG(uint32_t dstId)

@@ -66,10 +66,7 @@ TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
 /// <summary>
 /// Finalizes a instance of the TagDMRData class.
 /// </summary>
-TagDMRData::~TagDMRData()
-{
-    /* stub */
-}
+TagDMRData::~TagDMRData() = default;
 
 /// <summary>
 /// Process a data frame from the network.
@@ -336,7 +333,7 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data 
             std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, dataType);
             if (lc == nullptr) {
                 LogWarning(LOG_NET, "DMR Slot %u, bad LC received from the network, replacing", slotNo);
-                lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), rewriteDstId);
+                lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), rewriteDstId);
             }
 
             lc->setDstId(rewriteDstId);
@@ -351,7 +348,7 @@ void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data 
             std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
             if (lc == nullptr) {
                 LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", slotNo);
-                lc = new_unique(lc::PrivacyLC);
+                lc = std::make_unique<lc::PrivacyLC>();
             }
 
             lc->setDstId(rewriteDstId);

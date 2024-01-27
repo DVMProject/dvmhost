@@ -32,7 +32,6 @@ using namespace network;
 
 #include <cstdio>
 #include <cassert>
-#include <cstdlib>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

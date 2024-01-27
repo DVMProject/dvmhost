@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_ACK_RSP.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -97,8 +94,6 @@ void MBT_IOSP_ACK_RSP::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 /// <returns></returns>
 std::string MBT_IOSP_ACK_RSP::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
-    else    
-        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
+    if (isp) return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
+    else return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
 }

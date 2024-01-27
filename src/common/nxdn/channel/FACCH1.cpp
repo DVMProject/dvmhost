@@ -37,7 +37,6 @@
 using namespace nxdn;
 using namespace nxdn::channel;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 

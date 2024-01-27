@@ -40,9 +40,7 @@ using namespace modem::port;
 
 #include <sys/types.h>
 
-#include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
@@ -71,9 +69,7 @@ UARTPort::UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS
 /// <summary>
 /// Finalizes a instance of the UARTPort class.
 /// </summary>
-UARTPort::~UARTPort()
-{
-}
+UARTPort::~UARTPort() = default;
 
 /// <summary>
 /// Opens a connection to the serial port.

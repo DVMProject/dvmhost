@@ -50,18 +50,18 @@ namespace modem
             /// <summary>Initializes a new instance of the ModemNullPort class.</summary>
             ModemNullPort();
             /// <summary>Finalizes a instance of the ModemNullPort class.</summary>
-            virtual ~ModemNullPort();
+            ~ModemNullPort() override;
 
             /// <summary>Opens a connection to the port.</summary>
-            bool open();
+            bool open() override;
 
             /// <summary>Reads data from the port.</summary>
-            int read(uint8_t* buffer, uint32_t length);
+            int read(uint8_t* buffer, uint32_t length) override;
             /// <summary>Writes data to the port.</summary>
-            int write(const uint8_t* buffer, uint32_t length);
+            int write(const uint8_t* buffer, uint32_t length) override;
 
             /// <summary>Closes the connection to the port.</summary>
-            void close();
+            void close() override;
 
         private:
             RingBuffer<unsigned char> m_buffer;

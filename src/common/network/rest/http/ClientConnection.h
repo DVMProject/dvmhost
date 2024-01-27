@@ -66,6 +66,7 @@ namespace network
                 explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :
                     m_socket(std::move(socket)),
                     m_requestHandler(handler),
+                    m_buffer(),
                     m_lexer(HTTPLexer(true))
                 {
                     /* stub */

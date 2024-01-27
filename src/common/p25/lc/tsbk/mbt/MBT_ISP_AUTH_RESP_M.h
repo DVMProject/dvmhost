@@ -45,7 +45,7 @@ namespace p25
                 /// <summary>Initializes a new instance of the MBT_ISP_AUTH_RESP_M class.</summary>
                 MBT_ISP_AUTH_RESP_M();
                 /// <summary>Finalizes a instance of the MBT_ISP_AUTH_RESP_M class.</summary>
-                ~MBT_ISP_AUTH_RESP_M();
+                ~MBT_ISP_AUTH_RESP_M() override;
 
                 /// <summary>Decode a alternate trunking signalling block.</summary>
                 bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) override;
@@ -53,7 +53,7 @@ namespace p25
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
-                virtual std::string toString(bool isp = false) override;
+                std::string toString(bool isp = true) override;
 
                 /** Authentication data */
                 /// <summary>Gets the authentication result.</summary>

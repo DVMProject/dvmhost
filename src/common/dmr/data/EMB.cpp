@@ -55,10 +55,7 @@ EMB::EMB() :
 /// <summary>
 /// Finalizes a instance of the EMB class.
 /// </summary>
-EMB::~EMB()
-{
-    /* stub */
-}
+EMB::~EMB() = default;
 
 /// <summary>
 /// Decodes DMR embedded signalling data.

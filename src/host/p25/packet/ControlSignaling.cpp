@@ -989,7 +989,7 @@ void ControlSignaling::writeAdjSSNetwork()
         }
 
         // transmit adjacent site broadcast
-        std::unique_ptr<OSP_ADJ_STS_BCAST> osp = new_unique(OSP_ADJ_STS_BCAST);
+        std::unique_ptr<OSP_ADJ_STS_BCAST> osp = std::make_unique<OSP_ADJ_STS_BCAST>();
         osp->setSrcId(P25_WUID_FNE);
         osp->setAdjSiteCFVA(cfva);
         osp->setAdjSiteSysId(m_p25->m_siteData.sysId());
@@ -1068,7 +1068,7 @@ void ControlSignaling::clock(uint32_t ms)
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
-    std::unique_ptr<IOSP_CALL_ALRT> iosp = new_unique(IOSP_CALL_ALRT);
+    std::unique_ptr<IOSP_CALL_ALRT> iosp = std::make_unique<IOSP_CALL_ALRT>();
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
@@ -1086,7 +1086,7 @@ void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
 /// <param name="txMult"></param>
 void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, uint8_t txMult)
 {
-    std::unique_ptr<IOSP_RAD_MON> iosp = new_unique(IOSP_RAD_MON);
+    std::unique_ptr<IOSP_RAD_MON> iosp = std::make_unique<IOSP_RAD_MON>();
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
     iosp->setTxMult(txMult);
@@ -1108,7 +1108,7 @@ void ControlSignaling::writeRF_TSDU_Radio_Mon(uint32_t srcId, uint32_t dstId, ui
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
-    std::unique_ptr<IOSP_EXT_FNCT> iosp = new_unique(IOSP_EXT_FNCT);
+    std::unique_ptr<IOSP_EXT_FNCT> iosp = std::make_unique<IOSP_EXT_FNCT>();
     iosp->setExtendedFunction(func);
     iosp->setSrcId(arg);
     iosp->setDstId(dstId);
@@ -1138,7 +1138,7 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 {
-    std::unique_ptr<OSP_GRP_AFF_Q> osp = new_unique(OSP_GRP_AFF_Q);
+    std::unique_ptr<OSP_GRP_AFF_Q> osp = std::make_unique<OSP_GRP_AFF_Q>();
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
 
@@ -1154,7 +1154,7 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 {
-    std::unique_ptr<OSP_U_REG_CMD> osp = new_unique(OSP_U_REG_CMD);
+    std::unique_ptr<OSP_U_REG_CMD> osp = std::make_unique<OSP_U_REG_CMD>();
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
 
@@ -1171,7 +1171,7 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_Emerg_Alrm(uint32_t srcId, uint32_t dstId)
 {
-    std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = new_unique(ISP_EMERG_ALRM_REQ);
+    std::unique_ptr<ISP_EMERG_ALRM_REQ> isp = std::make_unique<ISP_EMERG_ALRM_REQ>();
     isp->setSrcId(srcId);
     isp->setDstId(dstId);
 
@@ -1189,7 +1189,7 @@ void ControlSignaling::writeRF_TSDU_Raw(const uint8_t* tsbk)
         return;
     }
 
-    std::unique_ptr<OSP_TSBK_RAW> osp = new_unique(OSP_TSBK_RAW);
+    std::unique_ptr<OSP_TSBK_RAW> osp = std::make_unique<OSP_TSBK_RAW>();
     osp->setTSBK(tsbk);
 
     writeRF_TSDU_SBF(osp.get(), true);
@@ -1205,7 +1205,7 @@ void ControlSignaling::setConvFallback(bool fallback)
     if (m_convFallback && m_p25->m_enableControl) {
         m_convFallbackPacketDelay = 0U;
 
-        std::unique_ptr<OSP_MOT_PSH_CCH> osp = new_unique(OSP_MOT_PSH_CCH);
+        std::unique_ptr<OSP_MOT_PSH_CCH> osp = std::make_unique<OSP_MOT_PSH_CCH>();
         for (uint8_t i = 0U; i < 3U; i++) {
             writeRF_TSDU_SBF(osp.get(), true);
         }
@@ -1741,9 +1741,9 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
         for (uint32_t i = 0; i < count; i++) {
             if ((srcId != 0U) && (dstId != 0U)) {
                 if (grp) {
-                    lc = new_unique(lc::tdulc::LC_GROUP);
+                    lc = std::make_unique<lc::tdulc::LC_GROUP>();
                 } else {
-                    lc = new_unique(lc::tdulc::LC_PRIVATE);
+                    lc = std::make_unique<lc::tdulc::LC_PRIVATE>();
                 }
 
                 lc->setSrcId(srcId);
@@ -1753,9 +1753,9 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
                 writeRF_TDULC(lc.get(), true);
             }
 
-            lc = new_unique(lc::tdulc::LC_NET_STS_BCAST);
+            lc = std::make_unique<lc::tdulc::LC_NET_STS_BCAST>();
             writeRF_TDULC(lc.get(), true);
-            lc = new_unique(lc::tdulc::LC_RFSS_STS_BCAST);
+            lc = std::make_unique<lc::tdulc::LC_RFSS_STS_BCAST>();
             writeRF_TDULC(lc.get(), true);
         }
     }
@@ -1764,7 +1764,7 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
         LogMessage(LOG_RF, P25_TDULC_STR ", LC_CALL_TERM (Call Termination), srcId = %u, dstId = %u", srcId, dstId);
     }
 
-    lc = new_unique(lc::tdulc::LC_CALL_TERM);
+    lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
     writeRF_TDULC(lc.get(), true);
 
     if (m_p25->m_enableControl) {
@@ -1792,7 +1792,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
         bool fallbackTx = (frameCnt % 253U) == 0U;
         if (fallbackTx && n == 8U) {
             if (m_convFallbackPacketDelay >= CONV_FALLBACK_PACKET_DELAY) {
-                std::unique_ptr<lc::tdulc::LC_CONV_FALLBACK> lc = new_unique(lc::tdulc::LC_CONV_FALLBACK);
+                std::unique_ptr<lc::tdulc::LC_CONV_FALLBACK> lc = std::make_unique<lc::tdulc::LC_CONV_FALLBACK>();
                 for (uint8_t i = 0U; i < 3U; i++) {
                     writeRF_TDULC(lc.get(), true);
                 }
@@ -1804,7 +1804,7 @@ void ControlSignaling::writeRF_ControlData(uint8_t frameCnt, uint8_t n, bool adj
         }
         else {
             if (n == 8U) {
-                std::unique_ptr<lc::tdulc::LC_FAILSOFT> lc = new_unique(lc::tdulc::LC_FAILSOFT);
+                std::unique_ptr<lc::tdulc::LC_FAILSOFT> lc = std::make_unique<lc::tdulc::LC_FAILSOFT>();
                 writeRF_TDULC(lc.get(), true);
             }
         }
@@ -1963,7 +1963,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 
                         // handle 700/800/900 identities
                         if (entry.baseFrequency() >= 762000000U) {
-                            std::unique_ptr<OSP_IDEN_UP> osp = new_unique(OSP_IDEN_UP);
+                            std::unique_ptr<OSP_IDEN_UP> osp = std::make_unique<OSP_IDEN_UP>();
                             DEBUG_LOG_TSBK(osp->toString());
                             osp->siteIdenEntry(entry);
 
@@ -1971,7 +1971,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
                             tsbk = std::move(osp);
                         }
                         else {
-                            std::unique_ptr<OSP_IDEN_UP_VU> osp = new_unique(OSP_IDEN_UP_VU);
+                            std::unique_ptr<OSP_IDEN_UP_VU> osp = std::make_unique<OSP_IDEN_UP_VU>();
                             DEBUG_LOG_TSBK(osp->toString());
                             osp->siteIdenEntry(entry);
 
@@ -1987,12 +1987,12 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
             break;
         case TSBK_OSP_NET_STS_BCAST:
             // transmit net status burst
-            tsbk = new_unique(OSP_NET_STS_BCAST);
+            tsbk = std::make_unique<OSP_NET_STS_BCAST>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
         case TSBK_OSP_RFSS_STS_BCAST:
             // transmit rfss status burst
-            tsbk = new_unique(OSP_RFSS_STS_BCAST);
+            tsbk = std::make_unique<OSP_RFSS_STS_BCAST>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
         case TSBK_OSP_ADJ_STS_BCAST:
@@ -2001,7 +2001,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
                 if (m_mbfAdjSSCnt >= m_adjSiteTable.size())
                     m_mbfAdjSSCnt = 0U;
 
-                std::unique_ptr<OSP_ADJ_STS_BCAST> osp = new_unique(OSP_ADJ_STS_BCAST);
+                std::unique_ptr<OSP_ADJ_STS_BCAST> osp = std::make_unique<OSP_ADJ_STS_BCAST>();
                 DEBUG_LOG_TSBK(osp->toString());
 
                 uint8_t i = 0U;
@@ -2052,7 +2052,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
                 if (m_mbfSCCBCnt >= m_sccbTable.size())
                     m_mbfSCCBCnt = 0U;
 
-                std::unique_ptr<OSP_SCCB_EXP> osp = new_unique(OSP_SCCB_EXP);
+                std::unique_ptr<OSP_SCCB_EXP> osp = std::make_unique<OSP_SCCB_EXP>();
                 DEBUG_LOG_TSBK(osp->toString());
 
                 uint8_t i = 0U;
@@ -2082,13 +2082,13 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
             break;
         case TSBK_OSP_SNDCP_CH_ANN:
             // transmit SNDCP announcement
-            tsbk = new_unique(OSP_SNDCP_CH_ANN);
+            tsbk = std::make_unique<OSP_SNDCP_CH_ANN>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
         case TSBK_OSP_SYNC_BCAST:
         {
             // transmit sync broadcast
-            std::unique_ptr<OSP_SYNC_BCAST> osp = new_unique(OSP_SYNC_BCAST);
+            std::unique_ptr<OSP_SYNC_BCAST> osp = std::make_unique<OSP_SYNC_BCAST>();
             DEBUG_LOG_TSBK(osp->toString());
             osp->setMicroslotCount(m_microslotCount);
             tsbk = std::move(osp);
@@ -2098,7 +2098,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
         {
             if (m_ctrlTimeDateAnn) {
                 // transmit time/date announcement
-                tsbk = new_unique(OSP_TIME_DATE_ANN);
+                tsbk = std::make_unique<OSP_TIME_DATE_ANN>();
                 DEBUG_LOG_TSBK(tsbk->toString());
             }
         }
@@ -2107,20 +2107,20 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
         /** Motorola CC data */
         case TSBK_OSP_MOT_PSH_CCH:
             // transmit motorola PSH CCH burst
-            tsbk = new_unique(OSP_MOT_PSH_CCH);
+            tsbk = std::make_unique<OSP_MOT_PSH_CCH>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
 
         case TSBK_OSP_MOT_CC_BSI:
             // transmit motorola CC BSI burst
-            tsbk = new_unique(OSP_MOT_CC_BSI);
+            tsbk = std::make_unique<OSP_MOT_CC_BSI>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
 
         /** DVM CC data */
         case TSBK_OSP_DVM_GIT_HASH:
             // transmit git hash burst
-            tsbk = new_unique(OSP_DVM_GIT_HASH);
+            tsbk = std::make_unique<OSP_DVM_GIT_HASH>();
             DEBUG_LOG_TSBK(tsbk->toString());
             break;
     }
@@ -2332,7 +2332,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            std::unique_ptr<IOSP_GRP_VCH> iosp = new_unique(IOSP_GRP_VCH);
+            std::unique_ptr<IOSP_GRP_VCH> iosp = std::make_unique<IOSP_GRP_VCH>();
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
@@ -2386,7 +2386,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            std::unique_ptr<IOSP_UU_VCH> iosp = new_unique(IOSP_UU_VCH);
+            std::unique_ptr<IOSP_UU_VCH> iosp = std::make_unique<IOSP_UU_VCH>();
             iosp->setMFId(m_lastMFID);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
@@ -2451,7 +2451,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                 }
                 else {
                     if (grp) {
-                        osp = new_unique(OSP_GRP_VCH_GRANT_UPD);
+                        osp = std::make_unique<OSP_GRP_VCH_GRANT_UPD>();
                         DEBUG_LOG_TSBK(osp->toString());
 
                         // transmit group voice grant update
@@ -2465,7 +2465,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                     } else {
                         uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
 
-                        osp = new_unique(OSP_UU_VCH_GRANT_UPD);
+                        osp = std::make_unique<OSP_UU_VCH_GRANT_UPD>();
                         DEBUG_LOG_TSBK(osp->toString());
 
                         // transmit group voice grant update
@@ -2503,7 +2503,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
 /// <returns></returns>
 bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, bool skip, bool net)
 {
-    std::unique_ptr<OSP_SNDCP_CH_GNT> osp = new_unique(OSP_SNDCP_CH_GNT);
+    std::unique_ptr<OSP_SNDCP_CH_GNT> osp = std::make_unique<OSP_SNDCP_CH_GNT>();
     osp->setMFId(m_lastMFID);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -2583,7 +2583,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
 /// <param name="dstId"></param>
 void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
-    std::unique_ptr<IOSP_UU_ANS> iosp = new_unique(IOSP_UU_ANS);
+    std::unique_ptr<IOSP_UU_ANS> iosp = std::make_unique<IOSP_UU_ANS>();
     iosp->setMFId(m_lastMFID);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
@@ -2600,7 +2600,7 @@ void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 /// <param name="noNetwork"></param>
 void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
 {
-    std::unique_ptr<IOSP_ACK_RSP> iosp = new_unique(IOSP_ACK_RSP);
+    std::unique_ptr<IOSP_ACK_RSP> iosp = std::make_unique<IOSP_ACK_RSP>();
     iosp->setSrcId(srcId);
     iosp->setService(service);
 
@@ -2626,7 +2626,7 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bo
 /// <param name="aiv"></param>
 void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
 {
-    std::unique_ptr<OSP_DENY_RSP> osp = new_unique(OSP_DENY_RSP);
+    std::unique_ptr<OSP_DENY_RSP> osp = std::make_unique<OSP_DENY_RSP>();
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -2650,7 +2650,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     bool ret = false;
 
-    std::unique_ptr<IOSP_GRP_AFF> iosp = new_unique(IOSP_GRP_AFF);
+    std::unique_ptr<IOSP_GRP_AFF> iosp = std::make_unique<IOSP_GRP_AFF>();
     iosp->setMFId(m_lastMFID);
     iosp->setAnnounceGroup(m_announcementGroup);
     iosp->setSrcId(srcId);
@@ -2712,7 +2712,7 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 /// <param name="sysId"></param>
 void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
-    std::unique_ptr<IOSP_U_REG> iosp = new_unique(IOSP_U_REG);
+    std::unique_ptr<IOSP_U_REG> iosp = std::make_unique<IOSP_U_REG>();
     iosp->setMFId(m_lastMFID);
     iosp->setResponse(P25_RSP_ACCEPT);
     iosp->setSrcId(srcId);
@@ -2765,7 +2765,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
     dereged = m_p25->m_affiliations.unitDereg(srcId);
 
     if (dereged) {
-        std::unique_ptr<OSP_U_DEREG_ACK> osp = new_unique(OSP_U_DEREG_ACK);
+        std::unique_ptr<OSP_U_DEREG_ACK> osp = std::make_unique<OSP_U_DEREG_ACK>();
         osp->setMFId(m_lastMFID);
         osp->setSrcId(P25_WUID_FNE);
         osp->setDstId(srcId);
@@ -2790,7 +2790,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 /// <param name="grp"></param>
 void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
 {
-    std::unique_ptr<OSP_QUE_RSP> osp = new_unique(OSP_QUE_RSP);
+    std::unique_ptr<OSP_QUE_RSP> osp = std::make_unique<OSP_QUE_RSP>();
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -2816,7 +2816,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 {
     bool ret = false;
 
-    std::unique_ptr<OSP_LOC_REG_RSP> osp = new_unique(OSP_LOC_REG_RSP);
+    std::unique_ptr<OSP_LOC_REG_RSP> osp = std::make_unique<OSP_LOC_REG_RSP>();
     osp->setMFId(m_lastMFID);
     osp->setResponse(P25_RSP_ACCEPT);
     osp->setDstId(dstId);
@@ -2874,7 +2874,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 /// <param name="srcId"></param>
 void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
 {
-    std::unique_ptr<MBT_OSP_AUTH_DMD> osp = new_unique(MBT_OSP_AUTH_DMD);
+    std::unique_ptr<MBT_OSP_AUTH_DMD> osp = std::make_unique<MBT_OSP_AUTH_DMD>();
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(srcId);
     osp->setAuthRS(m_p25->m_llaRS);
@@ -2914,7 +2914,7 @@ bool ControlSignaling::writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId)
         m_p25->m_affiliations.releaseGrant(dstId, false);
     }
 
-    std::unique_ptr<OSP_DVM_LC_CALL_TERM> osp = new_unique(OSP_DVM_LC_CALL_TERM);
+    std::unique_ptr<OSP_DVM_LC_CALL_TERM> osp = std::make_unique<OSP_DVM_LC_CALL_TERM>();
     osp->setGrpVchId(m_p25->m_siteData.channelId());
     osp->setGrpVchNo(m_p25->m_siteData.channelNo());
     osp->setDstId(dstId);

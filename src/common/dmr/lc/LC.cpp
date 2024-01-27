@@ -36,7 +36,6 @@
 using namespace dmr::lc;
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -171,10 +170,7 @@ LC::LC() :
 /// <summary>
 /// Finalizes a instance of the LC class.
 /// </summary>
-LC::~LC()
-{
-    /* stub */
-}
+LC::~LC() = default;
 
 /// <summary>
 ///

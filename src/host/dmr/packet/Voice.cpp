@@ -248,7 +248,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
             if (lc == nullptr) {
                 LogWarning(LOG_RF, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
-                lc = new_unique(lc::PrivacyLC);
+                lc = std::make_unique<lc::PrivacyLC>();
                 lc->setDstId(m_slot->m_rfLC->getDstId());
             }
 
@@ -674,7 +674,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         std::unique_ptr<lc::LC> lc = fullLC.decode(data + 2U, DT_VOICE_LC_HEADER);
         if (lc == nullptr) {
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_LC_HEADER, bad LC received from the network, replacing", m_slot->m_slotNo);
-            lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
         }
 
         uint32_t srcId = lc->getSrcId();
@@ -766,7 +766,7 @@ void Voice::processNetwork(const data::Data& dmrData)
     }
     else if (dataType == DT_VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
-            std::unique_ptr<lc::LC> lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
@@ -834,7 +834,7 @@ void Voice::processNetwork(const data::Data& dmrData)
         std::unique_ptr<lc::PrivacyLC> lc = fullLC.decodePI(data + 2U);
         if (lc == nullptr) {
             LogWarning(LOG_NET, "DMR Slot %u, DT_VOICE_PI_HEADER, bad LC received, replacing", m_slot->m_slotNo);
-            lc = new_unique(lc::PrivacyLC);
+            lc = std::make_unique<lc::PrivacyLC>();
             lc->setDstId(dmrData.getDstId());
         }
 
@@ -864,7 +864,7 @@ void Voice::processNetwork(const data::Data& dmrData)
     }
     else if (dataType == DT_VOICE_SYNC) {
         if (m_slot->m_netState == RS_NET_IDLE) {
-            std::unique_ptr<lc::LC> lc = new_unique(lc::LC, dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+            std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
             uint32_t dstId = lc->getDstId();
             uint32_t srcId = lc->getSrcId();

@@ -75,7 +75,7 @@ namespace network
                 /// <summary>Initializes a copy instance of the HTTPClient class.</summary>
                 HTTPClient(const HTTPClient&) = delete;
                 /// <summary>Finalizes a instance of the HTTPClient class.</summary>
-                ~HTTPClient()
+                ~HTTPClient() override
                 {
                     if (m_connection != nullptr) {
                         close();
@@ -136,7 +136,7 @@ namespace network
 
             private:
                 /// <summary></summary>
-                virtual void entry()
+                void entry() override
                 {
                     if (m_completed) {
                         return;
@@ -164,7 +164,7 @@ namespace network
                 {
                     asio::connect(m_socket, endpoints);
 
-                    m_connection = new_unique(ConnectionType, std::move(m_socket), m_requestHandler);
+                    m_connection = std::make_unique<ConnectionType>(std::move(m_socket), m_requestHandler);
                     m_connection->start();
                 }
 

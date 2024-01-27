@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_ALOHA.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace dmr::lc::csbk;
 using namespace dmr::lc;
 using namespace dmr;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -58,7 +55,7 @@ CSBK_ALOHA::CSBK_ALOHA() : CSBK(),
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
 bool CSBK_ALOHA::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -71,7 +68,7 @@ bool CSBK_ALOHA::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CSBK_ALOHA::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t csbkValue = 0U;
 

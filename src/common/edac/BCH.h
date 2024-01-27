@@ -36,7 +36,7 @@ namespace edac
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements Bose�Chaudhuri�Hocquenghem codes for protecting P25 NID
+    //      Implements Bose/Chaudhuri/Hocquenghem codes for protecting P25 NID
     //      data.
     // ---------------------------------------------------------------------------
 

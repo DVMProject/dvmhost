@@ -33,17 +33,13 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
-#include "edac/SHA256.h"
 #include "network/BaseNetwork.h"
-#include "Log.h"
 #include "Utils.h"
 
 using namespace network;
 using namespace network::frame;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

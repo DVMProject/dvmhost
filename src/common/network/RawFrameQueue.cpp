@@ -31,9 +31,7 @@
 
 using namespace network;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 #include <cstring>
 
 // ---------------------------------------------------------------------------
@@ -58,7 +56,7 @@ RawFrameQueue::RawFrameQueue(UDPSocket* socket, bool debug) :
 /// </summary>
 RawFrameQueue::~RawFrameQueue()
 {
-    /* stub */
+    deleteBuffers();
 }
 
 /// <summary>
@@ -149,6 +147,20 @@ bool RawFrameQueue::flushQueue()
         ret = false;
     }
 
+    deleteBuffers();
+
+    return ret;
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to ensure buffers are deleted.
+/// </summary>
+void RawFrameQueue::deleteBuffers()
+{
     for (auto& buffer : m_buffers) {
         if (buffer != nullptr) {
             // LogDebug(LOG_NET, "deleting buffer, addr %p len %u", buffer->buffer, buffer->length);
@@ -163,6 +175,4 @@ bool RawFrameQueue::flushQueue()
         }
     }
     m_buffers.clear();
-
-    return ret;
 }

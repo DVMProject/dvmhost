@@ -28,10 +28,8 @@
 #include "fne/network/RESTDefines.h"
 #include "common/Thread.h"
 #include "common/Log.h"
-#include "common/Utils.h"
 
 #include <cstdio>
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -278,7 +276,7 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "must specify the address to connect to");
             g_remoteAddress = std::string(argv[++i]);
 
-            if (g_remoteAddress == "")
+            if (g_remoteAddress.empty())
                 usage("error: %s", "remote address cannot be blank!");
 
             p += 2;
@@ -298,7 +296,7 @@ int checkArgs(int argc, char* argv[])
                 usage("error: %s", "must specify the auth password");
             g_remotePassword = std::string(argv[++i]);
 
-            if (g_remotePassword == "")
+            if (g_remotePassword.empty())
                 usage("error: %s", "remote auth password cannot be blank!");
 
             p += 2;

@@ -52,18 +52,12 @@ bool TSBKFactory::m_warnCRC = false;
 /// <summary>
 /// Initializes a new instance of the TSBKFactory class.
 /// </summary>
-TSBKFactory::TSBKFactory()
-{
-    /* stub */
-}
+TSBKFactory::TSBKFactory() = default;
 
 /// <summary>
 /// Finalizes a instance of TSBKFactory class.
 /// </summary>
-TSBKFactory::~TSBKFactory()
-{
-    /* stub */
-}
+TSBKFactory::~TSBKFactory() = default;
 
 /// <summary>
 /// Create an instance of a TSBK.

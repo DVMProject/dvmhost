@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tdulc/LC_FAILSOFT.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tdulc;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ LC_FAILSOFT::LC_FAILSOFT() : TDULC()
 /// <returns>True, if TDULC was decoded, otherwise false.</returns>
 bool LC_FAILSOFT::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -68,7 +65,7 @@ bool LC_FAILSOFT::decode(const uint8_t* data)
 /// <param name="data"></param>
 void LC_FAILSOFT::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t rsValue = 0U;
 

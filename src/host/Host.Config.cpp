@@ -360,7 +360,7 @@ bool Host::createModem()
     yaml::Node dmrProtocol = protocolConf["dmr"];
     uint32_t dmrQueueSize = dmrProtocol["queueSize"].as<uint32_t>(24U);
 
-    // clamp queue size to no less then 24 and no greater the 100
+    // clamp queue size to no less than 24 and no greater the 100
     if (dmrQueueSize < 24U) {
         LogWarning(LOG_HOST, "DMR queue size must be greater then 24 frames, defaulting to 24 frames!");
         dmrQueueSize = 24U;
@@ -378,7 +378,7 @@ bool Host::createModem()
     yaml::Node p25Protocol = protocolConf["p25"];
     uint32_t p25QueueSize = p25Protocol["queueSize"].as<uint16_t>(12U);
 
-    // clamp queue size to no less then 12 and no greater the 100 frames
+    // clamp queue size to no less than 12 and no greater the 100 frames
     if (p25QueueSize < 12U) {
         LogWarning(LOG_HOST, "P25 queue size must be greater then 12 frames, defaulting to 12 frames!");
         p25QueueSize = 12U;
@@ -396,7 +396,7 @@ bool Host::createModem()
     yaml::Node nxdnProtocol = protocolConf["nxdn"];
     uint32_t nxdnQueueSize = nxdnProtocol["queueSize"].as<uint32_t>(31U);
 
-    // clamp queue size to no less then 31 and no greater the 50 frames
+    // clamp queue size to no less than 31 and no greater the 50 frames
     if (nxdnQueueSize < 31U) {
         LogWarning(LOG_HOST, "NXDN queue size must be greater then 31 frames, defaulting to 31 frames!");
         nxdnQueueSize = 31U;

@@ -28,7 +28,6 @@
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
-#include "common/Utils.h"
 #include "network/fne/TagDMRData.h"
 #include "network/fne/TagP25Data.h"
 #include "network/fne/TagNXDNData.h"
@@ -40,15 +39,10 @@ using namespace network;
 using namespace lookups;
 
 #include <cstdio>
-#include <cstdarg>
 #include <algorithm>
 #include <functional>
-#include <vector>
 
-#include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
 #include <pwd.h>
 
 // ---------------------------------------------------------------------------
@@ -88,10 +82,7 @@ HostFNE::HostFNE(const std::string& confFile) :
 /// <summary>
 /// Finalizes a instance of the HostFNE class.
 /// </summary>
-HostFNE::~HostFNE()
-{
-    /* stub */
-}
+HostFNE::~HostFNE() = default;
 
 /// <summary>
 /// Executes the main FNE processing loop.

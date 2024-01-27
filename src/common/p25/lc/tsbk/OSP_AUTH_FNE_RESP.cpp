@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_AUTH_FNE_RESP.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -43,7 +40,7 @@ using namespace p25;
 /// Initializes a new instance of the OSP_AUTH_FNE_RESP class.
 /// </summary>
 OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
-    m_authRes(NULL)
+    m_authRes(nullptr)
 {
     m_lco = TSBK_OSP_AUTH_FNE_RESP;
 
@@ -56,9 +53,9 @@ OSP_AUTH_FNE_RESP::OSP_AUTH_FNE_RESP() : TSBK(),
 /// </summary>
 OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
 {
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
-        m_authRes = NULL;
+        m_authRes = nullptr;
     }
 }
 
@@ -70,7 +67,7 @@ OSP_AUTH_FNE_RESP::~OSP_AUTH_FNE_RESP()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -85,7 +82,7 @@ bool OSP_AUTH_FNE_RESP::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_AUTH_FNE_RESP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -113,9 +110,9 @@ std::string OSP_AUTH_FNE_RESP::toString(bool isp)
 /// <param name="mi"></param>
 void OSP_AUTH_FNE_RESP::setAuthRes(const uint8_t* res)
 {
-    assert(res != NULL);
+    assert(res != nullptr);
 
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
     }
 
@@ -135,7 +132,7 @@ void OSP_AUTH_FNE_RESP::copy(const OSP_AUTH_FNE_RESP& data)
 {
     TSBK::copy(data);
 
-    if (m_authRes != NULL) {
+    if (m_authRes != nullptr) {
         delete[] m_authRes;
     }
 

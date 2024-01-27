@@ -74,10 +74,7 @@ Timer::Timer(uint32_t ticksPerSec, uint32_t secs, uint32_t msecs) :
 /// <summary>
 /// Finalizes a instance of the Timer class.
 /// </summary>
-Timer::~Timer()
-{
-    /* stub */
-}
+Timer::~Timer() = default;
 
 /// <summary>
 /// Sets the timeout for the timer.

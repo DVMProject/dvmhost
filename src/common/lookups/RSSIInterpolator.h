@@ -53,7 +53,7 @@ namespace lookups
         /// <summary>Loads the table from the passed RSSI mapping file.</summary>
         bool load(const std::string& filename);
 
-        /// <summary>Interoplates the given raw RSSI value with the lookup map.</summary>
+        /// <summary>Interpolates the given raw RSSI value with the lookup map.</summary>
         int interpolate(uint16_t raw) const;
 
     private:

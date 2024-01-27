@@ -34,7 +34,6 @@
 #include "common/network/rest/RequestDispatcher.h"
 #include "common/Thread.h"
 #include "common/Log.h"
-#include "common/Utils.h"
 #include "remote/RESTClient.h"
 
 using namespace network;
@@ -129,10 +128,7 @@ RESTClient::RESTClient(const std::string& address, uint32_t port, const std::str
 /// <summary>
 /// Finalizes a instance of the RESTClient class.
 /// </summary>
-RESTClient::~RESTClient()
-{
-    /* stub */
-}
+RESTClient::~RESTClient() = default;
 
 /// <summary>
 /// Sends remote control command to the specified modem.

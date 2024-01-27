@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_UU_VCH.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ IOSP_UU_VCH::IOSP_UU_VCH() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -85,7 +82,7 @@ bool IOSP_UU_VCH::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -114,8 +111,6 @@ void IOSP_UU_VCH::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_UU_VCH::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request)");
-    else    
-        return std::string("TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant)");
+    if (isp) return std::string("TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request)");
+    else return std::string("TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant)");
 }

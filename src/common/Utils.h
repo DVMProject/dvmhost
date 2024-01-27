@@ -171,8 +171,6 @@ inline std::string strtoupper(const std::string value) {
             ((buffer[offset + 0U] << 8) & 0xFF00U)  |   \
             ((buffer[offset + 1U] << 0) & 0x00FFU);
 
-#define new_unique(type, ...) std::unique_ptr<type>(new type(__VA_ARGS__))
-
 /// <summary>Unique uint8_t array.</summary>
 typedef std::unique_ptr<uint8_t[]> UInt8Array;
 

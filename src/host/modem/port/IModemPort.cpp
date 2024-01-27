@@ -38,7 +38,4 @@ using namespace modem::port;
 /// <summary>
 /// Finalizes a instance of the IModemPort class.
 /// </summary>
-IModemPort::~IModemPort()
-{
-    /* stub */
-}
+IModemPort::~IModemPort() = default;

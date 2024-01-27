@@ -471,7 +471,7 @@ namespace edac
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Implements routines to regenerate DMR/IMBE data using forward error
+    //      Implements routines to regenerate AMBE/IMBE data using forward error
     //      correction.
     // ---------------------------------------------------------------------------
 

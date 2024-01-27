@@ -56,9 +56,7 @@ ModemNullPort::ModemNullPort() :
 /// <summary>
 /// Finalizes a instance of the ModemNullPort class.
 /// </summary>
-ModemNullPort::~ModemNullPort()
-{
-}
+ModemNullPort::~ModemNullPort() = default;
 
 /// <summary>
 /// Opens a connection to the port.

@@ -25,14 +25,10 @@
 */
 #include "lookups/IdenTableLookup.h"
 #include "Log.h"
-#include "Timer.h"
 
 using namespace lookups;
 
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <cctype>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -47,14 +43,6 @@ using namespace lookups;
 /// <param name="filename">Full-path to the channel identity table file.</param>
 /// <param name="reloadTime">Interval of time to reload the channel identity table.</param>
 IdenTableLookup::IdenTableLookup(const std::string& filename, uint32_t reloadTime) : LookupTable(filename, reloadTime)
-{
-    /* stub */
-}
-
-/// <summary>
-/// Finalizes a instance of the IdenTableLookup class.
-/// </summary>
-IdenTableLookup::~IdenTableLookup()
 {
     /* stub */
 }
@@ -116,7 +104,7 @@ std::vector<IdenTable> IdenTableLookup::list()
 /// <returns>True, if lookup table was loaded, otherwise false.</returns>
 bool IdenTableLookup::load()
 {
-    if (m_filename.length() <= 0) {
+    if (m_filename.empty()) {
         return false;
     }
 

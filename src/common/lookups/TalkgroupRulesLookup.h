@@ -44,14 +44,14 @@ namespace lookups
 
     class HOST_SW_API TalkgroupRuleGroupVoiceSource {
     public:
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleGroupVoiceSource class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.</summary>
         TalkgroupRuleGroupVoiceSource() :
             m_tgId(0U),
             m_tgSlot(0U)
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleGroupVoiceSource class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.</summary>
         /// <param name="node"></param>
         TalkgroupRuleGroupVoiceSource(yaml::Node& node) :
             TalkgroupRuleGroupVoiceSource()
@@ -61,7 +61,7 @@ namespace lookups
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleGroupVoiceSource to another TalkgroupRuleGroupVoiceSource.</summary>
-        virtual TalkgroupRuleGroupVoiceSource& operator=(const TalkgroupRuleGroupVoiceSource& data)
+        virtual TalkgroupRuleGroupVoiceSource& operator= (const TalkgroupRuleGroupVoiceSource& data)
         {
             if (this != &data) {
                 m_tgId = data.m_tgId;
@@ -85,7 +85,7 @@ namespace lookups
 
     class HOST_SW_API TalkgroupRuleRewrite {
     public:
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleRewrite class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleRewrite class.</summary>
         TalkgroupRuleRewrite() :
             m_peerId(0U),
             m_tgId(0U),
@@ -93,7 +93,7 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleRewrite class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleRewrite class.</summary>
         /// <param name="node"></param>
         TalkgroupRuleRewrite(yaml::Node& node) :
             TalkgroupRuleRewrite()
@@ -104,7 +104,7 @@ namespace lookups
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleRewrite to another TalkgroupRuleRewrite.</summary>
-        virtual TalkgroupRuleRewrite& operator=(const TalkgroupRuleRewrite& data)
+        virtual TalkgroupRuleRewrite& operator= (const TalkgroupRuleRewrite& data)
         {
             if (this != &data) {
                 m_peerId = data.m_peerId;
@@ -131,7 +131,7 @@ namespace lookups
 
     class HOST_SW_API TalkgroupRuleConfig {
     public:
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleConfig class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleConfig class.</summary>
         TalkgroupRuleConfig() :
             m_active(false),
             m_parrot(false),
@@ -141,7 +141,7 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleConfig class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleConfig class.</summary>
         /// <param name="node"></param>
         TalkgroupRuleConfig(yaml::Node& node) :
             TalkgroupRuleConfig()
@@ -175,7 +175,7 @@ namespace lookups
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleConfig to another TalkgroupRuleConfig.</summary>
-        virtual TalkgroupRuleConfig& operator=(const TalkgroupRuleConfig& data)
+        virtual TalkgroupRuleConfig& operator= (const TalkgroupRuleConfig& data)
         {
             if (this != &data) {
                 m_active = data.m_active;
@@ -207,7 +207,7 @@ namespace lookups
 
     class HOST_SW_API TalkgroupRuleGroupVoice {
     public:
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleGroupVoice class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoice class.</summary>
         TalkgroupRuleGroupVoice() :
             m_name(),
             m_config(),
@@ -215,7 +215,7 @@ namespace lookups
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the TalkgroupRuleGroupVoice class.</summary>
+        /// <summary>Initializes a new instance of the TalkgroupRuleGroupVoice class.</summary>
         /// <param name="node"></param>
         TalkgroupRuleGroupVoice(yaml::Node& node) :
             TalkgroupRuleGroupVoice()
@@ -226,7 +226,7 @@ namespace lookups
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleGroupVoice to another TalkgroupRuleGroupVoice.</summary>
-        virtual TalkgroupRuleGroupVoice& operator=(const TalkgroupRuleGroupVoice& data)
+        virtual TalkgroupRuleGroupVoice& operator= (const TalkgroupRuleGroupVoice& data)
         {
             if (this != &data) {
                 m_name = data.m_name;
@@ -265,10 +265,10 @@ namespace lookups
         /// <summary>Initializes a new instance of the TalkgroupRulesLookup class.</summary>
         TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl);
         /// <summary>Finalizes a instance of the TalkgroupRulesLookup class.</summary>
-        virtual ~TalkgroupRulesLookup();
+        ~TalkgroupRulesLookup() override;
 
         /// <summary></summary>
-        void entry();
+        void entry() override;
 
         /// <summary>Stops and unloads this lookup table.</summary>
         void stop();

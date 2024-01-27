@@ -35,7 +35,6 @@ using namespace lookups;
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cctype>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -94,7 +93,7 @@ bool RSSIInterpolator::load(const std::string& filename)
 }
 
 /// <summary>
-/// Interoplates the given raw RSSI value with the lookup map.
+/// Interpolates the given raw RSSI value with the lookup map.
 /// </summary>
 /// <param name="val">Raw RSSI value from modem DSP.</param>
 /// <returns>Interpolated RSSI value.</returns>

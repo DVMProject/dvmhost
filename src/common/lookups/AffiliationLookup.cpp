@@ -28,11 +28,6 @@
 
 using namespace lookups;
 
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------

@@ -93,7 +93,7 @@ private:
 
     /// <summary>Reads basic configuration parameters from the INI.</summary>
     bool readParams();
-    /// <summary>Initializes REST API serivces.</summary>
+    /// <summary>Initializes REST API services.</summary>
     bool initializeRESTAPI();
     /// <summary>Initializes master FNE network connectivity.</summary>
     bool createMasterNetwork();

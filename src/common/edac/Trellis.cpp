@@ -30,7 +30,6 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -66,18 +65,12 @@ const uint8_t ENCODE_TABLE_12[] = {
 /// <summary>
 /// Initializes a new instance of the Trellis class.
 /// </summary>
-Trellis::Trellis()
-{
-    /* stub */
-}
+Trellis::Trellis() = default;
 
 /// <summary>
 /// Finalizes a instance of the Trellis class.
 /// </summary>
-Trellis::~Trellis()
-{
-    /* stub */
-}
+Trellis::~Trellis() = default;
 
 /// <summary>
 /// Decodes 3/4 rate Trellis.

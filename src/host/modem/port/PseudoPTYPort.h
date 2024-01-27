@@ -51,13 +51,13 @@ namespace modem
             /// <summary>Initializes a new instance of the PseudoPTYPort class.</summary>
             PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, bool assertRTS = false);
             /// <summary>Finalizes a instance of the PseudoPTYPort class.</summary>
-            virtual ~PseudoPTYPort();
+            ~PseudoPTYPort() override;
 
             /// <summary>Opens a connection to the serial port.</summary>
-            bool open();
+            bool open() override;
 
             /// <summary>Closes the connection to the serial port.</summary>
-            void close();
+            void close() override;
 
         protected:
             std::string m_symlink;

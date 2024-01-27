@@ -29,13 +29,8 @@
 
 using namespace lookups;
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cctype>
 #include <string>
 #include <vector>
-#include <fstream>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -62,10 +57,7 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
 /// <summary>
 /// Finalizes a instance of the TalkgroupRulesLookup class.
 /// </summary>
-TalkgroupRulesLookup::~TalkgroupRulesLookup()
-{
-    /* stub */
-}
+TalkgroupRulesLookup::~TalkgroupRulesLookup() = default;
 
 /// <summary>
 ///

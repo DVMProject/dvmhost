@@ -30,7 +30,6 @@
 */
 #include "Thread.h"
 
-#include <sys/prctl.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -51,10 +50,7 @@ Thread::Thread() :
 /// <summary>
 /// Finalizes a instance of the Thread class.
 /// </summary>
-Thread::~Thread()
-{
-    /* stub */
-}
+Thread::~Thread() = default;
 
 /// <summary>
 /// Starts the thread execution.

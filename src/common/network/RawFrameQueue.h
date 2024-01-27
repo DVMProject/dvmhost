@@ -67,6 +67,10 @@ namespace network
         BufferVector m_buffers;
 
         bool m_debug;
+
+    private:
+        /// <summary>Helper to ensure buffers are deleted.</summary>
+        void deleteBuffers();
     };
 } // namespace network
 

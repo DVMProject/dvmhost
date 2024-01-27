@@ -54,7 +54,7 @@ protected:
     /// <summary>
     ///
     /// </summary>
-    virtual void processExternalUserEvent()
+    void processExternalUserEvent() override
     {
         /* stub */
     }

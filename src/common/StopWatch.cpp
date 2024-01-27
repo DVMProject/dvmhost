@@ -80,7 +80,7 @@ ulong64_t StopWatch::start()
 }
 
 /// <summary>
-/// Gets the elpased time since the stopwatch started.
+/// Gets the elapsed time since the stopwatch started.
 /// </summary>
 /// <returns></returns>
 uint32_t StopWatch::elapsed()

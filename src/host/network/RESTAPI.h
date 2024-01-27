@@ -58,7 +58,7 @@ public:
     /// <summary>Initializes a new instance of the RESTAPI class.</summary>
     RESTAPI(const std::string& address, uint16_t port, const std::string& password, Host* host, bool debug);
     /// <summary>Finalizes a instance of the RESTAPI class.</summary>
-    ~RESTAPI();
+    ~RESTAPI() override;
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
     void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup);
@@ -97,7 +97,7 @@ private:
     std::unordered_map<std::string, uint64_t> m_authTokens;
 
     /// <summary></summary>
-    virtual void entry();
+    void entry() override;
 
     /// <summary>Helper to initialize REST API endpoints.</summary>
     void initializeEndpoints();

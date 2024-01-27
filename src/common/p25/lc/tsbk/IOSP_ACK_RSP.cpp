@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/IOSP_ACK_RSP.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ IOSP_ACK_RSP::IOSP_ACK_RSP() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool IOSP_ACK_RSP::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -82,7 +79,7 @@ bool IOSP_ACK_RSP::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
@@ -109,8 +106,6 @@ void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <returns></returns>
 std::string IOSP_ACK_RSP::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
-    else    
-        return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
+    if (isp) return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - Unit)");
+    else return std::string("TSBK_IOSP_ACK_RSP (Acknowledge Response - FNE)");
 }

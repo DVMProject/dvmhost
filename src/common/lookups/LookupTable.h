@@ -26,10 +26,6 @@
 #if !defined(__LOOKUP_TABLE_H__)
 #define __LOOKUP_TABLE_H__
 
-#if _MSC_VER > 1910
-#pragma warning(disable : 4834) // [[nodiscard]] warning -- we don't care about this here
-#endif
-
 #include "common/Defines.h"
 #include "common/Thread.h"
 #include "common/Timer.h"
@@ -59,18 +55,14 @@ namespace lookups
             Thread(),
             m_filename(filename),
             m_reloadTime(reloadTime),
-            m_table()
-        {
-            /* stub */
-        }
-        /// <summary>Finalizes a instance of the LookupTable class.</summary>
-        virtual ~LookupTable()
+            m_table(),
+            m_stop(false)
         {
             /* stub */
         }
 
         /// <summary></summary>
-        virtual void entry()
+        void entry() override
         {
             if (m_reloadTime == 0U) {
                 return;
@@ -160,8 +152,6 @@ namespace lookups
         std::unordered_map<uint32_t, T> m_table;
         std::mutex m_mutex;
         bool m_stop;
-
-        bool m_acl;
 
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>

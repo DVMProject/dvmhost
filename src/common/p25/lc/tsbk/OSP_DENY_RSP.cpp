@@ -26,14 +26,12 @@
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_DENY_RSP.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +53,7 @@ OSP_DENY_RSP::OSP_DENY_RSP() : TSBK()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_DENY_RSP::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
     ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
@@ -83,13 +81,13 @@ bool OSP_DENY_RSP::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_DENY_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t tsbkValue = 0U;
 
     if (m_response == 0U) {
-        LogError(LOG_P25, "TSBK::encode(), invalid values for TSBK_OSP_DENY_RSP, reason = %u", m_response);
-        return; // blatently ignore creating this TSBK
+        LogError(LOG_P25, "OSP_DENY_RSP::encode(), invalid values for TSBK_OSP_DENY_RSP, reason = %u", m_response);
+        return; // blatantly ignore creating this TSBK
     }
 
     tsbkValue = (m_aivFlag) ? 0x80U : 0x00U;                                        // Additional Info Flag

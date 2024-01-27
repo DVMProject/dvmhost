@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_BSDWNACT.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace dmr::lc::csbk;
 using namespace dmr::lc;
 using namespace dmr;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -55,7 +52,7 @@ CSBK_BSDWNACT::CSBK_BSDWNACT() : CSBK(),
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
 bool CSBK_BSDWNACT::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
     ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
@@ -78,7 +75,7 @@ bool CSBK_BSDWNACT::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CSBK_BSDWNACT::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 }

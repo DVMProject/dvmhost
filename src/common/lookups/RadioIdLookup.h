@@ -46,14 +46,14 @@ namespace lookups
 
     class HOST_SW_API RadioId {
     public:
-        /// <summary>Initializes a new insatnce of the RadioId class.</summary>
+        /// <summary>Initializes a new instance of the RadioId class.</summary>
         RadioId() :
             m_radioEnabled(false),
             m_radioDefault(false)
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the RadioId class.</summary>
+        /// <summary>Initializes a new instance of the RadioId class.</summary>
         /// <param name="radioEnabled"></param>
         /// <param name="radioDefault"></param>
         RadioId(bool radioEnabled, bool radioDefault) :
@@ -100,8 +100,6 @@ namespace lookups
     public:
         /// <summary>Initializes a new instance of the RadioIdLookup class.</summary>
         RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl);
-        /// <summary>Finalizes a instance of the RadioIdLookup class.</summary>
-        virtual ~RadioIdLookup();
 
         /// <summary>Toggles the specified radio ID enabled or disabled.</summary>
         void toggleEntry(uint32_t id, bool enabled);
@@ -109,7 +107,7 @@ namespace lookups
         /// <summary>Adds a new entry to the lookup table by the specified unique ID.</summary>
         void addEntry(uint32_t id, bool enabled);
         /// <summary>Finds a table entry in this lookup table.</summary>
-        virtual RadioId find(uint32_t id);
+        RadioId find(uint32_t id) override;
 
         /// <summary>Flag indicating whether radio ID access control is enabled or not.</summary>
         bool getACL();
@@ -119,7 +117,7 @@ namespace lookups
 
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
-        virtual bool load();
+        bool load() override;
     };
 } // namespace lookups
 

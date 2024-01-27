@@ -52,8 +52,6 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
         FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug);
-        /// <summary>Finalizes a instance of the FrameQueue class.</summary>
-        virtual ~FrameQueue();
 
         /// <summary>Read message from the received UDP packet.</summary>
         UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,

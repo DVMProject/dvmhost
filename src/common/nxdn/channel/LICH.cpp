@@ -36,7 +36,6 @@
 using namespace nxdn;
 using namespace nxdn::channel;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 
@@ -143,16 +142,16 @@ void LICH::encode(uint8_t* data)
 
     m_lich = 0U;
 
-	m_lich &= 0x3FU;
+    m_lich &= 0x3FU;
     m_lich |= (m_rfct & 0x03U) << 6;
 
-	m_lich &= 0xCFU;
+    m_lich &= 0xCFU;
     m_lich |= (m_fct & 0x03U) << 4;
 
-	m_lich &= 0xF3U;
+    m_lich &= 0xF3U;
     m_lich |= (m_option & 0x03U) << 2;
 
-	m_lich &= 0xFDU;
+    m_lich &= 0xFDU;
     m_lich |= (m_outbound ? 0x01U : 0x00U) << 1;
 
 #if DEBUG_NXDN_LICH

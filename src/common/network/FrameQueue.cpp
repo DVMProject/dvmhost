@@ -36,9 +36,7 @@
 using namespace network;
 using namespace network::frame;
 
-#include <cstdio>
 #include <cassert>
-#include <cstdlib>
 #include <cstring>
 
 // ---------------------------------------------------------------------------
@@ -55,14 +53,6 @@ FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) : RawFram
     m_streamTimestamps()
 {
     assert(peerId < 999999999U);
-}
-
-/// <summary>
-/// Finalizes a instance of the FrameQueue class.
-/// </summary>
-FrameQueue::~FrameQueue()
-{
-    /* stub */
 }
 
 /// <summary>

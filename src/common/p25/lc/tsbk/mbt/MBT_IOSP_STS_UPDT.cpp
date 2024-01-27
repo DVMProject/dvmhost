@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_STS_UPDT.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -97,10 +94,8 @@ void MBT_IOSP_STS_UPDT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 /// <returns></returns>
 std::string MBT_IOSP_STS_UPDT::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_STS_UPDT (Status Update Request)");
-    else    
-        return std::string("TSBK_IOSP_STS_UPDT (Status Update)");
+    if (isp) return std::string("TSBK_IOSP_STS_UPDT (Status Update Request)");
+    else return std::string("TSBK_IOSP_STS_UPDT (Status Update)");
 }
 
 // ---------------------------------------------------------------------------

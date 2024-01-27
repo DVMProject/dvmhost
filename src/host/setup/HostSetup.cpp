@@ -24,7 +24,6 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "common/dmr/DMRDefines.h"
-#include "common/dmr/DMRUtils.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/lc/LC.h"

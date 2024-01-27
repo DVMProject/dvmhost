@@ -34,7 +34,6 @@
 
 using namespace nxdn;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------

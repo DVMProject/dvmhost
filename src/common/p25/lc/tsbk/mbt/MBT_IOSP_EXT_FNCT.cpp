@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_EXT_FNCT.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -97,10 +94,8 @@ void MBT_IOSP_EXT_FNCT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUser
 /// <returns></returns>
 std::string MBT_IOSP_EXT_FNCT::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
-    else    
-        return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
+    if (isp) return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Response)");
+    else return std::string("TSBK_IOSP_EXT_FNCT (Extended Function Command)");
 }
 
 // ---------------------------------------------------------------------------

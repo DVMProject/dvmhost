@@ -31,14 +31,10 @@
 #include "lookups/RadioIdLookup.h"
 #include "p25/P25Defines.h"
 #include "Log.h"
-#include "Timer.h"
 
 using namespace lookups;
 
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <cctype>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -60,14 +56,6 @@ RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, b
 }
 
 /// <summary>
-/// Finalizes a instance of the RadioIdLookup class.
-/// </summary>
-RadioIdLookup::~RadioIdLookup()
-{
-    /* stub */
-}
-
-/// <summary>
 /// Toggles the specified radio ID enabled or disabled.
 /// </summary>
 /// <param name="id">Unique ID to toggle.</param>
@@ -75,7 +63,7 @@ RadioIdLookup::~RadioIdLookup()
 void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 {
     RadioId rid = find(id);
-    if (rid.radioEnabled() == false && rid.radioDefault() == true) {
+    if (!rid.radioEnabled() && rid.radioDefault()) {
         if (enabled) {
             LogMessage(LOG_HOST, "Added enabled RID %u to RID ACL table", id);
         }
@@ -84,7 +72,7 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
         }
     }
 
-    if (rid.radioEnabled() == false && rid.radioDefault() == false) {
+    if (!rid.radioEnabled() && !rid.radioDefault()) {
         if (enabled) {
             LogMessage(LOG_HOST, "Enabled RID %u in RID ACL table", id);
         }
@@ -171,7 +159,7 @@ bool RadioIdLookup::getACL()
 /// <returns>True, if lookup table was loaded, otherwise false.</returns>
 bool RadioIdLookup::load()
 {
-    if (m_filename.length() <= 0) {
+    if (m_filename.empty()) {
         return false;
     }
 

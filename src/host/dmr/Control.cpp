@@ -32,7 +32,6 @@
 
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
 #include <algorithm>
 

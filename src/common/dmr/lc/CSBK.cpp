@@ -38,7 +38,6 @@
 using namespace dmr::lc;
 using namespace dmr;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -97,10 +96,7 @@ CSBK::CSBK() :
 /// <summary>
 /// Finalizes a instance of the CSBK class.
 /// </summary>
-CSBK::~CSBK()
-{
-    /* stub */
-}
+CSBK::~CSBK() = default;
 
 /// <summary>
 /// Returns a string that represents the current CSBK.

@@ -56,7 +56,7 @@ protected:
     /// <summary>
     ///
     /// </summary>
-    virtual void initLayout() override
+    void initLayout() override
     {
         FDialog::setMinimizable(true);
         FDialog::setShadow();
@@ -135,7 +135,7 @@ protected:
     /// <summary>
     ///
     /// </summary>
-    virtual void adjustSize() override
+    void adjustSize() override
     {
         FDialog::adjustSize();
     }
@@ -148,7 +148,7 @@ protected:
     /// 
     /// </summary>
     /// <param name="e"></param>
-    virtual void onKeyPress(finalcut::FKeyEvent* e)
+    void onKeyPress(finalcut::FKeyEvent* e) override
     {
         const auto key = e->key();
         if (key == FKey::F12) {
@@ -163,7 +163,7 @@ protected:
     /// 
     /// </summary>
     /// <param name="e"></param>
-    virtual void onClose(FCloseEvent* e) override
+    void onClose(FCloseEvent* e) override
     {
         hide();
     }

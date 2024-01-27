@@ -34,7 +34,6 @@
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/json/json.h"
 #include "common/Log.h"
-#include "common/StopWatch.h"
 #include "common/Utils.h"
 #include "network/Network.h"
 
@@ -42,7 +41,6 @@ using namespace network;
 
 #include <cstdio>
 #include <cassert>
-#include <cstdlib>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

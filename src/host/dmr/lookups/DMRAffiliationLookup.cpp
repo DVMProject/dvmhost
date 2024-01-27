@@ -29,9 +29,6 @@
 using namespace dmr::lookups;
 
 #include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -52,10 +49,7 @@ DMRAffiliationLookup::DMRAffiliationLookup(bool verbose) : ::lookups::Affiliatio
 /// <summary>
 /// Finalizes a instance of the DMRAffiliationLookup class.
 /// </summary>
-DMRAffiliationLookup::~DMRAffiliationLookup()
-{
-    /* stub */
-}
+DMRAffiliationLookup::~DMRAffiliationLookup() = default;
 
 /// <summary>
 /// Helper to grant a channel.

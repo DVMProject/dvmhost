@@ -27,12 +27,10 @@
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/lc/PacketInformation.h"
 #include "Log.h"
-#include "Utils.h"
 
 using namespace nxdn::lc;
 using namespace nxdn;
 
-#include <cstdio>
 #include <cassert>
 #include <cstring>
 
@@ -61,10 +59,7 @@ PacketInformation::PacketInformation() :
 /// <summary>
 /// Finalizes a instance of the PacketInformation class.
 /// </summary>
-PacketInformation::~PacketInformation()
-{
-    /* stub */
-}
+PacketInformation::~PacketInformation() = default;
 
 /// <summary>
 /// Decodes packet information.

@@ -30,8 +30,6 @@
 *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "Defines.h"
-#include "common/dmr/DMRUtils.h"
-#include "common/p25/P25Utils.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
@@ -46,17 +44,12 @@ using namespace modem;
 using namespace lookups;
 
 #include <cstdio>
-#include <cstdarg>
 #include <algorithm>
 #include <functional>
-#include <vector>
+#include <memory>
 #include <mutex>
 
-#include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <pwd.h>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -149,10 +142,7 @@ Host::Host(const std::string& confFile) :
 /// <summary>
 /// Finalizes a instance of the Host class.
 /// </summary>
-Host::~Host()
-{
-    /* stub */
-}
+Host::~Host() = default;
 
 /// <summary>
 /// Executes the main modem host processing loop.
@@ -427,9 +417,9 @@ int Host::run()
             g_fireDMRBeacon = true;
         }
 
-        dmr = std::unique_ptr<dmr::Control>(new dmr::Control(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
+        dmr = std::make_unique<dmr::Control>(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
             embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, 
-            m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose));
+            m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose);
         dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
             m_channelNo, true);
 
@@ -498,9 +488,9 @@ int Host::run()
             }
         }
 
-        p25 = std::unique_ptr<p25::Control>(new p25::Control(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
+        p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
             m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
-            p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose));
+            p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose);
         p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData,
             m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
@@ -560,9 +550,9 @@ int Host::run()
             }
         }
 
-        nxdn = std::unique_ptr<nxdn::Control>(new nxdn::Control(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
+        nxdn = std::make_unique<nxdn::Control>(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
             m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
-            nxdnDumpRcchData, nxdnDebug, nxdnVerbose));
+            nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
         nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData, m_siteId, 
             m_sysId, m_channelId, m_channelNo, true);
 

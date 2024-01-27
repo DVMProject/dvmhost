@@ -35,9 +35,7 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
-#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -73,16 +71,16 @@ void BPTC19696::decode(const uint8_t* in, uint8_t* out)
     assert(in != nullptr);
     assert(out != nullptr);
 
-    //  Get the raw binary
+    // get the raw binary
     decodeExtractBinary(in);
 
-    // Deinterleave
+    // deinterleave
     decodeDeInterleave();
 
-    // Error check
+    // error check
     decodeErrorCheck();
 
-    // Extract Data
+    // extract Data
     decodeExtractData(out);
 }
 
@@ -96,16 +94,16 @@ void BPTC19696::encode(const uint8_t* in, uint8_t* out)
     assert(in != nullptr);
     assert(out != nullptr);
 
-    // Extract Data
+    // extract Data
     encodeExtractData(in);
 
-    // Error check
+    // error check
     encodeErrorCheck();
 
-    // Deinterleave
+    // interleave
     encodeInterleave();
 
-    //  Get the raw binary
+    // get the raw binary
     encodeExtractBinary(out);
 }
 
@@ -119,7 +117,7 @@ void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 /// <param name="in"></param>
 void BPTC19696::decodeExtractBinary(const uint8_t* in)
 {
-    // First block
+    // first block
     Utils::byteToBitsBE(in[0U], m_rawData + 0U);
     Utils::byteToBitsBE(in[1U], m_rawData + 8U);
     Utils::byteToBitsBE(in[2U], m_rawData + 16U);
@@ -134,13 +132,13 @@ void BPTC19696::decodeExtractBinary(const uint8_t* in)
     Utils::byteToBitsBE(in[11U], m_rawData + 88U);
     Utils::byteToBitsBE(in[12U], m_rawData + 96U);
 
-    // Handle the two bits
+    // handle the two bits
     bool bits[8U];
     Utils::byteToBitsBE(in[20U], bits);
     m_rawData[98U] = bits[6U];
     m_rawData[99U] = bits[7U];
 
-    // Second block
+    // second block
     Utils::byteToBitsBE(in[21U], m_rawData + 100U);
     Utils::byteToBitsBE(in[22U], m_rawData + 108U);
     Utils::byteToBitsBE(in[23U], m_rawData + 116U);
@@ -163,11 +161,11 @@ void BPTC19696::decodeDeInterleave()
     for (uint32_t i = 0U; i < 196U; i++)
         m_deInterData[i] = false;
 
-    // The first bit is R(3) which is not used so can be ignored
+    // the first bit is R(3) which is not used so can be ignored
     for (uint32_t a = 0U; a < 196U; a++) {
-        // Calculate the interleave sequence
+        // calculate the interleave sequence
         uint32_t interleaveSequence = (a * 181U) % 196U;
-        // Shuffle the data
+        // shuffle the data
         m_deInterData[a] = m_rawData[interleaveSequence];
     }
 }
@@ -182,7 +180,7 @@ void BPTC19696::decodeErrorCheck()
     do {
         fixing = false;
 
-        // Run through each of the 15 columns
+        // run through each of the 15 columns
         bool col[13U];
         for (uint32_t c = 0U; c < 15U; c++) {
             uint32_t pos = c + 1U;
@@ -202,7 +200,7 @@ void BPTC19696::decodeErrorCheck()
             }
         }
 
-        // Run through each of the 9 rows containing data
+        // run through each of the 9 rows containing data
         for (uint32_t r = 0U; r < 9U; r++) {
             uint32_t pos = (r * 15U) + 1U;
             if (Hamming::decode15113_2(m_deInterData + pos))
@@ -319,13 +317,13 @@ void BPTC19696::encodeExtractData(const uint8_t* in) const
 /// </summary>
 void BPTC19696::encodeErrorCheck()
 {
-    // Run through each of the 9 rows containing data
+    // run through each of the 9 rows containing data
     for (uint32_t r = 0U; r < 9U; r++) {
         uint32_t pos = (r * 15U) + 1U;
         Hamming::encode15113_2(m_deInterData + pos);
     }
 
-    // Run through each of the 15 columns
+    // run through each of the 15 columns
     bool col[13U];
     for (uint32_t c = 0U; c < 15U; c++) {
         uint32_t pos = c + 1U;
@@ -352,11 +350,11 @@ void BPTC19696::encodeInterleave()
     for (uint32_t i = 0U; i < 196U; i++)
         m_rawData[i] = false;
 
-    // The first bit is R(3) which is not used so can be ignored
+    // the first bit is R(3) which is not used so can be ignored
     for (uint32_t a = 0U; a < 196U; a++) {
-        // Calculate the interleave sequence
+        // calculate the interleave sequence
         uint32_t interleaveSequence = (a * 181U) % 196U;
-        // Unshuffle the data
+        // unshuffle the data
         m_rawData[interleaveSequence] = m_deInterData[a];
     }
 }
@@ -367,7 +365,7 @@ void BPTC19696::encodeInterleave()
 /// <param name="data"></param>
 void BPTC19696::encodeExtractBinary(uint8_t* data)
 {
-    // First block
+    // first block
     Utils::bitsToByteBE(m_rawData + 0U, data[0U]);
     Utils::bitsToByteBE(m_rawData + 8U, data[1U]);
     Utils::bitsToByteBE(m_rawData + 16U, data[2U]);
@@ -381,13 +379,13 @@ void BPTC19696::encodeExtractBinary(uint8_t* data)
     Utils::bitsToByteBE(m_rawData + 80U, data[10U]);
     Utils::bitsToByteBE(m_rawData + 88U, data[11U]);
 
-    // Handle the two bits
+    // handle the two bits
     uint8_t byte;
     Utils::bitsToByteBE(m_rawData + 96U, byte);
     data[12U] = (data[12U] & 0x3FU) | ((byte >> 0) & 0xC0U);
     data[20U] = (data[20U] & 0xFCU) | ((byte >> 4) & 0x03U);
 
-    // Second block
+    // second block
     Utils::bitsToByteBE(m_rawData + 100U, data[21U]);
     Utils::bitsToByteBE(m_rawData + 108U, data[22U]);
     Utils::bitsToByteBE(m_rawData + 116U, data[23U]);

@@ -140,9 +140,9 @@ namespace edac
             virtual	int	load() const = 0;
 
             /// <summary>Initializes a new instance of the reed_solomon_base class.</summary>
-            reed_solomon_base() { /* stub */ }
+            reed_solomon_base() = default;
             /// <summary>Finalizes a instance of the reed_solomon_base class.</summary>
-            virtual ~reed_solomon_base() { /* stub */ }
+            virtual ~reed_solomon_base() = default;
 
             /// <summary></summary>
             virtual std::ostream &output(std::ostream &lhs) const { return lhs << "RS(" << this->size() << "," << this->load() << ")"; }
@@ -378,7 +378,7 @@ namespace edac
             }
 
             /// <summary>Finalizes a instance of the reed_solomon_tabs class.</summary>
-            virtual ~reed_solomon_tabs() { /* stub */ }
+            ~reed_solomon_tabs() override = default;
 
             //
             // modnn -- modulo replacement for galois field arithmetics, optionally w/ table acceleration
@@ -414,7 +414,6 @@ namespace edac
                 return x;
             }
         };
-
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -509,7 +508,7 @@ namespace edac
                 }
             }
             /// <summary>Finalizes a instance of the reed_solomon class.</summary>
-            virtual ~reed_solomon() { /* stub */ }
+            virtual ~reed_solomon() = default;
 
             /// <summary>A data element's bits.</summary>
             virtual size_t datum() const { return DATUM; }
@@ -742,7 +741,6 @@ namespace edac
 
                 return corrects;
             }
-
 
             int encode(const TYP* data, int len, TYP* parity) const
             {

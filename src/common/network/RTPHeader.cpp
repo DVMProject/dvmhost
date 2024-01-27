@@ -62,10 +62,7 @@ RTPHeader::RTPHeader() :
 /// <summary>
 /// Finalizes a instance of the RTPHeader class.
 /// </summary>
-RTPHeader::~RTPHeader()
-{
-    /* stub */
-}
+RTPHeader::~RTPHeader() = default;
 
 /// <summary>
 /// Decode a RTP header.

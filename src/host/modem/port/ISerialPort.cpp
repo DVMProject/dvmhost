@@ -38,7 +38,4 @@ using namespace modem::port;
 /// <summary>
 /// Finalizes a instance of the ISerialPort class.
 /// </summary>
-ISerialPort::~ISerialPort()
-{
-    /* stub */
-}
+ISerialPort::~ISerialPort() = default;

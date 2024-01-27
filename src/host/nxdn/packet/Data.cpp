@@ -34,20 +34,14 @@
 #include "common/nxdn/acl/AccessControl.h"
 #include "common/nxdn/Sync.h"
 #include "common/nxdn/NXDNUtils.h"
-#include "common/edac/CRC.h"
 #include "common/Log.h"
-#include "common/Utils.h"
 #include "nxdn/packet/Data.h"
 #include "ActivityLog.h"
-#include "HostMain.h"
 
 using namespace nxdn;
 using namespace nxdn::packet;
 
 #include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -270,7 +264,7 @@ bool Data::process(uint8_t option, uint8_t* data, uint32_t len)
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
     }
 
-	m_nxdn->m_voice->m_rfFrames++;
+    m_nxdn->m_voice->m_rfFrames++;
 
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "RF ended RF data transmission");
@@ -382,7 +376,7 @@ bool Data::processNetwork(uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
     }
 
-	m_nxdn->m_voice->m_netFrames++;
+    m_nxdn->m_voice->m_netFrames++;
 
     if (data[0U] == modem::TAG_EOT) {
         ::ActivityLog("NXDN", true, "network ended RF data transmission");
@@ -418,10 +412,7 @@ Data::Data(Control* nxdn, bool debug, bool verbose) :
 /// <summary>
 /// Finalizes a instance of the Data class.
 /// </summary>
-Data::~Data()
-{
-    /* stub */
-}
+Data::~Data() = default;
 
 /// <summary>
 /// Write data processed from RF to the network.

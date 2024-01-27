@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/OSP_TSBK_RAW.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -66,7 +63,7 @@ OSP_TSBK_RAW::~OSP_TSBK_RAW()
 /// <returns>True, if TSBK was decoded, otherwise false.</returns>
 bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -81,8 +78,8 @@ bool OSP_TSBK_RAW::decode(const uint8_t* data, bool rawTSBK)
 /// <param name="noTrellis"></param>
 void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
-    assert(data != NULL);
-    assert(m_tsbk != NULL);
+    assert(data != nullptr);
+    assert(m_tsbk != nullptr);
 
     /* stub */
 
@@ -95,7 +92,7 @@ void OSP_TSBK_RAW::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 /// <param name="tsbk"></param>
 void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
 {
-    assert(tsbk != NULL);
+    assert(tsbk != nullptr);
 
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker

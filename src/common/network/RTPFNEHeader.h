@@ -65,9 +65,9 @@ namespace network
             ~RTPFNEHeader();
 
             /// <summary>Decode a RTP header.</summary>
-            virtual bool decode(const uint8_t* data);
+            bool decode(const uint8_t* data) override;
             /// <summary>Encode a RTP header.</summary>
-            virtual void encode(uint8_t* data);
+            void encode(uint8_t* data) override;
 
         public:
             /// <summary>Traffic payload packet CRC-16.</summary>

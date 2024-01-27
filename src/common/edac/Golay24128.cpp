@@ -35,7 +35,6 @@
 
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -1076,7 +1075,7 @@ static const uint32_t DECODING_TABLE_23127[] = {
 #define X22             0x00400000   /* vector representation of X^{22} */
 #define X11             0x00000800   /* vector representation of X^{11} */
 #define MASK12          0xfffff800   /* auxiliary vector for testing */
-#define GENPOL          0x00000c75   /* generator polinomial, g(x) */
+#define GENPOL          0x00000c75   /* generator polynomial, g(x) */
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -1287,7 +1286,7 @@ void Golay24128::encode24128(uint8_t* data, const uint8_t* raw, uint32_t msglen)
 /// Compute the syndrome corresponding to the given pattern, i.e., the
 /// remainder after dividing the pattern (when considering it as the vector
 /// representation of a polynomial) by the generator polynomial, GENPOL.
-/// In the program this pattern has several meanings: (1) pattern = infomation
+/// In the program this pattern has several meanings: (1) pattern = information
 /// bits, when constructing the encoding table; (2) pattern = error pattern,
 /// when constructing the decoding table; and (3) pattern = received vector, to
 /// obtain its syndrome in decoding.

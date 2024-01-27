@@ -226,7 +226,7 @@ const uint32_t DECODING_TABLE_1987[] = {
 #define X18             0x00040000   /* vector representation of X^{18} */
 #define X11             0x00000800   /* vector representation of X^{11} */
 #define MASK8           0xfffff800   /* auxiliary vector for testing */
-#define GENPOL          0x00000c75   /* generator polinomial, g(x) */
+#define GENPOL          0x00000c75   /* generator polynomial, g(x) */
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -278,7 +278,7 @@ void Golay2087::encode(uint8_t* data)
 /// Compute the syndrome corresponding to the given pattern, i.e., the
 /// remainder after dividing the pattern (when considering it as the vector
 /// representation of a polynomial) by the generator polynomial, GENPOL.
-/// In the program this pattern has several meanings: (1) pattern = infomation
+/// In the program this pattern has several meanings: (1) pattern = information
 /// bits, when constructing the encoding table; (2) pattern = error pattern,
 /// when constructing the decoding table; and (3) pattern = received vector, to
 /// obtain its syndrome in decoding.

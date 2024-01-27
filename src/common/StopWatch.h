@@ -51,7 +51,7 @@ public:
 
     /// <summary>Starts the stopwatch.</summary>
     ulong64_t start();
-    /// <summary>Gets the elpased time since the stopwatch started.</summary>
+    /// <summary>Gets the elapsed time since the stopwatch started.</summary>
     uint32_t elapsed();
 
 private:

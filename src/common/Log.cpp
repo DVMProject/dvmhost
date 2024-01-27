@@ -70,7 +70,7 @@ bool g_disableTimeDisplay = false;
 
 static struct tm m_tm;
 
-static std::ostream m_outStream{std::cerr.rdbuf()};
+static std::ostream m_outStream { std::cerr.rdbuf() };
 
 static char LEVELS[] = " DMIWEF";
 

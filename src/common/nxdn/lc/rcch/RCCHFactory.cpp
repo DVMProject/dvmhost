@@ -41,18 +41,12 @@ using namespace nxdn;
 /// <summary>
 /// Initializes a new instance of the RCCHFactory class.
 /// </summary>
-RCCHFactory::RCCHFactory()
-{
-    /* stub */
-}
+RCCHFactory::RCCHFactory() = default;
 
 /// <summary>
 /// Finalizes a instance of RCCHFactory class.
 /// </summary>
-RCCHFactory::~RCCHFactory()
-{
-    /* stub */
-}
+RCCHFactory::~RCCHFactory() = default;
 
 /// <summary>
 /// Create an instance of a RCCH.

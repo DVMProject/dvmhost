@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "dmr/lc/csbk/CSBK_BROADCAST.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace dmr::lc::csbk;
 using namespace dmr::lc;
 using namespace dmr;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -59,7 +56,7 @@ CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
 /// <returns>True, if CSBK was decoded, otherwise false.</returns>
 bool CSBK_BROADCAST::decode(const uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     /* stub */
 
@@ -72,7 +69,7 @@ bool CSBK_BROADCAST::decode(const uint8_t* data)
 /// <param name="data"></param>
 void CSBK_BROADCAST::encode(uint8_t* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     ulong64_t csbkValue = 0U;
 
@@ -83,7 +80,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
     switch (m_anncType)
     {
     case BCAST_ANNC_ANN_WD_TSCC:
-        // Broadcast Parms 1
+        // Broadcast Params 1
         csbkValue = (csbkValue << 4) + 0U;                                          // Reserved
         csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);                       // Color Code 1
         csbkValue = (csbkValue << 4) + (m_colorCode & 0x0FU);                       // Color Code 2
@@ -94,7 +91,7 @@ void CSBK_BROADCAST::encode(uint8_t* data)
         csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
         csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
 
-        // Broadcast Parms 2
+        // Broadcast Params 2
         csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Channel 1
         csbkValue = (csbkValue << 12) + (m_logicalCh2 & 0xFFFU);                    // Logical Channel 2
         break;
@@ -136,17 +133,17 @@ void CSBK_BROADCAST::encode(uint8_t* data)
     }
     break;
     case BCAST_ANNC_SITE_PARMS:
-        // Broadcast Parms 1
-        csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);            // Site Identity (Broadcast Parms 1)
+        // Broadcast Params 1
+        csbkValue = (csbkValue << 14) + m_siteData.systemIdentity(true);            // Site Identity (Broadcast Params 1)
 
         csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
         csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
         csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
 
-        // Broadcast Parms 2
+        // Broadcast Params 2
         csbkValue = (csbkValue << 1) + 0U;                                          // Roaming TG Subscription/Attach
         csbkValue = (csbkValue << 1) + ((m_hibernating) ? 1U : 0U);                 // TSCC Hibernating
-        csbkValue = (csbkValue << 22) + 0U;                                         // Broadcast Parms 2 (Reserved)
+        csbkValue = (csbkValue << 22) + 0U;                                         // Broadcast Params 2 (Reserved)
         break;
     }
 

@@ -70,18 +70,18 @@ namespace modem
             /// <summary>Initializes a new instance of the UARTPort class.</summary>
             UARTPort(const std::string& device, SERIAL_SPEED speed, bool assertRTS = false);
             /// <summary>Finalizes a instance of the UARTPort class.</summary>
-            virtual ~UARTPort();
+            ~UARTPort() override;
 
             /// <summary>Opens a connection to the serial port.</summary>
-            bool open();
+            bool open() override;
 
             /// <summary>Reads data from the serial port.</summary>
-            int read(uint8_t* buffer, uint32_t length);
+            int read(uint8_t* buffer, uint32_t length) override;
             /// <summary>Writes data to the serial port.</summary>
-            int write(const uint8_t* buffer, uint32_t length);
+            int write(const uint8_t* buffer, uint32_t length) override;
 
             /// <summary>Closes the connection to the serial port.</summary>
-            void close();
+            void close() override;
 
 #if defined(__APPLE__)
             /// <summary></summary>

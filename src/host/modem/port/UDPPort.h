@@ -52,18 +52,18 @@ namespace modem
             /// <summary>Initializes a new instance of the UDPPort class.</summary>
             UDPPort(const std::string& modemAddress, uint16_t modemPort);
             /// <summary>Finalizes a instance of the UDPPort class.</summary>
-            virtual ~UDPPort();
+            ~UDPPort() override;
 
             /// <summary>Opens a connection to the serial port.</summary>
-            bool open();
+            bool open() override;
 
             /// <summary>Reads data from the serial port.</summary>
-            int read(uint8_t* buffer, uint32_t length);
+            int read(uint8_t* buffer, uint32_t length) override;
             /// <summary>Writes data to the serial port.</summary>
-            int write(const uint8_t* buffer, uint32_t length);
+            int write(const uint8_t* buffer, uint32_t length) override;
 
             /// <summary>Closes the connection to the serial port.</summary>
-            void close();
+            void close() override;
 
         protected:
             network::UDPSocket m_socket;

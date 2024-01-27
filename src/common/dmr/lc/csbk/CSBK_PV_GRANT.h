@@ -51,7 +51,7 @@ namespace dmr
                 void encode(uint8_t* data) override;
 
                 /// <summary>Returns a string that represents the current CSBK.</summary>
-                virtual std::string toString() override;
+                std::string toString() override;
             };
         } // namespace csbk
     } // namespace lc

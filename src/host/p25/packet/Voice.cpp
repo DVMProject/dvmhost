@@ -439,7 +439,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     std::unique_ptr<lc::TSBK> osp;
 
                     if (grp) {
-                        osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+                        osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                         // transmit group voice grant update
                         osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
@@ -450,7 +450,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     else {
                         uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
 
-                        osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+                        osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                         // transmit group voice grant update
                         osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
@@ -542,7 +542,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 std::unique_ptr<lc::TSBK> osp;
 
                 if (grp) {
-                    osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+                    osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
                     osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
@@ -553,7 +553,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 else {
                     uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
 
-                    osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+                    osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
                     osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
@@ -1360,7 +1360,7 @@ void Voice::checkNet_LDU1()
     if (m_p25->m_netState == RS_NET_IDLE)
         return;
 
-    // Check for an unflushed LDU1
+    // check for an unflushed LDU1
     if (m_netLDU1[10U] != 0x00U || m_netLDU1[26U] != 0x00U || m_netLDU1[55U] != 0x00U ||
         m_netLDU1[80U] != 0x00U || m_netLDU1[105U] != 0x00U || m_netLDU1[130U] != 0x00U ||
         m_netLDU1[155U] != 0x00U || m_netLDU1[180U] != 0x00U || m_netLDU1[204U] != 0x00U)
@@ -1531,7 +1531,7 @@ void Voice::writeNet_LDU1()
                 std::unique_ptr<lc::TSBK> osp;
 
                 if (grp) {
-                    osp = new_unique(lc::tsbk::OSP_GRP_VCH_GRANT_UPD);
+                    osp = std::make_unique<lc::tsbk::OSP_GRP_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
                     osp->setLCO(TSBK_OSP_GRP_VCH_GRANT_UPD);
@@ -1542,7 +1542,7 @@ void Voice::writeNet_LDU1()
                 else {
                     uint32_t srcId = m_p25->m_affiliations.getGrantedSrcId(dstId);
 
-                    osp = new_unique(lc::tsbk::OSP_UU_VCH_GRANT_UPD);
+                    osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
                     osp->setLCO(TSBK_OSP_UU_VCH_GRANT_UPD);
@@ -1719,7 +1719,7 @@ void Voice::checkNet_LDU2()
     if (m_p25->m_netState == RS_NET_IDLE)
         return;
 
-    // Check for an unflushed LDU2
+    // check for an unflushed LDU2
     if (m_netLDU2[10U] != 0x00U || m_netLDU2[26U] != 0x00U || m_netLDU2[55U] != 0x00U ||
         m_netLDU2[80U] != 0x00U || m_netLDU2[105U] != 0x00U || m_netLDU2[130U] != 0x00U ||
         m_netLDU2[155U] != 0x00U || m_netLDU2[180U] != 0x00U || m_netLDU2[204U] != 0x00U)
@@ -1986,7 +1986,6 @@ void Voice::getNextMI(uint8_t lastMI[9U], uint8_t nextMI[9U])
 
         // shift all the list elements, except the last one
         for (i = 0; i < 7; i++) {
-
             // grab high bit from the next element and use it as our low bit
             nextMI[i] = ((nextMI[i] & 0x7F) << 1) | (nextMI[i + 1] >> 7);
         }

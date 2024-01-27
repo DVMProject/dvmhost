@@ -50,12 +50,9 @@ RTPFNEHeader::RTPFNEHeader() :
 }
 
 /// <summary>
-/// Finalizes a instance of the RTPExtensionHeader class.
+/// Finalizes a instance of the RTPFNEHeader class.
 /// </summary>
-RTPFNEHeader::~RTPFNEHeader()
-{
-    /* stub */
-}
+RTPFNEHeader::~RTPFNEHeader() = default;
 
 /// <summary>
 /// Decode a RTP header.

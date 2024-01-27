@@ -179,7 +179,7 @@ execute_process(COMMAND git describe --abbrev=8 --always WORKING_DIRECTORY ${CMA
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
-project(dvmcore)
+project(dvm)
 include(src/CMakeLists.txt)
 
 if (ENABLE_TESTS)

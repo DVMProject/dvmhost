@@ -27,7 +27,6 @@
 #include "p25/P25Defines.h"
 #include "p25/lc/TDULC.h"
 #include "p25/P25Utils.h"
-#include "edac/CRC.h"
 #include "edac/Golay24128.h"
 #include "Log.h"
 #include "Utils.h"
@@ -35,8 +34,6 @@
 using namespace p25::lc;
 using namespace p25;
 
-#include <cstdio>
-#include <cmath>
 #include <cassert>
 #include <cstring>
 

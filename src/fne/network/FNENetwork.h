@@ -60,7 +60,7 @@ namespace network
         auto operator=(FNEPeerConnection&&) -> FNEPeerConnection& = delete;
         FNEPeerConnection(FNEPeerConnection&) = delete;
 
-        /// <summary>Initializes a new insatnce of the FNEPeerConnection class.</summary>
+        /// <summary>Initializes a new instance of the FNEPeerConnection class.</summary>
         FNEPeerConnection() :
             m_id(0U),
             m_currStreamId(0U),
@@ -79,7 +79,7 @@ namespace network
         {
             /* stub */
         }
-        /// <summary>Initializes a new insatnce of the FNEPeerConnection class.</summary>
+        /// <summary>Initializes a new instance of the FNEPeerConnection class.</summary>
         /// <param name="id">Unique ID of this modem on the network.</param>
         /// <param name="socketStorage"></param>
         /// <param name="sockStorageLen"></param>
@@ -156,7 +156,7 @@ namespace network
             bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
             bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
-        ~FNENetwork();
+        ~FNENetwork() override;
 
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
@@ -174,13 +174,13 @@ namespace network
         void setPresharedKey(const uint8_t* presharedKey);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
-        void clock(uint32_t ms);
+        void clock(uint32_t ms) override;
 
         /// <summary>Opens connection to the network.</summary>
-        bool open();
+        bool open() override;
 
         /// <summary>Closes connection to the network.</summary>
-        void close();
+        void close() override;
 
     private:
         friend class fne::TagDMRData;

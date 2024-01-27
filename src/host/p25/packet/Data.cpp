@@ -36,19 +36,15 @@
 #include "common/edac/CRC.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "p25/packet/ControlSignaling.h"
 #include "p25/packet/Data.h"
 #include "ActivityLog.h"
-#include "HostMain.h"
 
 using namespace p25;
 using namespace p25::data;
 using namespace p25::packet;
 
 #include <cassert>
-#include <cstdio>
 #include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Constants

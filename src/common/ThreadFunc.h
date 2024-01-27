@@ -50,7 +50,7 @@ public:
     }
 
     /// <summary>User-defined function to run for the thread main.</summary>
-    virtual void entry()
+    void entry() override
     {
         if (m_entry != nullptr)
             m_entry();

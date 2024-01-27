@@ -25,15 +25,12 @@
 */
 #include "Defines.h"
 #include "p25/lc/tsbk/mbt/MBT_IOSP_CALL_ALRT.h"
-#include "Log.h"
-#include "Utils.h"
 
 using namespace p25::lc::tsbk;
 using namespace p25::lc;
 using namespace p25;
 
 #include <cassert>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -95,8 +92,6 @@ void MBT_IOSP_CALL_ALRT::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUse
 /// <returns></returns>
 std::string MBT_IOSP_CALL_ALRT::toString(bool isp)
 {
-    if (isp)
-        return std::string("TSBK_IOSP_CALL_ALRT (Call Alert Request)");
-    else    
-        return std::string("TSBK_IOSP_CALL_ALRT (Call Alert)");
+    if (isp) return std::string("TSBK_IOSP_CALL_ALRT (Call Alert Request)");
+    else return std::string("TSBK_IOSP_CALL_ALRT (Call Alert)");
 }

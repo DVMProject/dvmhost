@@ -35,9 +35,7 @@
 using namespace nxdn;
 using namespace edac;
 
-#include <cstdio>
 #include <cassert>
-#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -46,18 +44,12 @@ using namespace edac;
 /// <summary>
 /// Initializes a new instance of the Audio class.
 /// </summary>
-Audio::Audio()
-{
-    /* stub */
-}
+Audio::Audio() = default;
 
 /// <summary>
 /// Finalizes a instance of the Audio class.
 /// </summary>
-Audio::~Audio()
-{
-    /* stub */
-}
+Audio::~Audio() = default;
 
 /// <summary>
 /// Decode a NXDN AMBE audio frame.

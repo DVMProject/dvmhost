@@ -35,21 +35,15 @@
 #include "common/nxdn/acl/AccessControl.h"
 #include "common/nxdn/Sync.h"
 #include "common/nxdn/NXDNUtils.h"
-#include "common/edac/CRC.h"
 #include "common/Log.h"
-#include "common/Utils.h"
-#include "nxdn/Audio.h"
 #include "nxdn/packet/Voice.h"
 #include "ActivityLog.h"
-#include "HostMain.h"
 
 using namespace nxdn;
 using namespace nxdn::packet;
 
 #include <cassert>
-#include <cstdio>
 #include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Macros
@@ -322,7 +316,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-		NXDNUtils::scrambler(data + 2U);
+        NXDNUtils::scrambler(data + 2U);
 
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
 
@@ -369,7 +363,7 @@ bool Voice::process(uint8_t fct, uint8_t option, uint8_t* data, uint32_t len)
             ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
         }
 
-		return true;
+        return true;
     } else {
         if (m_nxdn->m_rfState == RS_RF_LISTENING) {
             channel::FACCH1 facch;
@@ -776,7 +770,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
-		NXDNUtils::scrambler(data + 2U);
+        NXDNUtils::scrambler(data + 2U);
 
         if (m_nxdn->m_duplex) {
             data[0U] = type == RTCH_MESSAGE_TYPE_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
@@ -806,7 +800,7 @@ bool Voice::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t
             ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
         }
 
-		return true;
+        return true;
     } else {
         if (m_nxdn->m_netState == RS_NET_IDLE) {
             channel::FACCH1 facch;
@@ -1081,10 +1075,7 @@ Voice::Voice(Control* nxdn, bool debug, bool verbose) :
 /// <summary>
 /// Finalizes a instance of the Voice class.
 /// </summary>
-Voice::~Voice()
-{
-    /* stub */
-}
+Voice::~Voice() = default;
 
 /// <summary>
 /// Write data processed from RF to the network.

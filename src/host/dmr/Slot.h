@@ -75,11 +75,11 @@ namespace dmr
         ~Slot();
 
         /// <summary>Gets a flag indicating whether the P25 control channel is running.</summary>
-        bool getCCRunning() { return m_ccRunning; }
+        bool getCCRunning() const { return m_ccRunning; }
         /// <summary>Sets a flag indicating whether the P25 control channel is running.</summary>
         void setCCRunning(bool ccRunning) { m_ccPrevRunning = m_ccRunning; m_ccRunning = ccRunning; }
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
-        bool getCCHalted() { return m_ccHalted; }
+        bool getCCHalted() const { return m_ccHalted; }
         /// <summary>Sets a flag indicating whether the DMR control channel is halted.</summary>
         void setCCHalted(bool ccHalted) { m_ccHalted = ccHalted; }
 
@@ -100,7 +100,7 @@ namespace dmr
         void grantTG(uint32_t srcId, uint32_t dstId, bool grp);
         /// <summary>Releases a granted TG.</summary>
         void releaseGrantTG(uint32_t dstId);
-        /// <summary>Touchs a granted TG to keep a channel grant alive.</summary>
+        /// <summary>Touches a granted TG to keep a channel grant alive.</summary>
         void touchGrantTG(uint32_t dstId);
 
         /// <summary>Gets instance of the ControlSignaling class.</summary>

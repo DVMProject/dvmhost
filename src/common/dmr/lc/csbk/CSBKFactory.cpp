@@ -43,18 +43,12 @@ using namespace dmr;
 /// <summary>
 /// Initializes a new instance of the CSBKFactory class.
 /// </summary>
-CSBKFactory::CSBKFactory()
-{
-    /* stub */
-}
+CSBKFactory::CSBKFactory() = default;
 
 /// <summary>
 /// Finalizes a instance of CSBKFactory class.
 /// </summary>
-CSBKFactory::~CSBKFactory()
-{
-    /* stub */
-}
+CSBKFactory::~CSBKFactory() = default;
 
 /// <summary>
 /// Create an instance of a CSBK.

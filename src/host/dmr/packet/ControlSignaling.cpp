@@ -619,7 +619,7 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 /// <param name="dstId">Destination radio ID.</param>
 void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId)
 {
-    std::unique_ptr<CSBK_EXT_FNCT> csbk = new_unique(CSBK_EXT_FNCT);
+    std::unique_ptr<CSBK_EXT_FNCT> csbk = std::make_unique<CSBK_EXT_FNCT>();
     csbk->setGI(false);
     csbk->setExtendedFunction(func);
     csbk->setSrcId(arg);
@@ -651,7 +651,7 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
 /// <param name="dstId">Destination radio ID.</param>
 void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
 {
-    std::unique_ptr<CSBK_CALL_ALRT> csbk = new_unique(CSBK_CALL_ALRT);
+    std::unique_ptr<CSBK_CALL_ALRT> csbk = std::make_unique<CSBK_CALL_ALRT>();
     csbk->setGI(false);
     csbk->setSrcId(srcId);
     csbk->setDstId(dstId);
@@ -686,10 +686,7 @@ ControlSignaling::ControlSignaling(Slot * slot, network::BaseNetwork * network, 
 /// <summary>
 /// Finalizes a instance of the ControlSignaling class.
 /// </summary>
-ControlSignaling::~ControlSignaling()
-{
-    /* stub */
-}
+ControlSignaling::~ControlSignaling() = default;
 
 /*
 ** Modem Frame Queuing
@@ -755,7 +752,7 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool 
 /// <param name="responseInfo"></param>
 void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint8_t responseInfo)
 {
-    std::unique_ptr<CSBK_ACK_RSP> csbk = new_unique(CSBK_ACK_RSP);
+    std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
     csbk->setResponse(responseInfo);
     csbk->setReason(reason);
     csbk->setSrcId(DMR_WUID_ALL); // hmmm...
@@ -772,7 +769,7 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
 /// <param name="service"></param>
 void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uint8_t service)
 {
-    std::unique_ptr<CSBK_NACK_RSP> csbk = new_unique(CSBK_NACK_RSP);
+    std::unique_ptr<CSBK_NACK_RSP> csbk = std::make_unique<CSBK_NACK_RSP>();
     csbk->setServiceKind(service);
     csbk->setReason(reason);
     csbk->setSrcId(DMR_WUID_ALL); // hmmm...
@@ -950,7 +947,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
-        std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
+        std::unique_ptr<CSBK_TV_GRANT> csbk = std::make_unique<CSBK_TV_GRANT>();
         if (broadcast)
             csbk->setCSBKO(CSBKO_BTV_GRANT);
         csbk->setLogicalCh1(chNo);
@@ -1028,7 +1025,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
-        std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
+        std::unique_ptr<CSBK_PV_GRANT> csbk = std::make_unique<CSBK_PV_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
@@ -1186,7 +1183,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
-        std::unique_ptr<CSBK_TD_GRANT> csbk = new_unique(CSBK_TD_GRANT);
+        std::unique_ptr<CSBK_TD_GRANT> csbk = std::make_unique<CSBK_TD_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
@@ -1233,7 +1230,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         writeRF_CSBK_ACK_RSP(srcId, TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
 
-        std::unique_ptr<CSBK_PD_GRANT> csbk = new_unique(CSBK_PD_GRANT);
+        std::unique_ptr<CSBK_PD_GRANT> csbk = std::make_unique<CSBK_PD_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
@@ -1288,7 +1285,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
 
     bool dereg = (serviceOptions & 0x01U) == 0x01U;
 
-    std::unique_ptr<CSBK_ACK_RSP> csbk = new_unique(CSBK_ACK_RSP);
+    std::unique_ptr<CSBK_ACK_RSP> csbk = std::make_unique<CSBK_ACK_RSP>();
 
     if (!dereg) {
         if (m_verbose) {
@@ -1345,7 +1342,7 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
     uint8_t slot = m_tscc->m_affiliations->getGrantedSlot(dstId);
 
     if (grp) {
-        std::unique_ptr<CSBK_TV_GRANT> csbk = new_unique(CSBK_TV_GRANT);
+        std::unique_ptr<CSBK_TV_GRANT> csbk = std::make_unique<CSBK_TV_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
@@ -1358,7 +1355,7 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
     }
     else {
 /*        
-        std::unique_ptr<CSBK_PV_GRANT> csbk = new_unique(CSBK_PV_GRANT);
+        std::unique_ptr<CSBK_PV_GRANT> csbk = std::make_unique<CSBK_PV_GRANT>();
         csbk->setLogicalCh1(chNo);
         csbk->setSlotNo(slot);
 
@@ -1380,7 +1377,7 @@ void ControlSignaling::writeRF_CSBK_Grant_LateEntry(uint32_t dstId, uint32_t src
 /// <param name="imm"></param>
 void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t srcId, bool grp, bool voice, bool imm)
 {
-    std::unique_ptr<CSBK_P_GRANT> csbk = new_unique(CSBK_P_GRANT);
+    std::unique_ptr<CSBK_P_GRANT> csbk = std::make_unique<CSBK_P_GRANT>();
     if (voice) {
         if (grp) {
             csbk->setCSBKO(CSBKO_TV_GRANT);
@@ -1425,7 +1422,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
 /// <param name="imm"></param>
 void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId, bool grp, bool imm)
 {
-    std::unique_ptr<CSBK_P_CLEAR> csbk = new_unique(CSBK_P_CLEAR);
+    std::unique_ptr<CSBK_P_CLEAR> csbk = std::make_unique<CSBK_P_CLEAR>();
 
     csbk->setGI(grp);
 
@@ -1451,7 +1448,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
 /// </summary>
 void ControlSignaling::writeRF_TSCC_Aloha()
 {
-    std::unique_ptr<CSBK_ALOHA> csbk = new_unique(CSBK_ALOHA);
+    std::unique_ptr<CSBK_ALOHA> csbk = std::make_unique<CSBK_ALOHA>();
     DEBUG_LOG_CSBK(csbk->toString());
     csbk->setNRandWait(m_slot->m_alohaNRandWait);
     csbk->setBackoffNo(m_slot->m_alohaBackOff);
@@ -1468,7 +1465,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 {
     m_slot->m_rfSeqNo = 0U;
 
-    std::unique_ptr<CSBK_BROADCAST> csbk = new_unique(CSBK_BROADCAST);
+    std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
     csbk->siteIdenEntry(m_slot->m_idenEntry);
     csbk->setCdef(false);
     csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
@@ -1488,7 +1485,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
 /// </summary>
 void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 {
-    std::unique_ptr<CSBK_BROADCAST> csbk = new_unique(CSBK_BROADCAST);
+    std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
     DEBUG_LOG_CSBK(csbk->toString());
     csbk->setAnncType(BCAST_ANNC_SITE_PARMS);
 
@@ -1500,7 +1497,7 @@ void ControlSignaling::writeRF_TSCC_Bcast_Sys_Parm()
 /// </summary>
 void ControlSignaling::writeRF_TSCC_Git_Hash()
 {
-    std::unique_ptr<CSBK_DVM_GIT_HASH> csbk = new_unique(CSBK_DVM_GIT_HASH);
+    std::unique_ptr<CSBK_DVM_GIT_HASH> csbk = std::make_unique<CSBK_DVM_GIT_HASH>();
     DEBUG_LOG_CSBK(csbk->toString());
 
     writeRF_CSBK(csbk.get());

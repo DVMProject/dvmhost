@@ -32,17 +32,11 @@
 
 #include <cstring>
 #include <cassert>
-#include <cstdlib>
 
 using namespace modem::port;
 
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <cerrno>
-#include <fcntl.h>
 #include <unistd.h>
-#include <termios.h>
 #if defined(__linux__)
 	#include <pty.h>
 #else
@@ -68,10 +62,7 @@ PseudoPTYPort::PseudoPTYPort(const std::string& symlink, SERIAL_SPEED speed, boo
 /// <summary>
 /// Finalizes a instance of the PseudoPTYPort class.
 /// </summary>
-PseudoPTYPort::~PseudoPTYPort()
-{
-    /* stub */
-}
+PseudoPTYPort::~PseudoPTYPort() = default;
 
 /// <summary>
 /// Opens a connection to the serial port.
@@ -79,29 +70,29 @@ PseudoPTYPort::~PseudoPTYPort()
 /// <returns>True, if connection is opened, otherwise false.</returns>
 bool PseudoPTYPort::open()
 {
-	assert(m_fd == -1);
+    assert(m_fd == -1);
 
-	int slavefd;
-	char slave[300];
-	int result = ::openpty(&m_fd, &slavefd, slave, NULL, NULL);
-	if (result < 0) {
-		::LogError(LOG_HOST, "Cannot open the pseudo tty - errno : %d", errno);
-		return false;
-	}
+    int slavefd;
+    char slave[300];
+    int result = ::openpty(&m_fd, &slavefd, slave, NULL, NULL);
+    if (result < 0) {
+        ::LogError(LOG_HOST, "Cannot open the pseudo tty - errno : %d", errno);
+        return false;
+    }
 
-	// remove any previous stale symlink
-	::unlink(m_symlink.c_str());
+    // remove any previous stale symlink
+    ::unlink(m_symlink.c_str());
 
-	int ret = ::symlink(slave, m_symlink.c_str());
-	if (ret != 0) {
-		::LogError(LOG_HOST, "Cannot make symlink to %s with %s", slave, m_symlink.c_str());
-		close();
-		return false;
-	}
+    int ret = ::symlink(slave, m_symlink.c_str());
+    if (ret != 0) {
+        ::LogError(LOG_HOST, "Cannot make symlink to %s with %s", slave, m_symlink.c_str());
+        close();
+        return false;
+    }
 
-	::LogMessage(LOG_HOST, "Made symbolic link from %s to %s", slave, m_symlink.c_str());
-	m_device = std::string(::ttyname(m_fd));
-	return setTermios();
+    ::LogMessage(LOG_HOST, "Made symbolic link from %s to %s", slave, m_symlink.c_str());
+    m_device = std::string(::ttyname(m_fd));
+    return setTermios();
 }
 
 /// <summary>

@@ -30,7 +30,6 @@
 */
 #include "Defines.h"
 #include "common/Log.h"
-#include "common/Utils.h"
 #include "modem/port/UDPPort.h"
 
 using namespace modem::port;
@@ -76,10 +75,7 @@ UDPPort::UDPPort(const std::string& address, uint16_t modemPort) :
 /// <summary>
 /// Finalizes a instance of the UDPPort class.
 /// </summary>
-UDPPort::~UDPPort()
-{
-    /* stub */
-}
+UDPPort::~UDPPort() = default;
 
 /// <summary>
 /// Opens a connection to the port.

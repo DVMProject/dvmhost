@@ -63,7 +63,7 @@ namespace dmr
             virtual std::string toString();
 
             /// <summary>Regenerate a DMR CSBK without decoding.</summary>
-            /// <remarks>This is because the DMR archeticture allows fall-thru of unsupported CSBKs.</remarks>
+            /// <remarks>This is because the DMR architecture allows fall-thru of unsupported CSBKs.</remarks>
             static bool regenerate(uint8_t* data, uint8_t dataType);
 
             /// <summary>Gets the flag indicating verbose log output.</summary>

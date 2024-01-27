@@ -45,7 +45,7 @@ namespace p25
                 /// <summary>Initializes a new instance of the MBT_OSP_AUTH_DMD class.</summary>
                 MBT_OSP_AUTH_DMD();
                 /// <summary>Finalizes a instance of the MBT_OSP_AUTH_DMD class.</summary>
-                ~MBT_OSP_AUTH_DMD();
+                ~MBT_OSP_AUTH_DMD() override;
 
                 /// <summary>Decode a alternate trunking signalling block.</summary>
                 bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) override;
@@ -53,7 +53,7 @@ namespace p25
                 void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) override;
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
-                virtual std::string toString(bool isp = false) override;
+                std::string toString(bool isp = false) override;
 
                 /// <summary>Sets the authentication random seed.</summary>
                 void setAuthRS(const uint8_t* rs);

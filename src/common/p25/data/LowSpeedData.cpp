@@ -35,7 +35,6 @@
 using namespace p25::data;
 using namespace p25;
 
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------
@@ -79,10 +78,7 @@ LowSpeedData::LowSpeedData() :
 /// <summary>
 /// Finalizes a new instance of the LowSpeedData class.
 /// </summary>
-LowSpeedData::~LowSpeedData()
-{
-    /* stub */
-}
+LowSpeedData::~LowSpeedData() = default;
 
 /// <summary>
 /// Equals operator.

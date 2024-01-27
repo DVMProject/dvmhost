@@ -33,7 +33,6 @@
 #include "common/p25/acl/AccessControl.h"
 #include "common/p25/P25Utils.h"
 #include "common/p25/Sync.h"
-#include "common/edac/CRC.h"
 #include "common/AESCrypto.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -46,9 +45,7 @@ using namespace p25;
 using namespace p25::packet;
 
 #include <cassert>
-#include <cstdio>
 #include <cstring>
-#include <ctime>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -694,7 +691,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 /// <summary>
 /// Get the frame data length for the next frame in the data ring buffer.
 /// </summary>
-/// <returns>Length of frame data retreived.</returns>
+/// <returns>Length of frame data retrieved.</returns>
 uint32_t Control::peekFrameLength()
 {
     if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
@@ -717,7 +714,7 @@ uint32_t Control::peekFrameLength()
 /// Get frame data from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to store frame data.</param>
-/// <returns>Length of frame data retreived.</returns>
+/// <returns>Length of frame data retrieved.</returns>
 uint32_t Control::getFrame(uint8_t* data)
 {
     assert(data != nullptr);
@@ -1021,7 +1018,7 @@ void Control::releaseGrantTG(uint32_t dstId)
 }
 
 /// <summary>
-/// Touchs a granted TG to keep a channel grant alive.
+/// Touches a granted TG to keep a channel grant alive.
 /// </summary>
 /// <param name="dstId"></param>
 void Control::touchGrantTG(uint32_t dstId)
@@ -1090,8 +1087,8 @@ uint32_t Control::getLastSrcId() const
         return m_rfLastSrcId;
     }
 
-    if (m_rfLastSrcId != 0U) {
-        return m_rfLastSrcId;
+    if (m_netLastSrcId != 0U) {
+        return m_netLastSrcId;
     }
 
     return 0U;

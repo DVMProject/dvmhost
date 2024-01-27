@@ -210,7 +210,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         m_slot->m_rfFrames = dataHeader->getBlocks();
         m_slot->m_rfSeqNo = 0U;
-        m_slot->m_rfLC = new_unique(lc::LC, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_rfLC = std::make_unique<lc::LC>(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
@@ -427,7 +427,7 @@ void Data::processNetwork(const data::Data& dmrData)
         }
 
         m_slot->m_netFrames = dataHeader->getBlocks();
-        m_slot->m_netLC = new_unique(lc::LC, gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
+        m_slot->m_netLC = std::make_unique<lc::LC>(gi ? FLCO_GROUP : FLCO_PRIVATE, srcId, dstId);
 
         // Regenerate the data header
         dataHeader->encode(data + 2U);
