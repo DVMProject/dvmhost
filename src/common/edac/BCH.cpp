@@ -1,15 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /**
 * Digital Voice Modem - Common Library
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * @package DVM / Common Library
+* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
+* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 */
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
 /*
 * File:    bch3.c
 * Title:   Encoder/decoder for binary BCH codes in C (Version 3.1)
@@ -86,8 +85,6 @@
 
 using namespace edac;
 
-#include <cmath>
-#include <cstdio>
 #include <cassert>
 
 // ---------------------------------------------------------------------------

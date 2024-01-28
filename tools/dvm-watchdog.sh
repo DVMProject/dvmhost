@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
 #/**
 #* Digital Voice Modem - Host Software
 #* GPLv2 Open Source. Use is subject to license terms.

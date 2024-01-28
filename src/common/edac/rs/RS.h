@@ -1,47 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /**
 * Digital Voice Modem - Common Library
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * @package DVM / Common Library
+* @derivedfrom EZPWD Reed-Solomon (https://github.com/pjkundert/ezpwd-reed-solomon)
+* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
+*
+*   Copyright (C) 2014 Hard Consulting Corporation
+*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
 *
 */
-//
-// Based on code from the EZPWD Reed-Solomon project. (https://github.com/pjkundert/ezpwd-reed-solomon)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
-/*
-*   Copyright (C) 2023 by Bryan Biedenkapp N2PLL
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*   the Free Software Foundation; either version 2 of the License, or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with this program; if not, write to the Free Software
-*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+#if !defined(__RS_H__)
+#define __RS_H__
+
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- *
- * Copyright (c) 2014, Hard Consulting Corporation.
- *
- * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
- * the GNU General Public License as published by the Free Software Foundation, either version 3 of
- * the License, or (at your option) any later version.  See the LICENSE file at the top of the
- * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The
- * c++/ezpwd/rs_base file is redistributed under the terms of the LGPL, regardless of the overall
- * licensing terms.
- *
- * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
- * the GNU General Public License for more details.
  *
  * The core Reed-Solomon codec implementation in c++/ezpwd/rs_base is by Phil Karn, converted to C++
  * by Perry Kundert (perry@hardconsulting.com), and may be used under the terms of the LGPL.  Here
@@ -76,8 +51,6 @@
  * (corrected) R-S codewords.  We chose the report failure on these attempts.
  *
  */
-#if !defined(__RS_H__)
-#define __RS_H__
 
 #include "common/Defines.h"
 #include "common/Log.h"

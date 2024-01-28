@@ -1,22 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /**
 * Digital Voice Modem - Common Library
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * @package DVM / Common Library
+* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*/
-/*
-*   Copyright (C) 2023 Bryan Biedenkapp N2PLL
+*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
 *
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*   the Free Software Foundation; version 2 of the License.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
 */
 #if !defined(__CLOCK_H__)
 #define __CLOCK_H__

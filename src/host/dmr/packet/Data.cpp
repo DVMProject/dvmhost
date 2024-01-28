@@ -1,27 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Host Software
+* Digital Voice Modem - Modem Host Software
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / Host Software
+* @package DVM / Modem Host Software
+* @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
+* @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*/
-//
-// Based on code from the MMDVMHost project. (https://github.com/g4klx/MMDVMHost)
-// Licensed under the GPLv2 License (https://opensource.org/licenses/GPL-2.0)
-//
-/*
 *   Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 by Bryan Biedenkapp N2PLL
+*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
 *
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*   the Free Software Foundation; version 2 of the License.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
 */
 #include "Defines.h"
 #include "common/dmr/acl/AccessControl.h"

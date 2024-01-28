@@ -1,47 +1,25 @@
+// SPDX-License-Identifier: MIT
 /**
 * Digital Voice Modem - Common Library
-* GPLv2 Open Source. Use is subject to license terms.
+* MIT Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * @package DVM / Common Library
+* @derivedfrom mini-yaml (https://github.com/jimmiebergmann/mini-yaml)
+* @license MIT License (https://opensource.org/license/MIT)
+*
+*   Copyright (C) 2018 Jimmie Bergmann
+*   Copyright (C) 2020 Bryan Biedenkapp, N2PLL
 *
 */
-//
-// Based on code from the mini-yaml project. (https://github.com/jimmiebergmann/mini-yaml)
-// Licensed under the MIT License (https://opensource.org/licenses/MIT)
-//
-/*
-*   Copyright(c) 2018 Jimmie Bergmann
-*   Copyright (C) 2020 Bryan Biedenkapp N2PLL
-*
-*   MIT License
-*
-*   Permission is hereby granted, free of charge, to any person obtaining a copy
-*   of this software and associated documentation files(the "Software"), to deal
-*   in the Software without restriction, including without limitation the rights
-*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-*   copies of the Software, and to permit persons to whom the Software is
-*   furnished to do so, subject to the following conditions :
-*
-*   The above copyright notice and this permission notice shall be included in all
-*   copies or substantial portions of the Software.
-*
-*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
-*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-*   SOFTWARE.
-*
-*/
-/*
+#if !defined(__YAML_H__)
+#define __YAML_H__
+
+/**
 * YAML documentation:
 * http://yaml.org/spec/1.0/index.html
 * https://www.codeproject.com/Articles/28720/YAML-Parser-in-C
 */
-#if !defined(__YAML_H__)
-#define __YAML_H__
 
 #include "common/Defines.h"
 
