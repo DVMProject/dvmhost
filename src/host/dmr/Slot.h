@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_SLOT_H__)
@@ -163,6 +163,8 @@ namespace dmr
         Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_packetTimer;
+
+        Timer m_adjSiteUpdate;
 
         Timer m_ccPacketInterval;
 

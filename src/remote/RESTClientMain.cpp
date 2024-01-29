@@ -43,6 +43,7 @@
 #define RCD_FNE_GET_PEERLIST            "fne-peerlist"
 #define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
+#define RCD_FNE_GET_AFFLIST             "fne-affs"
 
 #define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
@@ -63,8 +64,6 @@
 #define RCD_RELEASE_GRANTS              "rel-grnts"
 #define RCD_RELEASE_AFFS                "rel-affs"
 #define RCD_RELEASE_AFF                 "rel-aff"
-
-#define RCD_GET_AFFS                    "affs"
 
 #define RCD_DMR_BEACON                  "dmr-beacon"
 #define RCD_P25_CC                      "p25-cc"
@@ -91,6 +90,10 @@
 #define RCD_P25_CC_BCAST                "p25-cc-bcast"
 
 #define RCD_NXDN_CC_DEDICATED           "nxdn-cc-dedicated"
+
+#define RCD_DMR_GET_AFFLIST             "dmr-affs"
+#define RCD_P25_GET_AFFLIST             "p25-affs"
+#define RCD_NXDN_GET_AFFLIST            "nxdn-affs"
 
 #define RCD_DMR_DEBUG                   "dmr-debug"
 #define RCD_DMR_DUMP_CSBK               "dmr-dump-csbk"
@@ -181,6 +184,7 @@ void usage(const char* message, const char* arg)
     reply += "  fne-peerlist                Retrieves the list of connected peers (Converged FNE only)\r\n";
     reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
+    reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                    Causes the host to quit\r\n";
@@ -195,7 +199,6 @@ void usage(const char* message, const char* arg)
     reply += "  rel-grnts                   Forcibly releases all channel grants\r\n";
     reply += "  rel-affs                    Forcibly releases all group affiliations\r\n";
     reply += "  rel-aff <state> <dstid>     Forcibly releases specified group affiliations\r\n";
-    reply += "  affs                        Retrieves the list of currently affiliated SUs\r\n";
     reply += "\r\n";
     reply += "  dmr-beacon                  Transmits a DMR beacon burst\r\n";
     reply += "  p25-cc                      Transmits a non-continous P25 CC burst\r\n";
@@ -216,6 +219,8 @@ void usage(const char* message, const char* arg)
     reply += "\r\n";
     reply += "  dmr-cc-dedicated            Enables or disables dedicated control channel\r\n";
     reply += "  dmr-cc-bcast                Enables or disables broadcast of the control channel\r\n";
+    reply += "\r\n";
+    reply += "  dmr-affs                    Retrieves the list of currently affiliated DMR SUs\r\n";
     reply += "\r\nP25 Commands:\r\n";
     reply += "  p25-set-mfid <mfid>         Sets the P25 MFId for the next sent P25 command\r\n";
     reply += "  p25-rid-page <rid>          Pages/Calls the specified RID\r\n";
@@ -227,8 +232,12 @@ void usage(const char* message, const char* arg)
     reply += "\r\n";
     reply += "  p25-cc-dedicated            Enables or disables dedicated control channel\r\n";
     reply += "  p25-cc-bcast                Enables or disables broadcast of the control channel\r\n";
+    reply += "\r\n";
+    reply += "  p25-affs                    Retrieves the list of currently affiliated P25 SUs\r\n";
     reply += "\r\nNXDN Commands:\r\n";
     reply += "  nxdn-cc-dedicated           Enables or disables dedicated control channel\r\n";
+    reply += "\r\n";
+    reply += "  nxdn-affs                   Retrieves the list of currently affiliated NXDN SUs\r\n";
 
     ::fprintf(stdout, "\n%s\n", reply.c_str());
     exit(EXIT_FAILURE);
@@ -423,15 +432,6 @@ int main(int argc, char** argv)
         else if (rcom == RCD_GET_VOICE_CH) {
             retCode = client->send(HTTP_GET, GET_VOICE_CH, json::object(), response);
         }
-        else if (rcom == RCD_FNE_GET_PEERLIST) {
-            retCode = client->send(HTTP_GET, FNE_GET_PEERLIST, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_TGIDLIST) {
-            retCode = client->send(HTTP_GET, FNE_GET_TGID_LIST, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
-            retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);
-        }
         else if (rcom == RCD_MODE && argCnt >= 1U) {
             std::string mode = getArgString(args, 0U);
 
@@ -522,9 +522,6 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_RELEASE_TG, req, response);
         }
-        else if (rcom == RCD_GET_AFFS) {
-            retCode = client->send(HTTP_GET, GET_AFF_LIST, json::object(), response);
-        }
 
         /*
         ** Digital Mobile Radio
@@ -597,6 +594,9 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_DMR_CC_BCAST) {
             retCode = client->send(HTTP_GET, GET_DMR_CC_BCAST, json::object(), response);
+        }
+        else if (rcom == RCD_DMR_GET_AFFLIST) {
+            retCode = client->send(HTTP_GET, GET_DMR_AFFILIATIONS, json::object(), response);
         }
 
         /*
@@ -687,6 +687,9 @@ int main(int argc, char** argv)
         else if (rcom == RCD_P25_CC_BCAST) {
             retCode = client->send(HTTP_GET, GET_P25_CC_BCAST, json::object(), response);
         }
+        else if (rcom == RCD_P25_GET_AFFLIST) {
+            retCode = client->send(HTTP_GET, GET_P25_AFFILIATIONS, json::object(), response);
+        }
 
         /*
         ** Next Generation Digital Narrowband
@@ -716,6 +719,25 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_NXDN_CC_DEDICATED) {
             retCode = client->send(HTTP_GET, GET_NXDN_CC_DEDICATED, json::object(), response);
+        }
+        else if (rcom == RCD_NXDN_GET_AFFLIST) {
+            retCode = client->send(HTTP_GET, GET_NXDN_AFFILIATIONS, json::object(), response);
+        }
+
+        /*
+        ** Fixed Network Equipment
+        */
+        else if (rcom == RCD_FNE_GET_PEERLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_PEERLIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_TGIDLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_TGID_LIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
+            retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_AFFLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_AFF_LIST, json::object(), response);
         }
         else {
             args.clear();

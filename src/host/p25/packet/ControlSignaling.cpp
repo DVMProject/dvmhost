@@ -2682,6 +2682,8 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 
         // update dynamic affiliation table
         m_p25->m_affiliations.groupAff(srcId, dstId);
+
+        m_p25->m_network->announceGroupAffiliation(srcId, dstId);
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
@@ -2726,6 +2728,8 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
         if (!m_p25->m_affiliations.isUnitReg(srcId)) {
             m_p25->m_affiliations.unitReg(srcId);
         }
+
+        m_p25->m_network->announceUnitRegistration(srcId);
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), true);
@@ -2760,6 +2764,8 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
         ::ActivityLog("P25", true, "unit deregistration request from %u", srcId);
 
         writeRF_TSDU_SBF_Imm(osp.get(), false);
+
+        m_p25->m_network->announceUnitDeregistration(srcId);
     }
 }
 

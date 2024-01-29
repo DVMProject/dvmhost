@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
-*   Copyright (C) 2022-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -556,6 +556,19 @@ void Control::clock(uint32_t ms)
                 }
 
                 m_ccPacketInterval.start();
+            }
+        }
+
+        // do we need to network announce ourselves?
+        if (!m_adjSiteUpdate.isRunning()) {
+            m_adjSiteUpdate.start();
+        }
+
+        m_adjSiteUpdate.clock(ms);
+        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
+            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_network->announceAffiliationUpdate(m_affiliations.grpAffTable());
+                m_adjSiteUpdate.start();
             }
         }
 

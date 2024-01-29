@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_DEFINES_H__)
@@ -59,8 +59,6 @@
 #define GET_RID_BLACKLIST_BASE          "/rid-blacklist/"
 #define GET_RID_BLACKLIST               GET_RID_BLACKLIST_BASE"(\\d+)"
 
-#define GET_AFF_LIST                    "/affs"
-
 #define GET_DMR_BEACON                  "/dmr/beacon"
 #define GET_DMR_DEBUG_BASE              "/dmr/debug/"
 #define GET_DMR_DEBUG                   GET_DMR_DEBUG_BASE"(\\d+)/(\\d+)"
@@ -70,6 +68,7 @@
 #define GET_DMR_CC_DEDICATED            "/dmr/cc-enable"
 #define GET_DMR_CC_BCAST                "/dmr/cc-broadcast"
 #define PUT_DMR_TSCC_PAYLOAD_ACT        "/dmr/payload-activate"
+#define GET_DMR_AFFILIATIONS            "/dmr/report-affiliations"
 
 #define GET_P25_CC                      "/p25/cc"
 #define GET_P25_CC_FALLBACK_BASE        "/p25/cc-fallback/"
@@ -82,6 +81,7 @@
 #define GET_P25_CC_DEDICATED            "/p25/cc-enable"
 #define GET_P25_CC_BCAST                "/p25/cc-broadcast"
 #define PUT_P25_RAW_TSBK                "/p25/raw-tsbk"
+#define GET_P25_AFFILIATIONS            "/p25/report-affiliations"
 
 #define GET_NXDN_CC                     "/nxdn/cc"
 #define GET_NXDN_DEBUG_BASE             "/nxdn/debug/"
@@ -89,5 +89,6 @@
 #define GET_NXDN_DUMP_RCCH_BASE         "/nxdn/dump-rcch/"
 #define GET_NXDN_DUMP_RCCH              GET_NXDN_DUMP_RCCH_BASE"(\\d+)"
 #define GET_NXDN_CC_DEDICATED           "/nxdn/cc-enable"
+#define GET_NXDN_AFFILIATIONS           "/nxdn/report-affiliations"
 
 #endif // __REST_DEFINES_H__

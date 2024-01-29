@@ -102,6 +102,9 @@ private:
 
     /// <summary></summary>
     void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /// <summary></summary>
+    void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

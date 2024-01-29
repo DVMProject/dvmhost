@@ -7,7 +7,7 @@
 * @package DVM / Converged FNE Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__FNE_NETWORK_H__)
@@ -16,6 +16,7 @@
 #include "fne/Defines.h"
 #include "common/network/BaseNetwork.h"
 #include "common/network/json/json.h"
+#include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "host/network/Network.h"
@@ -199,6 +200,8 @@ namespace network
 
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
+        std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
 
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;
@@ -207,6 +210,11 @@ namespace network
         bool m_callInProgress;
 
         bool m_verbose;
+
+        /// <summary>Helper to erase the peer from the peers affiliations list.</summary>
+        bool erasePeerAffiliations(uint32_t peerId);
+        /// <summary>Helper to erase the peer from the peers list.</summary>
+        bool erasePeer(uint32_t peerId);
 
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
         void writeWhitelistRIDs(uint32_t peerId, bool queueOnly = false);

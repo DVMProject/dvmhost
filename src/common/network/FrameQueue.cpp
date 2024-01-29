@@ -91,8 +91,7 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
         }
 
         // ensure payload type is correct
-        if ((_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) &&
-            (_rtpHeader.getPayloadType() != DVM_CTRL_RTP_PAYLOAD_TYPE)) {
+        if (_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP payload type received from network");
             return nullptr;
         }
@@ -193,12 +192,6 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     header.setTimestamp(timestamp);
     header.setSequence(rtpSeq);
     header.setSSRC(ssrc);
-
-    // properly flag control opcodes
-    if ((opcode.first == NET_FUNC_TRANSFER) || (opcode.first == NET_FUNC_GRANT_REQ)) {
-        header.setPayloadType(DVM_CTRL_RTP_PAYLOAD_TYPE);
-        header.setSequence(0U);
-    }
 
     header.encode(buffer);
 

@@ -114,6 +114,8 @@ namespace lookups
         virtual bool unitDereg(uint32_t srcId);
         /// <summary>Helper to determine if the source ID has unit registered.</summary>
         virtual bool isUnitReg(uint32_t srcId) const;
+        /// <summary>Helper to release unit registrations.</summary>
+        virtual void clearUnitReg();
 
         /// <summary>Gets the count of affiliations.</summary>
         uint8_t grpAffSize() const { return m_grpAffTable.size(); }

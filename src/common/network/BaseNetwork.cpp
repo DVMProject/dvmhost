@@ -173,6 +173,81 @@ bool BaseNetwork::writeDiagLog(const char* message)
 }
 
 /// <summary>
+/// Writes a group affiliation to the network.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+
+    __SET_UINT16(srcId, buffer, 0U);
+    __SET_UINT16(dstId, buffer, 3U);
+
+    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, 0U, 0U);
+}
+
+/// <summary>
+/// Writes a unit registration to the network.
+/// </summary>
+/// <param name="srcId"></param>
+bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+
+    __SET_UINT16(srcId, buffer, 0U);
+
+    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+}
+
+/// <summary>
+/// Writes a unit deregistration to the network.
+/// </summary>
+/// <param name="srcId"></param>
+bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+
+    __SET_UINT16(srcId, buffer, 0U);
+
+    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+}
+
+/// <summary>
+/// Writes a complete update of the peer affiliation list to the network.
+/// </summary>
+/// <param name="affs"></param>
+bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[4U + (affs.size() * 8U)];
+    ::memset(buffer, 0x00U, 4U + (affs.size() * 8U));
+
+    __SET_UINT32(affs.size(), buffer, 0U);
+
+    // write talkgroup IDs to active TGID payload
+    uint32_t offs = 4U;
+    for (auto it : affs) {
+        __SET_UINT16(it.first, buffer, offs);
+        __SET_UINT16(it.second, buffer, offs + 4U);
+        offs += 8U;
+    }
+
+    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), 0U, 0U);
+}
+
+/// <summary>
 /// Resets the DMR ring buffer for the given slot.
 /// </summary>
 /// <param name="slotNo">DMR slot ring buffer to reset.</param>

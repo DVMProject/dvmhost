@@ -125,6 +125,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_netTimeoutTimer(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_packetTimer(1000U, 0U, 50U),
+    m_adjSiteUpdate(1000U, 75U),
     m_ccPacketInterval(1000U, 0U, DMR_SLOT_TIME),
     m_interval(),
     m_elapsed(),
@@ -470,6 +471,19 @@ void Slot::clock()
                 }
 
                 m_ccPacketInterval.start();
+            }
+        }
+
+        // do we need to network announce ourselves?
+        if (!m_adjSiteUpdate.isRunning()) {
+            m_adjSiteUpdate.start();
+        }
+
+        m_adjSiteUpdate.clock(ms);
+        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
+            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_network->announceAffiliationUpdate(m_affiliations->grpAffTable());
+                m_adjSiteUpdate.start();
             }
         }
 

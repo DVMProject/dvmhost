@@ -1275,6 +1275,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         // remove dynamic unit registration table entry
         m_slot->m_affiliations->unitDereg(srcId);
 
+        m_slot->m_network->announceUnitDeregistration(srcId);
+
         csbk->setReason(TS_ACK_RSN_REG);
     }
     else
@@ -1299,6 +1301,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
             if (!m_slot->m_affiliations->isUnitReg(srcId)) {
                 m_slot->m_affiliations->unitReg(srcId);
             }
+
+            m_slot->m_network->announceUnitRegistration(srcId);
         }
     }
 

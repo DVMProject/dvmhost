@@ -25,4 +25,6 @@
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 
+#define FNE_GET_AFF_LIST                "/report-affiliations"
+
 #endif // __FNE_REST_DEFINES_H__

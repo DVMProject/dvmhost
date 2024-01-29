@@ -242,6 +242,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_TGID_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetTGIDList, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
+
+    m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 }
 
 /// <summary>
@@ -584,5 +586,58 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
         m_network->m_forceListUpdate = true;
     }
 
+    reply.payload(response);
+}
+
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array affs = json::array();
+    if (m_network != nullptr) {
+        if (m_network->m_peers.size() > 0) {
+            for (auto entry : m_network->m_peers) {
+                uint32_t peerId = entry.first;
+                network::FNEPeerConnection* peer = entry.second;
+                if (peer != nullptr) {
+                    lookups::AffiliationLookup* affLookup = m_network->m_peerAffiliations[peerId];
+                    std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
+
+                    json::object peerObj = json::object();
+                    peerObj["peerId"].set<uint32_t>(peerId);
+
+                    json::array peerAffs = json::array();
+                    if (affLookup->grpAffSize() > 0U) {
+                        for (auto entry : affTable) {
+                            uint32_t srcId = entry.first;
+                            uint32_t dstId = entry.second;
+
+                            json::object affObj = json::object();
+                            affObj["srcId"].set<uint32_t>(srcId);
+                            affObj["dstId"].set<uint32_t>(dstId);
+                            peerAffs.push_back(json::value(affObj));
+                        }
+                    }
+
+                    peerObj["affiliations"].set<json::array>(peerAffs);
+                    affs.push_back(json::value(peerObj));
+                }
+            }
+        }
+    }
+
+    response["affiliations"].set<json::array>(affs);
     reply.payload(response);
 }

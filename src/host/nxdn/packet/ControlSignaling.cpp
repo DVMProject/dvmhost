@@ -728,6 +728,8 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
 
         // update dynamic affiliation table
         m_nxdn->m_affiliations.groupAff(srcId, dstId);
+
+        m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
     }
 
     writeRF_Message_Imm(rcch.get(), false);
@@ -769,6 +771,8 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
         if (!m_nxdn->m_affiliations.isUnitReg(srcId)) {
             m_nxdn->m_affiliations.unitReg(srcId);
         }
+
+        m_nxdn->m_network->announceUnitRegistration(srcId);
     }
 
     rcch->setSrcId(srcId);

@@ -30,6 +30,7 @@
 #include <string>
 #include <cstdint>
 #include <random>
+#include <unordered_map>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -52,6 +53,8 @@
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
 
+#define TAG_ANNOUNCE            "ANNC"
+
 namespace network
 {
     // ---------------------------------------------------------------------------
@@ -61,6 +64,8 @@ namespace network
     const uint32_t  PACKET_PAD = 8U;
 
     const uint32_t  MSG_HDR_SIZE = 24U;
+    const uint32_t  MSG_ANNC_GRP_AFFIL = 6U;
+    const uint32_t  MSG_ANNC_UNIT_REG = 3U;
     const uint32_t  DMR_PACKET_LENGTH = 55U;        // 20 byte header + DMR_FRAME_LENGTH_BYTES + 2 byte trailer
     const uint32_t  P25_LDU1_PACKET_LENGTH = 193U;  // 24 byte header + DFSI data + 1 byte frame type + 12 byte enc sync
     const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
@@ -97,6 +102,12 @@ namespace network
     const uint8_t   NET_FUNC_TRANSFER = 0x90U;                                  // Network Transfer Function
     const uint8_t   NET_TRANSFER_SUBFUNC_ACTIVITY = 0x01U;                      // Activity Log Transfer
     const uint8_t   NET_TRANSFER_SUBFUNC_DIAG = 0x02U;                          // Diagnostic Log Transfer
+
+    const uint8_t   NET_FUNC_ANNOUNCE = 0x91U;                                  // Network Announce Function
+    const uint8_t   NET_ANNC_SUBFUNC_GRP_AFFIL = 0x00U;                         // Announce Group Affiliation
+    const uint8_t   NET_ANNC_SUBFUNC_UNIT_REG = 0x01U;                          // Announce Unit Registration
+    const uint8_t   NET_ANNC_SUBFUNC_UNIT_DEREG = 0x02U;                        // Announce Unit Deregistration
+    const uint8_t   NET_ANNC_SUBFUNC_AFFILS = 0x90U;                            // Update All Affiliations
 
     // ---------------------------------------------------------------------------
     //  Network Peer Connection Status
@@ -143,6 +154,15 @@ namespace network
 
         /// <summary>Writes the local diagnostic logs to the network.</summary>
         virtual bool writeDiagLog(const char* message);
+
+        /// <summary>Writes a group affiliation to the network.</summary>
+        virtual bool announceGroupAffiliation(uint32_t srcId, uint32_t dstId);
+        /// <summary>Writes a unit registration to the network.</summary>
+        virtual bool announceUnitRegistration(uint32_t srcId);
+        /// <summary>Writes a unit deregistration to the network.</summary>
+        virtual bool announceUnitDeregistration(uint32_t srcId);
+        /// <summary>Writes a complete update of the peer affiliation list to the network.</summary>
+        virtual bool announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         virtual void clock(uint32_t ms) = 0;

@@ -7,7 +7,7 @@
 * @package DVM / Converged FNE Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "fne/Defines.h"
@@ -71,6 +71,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_tidLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
+    m_peerAffiliations(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_forceListUpdate(false),
@@ -153,6 +154,8 @@ void FNENetwork::clock(uint32_t ms)
             if (connection != nullptr) {
                 delete connection;
             }
+
+            erasePeerAffiliations(peerId);
         }
 
         // roll the RTP timestamp if no call is in progress
@@ -319,9 +322,7 @@ void FNENetwork::clock(uint32_t ms)
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
                             if (connection->connectionState() != NET_STAT_RUNNING) {
-                                auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                                if (it != m_peers.end()) {
-                                    m_peers.erase(peerId);
+                                if (erasePeer(peerId)) {
                                     delete connection;
                                 }
                             }
@@ -380,10 +381,7 @@ void FNENetwork::clock(uint32_t ms)
                             else {
                                 LogWarning(LOG_NET, "PEER %u has failed the login exchange", peerId);
                                 writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                                auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                                if (it != m_peers.end()) {
-                                    m_peers.erase(peerId);
-                                }
+                                erasePeer(peerId);
                             }
 
                             m_peers[peerId] = connection;
@@ -391,10 +389,7 @@ void FNENetwork::clock(uint32_t ms)
                         else {
                             LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
                             writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                            if (it != m_peers.end()) {
-                                m_peers.erase(peerId);
-                            }
+                            erasePeer(peerId);
                         }
                     }
                 }
@@ -422,20 +417,14 @@ void FNENetwork::clock(uint32_t ms)
                             if (!err.empty()) {
                                 LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
                                 writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                                auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                                if (it != m_peers.end()) {
-                                    m_peers.erase(peerId);
-                                }
+                                erasePeer(peerId);
                             }
                             else  {
                                 // ensure parsed JSON is an object
                                 if (!v.is<json::object>()) {
                                     LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
                                     writePeerNAK(peerId, TAG_REPEATER_AUTH);
-                                    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                                    if (it != m_peers.end()) {
-                                        m_peers.erase(peerId);
-                                    }
+                                    erasePeer(peerId);
                                 }
                                 else {
                                     connection->config(v.get<json::object>());
@@ -462,16 +451,18 @@ void FNENetwork::clock(uint32_t ms)
                                         std::string software = peerConfig["software"].get<std::string>();
                                         LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());
                                     }
+
+                                    // setup the affiliations list for this peer
+                                    std::stringstream peerName;
+                                    peerName << "PEER " << peerId;
+                                    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName.str().c_str(), m_verbose);
                                 }
                             }
                         }
                         else {
                             LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
                             writePeerNAK(peerId, TAG_REPEATER_CONFIG);
-                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                            if (it != m_peers.end()) {
-                                m_peers.erase(peerId);
-                            }
+                            erasePeer(peerId);
                         }
                     }
                 }
@@ -491,10 +482,8 @@ void FNENetwork::clock(uint32_t ms)
                         // validate peer (simple validation really)
                         if (connection->connected() && connection->address() == ip) {
                             LogInfoEx(LOG_NET, "PEER %u is closing down", peerId);
-
-                            auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-                            if (it != m_peers.end()) {
-                                m_peers.erase(peerId);
+                            if (erasePeer(peerId)) {
+                                erasePeerAffiliations(peerId);
                                 delete connection;
                             }
                         }
@@ -609,6 +598,99 @@ void FNENetwork::clock(uint32_t ms)
             }
             break;
 
+        case NET_FUNC_ANNOUNCE:
+            {
+                if (fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_GRP_AFFIL) {         // Announce Group Affiliation
+                    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
+                            lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                uint32_t srcId = __GET_UINT16(buffer.get(), 0U);
+                                uint32_t dstId = __GET_UINT16(buffer.get(), 3U);
+                                aff->groupUnaff(srcId);
+                                aff->groupAff(srcId, dstId);
+                            }
+                            else {
+                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                            }
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_UNIT_REG) {     // Announce Unit Registration
+                    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
+                            lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                uint32_t srcId = __GET_UINT16(buffer.get(), 0U);
+                                aff->unitReg(srcId);
+                            }
+                            else {
+                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                            }
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_UNIT_DEREG) {   // Announce Unit Deregistration
+                    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
+                            lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                uint32_t srcId = __GET_UINT16(buffer.get(), 0U);
+                                aff->unitDereg(srcId);
+                            }
+                            else {
+                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                            }
+                        }
+                    }
+                }
+                else if (fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_AFFILS) {       // Announce Update All Affiliations
+                    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+                        FNEPeerConnection* connection = m_peers[peerId];
+                        if (connection != nullptr) {
+                            std::string ip = UDPSocket::address(address);
+
+                            // validate peer (simple validation really)
+                            if (connection->connected() && connection->address() == ip) {
+                                lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+                                aff->clearGroupAff(0U, true);
+
+                                // update TGID lists
+                                uint32_t len = __GET_UINT32(buffer.get(), 0U);
+                                uint32_t offs = 4U;
+                                for (uint32_t i = 0; i < len; i++) {
+                                    uint32_t srcId = __GET_UINT16(buffer.get(), offs);
+                                    uint32_t dstId = __GET_UINT16(buffer.get(), offs + 4U);
+
+                                    aff->groupAff(srcId, dstId);
+                                    offs += 8U;
+                                }
+                                LogMessage(LOG_NET, "PEER %u announced %u affiliations", peerId, len);
+                            }
+                            else {
+                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                            }
+                        }
+                    }
+                }
+                else {
+                    Utils::dump("Unknown transfer opcode from the peer", buffer.get(), length);
+                }
+            }
+            break;
+
         default:
             Utils::dump("Unknown opcode from the peer", buffer.get(), length);
             break;
@@ -690,6 +772,41 @@ void FNENetwork::close()
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+/// Helper to erase the peer from the peers affiliations list.
+/// </summary>
+/// <param name="peerId"></param>
+/// <returns></returns>
+bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
+{
+    auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
+    if (it != m_peerAffiliations.end()) {
+        lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+        m_peerAffiliations.erase(peerId);
+        delete aff;
+
+        return true;
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Helper to erase the peer from the peers list.
+/// </summary>
+/// <param name="peerId"></param>
+/// <returns></returns>
+bool FNENetwork::erasePeer(uint32_t peerId)
+{
+    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+    if (it != m_peers.end()) {
+        m_peers.erase(peerId);
+        return true;
+    }
+
+    return false;
+}
 
 /// <summary>
 /// Helper to send the list of whitelisted RIDs to the specified peer.

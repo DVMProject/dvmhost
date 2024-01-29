@@ -121,6 +121,16 @@ bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 }
 
 /// <summary>
+/// Helper to release unit registrations.
+/// </summary>
+void AffiliationLookup::clearUnitReg()
+{
+    std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
+    LogWarning(LOG_HOST, "%s, releasing all unit registrations", m_name);
+    m_unitRegTable.clear();
+}
+
+/// <summary>
 /// Helper to group affiliate a source ID.
 /// </summary>
 /// <param name="srcId"></param>
@@ -218,6 +228,10 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
                 srcToRel.push_back(srcId);
             }
         }
+    }
+
+    for (auto srcId : srcToRel) {
+        m_grpAffTable.erase(srcId);
     }
 
     return srcToRel;

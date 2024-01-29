@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -268,8 +268,6 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_RID_WHITELIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDWhitelist, this));
     m_dispatcher.match(GET_RID_BLACKLIST, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDBlacklist, this));
 
-    m_dispatcher.match(GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
-
     /*
     ** Digital Mobile Radio
     */
@@ -281,6 +279,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_DMR_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCEnable, this));
     m_dispatcher.match(GET_DMR_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetDMRCCBroadcast, this));
     m_dispatcher.match(PUT_DMR_TSCC_PAYLOAD_ACT).put(REST_API_BIND(RESTAPI::restAPI_PutTSCCPayloadActivate, this));
+    m_dispatcher.match(GET_DMR_AFFILIATIONS).get(REST_API_BIND(RESTAPI::restAPI_GetDMRAffList, this));
 
     /*
     ** Project 25
@@ -293,6 +292,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_P25_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCEnable, this));
     m_dispatcher.match(GET_P25_CC_BCAST).get(REST_API_BIND(RESTAPI::restAPI_GetP25CCBroadcast, this));
     m_dispatcher.match(PUT_P25_RAW_TSBK).put(REST_API_BIND(RESTAPI::restAPI_PutP25RawTSBK, this));
+    m_dispatcher.match(GET_P25_AFFILIATIONS).get(REST_API_BIND(RESTAPI::restAPI_GetP25AffList, this));
 
     /*
     ** Next Generation Digital Narrowband
@@ -302,6 +302,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_NXDN_DEBUG).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDebug, this));
     m_dispatcher.match(GET_NXDN_DUMP_RCCH).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNDumpRCCH, this));
     m_dispatcher.match(GET_NXDN_CC_DEDICATED).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNCCEnable, this));
+    m_dispatcher.match(GET_NXDN_AFFILIATIONS).get(REST_API_BIND(RESTAPI::restAPI_GetNXDNAffList, this));
 }
 
 /// <summary>
@@ -1350,83 +1351,6 @@ void RESTAPI::restAPI_GetRIDBlacklist(const HTTPPayload& request, HTTPPayload& r
     }
 }
 
-/// <summary>
-///
-/// </summary>
-/// <param name="request"></param>
-/// <param name="reply"></param>
-/// <param name="match"></param>
-void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    std::unordered_map<uint32_t, uint32_t> globalAffTable = std::unordered_map<uint32_t, uint32_t>();
-
-    if (m_dmr != nullptr) {
-        std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations().grpAffTable();
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
-
-            // did we already catalog this affiliation?
-            auto globEntry = globalAffTable.find(srcId);    
-            if (globEntry == globalAffTable.end()) {
-                globalAffTable[srcId] = grpId;
-            }
-        }
-    }
-
-    if (m_p25 != nullptr) {
-        std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations().grpAffTable();
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
-
-            // did we already catalog this affiliation?
-            auto globEntry = globalAffTable.find(srcId);    
-            if (globEntry == globalAffTable.end()) {
-                globalAffTable[srcId] = grpId;
-            }
-        }
-    }
-
-    if (m_nxdn != nullptr) {
-        std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations().grpAffTable();
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
-
-            // did we already catalog this affiliation?
-            auto globEntry = globalAffTable.find(srcId);    
-            if (globEntry == globalAffTable.end()) {
-                globalAffTable[srcId] = grpId;
-            }
-        }
-    }
-
-    json::array affs = json::array();
-    if (globalAffTable.size() > 0) {
-        for (auto entry : globalAffTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
-
-            json::object aff = json::object();
-            aff["srcId"].set<uint32_t>(srcId);
-            aff["grpId"].set<uint32_t>(grpId);
-
-            affs.push_back(json::value(aff));
-        }
-    }
-
-    response["affiliations"].set<json::array>(affs);
-    reply.payload(response);
-}
-
 /*
 ** Digital Mobile Radio
 */
@@ -1754,6 +1678,40 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
 
         m_dmr->tsccActivateSlot(slot, dstId, srcId, group, voice);
     }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array affs = json::array();
+    std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations().grpAffTable();
+    if (affTable.size() > 0) {
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            json::object aff = json::object();
+            aff["srcId"].set<uint32_t>(srcId);
+            aff["grpId"].set<uint32_t>(grpId);
+
+            affs.push_back(json::value(aff));
+        }
+    }
+
+    response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
 }
 
 /*
@@ -2102,6 +2060,40 @@ void RESTAPI::restAPI_PutP25RawTSBK(const HTTPPayload& request, HTTPPayload& rep
     m_p25->control()->writeRF_TSDU_Raw(tsbk);
 }
 
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetP25AffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array affs = json::array();
+    std::unordered_map<uint32_t, uint32_t> affTable = m_p25->affiliations().grpAffTable();
+    if (affTable.size() > 0) {
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            json::object aff = json::object();
+            aff["srcId"].set<uint32_t>(srcId);
+            aff["grpId"].set<uint32_t>(grpId);
+
+            affs.push_back(json::value(aff));
+        }
+    }
+
+    response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
+}
+
 /*
 ** Next Generation Digital Narrowband
 */
@@ -2253,4 +2245,38 @@ void RESTAPI::restAPI_GetNXDNCCEnable(const HTTPPayload& request, HTTPPayload& r
         errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
         return;
     }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetNXDNAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array affs = json::array();
+    std::unordered_map<uint32_t, uint32_t> affTable = m_nxdn->affiliations().grpAffTable();
+    if (affTable.size() > 0) {
+        for (auto entry : affTable) {
+            uint32_t srcId = entry.first;
+            uint32_t grpId = entry.second;
+
+            json::object aff = json::object();
+            aff["srcId"].set<uint32_t>(srcId);
+            aff["grpId"].set<uint32_t>(grpId);
+
+            affs.push_back(json::value(aff));
+        }
+    }
+
+    response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
 }
