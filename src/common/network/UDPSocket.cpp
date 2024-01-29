@@ -232,6 +232,11 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
 
     // are we crypto wrapped?
     if (m_isCryptoWrapped) {
+        if (m_presharedKey == nullptr) {
+            LogError(LOG_NET, "tried to read datagram encrypted with no key? this shouldn't happen BUGBUG");
+            return -1;
+        }
+
         // does the network packet contain the appropriate magic leader?
         uint16_t magic = __GET_UINT16B(buffer, 0U);
         if (magic == AES_WRAPPED_PCKT_MAGIC) {
@@ -284,6 +289,11 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
     UInt8Array out = nullptr;
     // are we crypto wrapped?
     if (m_isCryptoWrapped) {
+        if (m_presharedKey == nullptr) {
+            LogError(LOG_NET, "tried to write datagram encrypted with no key? this shouldn't happen BUGBUG");
+            return false;
+        }
+
         uint32_t cryptedLen = length * sizeof(uint8_t);
         uint8_t* cryptoBuffer = new uint8_t[length];
         ::memcpy(cryptoBuffer, buffer, length);
@@ -379,6 +389,14 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
 
     // LogDebug(LOG_NET, "Sending message(s) (to %s:%u) addrLen %u", UDPSocket::address(address).c_str(), UDPSocket::port(address), addrLen);
 
+    // are we crypto wrapped?
+    if (m_isCryptoWrapped) {
+        if (m_presharedKey == nullptr) {
+            LogError(LOG_NET, "tried to write datagram encrypted with no key? this shouldn't happen BUGBUG");
+            return false;
+        }
+    }
+
     int sent = 0;
     struct mmsghdr headers[MAX_BUFFER_COUNT];
     struct iovec chunks[MAX_BUFFER_COUNT];
@@ -386,22 +404,22 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
     // create mmsghdrs from input buffers and send them at once
     int size = buffers.size();
     for (size_t i = 0; i < buffers.size(); ++i) {
-        if (buffers.at(i) == nullptr) {
+        if (buffers[i] == nullptr) {
             --size;
             continue;
         }
 
-        uint32_t length = buffers.at(i)->length;
-        if (buffers.at(i)->buffer == nullptr) {
+        uint32_t length = buffers[i]->length;
+        if (buffers[i]->buffer == nullptr) {
             LogError(LOG_NET, "discarding buffered message with len = %u, but deleted buffer?", length);
             --size;
             continue;
         }
 
         // are we crypto wrapped?
-        if (m_isCryptoWrapped) {
+        if (m_isCryptoWrapped && m_presharedKey != nullptr) {
             uint32_t cryptedLen = length * sizeof(uint8_t);
-            uint8_t* cryptoBuffer = buffers.at(i)->buffer;
+            uint8_t* cryptoBuffer = buffers[i]->buffer;
 
             // do we need to pad the original buffer to be block aligned?
             if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
@@ -433,6 +451,13 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
             // cleanup buffers and replace with new
             delete[] crypted;
             //delete buffers[i]->buffer;
+
+            // this should never happen...
+            if (buffers[i] == nullptr) {
+                --size;
+                continue;
+            }
+
             buffers[i]->buffer = new uint8_t[cryptedLen + 2U];
             ::memcpy(buffers[i]->buffer, out, cryptedLen + 2U);
             buffers[i]->length = cryptedLen + 2U;
