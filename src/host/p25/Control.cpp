@@ -819,7 +819,8 @@ void Control::clock(uint32_t ms)
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
-                m_network->announceAffiliationUpdate(m_affiliations.grpAffTable());
+                if (m_network != nullptr)
+                    m_network->announceAffiliationUpdate(m_affiliations.grpAffTable());
                 m_adjSiteUpdate.start();
             }
         }
