@@ -151,23 +151,21 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status.erase(dstId);
                 }
                 else {
-                    return false;
-                }
-
-                // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
-                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
-                if (tg.config().parrot()) {
-                    if (m_parrotFrames.size() > 0) {
-                        m_parrotFramesReady = true;
-                        m_parrotFirstFrame = true;
-                        Thread::sleep(m_network->m_parrotDelay);
-                        LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                    // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
+                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                    if (tg.config().parrot()) {
+                        if (m_parrotFrames.size() > 0) {
+                            m_parrotFramesReady = true;
+                            m_parrotFirstFrame = true;
+                            Thread::sleep(m_network->m_parrotDelay);
+                            LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                        }
                     }
-                }
 
-                LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
-                    peerId, srcId, dstId, duration / 1000, streamId);
-                m_network->m_callInProgress = false;
+                    LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
+                        peerId, srcId, dstId, duration / 1000, streamId);
+                    m_network->m_callInProgress = false;
+                }
             }
 
             // is this a new call stream?
@@ -219,46 +217,58 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // repeat traffic to the connected peers
-        for (auto peer : m_network->m_peers) {
-            if (peerId != peer.first) {
-                // is this peer ignored?
-                if (!isPeerPermitted(peer.first, control, duid, streamId)) {
-                    continue;
-                }
+        if (m_network->m_peers.size() > 0U) {
+            for (auto peer : m_network->m_peers) {
+                if (peerId != peer.first) {
+                    // is this peer ignored?
+                    if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                        continue;
+                    }
 
-                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, buffer, len, pktSeq, streamId, true);
-                if (m_network->m_debug) {
-                    LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                        peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
-                }
+                    m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, buffer, len, pktSeq, streamId, true);
+                    if (m_network->m_debug) {
+                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
+                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                    }
 
-                if (!m_network->m_callInProgress)
-                    m_network->m_callInProgress = true;
+                    if (!m_network->m_callInProgress)
+                        m_network->m_callInProgress = true;
+                }
             }
+            m_network->m_frameQueue->flushQueue();
         }
-        m_network->m_frameQueue->flushQueue();
 
         // repeat traffic to upstream peers
-        if (m_network->m_host->m_peerNetworks.size() > 0 && !tg.config().parrot()) {
+        if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
-                uint32_t peerId = peer.second->getPeerId();
+                uint32_t dstPeerId = peer.second->getPeerId();
 
-                // is this peer ignored?
-                if (!isPeerPermitted(peerId, control, duid, streamId)) {
-                    continue;
+                // don't try to repeat traffic to the source peer...if this traffic
+                // is coming from a upstream peer
+                if (dstPeerId != peerId) {
+                    // is this peer ignored?
+                    if (!isPeerPermitted(dstPeerId, control, duid, streamId)) {
+                        continue;
+                    }
+
+                    uint8_t outboundPeerBuffer[len];
+                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    ::memcpy(outboundPeerBuffer, buffer, len);
+
+                    // perform TGID route rewrites if configured
+                    routeRewrite(outboundPeerBuffer, dstPeerId, duid, dstId);
+
+                    peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
+                    if (m_network->m_debug) {
+                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
+                            peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                    }
+
+                    if (!m_network->m_callInProgress)
+                        m_network->m_callInProgress = true;
                 }
-
-                uint8_t outboundPeerBuffer[len];
-                ::memset(outboundPeerBuffer, 0x00U, len);
-                ::memcpy(outboundPeerBuffer, buffer, len);
-
-                // perform TGID route rewrites if configured
-                routeRewrite(outboundPeerBuffer, peerId, duid, dstId);
-
-                peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
             }
         }
-        m_network->m_frameQueue->flushQueue();
 
         return true;
     }

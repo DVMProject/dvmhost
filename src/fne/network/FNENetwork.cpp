@@ -453,9 +453,9 @@ void FNENetwork::clock(uint32_t ms)
                                     }
 
                                     // setup the affiliations list for this peer
-                                    std::stringstream peerName;
-                                    peerName << "PEER " << peerId;
-                                    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName.str().c_str(), m_verbose);
+                                    char *peerName = new char[16];
+                                    ::sprintf(peerName, "PEER %u", peerId);
+                                    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, m_verbose);
                                 }
                             }
                         }
