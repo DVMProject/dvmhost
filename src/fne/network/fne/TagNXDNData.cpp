@@ -108,6 +108,9 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
                     m_status.erase(dstId);
                 }
+                else {
+                    return false;
+                }
 
                 // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                 lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
