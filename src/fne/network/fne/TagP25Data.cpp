@@ -147,10 +147,18 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 RxStatus status = m_status[dstId];
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
+                // perform a test for grant demands, and if the TG isn't valid ignore the demand
+                bool grantDemand = (data[14U] & 0x80U) == 0x80U;
+                if (grantDemand) {
+                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+                    if (!tg.config().active()) {
+                        return false;
+                    }
+                }
+
                 if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
                     m_status.erase(dstId);
-                }
-                else {
+
                     // is this a parrot talkgroup? if so, clear any remaining frames from the buffer
                     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
                     if (tg.config().parrot()) {
