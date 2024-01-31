@@ -78,7 +78,7 @@ master:
 # Peers
 #
 peers:
-    - name: PARROT
+    - name: EXAMPLEPEER
       # Flag indicating whether or not the peer is enabled.
       enabled: true
       # Hostname/IP address to listen on (blank for all).
@@ -92,7 +92,7 @@ peers:
       # FNE access password.
       password: RPT1234
       # Textual identity of this peer.
-      identity: PARROT
+      identity: EXPEER
       # Network Peer ID
       peerId: 9000990
 
