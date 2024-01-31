@@ -91,8 +91,8 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
         }
 
         // ensure payload type is correct
-        if (_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE ||
-            _rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE + 1U) {
+        if ((_rtpHeader.getPayloadType() != DVM_RTP_PAYLOAD_TYPE) &&
+            (_rtpHeader.getPayloadType() != (DVM_RTP_PAYLOAD_TYPE + 1U))) {
             LogError(LOG_NET, "FrameQueue::read(), invalid RTP payload type received from network");
             return nullptr;
         }
