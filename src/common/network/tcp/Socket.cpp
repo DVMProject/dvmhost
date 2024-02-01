@@ -398,5 +398,5 @@ void Socket::initAddr(const std::string& ipAddr, const int port, sockaddr_in& ad
             throw std::runtime_error("Failed to parse IP address");
     }
 
-    addr.sin_port = ::htons(port);
+    addr.sin_port = htons(port);
 }
