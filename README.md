@@ -100,7 +100,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 4. Ensure the TX Level is set to 50 (it should be by default, you can use the spinbox in the "Level Adjustment" window to change the value, if necessary to set it to 50).
 5. If the hardware in use has a TX potentiometer, set it to the to minimum level.
 6. Start Tx (click "Transmit" or press F12 on the keyboard).
-7. While observing the BER via whatever means available, adjust the TX potentiometer for the lowest received BER. If necessary also adjust the software TX Level for some fine tuning with the spinbox in the "Level Adjustment" window.
+7. While observing the BER via whatever means available, adjust the TX potentiometer (if the modem hardware allows) for the lowest received BER. Adjust the software TX Level for some fine tuning with the spinbox in the "Level Adjustment" window.
 8. Stop Tx (click "Transmit" or press F12 on the keyboard).
 9. After altering settings, use the "File" menu, "Save Settings" menu option to save the desired configuration.
 10. Quit setup mode, if done doing calibration, using, "File" menu, "Quit".
@@ -112,7 +112,7 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 3. Ensure the TXLevel is set to 50 (it should be by default, "\`" will display current values, use "T" [increase] and "t" [decrease] if necessary to set it to 50).
 4. If the hardware in use has a TX potentiometer, set it to the to minimum level.
 5. Start Tx (press spacebar to toggle Tx).
-6. While observing the BER via whatever means available, adjust the TX potentiometer for the lowest received BER. If necessary also adjust the software TXLevel for some fine tuning with the "T" (increase) and "t" (decrease).
+6. While observing the BER via whatever means available, adjust the TX potentiometer (if the modem hardware allows) for the lowest received BER. Adjust the software TXLevel for some fine tuning with the "T" (increase) and "t" (decrease).
 7. Stop Tx (press spacebar to toggle Tx).
 8. Save the configuration using "s" and quit calibration mode with "q".
 
