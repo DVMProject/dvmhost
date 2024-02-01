@@ -47,11 +47,11 @@ UDPPort::UDPPort(const std::string& address, uint16_t modemPort) :
     assert(!address.empty());
     assert(modemPort > 0U);
 
-    if (UDPSocket::lookup(address, modemPort, m_addr, m_addrLen) != 0)
+    if (udp::Socket::lookup(address, modemPort, m_addr, m_addrLen) != 0)
         m_addrLen = 0U;
 
     if (m_addrLen > 0U) {
-        std::string addrStr = UDPSocket::address(m_addr);
+        std::string addrStr = udp::Socket::address(m_addr);
         LogWarning(LOG_HOST, "SECURITY: Remote modem expects IP address; %s for remote modem control", addrStr.c_str());
     }
 }
@@ -99,11 +99,11 @@ int UDPPort::read(uint8_t* buffer, uint32_t length)
 
     // Add new data to the ring buffer
     if (ret > 0) {
-        if (UDPSocket::match(addr, m_addr)) {
+        if (udp::Socket::match(addr, m_addr)) {
             m_buffer.addData(data, ret);
         }
         else {
-            std::string addrStr = UDPSocket::address(addr);
+            std::string addrStr = udp::Socket::address(addr);
             LogWarning(LOG_HOST, "SECURITY: Remote modem mode encountered invalid IP address; %s", addrStr.c_str());
         }
     }

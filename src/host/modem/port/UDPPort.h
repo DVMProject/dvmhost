@@ -16,7 +16,7 @@
 #define __UDP_PORT_H__
 
 #include "Defines.h"
-#include "common/network/UDPSocket.h"
+#include "common/network/udp/Socket.h"
 #include "common/RingBuffer.h"
 #include "modem/port/IModemPort.h"
 
@@ -50,7 +50,7 @@ namespace modem
             void close() override;
 
         protected:
-            network::UDPSocket m_socket;
+            network::udp::Socket m_socket;
 
             sockaddr_storage m_addr;
             uint32_t m_addrLen;

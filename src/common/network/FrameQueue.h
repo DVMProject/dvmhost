@@ -36,8 +36,12 @@ namespace network
     class HOST_SW_API FrameQueue : public RawFrameQueue {
     public: typedef std::pair<const uint8_t, const uint8_t> OpcodePair;
     public:
+        auto operator=(FrameQueue&) -> FrameQueue& = delete;
+        auto operator=(FrameQueue&&) -> FrameQueue& = delete;
+        FrameQueue(FrameQueue&) = delete;
+
         /// <summary>Initializes a new instance of the FrameQueue class.</summary>
-        FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug);
+        FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug);
 
         /// <summary>Read message from the received UDP packet.</summary>
         UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,

@@ -14,7 +14,7 @@
 #define __RAW_FRAME_QUEUE_H__
 
 #include "common/Defines.h"
-#include "common/network/UDPSocket.h"
+#include "common/network/udp/Socket.h"
 #include "common/Utils.h"
 
 namespace network
@@ -32,8 +32,12 @@ namespace network
 
     class HOST_SW_API RawFrameQueue {
     public:
+        auto operator=(RawFrameQueue&) -> RawFrameQueue& = delete;
+        auto operator=(RawFrameQueue&&) -> RawFrameQueue& = delete;
+        RawFrameQueue(RawFrameQueue&) = delete;
+
         /// <summary>Initializes a new instance of the RawFrameQueue class.</summary>
-        RawFrameQueue(UDPSocket* socket, bool debug);
+        RawFrameQueue(udp::Socket* socket, bool debug);
         /// <summary>Finalizes a instance of the RawFrameQueue class.</summary>
         virtual ~RawFrameQueue();
 
@@ -49,9 +53,9 @@ namespace network
     protected:
         sockaddr_storage m_addr;
         uint32_t m_addrLen;
-        UDPSocket* m_socket;
+        udp::Socket* m_socket;
 
-        BufferVector m_buffers;
+        udp::BufferVector m_buffers;
 
         bool m_debug;
 

@@ -12,7 +12,7 @@
 */
 #include "Defines.h"
 #include "network/RawFrameQueue.h"
-#include "network/UDPSocket.h"
+#include "network/udp/Socket.h"
 #include "Log.h"
 #include "Utils.h"
 
@@ -30,7 +30,7 @@ using namespace network;
 /// </summary>
 /// <param name="socket">Local port used to listen for incoming data.</param>
 /// <param name="debug"></param>
-RawFrameQueue::RawFrameQueue(UDPSocket* socket, bool debug) :
+RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
     m_buffers(),
     m_debug(debug)
@@ -101,7 +101,7 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
     if (m_debug)
         Utils::dump(1U, "RawFrameQueue::enqueueMessage() Buffered Message", buffer, length);
 
-    UDPDatagram* dgram = new UDPDatagram;
+    udp::UDPDatagram* dgram = new udp::UDPDatagram;
     dgram->buffer = buffer;
     dgram->length = length;
     dgram->address = addr;

@@ -14,7 +14,6 @@
 #define __REST_API_H__
 
 #include "fne/Defines.h"
-#include "common/network/UDPSocket.h"
 #include "common/network/rest/RequestDispatcher.h"
 #include "common/network/rest/http/HTTPServer.h"
 #include "common/lookups/RadioIdLookup.h"

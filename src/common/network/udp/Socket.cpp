@@ -13,11 +13,12 @@
 *
 */
 #include "Defines.h"
-#include "network/UDPSocket.h"
+#include "network/udp/Socket.h"
 #include "Log.h"
 #include "Utils.h"
 
 using namespace network;
+using namespace network::udp;
 
 #include <cassert>
 #include <cerrno>
@@ -32,15 +33,17 @@ using namespace network;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 /// <summary>
-/// Initializes a new instance of the UDPSocket class.
+/// Initializes a new instance of the Socket class.
 /// </summary>
 /// <param name="address">Hostname/IP address to connect to.</param>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
-    m_address_save(address),
-    m_port_save(port),
-    m_isOpen(false),
+Socket::Socket(const std::string& address, uint16_t port) :
+    m_localAddress(address),
+    m_localPort(port),
+    m_af(AF_UNSPEC),
+    m_fd(-1),
     m_aes(nullptr),
     m_isCryptoWrapped(false),
     m_presharedKey(nullptr),
@@ -48,22 +51,17 @@ UDPSocket::UDPSocket(const std::string& address, uint16_t port) :
 {
     m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
     m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
-    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
-        m_address[i] = "";
-        m_port[i] = 0U;
-        m_af[i] = 0U;
-        m_fd[i] = -1;
-    }
 }
 
 /// <summary>
-/// Initializes a new instance of the UDPSocket class.
+/// Initializes a new instance of the Socket class.
 /// </summary>
 /// <param name="port">Port number.</param>
-UDPSocket::UDPSocket(uint16_t port) :
-    m_address_save(),
-    m_port_save(port),
-    m_isOpen(false),
+Socket::Socket(uint16_t port) :
+    m_localAddress(),
+    m_localPort(port),
+    m_af(AF_UNSPEC),
+    m_fd(-1),
     m_aes(nullptr),
     m_isCryptoWrapped(false),
     m_presharedKey(nullptr),
@@ -71,18 +69,12 @@ UDPSocket::UDPSocket(uint16_t port) :
 {
     m_aes = new crypto::AES(crypto::AESKeyLength::AES_256);
     m_presharedKey = new uint8_t[AES_WRAPPED_PCKT_KEY_LEN];
-    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
-        m_address[i] = "";
-        m_port[i] = 0U;
-        m_af[i] = 0U;
-        m_fd[i] = -1;
-    }
 }
 
 /// <summary>
-/// Finalizes a instance of the UDPSocket class.
+/// Finalizes a instance of the Socket class.
 /// </summary>
-UDPSocket::~UDPSocket()
+Socket::~Socket()
 {
     if (m_aes != nullptr)
         delete m_aes;
@@ -95,7 +87,7 @@ UDPSocket::~UDPSocket()
 /// </summary>
 /// <param name="address"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(const sockaddr_storage& address)
+bool Socket::open(const sockaddr_storage& address) noexcept
 {
     return open(address.ss_family);
 }
@@ -105,20 +97,19 @@ bool UDPSocket::open(const sockaddr_storage& address)
 /// </summary>
 /// <param name="af"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(uint32_t af)
+bool Socket::open(uint32_t af) noexcept
 {
-    return open(0, af, m_address_save, m_port_save);
+    return open(af, m_localAddress, m_localPort);
 }
 
 /// <summary>
 /// Opens UDP socket connection.
 /// </summary>
-/// <param name="index"></param>
 /// <param name="af"></param>
 /// <param name="address"></param>
 /// <param name="port"></param>
 /// <returns>True, if UDP socket is opened, otherwise false.</returns>
-bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string& address, const uint16_t port)
+bool Socket::open(const uint32_t af, const std::string& address, const uint16_t port) noexcept
 {
     sockaddr_storage addr;
     uint32_t addrlen;
@@ -132,43 +123,40 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
     int err = lookup(address, port, addr, addrlen, hints);
     if (err != 0) {
         LogError(LOG_NET, "The local address is invalid - %s", address.c_str());
-        m_isOpen = false;
         return false;
     }
 
-    close(index);
+    close();
 
-    int fd = ::socket(addr.ss_family, SOCK_DGRAM, 0);
-    if (fd < 0) {
-        LogError(LOG_NET, "Cannot create the UDP socket, err: %d", errno);
-        m_isOpen = false;
+    if (!initSocket(addr.ss_family, SOCK_DGRAM, 0))
         return false;
-    }
-
-    m_address[index] = address;
-    m_port[index] = port;
-    m_af[index] = addr.ss_family;
-    m_fd[index] = fd;
 
     if (port > 0U) {
         int reuse = 1;
-        if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)& reuse, sizeof(reuse)) == -1) {
+        if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, (char*)& reuse, sizeof(reuse)) == -1) {
             LogError(LOG_NET, "Cannot set the UDP socket option, err: %d", errno);
-            m_isOpen = false;
             return false;
         }
 
-        if (::bind(fd, (sockaddr*)& addr, addrlen) == -1) {
-            LogError(LOG_NET, "Cannot bind the UDP address, err: %d", errno);
-            m_isOpen = false;
+        if (!bind(address, port)) {
             return false;
         }
 
         LogInfoEx(LOG_NET, "Opening UDP port on %u", port);
     }
 
-    m_isOpen = true;
     return true;
+}
+
+/// <summary>
+/// Closes the UDP socket connection.
+/// </summary>
+void Socket::close()
+{
+    if (m_fd >= 0) {
+        ::close(m_fd);
+        m_fd = -1;
+    }
 }
 
 /// <summary>
@@ -179,17 +167,20 @@ bool UDPSocket::open(const uint32_t index, const uint32_t af, const std::string&
 /// <param name="address">IP address data read from.</param>
 /// <param name="addrLen"></param>
 /// <returns>Actual length of data read from remote UDP socket.</returns>
-int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen)
+ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address, uint32_t& addrLen) noexcept
 {
     assert(buffer != nullptr);
     assert(length > 0U);
+
+    if (m_fd < 0)
+        return -1;
 
     // Check that the readfrom() won't block
     int i, n;
     struct pollfd pfd[UDP_SOCKET_MAX];
     for (i = n = 0; i < UDP_SOCKET_MAX; i++) {
-        if (m_fd[i] >= 0) {
-            pfd[n].fd = m_fd[i];
+        if (m_fd >= 0) {
+            pfd[n].fd = m_fd;
             pfd[n].events = POLLIN;
             n++;
         }
@@ -222,7 +213,7 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
         LogError(LOG_NET, "Error returned from recvfrom, err: %d", errno);
 
         if (len == -1 && errno == ENOTSOCK) {
-            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_port[index]);
+            LogMessage(LOG_NET, "Re-opening UDP port on %u", m_localPort);
             close();
             open();
         }
@@ -241,12 +232,12 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
         uint16_t magic = __GET_UINT16B(buffer, 0U);
         if (magic == AES_WRAPPED_PCKT_MAGIC) {
             uint32_t cryptedLen = (len - 2U) * sizeof(uint8_t);
-            // Utils::dump(1U, "UDPSocket::read() crypted", buffer + 2U, cryptedLen);
+            // Utils::dump(1U, "Socket::read() crypted", buffer + 2U, cryptedLen);
 
             // decrypt
             uint8_t* decrypted = m_aes->decryptECB(buffer + 2U, cryptedLen, m_presharedKey);
 
-            // Utils::dump(1U, "UDPSocket::read() decrypted", decrypted, cryptedLen);
+            // Utils::dump(1U, "Socket::read() decrypted", decrypted, cryptedLen);
 
             // finalize, cleanup buffers and replace with new
             if (decrypted != nullptr) {
@@ -279,14 +270,22 @@ int UDPSocket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address,
 /// <param name="addrLen"></param>
 /// <param name="lenWritten">Total number of bytes written.</param>
 /// <returns>True if message was sent, otherwise false.</returns>
-bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, int* lenWritten)
+bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storage& address, uint32_t addrLen, ssize_t* lenWritten) noexcept
 {
     assert(buffer != nullptr);
     assert(length > 0U);
 
-    bool result = false;
+    if (m_fd < 0) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
 
+        return false;
+    }
+
+    bool result = false;
     UInt8Array out = nullptr;
+
     // are we crypto wrapped?
     if (m_isCryptoWrapped) {
         if (m_presharedKey == nullptr) {
@@ -312,7 +311,7 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
         // encrypt
         uint8_t* crypted = m_aes->encryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
 
-        // Utils::dump(1U, "UDPSocket::write() crypted", crypted, cryptedLen);
+        // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
 
         // finalize, cleanup buffers and replace with new
         out = std::unique_ptr<uint8_t[]>(new uint8_t[cryptedLen + 2U]);
@@ -334,25 +333,20 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
         ::memcpy(out.get(), buffer, length);
     }
 
-    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
-        if (m_fd[i] < 0 || m_af[i] != address.ss_family)
-            continue;
+    ssize_t sent = ::sendto(m_fd, (char*)out.get(), length, 0, (sockaddr*)& address, addrLen);
+    if (sent < 0) {
+        LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
 
-        ssize_t sent = ::sendto(m_fd[i], (char*)out.get(), length, 0, (sockaddr*)& address, addrLen);
-        if (sent < 0) {
-            LogError(LOG_NET, "Error returned from sendto, err: %d", errno);
-
-            if (lenWritten != nullptr) {
-                *lenWritten = -1;
-            }
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
         }
-        else {
-            if (sent == ssize_t(length))
-                result = true;
+    }
+    else {
+        if (sent == ssize_t(length))
+            result = true;
 
-            if (lenWritten != nullptr) {
-                *lenWritten = sent;
-            }
+        if (lenWritten != nullptr) {
+            *lenWritten = sent;
         }
     }
 
@@ -367,16 +361,32 @@ bool UDPSocket::write(const uint8_t* buffer, uint32_t length, const sockaddr_sto
 /// <param name="addrLen"></param>
 /// <param name="lenWritten">Total number of bytes written.</param>
 /// <returns>True if messages were sent, otherwise false.</returns>
-bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
+bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 {
     bool result = false;
+    if (m_fd < 0) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
+        return false;
+    }
+
     if (buffers.empty()) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
         return false;
     }
 
     // bryanb: this is the same as above -- but for some assinine reason prevents
     // weirdness
     if (buffers.size() == 0U) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
         return false;
     }
 
@@ -384,15 +394,25 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
 
     if (buffers.size() > UINT16_MAX) {
         LogError(LOG_NET, "Trying to send too many buffers?");
+
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+
         return false;
     }
 
-    // LogDebug(LOG_NET, "Sending message(s) (to %s:%u) addrLen %u", UDPSocket::address(address).c_str(), UDPSocket::port(address), addrLen);
+    // LogDebug(LOG_NET, "Sending message(s) (to %s:%u) addrLen %u", Socket::address(address).c_str(), Socket::port(address), addrLen);
 
     // are we crypto wrapped?
     if (m_isCryptoWrapped) {
         if (m_presharedKey == nullptr) {
             LogError(LOG_NET, "tried to write datagram encrypted with no key? this shouldn't happen BUGBUG");
+
+            if (lenWritten != nullptr) {
+                *lenWritten = -1;
+            }
+
             return false;
         }
     }
@@ -441,7 +461,7 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
                 continue;
             }
 
-            // Utils::dump(1U, "UDPSocket::write() crypted", crypted, cryptedLen);
+            // Utils::dump(1U, "Socket::write() crypted", crypted, cryptedLen);
 
             // finalize
             uint8_t out[cryptedLen + 2U];
@@ -475,38 +495,39 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
         headers[i].msg_hdr.msg_controllen = 0;
     }
 
-    for (int i = 0; i < UDP_SOCKET_MAX; i++) {
-        if (m_fd[i] < 0)
-            continue;
-
-        bool skip = false;
-        for (auto& buffer : buffers) {
-            if (m_af[i] != buffer->address.ss_family) {
-                skip = true;
-                break;
-            }
+    bool skip = false;
+    for (auto& buffer : buffers) {
+        if (m_af != buffer->address.ss_family) {
+            skip = true;
+            break;
         }
-        if (skip)
-            continue;
+    }
 
-        if (sendmmsg(m_fd[i], headers, size, 0) < 0) {
-            LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
-            if (lenWritten != nullptr) {
-                *lenWritten = -1;
-            }
+    if (skip) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
         }
 
-        if (sent < 0) {
-            LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
-            if (lenWritten != nullptr) {
-                *lenWritten = -1;
-            }
+        return false;
+    }
+
+    if (sendmmsg(m_fd, headers, size, 0) < 0) {
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
         }
-        else {
-            result = true;
-            if (lenWritten != nullptr) {
-                *lenWritten = sent;
-            }
+    }
+
+    if (sent < 0) {
+        LogError(LOG_NET, "Error returned from sendmmsg, err: %d", errno);
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+    }
+    else {
+        result = true;
+        if (lenWritten != nullptr) {
+            *lenWritten = sent;
         }
     }
 
@@ -514,32 +535,10 @@ bool UDPSocket::write(BufferVector& buffers, int* lenWritten)
 }
 
 /// <summary>
-/// Closes the UDP socket connection.
-/// </summary>
-void UDPSocket::close()
-{
-    for (int i = 0; i < UDP_SOCKET_MAX; i++)
-        close(i);
-    m_isOpen = false;
-}
-
-/// <summary>
-/// Closes the UDP socket connection.
-/// </summary>
-/// <param name="index"></param>
-void UDPSocket::close(const uint32_t index)
-{
-    if ((index < UDP_SOCKET_MAX) && (m_fd[index] >= 0)) {
-        ::close(m_fd[index]);
-        m_fd[index] = -1;
-    }
-}
-
-/// <summary>
 /// Sets the preshared encryption key.
 /// </summary>
 /// <param name="presharedKey"></param>
-void UDPSocket::setPresharedKey(const uint8_t* presharedKey)
+void Socket::setPresharedKey(const uint8_t* presharedKey)
 {
     if (presharedKey != nullptr) {
         ::memset(m_presharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
@@ -559,7 +558,7 @@ void UDPSocket::setPresharedKey(const uint8_t* presharedKey)
 /// <param name="addr">Socket address structure.</param>
 /// <param name="addrLen"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen)
+int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen)
 {
     struct addrinfo hints;
     ::memset(&hints, 0, sizeof(hints));
@@ -576,7 +575,7 @@ int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_stora
 /// <param name="addrLen"></param>
 /// <param name="hints"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
+int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
 {
     std::string portstr = std::to_string(port);
     struct addrinfo* res;
@@ -609,7 +608,7 @@ int UDPSocket::lookup(const std::string& hostname, uint16_t port, sockaddr_stora
 /// <param name="addr2"></param>
 /// <param name="type"></param>
 /// <returns></returns>
-bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type)
+bool Socket::match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type)
 {
     if (addr1.ss_family != addr2.ss_family)
         return false;
@@ -656,7 +655,7 @@ bool UDPSocket::match(const sockaddr_storage& addr1, const sockaddr_storage& add
 /// </summary>
 /// <param name="addr"></param>
 /// <returns></returns>
-std::string UDPSocket::address(const sockaddr_storage& addr)
+std::string Socket::address(const sockaddr_storage& addr)
 {
     std::string address = std::string();
     char str[INET_ADDRSTRLEN];
@@ -690,7 +689,7 @@ std::string UDPSocket::address(const sockaddr_storage& addr)
 /// </summary>
 /// <param name="addr"></param>
 /// <returns></returns>
-uint16_t UDPSocket::port(const sockaddr_storage& addr)
+uint16_t Socket::port(const sockaddr_storage& addr)
 {
     uint16_t port = 0U;
 
@@ -721,9 +720,75 @@ uint16_t UDPSocket::port(const sockaddr_storage& addr)
 /// </summary>
 /// <param name="addr"></param>
 /// <returns></returns>
-bool UDPSocket::isNone(const sockaddr_storage& addr)
+bool Socket::isNone(const sockaddr_storage& addr)
 {
     struct sockaddr_in* in = (struct sockaddr_in*)& addr;
 
     return ((addr.ss_family == AF_INET) && (in->sin_addr.s_addr == htonl(INADDR_NONE)));
+}
+
+// ---------------------------------------------------------------------------
+//  Protected Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+///
+/// </summary>
+/// <param name="domain"></param>
+/// <param name="type"></param>
+/// <param name="protocol"></param>
+bool Socket::initSocket(const int domain, const int type, const int protocol) noexcept(false)
+{
+    m_fd = ::socket(domain, type, protocol);
+    if (m_fd < 0) {
+        LogError(LOG_NET, "Cannot create the UDP socket, err: %d", errno);
+        return false;
+    }
+
+    m_af = domain;
+    return true;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="ipAddr"></param>
+/// <param name="port"></param>
+/// <returns></returns>
+bool Socket::bind(const std::string& ipAddr, const uint16_t port) noexcept(false)
+{
+    m_localAddress = std::string(ipAddr);
+    m_localPort = port;
+
+    sockaddr_in addr = {};
+    initAddr(ipAddr, port, addr);
+
+    socklen_t length = sizeof(addr);
+    bool retval = true;
+    if (::bind(m_fd, reinterpret_cast<sockaddr*>(&addr), length) < 0) {
+        LogError(LOG_NET, "Cannot bind the UDP address, err: %d", errno);
+        retval = false;
+    }
+
+    return retval;
+}
+
+/// <summary>
+/// Initialize the sockaddr_in structure with the provided IP and port
+/// </summary>
+/// <param name="ipAddr">IP address.</param>
+/// <param name="port">IP address.</param>
+/// <param name="addr"></param>
+void Socket::initAddr(const std::string& ipAddr, const int port, sockaddr_in& addr) noexcept(false)
+{
+    addr.sin_family = AF_INET;
+    if (ipAddr.empty() || ipAddr == "0.0.0.0")
+        addr.sin_addr.s_addr = INADDR_ANY;
+    else
+    {
+        if (::inet_pton(AF_INET, ipAddr.c_str(), &addr.sin_addr) <= 0)
+            throw std::runtime_error("Failed to parse IP address");
+    }
+
+    addr.sin_port = ::htons(port);
 }

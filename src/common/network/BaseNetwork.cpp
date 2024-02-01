@@ -65,7 +65,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
 {
     assert(peerId < 999999999U);
 
-    m_socket = new UDPSocket(localPort);
+    m_socket = new udp::Socket(localPort);
     m_frameQueue = new FrameQueue(m_socket, peerId, debug);
 
     std::random_device rd;

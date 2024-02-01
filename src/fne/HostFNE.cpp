@@ -11,7 +11,7 @@
 *
 */
 #include "Defines.h"
-#include "common/network/UDPSocket.h"
+#include "common/network/udp/Socket.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"

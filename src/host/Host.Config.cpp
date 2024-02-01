@@ -11,7 +11,7 @@
 *
 */
 #include "Defines.h"
-#include "common/network/UDPSocket.h"
+#include "common/network/udp/Socket.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
 #include "modem/port/PseudoPTYPort.h"

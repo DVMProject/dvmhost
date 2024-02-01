@@ -23,7 +23,7 @@
 #include "common/p25/Audio.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/network/FrameQueue.h"
-#include "common/network/UDPSocket.h"
+#include "common/network/udp/Socket.h"
 #include "common/RingBuffer.h"
 #include "common/Utils.h"
 
@@ -253,7 +253,7 @@ namespace network
 
         bool m_debug;
 
-        UDPSocket* m_socket;
+        udp::Socket* m_socket;
         FrameQueue* m_frameQueue;
 
         RingBuffer<uint8_t> m_rxDMRData;

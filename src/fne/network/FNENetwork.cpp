@@ -237,7 +237,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
@@ -254,7 +254,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
@@ -271,7 +271,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
@@ -477,7 +477,7 @@ void FNENetwork::clock(uint32_t ms)
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection* connection = m_peers[peerId];
                     if (connection != nullptr) {
-                        std::string ip = UDPSocket::address(address);
+                        std::string ip = udp::Socket::address(address);
 
                         // validate peer (simple validation really)
                         if (connection->connected() && connection->address() == ip) {
@@ -496,7 +496,7 @@ void FNENetwork::clock(uint32_t ms)
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection* connection = m_peers[peerId];
                     if (connection != nullptr) {
-                        std::string ip = UDPSocket::address(address);
+                        std::string ip = udp::Socket::address(address);
 
                         // validate peer (simple validation really)
                         if (connection->connected() && connection->address() == ip) {
@@ -527,7 +527,7 @@ void FNENetwork::clock(uint32_t ms)
                 if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                     FNEPeerConnection* connection = m_peers[peerId];
                     if (connection != nullptr) {
-                        std::string ip = UDPSocket::address(address);
+                        std::string ip = udp::Socket::address(address);
 
                         // validate peer (simple validation really)
                         if (connection->connected() && connection->address() == ip) {
@@ -548,7 +548,7 @@ void FNENetwork::clock(uint32_t ms)
                         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                             FNEPeerConnection* connection = m_peers[peerId];
                             if (connection != nullptr) {
-                                std::string ip = UDPSocket::address(address);
+                                std::string ip = udp::Socket::address(address);
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
@@ -571,7 +571,7 @@ void FNENetwork::clock(uint32_t ms)
                         if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                             FNEPeerConnection* connection = m_peers[peerId];
                             if (connection != nullptr) {
-                                std::string ip = UDPSocket::address(address);
+                                std::string ip = udp::Socket::address(address);
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
@@ -604,7 +604,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
                             lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
 
                             // validate peer (simple validation really)
@@ -624,7 +624,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
                             lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
 
                             // validate peer (simple validation really)
@@ -642,7 +642,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
                             lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
 
                             // validate peer (simple validation really)
@@ -660,7 +660,7 @@ void FNENetwork::clock(uint32_t ms)
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            std::string ip = UDPSocket::address(address);
+                            std::string ip = udp::Socket::address(address);
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
@@ -728,7 +728,7 @@ bool FNENetwork::open()
     m_status = NET_STAT_MST_RUNNING;
     m_maintainenceTimer.start();
 
-    m_socket = new UDPSocket(m_address, m_port);
+    m_socket = new udp::Socket(m_address, m_port);
 
     // reinitialize the frame queue
     if (m_frameQueue != nullptr) {

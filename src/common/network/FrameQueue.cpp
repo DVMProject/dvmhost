@@ -35,7 +35,7 @@ using namespace network::frame;
 /// </FrameQueue>
 /// <param name="socket">Local port used to listen for incoming data.</param>
 /// <param name="peerId">Unique ID of this modem on the network.</param>
-FrameQueue::FrameQueue(UDPSocket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
+FrameQueue::FrameQueue(udp::Socket* socket, uint32_t peerId, bool debug) : RawFrameQueue(socket, debug),
     m_peerId(peerId),
     m_streamTimestamps()
 {
@@ -227,7 +227,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     if (m_debug)
         Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
 
-    UDPDatagram *dgram = new UDPDatagram;
+    udp::UDPDatagram *dgram = new udp::UDPDatagram;
     dgram->buffer = buffer;
     dgram->length = bufferLen;
     dgram->address = addr;
