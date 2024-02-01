@@ -6,11 +6,11 @@ This project is a direct fork of the MMDVMHost (https://github.com/g4klx/MMDVMHo
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
-The main executable program for this project is `dvmhost`, this is the host software that connects to the DVM modems (both repeater and hotspot). However, it is important to note this project will also contains the following:
-
-- `dvmcmd` a simple command-line utility to send remote control commands to a DVM host instance with REST API configured.
-- `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of DVM host instances (this tool is only available when project wide TUI support is enabled!).
-- `dvmfne` a conference bridge FNE. (See the [Conference Bridge FNE](#conference-bridge-fne) section below.)
+This project generates a few executables:
+- `dvmhost` the main executable, this is the host software that connects to the DVM modems (both repeater and hotspot) and is the primary data processing application for digital modes. [See configuration](#dvmhost-configuration) to configure and calibrate.
+- `dvmfne` a network "core", this provides a central server for `dvmhost` instances to connect to and be networked with, allowing relay of traffic and other data between `dvmhost` instances and other `dvmfne` instances. [See configuration](#dvmfne-configuration) to configure.
+- `dvmcmd` a simple command-line utility to send remote control commands to a `dvmhost` or `dvmfne` instance with REST API configured.
+- `dvmmon` a TUI utility that allows semi-realtime console-based monitoring of `dvmhost` instances (this tool is only available when project wide TUI support is enabled!).
 
 ## Building
 
@@ -59,7 +59,7 @@ If cross-compiling is required (for either ARM 32bit, 64bit or old Raspberry Pi 
 
 Please note cross-compliation requires you to have the appropriate development packages installed for your system. For ARM 32-bit, on Debian/Ubuntu OS install the "arm-linux-gnueabihf-gcc" and "arm-linux-gnueabihf-g++" packages. For ARM 64-bit, on Debian/Ubuntu OS install the "aarch64-linux-gnu-gcc" and "aarch64-linux-gnu-g++" packages.
 
-[See build notes](#build-notes).
+[See project notes](#project-notes).
 
 ### Setup TUI (Text-based User Interface)
 
@@ -68,21 +68,21 @@ Since, DVM Host 3.5, the old calibration and setup modes have been deprecated in
 - `-DENABLE_SETUP_TUI=0` - This will disable the setup/calibration TUI interface.
 - `-DENABLE_TUI_SUPPORT=0` - This will disable TUI support project wide. Any projects that require TUI support will not compile, or will have any TUI components disabled.
 
-### Compiled Protocol Options
+## dvmhost Configuration
 
-Support for DMR, P25 and NXDN protocols are enabled out of the box. What "compiled-in" support means is whether or not the host will perform _any_ processing for the specified protocol (and this is regardless of whether or not the `config.yml` has a protocol specified for being enabled or not).
+This source repository contains configuration example files within the configs folder, please review `config.example.yml` for the `dvmhost` for details on various configurable options. When first setting up a DVM instance, it is important to properly set the channel "Identity Table" or "Logical Channel ID" (or LCN ID) data, within the `iden_table.dat` file and then calibrate the modem.
 
-The abiliy to enable/disable protocols was removed in 3.6.
+The `iden_table.dat` file contains critical information used by `dvmhost` (and some other related applications) to calculate frequencies for Rx/Tx, these calculations are used for over the air broadcast messages that direct radios to which frequency to tune to when in trunking mode. Additionally, the `iden_table.dat` frequency calculations are also used to determine what frequency a hotspot operates on.
 
-## Configuration
+There is a helper CLI Python tool called `iden-channel-calculator` (For more information please, see: https://github.com/DVMProject/iden-channel-calculator) to help calculate and generate `iden_table.dat` entries, along with determine which relative channel number relates to a specified frequency.
 
-When first setting up a DVM instance, it is required to properly set the "Logical Channel ID" (or LCN ID) data and then calibrate the modem.
+It should also be important to read and review the [calibration notes](#calibration-notes) below.
 
-### Initial Setup
+### Initial Setup Steps
 
 The following setups assume the host is compiled with the setup TUI mode (if availble). It is possible to setup the modem without the setup TUI, and requires manually modifying `config.yml` and the `iden_table.dat` files.
 
-1. Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart protocol has the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
+1. Create/Edit `config.yml` and ensure the settings for the modem are correct, find the "modem" section in "system". Check that the uart protocol has the appropriate UART port and port speed set (the config.yml defaults to /dev/ttyUSB0 and 115200).
 2. Start `dvmhost` as follows: `/path/to/dvmhost -c /path/to/config.yml --setup`. This will start the dvmhost setup TUI mode.
 3. Using the TUI user interface, use the "Setup" menu to set default parameters.
     3.1. The "Logging & Data Configuration" submenu allows you to alter the various logging file paths and levels, as well as paths to data files (such as the `iden_table.dat` file).
@@ -139,8 +139,16 @@ The following setups assume the host is compiled with the setup TUI mode (if ava
 
 ### Calibration Notes
 
-- During Transmit Calibration, it may be necessary to adjust the symbol levels directly. Normally this isn't required as the DVM will just work, but some radios require some fine adjustment of the symbol levels, this is exposed in the calibration mode.
+- If you have access to appropriate RF test equipment (or equivilant equipment) that is capable of monitor the overall transmitted *analog* FM deviation; if is important to adjust both the modem and the connected radios so that the overall transmitted *analog* FM deviation be between 2.75khz and 2.83khz (a center average of 2.80khz *analog* FM deviation is best).
+- When using a repeater/modem board attached to an appropriate FM repeater/radio, it *may* be necessary to "de-tune" the repeater/radio slightly, most commercial grade equipment operating within a 12.5khz channel may impose a strict 2.5khz (and no greater) maximum *analog* FM deviation, this is well below what is required for good digital operation. It may be necessary using whatever tuning/alignment tools to "de-tune" or adjust the equipments alignment to allow for a wider *analog* FM deviation, as close to 2.80khz as possible.
+- In some situations, it may be necessary to adjust the symbol levels directly. Normally this isn't required as the DVM will just work, but some radios require some fine adjustment of the symbol levels, this is exposed in the calibration mode. It is however recommended, that these adjustments *not* be made unless appropriate RF test equipment is available.
 - Unusually high BER >10% and other various receive problems may be due to the radio/hotspot being off frequency and requiring some adjustment. Even a slight frequency drift can be catastrophic for proper digital modulation. The recommendation is to ensure the interfaced radio does not have an overall reference frequency drift > +/- 150hz. An unusually high BER can also be explained by DC level offsets in the signal paths, or issues with the FM deviation levels on the interfaced radio being too high or too low.
+
+## dvmfne Configuration
+
+This source repository contains configuration example files within the configs folder, please review `fne-config.example.yml` for the `dvmfne` for details on various configurable options. When first setting up a FNE instance, it is important to properly configure a `talkgroup_rules.example.yml` file, this file defines all the various rules for valid talkgroups and other settings.
+
+There is no other real configuration for a `dvmfne` instance other then setting the appropriate parameters within the configuration files.
 
 ## Command Line Parameters
 
@@ -164,6 +172,20 @@ usage: ./dvmhost [-vhf] [--setup] [-c <configuration file>] [--remote [-a <addre
   --        stop handling options
 ```
 
+### dvmfne Command Line Parameters
+
+```
+usage: ./dvmfne [-vhf][-c <configuration file>]
+
+  -v        show version information
+  -h        show this screen
+  -f        foreground mode
+
+  -c <file> specifies the configuration file to use
+
+  --        stop handling options
+```
+
 ### dvmcmd Command Line Parameters
 
 ```
@@ -182,20 +204,6 @@ usage: ./dvmcmd [-dvh][-a <address>][-p <port>][-P <password>] <command> <argume
 
 NOTE: See `dvmcmd -h` for full help for commands and arguments.
 
-### dvmfne Command Line Parameters
-
-```
-usage: ./dvmfne [-vhf][-c <configuration file>]
-
-  -v        show version information
-  -h        show this screen
-  -f        foreground mode
-
-  -c <file> specifies the configuration file to use
-
-  --        stop handling options
-```
-
 ### dvmmon Command Line Parameters
 
 ```
@@ -212,33 +220,26 @@ usage: ./dvmmon [-dvh][--hide-log][-c <configuration file>]
   --                          stop handling options
 ```
 
-## Conference Bridge FNE
-
-The DVMHost project will also build `dvmfne` which is a simple conference bridge style FNE. This FNE uses its own configuration file (see `fne-config.example.yml`). 
-
-The conference bridge FNE is a simplistic FNE, meant for simple single-master small-scale deployments. It, like the full-scale FNE, defines rules for available talkgroups and manages calls. Unlike the full-scale FNE, the conference bridge FNE does not have multi-system routing or support multiple masters. It can peer to other FNEs, however, unlike full-scale FNE the conference bridge FNE does not have provisioning for talkgroup mutuation (i.e. talkgroup number rewriting, where on System A TG123 routes to System B TG456), all TGs must be one to one across peers. 
-
-The conference bridge FNE is meant as an easier alternative to a full-scale FNE where complex routing or multiple masters are not required.
-
-## Build Notes
+## Project Notes
 
 - The installation path of "/opt/dvm" is still supported by the CMake Makefile (and will be for the forseeable future); after compiling, in order to install to this path simply use: `make old_install`.
 - The installation of the systemd service is also still supported by the CMake Makefile, after using `make old_install`, simply use: `make old_install-service`.
 
-- The old RPi 1, 2 or 3 cross-compile *requires* a downloaded copy of ASIO pointed to with the `-DWITH_ASIO=/path/to/asio`.
+- After compilation the CMake build system has a configuration to generate tarball payload packages using `make tarball`. This will generate a tarball package, the tarball package contains the similar pathing that the `make old_install` would generate.
+
+- For maximize size reduction before performing a `make install`, `make old_install` or `make tarball` it is recommended to run `make strip` to strip any debug symbols or other unneeded information from the resultant binaries.
+
 - By default when cross-compiling for old RPi 1 using the Debian/Ubuntu OS, the toolchain will attempt to fetch and clone the tools automatically. If you already have a copy of these tools, you can specify the location for them with the `-DWITH_RPI_ARM_TOOLS=/path/to/tools`
-- For old RPi 1, 2 or 3 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++").
-  1. Switch to "/opt" and checkout `https://github.com/raspberrypi/tools.git`.
-- The old RPi 1, 2 or 3 builds do not support the TUI when cross compiling. If you require the TUI on these platforms, you have to build the dvmhost directly on the target platform vs cross compiling.
+- For old RPi 1, 2 or 3 using Debian/Ubuntu OS install the standard ARM embedded toolchain (typically "arm-none-eabi-gcc" and "arm-none-eabi-g++"). The CMake build system will automatically attempt to clone down the compilation tools, if you already have the RPI_ARM compilation tools installed use the instructions the above bullet to point to them (this will prevent CMake from attempting to clone the compilation tools).
+- The old RPi 1, 2 or 3 builds do not support the TUI when cross compiling. If you require the TUI on these platforms, you have to build the project directly on the target platform vs cross compiling.
 
-
-There is an automated process to generate a tarball package if required as well, after compiling simply run: `make tarball`. This will generate a tarball package, the tarball package contains the similar pathing that the `make old_install` would generate.
+- If you have old configuration files, missing comments or new parameters, there is a tool provided in the "tools" directory of the project called `config_annotator.py` this is a Python CLI tool designed to compare an existing configuration file against the example configuration file and recomment and add missing parameters (along with removing illegal/invalid parameters). It is recommended to backup your existing configuration file before running this tool on it. *This tool is only designed for the `dvmhost` configuration file, and no other configuration file!*
 
 ## Security Warnings
 
 It is highly recommended that the REST API interface not be exposed directly to the internet. If such exposure is wanted/needed, it is highly recommended to proxy the dvmhost REST API through a modern web server (like nginx for example) rather then directly exposing dvmhost's REST API port.
 
-## Raspberry Pi Preparation
+## Raspberry Pi Preparation Notes
 
 Some extra notes for those who are using the Raspberry Pi, default Raspbian OS or Debian OS installations. You will not be able to flash or access the STM32 modem unless you do some things beforehand.
 
