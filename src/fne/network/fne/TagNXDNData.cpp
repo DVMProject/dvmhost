@@ -360,6 +360,15 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
                 }
             }
         }
+
+        // is this a TG that requires affiliations to repeat?
+        if (tg.config().affiliated()) {
+            // check the affiliations for this peer to see if we can repeat traffic
+            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+            if (!aff->hasGroupAff(lc.getDstId())) {
+                return false;
+            }
+        }
     }
 
     return true;

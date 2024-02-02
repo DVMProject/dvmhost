@@ -125,6 +125,8 @@ namespace lookups
         virtual void groupAff(uint32_t srcId, uint32_t dstId);
         /// <summary>Helper to group unaffiliate a source ID.</summary>
         virtual bool groupUnaff(uint32_t srcId);
+        /// <summary>Helper to determine if the group destination ID has any affiations.</summary>
+        virtual bool hasGroupAff(uint32_t dstId) const;
         /// <summary>Helper to determine if the source ID has affiliated to the group destination ID.</summary>
         virtual bool isGroupAff(uint32_t srcId, uint32_t dstId) const;
         /// <summary>Helper to release group affiliations.</summary>

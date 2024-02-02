@@ -178,6 +178,23 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
 }
 
 /// <summary>
+/// Helper to determine if the group destination ID has any affiations.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <returns></returns>
+bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
+{
+    for (auto entry : m_grpAffTable) {
+        if (entry.second == dstId) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/// <summary>
 /// Helper to determine if the source ID has affiliated to the group destination ID.
 /// </summary>
 /// <param name="srcId"></param>

@@ -495,6 +495,15 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
         }
     }
 
+    // is this a TG that requires affiliations to repeat?
+    if (tg.config().affiliated()) {
+        // check the affiliations for this peer to see if we can repeat traffic
+        lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+        if (!aff->hasGroupAff(control.getDstId())) {
+            return false;
+        }
+    }
+
     return true;
 }
 

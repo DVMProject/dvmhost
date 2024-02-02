@@ -16,6 +16,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -39,6 +41,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
@@ -57,13 +61,15 @@ groupVoice:
       slot: 1
 
     # Textual name of the talkgroup.
-  - name: Parrot Mutation Example
+  - name: Rewrite Example
     #
     # Talkgroup Configuration
     #
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
@@ -83,7 +89,7 @@ groupVoice:
     #
     source:
       # Numerical talkgroup ID number.
-      tgid: 9990
+      tgid: 5
       # DMR slot number.
       slot: 1
 
@@ -95,6 +101,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -118,6 +126,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -141,6 +151,8 @@ groupVoice:
     config:
       # Flag indicating whether this talkgroup is active or not.
       active: true
+      # Flag indicating whether this talkgroup will only repeat with affiliations.
+      affiliated: false
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).

@@ -121,6 +121,7 @@ namespace lookups
         /// <summary>Initializes a new instance of the TalkgroupRuleConfig class.</summary>
         TalkgroupRuleConfig() :
             m_active(false),
+            m_affiliated(false),
             m_parrot(false),
             m_inclusion(),
             m_exclusion(),
@@ -134,6 +135,7 @@ namespace lookups
             TalkgroupRuleConfig()
         {
             m_active = node["active"].as<bool>(false);
+            m_affiliated = node["affiliated"].as<bool>(false);
             m_parrot = node["parrot"].as<bool>(false);
 
             yaml::Node& inclusionList = node["inclusion"];
@@ -166,6 +168,7 @@ namespace lookups
         {
             if (this != &data) {
                 m_active = data.m_active;
+                m_affiliated = data.m_affiliated;
                 m_parrot = data.m_parrot;
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
@@ -178,6 +181,8 @@ namespace lookups
     public:
         /// <summary>Flag indicating whether the rule is active.</summary>
         __PROPERTY_PLAIN(bool, active);
+        /// <summary>Flag indicating whether this talkgroup will only repeat with affiliations.</summary>
+        __PROPERTY_PLAIN(bool, affiliated);
         /// <summary>Flag indicating whether or not the talkgroup is a parrot.</summary>
         __PROPERTY_PLAIN(bool, parrot);
         /// <summary>List of peer IDs included by this rule.</summary>
