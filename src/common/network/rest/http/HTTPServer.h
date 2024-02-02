@@ -43,6 +43,10 @@ namespace network
             template<typename RequestHandlerType, template<class> class ConnectionImpl = ServerConnection>
             class HTTPServer {
             public:
+                auto operator=(HTTPServer&) -> HTTPServer& = delete;
+                auto operator=(HTTPServer&&) -> HTTPServer& = delete;
+                HTTPServer(HTTPServer&) = delete;
+
                 /// <summary>Initializes a new instance of the HTTPServer class.</summary>
                 explicit HTTPServer(const std::string& address, uint16_t port) :
                     m_ioService(),
@@ -63,11 +67,6 @@ namespace network
 
                     accept();
                 }
-                /// <summary>Initializes a copy instance of the HTTPServer class.</summary>
-                HTTPServer(const HTTPServer&) = delete;
-
-                /// <summary></summary>
-                HTTPServer& operator=(const HTTPServer&) = delete;
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
                 template<typename Handler>

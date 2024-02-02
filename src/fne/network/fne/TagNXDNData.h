@@ -38,7 +38,7 @@ namespace network
             ~TagNXDNData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();

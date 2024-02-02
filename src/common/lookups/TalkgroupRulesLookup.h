@@ -85,7 +85,7 @@ namespace lookups
         TalkgroupRuleRewrite(yaml::Node& node) :
             TalkgroupRuleRewrite()
         {
-            m_peerId = node["peerId"].as<uint32_t>(0U);
+            m_peerId = node["peerid"].as<uint32_t>(0U);
             m_tgId = node["tgid"].as<uint32_t>(0U);
             m_tgSlot = (uint8_t)node["slot"].as<uint32_t>(0U);
         }
@@ -169,6 +169,7 @@ namespace lookups
                 m_parrot = data.m_parrot;
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
+                m_rewrite = data.m_rewrite;
             }
 
             return *this;

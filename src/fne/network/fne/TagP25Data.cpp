@@ -62,9 +62,8 @@ TagP25Data::~TagP25Data() = default;
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
-/// <param name="fromPeer">Flag indicating whether this traffic is from a peer connection or not.</param>
 /// <returns></returns>
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -84,6 +83,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     uint8_t duid = data[22U];
     uint8_t frameType = P25_FT_DATA_UNIT;
+
+    // perform TGID route rewrites if configured
+    routeRewrite(buffer, peerId, duid, dstId, false);
+    dstId = __GET_UINT16(buffer, 8U);
 
     lc::LC control;
     data::LowSpeedData lsd;
@@ -126,12 +129,6 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
-
-    // is this data from a peer connection?
-    if (fromPeer) {
-        // perform TGID route rewrites if configured
-        routeRewrite(buffer, peerId, duid, dstId, false);
-    }
 
     // is the stream valid?
     if (validate(peerId, control, duid, streamId)) {
@@ -233,7 +230,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, buffer, len, pktSeq, streamId, true);
+                    uint8_t outboundPeerBuffer[len];
+                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    ::memcpy(outboundPeerBuffer, buffer, len);
+
+                    // perform TGID route rewrites if configured
+                    routeRewrite(outboundPeerBuffer, peer.first, duid, dstId);
+
+                    m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
                         LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
                             peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
@@ -429,23 +433,21 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 
     std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
 
-    bool rewrote = false;
     if (rewrites.size() > 0) {
         for (auto entry : rewrites) {
             if (entry.peerId() == peerId) {
                 if (outbound) {
-                    dstId = tg.source().tgId();
-                }
-                else {
                     dstId = entry.tgId();
                 }
-                rewrote = true;
-                break;
+                else {
+                    dstId = tg.source().tgId();
+                }
+                return true;
             }
         }
     }
 
-    return rewrote;
+    return false;
 }
 
 /// <summary>

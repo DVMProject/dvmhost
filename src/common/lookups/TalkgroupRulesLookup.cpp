@@ -262,7 +262,8 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
                 if (x.config().rewrite().size() == 0)
                     return false;
 
-                auto innerIt = std::find_if(x.config().rewrite().begin(), x.config().rewrite().end(),
+                std::vector<TalkgroupRuleRewrite> rewrite = x.config().rewrite();
+                auto innerIt = std::find_if(rewrite.begin(), rewrite.end(),
                     [&](TalkgroupRuleRewrite y)
                     {
                         if (slot != 0U) {
@@ -272,7 +273,7 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
                         return y.peerId() == peerId && y.tgId() == id;
                     });
 
-                if (innerIt != x.config().rewrite().end())
+                if (innerIt != rewrite.end())
                     return true;
                 return false;
             });

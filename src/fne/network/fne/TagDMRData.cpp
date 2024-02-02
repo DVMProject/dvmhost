@@ -60,9 +60,8 @@ TagDMRData::~TagDMRData() = default;
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
-/// <param name="fromPeer">Flag indicating whether this traffic is from a peer connection or not.</param>
 /// <returns></returns>
-bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer)
+bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -108,11 +107,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         dmrData.setN(n);
     }
 
-    // is this data from a peer connection?
-    if (fromPeer) {
-        // perform TGID route rewrites if configured
-        routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
-    }
+    // perform TGID route rewrites if configured
+    routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
+    dstId = __GET_UINT16(buffer, 8U);
 
     // is the stream valid?
     if (validate(peerId, dmrData, streamId)) {
@@ -211,7 +208,14 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, buffer, len, pktSeq, streamId, true);
+                    uint8_t outboundPeerBuffer[len];
+                    ::memset(outboundPeerBuffer, 0x00U, len);
+                    ::memcpy(outboundPeerBuffer, buffer, len);
+
+                    // perform TGID route rewrites if configured
+                    routeRewrite(outboundPeerBuffer, peer.first, dmrData, dataType, dstId, slotNo);
+
+                    m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
                         LogDebug(LOG_NET, "DMR, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                             peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId);
@@ -303,7 +307,7 @@ void TagDMRData::playbackParrot()
 /// <param name="dstId"></param>
 /// <param name="slotNo"></param>
 /// <param name="outbound"></param>
-void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
+void TagDMRData::routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound)
 {
     uint32_t rewriteDstId = dstId;
     uint32_t rewriteSlotNo = slotNo;
@@ -369,10 +373,10 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
 {
     lookups::TalkgroupRuleGroupVoice tg;
     if (outbound) {
-        tg = m_network->m_tidLookup->find(dstId, slotNo);
+        tg = m_network->m_tidLookup->find(dstId);
     }
     else {
-        tg = m_network->m_tidLookup->findByRewrite(peerId, dstId, slotNo);
+        tg = m_network->m_tidLookup->findByRewrite(peerId, dstId);
     }
 
     std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
@@ -382,12 +386,12 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
         for (auto entry : rewrites) {
             if (entry.peerId() == peerId) {
                 if (outbound) {
-                    dstId = tg.source().tgId();
-                    slotNo = tg.source().tgSlot();
-                }
-                else {
                     dstId = entry.tgId();
                     slotNo = entry.tgSlot();
+                }
+                else {
+                    dstId = tg.source().tgId();
+                    slotNo = tg.source().tgSlot();
                 }
                 rewrote = true;
                 break;

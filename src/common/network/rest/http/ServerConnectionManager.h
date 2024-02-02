@@ -36,13 +36,12 @@ namespace network
             template<typename ConnectionPtr>
             class ServerConnectionManager {
             public:
+                auto operator=(ServerConnectionManager&) -> ServerConnectionManager& = delete;
+                auto operator=(ServerConnectionManager&&) -> ServerConnectionManager& = delete;
+                ServerConnectionManager(ServerConnectionManager&) = delete;
+
                 /// <summary>Initializes a new instance of the ServerConnectionManager class.</summary>
                 ServerConnectionManager() = default;
-                /// <summary>Initializes a copy instance of the ServerConnectionManager class.</summary>
-                ServerConnectionManager(const ServerConnectionManager&) = delete;
-
-                /// <summary></summary>
-                ServerConnectionManager& operator=(const ServerConnectionManager&) = delete;
 
                 /// <summary>Add the specified connection to the manager and start it.</summary>
                 void start(ConnectionPtr c)

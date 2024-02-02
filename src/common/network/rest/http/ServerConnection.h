@@ -49,23 +49,21 @@ namespace network
                 typedef std::shared_ptr<selfType> selfTypePtr;
                 typedef ServerConnectionManager<selfTypePtr> ConnectionManagerType;
             public:
+                auto operator=(ServerConnection&) -> ServerConnection& = delete;
+                auto operator=(ServerConnection&&) -> ServerConnection& = delete;
+                ServerConnection(ServerConnection&) = delete;
+
                 /// <summary>Initializes a new instance of the ServerConnection class.</summary>
                 explicit ServerConnection(asio::ip::tcp::socket socket, ConnectionManagerType& manager, RequestHandlerType& handler,
                     bool persistent = false) :
                     m_socket(std::move(socket)),
                     m_connectionManager(manager),
                     m_requestHandler(handler),
-                    m_buffer(),
                     m_lexer(HTTPLexer(false)),
                     m_persistent(persistent)
                 {
                     /* stub */
                 }
-                /// <summary>Initializes a copy instance of the ServerConnection class.</summary>
-                ServerConnection(const ServerConnection&) = delete;
-
-                /// <summary></summary>
-                ServerConnection& operator=(const ServerConnection&) = delete;
 
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
@@ -118,7 +116,7 @@ namespace network
                         }
                         else if (ec != asio::error::operation_aborted) {
                             if (ec) {
-                                ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                                ::LogError(LOG_REST, "ServerConnection::read(), %s, code = %u", ec.message().c_str(), ec.value());
                             }
                             m_connectionManager.stop(this->shared_from_this());
                         }
@@ -157,7 +155,7 @@ namespace network
 
                             if (ec != asio::error::operation_aborted) {
                                 if (ec) {
-                                    ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                                    ::LogError(LOG_REST, "ServerConnection::write(), %s, code = %u", ec.message().c_str(), ec.value());
                                 }
                                 m_connectionManager.stop(this->shared_from_this());
                             }

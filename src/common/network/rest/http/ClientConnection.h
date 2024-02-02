@@ -38,20 +38,18 @@ namespace network
             template <typename RequestHandlerType>
             class ClientConnection {
             public:
+                auto operator=(ClientConnection&) -> ClientConnection& = delete;
+                auto operator=(ClientConnection&&) -> ClientConnection& = delete;
+                ClientConnection(ClientConnection&) = delete;
+
                 /// <summary>Initializes a new instance of the ClientConnection class.</summary>
                 explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :
                     m_socket(std::move(socket)),
                     m_requestHandler(handler),
-                    m_buffer(),
                     m_lexer(HTTPLexer(true))
                 {
                     /* stub */
                 }
-                /// <summary>Initializes a copy instance of the ClientConnection class.</summary>
-                ClientConnection(const ClientConnection&) = delete;
-
-                /// <summary></summary>
-                ClientConnection& operator=(const ClientConnection&) = delete;
 
                 /// <summary>Start the first asynchronous operation for the connection.</summary>
                 void start() { read(); }
@@ -81,7 +79,7 @@ namespace network
                     {
                         asio::error_code ec = e.code();
                         if (ec) {
-                            ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                            ::LogError(LOG_REST, "ClientConnection::ensureNoLinger(), %s, code = %u", ec.message().c_str(), ec.value());
                         }
                     }
                 }
@@ -123,7 +121,7 @@ namespace network
                         }
                         else if (ec != asio::error::operation_aborted) {
                             if (ec) {
-                                ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                                ::LogError(LOG_REST, "ClientConnection::read(), %s, code = %u", ec.message().c_str(), ec.value());
                             }
                             stop();
                         }
@@ -150,7 +148,9 @@ namespace network
                                 asio::error_code ignored_ec;
                                 m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
                             }
-                            catch(const std::exception& e) { ::LogError(LOG_REST, "%s", ec.message().c_str()); }
+                            catch(const std::exception& e) { 
+                                ::LogError(LOG_REST, "ClientConnection::write(), %s, code = %u", ec.message().c_str(), ec.value()); 
+                            }
                         }
                     }
                 }

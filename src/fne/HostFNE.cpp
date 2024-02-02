@@ -491,7 +491,7 @@ bool HostFNE::createPeerNetworks()
                 if (key.size() == 32) {
                     // bryanb: shhhhhhh....dirty nasty hacks
                     key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
-                    LogWarning(LOG_HOST, "Half-length peer  network preshared encryption key detected, doubling key on itself.");
+                    LogWarning(LOG_HOST, "Half-length peer %u network preshared encryption key detected, doubling key on itself.", id);
                 }
 
                 if (key.size() == 64) {
@@ -534,7 +534,7 @@ bool HostFNE::createPeerNetworks()
             network::PeerNetwork* network = new PeerNetwork(masterAddress, masterPort, 0U, id, password, true, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, true, true, m_allowActivityTransfer, m_allowDiagnosticTransfer, false);
             network->setMetadata(identity, rxFrequency, txFrequency, 0.0F, 0.0F, 0, 0, 0, latitude, longitude, 0, location);
             if (encrypted) {
-                m_network->setPresharedKey(presharedKey);
+                network->setPresharedKey(presharedKey);
             }
 
             network->enable(enabled);
@@ -576,7 +576,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
             uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
             uint32_t streamId = peerNetwork->getDMRStreamId(slotNo);
 
-            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
+            m_network->dmrTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 
@@ -589,7 +589,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getP25StreamId();
 
-            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
+            m_network->p25TrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 
@@ -602,7 +602,7 @@ void HostFNE::processPeer(network::PeerNetwork* peerNetwork)
             uint32_t peerId = peerNetwork->getPeerId();
             uint32_t streamId = peerNetwork->getNXDNStreamId();
 
-            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId, true);
+            m_network->nxdnTrafficHandler()->processFrame(data.get(), length, peerId, peerNetwork->pktLastSeq(), streamId);
         }
     }
 }

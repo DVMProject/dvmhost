@@ -39,15 +39,14 @@ namespace network
 
             class HTTPRequestHandler {
             public:
+                auto operator=(HTTPRequestHandler&) -> HTTPRequestHandler& = delete;
+                HTTPRequestHandler(HTTPRequestHandler&) = delete;
+
                 /// <summary>Initializes a new instance of the HTTPRequestHandler class.</summary>
                 explicit HTTPRequestHandler(const std::string& docRoot);
-                /// <summary>Initializes a copy instance of the HTTPRequestHandler class.</summary>
-                HTTPRequestHandler(const HTTPRequestHandler&) = delete;
                 /// <summary></summary>
                 HTTPRequestHandler(HTTPRequestHandler&&) = default;
 
-                /// <summary></summary>
-                HTTPRequestHandler& operator=(const HTTPRequestHandler&) = delete;
                 /// <summary></summary>
                 HTTPRequestHandler& operator=(HTTPRequestHandler&&) = default;
 

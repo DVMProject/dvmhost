@@ -38,7 +38,7 @@ namespace network
             ~TagDMRData();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromPeer = false);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();
@@ -65,7 +65,7 @@ namespace network
             bool m_debug;
 
             /// <summary>Helper to route rewrite the network data buffer.</summary>
-            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
+            void routeRewrite(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData, uint8_t dataType, uint32_t dstId, uint32_t slotNo, bool outbound = true);
             /// <summary>Helper to route rewrite destination ID and slot.</summary>
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
 

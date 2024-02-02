@@ -42,6 +42,10 @@ namespace network
             template<typename RequestHandlerType, template<class> class ConnectionImpl = ClientConnection>
             class HTTPClient : private Thread {
             public:
+                auto operator=(HTTPClient&) -> HTTPClient& = delete;
+                auto operator=(HTTPClient&&) -> HTTPClient& = delete;
+                HTTPClient(HTTPClient&) = delete;
+
                 /// <summary>Initializes a new instance of the HTTPClient class.</summary>
                 HTTPClient(const std::string& address, uint16_t port) :
                     m_address(address),
@@ -53,8 +57,6 @@ namespace network
                 {
                     /* stub */
                 }
-                /// <summary>Initializes a copy instance of the HTTPClient class.</summary>
-                HTTPClient(const HTTPClient&) = delete;
                 /// <summary>Finalizes a instance of the HTTPClient class.</summary>
                 ~HTTPClient() override
                 {
@@ -62,9 +64,6 @@ namespace network
                         close();
                     }
                 }
-
-                /// <summary></summary>
-                HTTPClient& operator=(const HTTPClient&) = delete;
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
                 template<typename Handler>
