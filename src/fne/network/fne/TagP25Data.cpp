@@ -293,7 +293,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     routeRewrite(outboundPeerBuffer, dstPeerId, duid, dstId);
 
                     // process TSDUs going to external peers
-                    if (processTSDUToExternal(outboundPeerBuffer, dstPeerId, duid)) {
+                    if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
                         peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                         if (m_network->m_debug) {
                             LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
@@ -479,9 +479,10 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// Helper to process TSDUs being passed to an external peer.
 /// </summary>
 /// <param name="buffer"></param>
-/// <param name="peerId">Peer ID</param>
+/// <param name="srcPeerId">Source Peer ID</param>
+/// <param name="dstPeerId">Destination Peer ID</param>
 /// <param name="duid"></param>
-bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == P25_DUID_TSDU) {
@@ -505,7 +506,7 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t peerId, uint8_t
                     }
 
                     if (m_network->m_disallowP25AdjStsBcast) {
-                        LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", peerId);
+                        LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", dstPeerId);
                         return false;
                     }
                 }
@@ -513,6 +514,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t peerId, uint8_t
             default:
                 break;
             }
+        } else {
+            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", srcPeerId);
         }
     }
 
