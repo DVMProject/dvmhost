@@ -375,7 +375,7 @@ void Network::clock(uint32_t ms)
                     }
                 }
                 else {
-                    Utils::dump("Unknown protocol opcode from the master", buffer.get(), length);
+                    Utils::dump("unknown protocol opcode from the master", buffer.get(), length);
                 }
             }
             break;
@@ -471,7 +471,7 @@ void Network::clock(uint32_t ms)
                     }
                 }
                 else {
-                    Utils::dump("Unknown master control opcode from the master", buffer.get(), length);
+                    Utils::dump("unknown master control opcode from the master", buffer.get(), length);
                 }
             }
             break;
@@ -479,13 +479,13 @@ void Network::clock(uint32_t ms)
         case NET_FUNC_NAK:                                                              // Master Negative Ack
             {
                 if (m_status == NET_STAT_RUNNING) {
-                    LogWarning(LOG_NET, "Master returned a NAK; attemping to relogin ...");
+                    LogWarning(LOG_NET, "PEER %u master returned a NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
                     m_retryTimer.start();
                 }
                 else {
-                    LogError(LOG_NET, "Master returned a NAK; network reconnect ...");
+                    LogError(LOG_NET, "PEER %u master returned a NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     close();
                     open();
                     return;
@@ -496,7 +496,7 @@ void Network::clock(uint32_t ms)
             {
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
-                        LogDebug(LOG_NET, "Sending authorisation");
+                        LogDebug(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
                         writeAuthorisation();
                         m_status = NET_STAT_WAITING_AUTHORISATION;
@@ -504,14 +504,14 @@ void Network::clock(uint32_t ms)
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_AUTHORISATION:
-                        LogDebug(LOG_NET, "Sending configuration");
+                        LogDebug(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         writeConfig();
                         m_status = NET_STAT_WAITING_CONFIG;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_CONFIG:
-                        LogMessage(LOG_NET, "Logged into the master successfully");
+                        LogMessage(LOG_NET, "PEER %u RPTC ACK, logged into the master successfully, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         m_loginStreamId = 0U;
                         m_remotePeerId = rtpHeader.getSSRC();
                         pktSeq(true);
@@ -526,7 +526,7 @@ void Network::clock(uint32_t ms)
             break;
         case NET_FUNC_MST_CLOSING:                                                      // Master Shutdown
             {
-                LogError(LOG_NET, "Master is closing down");
+                LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
                 close();
                 open();
             }
@@ -535,7 +535,7 @@ void Network::clock(uint32_t ms)
             m_timeoutTimer.start();
             break;
         default:
-            Utils::dump("Unknown opcode from the master", buffer.get(), length);
+            Utils::dump("unknown opcode from the master", buffer.get(), length);
         }
     }
 
@@ -563,7 +563,7 @@ void Network::clock(uint32_t ms)
 
     m_timeoutTimer.clock(ms);
     if (m_timeoutTimer.isRunning() && m_timeoutTimer.hasExpired()) {
-        LogError(LOG_NET, "Connection to the master has timed out, retrying connection");
+        LogError(LOG_NET, "PEER %u connection to the master has timed out, retrying connection, remotePeerId = %u", m_peerId, m_remotePeerId);
         close();
         open();
     }
@@ -578,7 +578,7 @@ bool Network::open()
     if (!m_enabled)
         return false;
     if (m_debug)
-        LogMessage(LOG_NET, "Opening Network");
+        LogMessage(LOG_NET, "PEER %u opening network", m_peerId);
 
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogMessage(LOG_NET, "Could not lookup the address of the master");
@@ -598,7 +598,7 @@ bool Network::open()
 void Network::close()
 {
     if (m_debug)
-        LogMessage(LOG_NET, "Closing Network");
+        LogMessage(LOG_NET, "PEER %u closing Network", m_peerId);
 
     if (m_status == NET_STAT_RUNNING) {
         uint8_t buffer[1U];
