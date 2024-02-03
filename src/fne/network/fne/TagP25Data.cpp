@@ -498,16 +498,16 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
             switch (tsbk->getLCO()) {
             case TSBK_OSP_ADJ_STS_BCAST:
                 {
-                    lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
-
-                    if (m_network->m_verbose) {
-                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
-                            osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
-                    }
-
                     if (m_network->m_disallowP25AdjStsBcast) {
-                        LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", dstPeerId);
+                        // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", dstPeerId);
                         return false;
+                    } else {
+                        lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
+
+                        if (m_network->m_verbose) {
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                                osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+                        }
                     }
                 }
                 break;
