@@ -46,6 +46,9 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Flag indicating whether or not peer pinging will be reported.
+    reportPeerPing: true
+
     # Flag indicating whether or not master endpoint networking is encrypted.
     encrypted: false
     # AES-256 32-byte Preshared Key

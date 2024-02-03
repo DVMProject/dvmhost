@@ -141,7 +141,7 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the FNENetwork class.</summary>
         FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-            bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+            bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
             bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime);
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork() override;
@@ -209,6 +209,7 @@ namespace network
         bool m_forceListUpdate;
         bool m_callInProgress;
 
+        bool m_reportPeerPing;
         bool m_verbose;
 
         /// <summary>Helper to erase the peer from the peers affiliations list.</summary>

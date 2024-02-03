@@ -42,6 +42,7 @@ using namespace network::fne;
 /// <param name="password">Network authentication password.</param>
 /// <param name="debug">Flag indicating whether network debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether network verbose logging is enabled.</param>
+/// <param name="reportPeerPing">Flag indicating whether peer pinging is reported.</param>
 /// <param name="dmr">Flag indicating whether DMR is enabled.</param>
 /// <param name="p25">Flag indicating whether P25 is enabled.</param>
 /// <param name="nxdn">Flag indicating whether NXDN is enabled.</param>
@@ -52,7 +53,7 @@ using namespace network::fne;
 /// <param name="pingTime"></param>
 /// <param name="updateLookupTime"></param>
 FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
-    bool debug, bool verbose, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
+    bool debug, bool verbose, bool reportPeerPing, bool dmr, bool p25, bool nxdn, uint32_t parrotDelay, bool parrotGrantDemand,
     bool allowActivityTransfer, bool allowDiagnosticTransfer, uint32_t pingTime, uint32_t updateLookupTime) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
@@ -76,6 +77,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_forceListUpdate(false),
     m_callInProgress(false),
+    m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
     assert(host != nullptr);
@@ -320,11 +322,17 @@ void FNENetwork::clock(uint32_t ms)
                     // the login sequence
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
+                        LogMessage(LOG_NET, "PEER %u was RPTL NAKed cleaning up peer connection", peerId);
                         if (connection != nullptr) {
                             if (connection->connectionState() != NET_STAT_RUNNING) {
                                 if (erasePeer(peerId)) {
                                     delete connection;
                                 }
+                            }
+                        } else {
+                            erasePeer(peerId);
+                            if (m_verbose) {
+                                LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection?", peerId);
                             }
                         }
                     }
@@ -510,7 +518,7 @@ void FNENetwork::clock(uint32_t ms)
                             m_peers[peerId] = connection;
                             writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
 
-                            if (m_verbose) {
+                            if (m_reportPeerPing) {
                                 LogInfoEx(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection->pingsReceived());
                             }
                         }

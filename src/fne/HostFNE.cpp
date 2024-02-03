@@ -373,6 +373,8 @@ bool HostFNE::createMasterNetwork()
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
 
+    bool reportPeerPing = masterConf["reportPeerPing"].as<bool>(false);
+
     bool encrypted = masterConf["encrypted"].as<bool>(false);
     std::string key = masterConf["presharedKey"].as<std::string>();
     uint8_t presharedKey[AES_WRAPPED_PCKT_KEY_LEN];
@@ -433,6 +435,8 @@ bool HostFNE::createMasterNetwork()
 
     LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
+    LogInfo("    Report Peer Pings: %s", reportPeerPing ? "yes" : "no");
+
     if (verbose) {
         LogInfo("    Verbose: yes");
     }
@@ -442,7 +446,7 @@ bool HostFNE::createMasterNetwork()
     }
 
     // initialize networking
-    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
+    m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
