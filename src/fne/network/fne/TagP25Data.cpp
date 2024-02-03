@@ -62,8 +62,9 @@ TagP25Data::~TagP25Data() = default;
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="external">Flag indicating traffic is from an external peer.</param>
 /// <returns></returns>
-bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -154,7 +155,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this the end of the call stream?
             if ((duid == P25_DUID_TDU) || (duid == P25_DUID_TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -184,8 +185,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         }
                     }
 
-                    LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
-                        peerId, srcId, dstId, duration / 1000, streamId);
+                    LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                        peerId, srcId, dstId, duration / 1000, streamId, external);
                     m_network->m_callInProgress = false;
                 }
             }
@@ -193,7 +194,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             // is this a new call stream?
             if ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -202,7 +203,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC))) {
                         if (status.srcId != 0U && status.srcId != srcId) {
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                             return false;
                         }
                     }
@@ -229,7 +230,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     status.dstId = dstId;
                     status.streamId = streamId;
                     m_status[dstId] = status;
-                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     m_network->m_callInProgress = true;
                 }
             }
@@ -261,8 +262,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -272,13 +273,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             m_network->m_frameQueue->flushQueue();
         }
 
-        // repeat traffic to upstream peers
+        // repeat traffic to external peers
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t dstPeerId = peer.second->getPeerId();
 
                 // don't try to repeat traffic to the source peer...if this traffic
-                // is coming from a upstream peer
+                // is coming from a external peer
                 if (dstPeerId != peerId) {
                     // is this peer ignored?
                     if (!isPeerPermitted(dstPeerId, control, duid, streamId)) {
@@ -293,11 +294,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     routeRewrite(outboundPeerBuffer, dstPeerId, duid, dstId);
 
                     // process TSDUs going to external peers
-                    if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
+                    if (processTSDUExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
                         peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                         if (m_network->m_debug) {
-                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                                peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                                peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, external);
                         }
                     }
 
@@ -482,7 +483,7 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// <param name="srcPeerId">Source Peer ID</param>
 /// <param name="dstPeerId">Destination Peer ID</param>
 /// <param name="duid"></param>
-bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
+bool TagP25Data::processTSDUExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == P25_DUID_TSDU) {

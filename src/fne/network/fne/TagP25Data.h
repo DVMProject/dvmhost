@@ -44,7 +44,7 @@ namespace network
             ~TagP25Data();
 
             /// <summary>Process a data frame from the network.</summary>
-            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();
@@ -76,7 +76,7 @@ namespace network
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to process TSDUs being passed to an external peer.</summary>
-            bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
+            bool processTSDUExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);

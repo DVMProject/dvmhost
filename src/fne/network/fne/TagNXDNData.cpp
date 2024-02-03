@@ -59,8 +59,9 @@ TagNXDNData::~TagNXDNData() = default;
 /// <param name="peerId">Peer ID</param>
 /// <param name="pktSeq"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="external">Flag indicating traffic is from an external peer.</param>
 /// <returns></returns>
-bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external)
 {
     hrc::hrc_t pktTime = hrc::now();
 
@@ -100,7 +101,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this the end of the call stream?
             if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -120,8 +121,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         }
                     }
 
-                    LogMessage(LOG_NET, "NXDN, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u",
-                        peerId, srcId, dstId, duration / 1000, streamId);
+                    LogMessage(LOG_NET, "NXDN, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
+                        peerId, srcId, dstId, duration / 1000, streamId, external);
                     m_network->m_callInProgress = false;
                 }
             }
@@ -129,7 +130,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             // is this a new call stream?
             if ((messageType != RTCH_MESSAGE_TYPE_TX_REL && messageType != RTCH_MESSAGE_TYPE_TX_REL_EX)) {
                 if (srcId == 0U && dstId == 0U) {
-                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     return false;
                 }
 
@@ -138,7 +139,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId) {
                         if (status.srcId != 0U && status.srcId != srcId) {
-                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                             return false;
                         }
                     }
@@ -165,7 +166,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     status.dstId = dstId;
                     status.streamId = streamId;
                     m_status[dstId] = status;
-                    LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
                     m_network->m_callInProgress = true;
                 }
             }
@@ -197,8 +198,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                     m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, true);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                            peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId);
+                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
@@ -208,13 +209,13 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             m_network->m_frameQueue->flushQueue();
         }
 
-        // repeat traffic to upstream peers
+        // repeat traffic to external peers
         if (m_network->m_host->m_peerNetworks.size() > 0U && !tg.config().parrot()) {
             for (auto peer : m_network->m_host->m_peerNetworks) {
                 uint32_t dstPeerId = peer.second->getPeerId();
 
                 // don't try to repeat traffic to the source peer...if this traffic
-                // is coming from a upstream peer
+                // is coming from a external peer
                 if (dstPeerId != peerId) {
                     // is this peer ignored?
                     if (!isPeerPermitted(dstPeerId, lc, messageType, streamId)) {
@@ -230,8 +231,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                     peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                            peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId);
+                        LogDebug(LOG_NET, "NXDN, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
+                            peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, external);
                     }
 
                     if (!m_network->m_callInProgress)
