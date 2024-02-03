@@ -224,7 +224,7 @@ void FNENetwork::clock(uint32_t ms)
                     connection->pktNextSeq(0U);
                 } else {
                     if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq())) {
-                        LogWarning(LOG_NET, "PEER %u Stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
+                        LogWarning(LOG_NET, "PEER %u stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
                     }
 
                     connection->currStreamId(streamId);
@@ -242,7 +242,7 @@ void FNENetwork::clock(uint32_t ms)
         // if we don't have a stream ID and are receiving call data -- throw an error and discard
         if (streamId == 0 && fneHeader.getFunction() == NET_FUNC_PROTOCOL)
         {
-            LogError(LOG_NET, "PEER %u Malformed packet (no stream ID for a call?)", peerId);
+            LogError(LOG_NET, "PEER %u malformed packet (no stream ID for a call?)", peerId);
             return;
         }
 
@@ -309,32 +309,46 @@ void FNENetwork::clock(uint32_t ms)
 
         case NET_FUNC_RPTL:                                                             // Repeater Login
             {
-                FNEPeerConnection* connection = nullptr;
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
-                    connection = new FNEPeerConnection(peerId, address, addrLen);
+                    FNEPeerConnection* connection = new FNEPeerConnection(peerId, address, addrLen);
                     connection->lastPing(now);
                     connection->currStreamId(streamId);
 
                     setupRepeaterLogin(peerId, connection);
                 }
                 else {
-                    writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
-
                     // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
                     // the login sequence
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        connection = m_peers[peerId];
+                        FNEPeerConnection* connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            LogMessage(LOG_NET, "PEER %u was RPTL NAKed, resetting up peer connection, connectionState = %u", peerId, connection->connectionState());
                             if (connection->connectionState() == NET_STAT_RUNNING) {
+                                LogMessage(LOG_NET, "PEER %u resetting peer connection, connectionState = %u", peerId, connection->connectionState());
+                                delete connection;
+
+                                connection = new FNEPeerConnection(peerId, address, addrLen);
                                 connection->lastPing(now);
                                 connection->currStreamId(streamId);
 
+                                lookups::AffiliationLookup* affLookup = m_peerAffiliations[peerId];
+                                if (affLookup != nullptr)
+                                    delete affLookup;
+                                m_peerAffiliations.erase(peerId);
+
                                 setupRepeaterLogin(peerId, connection);
+                            } else {
+                                writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
+
+                                LogWarning(LOG_NET, "PEER %u RPTL NAK, bad connection state, connectionState = %u", peerId, connection->connectionState());
+
+                                delete connection;
+                                erasePeer(peerId);
                             }
                         } else {
+                            writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
+
                             erasePeer(peerId);
-                            LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection", peerId);
+                            LogWarning(LOG_NET, "PEER %u RPTL NAK, having no connection", peerId);
                         }
                     }
                 }
@@ -385,10 +399,10 @@ void FNENetwork::clock(uint32_t ms)
                             if (valid) {
                                 connection->connectionState(NET_STAT_WAITING_CONFIG);
                                 writePeerACK(peerId);
-                                LogInfoEx(LOG_NET, "PEER %u has completed the login exchange", peerId);
+                                LogInfoEx(LOG_NET, "PEER %u RPTK ACK, completed the login exchange", peerId);
                             }
                             else {
-                                LogWarning(LOG_NET, "PEER %u has failed the login exchange", peerId);
+                                LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
                                 writePeerNAK(peerId, TAG_REPEATER_AUTH);
                                 erasePeer(peerId);
                             }
@@ -396,7 +410,7 @@ void FNENetwork::clock(uint32_t ms)
                             m_peers[peerId] = connection;
                         }
                         else {
-                            LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
+                            LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                             writePeerNAK(peerId, TAG_REPEATER_AUTH);
                             erasePeer(peerId);
                         }
@@ -404,6 +418,7 @@ void FNENetwork::clock(uint32_t ms)
                 }
                 else {
                     writePeerNAK(peerId, TAG_REPEATER_AUTH, address, addrLen);
+                    LogWarning(LOG_NET, "PEER %u RPTK NAK, having no connection", peerId);
                 }
             }
             break;
@@ -424,14 +439,14 @@ void FNENetwork::clock(uint32_t ms)
                             json::value v;
                             std::string err = json::parse(v, payload);
                             if (!err.empty()) {
-                                LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
+                                LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                 writePeerNAK(peerId, TAG_REPEATER_AUTH);
                                 erasePeer(peerId);
                             }
                             else  {
                                 // ensure parsed JSON is an object
                                 if (!v.is<json::object>()) {
-                                    LogWarning(LOG_NET, "PEER %u has supplied invalid configuration data", peerId);
+                                    LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
                                     writePeerNAK(peerId, TAG_REPEATER_AUTH);
                                     erasePeer(peerId);
                                 }
@@ -444,7 +459,7 @@ void FNENetwork::clock(uint32_t ms)
                                     m_peers[peerId] = connection;
 
                                     writePeerACK(peerId);
-                                    LogInfoEx(LOG_NET, "PEER %u has completed the configuration exchange", peerId);
+                                    LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
 
                                     // queue final update messages and flush
                                     writeWhitelistRIDs(peerId, true);
@@ -469,7 +484,7 @@ void FNENetwork::clock(uint32_t ms)
                             }
                         }
                         else {
-                            LogWarning(LOG_NET, "PEER %u tried login exchange while in an incorrect state?", peerId);
+                            LogWarning(LOG_NET, "PEER %u RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
                             writePeerNAK(peerId, TAG_REPEATER_CONFIG);
                             erasePeer(peerId);
                         }
@@ -477,6 +492,7 @@ void FNENetwork::clock(uint32_t ms)
                 }
                 else {
                     writePeerNAK(peerId, TAG_REPEATER_CONFIG, address, addrLen);
+                    LogWarning(LOG_NET, "PEER %u RPTC NAK, having no connection", peerId);
                 }
             }
             break;
@@ -602,7 +618,7 @@ void FNENetwork::clock(uint32_t ms)
                     }
                 }
                 else {
-                    Utils::dump("Unknown transfer opcode from the peer", buffer.get(), length);
+                    Utils::dump("unknown transfer opcode from the peer", buffer.get(), length);
                 }
             }
             break;
@@ -695,13 +711,13 @@ void FNENetwork::clock(uint32_t ms)
                     }
                 }
                 else {
-                    Utils::dump("Unknown transfer opcode from the peer", buffer.get(), length);
+                    Utils::dump("unknown announcement opcode from the peer", buffer.get(), length);
                 }
             }
             break;
 
         default:
-            Utils::dump("Unknown opcode from the peer", buffer.get(), length);
+            Utils::dump("unknown opcode from the peer", buffer.get(), length);
             break;
         }
     }
@@ -827,7 +843,7 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connecti
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     connection->salt(dist(m_random));
 
-    LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection->address().c_str(), connection->port());
+    LogInfoEx(LOG_NET, "PEER %u started login from, %s:%u", peerId, connection->address().c_str(), connection->port());
 
     connection->connectionState(NET_STAT_WAITING_AUTHORISATION);
     m_peers[peerId] = connection;
@@ -838,7 +854,7 @@ void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connecti
     __SET_UINT32(connection->salt(), salt, 0U);
 
     writePeerACK(peerId, salt, 4U);
-    LogInfoEx(LOG_NET, "Challenge response send to PEER %u for login", peerId);
+    LogInfoEx(LOG_NET, "PEER %u RPTL ACK, challenge response sent for login", peerId);
 }
 
 /// <summary>
@@ -873,7 +889,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId, bool queueOnly)
     uint32_t offs = 4U;
     for (uint32_t id : ridWhitelist) {
         if (m_debug)
-            LogDebug(LOG_NET, "PEER %u Whitelisting RID %u", peerId, id);
+            LogDebug(LOG_NET, "PEER %u whitelisting RID %u", peerId, id);
 
         __SET_UINT32(id, payload, offs);
         offs += 4U;
@@ -929,7 +945,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId, bool queueOnly)
     uint32_t offs = 4U;
     for (uint32_t id : ridBlacklist) {
         if (m_debug)
-            LogDebug(LOG_NET, "PEER %u Blacklisting RID %u", peerId, id);
+            LogDebug(LOG_NET, "PEER %u blacklisting RID %u", peerId, id);
 
         __SET_UINT32(id, payload, offs);
         offs += 4U;
@@ -1003,7 +1019,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId, bool queueOnly)
     uint32_t offs = 4U;
     for (std::pair<uint32_t, uint8_t> tg : tgidList) {
         if (m_debug)
-            LogDebug(LOG_NET, "PEER %u Activating TGID %u TS %u", peerId, tg.first, tg.second);
+            LogDebug(LOG_NET, "PEER %u activating TGID %u TS %u", peerId, tg.first, tg.second);
         __SET_UINT32(tg.first, payload, offs);
         payload[offs + 4U] = tg.second;
         offs += 5U;
@@ -1073,7 +1089,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId, bool queueOnly)
     uint32_t offs = 4U;
     for (std::pair<uint32_t, uint8_t> tg : tgidList) {
         if (m_debug)
-            LogDebug(LOG_NET, "PEER %u Deactivating TGID %u TS %u", peerId, tg.first, tg.second);
+            LogDebug(LOG_NET, "PEER %u deactivating TGID %u TS %u", peerId, tg.first, tg.second);
         __SET_UINT32(tg.first, payload, offs);
         payload[offs + 4U] = tg.second;
         offs += 5U;
