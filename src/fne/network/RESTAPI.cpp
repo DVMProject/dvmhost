@@ -746,6 +746,8 @@ void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply
                 ridObj["id"].set<uint32_t>(rid);
                 bool enabled = entry.second.radioEnabled();
                 ridObj["enabled"].set<bool>(enabled);
+                std::string alias = entry.second.radioAlias();
+                ridObj["alias"].set<std::string>(alias);
 
                 rids.push_back(json::value(ridObj));
             }
@@ -789,9 +791,15 @@ void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, 
 
     bool enabled = req["enabled"].get<bool>();
 
+    std::string alias = "";
+    // Check if we were provided an alias in the request
+    if (req.find("alias") != req.end()) {
+        alias = req["alias"].get<std::string>();
+    }
+
     RadioId radioId = m_ridLookup->find(rid);
     if (radioId.radioDefault()) {
-        m_ridLookup->addEntry(rid, enabled);
+        m_ridLookup->addEntry(rid, enabled, alias);
     }
     else {
         m_ridLookup->toggleEntry(rid, enabled);

@@ -33,7 +33,8 @@ namespace lookups
         /// <summary>Initializes a new instance of the RadioId class.</summary>
         RadioId() :
             m_radioEnabled(false),
-            m_radioDefault(false)
+            m_radioDefault(false),
+            m_radioAlias("")
         {
             /* stub */
         }
@@ -42,7 +43,20 @@ namespace lookups
         /// <param name="radioDefault"></param>
         RadioId(bool radioEnabled, bool radioDefault) :
             m_radioEnabled(radioEnabled),
-            m_radioDefault(radioDefault)
+            m_radioDefault(radioDefault),
+            m_radioAlias("")
+        {
+            /* stub */
+        }
+
+        /// <summary>Initializes a new instance of the RadioId class.</summary>
+        /// <param name="radioEnabled"></param>
+        /// <param name="radioDefault"></param>
+        /// <param name="radioAlias"></param>
+        RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias) :
+            m_radioEnabled(radioEnabled),
+            m_radioDefault(radioDefault),
+            m_radioAlias(radioAlias)
         {
             /* stub */
         }
@@ -53,6 +67,7 @@ namespace lookups
             if (this != &data) {
                 m_radioEnabled = data.m_radioEnabled;
                 m_radioDefault = data.m_radioDefault;
+                m_radioAlias = data.m_radioAlias;
             }
 
             return *this;
@@ -67,11 +82,24 @@ namespace lookups
             m_radioDefault = radioDefault;
         }
 
+        /// <summary>Sets flag values.</summary>
+        /// <param name="radioEnabled">Radio enabled.</param>
+        /// <param name="radioDefault">Radio default.</param>
+        /// <param name="radioAlias"></param>
+        void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias)
+        {
+            m_radioEnabled = radioEnabled;
+            m_radioDefault = radioDefault;
+            m_radioAlias = radioAlias;
+        }
+
     public:
         /// <summary>Flag indicating if the radio is enabled.</summary>
         __READONLY_PROPERTY_PLAIN(bool, radioEnabled);
         /// <summary>Flag indicating if the radio is default.</summary>
         __READONLY_PROPERTY_PLAIN(bool, radioDefault);
+        /// <summary>Alias for the radio.</summary>
+        __READONLY_PROPERTY_PLAIN(std::string, radioAlias);
     };
 
     // ---------------------------------------------------------------------------
@@ -88,8 +116,9 @@ namespace lookups
         /// <summary>Toggles the specified radio ID enabled or disabled.</summary>
         void toggleEntry(uint32_t id, bool enabled);
 
-        /// <summary>Adds a new entry to the lookup table by the specified unique ID.</summary>
-        void addEntry(uint32_t id, bool enabled);
+        /// <summary>Adds a new entry to the lookup table by the specified unique ID, with an alias.</summary>
+        void addEntry(uint32_t id, bool enabled, const std::string& alias);
+
         /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
         void eraseEntry(uint32_t id);
         /// <summary>Finds a table entry in this lookup table.</summary>

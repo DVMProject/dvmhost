@@ -49,23 +49,23 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
     RadioId rid = find(id);
     if (!rid.radioEnabled() && rid.radioDefault()) {
         if (enabled) {
-            LogMessage(LOG_HOST, "Added enabled RID %u to RID ACL table", id);
+            LogMessage(LOG_HOST, "Added enabled RID %u (%s) to RID ACL table", id, rid.radioAlias().c_str());
         }
         else {
-            LogMessage(LOG_HOST, "Added disabled RID %u to RID ACL table", id);
+            LogMessage(LOG_HOST, "Added disabled RID %u (%s) to RID ACL table", id, rid.radioAlias().c_str());
         }
     }
 
     if (!rid.radioEnabled() && !rid.radioDefault()) {
         if (enabled) {
-            LogMessage(LOG_HOST, "Enabled RID %u in RID ACL table", id);
+            LogMessage(LOG_HOST, "Enabled RID %u (%s) in RID ACL table", id, rid.radioAlias().c_str());
         }
         else {
-            LogMessage(LOG_HOST, "Disabled RID %u in RID ACL table", id);
+            LogMessage(LOG_HOST, "Disabled RID %u (%s) in RID ACL table", id, rid.radioAlias().c_str());
         }
     }
 
-    addEntry(id, enabled);
+    addEntry(id, enabled, rid.radioAlias());
 }
 
 /// <summary>
@@ -73,13 +73,14 @@ void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 /// </summary>
 /// <param name="id">Unique ID to add.</param>
 /// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
-void RadioIdLookup::addEntry(uint32_t id, bool enabled)
+/// <param name="alias">Alias for the radio ID</param>
+void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
 {
     if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
         return;
     }
 
-    RadioId entry = RadioId(enabled, false);
+    RadioId entry = RadioId(enabled, false, alias);
 
     m_mutex.lock();
     {
@@ -88,7 +89,7 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled)
 
             // if the enabled value doesn't match -- override with the intended
             if (_entry.radioEnabled() != enabled) {
-                _entry = RadioId(enabled, false);
+                _entry = RadioId(enabled, false, alias);
                 m_table[id] = _entry;
             }
         } catch (...) {
@@ -188,6 +189,7 @@ bool RadioIdLookup::load()
         std::string line;
         while (std::getline(file, line)) {
             if (line.length() > 0) {
+                // Skip comments with #
                 if (line.at(0) == '#')
                     continue;
 
@@ -214,7 +216,14 @@ bool RadioIdLookup::load()
                 bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
                 bool radioDefault = false;
 
-                m_table[id] = RadioId(radioEnabled, radioDefault);
+                // Check for an optional alias field
+                if (parsed.size() >= 3) {
+                    m_table[id] = RadioId(radioEnabled, radioDefault, parsed[2]);
+                    LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
+                } else {
+                    m_table[id] = RadioId(radioEnabled, radioDefault);
+                    LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
+                }
             }
         }
     }

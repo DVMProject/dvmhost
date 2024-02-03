@@ -2,6 +2,7 @@
 
 - Bryan Biedenkapp (https://github.com/gatekeep)
 - Natalie Moore (https://github.com/jelimoore)
+- Patrick McDonnell (https://github.com/W3AXL)
 
 - Build Chain and Helper Tools
   - K4YT3X (https://github.com/k4yt3x)
