@@ -510,8 +510,8 @@ void FNENetwork::clock(uint32_t ms)
                             m_peers[peerId] = connection;
                             writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
 
-                            if (m_debug) {
-                                LogDebug(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection->pingsReceived());
+                            if (m_verbose) {
+                                LogInfoEx(LOG_NET, "PEER %u ping received and answered, pingsReceived = %u", peerId, connection->pingsReceived());
                             }
                         }
                         else {
