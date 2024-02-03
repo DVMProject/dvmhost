@@ -289,6 +289,14 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 }
 
 /// <summary>
+/// Saves loaded talkgroup rules.
+/// </summary>
+void TalkgroupRulesLookup::commit()
+{
+    // bryanb: TODO TODO TODO
+}
+
+/// <summary>
 /// Flag indicating whether talkgroup ID access control is enabled or not.
 /// </summary>
 /// <returns>True, if talkgroup ID access control is enabled, otherwise false.</returns>

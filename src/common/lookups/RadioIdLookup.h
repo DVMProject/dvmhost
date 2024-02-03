@@ -90,8 +90,13 @@ namespace lookups
 
         /// <summary>Adds a new entry to the lookup table by the specified unique ID.</summary>
         void addEntry(uint32_t id, bool enabled);
+        /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
+        void eraseEntry(uint32_t id);
         /// <summary>Finds a table entry in this lookup table.</summary>
         RadioId find(uint32_t id) override;
+
+        /// <summary>Saves loaded radio ID lookups.</summary>
+        void commit();
 
         /// <summary>Flag indicating whether radio ID access control is enabled or not.</summary>
         bool getACL();

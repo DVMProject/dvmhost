@@ -23,6 +23,8 @@ using namespace network;
 using namespace network::rest;
 using namespace network::rest::http;
 
+using namespace lookups;
+
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
@@ -117,6 +119,237 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
 
     obj = v.get<json::object>();
     return true;
+}
+
+/// <summary>
+/// Helper to convert a <see cref="TalkgroupRuleGroupVoice"/> to JSON.
+/// </summary>
+/// <param name="groupVoice"></param>
+/// <returns></returns>
+json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice) 
+{
+    json::object tg = json::object();
+
+    std::string tgName = groupVoice.name();
+    tg["name"].set<std::string>(tgName);
+    bool invalid = groupVoice.isInvalid();
+    tg["invalid"].set<bool>(invalid);
+
+    // source stanza
+    {
+        json::object source = json::object();
+        uint32_t tgId = groupVoice.source().tgId();
+        source["tgid"].set<uint32_t>(tgId);
+        uint8_t tgSlot = groupVoice.source().tgSlot();
+        source["slot"].set<uint8_t>(tgSlot);
+        tg["source"].set<json::object>(source);
+    }
+
+    // config stanza
+    {
+        json::object config = json::object();
+        bool active = groupVoice.config().active();
+        config["active"].set<bool>(active);
+        bool affiliated = groupVoice.config().affiliated();
+        config["affiliated"].set<bool>(affiliated);
+        bool parrot = groupVoice.config().parrot();
+        config["parrot"].set<bool>(parrot);
+
+        json::array inclusions = json::array();
+        std::vector<uint32_t> inclusion = groupVoice.config().inclusion();
+        if (inclusion.size() > 0) {
+            for (auto inclEntry : inclusion) {
+                uint32_t peerId = inclEntry;
+                inclusions.push_back(json::value((double)peerId));
+            }
+        }
+        config["inclusion"].set<json::array>(inclusions);
+
+        json::array exclusions = json::array();
+        std::vector<uint32_t> exclusion = groupVoice.config().exclusion();
+        if (exclusion.size() > 0) {
+            for (auto exclEntry : exclusion) {
+                uint32_t peerId = exclEntry;
+                exclusions.push_back(json::value((double)peerId));
+            }
+        }
+        config["exclusion"].set<json::array>(exclusions);
+
+        json::array rewrites = json::array();
+        std::vector<lookups::TalkgroupRuleRewrite> rewrite = groupVoice.config().rewrite();
+        if (rewrite.size() > 0) {
+            for (auto rewrEntry : rewrite) {
+                json::object rewrite = json::object();
+                uint32_t peerId = rewrEntry.peerId();
+                rewrite["peerid"].set<uint32_t>(peerId);
+                uint32_t tgId = rewrEntry.tgId();
+                rewrite["tgid"].set<uint32_t>(tgId);
+                uint8_t tgSlot = rewrEntry.tgSlot();
+                rewrite["slot"].set<uint8_t>(tgSlot);
+
+                exclusions.push_back(json::value(rewrite));
+            }
+        }
+        config["rewrite"].set<json::array>(rewrites);
+        tg["config"].set<json::object>(config);
+    }
+
+    return tg;
+}
+
+/// <summary>
+/// Helper to convert JSON to a <see cref="TalkgroupRuleGroupVoice"/>.
+/// </summary>
+/// <param name="req"></param>
+/// <returns></returns>
+TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply) 
+{
+    TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice();
+
+    // validate parameters
+    if (!req["name"].is<std::string>()) {
+        errorPayload(reply, "TG \"name\" was not a valid string");
+        return TalkgroupRuleGroupVoice();
+    }
+
+    groupVoice.name(req["name"].get<std::string>());
+
+    // source stanza
+    {
+        if (!req["source"].is<json::object>()) {
+            errorPayload(reply, "TG \"source\" was not a valid JSON object");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::object sourceObj = req["source"].get<json::object>();
+
+        if (!sourceObj["tgid"].is<uint32_t>()) {
+            errorPayload(reply, "TG source \"tgid\" was not a valid number");
+            return TalkgroupRuleGroupVoice();
+        }
+
+        if (!sourceObj["slot"].is<uint8_t>()) {
+            errorPayload(reply, "TG source \"slot\" was not a valid number");
+            return TalkgroupRuleGroupVoice();
+        }
+
+        TalkgroupRuleGroupVoiceSource source = groupVoice.source();
+        source.tgId(sourceObj["tgid"].get<uint32_t>());
+        source.tgSlot(sourceObj["slot"].get<uint8_t>());
+
+        groupVoice.source(source);
+    }
+
+    // config stanza
+    {
+        if (!req["config"].is<json::object>()) {
+            errorPayload(reply, "TG \"config\" was not a valid JSON object");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::object configObj = req["config"].get<json::object>();
+
+        if (!configObj["active"].is<bool>()) {
+            errorPayload(reply, "TG configuration \"active\" was not a valid boolean");
+            return TalkgroupRuleGroupVoice();
+        }
+
+        if (!configObj["affiliated"].is<bool>()) {
+            errorPayload(reply, "TG configuration \"affiliated\" was not a valid boolean");
+            return TalkgroupRuleGroupVoice();
+        }
+
+        if (!configObj["parrot"].is<bool>()) {
+            errorPayload(reply, "TG configuration \"parrot\" slot was not a valid boolean");
+            return TalkgroupRuleGroupVoice();
+        }
+
+        TalkgroupRuleConfig config = groupVoice.config();
+        config.active(configObj["active"].get<bool>());
+        config.affiliated(configObj["affiliated"].get<bool>());
+        config.parrot(configObj["parrot"].get<bool>());
+
+        if (!req["inclusion"].is<json::array>()) {
+            errorPayload(reply, "TG \"inclusion\" was not a valid JSON array");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::array inclusions = req["inclusion"].get<json::array>();
+
+        std::vector<uint32_t> inclusion = groupVoice.config().inclusion();
+        if (inclusions.size() > 0) {
+            for (auto inclEntry : inclusions) {
+                if (!inclEntry.is<uint32_t>()) {
+                    errorPayload(reply, "TG inclusion value was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                inclusion.push_back(inclEntry.get<uint32_t>());
+            }
+            config.inclusion(inclusion);
+        }
+
+        if (!req["exclusion"].is<json::array>()) {
+            errorPayload(reply, "TG \"exclusion\" was not a valid JSON array");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::array exclusions = req["exclusion"].get<json::array>();
+
+        std::vector<uint32_t> exclusion = groupVoice.config().exclusion();
+        if (exclusions.size() > 0) {
+            for (auto exclEntry : exclusions) {
+                if (!exclEntry.is<uint32_t>()) {
+                    errorPayload(reply, "TG exclusion value was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                exclusion.push_back(exclEntry.get<uint32_t>());
+            }
+            config.exclusion(exclusion);
+        }
+
+        if (!req["rewrites"].is<json::array>()) {
+            errorPayload(reply, "TG \"rewrites\" was not a valid JSON array");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::array rewrites = req["rewrites"].get<json::array>();
+
+        std::vector<lookups::TalkgroupRuleRewrite> rewrite = groupVoice.config().rewrite();
+        if (rewrites.size() > 0) {
+            for (auto rewrEntry : rewrites) {
+                if (!rewrEntry.is<json::object>()) {
+                    errorPayload(reply, "TG rewrite value was not a valid JSON object");
+                    return TalkgroupRuleGroupVoice();
+                }
+                json::object rewriteObj = rewrEntry.get<json::object>();
+
+                TalkgroupRuleRewrite rewriteRule = TalkgroupRuleRewrite();
+
+                if (!rewriteObj["peerid"].is<uint32_t>()) {
+                    errorPayload(reply, "TG rewrite rule \"peerid\" was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                if (!rewriteObj["tgid"].is<uint32_t>()) {
+                    errorPayload(reply, "TG rewrite rule \"tgid\" was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                if (!rewriteObj["slot"].is<uint8_t>()) {
+                    errorPayload(reply, "TG rewrite rule \"slot\" was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                rewriteRule.peerId(rewriteObj["peerid"].get<uint32_t>());
+                rewriteRule.tgId(rewriteObj["tgid"].get<uint32_t>());
+                rewriteRule.tgSlot(rewriteObj["slot"].get<uint8_t>());
+
+                rewrite.push_back(rewriteRule);
+            }
+            config.rewrite(rewrite);
+        }
+
+        groupVoice.config(config);
+    }
+
+    return groupVoice;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,8 +471,18 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(GET_VERSION).get(REST_API_BIND(RESTAPI::restAPI_GetVersion, this));
     m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
-    m_dispatcher.match(FNE_GET_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
-    m_dispatcher.match(FNE_GET_TGID_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetTGIDList, this));
+
+    m_dispatcher.match(FNE_GET_PEER_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetPeerQuery, this));
+
+    m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
+    m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
+    m_dispatcher.match(FNE_PUT_RID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRIDDelete, this));
+    m_dispatcher.match(FNE_GET_RID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRIDCommit, this));
+
+    m_dispatcher.match(FNE_GET_TGID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetTGQuery, this));
+    m_dispatcher.match(FNE_PUT_TGID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutTGAdd, this));
+    m_dispatcher.match(FNE_PUT_TGID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutTGDelete, this));
+    m_dispatcher.match(FNE_GET_TGID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetTGCommit, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
@@ -431,7 +674,7 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -484,7 +727,147 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
-void RESTAPI::restAPI_GetTGIDList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array rids = json::array();
+    if (m_ridLookup != nullptr) {
+        if (m_ridLookup->table().size() > 0) {
+            for (auto entry : m_ridLookup->table()) {
+                json::object ridObj = json::object();
+
+                uint32_t rid = entry.first;
+                ridObj["id"].set<uint32_t>(rid);
+                bool enabled = entry.second.radioEnabled();
+                ridObj["enabled"].set<bool>(enabled);
+
+                rids.push_back(json::value(ridObj));
+            }
+        }
+    }
+
+    response["rids"].set<json::array>(rids);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    if (!req["enabled"].is<bool>()) {
+        errorPayload(reply, "enabled was not a valid boolean");
+        return;
+    }
+
+    bool enabled = req["enabled"].get<bool>();
+
+    RadioId radioId = m_ridLookup->find(rid);
+    if (radioId.radioDefault()) {
+        m_ridLookup->addEntry(rid, enabled);
+    }
+    else {
+        m_ridLookup->toggleEntry(rid, enabled);
+    }
+
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    RadioId radioId = m_ridLookup->find(rid);
+    if (radioId.radioDefault()) {
+        errorPayload(reply, "failed to find specified RID to delete");
+        return;
+    }
+
+    m_ridLookup->eraseEntry(rid);
+
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    m_ridLookup->commit();
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
         return;
@@ -497,74 +880,120 @@ void RESTAPI::restAPI_GetTGIDList(const HTTPPayload& request, HTTPPayload& reply
     if (m_tidLookup != nullptr) {
         if (m_tidLookup->groupVoice().size() > 0) {
             for (auto entry : m_tidLookup->groupVoice()) {
-                json::object tg = json::object();
-
-                std::string tgName = entry.name();
-                tg["name"].set<std::string>(tgName);
-                bool invalid = entry.isInvalid();
-                tg["invalid"].set<bool>(invalid);
-
-                {
-                    json::object source = json::object();
-                    uint32_t tgId = entry.source().tgId();
-                    source["tgid"].set<uint32_t>(tgId);
-                    uint8_t tgSlot = entry.source().tgSlot();
-                    source["slot"].set<uint8_t>(tgSlot);
-                    tg["source"].set<json::object>(source);
-                }
-
-                {
-                    json::object config = json::object();
-                    bool active = entry.config().active();
-                    config["active"].set<bool>(active);
-                    bool parrot = entry.config().parrot();
-                    config["parrot"].set<bool>(parrot);
-
-                    json::array inclusions = json::array();
-                    std::vector<uint32_t> inclusion = entry.config().inclusion();
-                    if (inclusion.size() > 0) {
-                        for (auto inclEntry : inclusion) {
-                            uint32_t peerId = inclEntry;
-                            inclusions.push_back(json::value((double)peerId));
-                        }
-                    }
-                    config["inclusion"].set<json::array>(inclusions);
-
-                    json::array exclusions = json::array();
-                    std::vector<uint32_t> exclusion = entry.config().exclusion();
-                    if (exclusion.size() > 0) {
-                        for (auto exclEntry : exclusion) {
-                            uint32_t peerId = exclEntry;
-                            exclusions.push_back(json::value((double)peerId));
-                        }
-                    }
-                    config["exclusion"].set<json::array>(exclusions);
-
-                    json::array rewrites = json::array();
-                    std::vector<lookups::TalkgroupRuleRewrite> rewrite = entry.config().rewrite();
-                    if (rewrite.size() > 0) {
-                        for (auto rewrEntry : rewrite) {
-                            json::object rewrite = json::object();
-                            uint32_t peerId = rewrEntry.peerId();
-                            rewrite["peerId"].set<uint32_t>(peerId);
-                            uint32_t tgId = rewrEntry.tgId();
-                            rewrite["tgid"].set<uint32_t>(tgId);
-                            uint8_t tgSlot = rewrEntry.tgSlot();
-                            rewrite["slot"].set<uint8_t>(tgSlot);
-
-                            exclusions.push_back(json::value(rewrite));
-                        }
-                    }
-                    config["rewrite"].set<json::array>(rewrites);
-                    tg["config"].set<json::object>(config);
-                }
-
+                json::object tg = tgToJson(entry);
                 tgs.push_back(json::value(tg));
             }
         }
     }
 
     response["tgs"].set<json::array>(tgs);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    TalkgroupRuleGroupVoice groupVoice = jsonToTG(req, reply);
+    if (groupVoice.isInvalid()) {
+        return;
+    }
+
+    std::string groupName = groupVoice.name();
+    uint32_t tgId = groupVoice.source().tgId();
+    uint8_t tgSlot = groupVoice.source().tgSlot();
+    bool active = groupVoice.config().active();
+    bool parrot = groupVoice.config().parrot();
+
+    uint32_t incCount = groupVoice.config().inclusion().size();
+    uint32_t excCount = groupVoice.config().exclusion().size();
+    uint32_t rewrCount = groupVoice.config().rewrite().size();
+
+    if (incCount > 0 && excCount > 0) {
+        ::LogWarning(LOG_REST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
+    }
+
+    ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
+
+    m_tidLookup->addEntry(groupVoice);
+
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    // validate state is a string within the JSON blob
+    if (!req["tgid"].is<uint32_t>()) {
+        errorPayload(reply, "tgid was not a valid integer");
+        return;
+    }
+
+    uint32_t tgid = req["tgid"].get<uint32_t>();
+
+    TalkgroupRuleGroupVoice groupVoice = m_tidLookup->find(tgid);
+    if (groupVoice.isInvalid()) {
+        errorPayload(reply, "failed to find specified TGID to delete");
+        return;
+    }
+
+    m_tidLookup->eraseEntry(groupVoice.source().tgId(), groupVoice.source().tgSlot());
+
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    m_tidLookup->commit();
+
     reply.payload(response);
 }
 
@@ -588,7 +1017,6 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
 
     reply.payload(response);
 }
-
 
 /// <summary>
 ///

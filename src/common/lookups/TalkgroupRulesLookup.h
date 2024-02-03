@@ -275,12 +275,15 @@ namespace lookups
         void addEntry(uint32_t id, uint8_t slot, bool enabled);
         /// <summary>Adds a new entry to the lookup table.</summary>
         void addEntry(TalkgroupRuleGroupVoice groupVoice);
-        /// <summary>Adds a new entry to the lookup table.</summary>
+        /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
         void eraseEntry(uint32_t id, uint8_t slot);
         /// <summary>Finds a table entry in this lookup table.</summary>
         virtual TalkgroupRuleGroupVoice find(uint32_t id, uint8_t slot = 0U);
         /// <summary>Finds a table entry in this lookup table by rewrite.</summary>
         virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
+
+        /// <summary>Saves loaded talkgroup rules.</summary>
+        void commit();
 
         /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
         bool getACL();

@@ -20,8 +20,17 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-#define FNE_GET_PEERLIST                "/peerlist"
-#define FNE_GET_TGID_LIST               "/tgidlist"
+#define FNE_GET_PEER_QUERY              "/peer/query"
+
+#define FNE_GET_RID_QUERY               "/rid/query"
+#define FNE_PUT_RID_ADD                 "/rid/add"
+#define FNE_PUT_RID_DELETE              "/rid/delete"
+#define FNE_GET_RID_COMMIT              "/rid/commit"
+
+#define FNE_GET_TGID_QUERY              "/tg/query"
+#define FNE_PUT_TGID_ADD                "/tg/add"
+#define FNE_PUT_TGID_DELETE             "/tg/delete"
+#define FNE_GET_TGID_COMMIT             "/tg/commit"
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 

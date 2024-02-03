@@ -99,6 +99,24 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled)
 }
 
 /// <summary>
+/// Erases an existing entry from the lookup table by the specified unique ID.
+/// </summary>
+/// <param name="id">Unique ID to erase.</param>
+void RadioIdLookup::eraseEntry(uint32_t id)
+{
+    m_mutex.lock();
+    {
+        try {
+            m_table.at(id);
+            m_table.erase(id);
+        } catch (...) {
+            /* stub */
+        }
+    }
+    m_mutex.unlock();
+}
+
+/// <summary>
 /// Finds a table entry in this lookup table.
 /// </summary>
 /// <param name="id">Unique identifier for table entry.</param>
@@ -122,6 +140,14 @@ RadioId RadioIdLookup::find(uint32_t id)
     m_mutex.unlock();
 
     return entry;
+}
+
+/// <summary>
+/// Saves loaded talkgroup rules.
+/// </summary>
+void RadioIdLookup::commit()
+{
+    // bryanb: TODO TODO TODO
 }
 
 /// <summary>

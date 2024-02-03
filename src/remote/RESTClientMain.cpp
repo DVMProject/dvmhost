@@ -728,10 +728,10 @@ int main(int argc, char** argv)
         ** Fixed Network Equipment
         */
         else if (rcom == RCD_FNE_GET_PEERLIST) {
-            retCode = client->send(HTTP_GET, FNE_GET_PEERLIST, json::object(), response);
+            retCode = client->send(HTTP_GET, FNE_GET_PEER_QUERY, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_TGIDLIST) {
-            retCode = client->send(HTTP_GET, FNE_GET_TGID_LIST, json::object(), response);
+            retCode = client->send(HTTP_GET, FNE_GET_TGID_QUERY, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
             retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);
