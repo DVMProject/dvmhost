@@ -140,7 +140,7 @@ namespace network
                     {
                         asio::error_code ec = e.code();
                         if (ec) {
-                            ::LogError(LOG_REST, "%s, code = %u", ec.message().c_str(), ec.value());
+                            ::LogError(LOG_REST, "ClientConnection::write(), %s, code = %u", ec.message().c_str(), ec.value());
 
                             try
                             {
