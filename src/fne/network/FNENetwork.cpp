@@ -309,26 +309,13 @@ void FNENetwork::clock(uint32_t ms)
 
         case NET_FUNC_RPTL:                                                             // Repeater Login
             {
+                FNEPeerConnection* connection = nullptr;
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
-                    FNEPeerConnection* connection = new FNEPeerConnection(peerId, address, addrLen);
+                    connection = new FNEPeerConnection(peerId, address, addrLen);
                     connection->lastPing(now);
                     connection->currStreamId(streamId);
 
-                    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-                    connection->salt(dist(m_random));
-
-                    LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection->address().c_str(), connection->port());
-
-                    connection->connectionState(NET_STAT_WAITING_AUTHORISATION);
-                    m_peers[peerId] = connection;
-
-                    // transmit salt to peer
-                    uint8_t salt[4U];
-                    ::memset(salt, 0x00U, 4U);
-                    __SET_UINT32(connection->salt(), salt, 0U);
-
-                    writePeerACK(peerId, salt, 4U);
-                    LogInfoEx(LOG_NET, "Challenge response send to PEER %u for login", peerId);
+                    setupRepeaterLogin(peerId, connection);
                 }
                 else {
                     writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
@@ -336,17 +323,18 @@ void FNENetwork::clock(uint32_t ms)
                     // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
                     // the login sequence
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-                        FNEPeerConnection* connection = m_peers[peerId];
-                        LogMessage(LOG_NET, "PEER %u was RPTL NAKed, cleaning up peer connection, connectionState = %u", peerId, connection->connectionState());
+                        connection = m_peers[peerId];
                         if (connection != nullptr) {
-                            if (erasePeer(peerId)) {
-                                delete connection;
+                            LogMessage(LOG_NET, "PEER %u was RPTL NAKed, resetting up peer connection, connectionState = %u", peerId, connection->connectionState());
+                            if (connection->connectionState() == NET_STAT_RUNNING) {
+                                connection->lastPing(now);
+                                connection->currStreamId(streamId);
+
+                                setupRepeaterLogin(peerId, connection);
                             }
                         } else {
                             erasePeer(peerId);
-                            if (m_verbose) {
-                                LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection?, connectionState = %u", peerId, connection->connectionState());
-                            }
+                            LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection", peerId);
                         }
                     }
                 }
@@ -827,6 +815,30 @@ bool FNENetwork::erasePeer(uint32_t peerId)
     }
 
     return false;
+}
+
+/// <summary>
+/// Helper to complete setting up a repeater login request.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="connection"></param>
+void FNENetwork::setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection)
+{
+    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+    connection->salt(dist(m_random));
+
+    LogInfoEx(LOG_NET, "Repeater logging in with PEER %u, %s:%u", peerId, connection->address().c_str(), connection->port());
+
+    connection->connectionState(NET_STAT_WAITING_AUTHORISATION);
+    m_peers[peerId] = connection;
+
+    // transmit salt to peer
+    uint8_t salt[4U];
+    ::memset(salt, 0x00U, 4U);
+    __SET_UINT32(connection->salt(), salt, 0U);
+
+    writePeerACK(peerId, salt, 4U);
+    LogInfoEx(LOG_NET, "Challenge response send to PEER %u for login", peerId);
 }
 
 /// <summary>

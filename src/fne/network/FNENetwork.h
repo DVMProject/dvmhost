@@ -222,6 +222,9 @@ namespace network
         /// <summary>Helper to erase the peer from the peers list.</summary>
         bool erasePeer(uint32_t peerId);
 
+        /// <summary>Helper to complete setting up a repeater login request.</summary>
+        void setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection);
+
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
         void writeWhitelistRIDs(uint32_t peerId, bool queueOnly = false);
         /// <summary>Helper to send the list of whitelisted RIDs to connected peers.</summary>

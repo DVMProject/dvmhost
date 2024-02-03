@@ -1041,26 +1041,28 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
                     lookups::AffiliationLookup* affLookup = m_network->m_peerAffiliations[peerId];
-                    std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
+                    if (affLookup != nullptr) {
+                        std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
 
-                    json::object peerObj = json::object();
-                    peerObj["peerId"].set<uint32_t>(peerId);
+                        json::object peerObj = json::object();
+                        peerObj["peerId"].set<uint32_t>(peerId);
 
-                    json::array peerAffs = json::array();
-                    if (affLookup->grpAffSize() > 0U) {
-                        for (auto entry : affTable) {
-                            uint32_t srcId = entry.first;
-                            uint32_t dstId = entry.second;
+                        json::array peerAffs = json::array();
+                        if (affLookup->grpAffSize() > 0U) {
+                            for (auto entry : affTable) {
+                                uint32_t srcId = entry.first;
+                                uint32_t dstId = entry.second;
 
-                            json::object affObj = json::object();
-                            affObj["srcId"].set<uint32_t>(srcId);
-                            affObj["dstId"].set<uint32_t>(dstId);
-                            peerAffs.push_back(json::value(affObj));
+                                json::object affObj = json::object();
+                                affObj["srcId"].set<uint32_t>(srcId);
+                                affObj["dstId"].set<uint32_t>(dstId);
+                                peerAffs.push_back(json::value(affObj));
+                            }
                         }
-                    }
 
-                    peerObj["affiliations"].set<json::array>(peerAffs);
-                    affs.push_back(json::value(peerObj));
+                        peerObj["affiliations"].set<json::array>(peerAffs);
+                        affs.push_back(json::value(peerObj));
+                    }
                 }
             }
         }
