@@ -448,6 +448,7 @@ bool HostFNE::createMasterNetwork()
     // initialize networking
     m_network = new FNENetwork(this, address, port, id, password, debug, verbose, reportPeerPing, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, 
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
+    m_network->setOptions(masterConf, true);
 
     m_network->setLookups(m_ridLookup, m_tidLookup);
 

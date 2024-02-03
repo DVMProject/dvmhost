@@ -77,6 +77,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_forceListUpdate(false),
     m_callInProgress(false),
+    m_disallowP25AdjStsBcast(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -98,6 +99,20 @@ FNENetwork::~FNENetwork()
     delete m_tagDMR;
     delete m_tagP25;
     delete m_tagNXDN;
+}
+
+/// <summary>
+/// Helper to set configuration options.
+/// </summary>
+/// <param name="conf">Instance of the yaml::Node class.</param>
+/// <param name="printOptions"></param>
+void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
+{
+    m_disallowP25AdjStsBcast = conf["disallowP25AdjStsBcast"].as<bool>(false);
+
+    if (printOptions) {
+        LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowP25AdjStsBcast ? "yes" : "no");
+    }
 }
 
 /// <summary>
@@ -322,17 +337,15 @@ void FNENetwork::clock(uint32_t ms)
                     // the login sequence
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
                         FNEPeerConnection* connection = m_peers[peerId];
-                        LogMessage(LOG_NET, "PEER %u was RPTL NAKed cleaning up peer connection", peerId);
+                        LogMessage(LOG_NET, "PEER %u was RPTL NAKed, cleaning up peer connection, connectionState = %u", peerId, connection->connectionState());
                         if (connection != nullptr) {
-                            if (connection->connectionState() != NET_STAT_RUNNING) {
-                                if (erasePeer(peerId)) {
-                                    delete connection;
-                                }
+                            if (erasePeer(peerId)) {
+                                delete connection;
                             }
                         } else {
                             erasePeer(peerId);
                             if (m_verbose) {
-                                LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection?", peerId);
+                                LogWarning(LOG_NET, "PEER %u was RPTL NAKed while having no connection?, connectionState = %u", peerId, connection->connectionState());
                             }
                         }
                     }

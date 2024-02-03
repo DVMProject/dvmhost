@@ -120,6 +120,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         // is this the end of the call stream?
         if (dataSync && (dataType == DT_TERMINATOR_WITH_LC)) {
+            if (srcId == 0U && dstId == 0U) {
+                LogWarning(LOG_NET, "DMR, invalid TERMINATOR, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                return false;
+            }
+
             RxStatus status;
             auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
             if (it == m_status.end()) {
@@ -153,6 +158,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         // is this a new call stream?
         if (dataSync && (dataType == DT_VOICE_LC_HEADER)) {
+            if (srcId == 0U && dstId == 0U) {
+                LogWarning(LOG_NET, "DMR, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                return false;
+            }
+
             auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return (x.second.dstId == dstId && x.second.slotNo == slotNo); });
             if (it != m_status.end()) {
                 RxStatus status = it->second;
@@ -487,6 +497,9 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
     // is this a group call?
     if (data.getDataType() == FLCO_GROUP) {
         lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(data.getDstId());
+        if (tg.isInvalid()) {
+            return false;
+        }
 
         // check the DMR slot number
         if (tg.source().tgSlot() != data.getSlotNo()) {

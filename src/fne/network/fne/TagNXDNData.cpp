@@ -99,6 +99,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
              messageType == RTCH_MESSAGE_TYPE_DCALL_DATA)) {
             // is this the end of the call stream?
             if (messageType == RTCH_MESSAGE_TYPE_TX_REL || messageType == RTCH_MESSAGE_TYPE_TX_REL_EX) {
+                if (srcId == 0U && dstId == 0U) {
+                    LogWarning(LOG_NET, "NXDN, invalid TX_REL, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    return false;
+                }
+
                 RxStatus status = m_status[dstId];
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
@@ -123,6 +128,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
             // is this a new call stream?
             if ((messageType != RTCH_MESSAGE_TYPE_TX_REL && messageType != RTCH_MESSAGE_TYPE_TX_REL_EX)) {
+                if (srcId == 0U && dstId == 0U) {
+                    LogWarning(LOG_NET, "NXDN, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    return false;
+                }
+
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
@@ -410,6 +420,12 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
     }
 
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(lc.getDstId());
+
+    // check TGID validity
+    if (tg.isInvalid()) {
+        return false;
+    }
+
     if (!tg.config().active()) {
         return false;
     }

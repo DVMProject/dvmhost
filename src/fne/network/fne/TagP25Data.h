@@ -75,10 +75,13 @@ namespace network
             /// <summary>Helper to route rewrite destination ID.</summary>
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
+            /// <summary>Helper to process TSDUs being passed to an external peer.</summary>
+            bool processTSDUToExternal(uint8_t* buffer, uint32_t peerId, uint8_t duid);
+
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
             /// <summary>Helper to validate the P25 call stream.</summary>
-            bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
+            bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
         };
     } // namespace fne
 } // namespace network

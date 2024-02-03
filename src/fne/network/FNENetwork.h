@@ -146,6 +146,9 @@ namespace network
         /// <summary>Finalizes a instance of the FNENetwork class.</summary>
         ~FNENetwork() override;
 
+        /// <summary>Helper to set configuration options.</summary>
+        void setOptions(yaml::Node& conf, bool printOptions);
+
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
 
@@ -208,6 +211,8 @@ namespace network
 
         bool m_forceListUpdate;
         bool m_callInProgress;
+
+        bool m_disallowP25AdjStsBcast;
 
         bool m_reportPeerPing;
         bool m_verbose;

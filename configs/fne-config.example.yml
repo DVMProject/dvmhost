@@ -68,6 +68,9 @@ master:
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
     parrotGrantDemand: true
 
+    # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
+    disallowP25AdjStsBcast: false
+
     #
     # Talkgroup Rules Configuration
     #
@@ -78,7 +81,7 @@ master:
         time: 30
 
 #
-# Peers
+# External Peers
 #
 peers:
     - name: EXAMPLEPEER

@@ -130,8 +130,20 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
+    uint32_t frameLength = buffer[23U];
+
+    // process a TSBK out into a class literal if possible
+    std::unique_ptr<lc::TSBK> tsbk;
+    if (duid == P25_DUID_TSDU) {
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+    }
+
     // is the stream valid?
-    if (validate(peerId, control, duid, streamId)) {
+    if (validate(peerId, control, duid, tsbk.get(), streamId)) {
         // is this peer ignored?
         if (!isPeerPermitted(peerId, control, duid, streamId)) {
             return false;
@@ -141,6 +153,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (duid != P25_DUID_TSDU && duid != P25_DUID_PDU) {
             // is this the end of the call stream?
             if ((duid == P25_DUID_TDU) || (duid == P25_DUID_TDULC)) {
+                if (srcId == 0U && dstId == 0U) {
+                    LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    return false;
+                }
+
                 RxStatus status = m_status[dstId];
                 uint64_t duration = hrc::diff(pktTime, status.callStartTime);
 
@@ -175,6 +192,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
             // is this a new call stream?
             if ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC)) {
+                if (srcId == 0U && dstId == 0U) {
+                    LogWarning(LOG_NET, "P25, invalid call, peer = %u, srcId = %u, dstId = %u, streamId = %u", peerId, srcId, dstId, streamId);
+                    return false;
+                }
+
                 auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; });
                 if (it != m_status.end()) {
                     RxStatus status = m_status[dstId];
@@ -270,10 +292,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, dstPeerId, duid, dstId);
 
-                    peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
-                        LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
-                            peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                    // process TSDUs going to external peers
+                    if (processTSDUToExternal(outboundPeerBuffer, dstPeerId, duid)) {
+                        peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
+                        if (m_network->m_debug) {
+                            LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u", 
+                                peerId, dstPeerId, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId);
+                        }
                     }
 
                     if (!m_network->m_callInProgress)
@@ -331,7 +356,7 @@ void TagP25Data::playbackParrot()
             m_parrotFirstFrame = false;
         }
 
-        // repeat traffic to the connected peersmutations
+        // repeat traffic to the connected peers
         for (auto peer : m_network->m_peers) {
             m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
             if (m_network->m_debug) {
@@ -451,6 +476,50 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 }
 
 /// <summary>
+/// Helper to process TSDUs being passed to an external peer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="duid"></param>
+bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+{
+    // are we receiving a TSDU?
+    if (duid == P25_DUID_TSDU) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        if (tsbk != nullptr) {
+            // handle standard P25 reference opcodes
+            switch (tsbk->getLCO()) {
+            case TSBK_OSP_ADJ_STS_BCAST:
+                {
+                    lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
+
+                    if (m_network->m_verbose) {
+                        LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
+                            osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+                    }
+
+                    if (m_network->m_disallowP25AdjStsBcast) {
+                        LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", peerId);
+                        return false;
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return true;
+}
+
+/// <summary>
 /// Helper to determine if the peer is permitted for traffic.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
@@ -513,9 +582,10 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
 /// <param name="peerId">Peer ID</param>
 /// <param name="control"></param>
 /// <param name="duid"></param>
+/// <param name="tsbk"></param>
 /// <param name="streamId">Stream ID</param>
 /// <returns></returns>
-bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId)
+bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId)
 {
     // is the source ID a blacklisted ID?
     lookups::RadioId rid = m_network->m_ridLookup->find(control.getSrcId());
@@ -525,8 +595,8 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, uint32
         }
     }
 
-    // always validate a TSDU or PDU if the source is valid
-    if (duid == P25_DUID_TSDU || duid == P25_DUID_PDU)
+    // always validate a PDU if the source is valid
+    if (duid == P25_DUID_PDU)
         return true;
 
     // always validate a terminator if the source is valid
@@ -546,7 +616,37 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, uint32
         return true;
     }
 
+    // always validate a TSDU or PDU if the source is valid
+    if (duid == P25_DUID_TSDU) {
+        if (tsbk != nullptr) {
+            // handle standard P25 reference opcodes
+            switch (tsbk->getLCO()) {
+                case TSBK_IOSP_GRP_VCH:
+                {
+                    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(tsbk->getDstId());
+
+                    // check TGID validity
+                    if (tg.isInvalid()) {
+                        return false;
+                    }
+
+                    if (!tg.config().active()) {
+                        return false;
+                    }
+                }
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    // check TGID validity
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+    if (tg.isInvalid()) {
+        return false;
+    }
+
     if (!tg.config().active()) {
         return false;
     }
