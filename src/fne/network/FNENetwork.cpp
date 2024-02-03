@@ -77,7 +77,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_forceListUpdate(false),
     m_callInProgress(false),
-    m_disallowP25AdjStsBcast(false),
+    m_disallowP25AdjStsBcast(true),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -108,7 +108,7 @@ FNENetwork::~FNENetwork()
 /// <param name="printOptions"></param>
 void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
-    m_disallowP25AdjStsBcast = conf["disallowP25AdjStsBcast"].as<bool>(false);
+    m_disallowP25AdjStsBcast = conf["disallowP25AdjStsBcast"].as<bool>(true);
 
     if (printOptions) {
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowP25AdjStsBcast ? "yes" : "no");
