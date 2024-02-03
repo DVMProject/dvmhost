@@ -69,7 +69,7 @@ master:
     parrotGrantDemand: true
 
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
-    disallowP25AdjStsBcast: false
+    disallowP25AdjStsBcast: true
 
     #
     # Talkgroup Rules Configuration
