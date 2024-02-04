@@ -797,13 +797,8 @@ void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, 
         alias = req["alias"].get<std::string>();
     }
 
-    RadioId radioId = m_ridLookup->find(rid);
-    if (radioId.radioDefault()) {
-        m_ridLookup->addEntry(rid, enabled, alias);
-    }
-    else {
-        m_ridLookup->toggleEntry(rid, enabled);
-    }
+    // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
+    m_ridLookup->addEntry(rid, enabled, alias);
 
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
