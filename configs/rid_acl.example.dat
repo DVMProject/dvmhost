@@ -1,5 +1,5 @@
 #
 # This file sets the valid Radio IDs allowed on a repeater.
 #
-# RID,Enabled (1 = Enabled / 0 = Disabled),<newline>
-#1234,1,
+# RID,Enabled (1 = Enabled / 0 = Disabled),Optional Alias,<newline>
+#1234,1,RID Alias,
