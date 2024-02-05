@@ -8,6 +8,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
 #include "lookups/IdenTableLookup.h"
