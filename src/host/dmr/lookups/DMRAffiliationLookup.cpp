@@ -102,7 +102,7 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, slot = %u, dstId = %u, group = %u",
-            m_name, chNo, slot, dstId, grp);
+            m_name.c_str(), chNo, slot, dstId, grp);
     }
 
     return true;
@@ -121,7 +121,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
     // are we trying to release all grants?
     if (dstId == 0U && releaseAll) {
-        LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name);
+        LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name.c_str());
 
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
         for (auto entry : m_grantChTable) {
@@ -144,7 +144,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, slot = %u, dstId = %u",
-                m_name, chNo, slot, dstId);
+                m_name.c_str(), chNo, slot, dstId);
         }
 
         if (m_releaseGrant != nullptr) {
