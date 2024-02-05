@@ -10,6 +10,7 @@
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
 *   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
 #include "lookups/RadioIdLookup.h"
