@@ -166,3 +166,13 @@ bool IdenTableLookup::load()
 
     return true;
 }
+
+/// <summary>
+/// Saves the table to the passed lookup table file.
+/// </summary>
+/// <returns>True, if lookup table was saved, otherwise false.</returns>
+bool IdenTableLookup::save()
+{
+    /// TODO TODO TODO actually save stuff
+    return false;
+}

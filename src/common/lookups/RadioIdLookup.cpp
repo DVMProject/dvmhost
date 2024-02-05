@@ -132,6 +132,7 @@ RadioId RadioIdLookup::find(uint32_t id)
 void RadioIdLookup::commit()
 {
     // bryanb: TODO TODO TODO
+    save();
 }
 
 /// <summary>
@@ -219,6 +220,64 @@ bool RadioIdLookup::load()
         return false;
 
     LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
+
+    return true;
+}
+
+/// <summary>
+/// Saves the table to the passed lookup table file.
+/// </summary>
+/// <returns>True, if lookup table was saved, otherwise false.</returns>
+bool RadioIdLookup::save()
+{
+    LogDebug(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
+
+    if (m_filename.empty()) {
+        return false;
+    }
+
+    std::ofstream file (m_filename, std::ofstream::out);
+    if (file.fail()) {
+        LogError(LOG_HOST, "Cannot open the radio ID lookup file - %s", m_filename.c_str());
+        return false;
+    }
+
+    // Counter for lines written
+    unsigned int lines = 0;
+
+    m_mutex.lock();
+    {
+        // String for writing
+        std::string line;
+        // iterate over each entry in the RID lookup and write it to the open file
+        for (auto& entry: m_table) {
+            // Get the parameters
+            uint32_t rid = entry.first;
+            bool enabled = entry.second.radioEnabled();
+            std::string alias = entry.second.radioAlias();
+            // Format into a string
+            line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
+            // Add the alias if we have one
+            if (alias.length() > 0) {
+                line += alias;
+                line += ",";
+            }
+            // Add the newline
+            line += "\n";
+            // Write to file
+            file << line;
+            // Increment
+            lines++;
+        }
+    }
+    m_mutex.unlock();
+
+    file.close();
+
+    if (lines != m_table.size())
+        return false;
+
+    LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
 
     return true;
 }

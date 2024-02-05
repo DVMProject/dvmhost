@@ -137,6 +137,10 @@ namespace lookups
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
         bool load() override;
+
+        /// <summary>Saves the table to the passed lookup table file.</summary>
+        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        bool save() override;
     };
 } // namespace lookups
 

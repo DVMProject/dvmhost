@@ -143,6 +143,8 @@ namespace lookups
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
         virtual bool load() = 0;
+
+        virtual bool save() = 0;
     };
 } // namespace lookups
 
