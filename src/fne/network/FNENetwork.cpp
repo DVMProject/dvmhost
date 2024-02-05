@@ -33,6 +33,7 @@ using namespace network::fne;
 //  Constants
 // ---------------------------------------------------------------------------
 
+const uint32_t MAX_HARD_CONN_CAP = 250U;
 const uint8_t MAX_PEER_LIST_BEFORE_FLUSH = 10U;
 const uint32_t MAX_RID_LIST_CHUNK = 50U;
 
@@ -83,6 +84,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_peerAffiliations(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTime(updateLookupTime * 60U),
+    m_softConnLimit(0U),
     m_callInProgress(false),
     m_disallowP25AdjStsBcast(true),
     m_reportPeerPing(reportPeerPing),
@@ -116,8 +118,14 @@ FNENetwork::~FNENetwork()
 void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
     m_disallowP25AdjStsBcast = conf["disallowP25AdjStsBcast"].as<bool>(true);
+    m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
+
+    if (m_softConnLimit > MAX_HARD_CONN_CAP) {
+        m_softConnLimit = MAX_HARD_CONN_CAP;
+    }
 
     if (printOptions) {
+        LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowP25AdjStsBcast ? "yes" : "no");
     }
 }
@@ -220,6 +228,9 @@ void FNENetwork::processNetwork()
                             }
                         }
                     }
+                    else {
+                        writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                    }
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
                     if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
@@ -236,6 +247,9 @@ void FNENetwork::processNetwork()
                                 }
                             }
                         }
+                    }
+                    else {
+                        writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
                     }
                 }
                 else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
@@ -254,6 +268,9 @@ void FNENetwork::processNetwork()
                             }
                         }
                     }
+                    else {
+                        writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                    }
                 }
                 else {
                     Utils::dump("Unknown protocol opcode from peer", buffer.get(), length);
@@ -264,6 +281,18 @@ void FNENetwork::processNetwork()
         case NET_FUNC_RPTL:                                                             // Repeater Login
             {
                 if (peerId > 0 && (m_peers.find(peerId) == m_peers.end())) {
+                    if (m_peers.size() >= MAX_HARD_CONN_CAP) {
+                        LogError(LOG_NET, "PEER %u attempted to connect with no more connections available, currConnections = %u", peerId, m_peers.size());
+                        writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_FNE_MAX_CONN, address, addrLen);
+                        break;
+                    }
+
+                    if (m_softConnLimit > 0U && m_peers.size() >= m_softConnLimit) {
+                        LogError(LOG_NET, "PEER %u attempted to connect with no more connections available, maxConnections = %u, currConnections = %u", peerId, m_softConnLimit, m_peers.size());
+                        writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_FNE_MAX_CONN, address, addrLen);
+                        break;
+                    }
+
                     FNEPeerConnection* connection = new FNEPeerConnection(peerId, address, addrLen);
                     connection->lastPing(now);
                     connection->currStreamId(streamId);
@@ -291,7 +320,7 @@ void FNENetwork::processNetwork()
 
                                 setupRepeaterLogin(peerId, connection);
                             } else {
-                                writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
+                                writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, address, addrLen);
 
                                 LogWarning(LOG_NET, "PEER %u RPTL NAK, bad connection state, connectionState = %u", peerId, connection->connectionState());
 
@@ -299,7 +328,7 @@ void FNENetwork::processNetwork()
                                 erasePeer(peerId);
                             }
                         } else {
-                            writePeerNAK(peerId, TAG_REPEATER_LOGIN, address, addrLen);
+                            writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, address, addrLen);
 
                             erasePeer(peerId);
                             LogWarning(LOG_NET, "PEER %u RPTL NAK, having no connection", peerId);
@@ -357,7 +386,7 @@ void FNENetwork::processNetwork()
                             }
                             else {
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
-                                writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                                writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 erasePeer(peerId);
                             }
 
@@ -365,13 +394,13 @@ void FNENetwork::processNetwork()
                         }
                         else {
                             LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
-                            writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                            writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE);
                             erasePeer(peerId);
                         }
                     }
                 }
                 else {
-                    writePeerNAK(peerId, TAG_REPEATER_AUTH, address, addrLen);
+                    writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, address, addrLen);
                     LogWarning(LOG_NET, "PEER %u RPTK NAK, having no connection", peerId);
                 }
             }
@@ -394,14 +423,14 @@ void FNENetwork::processNetwork()
                             std::string err = json::parse(v, payload);
                             if (!err.empty()) {
                                 LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
-                                writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                                writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA);
                                 erasePeer(peerId);
                             }
                             else  {
                                 // ensure parsed JSON is an object
                                 if (!v.is<json::object>()) {
                                     LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
-                                    writePeerNAK(peerId, TAG_REPEATER_AUTH);
+                                    writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA);
                                     erasePeer(peerId);
                                 }
                                 else {
@@ -434,13 +463,13 @@ void FNENetwork::processNetwork()
                         }
                         else {
                             LogWarning(LOG_NET, "PEER %u RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
-                            writePeerNAK(peerId, TAG_REPEATER_CONFIG);
+                            writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE);
                             erasePeer(peerId);
                         }
                     }
                 }
                 else {
-                    writePeerNAK(peerId, TAG_REPEATER_CONFIG, address, addrLen);
+                    writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE, address, addrLen);
                     LogWarning(LOG_NET, "PEER %u RPTC NAK, having no connection", peerId);
                 }
             }
@@ -517,7 +546,7 @@ void FNENetwork::processNetwork()
                             /* ignored */
                         }
                         else {
-                            writePeerNAK(peerId, TAG_REPEATER_GRANT);
+                            writePeerNAK(peerId, TAG_REPEATER_GRANT, NET_CONN_NAK_FNE_UNAUTHORIZED);
                         }
                     }
                 }
@@ -543,7 +572,7 @@ void FNENetwork::processNetwork()
                                     ::ActivityLog("%u %s", peerId, payload.c_str());
                                 }
                                 else {
-                                    writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG);
+                                    writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -569,7 +598,7 @@ void FNENetwork::processNetwork()
                                     g_disableTimeDisplay = currState;
                                 }
                                 else {
-                                    writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG);
+                                    writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                 }
                             }
                         }
@@ -598,7 +627,7 @@ void FNENetwork::processNetwork()
                                 aff->groupAff(srcId, dstId);
                             }
                             else {
-                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                                writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }
@@ -616,7 +645,7 @@ void FNENetwork::processNetwork()
                                 aff->unitReg(srcId);
                             }
                             else {
-                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                                writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }
@@ -634,7 +663,7 @@ void FNENetwork::processNetwork()
                                 aff->unitDereg(srcId);
                             }
                             else {
-                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                                writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }
@@ -663,7 +692,7 @@ void FNENetwork::processNetwork()
                                 LogMessage(LOG_NET, "PEER %u announced %u affiliations", peerId, len);
                             }
                             else {
-                                writePeerNAK(peerId, TAG_ANNOUNCE);
+                                writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                             }
                         }
                     }
@@ -1274,7 +1303,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="tag"></param>
-bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
+/// <param name="reason"></param>
+bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason)
 {
     assert(peerId > 0);
     assert(tag != nullptr);
@@ -1283,8 +1313,9 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
+    __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
-    LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
+    LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u", peerId, tag, (uint16_t)reason);
     return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
@@ -1293,9 +1324,10 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag)
 /// </summary>
 /// <param name="peerId"></param>
 /// <param name="tag"></param>
+/// <param name="reason"></param>
 /// <param name="addr"></param>
 /// <param name="addrLen"></param>
-bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage& addr, uint32_t addrLen)
+bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen)
 {
     assert(peerId > 0);
     assert(tag != nullptr);
@@ -1304,9 +1336,10 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
 
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
+    __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
-    LogWarning(LOG_NET, "%s from unauth PEER %u", tag, peerId);
-    m_frameQueue->enqueueMessage(buffer, 10U, createStreamId(), peerId, m_peerId,
+    LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u", peerId, tag, (uint16_t)reason);
+    m_frameQueue->enqueueMessage(buffer, 12U, createStreamId(), peerId, m_peerId,
         { NET_FUNC_NAK, NET_SUBFUNC_NOP }, 0U, addr, addrLen);
     return m_frameQueue->flushQueue();
 }

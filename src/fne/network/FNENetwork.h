@@ -235,6 +235,7 @@ namespace network
         Timer m_maintainenceTimer;
 
         uint32_t m_updateLookupTime;
+        uint32_t m_softConnLimit;
 
         bool m_callInProgress;
 
@@ -280,9 +281,9 @@ namespace network
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
 
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
-        bool writePeerNAK(uint32_t peerId, const char* tag);
+        bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
-        bool writePeerNAK(uint32_t peerId, const char* tag, sockaddr_storage& addr, uint32_t addrLen);
+        bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
 
         
     };

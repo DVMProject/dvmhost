@@ -131,6 +131,22 @@ namespace network
     };
 
     // ---------------------------------------------------------------------------
+    //  Network Peer NAK Reasons
+    // ---------------------------------------------------------------------------
+
+    enum NET_CONN_NAK_REASON {
+        NET_CONN_NAK_GENERAL_FAILURE,
+
+        NET_CONN_NAK_FNE_UNAUTHORIZED,
+        NET_CONN_NAK_BAD_CONN_STATE,
+        NET_CONN_NAK_INVALID_CONFIG_DATA,
+
+        NET_CONN_NAK_FNE_MAX_CONN,
+
+        NET_CONN_NAK_INVALID = 0xFFFF
+    };
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     //      Implements the base networking logic.
     // ---------------------------------------------------------------------------

@@ -480,14 +480,40 @@ void Network::clock(uint32_t ms)
 
         case NET_FUNC_NAK:                                                              // Master Negative Ack
             {
-                if (m_status == NET_STAT_RUNNING) {
-                    LogWarning(LOG_NET, "PEER %u master returned a NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                // DVM 3.6 adds support to respond with a NAK reason, as such we just check if the NAK response is greater
+                // then 10 bytes and process the reason value
+                uint16_t reason = 0U;
+                if (length > 10) {
+                    reason = __GET_UINT16B(buffer, 10U);
+                    switch (reason) {
+                    case NET_CONN_NAK_FNE_UNAUTHORIZED:
+                        LogWarning(LOG_NET, "PEER %u master NAK; unauthorized, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_BAD_CONN_STATE:
+                        LogWarning(LOG_NET, "PEER %u master NAK; bad connection state, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_INVALID_CONFIG_DATA:
+                        LogWarning(LOG_NET, "PEER %u master NAK; invalid configuration data, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_FNE_MAX_CONN:
+                        LogWarning(LOG_NET, "PEER %u master NAK; FNE has reached maximum permitted connections, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+
+                    case NET_CONN_NAK_GENERAL_FAILURE:
+                    default:
+                        LogWarning(LOG_NET, "PEER %u master NAK; general failure, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    }
+                }
+
+                if (m_status == NET_STAT_RUNNING || (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
+                    LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     m_status = NET_STAT_WAITING_LOGIN;
                     m_timeoutTimer.start();
                     m_retryTimer.start();
                 }
                 else {
-                    LogError(LOG_NET, "PEER %u master returned a NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                    LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                     close();
                     open();
                     return;
