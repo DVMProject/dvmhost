@@ -15,6 +15,7 @@
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
+#include "common/ThreadFunc.h"
 #include "network/fne/TagDMRData.h"
 #include "network/fne/TagP25Data.h"
 #include "network/fne/TagNXDNData.h"
@@ -179,6 +180,21 @@ int HostFNE::run()
 
     StopWatch stopWatch;
     stopWatch.start();
+
+    // setup network loop threads
+    ThreadFunc networkLoop([&, this]() {
+        if (g_killed)
+            return;
+
+        if (m_network != nullptr) {
+            while (!g_killed) {
+                m_network->processNetwork();
+                Thread::sleep(5);
+            }
+        }
+    });
+    networkLoop.run();
+    networkLoop.setName("dvmfne:network-loop");
 
     // main execution loop
     while (!g_killed) {

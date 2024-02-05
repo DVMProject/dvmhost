@@ -187,6 +187,9 @@ namespace network
         /// <summary>Sets endpoint preshared encryption key.</summary>
         void setPresharedKey(const uint8_t* presharedKey);
 
+        /// <summary>Process a data frames from the network.</summary>
+        void processNetwork();
+
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms) override;
 

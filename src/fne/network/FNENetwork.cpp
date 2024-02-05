@@ -142,54 +142,15 @@ void FNENetwork::setPresharedKey(const uint8_t* presharedKey)
 }
 
 /// <summary>
-/// Updates the timer by the passed number of milliseconds.
+/// Process a data frames from the network.
 /// </summary>
-/// <param name="ms"></param>
-void FNENetwork::clock(uint32_t ms)
+void FNENetwork::processNetwork()
 {
     if (m_status != NET_STAT_MST_RUNNING) {
         return;
     }
 
     uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    m_maintainenceTimer.clock(ms);
-    if (m_maintainenceTimer.isRunning() && m_maintainenceTimer.hasExpired()) {
-        // check to see if any peers have been quiet (no ping) longer than allowed
-        std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
-        for (auto peer : m_peers) {
-            uint32_t id = peer.first;
-            FNEPeerConnection* connection = peer.second;
-            if (connection != nullptr) {
-                if (connection->connected()) {
-                    uint64_t dt = connection->lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
-                    if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u timed out, dt = %u, now = %u", id, dt, now);
-                        peersToRemove.push_back(id);
-                    }
-                }
-            }
-        }
-
-        // remove any peers
-        for (uint32_t peerId : peersToRemove) {
-            FNEPeerConnection* connection = m_peers[peerId];
-            m_peers.erase(peerId);
-            if (connection != nullptr) {
-                delete connection;
-            }
-
-            erasePeerAffiliations(peerId);
-        }
-
-        // roll the RTP timestamp if no call is in progress
-        if (!m_callInProgress) {
-            frame::RTPHeader::resetStartTime();
-            m_frameQueue->clearTimestamps();
-        }
-
-        m_maintainenceTimer.start();
-    }
 
     sockaddr_storage address;
     uint32_t addrLen;
@@ -739,6 +700,57 @@ void FNENetwork::clock(uint32_t ms)
 }
 
 /// <summary>
+/// Updates the timer by the passed number of milliseconds.
+/// </summary>
+/// <param name="ms"></param>
+void FNENetwork::clock(uint32_t ms)
+{
+    if (m_status != NET_STAT_MST_RUNNING) {
+        return;
+    }
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    m_maintainenceTimer.clock(ms);
+    if (m_maintainenceTimer.isRunning() && m_maintainenceTimer.hasExpired()) {
+        // check to see if any peers have been quiet (no ping) longer than allowed
+        std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
+        for (auto peer : m_peers) {
+            uint32_t id = peer.first;
+            FNEPeerConnection* connection = peer.second;
+            if (connection != nullptr) {
+                if (connection->connected()) {
+                    uint64_t dt = connection->lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
+                    if (dt < now) {
+                        LogInfoEx(LOG_NET, "PEER %u timed out, dt = %u, now = %u", id, dt, now);
+                        peersToRemove.push_back(id);
+                    }
+                }
+            }
+        }
+
+        // remove any peers
+        for (uint32_t peerId : peersToRemove) {
+            FNEPeerConnection* connection = m_peers[peerId];
+            m_peers.erase(peerId);
+            if (connection != nullptr) {
+                delete connection;
+            }
+
+            erasePeerAffiliations(peerId);
+        }
+
+        // roll the RTP timestamp if no call is in progress
+        if (!m_callInProgress) {
+            frame::RTPHeader::resetStartTime();
+            m_frameQueue->clearTimestamps();
+        }
+
+        m_maintainenceTimer.start();
+    }
+}
+
+/// <summary>
 /// Opens connection to the network.
 /// </summary>
 /// <returns></returns>
@@ -899,6 +911,8 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 /// <param name="peerId"></param>
 void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 {
+    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     // send radio ID white/black lists
     std::vector<uint32_t> ridWhitelist;
 
@@ -954,6 +968,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
             writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_WL_RID },
                 payload, bufSize, true);
         }
+
+        connection->lastPing(now);
     }
 }
 
@@ -963,6 +979,8 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 /// <param name="peerId"></param>
 void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 {
+    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     // send radio ID blacklist
     std::vector<uint32_t> ridBlacklist;
 
@@ -1018,6 +1036,8 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
             writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_BL_RID },
                 payload, bufSize, true);
         }
+
+        connection->lastPing(now);
     }
 }
 
