@@ -131,7 +131,39 @@ UInt8Array FrameQueue::read(int& messageLength, sockaddr_storage& address, uint3
 }
 
 /// <summary>
-/// Cache "message" to frame queue.
+/// Write message to the UDP socket.
+/// </summary>
+/// <param name="message">Message buffer to frame and queue.</param>
+/// <param name="length">Length of message.</param>
+/// <param name="streamId">Message stream ID.</param>
+/// <param name="peerId">Peer ID.</param>
+/// <param name="ssrc">RTP SSRC ID.</param>
+/// <param name="opcode">Opcode.</param>
+/// <param name="rtpSeq">RTP Sequence.</param>
+/// <param name="addr">IP address to write data to.</param>
+/// <param name="addrLen"></param>
+/// <returns></returns>
+bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+    uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen)
+{
+    assert(message != nullptr);
+    assert(length > 0U);
+
+    uint32_t bufferLen = 0U;
+    uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
+
+    bool ret = true;
+    if (!m_socket->write(buffer, bufferLen, addr, addrLen)) {
+        LogError(LOG_NET, "Failed writing data to the network");
+        ret = false;
+    }
+
+    delete buffer;
+    return ret;
+}
+
+/// <summary>
+/// Cache message to frame queue.
 /// </summary>
 /// <param name="message">Message buffer to frame and queue.</param>
 /// <param name="length">Length of message.</param>
@@ -149,7 +181,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 }
 
 /// <summary>
-/// Cache "message" to frame queue.
+/// Cache message to frame queue.
 /// </summary>
 /// <param name="message">Message buffer to frame and queue.</param>
 /// <param name="length">Length of message.</param>
@@ -167,6 +199,48 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     assert(message != nullptr);
     assert(length > 0U);
 
+    uint32_t bufferLen = 0U;
+    uint8_t* buffer = generateMessage(message, length, streamId, peerId, ssrc, opcode, rtpSeq, &bufferLen);
+
+    udp::UDPDatagram *dgram = new udp::UDPDatagram;
+    dgram->buffer = buffer;
+    dgram->length = bufferLen;
+    dgram->address = addr;
+    dgram->addrLen = addrLen;
+
+    m_buffers.push_back(dgram);
+}
+
+/// <summary>
+/// Helper method to clear any tracked stream timestamps.
+/// </summary>
+void FrameQueue::clearTimestamps()
+{
+    m_streamTimestamps.clear();
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Generate RTP message for the frame queue.
+/// </summary>
+/// <param name="message">Message buffer to frame and queue.</param>
+/// <param name="length">Length of message.</param>
+/// <param name="streamId">Message stream ID.</param>
+/// <param name="peerId">Peer ID.</param>
+/// <param name="ssrc">RTP SSRC ID.</param>
+/// <param name="opcode">Opcode.</param>
+/// <param name="rtpSeq">RTP Sequence.</param>
+/// <param name="outBufferLen"></param>
+/// <returns></returns>
+uint8_t* FrameQueue::generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+    uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen)
+{
+    assert(message != nullptr);
+    assert(length > 0U);
+
     uint32_t timestamp = INVALID_TS;
     if (streamId != 0U) {
         auto entry = m_streamTimestamps.find(streamId);
@@ -177,7 +251,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
         if (timestamp != INVALID_TS) {
             timestamp += (RTP_GENERIC_CLOCK_RATE / 133);
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
+                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, previous TS = %u, TS = %u, rtpSeq = %u", streamId, m_streamTimestamps[streamId], timestamp, rtpSeq);
             m_streamTimestamps[streamId] = timestamp;
         }
     }
@@ -198,7 +272,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
 
     if (streamId != 0U && timestamp == INVALID_TS && rtpSeq != RTP_END_OF_CALL_SEQ) {
         if (m_debug)
-            LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
+            LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, initial TS = %u, rtpSeq = %u", streamId, header.getTimestamp(), rtpSeq);
         m_streamTimestamps[streamId] = header.getTimestamp();
     }
 
@@ -206,7 +280,7 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
         auto entry = m_streamTimestamps.find(streamId);
         if (entry != m_streamTimestamps.end()) {
             if (m_debug)
-                LogDebug(LOG_NET, "FrameQueue::enqueueMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
+                LogDebug(LOG_NET, "FrameQueue::generateMessage() RTP streamId = %u, rtpSeq = %u", streamId, rtpSeq);
             m_streamTimestamps.erase(streamId);
         }
     }
@@ -225,21 +299,11 @@ void FrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, uint32_
     ::memcpy(buffer + RTP_HEADER_LENGTH_BYTES + RTP_EXTENSION_HEADER_LENGTH_BYTES + RTP_FNE_HEADER_LENGTH_BYTES, message, length);
 
     if (m_debug)
-        Utils::dump(1U, "FrameQueue::enqueueMessage() Buffered Message", buffer, bufferLen);
+        Utils::dump(1U, "FrameQueue::generateMessage() Buffered Message", buffer, bufferLen);
 
-    udp::UDPDatagram *dgram = new udp::UDPDatagram;
-    dgram->buffer = buffer;
-    dgram->length = bufferLen;
-    dgram->address = addr;
-    dgram->addrLen = addrLen;
+    if (outBufferLen != nullptr) {
+        *outBufferLen = bufferLen;
+    }
 
-    m_buffers.push_back(dgram);
-}
-
-/// <summary>
-/// Helper method to clear any tracked stream timestamps.
-/// </summary>
-void FrameQueue::clearTimestamps()
-{
-    m_streamTimestamps.clear();
+    return buffer;
 }

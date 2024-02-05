@@ -100,7 +100,7 @@ namespace lookups
     class HOST_SW_API AffiliationLookup {
     public:
         /// <summary>Initializes a new instance of the AffiliationLookup class.</summary>
-        AffiliationLookup(const char* name, bool verbose);
+        AffiliationLookup(const std::string name, bool verbose);
         /// <summary>Finalizes a instance of the AffiliationLookup class.</summary>
         virtual ~AffiliationLookup();
 
@@ -196,7 +196,7 @@ namespace lookups
         //                 chNo      dstId     slot
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
 
-        const char *m_name;
+        const std::string m_name;
 
         bool m_verbose;
     };

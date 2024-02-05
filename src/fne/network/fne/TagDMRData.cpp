@@ -252,6 +252,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
+                    // check if the source peer is blocked from sending to this peer
+                    if (peer.second->checkBlockedPeer(peerId)) {
+                        continue;
+                    }
+
                     uint8_t outboundPeerBuffer[len];
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);

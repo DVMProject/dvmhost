@@ -396,6 +396,7 @@ void Network::clock(uint32_t ms)
                                 m_ridLookup->toggleEntry(id, true);
                                 offs += 4U;
                             }
+                            LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
                         }
                     }
                 }
@@ -413,6 +414,7 @@ void Network::clock(uint32_t ms)
                                 m_ridLookup->toggleEntry(id, false);
                                 offs += 4U;
                             }
+                            LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
                         }
                     }
                 }

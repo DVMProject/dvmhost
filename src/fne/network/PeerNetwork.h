@@ -18,6 +18,7 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace network
 {
@@ -32,7 +33,16 @@ namespace network
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
 
+        /// <summary>Gets the blocked traffic peer ID table.</summary>
+        std::vector<uint32_t> blockTrafficTo() const { return m_blockTrafficToTable; }
+        /// <summary>Adds an entry to the blocked traffic peer ID table.</summary>
+        void addBlockedTrafficPeer(uint32_t peerId) { m_blockTrafficToTable.push_back(peerId); }
+        /// <summary>Checks if the passed peer ID is blocked from sending to this peer.</summary>
+        bool checkBlockedPeer(uint32_t peerId);
+
     protected:
+        std::vector<uint32_t> m_blockTrafficToTable;
+
         /// <summary>Writes configuration to the network.</summary>
         bool writeConfig() override;
     };

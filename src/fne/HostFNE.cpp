@@ -542,6 +542,19 @@ bool HostFNE::createPeerNetworks()
                 network->setPresharedKey(presharedKey);
             }
 
+            /*
+            ** Block Traffic To Peers
+            */
+            yaml::Node& blockTrafficTo = peerConf["blockTrafficTo"];
+            if (blockTrafficTo.size() > 0U) {
+                for (size_t i = 0; i < blockTrafficTo.size(); i++) {
+                    uint32_t peerId = (uint32_t)::strtoul(blockTrafficTo[i].as<std::string>("0").c_str(), NULL, 10);
+                    if (peerId != 0U) {
+                        network->addBlockedTrafficPeer(peerId);
+                    }
+                }
+            }
+
             network->enable(enabled);
             if (enabled) {
                 bool ret = network->open();

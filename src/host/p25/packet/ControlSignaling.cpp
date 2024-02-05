@@ -751,8 +751,9 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     m_p25->m_affiliations.releaseGrant(dstId, false);
                                 }
                             }
+                            
+                            return true; // don't allow this to write to the air
                         }
-                        break;
                         case TSBK_OSP_DVM_GIT_HASH:
                             // ignore
                             return true; // don't allow this to write to the air

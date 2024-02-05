@@ -473,6 +473,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_STATUS).get(REST_API_BIND(RESTAPI::restAPI_GetStatus, this));
 
     m_dispatcher.match(FNE_GET_PEER_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetPeerQuery, this));
+    m_dispatcher.match(FNE_GET_PEER_COUNT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCount, this));
 
     m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
     m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
@@ -727,6 +728,30 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array peers = json::array();
+    if (m_network != nullptr) {
+        uint32_t count = m_network->m_peers.size();
+        response["peerCount"].set<uint32_t>(count);
+    }
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
 void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -799,10 +824,11 @@ void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, 
 
     // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
     m_ridLookup->addEntry(rid, enabled, alias);
-
+/*    
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
+*/    
 }
 
 /// <summary>
@@ -838,10 +864,11 @@ void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& repl
     }
 
     m_ridLookup->eraseEntry(rid);
-
+/*    
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
+*/    
 }
 
 /// <summary>
@@ -934,10 +961,11 @@ void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, c
     ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
 
     m_tidLookup->addEntry(groupVoice);
-
+/*    
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
+*/    
 }
 
 /// <summary>
@@ -974,10 +1002,11 @@ void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply
     }
 
     m_tidLookup->eraseEntry(groupVoice.source().tgId(), groupVoice.source().tgSlot());
-
+/*    
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
+*/    
 }
 
 /// <summary>
@@ -1014,10 +1043,11 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
+/*
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
-
+*/
     reply.payload(response);
 }
 

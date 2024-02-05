@@ -46,11 +46,14 @@ namespace network
         /// <summary>Read message from the received UDP packet.</summary>
         UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen,
                 frame::RTPHeader* rtpHeader = nullptr, frame::RTPFNEHeader* fneHeader = nullptr);
+        /// <summary>Write message to the UDP socket.</summary>
+        bool write(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+            uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
-        /// <summary>Cache "message" to frame queue.</summary>
+        /// <summary>Cache message to frame queue.</summary>
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
             OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
-        /// <summary>Cache "message" to frame queue.</summary>
+        /// <summary>Cache message to frame queue.</summary>
         void enqueueMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
             uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, sockaddr_storage& addr, uint32_t addrLen);
 
@@ -60,6 +63,10 @@ namespace network
     private:
         uint32_t m_peerId;
         std::unordered_map<uint32_t, uint32_t> m_streamTimestamps;
+
+        /// <summary>Generate RTP message for the frame queue.</summary>
+        uint8_t* generateMessage(const uint8_t* message, uint32_t length, uint32_t streamId, uint32_t peerId,
+            uint32_t ssrc, OpcodePair opcode, uint16_t rtpSeq, uint32_t* outBufferLen);
     };
 } // namespace network
 

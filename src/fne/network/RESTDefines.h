@@ -21,6 +21,7 @@
 // ---------------------------------------------------------------------------
 
 #define FNE_GET_PEER_QUERY              "/peer/query"
+#define FNE_GET_PEER_COUNT              "/peer/count"
 
 #define FNE_GET_RID_QUERY               "/rid/query"
 #define FNE_PUT_RID_ADD                 "/rid/add"

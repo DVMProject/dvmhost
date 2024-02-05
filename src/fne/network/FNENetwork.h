@@ -38,6 +38,12 @@ namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
 namespace network
 {
     // ---------------------------------------------------------------------------
+    //  Class Prototypes
+    // ---------------------------------------------------------------------------
+
+    class HOST_SW_API FNENetwork;
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     //     Represents an peer connection to the FNE.
     // ---------------------------------------------------------------------------
@@ -61,6 +67,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
+            m_lastACLUpdate(0U),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)
@@ -83,6 +90,7 @@ namespace network
             m_connectionState(NET_STAT_INVALID),
             m_pingsReceived(0U),
             m_lastPing(0U),
+            m_lastACLUpdate(0U),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)
@@ -123,6 +131,9 @@ namespace network
         /// <summary>Last ping received.</summary>
         __PROPERTY_PLAIN(uint64_t, lastPing);
 
+        /// <summary>Last ACL update sent.</summary>
+        __PROPERTY_PLAIN(uint64_t, lastACLUpdate);
+
         /// <summary>JSON objecting containing peer configuration information.</summary>
         __PROPERTY_PLAIN(json::object, config);
 
@@ -130,6 +141,18 @@ namespace network
         __PROPERTY_PLAIN(uint16_t, pktLastSeq);
         /// <summary>Calculated next RTP sequence.</summary>
         __PROPERTY_PLAIN(uint16_t, pktNextSeq);
+    };
+
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    //      
+    // ---------------------------------------------------------------------------
+
+    struct ACLUpdateRequest {
+        FNENetwork* network;
+        uint32_t peerId;
+
+        pthread_t thread;
     };
 
     // ---------------------------------------------------------------------------
@@ -207,9 +230,9 @@ namespace network
         std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
 
         Timer m_maintainenceTimer;
-        Timer m_updateLookupTimer;
 
-        bool m_forceListUpdate;
+        uint32_t m_updateLookupTime;
+
         bool m_callInProgress;
 
         bool m_disallowP25AdjStsBcast;
@@ -225,34 +248,30 @@ namespace network
         /// <summary>Helper to complete setting up a repeater login request.</summary>
         void setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection);
 
+        /// <summary>Helper to send the ACL lists to the specified peer in a separate thread.</summary>
+        void peerACLUpdate(uint32_t peerId);
+        /// <summary>Entry point to send the ACL lists to the specified peer in a separate thread.</summary>
+        static void* threadedACLUpdate(void* arg);
+
         /// <summary>Helper to send the list of whitelisted RIDs to the specified peer.</summary>
-        void writeWhitelistRIDs(uint32_t peerId, bool queueOnly = false);
-        /// <summary>Helper to send the list of whitelisted RIDs to connected peers.</summary>
-        void writeWhitelistRIDs();
+        void writeWhitelistRIDs(uint32_t peerId);
         /// <summary>Helper to send the list of blacklisted RIDs to the specified peer.</summary>
-        void writeBlacklistRIDs(uint32_t peerId, bool queueOnly = false);
-        /// <summary>Helper to send the list of blacklisted RIDs to connected peers.</summary>
-        void writeBlacklistRIDs();
-
+        void writeBlacklistRIDs(uint32_t peerId);
         /// <summary>Helper to send the list of active TGIDs to the specified peer.</summary>
-        void writeTGIDs(uint32_t peerId, bool queueOnly = false);
-        /// <summary>Helper to send the list of active TGIDs to connected peers.</summary>
-        void writeTGIDs();
+        void writeTGIDs(uint32_t peerId);
         /// <summary>Helper to send the list of deactivated TGIDs to the specified peer.</summary>
-        void writeDeactiveTGIDs(uint32_t peerId, bool queueOnly = false);
-        /// <summary>Helper to send the list of deactivated TGIDs to connected peers.</summary>
-        void writeDeactiveTGIDs();
+        void writeDeactiveTGIDs(uint32_t peerId);
 
         /// <summary>Helper to send a data message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool directWrite = false) const;
         /// <summary>Helper to send a data message to the specified peer.</summary>
         bool writePeer(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint32_t streamId, bool queueOnly = false, bool incPktSeq = false);
+            uint32_t streamId, bool queueOnly = false, bool incPktSeq = false, bool directWrite = false) const;
 
         /// <summary>Helper to send a command message to the specified peer.</summary>
         bool writePeerCommand(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U, 
-            bool queueOnly = false, bool incPktSeq = false);
+            bool incPktSeq = false) const;
 
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);

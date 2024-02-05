@@ -232,10 +232,23 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
         uint16_t magic = __GET_UINT16B(buffer, 0U);
         if (magic == AES_WRAPPED_PCKT_MAGIC) {
             uint32_t cryptedLen = (len - 2U) * sizeof(uint8_t);
-            // Utils::dump(1U, "Socket::read() crypted", buffer + 2U, cryptedLen);
+            uint8_t* cryptoBuffer = buffer + 2U;
+
+            // do we need to pad the original buffer to be block aligned?
+            if (cryptedLen % crypto::AES::BLOCK_BYTES_LEN != 0) {
+                uint32_t alignment = crypto::AES::BLOCK_BYTES_LEN - (cryptedLen % crypto::AES::BLOCK_BYTES_LEN);
+                cryptedLen += alignment;
+
+                // reallocate buffer and copy
+                cryptoBuffer = new uint8_t[cryptedLen];
+                ::memset(cryptoBuffer, 0x00U, cryptedLen);
+                ::memcpy(cryptoBuffer, buffer + 2U, len - 2U);
+            }
+
+            // Utils::dump(1U, "Socket::read() crypted", cryptoBuffer, cryptedLen);
 
             // decrypt
-            uint8_t* decrypted = m_aes->decryptECB(buffer + 2U, cryptedLen, m_presharedKey);
+            uint8_t* decrypted = m_aes->decryptECB(cryptoBuffer, cryptedLen, m_presharedKey);
 
             // Utils::dump(1U, "Socket::read() decrypted", decrypted, cryptedLen);
 
@@ -320,6 +333,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
             ::memcpy(out.get() + 2U, crypted, cryptedLen);
             __SET_UINT16B(AES_WRAPPED_PCKT_MAGIC, out.get(), 0U);
             delete[] crypted;
+            length = cryptedLen + 2U;
         } else {
             if (lenWritten != nullptr) {
                 *lenWritten = -1;

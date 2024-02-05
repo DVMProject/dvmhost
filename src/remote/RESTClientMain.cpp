@@ -41,6 +41,7 @@
 #define RCD_GET_VOICE_CH                "voice-ch"
 
 #define RCD_FNE_GET_PEERLIST            "fne-peerlist"
+#define RCD_FNE_GET_PEERCOUNT           "fne-peercount"
 #define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
 #define RCD_FNE_GET_AFFLIST             "fne-affs"
@@ -182,6 +183,7 @@ void usage(const char* message, const char* arg)
     reply += "  voice-ch                    Retrieves the list of configured voice channels\r\n";
     reply += "\r\n";
     reply += "  fne-peerlist                Retrieves the list of connected peers (Converged FNE only)\r\n";
+    reply += "  fne-peercount               Retrieves the count of connected peers (Converged FNE only)\r\n";
     reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
     reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
@@ -729,6 +731,9 @@ int main(int argc, char** argv)
         */
         else if (rcom == RCD_FNE_GET_PEERLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_PEER_QUERY, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_PEERCOUNT) {
+            retCode = client->send(HTTP_GET, FNE_GET_PEER_COUNT, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_TGIDLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_TGID_QUERY, json::object(), response);

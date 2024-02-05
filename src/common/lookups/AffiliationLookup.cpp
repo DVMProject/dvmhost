@@ -24,7 +24,7 @@ using namespace lookups;
 /// </summary>
 /// <param name="name">Name of lookup table.</param>
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
-AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
+AffiliationLookup::AffiliationLookup(const std::string name, bool verbose) :
     m_rfChTable(),
     m_rfChDataTable(),
     m_rfGrantChCnt(0U),
@@ -52,10 +52,7 @@ AffiliationLookup::AffiliationLookup(const char* name, bool verbose) :
 /// <summary>
 /// Finalizes a instance of the AffiliationLookup class.
 /// </summary>
-AffiliationLookup::~AffiliationLookup()
-{
-    /* stub */
-}
+AffiliationLookup::~AffiliationLookup() = default;
 
 /// <summary>
 /// Helper to group affiliate a source ID.
@@ -71,7 +68,7 @@ void AffiliationLookup::unitReg(uint32_t srcId)
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, unit registration, srcId = %u",
-            m_name, srcId);
+            m_name.c_str(), srcId);
     }
 }
 
@@ -89,7 +86,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId)
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, unit deregistration, srcId = %u",
-            m_name, srcId);
+            m_name.c_str(), srcId);
     }
 
     groupUnaff(srcId);
@@ -126,7 +123,7 @@ bool AffiliationLookup::isUnitReg(uint32_t srcId) const
 void AffiliationLookup::clearUnitReg()
 {
     std::vector<uint32_t> srcToRel = std::vector<uint32_t>();
-    LogWarning(LOG_HOST, "%s, releasing all unit registrations", m_name);
+    LogWarning(LOG_HOST, "%s, releasing all unit registrations", m_name.c_str());
     m_unitRegTable.clear();
 }
 
@@ -143,7 +140,7 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
-                m_name, srcId, dstId);
+                m_name.c_str(), srcId, dstId);
         }
     }
 }
@@ -160,7 +157,7 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
-                m_name, srcId, tblDstId);
+                m_name.c_str(), srcId, tblDstId);
         }
     } else {
         return false;
@@ -230,14 +227,14 @@ std::vector<uint32_t> AffiliationLookup::clearGroupAff(uint32_t dstId, bool rele
     }
 
     if (dstId == 0U && releaseAll) {
-        LogWarning(LOG_HOST, "%s, releasing all group affiliations", m_name);
+        LogWarning(LOG_HOST, "%s, releasing all group affiliations", m_name.c_str());
         for (auto entry : m_grpAffTable) {
             uint32_t srcId = entry.first;
             srcToRel.push_back(srcId);
         }
     }
     else {
-        LogWarning(LOG_HOST, "%s, releasing group affiliations, dstId = %u", m_name, dstId);
+        LogWarning(LOG_HOST, "%s, releasing group affiliations, dstId = %u", m_name.c_str(), dstId);
         for (auto entry : m_grpAffTable) {
             uint32_t srcId = entry.first;
             uint32_t grpId = entry.second;
@@ -289,7 +286,7 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, granting channel, chNo = %u, dstId = %u, srcId = %u, group = %u",
-            m_name, chNo, dstId, srcId, grp);
+            m_name.c_str(), chNo, dstId, srcId, grp);
     }
 
     return true;
@@ -324,7 +321,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
     // are we trying to release all grants?
     if (dstId == 0U && releaseAll) {
-        LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name);
+        LogWarning(LOG_HOST, "%s, force releasing all channel grants", m_name.c_str());
 
         std::vector<uint32_t> gntsToRel = std::vector<uint32_t>();
         for (auto entry : m_grantChTable) {
@@ -345,7 +342,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
 
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, releasing channel grant, chNo = %u, dstId = %u",
-                m_name, chNo, dstId);
+                m_name.c_str(), chNo, dstId);
         }
 
         if (m_releaseGrant != nullptr) {

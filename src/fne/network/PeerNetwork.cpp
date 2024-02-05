@@ -19,6 +19,7 @@ using namespace network;
 
 #include <cstdio>
 #include <cassert>
+#include <algorithm>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -44,11 +45,28 @@ using namespace network;
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
 PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
-    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup)
+    Network(address, port, localPort, peerId, password, duplex, debug, dmr, p25, nxdn, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup),
+    m_blockTrafficToTable()
 {
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
+}
+
+/// <summary>
+/// Checks if the passed peer ID is blocked from sending to this peer.
+/// </summary>
+/// <param name="peerId"></param>
+bool PeerNetwork::checkBlockedPeer(uint32_t peerId)
+{
+    if (m_blockTrafficToTable.empty())
+        return false;
+
+    if (std::find(m_blockTrafficToTable.begin(), m_blockTrafficToTable.end(), peerId) != m_blockTrafficToTable.end()) {
+        return true;
+    }
+
+    return false;
 }
 
 // ---------------------------------------------------------------------------

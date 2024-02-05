@@ -43,8 +43,10 @@ namespace network
 
         /// <summary>Read message from the received UDP packet.</summary>
         UInt8Array read(int& messageLength, sockaddr_storage& address, uint32_t& addrLen);
+        /// <summary>Write message to the UDP socket.</summary>
+        bool write(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
 
-        /// <summary>Cache "message" to frame queue.</summary>
+        /// <summary>Cache message to frame queue.</summary>
         void enqueueMessage(const uint8_t* message, uint32_t length, sockaddr_storage& addr, uint32_t addrLen);
 
         /// <summary>Flush the message queue.</summary>

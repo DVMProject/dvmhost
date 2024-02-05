@@ -32,7 +32,7 @@ public:
     /// <summary>Initializes a new instance of the RingBuffer class.</summary>
     /// <param name="length">Length of ring buffer.</param>
     /// <param name="name">Name of buffer.</param>
-    RingBuffer(uint32_t length, const char* name) :
+    RingBuffer(uint32_t length, const std::string name) :
         m_length(length),
         m_name(name),
         m_buffer(nullptr),
@@ -40,7 +40,6 @@ public:
         m_oPtr(0U)
     {
         assert(length > 0U);
-        assert(name != nullptr);
 
         m_buffer = new T[length];
 
@@ -60,7 +59,7 @@ public:
     bool addData(const T* buffer, uint32_t length)
     {
         if (length > freeSpace()) {
-            LogError(LOG_HOST, "**** Overflow in %s ring buffer, %u > %u, clearing the buffer", m_name, length, freeSpace());
+            LogError(LOG_HOST, "**** Overflow in %s ring buffer, %u > %u, clearing the buffer", m_name.c_str(), length, freeSpace());
             clear();
             return false;
         }
@@ -74,7 +73,7 @@ public:
                 m_iPtr = 0U;
         }
 #if DEBUG_RINGBUFFER
-        LogDebug(LOG_HOST, "RingBuffer::addData(%s): iPtr_Before = %u, iPtr_After = %u, oPtr = %u, len = %u, len_Written = %u", m_name, iPtr_BeforeWrite, m_iPtr, m_oPtr, m_length, (m_iPtr - iPtr_BeforeWrite));
+        LogDebug(LOG_HOST, "RingBuffer::addData(%s): iPtr_Before = %u, iPtr_After = %u, oPtr = %u, len = %u, len_Written = %u", m_name.c_str(), iPtr_BeforeWrite, m_iPtr, m_oPtr, m_length, (m_iPtr - iPtr_BeforeWrite));
 #endif
         return true;
     }
@@ -86,7 +85,7 @@ public:
     bool get(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
-            LogError(LOG_HOST, "**** Underflow get in %s ring buffer, %u < %u", m_name, dataSize(), length);
+            LogError(LOG_HOST, "**** Underflow get in %s ring buffer, %u < %u", m_name.c_str(), dataSize(), length);
             return false;
         }
 #if DEBUG_RINGBUFFER
@@ -99,7 +98,7 @@ public:
                 m_oPtr = 0U;
         }
 #if DEBUG_RINGBUFFER
-        LogDebug(LOG_HOST, "RingBuffer::getData(%s): iPtr = %u, oPtr_Before = %u, oPtr_After = %u, len = %u, len_Read = %u", m_name, m_iPtr, oPtr_BeforeRead, m_oPtr, m_length, (m_oPtr - oPtr_BeforeRead));
+        LogDebug(LOG_HOST, "RingBuffer::getData(%s): iPtr = %u, oPtr_Before = %u, oPtr_After = %u, len = %u, len_Read = %u", m_name.c_str(), m_iPtr, oPtr_BeforeRead, m_oPtr, m_length, (m_oPtr - oPtr_BeforeRead));
 #endif
         return true;
     }
@@ -111,7 +110,7 @@ public:
     bool peek(T* buffer, uint32_t length)
     {
         if (dataSize() < length) {
-            LogError(LOG_HOST, "**** Underflow peek in %s ring buffer, %u < %u", m_name, dataSize(), length);
+            LogError(LOG_HOST, "**** Underflow peek in %s ring buffer, %u < %u", m_name.c_str(), dataSize(), length);
             return false;
         }
 
@@ -204,7 +203,7 @@ public:
 private:
     uint32_t m_length;
 
-    const char* m_name;
+    const std::string m_name;
 
     T* m_buffer;
 
