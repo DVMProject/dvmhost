@@ -48,24 +48,6 @@ RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, b
 void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 {
     RadioId rid = find(id);
-    if (!rid.radioEnabled() && rid.radioDefault()) {
-        if (enabled) {
-            LogMessage(LOG_HOST, "Added enabled RID %u (%s) to RID ACL table", id, rid.radioAlias().c_str());
-        }
-        else {
-            LogMessage(LOG_HOST, "Added disabled RID %u (%s) to RID ACL table", id, rid.radioAlias().c_str());
-        }
-    }
-
-    if (!rid.radioEnabled() && !rid.radioDefault()) {
-        if (enabled) {
-            LogMessage(LOG_HOST, "Enabled RID %u (%s) in RID ACL table", id, rid.radioAlias().c_str());
-        }
-        else {
-            LogMessage(LOG_HOST, "Disabled RID %u (%s) in RID ACL table", id, rid.radioAlias().c_str());
-        }
-    }
-
     addEntry(id, enabled, rid.radioAlias());
 }
 
