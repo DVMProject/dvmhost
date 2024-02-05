@@ -145,7 +145,7 @@ namespace network
 
     // ---------------------------------------------------------------------------
     //  Structure Declaration
-    //      
+    //      Represents the data required for a peer ACL update request thread.
     // ---------------------------------------------------------------------------
 
     struct ACLUpdateRequest {

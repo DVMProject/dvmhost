@@ -189,7 +189,7 @@ int HostFNE::run()
         if (m_network != nullptr) {
             while (!g_killed) {
                 m_network->processNetwork();
-                Thread::sleep(5);
+                Thread::sleep(5U);
             }
         }
     });
@@ -225,6 +225,9 @@ int HostFNE::run()
         if (ms < 2U)
             Thread::sleep(1U);
     }
+
+    // shutdown threads
+    networkLoop.wait();
 
     if (m_network != nullptr) {
         m_network->close();
