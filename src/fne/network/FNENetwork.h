@@ -24,6 +24,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <mutex>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -156,6 +157,25 @@ namespace network
     };
 
     // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    //      Represents the data required for a network packet handler thread.
+    // ---------------------------------------------------------------------------
+
+    struct NetPacketRequest {
+        FNENetwork* network;
+        uint32_t peerId;
+
+        sockaddr_storage address;
+        uint32_t addrLen;
+        frame::RTPHeader rtpHeader;
+        frame::RTPFNEHeader fneHeader;
+        int length = 0U;
+        uint8_t *buffer;
+
+        pthread_t thread;
+    };
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     //      Implements the core FNE networking logic.
     // ---------------------------------------------------------------------------
@@ -189,6 +209,8 @@ namespace network
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
+        /// <summary>Entry point to process a given network packet.</summary>
+        static void* threadedNetworkRx(void* arg);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms) override;
@@ -227,6 +249,7 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
+        std::mutex m_peerMutex;
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
