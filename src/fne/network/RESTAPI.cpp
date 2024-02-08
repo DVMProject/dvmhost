@@ -8,6 +8,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2024 Patrick McDonnell, W3AXL
 *
 */
 #include "fne/Defines.h"
@@ -187,7 +188,7 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
                 uint8_t tgSlot = rewrEntry.tgSlot();
                 rewrite["slot"].set<uint8_t>(tgSlot);
 
-                exclusions.push_back(json::value(rewrite));
+                rewrites.push_back(json::value(rewrite));
             }
         }
         config["rewrite"].set<json::array>(rewrites);
@@ -209,6 +210,7 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
     // validate parameters
     if (!req["name"].is<std::string>()) {
         errorPayload(reply, "TG \"name\" was not a valid string");
+        LogDebug(LOG_REST, "TG \"name\" was not a valid string");
         return TalkgroupRuleGroupVoice();
     }
 
@@ -218,17 +220,20 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
     {
         if (!req["source"].is<json::object>()) {
             errorPayload(reply, "TG \"source\" was not a valid JSON object");
+            LogDebug(LOG_REST,  "TG \"source\" was not a valid JSON object");
             return TalkgroupRuleGroupVoice();
         }
         json::object sourceObj = req["source"].get<json::object>();
 
         if (!sourceObj["tgid"].is<uint32_t>()) {
             errorPayload(reply, "TG source \"tgid\" was not a valid number");
+            LogDebug(LOG_REST,  "TG source \"tgid\" was not a valid number");
             return TalkgroupRuleGroupVoice();
         }
 
         if (!sourceObj["slot"].is<uint8_t>()) {
             errorPayload(reply, "TG source \"slot\" was not a valid number");
+            LogDebug(LOG_REST,  "TG source \"slot\" was not a valid number");
             return TalkgroupRuleGroupVoice();
         }
 
@@ -243,22 +248,26 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
     {
         if (!req["config"].is<json::object>()) {
             errorPayload(reply, "TG \"config\" was not a valid JSON object");
+            LogDebug(LOG_REST,  "TG \"config\" was not a valid JSON object");
             return TalkgroupRuleGroupVoice();
         }
         json::object configObj = req["config"].get<json::object>();
 
         if (!configObj["active"].is<bool>()) {
             errorPayload(reply, "TG configuration \"active\" was not a valid boolean");
+            LogDebug(LOG_REST,  "TG configuration \"active\" was not a valid boolean");
             return TalkgroupRuleGroupVoice();
         }
 
         if (!configObj["affiliated"].is<bool>()) {
             errorPayload(reply, "TG configuration \"affiliated\" was not a valid boolean");
+            LogDebug(LOG_REST,  "TG configuration \"affiliated\" was not a valid boolean");
             return TalkgroupRuleGroupVoice();
         }
 
         if (!configObj["parrot"].is<bool>()) {
             errorPayload(reply, "TG configuration \"parrot\" slot was not a valid boolean");
+            LogDebug(LOG_REST,  "TG configuration \"parrot\" slot was not a valid boolean");
             return TalkgroupRuleGroupVoice();
         }
 
@@ -267,17 +276,19 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
         config.affiliated(configObj["affiliated"].get<bool>());
         config.parrot(configObj["parrot"].get<bool>());
 
-        if (!req["inclusion"].is<json::array>()) {
-            errorPayload(reply, "TG \"inclusion\" was not a valid JSON array");
+        if (!configObj["inclusion"].is<json::array>()) {
+            errorPayload(reply, "TG configuration \"inclusion\" was not a valid JSON array");
+            LogDebug(LOG_REST,  "TG configuration \"inclusion\" was not a valid JSON array");
             return TalkgroupRuleGroupVoice();
         }
-        json::array inclusions = req["inclusion"].get<json::array>();
+        json::array inclusions = configObj["inclusion"].get<json::array>();
 
         std::vector<uint32_t> inclusion = groupVoice.config().inclusion();
         if (inclusions.size() > 0) {
             for (auto inclEntry : inclusions) {
                 if (!inclEntry.is<uint32_t>()) {
-                    errorPayload(reply, "TG inclusion value was not a valid number");
+                    errorPayload(reply, "TG configuration inclusion value was not a valid number");
+                    LogDebug(LOG_REST,  "TG configuration inclusion value was not a valid number (was %s)", inclEntry.to_type().c_str());
                     return TalkgroupRuleGroupVoice();
                 }
 
@@ -286,17 +297,19 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
             config.inclusion(inclusion);
         }
 
-        if (!req["exclusion"].is<json::array>()) {
-            errorPayload(reply, "TG \"exclusion\" was not a valid JSON array");
+        if (!configObj["exclusion"].is<json::array>()) {
+            errorPayload(reply, "TG configuration \"exclusion\" was not a valid JSON array");
+            LogDebug(LOG_REST,  "TG configuration \"exclusion\" was not a valid JSON array");
             return TalkgroupRuleGroupVoice();
         }
-        json::array exclusions = req["exclusion"].get<json::array>();
+        json::array exclusions = configObj["exclusion"].get<json::array>();
 
         std::vector<uint32_t> exclusion = groupVoice.config().exclusion();
         if (exclusions.size() > 0) {
             for (auto exclEntry : exclusions) {
                 if (!exclEntry.is<uint32_t>()) {
-                    errorPayload(reply, "TG exclusion value was not a valid number");
+                    errorPayload(reply, "TG configuration exclusion value was not a valid number");
+                    LogDebug(LOG_REST,  "TG configuration exclusion value was not a valid number");
                     return TalkgroupRuleGroupVoice();
                 }
 
@@ -305,17 +318,19 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
             config.exclusion(exclusion);
         }
 
-        if (!req["rewrites"].is<json::array>()) {
-            errorPayload(reply, "TG \"rewrites\" was not a valid JSON array");
+        if (!configObj["rewrite"].is<json::array>()) {
+            errorPayload(reply, "TG configuration \"rewrite\" was not a valid JSON array");
+            LogDebug(LOG_REST,  "TG configuration \"rewrite\" was not a valid JSON array");
             return TalkgroupRuleGroupVoice();
         }
-        json::array rewrites = req["rewrites"].get<json::array>();
+        json::array rewrites = configObj["rewrite"].get<json::array>();
 
         std::vector<lookups::TalkgroupRuleRewrite> rewrite = groupVoice.config().rewrite();
         if (rewrites.size() > 0) {
             for (auto rewrEntry : rewrites) {
                 if (!rewrEntry.is<json::object>()) {
                     errorPayload(reply, "TG rewrite value was not a valid JSON object");
+                    LogDebug(LOG_REST,  "TG rewrite value was not a valid JSON object");
                     return TalkgroupRuleGroupVoice();
                 }
                 json::object rewriteObj = rewrEntry.get<json::object>();
@@ -324,16 +339,19 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
 
                 if (!rewriteObj["peerid"].is<uint32_t>()) {
                     errorPayload(reply, "TG rewrite rule \"peerid\" was not a valid number");
+                    LogDebug(LOG_REST,  "TG rewrite rule \"peerid\" was not a valid number");
                     return TalkgroupRuleGroupVoice();
                 }
 
                 if (!rewriteObj["tgid"].is<uint32_t>()) {
                     errorPayload(reply, "TG rewrite rule \"tgid\" was not a valid number");
+                    LogDebug(LOG_REST,  "TG rewrite rule \"tgid\" was not a valid number");
                     return TalkgroupRuleGroupVoice();
                 }
 
                 if (!rewriteObj["slot"].is<uint8_t>()) {
                     errorPayload(reply, "TG rewrite rule \"slot\" was not a valid number");
+                    LogDebug(LOG_REST,  "TG rewrite rule \"slot\" was not a valid number");
                     return TalkgroupRuleGroupVoice();
                 }
 
@@ -691,6 +709,7 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
+                    LogDebug(LOG_REST, "Preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
                     json::object peerObj = json::object();
                     peerObj["peerId"].set<uint32_t>(peerId);
 
@@ -716,6 +735,12 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                 }
             }
         }
+        else {
+            LogDebug(LOG_REST, "No peers connected to this FNE");
+        }
+    }
+    else {
+        LogDebug(LOG_REST, "Network not set up, no peers to return");
     }
 
     response["peers"].set<json::array>(peers);
@@ -941,6 +966,7 @@ void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, c
 
     TalkgroupRuleGroupVoice groupVoice = jsonToTG(req, reply);
     if (groupVoice.isInvalid()) {
+        ::LogError(LOG_REST, "Unable to parse TG JSON from REST TgAdd");
         return;
     }
 
@@ -993,9 +1019,15 @@ void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply
         return;
     }
 
-    uint32_t tgid = req["tgid"].get<uint32_t>();
+    // Validate slot
+    if (!req["slot"].is<uint8_t>()) {
+        errorPayload(reply, "slot was not a valid char");
+    }
 
-    TalkgroupRuleGroupVoice groupVoice = m_tidLookup->find(tgid);
+    uint32_t tgid = req["tgid"].get<uint32_t>();
+    uint8_t slot = req["slot"].get<uint8_t>();
+
+    TalkgroupRuleGroupVoice groupVoice = m_tidLookup->find(tgid, slot);
     if (groupVoice.isInvalid()) {
         errorPayload(reply, "failed to find specified TGID to delete");
         return;
@@ -1024,7 +1056,10 @@ void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    m_tidLookup->commit();
+    if(!m_tidLookup->commit()) {
+        errorPayload(reply, "failed to write new TGID file");
+        return;
+    }
 
     reply.payload(response);
 }

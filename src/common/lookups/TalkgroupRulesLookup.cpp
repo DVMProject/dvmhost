@@ -8,11 +8,13 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2024 Patrick McDonnell, W3AXL
 *
 */
 #include "lookups/TalkgroupRulesLookup.h"
 #include "Log.h"
 #include "Timer.h"
+#include "Utils.h"
 
 using namespace lookups;
 
@@ -291,9 +293,9 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 /// <summary>
 /// Saves loaded talkgroup rules.
 /// </summary>
-void TalkgroupRulesLookup::commit()
+bool TalkgroupRulesLookup::commit()
 {
-    // bryanb: TODO TODO TODO
+    return save();
 }
 
 /// <summary>
@@ -303,6 +305,67 @@ void TalkgroupRulesLookup::commit()
 bool TalkgroupRulesLookup::getACL()
 {
     return m_acl;
+}
+
+void TalkgroupRuleGroupVoice::getYaml(yaml::Node &node)
+{
+    // Get all the properties
+    node["name"] = m_name;
+    yaml::Node config, source;
+    m_config.getYaml(config);
+    m_source.getYaml(source);
+    node["config"] = config;
+    node["source"] = source;
+}
+
+void TalkgroupRuleConfig::getYaml(yaml::Node &node)
+{
+ 
+    // We have to convert the bools back to strings to pass to the yaml node
+    node["active"] = __BOOL_STR(m_active);
+    node["affiliated"] = __BOOL_STR(m_affiliated);
+    node["parrot"] = __BOOL_STR(m_parrot);
+    
+    // Get the lists
+    yaml::Node inclusionList;
+    if (m_inclusion.size() > 0U) {
+        for (auto inc : m_inclusion) {
+            yaml::Node& newIn = inclusionList.push_back();
+            newIn = __INT_STR(inc);
+        }
+    }
+    node["inclusion"] = inclusionList;
+    
+    yaml::Node exclusionList;
+    if (m_exclusion.size() > 0U) {
+        for (auto exc : m_exclusion) {
+            yaml::Node& newEx = exclusionList.push_back();
+            newEx = __INT_STR(exc);
+        }
+    }
+    node["exclusion"] = exclusionList;
+    
+    yaml::Node rewriteList;
+    if (m_rewrite.size() > 0U) {
+        for (auto rule : m_rewrite) {
+            yaml::Node& rewrite = rewriteList.push_back();
+            rule.getYaml(rewrite);
+        }
+    }
+    node["rewrite"] = rewriteList;
+}
+
+void TalkgroupRuleGroupVoiceSource::getYaml(yaml::Node &node)
+{
+    node["tgid"] = __INT_STR(m_tgId);
+    node["slot"] = __INT_STR(m_tgSlot);
+}
+
+void TalkgroupRuleRewrite::getYaml(yaml::Node &node)
+{
+    node["peerid"] = __INT_STR(m_peerId);
+    node["tgid"] = __INT_STR(m_tgId);
+    node["slot"] = __INT_STR(m_tgSlot);
 }
 
 // ---------------------------------------------------------------------------
@@ -322,7 +385,7 @@ bool TalkgroupRulesLookup::load()
     try {
         bool ret = yaml::Parse(m_rules, m_rulesFile.c_str());
         if (!ret) {
-            LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s", m_rulesFile.c_str());
+            LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s - error parsing YML", m_rulesFile.c_str());
             return false;
         }
     }
@@ -371,6 +434,55 @@ bool TalkgroupRulesLookup::load()
         return false;
 
     LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
+
+    return true;
+}
+
+/// <summary>
+/// Saves the table to the passed lookup table file.
+/// </summary>
+/// <returns>True, if lookup table was saved, otherwise false.</returns>
+bool TalkgroupRulesLookup::save()
+{
+    // Make sure file is valid
+    if (m_rulesFile.length() <= 0) {
+        return false;
+    }
+
+    m_mutex.lock();
+    
+    // New list for our new group voice rules
+    yaml::Node groupVoiceList;
+    yaml::Node newRules;
+
+    for (auto entry : m_groupVoice) {
+        yaml::Node& gv = groupVoiceList.push_back();
+        entry.getYaml(gv);
+        LogDebug(LOG_HOST, "Added TGID %s to yaml TG list", gv["name"].as<std::string>().c_str());
+    }
+
+    LogDebug(LOG_HOST, "Got final GroupVoiceList YAML size of %u", groupVoiceList.size());
+    
+    // Set the new rules
+    newRules["groupVoice"] = groupVoiceList;
+
+    m_mutex.unlock();
+
+    // Make sure we actually did stuff right
+    if (newRules["groupVoice"].size() != m_groupVoice.size()) {
+        LogError(LOG_HOST, "Generated YAML node for group lists did not match loaded group size! (%u != %u)", newRules["groupVoice"].size(), m_groupVoice.size());
+        return false;
+    }
+
+    try {
+        LogDebug(LOG_HOST, "Saving TGID file to %s", m_rulesFile.c_str());
+        yaml::Serialize(newRules, m_rulesFile.c_str());
+        LogDebug(LOG_HOST, "Saved TGID config file to %s", m_rulesFile.c_str());
+    }
+    catch (yaml::OperationException const& e) {
+        LogError(LOG_HOST, "Cannot open the talkgroup rules lookup file - %s (%s)", m_rulesFile.c_str(), e.message());
+        return false;
+    }
 
     return true;
 }
