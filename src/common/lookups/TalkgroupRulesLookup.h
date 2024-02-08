@@ -8,6 +8,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2024 Patrick McDonnell, W3AXL
 *
 */
 #if !defined(__TALKGROUP_RULES_LOOKUP_H__)
@@ -58,6 +59,8 @@ namespace lookups
             return *this;
         }
 
+        void getYaml(yaml::Node &node);
+
     public:
         /// <summary>Talkgroup ID.</summary>
         __PROPERTY_PLAIN(uint32_t, tgId);
@@ -101,6 +104,8 @@ namespace lookups
 
             return *this;
         }
+
+        void getYaml(yaml::Node &node);
 
     public:
         /// <summary>Peer ID.</summary>
@@ -178,6 +183,8 @@ namespace lookups
             return *this;
         }
 
+        void getYaml(yaml::Node &node);
+
     public:
         /// <summary>Flag indicating whether the rule is active.</summary>
         __PROPERTY_PLAIN(bool, active);
@@ -238,6 +245,8 @@ namespace lookups
             return false;
         }
 
+        void getYaml(yaml::Node &node);
+
     public:
         /// <summary>Textual name for the routing rule.</summary>
         __PROPERTY_PLAIN(std::string, name);
@@ -283,7 +292,7 @@ namespace lookups
         virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
 
         /// <summary>Saves loaded talkgroup rules.</summary>
-        void commit();
+        bool commit();
 
         /// <summary>Flag indicating whether talkgroup ID access control is enabled or not.</summary>
         bool getACL();
@@ -301,6 +310,9 @@ namespace lookups
         /// <summary>Loads the table from the passed lookup table file.</summary>
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
         bool load();
+        /// <summary>Saves the table to the passed lookup table file.</summary>
+        /// <returns>True, if lookup table was saved, otherwise false.</returns>
+        bool save();
 
     public:
         /// <summary>Number indicating the number of seconds to hang on a talkgroup.</summary>
