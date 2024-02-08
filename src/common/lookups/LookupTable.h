@@ -114,9 +114,11 @@ namespace lookups
             {
                 try {
                     m_table.at(id);
+                    m_mutex.unlock();
                     return true;
                 }
                 catch (...) {
+                    m_mutex.unlock();
                     return false;
                 }
             }
@@ -145,6 +147,8 @@ namespace lookups
         /// <returns>True, if lookup table was loaded, otherwise false.</returns>
         virtual bool load() = 0;
 
+        /// <summary>Saves the table from the lookup table in memory.</summary>
+        /// <returns>True, if lookup table was saved, otherwise false.</returns>
         virtual bool save() = 0;
     };
 } // namespace lookups

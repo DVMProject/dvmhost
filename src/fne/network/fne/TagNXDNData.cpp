@@ -182,11 +182,17 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {
+            uint32_t i = 0U;
             for (auto peer : m_network->m_peers) {
                 if (peerId != peer.first) {
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, lc, messageType, streamId)) {
                         continue;
+                    }
+
+                    // every 5 peers flush the queue
+                    if (i % 5U == 0U) {
+                        m_network->m_frameQueue->flushQueue();
                     }
 
                     uint8_t outboundPeerBuffer[len];
@@ -204,6 +210,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                     if (!m_network->m_callInProgress)
                         m_network->m_callInProgress = true;
+                    i++;
                 }
             }
             m_network->m_frameQueue->flushQueue();

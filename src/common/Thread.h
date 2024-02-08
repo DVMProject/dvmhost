@@ -18,6 +18,7 @@
 #include "common/Defines.h"
 
 #include <string>
+
 #include <pthread.h>
 
 // ---------------------------------------------------------------------------

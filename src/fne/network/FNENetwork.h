@@ -26,6 +26,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#include <pthread.h>
+
 // ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
@@ -209,8 +211,6 @@ namespace network
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork();
-        /// <summary>Entry point to process a given network packet.</summary>
-        static void* threadedNetworkRx(void* arg);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         void clock(uint32_t ms) override;
@@ -266,6 +266,9 @@ namespace network
 
         bool m_reportPeerPing;
         bool m_verbose;
+
+        /// <summary>Entry point to process a given network packet.</summary>
+        static void* threadedNetworkRx(void* arg);
 
         /// <summary>Helper to erase the peer from the peers affiliations list.</summary>
         bool erasePeerAffiliations(uint32_t peerId);
