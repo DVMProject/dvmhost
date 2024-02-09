@@ -387,6 +387,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagDMR != nullptr) {
                                             network->m_tagDMR->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
+                                    } else {
+                                        network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -408,6 +410,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagP25 != nullptr) {
                                             network->m_tagP25->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
+                                    } else {
+                                        network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -429,6 +433,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (network->m_tagNXDN != nullptr) {
                                             network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, req->rtpHeader.getSequence(), streamId);
                                         }
+                                    } else {
+                                        network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                                     }
                                 }
                             }
@@ -708,7 +714,47 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                /* ignored */
+                                uint32_t srcId = __GET_UINT16(req->buffer, 11U);                // Source Address
+                                uint32_t dstId = __GET_UINT16(req->buffer, 15U);                // Destination Address
+
+                                uint8_t slot = req->buffer[19U];
+
+                                bool unitToUnit = (req->buffer[19U] & 0x80U) == 0x80U;
+
+                                DVM_STATE state = (DVM_STATE)req->buffer[20U];                  // DVM Mode State
+                                switch (state) {
+                                case STATE_DMR:
+                                    if (network->m_dmrEnabled) {
+                                        if (network->m_tagDMR != nullptr) {
+                                            network->m_tagDMR->processGrantReq(srcId, dstId, slot, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                                        } else {
+                                            network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        }
+                                    }
+                                    break;
+                                case STATE_P25:
+                                    if (network->m_p25Enabled) {
+                                        if (network->m_tagP25 != nullptr) {
+                                            network->m_tagP25->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                                        } else {
+                                            network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        }
+                                    }
+                                    break;
+                                case STATE_NXDN:
+                                    if (network->m_nxdnEnabled) {
+                                        if (network->m_tagNXDN != nullptr) {
+                                            network->m_tagNXDN->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                                        } else {
+                                            network->writePeerNAK(peerId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    network->writePeerNAK(peerId, TAG_REPEATER_GRANT, NET_CONN_NAK_ILLEGAL_PACKET);
+                                    Utils::dump("unknown state for grant request from the peer", req->buffer, req->length);
+                                    break;
+                                }
                             }
                             else {
                                 network->writePeerNAK(peerId, TAG_REPEATER_GRANT, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -770,6 +816,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         }
                     }
                     else {
+                        network->writePeerNAK(peerId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
                     }
                 }
@@ -786,8 +833,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
-                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);
-                                    uint32_t dstId = __GET_UINT16(req->buffer, 3U);
+                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
+                                    uint32_t dstId = __GET_UINT16(req->buffer, 3U);             // Destination Address
                                     aff->groupUnaff(srcId);
                                     aff->groupAff(srcId, dstId);
                                 }
@@ -806,7 +853,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
-                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);
+                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitReg(srcId);
                                 }
                                 else {
@@ -824,7 +871,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
-                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);
+                                    uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitDereg(srcId);
                                 }
                                 else {
@@ -863,6 +910,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         }
                     }
                     else {
+                        network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown announcement opcode from the peer", req->buffer, req->length);
                     }
                 }

@@ -486,6 +486,12 @@ void Network::clock(uint32_t ms)
                 if (length > 10) {
                     reason = __GET_UINT16B(buffer, 10U);
                     switch (reason) {
+                    case NET_CONN_NAK_MODE_NOT_ENABLED:
+                        LogWarning(LOG_NET, "PEER %u master NAK; digital mode not enabled on FNE, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_ILLEGAL_PACKET:
+                        LogWarning(LOG_NET, "PEER %u master NAK; illegal/unknown packet, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
                     case NET_CONN_NAK_FNE_UNAUTHORIZED:
                         LogWarning(LOG_NET, "PEER %u master NAK; unauthorized, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;

@@ -39,6 +39,8 @@ namespace network
 
             /// <summary>Process a data frame from the network.</summary>
             bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool external = false);
+            /// <summary>Process a grant request frame from the network.</summary>
+            bool processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /// <summary>Helper to playback a parrot frame to the network.</summary>
             void playbackParrot();

@@ -131,7 +131,6 @@ RadioId RadioIdLookup::find(uint32_t id)
 /// </summary>
 void RadioIdLookup::commit()
 {
-    // bryanb: TODO TODO TODO
     save();
 }
 

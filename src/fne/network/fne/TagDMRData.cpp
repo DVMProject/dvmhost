@@ -290,6 +290,23 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 }
 
 /// <summary>
+/// Process a grant request frame from the network.
+/// </summary>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="slot"></param>
+/// <param name="unitToUnit"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="pktSeq"></param>
+/// <param name="streamId">Stream ID</param>
+/// <returns></returns>
+bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+{
+    // bryanb: TODO TODO TODO
+    return false;
+}
+
+/// <summary>
 /// Helper to playback a parrot frame to the network.
 /// </summary>
 void TagDMRData::playbackParrot()
