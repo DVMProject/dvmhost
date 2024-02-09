@@ -559,8 +559,6 @@ void Network::clock(uint32_t ms)
                         m_timeoutTimer.start();
                         m_retryTimer.start();
 
-                        Utils::dump(1U, "buffer", buffer.get(), length);
-
                         if (length > 6) {
                             m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
                             if (m_useAlternatePortForDiagnostics) {
