@@ -319,6 +319,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
+        ::pthread_detach(req->thread);
+
         uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         FNENetwork* network = req->network;
@@ -1040,6 +1042,8 @@ void* FNENetwork::threadedACLUpdate(void* arg)
 {
     ACLUpdateRequest* req = (ACLUpdateRequest*)arg;
     if (req != nullptr) {
+        ::pthread_detach(req->thread);
+
         LogInfoEx(LOG_NET, "PEER %u sending ACL list updates", req->peerId);
 
         req->network->writeWhitelistRIDs(req->peerId);
@@ -1047,9 +1051,7 @@ void* FNENetwork::threadedACLUpdate(void* arg)
         req->network->writeTGIDs(req->peerId);
         req->network->writeDeactiveTGIDs(req->peerId);
 
-        uint32_t thread = req->thread;
         delete req;
-        ::pthread_exit(&thread);
     }
 
     return nullptr;

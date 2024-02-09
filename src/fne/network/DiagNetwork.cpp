@@ -161,6 +161,8 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 {
     NetPacketRequest* req = (NetPacketRequest*)arg;
     if (req != nullptr) {
+        ::pthread_detach(req->thread);
+
         FNENetwork* network = req->network;
         if (req->length > 0) {
             uint32_t peerId = req->fneHeader.getPeerId();
