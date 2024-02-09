@@ -613,7 +613,15 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         connection->lastACLUpdate(now);
                                         network->m_peers[peerId] = connection;
 
-                                        network->writePeerACK(peerId);
+                                        // attach extra notification data to the RPTC ACK to notify the peer of 
+                                        // the use of the alternate diagnostic port
+                                        uint8_t buffer[1U];
+                                        buffer[0U] = 0x00U;
+                                        if (network->m_host->m_useAlternatePortForDiagnostics) {
+                                            buffer[0U] = 0x80U;
+                                        }
+
+                                        network->writePeerACK(peerId, buffer, 1U);
                                         LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
 
                                         json::object peerConfig = connection->config();
@@ -766,6 +774,12 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
             case NET_FUNC_TRANSFER:
                 {
+                    // are activity/diagnostic transfers occurring from the alternate port?
+                    if (network->m_host->m_useAlternatePortForDiagnostics) {
+                        break; // for performance and other reasons -- simply ignore the entire NET_FUNC_TRANSFER at this point
+                               // since they should be coming from the alternate port anyway
+                    }
+
                     if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_ACTIVITY) {     // Peer Activity Log Transfer
                         if (network->m_allowActivityTransfer) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
@@ -1397,6 +1411,8 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
 {
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    __SET_UINT32(peerId, buffer, 0U);                                           // Peer ID
 
     if (data != nullptr && length > 0U) {
         ::memcpy(buffer + 6U, data, length);

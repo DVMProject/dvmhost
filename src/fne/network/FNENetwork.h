@@ -58,6 +58,7 @@ namespace network
     //  Class Prototypes
     // ---------------------------------------------------------------------------
 
+    class HOST_SW_API DiagNetwork;
     class HOST_SW_API FNENetwork;
 
     // ---------------------------------------------------------------------------
@@ -236,6 +237,7 @@ namespace network
         void close() override;
 
     private:
+        friend class DiagNetwork;
         friend class fne::TagDMRData;
         fne::TagDMRData* m_tagDMR;
         friend class fne::TagP25Data;
@@ -324,8 +326,6 @@ namespace network
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
-
-        
     };
 } // namespace network
 

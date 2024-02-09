@@ -48,6 +48,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_slot1(slot1),
     m_slot2(slot2),
     m_duplex(duplex),
+    m_useAlternatePortForDiagnostics(false),
     m_allowActivityTransfer(allowActivityTransfer),
     m_allowDiagnosticTransfer(allowDiagnosticTransfer),
     m_debug(debug),
@@ -128,6 +129,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 /// Writes the local activity log to the network.
 /// </summary>
 /// <param name="message"></param>
+/// <param name="useAlternatePort"></param>
 /// <returns></returns>
 bool BaseNetwork::writeActLog(const char* message)
 {
@@ -145,13 +147,14 @@ bool BaseNetwork::writeActLog(const char* message)
     ::strcpy(buffer + 11U, message);
 
     return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
-        0U, 0U);
+        0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
 /// <summary>
 /// Writes the local diagnostics log to the network.
 /// </summary>
 /// <param name="message"></param>
+/// <param name="useAlternatePort"></param>
 /// <returns></returns>
 bool BaseNetwork::writeDiagLog(const char* message)
 {
@@ -169,7 +172,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
     ::strcpy(buffer + 11U, message);
 
     return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
-        0U, 0U);
+        0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
 /// <summary>
@@ -312,9 +315,25 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
 /// <param name="pktSeq"></param>
 /// <param name="streamId"></param>
 /// <param name="queueOnly"></param>
-bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, bool queueOnly)
+/// <param name="useAlternatePort"></param>
+bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
+    bool queueOnly, bool useAlternatePort)
 {
-    m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+    if (useAlternatePort) {
+        sockaddr_storage addr;
+        uint32_t addrLen;
+
+        std::string address = udp::Socket::address(m_addr);
+        uint16_t port = udp::Socket::port(m_addr) + 1U;
+
+        if (udp::Socket::lookup(address, port, addr, addrLen) == 0) {
+            m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
+        }
+    }
+    else {
+        m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+    }
+
     if (queueOnly)
         return true;
     return m_frameQueue->flushQueue();

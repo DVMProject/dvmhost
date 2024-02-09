@@ -531,15 +531,19 @@ void Network::clock(uint32_t ms)
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
                         LogDebug(LOG_NET, "PEER %u RPTL ACK, performing login exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+
                         ::memcpy(m_salt, buffer.get() + 6U, sizeof(uint32_t));
                         writeAuthorisation();
+
                         m_status = NET_STAT_WAITING_AUTHORISATION;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
                         break;
                     case NET_STAT_WAITING_AUTHORISATION:
                         LogDebug(LOG_NET, "PEER %u RPTK ACK, performing configuration exchange, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+
                         writeConfig();
+
                         m_status = NET_STAT_WAITING_CONFIG;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
@@ -548,10 +552,21 @@ void Network::clock(uint32_t ms)
                         LogMessage(LOG_NET, "PEER %u RPTC ACK, logged into the master successfully, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         m_loginStreamId = 0U;
                         m_remotePeerId = rtpHeader.getSSRC();
+
                         pktSeq(true);
+
                         m_status = NET_STAT_RUNNING;
                         m_timeoutTimer.start();
                         m_retryTimer.start();
+
+                        Utils::dump(1U, "buffer", buffer.get(), length);
+
+                        if (length > 6) {
+                            m_useAlternatePortForDiagnostics = (buffer[6U] & 0x80U) == 0x80U;
+                            if (m_useAlternatePortForDiagnostics) {
+                                LogMessage(LOG_NET, "PEER %u RPTC ACK, master commanded alternate port for diagnostics and activity logging, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                            }
+                        }
                         break;
                     default:
                         break;

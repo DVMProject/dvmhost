@@ -209,7 +209,7 @@ namespace network
 
         /// <summary>Helper to send a data message to the master.</summary>
         bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false);
+            uint16_t pktSeq, uint32_t streamId, bool queueOnly = false, bool useAlternatePort = false);
 
         /** Digital Mobile Radio */
         /// <summary>Reads DMR raw frame data from the DMR ring buffer.</summary>
@@ -268,6 +268,8 @@ namespace network
         __PROTECTED_READONLY_PROPERTY(bool, duplex, Duplex);
 
     protected:
+        bool m_useAlternatePortForDiagnostics;
+
         bool m_allowActivityTransfer;
         bool m_allowDiagnosticTransfer;
 

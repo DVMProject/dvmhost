@@ -144,6 +144,10 @@ system:
     # Flag indicating the TGID information for this master will be sent to its peers.
     sendTalkgroups: true
 
+    # Flag indicating the FNE should use an alternate port dedicated to diagnostic and activity
+    # log processing. This port number is always: master port + 1 (so for example, a master port
+    # of 62031 will use 62032 for diagnostic and activity messages.)
+    useAlternatePortForDiagnostics: false
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.

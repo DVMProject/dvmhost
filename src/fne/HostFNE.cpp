@@ -51,6 +51,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
     m_network(nullptr),
+    m_diagNetwork(nullptr),
     m_dmrEnabled(false),
     m_p25Enabled(false),
     m_nxdnEnabled(false),
@@ -60,6 +61,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_pingTime(5U),
     m_maxMissedPings(5U),
     m_updateLookupTime(10U),
+    m_useAlternatePortForDiagnostics(false),
     m_allowActivityTransfer(false),
     m_allowDiagnosticTransfer(false),
     m_RESTAPI(nullptr)
@@ -196,6 +198,22 @@ int HostFNE::run()
     networkLoop.run();
     networkLoop.setName("dvmfne:network-loop");
 
+    ThreadFunc diagNetworkLoop([&, this]() {
+        if (g_killed)
+            return;
+
+        if (m_diagNetwork != nullptr) {
+            while (!g_killed) {
+                m_diagNetwork->processNetwork();
+                Thread::sleep(5U);
+            }
+        }
+    });
+    if (m_useAlternatePortForDiagnostics) {
+        diagNetworkLoop.run();
+        diagNetworkLoop.setName("dvmfne:diag-network-loop");
+    }
+
     // main execution loop
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
@@ -210,6 +228,8 @@ int HostFNE::run()
         // clock master
         if (m_network != nullptr)
             m_network->clock(ms);
+        if (m_diagNetwork != nullptr)
+            m_diagNetwork->clock(ms);
 
         // clock peers
         for (auto network : m_peerNetworks) {
@@ -228,10 +248,18 @@ int HostFNE::run()
 
     // shutdown threads
     networkLoop.wait();
+    if (m_useAlternatePortForDiagnostics) {
+        diagNetworkLoop.wait();
+    }
 
     if (m_network != nullptr) {
         m_network->close();
         delete m_network;
+    }
+
+    if (m_diagNetwork != nullptr) {
+        m_diagNetwork->close();
+        delete m_diagNetwork;
     }
 
     for (auto network : m_peerNetworks) {
@@ -286,6 +314,7 @@ bool HostFNE::readParams()
         m_updateLookupTime = 10U;
     }
 
+    m_useAlternatePortForDiagnostics = systemConf["useAlternatePortForDiagnostics"].as<bool>(false);
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
 
@@ -296,6 +325,7 @@ bool HostFNE::readParams()
 
     LogInfo("    Send Talkgroups: %s", sendTalkgroups ? "yes" : "no");
 
+    LogInfo("    Use Alternate Port for Diagnostics: %s", m_useAlternatePortForDiagnostics ? "yes" : "no");
     LogInfo("    Allow Activity Log Transfer: %s", m_allowActivityTransfer ? "yes" : "no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
 
@@ -485,6 +515,23 @@ bool HostFNE::createMasterNetwork()
 
     if (encrypted) {
         m_network->setPresharedKey(presharedKey);
+    }
+
+    // setup alternate port for diagnostics/activity logging
+    if (m_useAlternatePortForDiagnostics) {
+        m_diagNetwork = new DiagNetwork(this, m_network, address, port + 1U);
+
+        bool ret = m_diagNetwork->open();
+        if (!ret) {
+            delete m_diagNetwork;
+            m_diagNetwork = nullptr;
+            LogError(LOG_HOST, "failed to initialize diagnostic log networking!");
+            m_useAlternatePortForDiagnostics = false; // this isn't fatal so just disable alternate port
+        }
+
+        if (encrypted) {
+            m_diagNetwork->setPresharedKey(presharedKey);
+        }
     }
 
     return true;

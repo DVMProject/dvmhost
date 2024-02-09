@@ -19,6 +19,7 @@
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
+#include "network/DiagNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/RESTAPI.h"
 
@@ -58,6 +59,7 @@ private:
     friend class network::fne::TagP25Data;
     friend class network::fne::TagNXDNData;
     network::FNENetwork* m_network;
+    network::DiagNetwork* m_diagNetwork;
 
     bool m_dmrEnabled;
     bool m_p25Enabled;
@@ -71,6 +73,8 @@ private:
     uint32_t m_pingTime;
     uint32_t m_maxMissedPings;
     uint32_t m_updateLookupTime;
+
+    bool m_useAlternatePortForDiagnostics;
 
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
