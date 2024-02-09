@@ -13,7 +13,9 @@
 *
 */
 #include "Thread.h"
+#include "Log.h"
 
+#include <cerrno>
 #include <signal.h>
 #include <unistd.h>
 
@@ -46,7 +48,13 @@ bool Thread::run()
         return m_started;
 
     m_started = true;
-    return ::pthread_create(&m_thread, NULL, helper, this) == 0;
+    int err = ::pthread_create(&m_thread, NULL, helper, this);
+    if (err != 0) {
+        LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        return false;
+    }
+
+    return true;
 }
 
 /// <summary>

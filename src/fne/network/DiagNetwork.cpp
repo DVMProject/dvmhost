@@ -95,7 +95,11 @@ void DiagNetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        ::pthread_create(&req->thread, NULL, threadedNetworkRx, req);
+        if (::pthread_create(&req->thread, NULL, threadedNetworkRx, req) != 0) {
+            LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+            delete req;
+            return;
+        }
     }
 }
 

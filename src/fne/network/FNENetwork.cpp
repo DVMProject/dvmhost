@@ -26,6 +26,7 @@ using namespace network;
 using namespace network::fne;
 
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 
 // ---------------------------------------------------------------------------
@@ -185,7 +186,11 @@ void FNENetwork::processNetwork()
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
-        ::pthread_create(&req->thread, NULL, threadedNetworkRx, req);
+        if (::pthread_create(&req->thread, NULL, threadedNetworkRx, req) != 0) {
+            LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+            delete req;
+            return;
+        }
     }
     else {
         // if the DMR handler has parrot frames to playback, playback a frame
@@ -1028,7 +1033,12 @@ void FNENetwork::peerACLUpdate(uint32_t peerId)
     std::stringstream peerName;
     peerName << peerId << ":acl-update";
 
-    ::pthread_create(&req->thread, NULL, threadedACLUpdate, req);
+    if (::pthread_create(&req->thread, NULL, threadedACLUpdate, req) != 0) {
+        LogError(LOG_NET, "Error returned from pthread_create, err: %d", errno);
+        delete req;
+        return;
+    }
+
     if (pthread_kill(req->thread, 0) == 0) {
         ::pthread_setname_np(req->thread, peerName.str().c_str());
     }
