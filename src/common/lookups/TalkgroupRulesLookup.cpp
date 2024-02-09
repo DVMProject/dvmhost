@@ -307,67 +307,6 @@ bool TalkgroupRulesLookup::getACL()
     return m_acl;
 }
 
-void TalkgroupRuleGroupVoice::getYaml(yaml::Node &node)
-{
-    // Get all the properties
-    node["name"] = m_name;
-    yaml::Node config, source;
-    m_config.getYaml(config);
-    m_source.getYaml(source);
-    node["config"] = config;
-    node["source"] = source;
-}
-
-void TalkgroupRuleConfig::getYaml(yaml::Node &node)
-{
- 
-    // We have to convert the bools back to strings to pass to the yaml node
-    node["active"] = __BOOL_STR(m_active);
-    node["affiliated"] = __BOOL_STR(m_affiliated);
-    node["parrot"] = __BOOL_STR(m_parrot);
-    
-    // Get the lists
-    yaml::Node inclusionList;
-    if (m_inclusion.size() > 0U) {
-        for (auto inc : m_inclusion) {
-            yaml::Node& newIn = inclusionList.push_back();
-            newIn = __INT_STR(inc);
-        }
-    }
-    node["inclusion"] = inclusionList;
-    
-    yaml::Node exclusionList;
-    if (m_exclusion.size() > 0U) {
-        for (auto exc : m_exclusion) {
-            yaml::Node& newEx = exclusionList.push_back();
-            newEx = __INT_STR(exc);
-        }
-    }
-    node["exclusion"] = exclusionList;
-    
-    yaml::Node rewriteList;
-    if (m_rewrite.size() > 0U) {
-        for (auto rule : m_rewrite) {
-            yaml::Node& rewrite = rewriteList.push_back();
-            rule.getYaml(rewrite);
-        }
-    }
-    node["rewrite"] = rewriteList;
-}
-
-void TalkgroupRuleGroupVoiceSource::getYaml(yaml::Node &node)
-{
-    node["tgid"] = __INT_STR(m_tgId);
-    node["slot"] = __INT_STR(m_tgSlot);
-}
-
-void TalkgroupRuleRewrite::getYaml(yaml::Node &node)
-{
-    node["peerid"] = __INT_STR(m_peerId);
-    node["tgid"] = __INT_STR(m_tgId);
-    node["slot"] = __INT_STR(m_tgSlot);
-}
-
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
