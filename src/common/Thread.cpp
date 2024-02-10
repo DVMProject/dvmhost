@@ -58,7 +58,7 @@ bool Thread::run()
 }
 
 /// <summary>
-///
+/// Make calling thread wait for termination of the thread.
 /// </summary>
 void Thread::wait()
 {
@@ -66,7 +66,7 @@ void Thread::wait()
 }
 
 /// <summary>
-///
+/// Set thread name visible in the kernel and its interfaces.
 /// </summary>
 /// <param name="name"></param>
 void Thread::setName(std::string name)
@@ -78,6 +78,19 @@ void Thread::setName(std::string name)
 #ifdef _GNU_SOURCE
     ::pthread_setname_np(m_thread, name.c_str());
 #endif // _GNU_SOURCE
+}
+
+/// <summary>
+/// Indicate that the thread is never to be joined with wait().
+/// The resources of thread will therefore be freed immediately when it
+/// terminates, instead of waiting for another thread to perform wait()
+/// on it.
+/// </summary>
+void Thread::detach()
+{
+    if (!m_started)
+        return;
+    ::pthread_detach(m_thread);
 }
 
 /// <summary>
@@ -94,7 +107,7 @@ void Thread::sleep(uint32_t ms)
 // ---------------------------------------------------------------------------
 
 /// <summary>
-///
+/// Internal helper thats used as the entry point for the thread.
 /// </summary>
 /// <param name="arg"></param>
 /// <returns></returns>

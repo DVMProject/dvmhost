@@ -39,11 +39,17 @@ public:
     /// <summary>User-defined function to run for the thread main.</summary>
     virtual void entry() = 0;
 
-    /// <summary></summary>
+    /// <summary>Make calling thread wait for termination of the thread.</summary>
     virtual void wait();
 
-    /// <summary></summary>
+    /// <summary>Set thread name visible in the kernel and its interfaces.</summary>
     virtual void setName(std::string name);
+
+    /// <summary>Indicate that the thread is never to be joined with wait().
+    /// The resources of thread will therefore be freed immediately when it
+    /// terminates, instead of waiting for another thread to perform wait()
+    /// on it.</summary>
+    virtual void detach();
 
     /// <summary></summary>
     static void sleep(uint32_t ms);
@@ -51,7 +57,7 @@ public:
 private:
     pthread_t m_thread;
 
-    /// <summary></summary>
+    /// <summary>Internal helper thats used as the entry point for the thread.</summary>
     static void* helper(void* arg);
 
 public:
