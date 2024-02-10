@@ -195,6 +195,13 @@ namespace lookups
             return *this;
         }
 
+        /// <summary>Gets the count of inclusions.</summary>
+        uint8_t inclusionSize() const { return m_inclusion.size(); }
+        /// <summary>Gets the count of exclusions.</summary>
+        uint8_t exclusionSize() const { return m_exclusion.size(); }
+        /// <summary>Gets the count of rewrites.</summary>
+        uint8_t rewriteSize() const { return m_rewrite.size(); }
+
         /// <summary>Return the YAML structure for this TalkgroupRuleConfig.</summary>
         void getYaml(yaml::Node &node)
         {

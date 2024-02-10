@@ -485,9 +485,8 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
         tg = m_network->m_tidLookup->findByRewrite(peerId, dstId);
     }
 
-    std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
-
-    if (rewrites.size() > 0) {
+    if (tg.config().rewriteSize() > 0) {
+        std::vector<lookups::TalkgroupRuleRewrite> rewrites = tg.config().rewrite();
         for (auto entry : rewrites) {
             if (entry.peerId() == peerId) {
                 if (outbound) {

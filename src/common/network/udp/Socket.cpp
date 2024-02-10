@@ -511,7 +511,14 @@ bool Socket::write(BufferVector& buffers, ssize_t* lenWritten) noexcept
 
     bool skip = false;
     for (auto& buffer : buffers) {
+        if (buffer == nullptr) {
+            LogError(LOG_NET, "Socket::write() missing network buffer data? this isn't normal, aborting");
+            skip = true;
+            break;
+        }
+
         if (m_af != buffer->address.ss_family) {
+            LogError(LOG_NET, "Socket::write() mismatched network address family? this isn't normal, aborting");
             skip = true;
             break;
         }
