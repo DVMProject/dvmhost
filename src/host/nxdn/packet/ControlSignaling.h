@@ -106,9 +106,6 @@ namespace nxdn
             void writeRF_CC_Message_Site_Info();
             /// <summary>Helper to write a CC SRV_INFO broadcast packet on the RF interface.</summary>
             void writeRF_CC_Message_Service_Info();
-
-            /// <summary>Helper to add the post field bits on NXDN frame data.</summary>
-            void addPostBits(uint8_t* data);
         };
     } // namespace packet
 } // namespace nxdn

@@ -894,12 +894,9 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     break;
                     case TSBK_ISP_EMERG_ALRM_REQ:
                     {
-                        ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
-
                         // non-emergency mode is a TSBK_OSP_DENY_RSP
-                        if (!isp->getEmergency()) {
-                            // ignore a network deny command
-                            return true; // don't allow this to write to the air
+                        if (!tsbk->getEmergency()) {
+                            break; // the FNE may explicitly send these
                         } else {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(true), srcId, dstId);
                             return true; // don't allow this to write to the air
@@ -915,9 +912,10 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     case TSBK_OSP_LOC_REG_RSP:
                         // ignore a network location registration command
                         return true; // don't allow this to write to the air
+                    case TSBK_OSP_U_REG_CMD:
+                        break; // the FNE may explicitly send these
                     case TSBK_OSP_QUE_RSP:
-                        // ignore a network queue command
-                        return true; // don't allow this to write to the air
+                        break; // the FNE may explicitly send these
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
                         return false;

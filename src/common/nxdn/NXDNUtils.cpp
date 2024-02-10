@@ -15,6 +15,7 @@
 #include "Defines.h"
 #include "nxdn/NXDNDefines.h"
 #include "nxdn/NXDNUtils.h"
+#include "Utils.h"
 
 using namespace nxdn;
 
@@ -44,4 +45,20 @@ void NXDNUtils::scrambler(uint8_t* data)
 
     for (uint32_t i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
         data[i] ^= SCRAMBLER[i];
+}
+
+/// <summary>
+/// Helper to add the post field bits on NXDN frame data.
+/// </summary>
+/// <param name="data"></param>
+void NXDNUtils::addPostBits(uint8_t* data)
+{
+    assert(data != nullptr);
+
+    // post field
+    for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {
+        uint32_t n = i + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_FEC_LENGTH_BITS + NXDN_CAC_E_POST_FIELD_BITS;
+        bool b = READ_BIT(NXDN_PREAMBLE, i);
+        WRITE_BIT(data, n, b);
+    }
 }

@@ -685,3 +685,96 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
 
     return true;
 }
+
+/// <summary>
+/// Helper to write a deny packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="dstId"></param>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+/// <param name="aiv"></param>
+void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+{
+    std::unique_ptr<lc::tsbk::OSP_DENY_RSP> osp = std::make_unique<lc::tsbk::OSP_DENY_RSP>();
+    osp->setAIV(aiv);
+    osp->setSrcId(srcId);
+    osp->setDstId(dstId);
+    osp->setService(service);
+    osp->setResponse(reason);
+
+    if (m_network->m_verbose) {
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+    }
+
+    write_TSDU(peerId, osp.get());
+}
+
+/// <summary>
+/// Helper to write a queue packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="dstId"></param>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+/// <param name="aiv"></param>
+/// <param name="grp"></param>
+void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
+{
+    std::unique_ptr<lc::tsbk::OSP_QUE_RSP> osp = std::make_unique<lc::tsbk::OSP_QUE_RSP>();
+    osp->setAIV(aiv);
+    osp->setSrcId(srcId);
+    osp->setDstId(dstId);
+    osp->setService(service);
+    osp->setResponse(reason);
+    osp->setGroup(grp);
+
+    if (m_network->m_verbose) {
+        LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
+            osp->toString().c_str(), osp->getAIV(), reason, osp->getSrcId(), osp->getDstId());
+    }
+
+    write_TSDU(peerId, osp.get());
+}
+
+/// <summary>
+/// Helper to write a network TSDU.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="tsbk"></param>
+void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
+{
+    uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
+
+    // Generate Sync
+    Sync::addP25Sync(data + 2U);
+
+    // Generate TSBK block
+    tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
+    tsbk->encode(data + 2U);
+
+    if (m_debug) {
+        LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
+            tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
+            tsbk->getSysId(), tsbk->getNetId());
+
+        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
+    }
+
+    lc::LC lc = lc::LC();
+    lc.setLCO(tsbk->getLCO());
+    lc.setMFId(tsbk->getMFId());
+    lc.setSrcId(tsbk->getSrcId());
+    lc.setDstId(tsbk->getDstId());
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = m_network->createP25_TSDUMessage(messageLength, lc, data);
+    if (message == nullptr) {
+        return;
+    }
+
+    uint32_t streamId = m_network->createStreamId();
+    m_network->writePeer(peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
+}

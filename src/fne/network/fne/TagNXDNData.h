@@ -17,6 +17,7 @@
 #include "common/Clock.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/lc/RCCH.h"
 #include "network/FNENetwork.h"
 
 #include <deque>
@@ -74,6 +75,12 @@ namespace network
             bool isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId);
             /// <summary>Helper to validate the NXDN call stream.</summary>
             bool validate(uint32_t peerId, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
+
+            /// <summary>Helper to write a deny packet.</summary>
+            void write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service);
+
+            /// <summary>Helper to write a network RCCH.</summary>
+            void write_Message(uint32_t peerId, nxdn::lc::RCCH* rcch);
         };
     } // namespace fne
 } // namespace network

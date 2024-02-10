@@ -28,6 +28,8 @@ namespace nxdn
     public:
         /// <summary>Helper to scramble the NXDN frame data.</summary>
         static void scrambler(uint8_t* data);
+        /// <summary>Helper to add the post field bits on NXDN frame data.</summary>
+        static void addPostBits(uint8_t* data);
     };
 } // namespace nxdn
 

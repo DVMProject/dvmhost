@@ -12,6 +12,12 @@
 */
 #include "fne/Defines.h"
 #include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/channel/LICH.h"
+#include "common/nxdn/channel/CAC.h"
+#include "common/nxdn/lc/rcch/RCCHFactory.h"
+#include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/NXDNUtils.h"
+#include "common/nxdn/Sync.h"
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -460,4 +466,86 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
     }
 
     return true;
+}
+
+/// <summary>
+/// Helper to write a deny packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service)
+{
+    std::unique_ptr<lc::RCCH> rcch = nullptr;
+
+    switch (service) {
+    case RTCH_MESSAGE_TYPE_VCALL:
+        rcch = std::make_unique<lc::rcch::MESSAGE_TYPE_VCALL_CONN>();
+        rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
+    default:
+        return;
+    }
+
+    rcch->setCauseResponse(reason);
+    rcch->setSrcId(srcId);
+    rcch->setDstId(dstId);
+
+    if (m_network->m_verbose) {
+        LogMessage(LOG_RF, "NXDN, MSG_DENIAL (Message Denial), reason = $%02X, service = $%02X, srcId = %u, dstId = %u",
+            service, srcId, dstId);
+    }
+
+    write_Message(peerId, rcch.get());
+}
+
+/// <summary>
+/// Helper to write a network RCCH.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="rcch"></param>
+void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
+{
+    uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, NXDN_FRAME_LENGTH_BYTES);
+
+    Sync::addNXDNSync(data + 2U);
+
+    // generate the LICH
+    channel::LICH lich;
+    lich.setRFCT(NXDN_LICH_RFCT_RCCH);
+    lich.setFCT(NXDN_LICH_CAC_OUTBOUND);
+    lich.setOption(NXDN_LICH_DATA_COMMON);
+    lich.setOutbound(true);
+    lich.encode(data + 2U);
+
+    uint8_t buffer[NXDN_RCCH_LC_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES);
+
+    rcch->encode(buffer, NXDN_RCCH_LC_LENGTH_BITS);
+
+    // generate the CAC
+    channel::CAC cac;
+    cac.setRAN(0U);
+    cac.setStructure(NXDN_SR_RCCH_SINGLE);
+    cac.setData(buffer);
+    cac.encode(data + 2U);
+
+    NXDNUtils::scrambler(data + 2U);
+    NXDNUtils::addPostBits(data + 2U);
+
+    lc::RTCH lc = lc::RTCH();
+    lc.setMessageType(rcch->getMessageType());
+    lc.setSrcId(rcch->getSrcId());
+    lc.setDstId(rcch->getDstId());
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = m_network->createNXDN_Message(messageLength, lc, data, NXDN_FRAME_LENGTH_BYTES + 2U);
+    if (message == nullptr) {
+        return;
+    }
+
+    uint32_t streamId = m_network->createStreamId();
+    m_network->writePeer(peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
 }

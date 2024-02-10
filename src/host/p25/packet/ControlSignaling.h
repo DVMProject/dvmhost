@@ -218,7 +218,7 @@ namespace p25
             bool writeNet_TSDU_Call_Term(uint32_t srcId, uint32_t dstId);
 
             /// <summary>Helper to write a network TSDU from the RF data queue.</summary>
-            void writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t * data);
+            void writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data);
 
             /// <summary>Helper to automatically inhibit a source ID on a denial.</summary>
             void denialInhibit(uint32_t srcId);

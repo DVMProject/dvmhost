@@ -442,36 +442,28 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
                 case SVC_KIND_IND_VOICE_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
 
-                    if (m_slot->m_authoritative) {
-                        if (!m_slot->m_affiliations->isGranted(dstId)) {
-                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
-                        }
+                    if (!m_slot->m_affiliations->isGranted(dstId)) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                     }
                     break;
                 case SVC_KIND_GRP_VOICE_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 1U);
 
-                    if (m_slot->m_authoritative) {
-                        if (!m_slot->m_affiliations->isGranted(dstId)) {
-                            writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
-                        }
+                    if (!m_slot->m_affiliations->isGranted(dstId)) {
+                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                     }
                     break;
                 case SVC_KIND_IND_DATA_CALL:
                 case SVC_KIND_IND_UDT_DATA_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
-                    if (!m_slot->m_affiliations->isGranted(dstId)) {
-                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
-                    }
+                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false, true);
                     break;
                 case SVC_KIND_GRP_DATA_CALL:
                 case SVC_KIND_GRP_UDT_DATA_CALL:
                     writeRF_CSBK_ACK_RSP(srcId, TS_WAIT_RSN, 0U);
 
-                    if (!m_slot->m_affiliations->isGranted(dstId)) {
-                        writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
-                    }
+                    writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true, true);
                     break;
                 case SVC_KIND_REG_SVC:
                     break;
@@ -725,7 +717,7 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool 
 */
 
 /// <summary>
-/// Helper to write a deny packet.
+/// Helper to write a ACK RSP packet.
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
@@ -742,7 +734,7 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
 }
 
 /// <summary>
-/// Helper to write a deny packet.
+/// Helper to write a NACK RSP packet.
 /// </summary>
 /// <param name="dstId"></param>
 /// <param name="reason"></param>

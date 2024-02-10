@@ -257,7 +257,7 @@ bool ControlSignaling::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& net
         uint16_t srcId = rcch->getSrcId();
         uint16_t dstId = rcch->getDstId();
 
-        // handle standard P25 reference opcodes
+        // handle standard NXDN message opcodes
         switch (rcch->getMessageType()) {
             case RTCH_MESSAGE_TYPE_VCALL:
             {
@@ -277,6 +277,8 @@ bool ControlSignaling::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& net
                 }
             }
             return true; // don't allow this to write to the air
+            case RCCH_MESSAGE_TYPE_VCALL_CONN:
+                break; // the FNE may explicitly send these
             default:
                 LogError(LOG_NET, "NXDN, unhandled message type, messageType = $%02X", rcch->getMessageType());
                 return false;
@@ -395,8 +397,7 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBef
     data[1U] = 0x00U;
 
     NXDNUtils::scrambler(data + 2U);
-
-    addPostBits(data + 2U);
+    NXDNUtils::addPostBits(data + 2U);
 
     if (!noNetwork)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -823,8 +824,7 @@ void ControlSignaling::writeRF_CC_Message_Site_Info()
     data[1U] = 0x00U;
 
     NXDNUtils::scrambler(data + 2U);
-
-    addPostBits(data + 2U);
+    NXDNUtils::addPostBits(data + 2U);
 
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
@@ -868,26 +868,9 @@ void ControlSignaling::writeRF_CC_Message_Service_Info()
     data[1U] = 0x00U;
 
     NXDNUtils::scrambler(data + 2U);
-
-    addPostBits(data + 2U);
+    NXDNUtils::addPostBits(data + 2U);
 
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U);
-    }
-}
-
-/// <summary>
-/// Helper to add the post field bits on NXDN frame data.
-/// </summary>
-/// <param name="data"></param>
-void ControlSignaling::addPostBits(uint8_t* data)
-{
-    assert(data != nullptr);
-
-    // post field
-    for (uint32_t i = 0U; i < NXDN_CAC_E_POST_FIELD_BITS; i++) {
-        uint32_t n = i + NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_CAC_FEC_LENGTH_BITS + NXDN_CAC_E_POST_FIELD_BITS;
-        bool b = READ_BIT(NXDN_PREAMBLE, i);
-        WRITE_BIT(data, n, b);
     }
 }

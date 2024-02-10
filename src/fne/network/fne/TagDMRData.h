@@ -16,6 +16,7 @@
 #include "fne/Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/Data.h"
+#include "common/dmr/lc/CSBK.h"
 #include "common/Clock.h"
 #include "network/FNENetwork.h"
 
@@ -75,6 +76,12 @@ namespace network
             bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
             /// <summary>Helper to validate the DMR call stream.</summary>
             bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
+
+            /// <summary>Helper to write a NACK RSP packet.</summary>
+            void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service);
+
+            /// <summary>Helper to write a network CSBK.</summary>
+            void write_CSBK(uint32_t peerId, dmr::lc::CSBK* csbk);
         };
     } // namespace fne
 } // namespace network

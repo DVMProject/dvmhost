@@ -11,8 +11,11 @@
 *
 */
 #include "fne/Defines.h"
+#include "common/dmr/lc/csbk/CSBKFactory.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/FullLC.h"
+#include "common/dmr/SlotType.h"
+#include "common/dmr/Sync.h"
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -542,4 +545,68 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
     }
 
     return true;
+}
+
+/// <summary>
+/// Helper to write a NACK RSP packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="dstId"></param>
+/// <param name="reason"></param>
+/// <param name="service"></param>
+void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service)
+{
+    std::unique_ptr<lc::csbk::CSBK_NACK_RSP> csbk = std::make_unique<lc::csbk::CSBK_NACK_RSP>();
+    csbk->setServiceKind(service);
+    csbk->setReason(reason);
+    csbk->setSrcId(DMR_WUID_ALL); // hmmm...
+    csbk->setDstId(dstId);
+
+    write_CSBK(peerId, csbk.get());
+}
+
+/// <summary>
+/// Helper to write a network CSBK.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="csbk"></param>
+void TagDMRData::write_CSBK(uint32_t peerId, lc::CSBK* csbk)
+{
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(0U);
+    slotType.setDataType(DT_CSBK);
+
+    // Regenerate the CSBK data
+    csbk->encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, true);
+
+    data::Data dmrData;
+    dmrData.setSlotNo(1U);
+    dmrData.setDataType(DT_CSBK);
+    dmrData.setSrcId(csbk->getSrcId());
+    dmrData.setDstId(csbk->getDstId());
+    dmrData.setFLCO(csbk->getGI() ? FLCO_GROUP : FLCO_PRIVATE);
+    dmrData.setN(0U);
+    dmrData.setSeqNo(0U);
+    dmrData.setBER(0U);
+    dmrData.setRSSI(0U);
+
+    dmrData.setData(data + 2U);
+
+    uint32_t streamId = m_network->createStreamId();
+    uint32_t messageLength = 0U;
+    UInt8Array message = m_network->createDMR_Message(messageLength, streamId, dmrData);
+    if (message == nullptr) {
+        return;
+    }
+
+    m_network->writePeer(peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId, false, true);
 }
