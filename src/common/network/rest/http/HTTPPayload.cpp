@@ -409,10 +409,10 @@ void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
     if (!isClientPayload) {
         headers.add("Content-Type", std::string(contentType));
         headers.add("Content-Length", std::to_string(content.size()));
-        headers.add("Server", std::string((__EXE_NAME__ "/" __VER__)));
+        headers.add("Server", std::string(("DVM/" __VER__)));
     }
     else {
-        headers.add("User-Agent", std::string((__EXE_NAME__ "/" __VER__)));
+        headers.add("User-Agent", std::string(("DVM/" __VER__)));
         headers.add("Accept", "*/*");
         if (::strtoupper(method) != HTTP_GET) {
             headers.add("Content-Type", std::string(contentType));

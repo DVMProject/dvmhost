@@ -709,7 +709,10 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
-                    LogDebug(LOG_REST, "Preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
+                    if (m_debug) {
+                        LogDebug(LOG_REST, "Preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
+                    }
+
                     json::object peerObj = json::object();
                     peerObj["peerId"].set<uint32_t>(peerId);
 
