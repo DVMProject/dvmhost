@@ -141,10 +141,10 @@ int HostFNE::run()
         ::close(STDERR_FILENO);
     }
 
-    ::LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
-    ::LogInfo("Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
-    ::LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
-    ::LogInfo(">> Fixed Network Equipment");
+    ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
+        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
+        ">> Fixed Network Equipment\r\n");
 
     // read base parameters from configuration
     ret = readParams();

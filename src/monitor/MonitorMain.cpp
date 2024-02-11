@@ -198,10 +198,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ::LogInfo(__PROG_NAME__ " %s (built %s)", __VER__, __BUILD__);
-    ::LogInfo("Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.");
-    ::LogInfo("Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others");
-    ::LogInfo(">> Host Monitor");
+    ::LogInfo(__PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
+        "Copyright (c) 2017-2024 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
+        ">> Host Monitor\r\n");
 
     try {
         ret = yaml::Parse(g_conf, g_iniFile.c_str());
