@@ -175,8 +175,12 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     switch (lco) {
     case TSBK_IOSP_GRP_VCH:
         return decode(new IOSP_GRP_VCH(), data, rawTSBK);
+    case TSBK_OSP_GRP_VCH_GRANT_UPD:
+        return decode(new OSP_GRP_VCH_GRANT_UPD(), data, rawTSBK);
     case TSBK_IOSP_UU_VCH:
         return decode(new IOSP_UU_VCH(), data, rawTSBK);
+    case TSBK_OSP_UU_VCH_GRANT_UPD:
+        return decode(new OSP_UU_VCH_GRANT_UPD(), data, rawTSBK);
     case TSBK_IOSP_UU_ANS:
         return decode(new IOSP_UU_ANS(), data, rawTSBK);
     case TSBK_ISP_SNDCP_CH_REQ:

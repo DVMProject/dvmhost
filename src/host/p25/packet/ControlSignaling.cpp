@@ -787,6 +787,9 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
                     }
                     return true; // don't allow this to write to the air
+                    case TSBK_OSP_GRP_VCH_GRANT_UPD:
+                    case TSBK_OSP_UU_VCH_GRANT_UPD:
+                        return true; // don't allow this to write to the air
                     case TSBK_IOSP_UU_ANS:
                     {
                         IOSP_UU_ANS* iosp = static_cast<IOSP_UU_ANS*>(tsbk.get());

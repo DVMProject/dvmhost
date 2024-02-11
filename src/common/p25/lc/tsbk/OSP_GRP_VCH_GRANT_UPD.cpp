@@ -41,7 +41,18 @@ bool OSP_GRP_VCH_GRANT_UPD::decode(const uint8_t* data, bool rawTSBK)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t tsbk[P25_TSBK_LENGTH_BYTES + 1U];
+    ::memset(tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
+
+    bool ret = TSBK::decode(data, tsbk, rawTSBK);
+    if (!ret)
+        return false;
+
+    ulong64_t tsbkValue = TSBK::toValue(tsbk);
+
+    m_grpVchId = (uint8_t)((tsbkValue >> 60) & 0xFU);                               // Channel ID
+    m_grpVchNo = (uint32_t)((tsbkValue >> 48) & 0xFFFU);                            // Channel Number
+    m_dstId = (uint32_t)((tsbkValue >> 32) & 0xFFFFU);                              // Talkgroup Address
 
     return true;
 }

@@ -445,7 +445,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
 
                     for (int i = 0; i < 3; i++)
-                        m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+                        m_p25->m_control->writeRF_TSDU_SBF(osp.get(), true, false, false, false);
                 }
             }
 
@@ -548,7 +548,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 }
 
                 for (int i = 0; i < 3; i++)
-                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, false);
+                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), true, false, false, false);
             }
 
             m_rfFrames = 0U;
@@ -1537,7 +1537,7 @@ void Voice::writeNet_LDU1()
                 }
 
                 for (int i = 0; i < 6; i++)
-                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), false, false, false, true);
+                    m_p25->m_control->writeRF_TSDU_SBF(osp.get(), true, false, false, true);
             }
         }
 

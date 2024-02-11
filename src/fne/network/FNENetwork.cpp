@@ -1115,10 +1115,11 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
             size_t listSize = ridWhitelist.size();
             if (chunkCnt > 1U) {
                 listSize = MAX_RID_LIST_CHUNK;
-            }
 
-            if (i == chunkCnt - 1U) {
-                listSize = (chunkCnt * MAX_RID_LIST_CHUNK) - ridWhitelist.size();
+                if (i == chunkCnt - 1U) {
+                    // this is a disgusting dirty hack...
+                    listSize = abs((i * MAX_RID_LIST_CHUNK) - ridWhitelist.size());
+                }
             }
 
             if (listSize > ridWhitelist.size()) {
@@ -1135,7 +1136,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
             // write whitelisted IDs to whitelist payload
             uint32_t offs = 4U;
             for (uint32_t j = 0; j < listSize; j++) {
-                uint32_t id = ridWhitelist.at(j + (i * MAX_RID_LIST_CHUNK));
+                uint32_t id = ridWhitelist.at(j + (i * listSize));
 
                 if (m_debug)
                     LogDebug(LOG_NET, "PEER %u whitelisting RID %u (%d / %d)", peerId, id, i, j);
@@ -1183,10 +1184,11 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
             size_t listSize = ridBlacklist.size();
             if (chunkCnt > 1U) {
                 listSize = MAX_RID_LIST_CHUNK;
-            }
-
-            if (i == chunkCnt - 1U) {
-                listSize = (chunkCnt * MAX_RID_LIST_CHUNK) - ridBlacklist.size();
+                
+                if (i == chunkCnt - 1U) {
+                    // this is a disgusting dirty hack...
+                    listSize = abs((i * MAX_RID_LIST_CHUNK) - ridBlacklist.size());
+                }
             }
 
             if (listSize > ridBlacklist.size()) {
@@ -1200,10 +1202,10 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
 
             __SET_UINT32(listSize, payload, 0U);
 
-            // write whitelisted IDs to whitelist payload
+            // write blacklisted IDs to blacklist payload
             uint32_t offs = 4U;
             for (uint32_t j = 0; j < listSize; j++) {
-                uint32_t id = ridBlacklist.at(j + (i * MAX_RID_LIST_CHUNK));
+                uint32_t id = ridBlacklist.at(j + (i * listSize));
 
                 if (m_debug)
                     LogDebug(LOG_NET, "PEER %u blacklisting RID %u (%d / %d)", peerId, id, i, j);
