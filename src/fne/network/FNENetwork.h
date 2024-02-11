@@ -86,6 +86,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_lastACLUpdate(0U),
+            m_isExternalPeer(false),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)
@@ -109,6 +110,7 @@ namespace network
             m_pingsReceived(0U),
             m_lastPing(0U),
             m_lastACLUpdate(0U),
+            m_isExternalPeer(false),
             m_config(),
             m_pktLastSeq(0U),
             m_pktNextSeq(1U)
@@ -151,6 +153,9 @@ namespace network
 
         /// <summary>Last ACL update sent.</summary>
         __PROPERTY_PLAIN(uint64_t, lastACLUpdate);
+
+        /// <summary>Flag indicating this connection is from an external peer.</summary>
+        __PROPERTY_PLAIN(bool, isExternalPeer);
 
         /// <summary>JSON objecting containing peer configuration information.</summary>
         __PROPERTY_PLAIN(json::object, config);
@@ -278,7 +283,8 @@ namespace network
 
         bool m_callInProgress;
 
-        bool m_disallowP25AdjStsBcast;
+        bool m_disallowAdjStsBcast;
+        bool m_disallowExtAdjStsBcast;
 
         bool m_reportPeerPing;
         bool m_verbose;

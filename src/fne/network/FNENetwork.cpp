@@ -87,7 +87,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_updateLookupTime(updateLookupTime * 60U),
     m_softConnLimit(0U),
     m_callInProgress(false),
-    m_disallowP25AdjStsBcast(true),
+    m_disallowAdjStsBcast(false),
+    m_disallowExtAdjStsBcast(true),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -118,16 +119,27 @@ FNENetwork::~FNENetwork()
 /// <param name="printOptions"></param>
 void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
-    m_disallowP25AdjStsBcast = conf["disallowP25AdjStsBcast"].as<bool>(true);
+    m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
+    m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
         m_softConnLimit = MAX_HARD_CONN_CAP;
     }
 
+    // always force disable ADJ_STS_BCAST to external peers if the all option
+    // is enabled
+    if (m_disallowAdjStsBcast) {
+        m_disallowExtAdjStsBcast = true;
+    }
+
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
-        LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowP25AdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 ADJ_STS_BCAST to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
+        if (m_disallowAdjStsBcast) {
+            LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
+        }
+        LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
     }
 }
 
@@ -632,6 +644,11 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         LogInfoEx(LOG_NET, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
 
                                         json::object peerConfig = connection->config();
+                                        if (peerConfig["externalPeer"].is<bool>()) {
+                                            bool external = peerConfig["externalPeer"].get<bool>();
+                                            connection->isExternalPeer(external);
+                                        }
+
                                         if (peerConfig["software"].is<std::string>()) {
                                             std::string software = peerConfig["software"].get<std::string>();
                                             LogInfoEx(LOG_NET, "PEER %u reports software %s", peerId, software.c_str());

@@ -77,8 +77,10 @@ namespace network
             /// <summary>Helper to route rewrite destination ID.</summary>
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
+            /// <summary>Helper to process TSDUs being passed from a peer.</summary>
+            bool processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid);
             /// <summary>Helper to process TSDUs being passed to an external peer.</summary>
-            bool processTSDUExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
+            bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);

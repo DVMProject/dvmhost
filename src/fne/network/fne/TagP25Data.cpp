@@ -244,6 +244,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId, srcId, dstId));
         }
 
+        // process TSDU from peer
+        if (!processTSDU(buffer, peerId, duid)) {
+            return false;
+        }
+
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {
             uint32_t i = 0U;
@@ -306,7 +311,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     routeRewrite(outboundPeerBuffer, dstPeerId, duid, dstId);
 
                     // process TSDUs going to external peers
-                    if (processTSDUExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
+                    if (processTSDUToExternal(outboundPeerBuffer, peerId, dstPeerId, duid)) {
                         peer.second->writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                         if (m_network->m_debug) {
                             LogDebug(LOG_NET, "P25, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, external = %u", 
@@ -424,12 +429,12 @@ void TagP25Data::routeRewrite(uint8_t* buffer, uint32_t peerId, uint8_t duid, ui
         // rewrite destination TGID in the frame
         __SET_UINT16(rewriteDstId, buffer, 8U);
 
-        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer + 24U, frameLength);
-
         // are we receiving a TSDU?
         if (duid == P25_DUID_TSDU) {
+            UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+            ::memset(data.get(), 0x00U, frameLength);
+            ::memcpy(data.get(), buffer + 24U, frameLength);
+
             std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
             if (tsbk != nullptr) {
                 // handle standard P25 reference opcodes
@@ -504,13 +509,12 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 }
 
 /// <summary>
-/// Helper to process TSDUs being passed to an external peer.
+/// Helper to process TSDUs being passed from a peer.
 /// </summary>
 /// <param name="buffer"></param>
-/// <param name="srcPeerId">Source Peer ID</param>
-/// <param name="dstPeerId">Destination Peer ID</param>
+/// <param name="peerId">Peer ID</param>
 /// <param name="duid"></param>
-bool TagP25Data::processTSDUExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
+bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == P25_DUID_TSDU) {
@@ -526,15 +530,62 @@ bool TagP25Data::processTSDUExternal(uint8_t* buffer, uint32_t srcPeerId, uint32
             switch (tsbk->getLCO()) {
             case TSBK_OSP_ADJ_STS_BCAST:
                 {
-                    if (m_network->m_disallowP25AdjStsBcast) {
+                    if (m_network->m_disallowAdjStsBcast) {
+                        // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to internal peers is prohibited, dropping", peerId);
+                        return false;
+                    } else {
+                        lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
+
+                        if (m_network->m_verbose) {
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
+                                osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), peerId);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        } else {
+            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", peerId);
+        }
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to process TSDUs being passed to an external peer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="srcPeerId">Source Peer ID</param>
+/// <param name="dstPeerId">Destination Peer ID</param>
+/// <param name="duid"></param>
+bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid)
+{
+    // are we receiving a TSDU?
+    if (duid == P25_DUID_TSDU) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        if (tsbk != nullptr) {
+            // handle standard P25 reference opcodes
+            switch (tsbk->getLCO()) {
+            case TSBK_OSP_ADJ_STS_BCAST:
+                {
+                    if (m_network->m_disallowExtAdjStsBcast) {
                         // LogWarning(LOG_NET, "PEER %u, passing ADJ_STS_BCAST to external peers is prohibited, dropping", dstPeerId);
                         return false;
                     } else {
                         lc::tsbk::OSP_ADJ_STS_BCAST* osp = static_cast<lc::tsbk::OSP_ADJ_STS_BCAST*>(tsbk.get());
 
                         if (m_network->m_verbose) {
-                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X", tsbk->toString().c_str(),
-                                osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+                            LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
+                                osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), srcPeerId);
                         }
                     }
                 }
