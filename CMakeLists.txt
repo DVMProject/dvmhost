@@ -30,6 +30,14 @@ else ()
     message(CHECK_PASS "no")
 endif (ENABLE_TUI_SUPPORT)
 
+option(ENABLE_TCP_SSL "Enable TCP SSL support" off)
+message(CHECK_START "Enable TCP SSL support")
+if (ENABLE_TCP_SSL)
+    message(CHECK_PASS "yes")
+else ()
+    message(CHECK_PASS "no")
+endif (ENABLE_TCP_SSL)
+
 # Cross-compile options
 option(CROSS_COMPILE_ARM "Cross-compile for 32-bit ARM" off)
 option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
@@ -154,6 +162,11 @@ if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
     FetchContent_MakeAvailable(FINALCUT)
     set(FINALCUT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/finalcut-src/src)
 endif (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
+
+if (ENABLE_TCP_SSL)
+    find_package(OpenSSL REQUIRED)
+    include_directories("${OPENSSL_INCLUDE_DIR}")
+endif (ENABLE_TCP_SSL)
 
 #
 # Set GIT_VER compiler directive

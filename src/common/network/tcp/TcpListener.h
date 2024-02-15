@@ -60,7 +60,7 @@ namespace network
             /// <param name="backlog"></param>
             TcpListener(const std::string& ipAddr, const uint16_t port, const int backlog) noexcept(false) : TcpListener(port, ipAddr)
             {
-                if (listen(backlog) < 0) {
+                if (listen(ipAddr, port, backlog) < 0) {
                     LogError(LOG_NET, "Failed to listen on TCP server, err: %d", errno);
                     throw std::runtime_error("Failed to listen on TCP server.");
                 }

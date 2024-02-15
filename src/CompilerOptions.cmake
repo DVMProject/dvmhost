@@ -20,6 +20,10 @@ else()
     set(ENABLE_SETUP_TUI off)
 endif (ENABLE_TUI_SUPPORT)
 
+if (ENABLE_TCP_SSL)
+    add_definitions(-DENABLE_TCP_SSL)
+endif (ENABLE_TCP_SSL)
+
 option(DISABLE_MONITOR "Disable dvmmon compilation" off)
 if (DISABLE_MONITOR)
     message(CHECK_START "Disable dvmmon compilation - enabled")
