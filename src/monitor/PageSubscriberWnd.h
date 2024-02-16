@@ -7,7 +7,7 @@
 * @package DVM / Host Monitor Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__PAGE_SUBSCRIBER_WND_H__)
@@ -132,7 +132,7 @@ private:
 
         // callback REST API
         int ret = RESTClient::send(m_selectedCh.address(), m_selectedCh.port(), m_selectedCh.password(),
-            HTTP_PUT, method, req, g_debug);
+            HTTP_PUT, method, req, m_selectedCh.ssl(), g_debug);
         if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
             ::LogError(LOG_HOST, "failed to send request %s to %s:%u", method.c_str(), m_selectedCh.address().c_str(), m_selectedCh.port());
         }

@@ -23,3 +23,5 @@ channels:
       restPort: 9990
       # REST API access password for channel.
       restPassword: "PASSWORD"
+      # Flag indicating whether or not REST API is operating in SSL mode.
+      restSsl: false

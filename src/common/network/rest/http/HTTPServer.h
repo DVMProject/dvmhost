@@ -9,7 +9,7 @@
 * @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
 *
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_HTTP__HTTP_SERVER_H__)
@@ -57,15 +57,7 @@ namespace network
                 {
                     // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
                     asio::ip::address ipAddress = asio::ip::address::from_string(address);
-                    asio::ip::tcp::endpoint endpoint(ipAddress, port);
-
-                    m_acceptor.open(endpoint.protocol());
-                    m_acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-                    m_acceptor.set_option(asio::socket_base::keep_alive(true));
-                    m_acceptor.bind(endpoint);
-                    m_acceptor.listen();
-
-                    accept();
+                    m_endpoint = asio::ip::tcp::endpoint(ipAddress, port);
                 }
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
@@ -73,6 +65,19 @@ namespace network
                 void setHandler(Handler&& handler)
                 {
                     m_requestHandler = RequestHandlerType(std::forward<Handler>(handler));
+                }
+
+                /// <summary>Open TCP acceptor.</summary>
+                void open()
+                {
+                    // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
+                    m_acceptor.open(m_endpoint.protocol());
+                    m_acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+                    m_acceptor.set_option(asio::socket_base::keep_alive(true));
+                    m_acceptor.bind(m_endpoint);
+                    m_acceptor.listen();
+
+                    accept();
                 }
 
                 /// <summary>Run the servers ASIO IO service loop.</summary>
@@ -119,6 +124,8 @@ namespace network
 
                 asio::io_service m_ioService;
                 asio::ip::tcp::acceptor m_acceptor;
+
+                asio::ip::tcp::endpoint m_endpoint;
 
                 ServerConnectionManager<ConnectionTypePtr> m_connectionManager;
 

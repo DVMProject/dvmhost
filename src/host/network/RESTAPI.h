@@ -16,6 +16,7 @@
 #include "Defines.h"
 #include "common/network/rest/RequestDispatcher.h"
 #include "common/network/rest/http/HTTPServer.h"
+#include "common/network/rest/http/SecureHTTPServer.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/Thread.h"
@@ -42,7 +43,8 @@ namespace nxdn { class HOST_SW_API Control; }
 class HOST_SW_API RESTAPI : private Thread {
 public:
     /// <summary>Initializes a new instance of the RESTAPI class.</summary>
-    RESTAPI(const std::string& address, uint16_t port, const std::string& password, Host* host, bool debug);
+    RESTAPI(const std::string& address, uint16_t port, const std::string& password, const std::string& keyFile, const std::string& certFile,
+        bool enableSSL, Host* host, bool debug);
     /// <summary>Finalizes a instance of the RESTAPI class.</summary>
     ~RESTAPI() override;
 
@@ -62,6 +64,10 @@ private:
     typedef network::rest::http::HTTPPayload HTTPPayload;
     RESTDispatcherType m_dispatcher;
     network::rest::http::HTTPServer<RESTDispatcherType> m_restServer;
+#if defined(ENABLE_TCP_SSL)
+    network::rest::http::SecureHTTPServer<RESTDispatcherType> m_restSecureServer;
+    bool m_enableSSL;
+#endif // ENABLE_TCP_SSL
 
     std::mt19937 m_random;
 

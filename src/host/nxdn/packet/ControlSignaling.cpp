@@ -607,7 +607,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
             req["dstId"].set<uint32_t>(dstId);
 
             int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                HTTP_PUT, PUT_PERMIT_TG, req, m_nxdn->m_debug);
+                HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_nxdn->m_debug);
             if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                 ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
                 m_nxdn->m_affiliations.releaseGrant(dstId, false);

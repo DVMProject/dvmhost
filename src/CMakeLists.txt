@@ -31,11 +31,11 @@ endif (ENABLE_SETUP_TUI)
 
 add_executable(dvmhost ${common_INCLUDE} ${dvmhost_SRC})
 if (ENABLE_SETUP_TUI)
-    target_link_libraries(dvmhost PRIVATE common asio::asio finalcut Threads::Threads util)
+    target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads util)
 else()
-    target_link_libraries(dvmhost PRIVATE common asio::asio Threads::Threads util)
+    target_link_libraries(dvmhost PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
 endif (ENABLE_SETUP_TUI)
-target_include_directories(dvmhost PRIVATE src src/host)
+target_include_directories(dvmhost PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host)
 
 set(CPACK_SET_DESTDIR true)
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
@@ -64,8 +64,8 @@ include(CPack)
 #
 include(src/fne/CMakeLists.txt)
 add_executable(dvmfne ${common_INCLUDE} ${dvmfne_SRC})
-target_link_libraries(dvmfne PRIVATE common asio::asio Threads::Threads)
-target_include_directories(dvmfne PRIVATE src src/host src/fne)
+target_link_libraries(dvmfne PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+target_include_directories(dvmfne PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/fne)
 
 #
 ## dvmmon
@@ -73,8 +73,8 @@ target_include_directories(dvmfne PRIVATE src src/host src/fne)
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
     include(src/monitor/CMakeLists.txt)
     add_executable(dvmmon ${common_INCLUDE} ${dvmmon_SRC})
-    target_link_libraries(dvmmon PRIVATE common asio::asio finalcut Threads::Threads)
-    target_include_directories(dvmmon PRIVATE src src/host src/monitor)
+    target_link_libraries(dvmmon PRIVATE common ${OPENSSL_LIBRARIES} asio::asio finalcut Threads::Threads)
+    target_include_directories(dvmmon PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/monitor)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 
 #
@@ -82,5 +82,5 @@ endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_MONITOR))
 #
 include(src/remote/CMakeLists.txt)
 add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
-target_link_libraries(dvmcmd PRIVATE common asio::asio Threads::Threads)
-target_include_directories(dvmcmd PRIVATE src src/remote)
+target_link_libraries(dvmcmd PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+target_include_directories(dvmcmd PRIVATE ${OPENSSL_INCLUDE_DIR} src src/remote)

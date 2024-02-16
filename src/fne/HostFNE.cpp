@@ -364,6 +364,9 @@ bool HostFNE::initializeRESTAPI()
     std::string restApiAddress = systemConf["restAddress"].as<std::string>("127.0.0.1");
     uint16_t restApiPort = (uint16_t)systemConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
     std::string restApiPassword = systemConf["restPassword"].as<std::string>();
+    bool restApiEnableSSL = systemConf["restSsl"].as<bool>(false);
+    std::string restApiSSLCert = systemConf["restSslCertificate"].as<std::string>("web.crt");
+    std::string restApiSSLKey = systemConf["restSslKey"].as<std::string>("web.key");
     bool restApiDebug = systemConf["restDebug"].as<bool>(false);
 
     if (restApiPassword.length() > 64) {
@@ -378,11 +381,25 @@ bool HostFNE::initializeRESTAPI()
         restApiEnable = false;
     }
 
+    if (restApiSSLCert.empty() && restApiEnableSSL) {
+        ::LogWarning(LOG_HOST, "REST API SSL certificate not provided; REST API SSL disabled.");
+        restApiEnableSSL = false;
+    }
+
+    if (restApiSSLKey.empty() && restApiEnableSSL) {
+        ::LogWarning(LOG_HOST, "REST API SSL certificate private key not provided; REST API SSL disabled.");
+        restApiEnableSSL = false;
+    }
+
     LogInfo("REST API Parameters");
     LogInfo("    REST API Enabled: %s", restApiEnable ? "yes" : "no");
     if (restApiEnable) {
         LogInfo("    REST API Address: %s", restApiAddress.c_str());
         LogInfo("    REST API Port: %u", restApiPort);
+
+        LogInfo("    REST API SSL Enabled: %s", restApiEnableSSL ? "yes" : "no");
+        LogInfo("    REST API SSL Certificate: %s", restApiSSLCert.c_str());
+        LogInfo("    REST API SSL Private Key: %s", restApiSSLKey.c_str());
 
         if (restApiDebug) {
             LogInfo("    REST API Debug: yes");
@@ -391,7 +408,7 @@ bool HostFNE::initializeRESTAPI()
 
     // initialize network remote command
     if (restApiEnable) {
-        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, this, restApiDebug);
+        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {

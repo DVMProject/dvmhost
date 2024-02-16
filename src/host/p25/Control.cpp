@@ -433,7 +433,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 req["dstId"].set<uint32_t>(dstId);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, m_debug);
+                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(),  m_debug);
             }
             else {
                 ::LogError(LOG_P25, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
@@ -1460,7 +1460,7 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     req["dstId"].set<uint32_t>(dstId);
 
     int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        HTTP_PUT, PUT_RELEASE_TG, req, m_controlChData.ssl(), m_debug);
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_P25, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
@@ -1491,7 +1491,7 @@ void Control::notifyCC_TouchGrant(uint32_t dstId)
     req["dstId"].set<uint32_t>(dstId);
 
     int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+        HTTP_PUT, PUT_TOUCH_TG, req, m_controlChData.ssl(), m_debug);
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_P25, "failed to notify the CC %s:%u of the touch of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }

@@ -7,7 +7,7 @@
 * @package DVM / Host Monitor Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__NODE_STATUS_WND_H__)
@@ -264,7 +264,7 @@ private:
                     json::object rsp = json::object();
                 
                     int ret = RESTClient::send(m_chData.address(), m_chData.port(), m_chData.password(),
-                        HTTP_GET, GET_STATUS, req, rsp, g_debug);
+                        HTTP_GET, GET_STATUS, req, rsp, m_chData.ssl(), g_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                         ::LogError(LOG_HOST, "failed to get status for %s:%u, chNo = %u", m_chData.address().c_str(), m_chData.port(), m_channelNo);
                         ++m_failCnt;
@@ -395,7 +395,7 @@ private:
                     // callback REST API to get status of the channel we represent
                     json::object req = json::object();
                     int ret = RESTClient::send(m_chData.address(), m_chData.port(), m_chData.password(),
-                        HTTP_GET, GET_STATUS, req, g_debug);
+                        HTTP_GET, GET_STATUS, req, m_chData.ssl(), g_debug);
                     if (ret == network::rest::http::HTTPPayload::StatusType::OK) {
                         m_failed = false;
                         m_failCnt = 0U;

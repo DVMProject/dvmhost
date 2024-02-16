@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -187,12 +187,13 @@ bool Host::readParams()
             std::string restApiAddress = controlCh["restAddress"].as<std::string>("");
             uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = controlCh["restPassword"].as<std::string>();
+            bool restSsl = controlCh["restSsl"].as<bool>(false);
 
-            VoiceChData data = VoiceChData(m_channelId, m_channelNo, restApiAddress, restApiPort, restApiPassword);
+            VoiceChData data = VoiceChData(m_channelId, m_channelNo, restApiAddress, restApiPort, restApiPassword, restSsl);
             m_controlChData = data;
 
             if (!m_controlChData.address().empty() && m_controlChData.port() > 0) {
-                ::LogInfoEx(LOG_HOST, "Control Channel REST API Address %s:%u", m_controlChData.address().c_str(), m_controlChData.port());
+                ::LogInfoEx(LOG_HOST, "Control Channel REST API Address %s:%u SSL %u", m_controlChData.address().c_str(), m_controlChData.port(), restSsl);
             } else {
                 ::LogInfoEx(LOG_HOST, "No Control Channel REST API Configured, CC notify disabled");
             }
@@ -234,10 +235,11 @@ bool Host::readParams()
             std::string restApiAddress = channel["restAddress"].as<std::string>("127.0.0.1");
             uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = channel["restPassword"].as<std::string>();
+            bool restSsl = channel["restSsl"].as<bool>(false);
 
-            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u", chId, chNo, restApiAddress.c_str(), restApiPort);
+            ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", chId, chNo, restApiAddress.c_str(), restApiPort, restSsl);
 
-            VoiceChData data = VoiceChData(chId, chNo, restApiAddress, restApiPort, restApiPassword);
+            VoiceChData data = VoiceChData(chId, chNo, restApiAddress, restApiPort, restApiPassword, restSsl);
             m_voiceChData[chNo] = data;
             m_voiceChNo.push_back(chNo);
         }
@@ -658,6 +660,9 @@ bool Host::createNetwork()
     std::string restApiAddress = networkConf["restAddress"].as<std::string>("127.0.0.1");
     uint16_t restApiPort = (uint16_t)networkConf["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
     std::string restApiPassword = networkConf["restPassword"].as<std::string>();
+    bool restApiEnableSSL = networkConf["restSsl"].as<bool>(false);
+    std::string restApiSSLCert = networkConf["restSslCertificate"].as<std::string>("web.crt");
+    std::string restApiSSLKey = networkConf["restSslKey"].as<std::string>("web.key");
     bool restApiDebug = networkConf["restDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(1000U);
     uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
@@ -718,6 +723,16 @@ bool Host::createNetwork()
         restApiEnable = false;
     }
 
+    if (restApiSSLCert.empty() && restApiEnableSSL) {
+        ::LogWarning(LOG_HOST, "REST API SSL certificate not provided; REST API SSL disabled.");
+        restApiEnableSSL = false;
+    }
+
+    if (restApiSSLKey.empty() && restApiEnableSSL) {
+        ::LogWarning(LOG_HOST, "REST API SSL certificate private key not provided; REST API SSL disabled.");
+        restApiEnableSSL = false;
+    }
+
     IdenTable entry = m_idenTable->find(m_channelId);
 
     LogInfo("Network Parameters");
@@ -747,6 +762,10 @@ bool Host::createNetwork()
     if (restApiEnable) {
         LogInfo("    REST API Address: %s", restApiAddress.c_str());
         LogInfo("    REST API Port: %u", restApiPort);
+
+        LogInfo("    REST API SSL Enabled: %s", restApiEnableSSL ? "yes" : "no");
+        LogInfo("    REST API SSL Certificate: %s", restApiSSLCert.c_str());
+        LogInfo("    REST API SSL Private Key: %s", restApiSSLKey.c_str());
 
         if (restApiDebug) {
             LogInfo("    REST API Debug: yes");
@@ -781,7 +800,7 @@ bool Host::createNetwork()
 
     // initialize network remote command
     if (restApiEnable) {
-        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, this, restApiDebug);
+        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {

@@ -161,6 +161,12 @@ system:
     restAddress: 127.0.0.1
     # Port number for REST API to listen on.
     restPort: 9990
+    # Flag indicating whether or not REST API is operating in SSL mode.
+    restSsl: false
+    # HTTPS/TLS certificate.
+    restSslCertificate: web.crt
+    # HTTPS/TLS key file.
+    restSslKey: web.key
     # REST API authentication password.
     restPassword: "PASSWORD"
     # Flag indicating whether or not verbose REST API debug logging is enabled.

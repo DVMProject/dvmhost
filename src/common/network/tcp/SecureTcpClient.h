@@ -20,6 +20,7 @@
 #include "common/network/tcp/Socket.h"
 
 #include <cassert>
+#include <cstring>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>

@@ -20,10 +20,11 @@ The DVM Host software requires the library dependancies below. Generally, the so
 
 ### Dependencies
 
-`apt-get install libasio-dev libncurses-dev`
+`apt-get install libasio-dev libncurses-dev libssl-dev`
 
 - ASIO Library (https://think-async.com/Asio/); on Debian/Ubuntu Linux's: `apt-get install libasio-dev`
 - ncurses; on Debian/Ubuntu Linux's: `apt-get install libncurses-dev`
+- OpenSSL; on Debian/Ubuntu Linux's: `apt-get install libssl-dev`
 
 Alternatively, if you download the ASIO library from the ASIO website and extract it to a location, you can specify the path to the ASIO library using: `-DWITH_ASIO=/path/to/asio`. This method is required when cross-compiling for old Raspberry Pi ARM 32 bit.
 
@@ -31,7 +32,7 @@ If cross-compiling ensure you install the appropriate libraries, for example for
 ```
 sudo dpkg --add-architecture arm64
 sudo apt-get update
-sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64
+sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
 ```
 
 ### Build Instructions

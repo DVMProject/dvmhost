@@ -876,7 +876,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                 req["clear"].set<bool>(clear);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), tscc->m_debug);
             }
             else {
                 ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -893,7 +893,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                     req["slot"].set<uint8_t>(slot);
 
                     RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, m_dmr->m_debug);
+                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_dmr->m_debug);
                 }
                 else {
                     ::LogError(LOG_DMR, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
@@ -1115,7 +1115,7 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     req["slot"].set<uint8_t>(slot);
 
     int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_RELEASE_TG, req, m_debug);
+        HTTP_PUT, PUT_RELEASE_TG, req, m_controlChData.ssl(), m_debug);
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
@@ -1148,7 +1148,7 @@ void Slot::notifyCC_TouchGrant(uint32_t dstId)
     req["slot"].set<uint8_t>(slot);
 
     int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-        HTTP_PUT, PUT_TOUCH_TG, req, m_debug);
+        HTTP_PUT, PUT_TOUCH_TG, req, m_controlChData.ssl(), m_debug);
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the touch of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }

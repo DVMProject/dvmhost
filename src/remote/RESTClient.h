@@ -7,7 +7,7 @@
 * @package DVM / Remote Command Client
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_CLIENT_H__)
@@ -28,7 +28,7 @@ class HOST_SW_API RESTClient
 {
 public:
     /// <summary>Initializes a new instance of the RESTClient class.</summary>
-    RESTClient(const std::string& address, uint32_t port, const std::string& password, bool debug);
+    RESTClient(const std::string& address, uint32_t port, const std::string& password, bool enableSSL, bool debug);
     /// <summary>Finalizes a instance of the RESTClient class.</summary>
     ~RESTClient();
 
@@ -39,10 +39,10 @@ public:
 
     /// <summary>Sends remote control command to the specified modem.</summary>
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-        const std::string endpoint, json::object payload, bool debug = false);
+        const std::string endpoint, json::object payload, bool enableSSL, bool debug = false);
     /// <summary>Sends remote control command to the specified modem.</summary>
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-        const std::string endpoint, json::object payload, json::object& response, bool debug = false);
+        const std::string endpoint, json::object payload, json::object& response, bool enableSSL, bool debug = false);
 
 private:
     typedef network::rest::http::HTTPPayload HTTPPayload;
@@ -61,6 +61,7 @@ private:
     static bool m_responseAvailable;
     static HTTPPayload m_response;
 
+    static bool m_enableSSL;
     static bool m_debug;
 };
 

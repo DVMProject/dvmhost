@@ -51,15 +51,19 @@ set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
 if (CROSS_COMPILE_ARM)
     set(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabihf-gcc)
     set(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabihf-g++)
-    set(ARCH arm)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm)
+    set(ARCH armhf)
+    set(CMAKE_SYSTEM_PROCESSOR armhf)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
+    set(OPENSSL_ROOT_DIR /usr/lib/arm-linux-gnueabihf)
     message(CHECK_START "Cross compiling for 32-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_ARM)
 if (CROSS_COMPILE_AARCH64)
     set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
     set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
     set(ARCH arm64)
+    set(CMAKE_SYSTEM_PROCESSOR arm64)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)
+    set(OPENSSL_ROOT_DIR /usr/lib/aarch64-linux-gnu)
     message(CHECK_START "Cross compiling for 64-bit ARM - ${CMAKE_C_COMPILER}")
 endif (CROSS_COMPILE_AARCH64)
 
@@ -78,14 +82,25 @@ if (CROSS_COMPILE_RPI_ARM)
             GIT_REPOSITORY https://github.com/raspberrypi/tools.git
         )
         FetchContent_MakeAvailable(RPiTools)
-        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+        set(CMAKE_C_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
+        set(CMAKE_CXX_COMPILER ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+
+        message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src")
+        execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+
+        set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/rpitools-src/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib)
     else()
-        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
-        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+        set(CMAKE_C_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc)
+        set(CMAKE_CXX_COMPILER ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin/arm-linux-gnueabihf-g++)
+
+        message(CHECK_START "Apply OpenSSL library binaries for cross compling (old RPi) 32-bit ARM - ${RPI_ARM_TOOLS}")
+        execute_process(COMMAND tar xzf contrib/openssl_cross_patch.RPI_ARM.tar.gz -C ${RPI_ARM_TOOLS} WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+
+        set(OPENSSL_ROOT_DIR ${RPI_ARM_TOOLS}/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/arm-linux-gnueabihf/sysroot/usr/lib)
     endif ()
 
     set(ARCH armhf)
+    set(CMAKE_SYSTEM_PROCESSOR armhf)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
     message(CHECK_START "Cross compiling for (old RPi) 32-bit ARM - ${CMAKE_C_COMPILER}")
 
@@ -93,6 +108,13 @@ if (CROSS_COMPILE_RPI_ARM)
     set(ENABLE_TUI_SUPPORT OFF)
     message(CHECK_START "Enable TUI support - no; for simplicity RPI_ARM cross-compiling does not support TUI.")
 endif (CROSS_COMPILE_RPI_ARM)
+
+# search for programs in the build host directories
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+# for libraries and headers in the target directories
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 # Standard CMake options
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -162,11 +184,6 @@ if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
     FetchContent_MakeAvailable(FINALCUT)
     set(FINALCUT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/finalcut-src/src)
 endif (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
-
-if (ENABLE_TCP_SSL)
-    find_package(OpenSSL REQUIRED)
-    include_directories("${OPENSSL_INCLUDE_DIR}")
-endif (ENABLE_TCP_SSL)
 
 #
 # Set GIT_VER compiler directive

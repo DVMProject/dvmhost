@@ -173,3 +173,9 @@ if (HAVE_SENDMMSG)
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DHAVE_SENDMMSG=1")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DHAVE_SENDMMSG=1")
 endif (HAVE_SENDMMSG)
+
+# are we enabling SSL support?
+if (ENABLE_TCP_SSL)
+    find_package(OpenSSL REQUIRED)
+    include_directories("${OPENSSL_INCLUDE_DIR}")
+endif (ENABLE_TCP_SSL)

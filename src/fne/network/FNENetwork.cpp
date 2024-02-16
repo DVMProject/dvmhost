@@ -1118,7 +1118,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
 
                 if (i == chunkCnt - 1U) {
                     // this is a disgusting dirty hack...
-                    listSize = abs((i * MAX_RID_LIST_CHUNK) - ridWhitelist.size());
+                    listSize = ::abs((long)((i * MAX_RID_LIST_CHUNK) - ridWhitelist.size()));
                 }
             }
 
@@ -1187,7 +1187,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
                 
                 if (i == chunkCnt - 1U) {
                     // this is a disgusting dirty hack...
-                    listSize = abs((i * MAX_RID_LIST_CHUNK) - ridBlacklist.size());
+                    listSize = ::abs((long)((i * MAX_RID_LIST_CHUNK) - ridBlacklist.size()));
                 }
             }
 

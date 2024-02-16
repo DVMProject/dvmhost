@@ -7,7 +7,7 @@
 * @package DVM / Remote Command Client
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "remote/RESTClient.h"
@@ -122,6 +122,7 @@ static std::string g_progExe = std::string(__EXE_NAME__);
 static std::string g_remoteAddress = std::string("127.0.0.1");
 static uint32_t g_remotePort = REST_API_DEFAULT_PORT;
 static std::string g_remotePassword = std::string();
+static bool g_enableSSL = false;
 static bool g_debug = false;
 
 // ---------------------------------------------------------------------------
@@ -155,7 +156,7 @@ void usage(const char* message, const char* arg)
     }
 
     ::fprintf(stdout, 
-        "usage: %s [-dvh]"
+        "usage: %s [-dvhs]"
         "[-a <address>]"
         "[-p <port>]"
         "[-P <password>]"
@@ -168,6 +169,8 @@ void usage(const char* message, const char* arg)
         "  -a                          remote modem command address\n"
         "  -p                          remote modem command port\n"
         "  -P                          remote modem authentication password\n"
+        "\n"
+        "  -s                          use HTTPS/SSL\n"
         "\n"
         "  --                          stop handling options\n",
         g_progExe.c_str());
@@ -299,6 +302,10 @@ int checkArgs(int argc, char* argv[])
 
             p += 2;
         }
+        else if (IS("-s")) {
+            ++p;
+            g_enableSSL = true;
+        }
         else if (IS("-d")) {
             ++p;
             g_debug = true;
@@ -398,7 +405,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    RESTClient* client = new RESTClient(g_remoteAddress, g_remotePort, g_remotePassword, g_debug);
+    RESTClient* client = new RESTClient(g_remoteAddress, g_remotePort, g_remotePassword, g_enableSSL, g_debug);
     int retCode = EXIT_SUCCESS;
 
     std::vector<std::string> args = std::vector<std::string>();

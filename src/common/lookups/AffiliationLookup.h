@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__AFFILIATION_LOOKUP_H__)
@@ -37,7 +37,8 @@ namespace lookups
             m_chNo(0U),
             m_address(),
             m_port(),
-            m_password()
+            m_password(),
+            m_ssl()
         {
             /* stub */
         }
@@ -47,12 +48,14 @@ namespace lookups
         /// <param name="address">REST API Address.</param>
         /// <param name="port">REST API Port.</param>
         /// <param name="password">REST API Password.</param>
-        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password) :
+        /// <param name="ssl">Flag indicating REST is using SSL.</param>
+        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl) :
             m_chId(chId),
             m_chNo(chNo),
             m_address(address),
             m_port(port),
-            m_password(password)
+            m_password(password),
+            m_ssl(ssl)
         {
             /* stub */
         }
@@ -68,6 +71,7 @@ namespace lookups
                 m_address = data.m_address;
                 m_port = data.m_port;
                 m_password = data.m_password;
+                m_ssl = data.m_ssl;
             }
 
             return *this;
@@ -89,6 +93,8 @@ namespace lookups
         __READONLY_PROPERTY_PLAIN(uint16_t, port);
         /// <summary>REST API Password.</summary>
         __READONLY_PROPERTY_PLAIN(std::string, password);
+        /// <summary>Flag indicating REST is using SSL.</summary>
+        __READONLY_PROPERTY_PLAIN(bool, ssl);
     };
 
     // ---------------------------------------------------------------------------

@@ -380,11 +380,19 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
-/// <param name="host">Instance of the Host class.</param>
+/// <param name="keyFile"></param>
+/// <param name="certFile"></param>
+/// <param name="enableSSL"></param>
+/// <param name="host">Instance of the HostFNE class.</param>
 /// <param name="debug"></param>
-RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& password, HostFNE* host, bool debug) :
+RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& password,
+    const std::string& keyFile, const std::string& certFile, bool enableSSL, HostFNE* host, bool debug) :
     m_dispatcher(debug),
     m_restServer(address, port),
+#if defined(ENABLE_TCP_SSL)
+    m_restSecureServer(address, port),
+    m_enableSSL(enableSSL),
+#endif // ENABLE_TCP_SSL
     m_random(),
     m_password(password),
     m_passwordHash(nullptr),
@@ -416,6 +424,15 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     if (m_debug) {
         Utils::dump("REST Password Hash", m_passwordHash, 32U);
     }
+
+#if defined(ENABLE_TCP_SSL)
+    if (m_enableSSL) {
+        if (!m_restSecureServer.setCertAndKey(keyFile, certFile)) {
+            m_enableSSL = false;
+            ::LogError(LOG_REST, "failed to initialize SSL for HTTPS, disabling SSL");
+        }
+    }
+#endif // ENABLE_TCP_SSL
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -454,7 +471,17 @@ void RESTAPI::setNetwork(network::FNENetwork* network)
 bool RESTAPI::open()
 {
     initializeEndpoints();
-    m_restServer.setHandler(m_dispatcher);
+#if defined(ENABLE_TCP_SSL)
+    if (m_enableSSL) {
+        m_restSecureServer.open();
+        m_restSecureServer.setHandler(m_dispatcher);
+    } else {
+#endif // ENABLE_TCP_SSL
+        m_restServer.open();
+        m_restServer.setHandler(m_dispatcher);
+#if defined(ENABLE_TCP_SSL)
+    }
+#endif // ENABLE_TCP_SSL
 
     return run();
 }
@@ -464,7 +491,15 @@ bool RESTAPI::open()
 /// </summary>
 void RESTAPI::close()
 {
-    m_restServer.stop();
+#if defined(ENABLE_TCP_SSL)
+    if (m_enableSSL) {
+        m_restSecureServer.stop();
+    } else {
+#endif // ENABLE_TCP_SSL
+        m_restServer.stop();
+#if defined(ENABLE_TCP_SSL)
+    }
+#endif // ENABLE_TCP_SSL
     wait();
 }
 
@@ -477,7 +512,15 @@ void RESTAPI::close()
 /// </summary>
 void RESTAPI::entry()
 {
-    m_restServer.run();
+#if defined(ENABLE_TCP_SSL)
+    if (m_enableSSL) {
+        m_restSecureServer.run();
+    } else {
+#endif // ENABLE_TCP_SSL
+        m_restServer.run();
+#if defined(ENABLE_TCP_SSL)
+    }
+#endif // ENABLE_TCP_SSL
 }
 
 /// <summary>

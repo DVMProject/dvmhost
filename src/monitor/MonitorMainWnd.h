@@ -168,10 +168,11 @@ private:
                 std::string restApiAddress = channel["restAddress"].as<std::string>("127.0.0.1");
                 uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
                 std::string restApiPassword = channel["restPassword"].as<std::string>();
+                bool restSsl = channel["restSsl"].as<bool>(false);
 
                 ::LogInfoEx(LOG_HOST, "Channel REST API Adddress %s:%u", restApiAddress.c_str(), restApiPort);
 
-                VoiceChData data = VoiceChData(0U, 0U, restApiAddress, restApiPort, restApiPassword);
+                VoiceChData data = VoiceChData(0U, 0U, restApiAddress, restApiPort, restApiPassword, restSsl);
 
                 NodeStatusWnd* wnd = new NodeStatusWnd(this);
                 wnd->setChData(data);

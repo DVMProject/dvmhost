@@ -2300,7 +2300,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     req["dstId"].set<uint32_t>(dstId);
 
                     int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
+                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_p25->m_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                         ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
                         m_p25->m_affiliations.releaseGrant(dstId, false);
@@ -2354,7 +2354,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     req["dstId"].set<uint32_t>(dstId);
 
                     int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                        HTTP_PUT, PUT_PERMIT_TG, req, m_p25->m_debug);
+                        HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_p25->m_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                         ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
                         m_p25->m_affiliations.releaseGrant(dstId, false);
