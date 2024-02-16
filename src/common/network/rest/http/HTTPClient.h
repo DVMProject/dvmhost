@@ -18,14 +18,14 @@
 #include "common/network/rest/http/HTTPRequestHandler.h"
 #include "common/Thread.h"
 
-#include <asio.hpp>
-
 #include <thread>
 #include <string>
 #include <signal.h>
 #include <utility>
 #include <memory>
 #include <mutex>
+
+#include <asio.hpp>
 
 namespace network
 {

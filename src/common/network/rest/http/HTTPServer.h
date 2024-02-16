@@ -20,13 +20,13 @@
 #include "common/network/rest/http/ServerConnectionManager.h"
 #include "common/network/rest/http/HTTPRequestHandler.h"
 
-#include <asio.hpp>
-
 #include <thread>
 #include <string>
 #include <signal.h>
 #include <utility>
 #include <memory>
+
+#include <asio.hpp>
 
 namespace network
 {
