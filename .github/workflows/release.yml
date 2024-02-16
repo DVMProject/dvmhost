@@ -48,7 +48,7 @@ jobs:
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
             g++-aarch64-linux-gnu \
-            libasio-dev
+            libasio-dev libssl-dev
       - name: Build
         run: |
           if [[ "${{ matrix.arch }}" == 'armhf' ]]; then

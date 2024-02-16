@@ -70,7 +70,7 @@ jobs:
             g++-arm-linux-gnueabihf \
             gcc-arm-linux-gnueabihf \
             g++-aarch64-linux-gnu \
-            libasio-dev
+            libasio-dev libssl-dev
       - name: Build
         run: |
           build_args='-DENABLE_TUI_SUPPORT=0'
