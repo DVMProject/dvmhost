@@ -327,16 +327,20 @@ bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data
         uint16_t port = udp::Socket::port(m_addr) + 1U;
 
         if (udp::Socket::lookup(address, port, addr, addrLen) == 0) {
-            m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
+            if (!queueOnly)
+                return m_frameQueue->write(data, length, streamId, m_peerId, m_peerId, opcode, pktSeq, addr, addrLen);
+            else
+                m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, addr, addrLen);
         }
     }
     else {
-        m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+        if (!queueOnly)
+            return m_frameQueue->write(data, length, streamId, m_peerId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
+        else
+            m_frameQueue->enqueueMessage(data, length, streamId, m_peerId, opcode, pktSeq, m_addr, m_addrLen);
     }
 
-    if (queueOnly)
-        return true;
-    return m_frameQueue->flushQueue();
+    return true;
 }
 
 /// <summary>
