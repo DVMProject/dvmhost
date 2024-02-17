@@ -440,8 +440,13 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 
         case CMD_GET_STATUS:
         {
+            Utils::dump(1U, "status buffer", buffer, len);
+
             m_isHotspot = (buffer[3U] & 0x01U) == 0x01U;
             m_modem->m_isHotspot = (buffer[3U] & 0x01U) == 0x01U;
+
+            LogDebug(LOG_CAL, "buffer[3] = %u, len = %u, m_isHotSpot = %u, m_modem->m_isHotspot = %u", buffer[3U], len, m_isHotspot, m_modem->m_isHotspot);
+            LogDebug(LOG_CAL, "m_modem->m_forceHotspot = %u", m_modem->m_forceHotspot);
 
             // override hotspot flag if we're forcing hotspot
             if (m_modem->m_forceHotspot) {
