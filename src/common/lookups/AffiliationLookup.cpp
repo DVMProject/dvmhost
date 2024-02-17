@@ -36,9 +36,11 @@ AffiliationLookup::AffiliationLookup(const std::string name, bool verbose) :
     m_netGrantedTable(),
     m_grantTimers(),
     m_releaseGrant(nullptr),
-    m_name(name),
+    m_name(),
     m_verbose(verbose)
 {
+    m_name = name;
+
     m_rfChTable.clear();
 
     m_unitRegTable.clear();

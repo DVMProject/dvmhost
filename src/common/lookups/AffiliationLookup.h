@@ -202,7 +202,7 @@ namespace lookups
         //                 chNo      dstId     slot
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
 
-        const std::string m_name;
+        std::string m_name;
 
         bool m_verbose;
     };
