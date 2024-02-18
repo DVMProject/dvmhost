@@ -84,3 +84,12 @@ include(src/remote/CMakeLists.txt)
 add_executable(dvmcmd ${common_INCLUDE} ${dvmcmd_SRC})
 target_link_libraries(dvmcmd PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
 target_include_directories(dvmcmd PRIVATE ${OPENSSL_INCLUDE_DIR} src src/remote)
+
+
+#
+## dvmkmf
+#
+include(src/kmf/CMakeLists.txt)
+add_executable(dvmkmf ${common_INCLUDE} ${dvmkmf_SRC})
+target_link_libraries(dvmkmf PRIVATE common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads)
+target_include_directories(dvmkmf PRIVATE ${OPENSSL_INCLUDE_DIR} src src/kmf)

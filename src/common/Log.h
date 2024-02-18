@@ -33,6 +33,8 @@
 #define LOG_DMR     "DMR"
 #define LOG_CAL     "CAL"
 #define LOG_SETUP   "SETUP"
+#define LOG_KMF     "KMF"
+#define LOG_KMFSOCK "SOCK"
 
 // ---------------------------------------------------------------------------
 //  Macros
