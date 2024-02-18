@@ -714,7 +714,7 @@ int Host::run()
     }
 
     bool hasTxShutdown = false;
-    std::mutex clockingMutex;
+    static std::mutex clockingMutex;
 
     // Macro to start DMR duplex idle transmission (or beacon)
     #define START_DMR_DUPLEX_IDLE(x)                                                                                    \
@@ -734,8 +734,10 @@ int Host::run()
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started slot 1 frame processor (modem write)");
             while (!g_killed) {
-                clockingMutex.lock();
+                // scope is intentional
                 {
+                    std::lock_guard<std::mutex> lock(clockingMutex);
+
                     // ------------------------------------------------------
                     //  -- Write to Modem Processing                      --
                     // ------------------------------------------------------
@@ -757,7 +759,6 @@ int Host::run()
                         }
                     });
                 }
-                clockingMutex.unlock();
 
                 if (m_state != STATE_IDLE)
                     Thread::sleep(m_activeTickDelay);
@@ -776,8 +777,10 @@ int Host::run()
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started slot 2 frame processor (modem write)");
             while (!g_killed) {
-                clockingMutex.lock();
+                // scope is intentional
                 {
+                    std::lock_guard<std::mutex> lock(clockingMutex);
+
                     // ------------------------------------------------------
                     //  -- Write to Modem Processing                      --
                     // ------------------------------------------------------
@@ -799,7 +802,6 @@ int Host::run()
                         }
                     });
                 }
-                clockingMutex.unlock();
 
                 if (m_state != STATE_IDLE)
                     Thread::sleep(m_activeTickDelay);
@@ -819,8 +821,10 @@ int Host::run()
         if (p25 != nullptr) {
             LogDebug(LOG_HOST, "P25, started frame processor (modem write)");
             while (!g_killed) {
-                clockingMutex.lock();
+                // scope is intentional
                 {
+                    std::lock_guard<std::mutex> lock(clockingMutex);
+
                     // ------------------------------------------------------
                     //  -- Write to Modem Processing                      --
                     // ------------------------------------------------------
@@ -839,7 +843,6 @@ int Host::run()
                         }
                     });
                 }
-                clockingMutex.unlock();
 
                 if (m_state != STATE_IDLE)
                     Thread::sleep(m_activeTickDelay);
@@ -859,8 +862,10 @@ int Host::run()
         if (nxdn != nullptr) {
             LogDebug(LOG_HOST, "NXDN, started frame processor (modem write)");
             while (!g_killed) {
-                clockingMutex.lock();
+                // scope is intentional
                 {
+                    std::lock_guard<std::mutex> lock(clockingMutex);
+
                     // ------------------------------------------------------
                     //  -- Write to Modem Processing                      --
                     // ------------------------------------------------------
@@ -879,7 +884,6 @@ int Host::run()
                         }
                     });
                 }
-                clockingMutex.unlock();
 
                 if (m_state != STATE_IDLE)
                     Thread::sleep(m_activeTickDelay);
@@ -928,8 +932,10 @@ int Host::run()
             }
         }
 
-        clockingMutex.lock();
+        // scope is intentional
         {
+            std::lock_guard<std::mutex> lock(clockingMutex);
+
             // ------------------------------------------------------
             //  -- Modem Clocking                                 --
             // ------------------------------------------------------
@@ -939,7 +945,6 @@ int Host::run()
 
             m_modem->clock(ms);
         }
-        clockingMutex.unlock();
 
         // ------------------------------------------------------
         //  -- Read from Modem Processing                     --
@@ -1057,7 +1062,7 @@ int Host::run()
 
                 LogDebug(LOG_HOST, "CW, start transmitting");
                 m_isTxCW = true;
-                clockingMutex.lock();
+                std::lock_guard<std::mutex> lock(clockingMutex);
 
                 setState(STATE_IDLE);
                 m_modem->sendCWId(m_cwCallsign);
@@ -1088,7 +1093,6 @@ int Host::run()
                         Thread::sleep(CW_IDLE_SLEEP_MS);
                 } while (true);
 
-                clockingMutex.unlock();
                 m_isTxCW = false;
                 m_cwIdTimer.setTimeout(m_cwIdTime);
                 m_cwIdTimer.start();

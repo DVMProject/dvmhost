@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
 *   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
@@ -20,6 +20,12 @@ using namespace lookups;
 #include <string>
 #include <vector>
 #include <fstream>
+
+// ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex IdenTableLookup::m_mutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -36,6 +42,15 @@ IdenTableLookup::IdenTableLookup(const std::string& filename, uint32_t reloadTim
 }
 
 /// <summary>
+/// Clears all entries from the lookup table.
+/// </summary>
+void IdenTableLookup::clear()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_table.clear();
+}
+
+/// <summary>
 /// Finds a table entry in this lookup table.
 /// </summary>
 /// <param name="id">Unique identifier for table entry.</param>
@@ -44,15 +59,12 @@ IdenTable IdenTableLookup::find(uint32_t id)
 {
     IdenTable entry;
 
-    m_mutex.lock();
-    {
-        try {
-            entry = m_table.at(id);
-        } catch (...) {
-            /* stub */
-        }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        entry = m_table.at(id);
+    } catch (...) {
+        /* stub */
     }
-    m_mutex.unlock();
 
     float chBandwidthKhz = entry.chBandwidthKhz();
     if (chBandwidthKhz == 0.0F)
@@ -105,57 +117,55 @@ bool IdenTableLookup::load()
     // clear table
     clear();
 
-    m_mutex.lock();
-    {
-        // read lines from file
-        std::string line;
-        while (std::getline(file, line)) {
-            if (line.length() > 0) {
-                if (line.at(0) == '#')
-                    continue;
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-                // tokenize line
-                std::string next;
-                std::vector<std::string> parsed;
-                char delim = ',';
+    // read lines from file
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.length() > 0) {
+            if (line.at(0) == '#')
+                continue;
 
-                for (auto it = line.begin(); it != line.end(); it++) {
-                    if (*it == delim) {
-                        if (!next.empty()) {
-                            parsed.push_back(next);
-                            next.clear();
-                        }
+            // tokenize line
+            std::string next;
+            std::vector<std::string> parsed;
+            char delim = ',';
+
+            for (auto it = line.begin(); it != line.end(); it++) {
+                if (*it == delim) {
+                    if (!next.empty()) {
+                        parsed.push_back(next);
+                        next.clear();
                     }
-                    else
-                        next += *it;
                 }
-                if (!next.empty())
-                    parsed.push_back(next);
-
-                // parse tokenized line
-                uint8_t channelId = (uint8_t)::atoi(parsed[0].c_str());
-                uint32_t baseFrequency = (uint32_t)::atoi(parsed[1].c_str());
-                float chSpaceKhz = float(::atof(parsed[2].c_str()));
-                float txOffsetMhz = float(::atof(parsed[3].c_str()));
-                float chBandwidthKhz = float(::atof(parsed[4].c_str()));
-
-                if (chSpaceKhz == 0.0F)
-                    chSpaceKhz = chBandwidthKhz / 2;
-                if (chSpaceKhz < 0.125F)    // clamp to 125 Hz
-                    chSpaceKhz = 0.125F;
-                if (chSpaceKhz > 125000.0F)   // clamp to 125 kHz
-                    chSpaceKhz = 125000.0F;                    
-
-                IdenTable entry = IdenTable(channelId, baseFrequency, chSpaceKhz, txOffsetMhz, chBandwidthKhz);
-
-                LogMessage(LOG_HOST, "Channel Id %u: BaseFrequency = %uHz, TXOffsetMhz = %fMHz, BandwidthKhz = %fKHz, SpaceKhz = %fKHz",
-                    entry.channelId(), entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
-
-                m_table[channelId] = entry;
+                else
+                    next += *it;
             }
+            if (!next.empty())
+                parsed.push_back(next);
+
+            // parse tokenized line
+            uint8_t channelId = (uint8_t)::atoi(parsed[0].c_str());
+            uint32_t baseFrequency = (uint32_t)::atoi(parsed[1].c_str());
+            float chSpaceKhz = float(::atof(parsed[2].c_str()));
+            float txOffsetMhz = float(::atof(parsed[3].c_str()));
+            float chBandwidthKhz = float(::atof(parsed[4].c_str()));
+
+            if (chSpaceKhz == 0.0F)
+                chSpaceKhz = chBandwidthKhz / 2;
+            if (chSpaceKhz < 0.125F)    // clamp to 125 Hz
+                chSpaceKhz = 0.125F;
+            if (chSpaceKhz > 125000.0F)   // clamp to 125 kHz
+                chSpaceKhz = 125000.0F;
+
+            IdenTable entry = IdenTable(channelId, baseFrequency, chSpaceKhz, txOffsetMhz, chBandwidthKhz);
+
+            LogMessage(LOG_HOST, "Channel Id %u: BaseFrequency = %uHz, TXOffsetMhz = %fMHz, BandwidthKhz = %fKHz, SpaceKhz = %fKHz",
+                entry.channelId(), entry.baseFrequency(), entry.txOffsetMhz(), entry.chBandwidthKhz(), entry.chSpaceKhz());
+
+            m_table[channelId] = entry;
         }
     }
-    m_mutex.unlock();
 
     file.close();
 
@@ -174,6 +184,5 @@ bool IdenTableLookup::load()
 /// <returns>True, if lookup table was saved, otherwise false.</returns>
 bool IdenTableLookup::save()
 {
-    /// TODO TODO TODO actually save stuff
     return false;
 }

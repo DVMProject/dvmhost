@@ -22,6 +22,12 @@ using namespace network;
 #include <cstring>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex RawFrameQueue::m_flushMutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -32,7 +38,6 @@ using namespace network;
 /// <param name="debug"></param>
 RawFrameQueue::RawFrameQueue(udp::Socket* socket, bool debug) :
     m_socket(socket),
-    m_flushMutex(),
     m_buffers(),
     m_debug(debug)
 {
@@ -147,32 +152,27 @@ void RawFrameQueue::enqueueMessage(const uint8_t* message, uint32_t length, sock
 bool RawFrameQueue::flushQueue()
 {
     bool ret = true;
-    m_flushMutex.lock();
-    {
-        if (m_buffers.empty()) {
-            m_flushMutex.unlock();
-            return false;
-        }
+    std::lock_guard<std::mutex> lock(m_flushMutex);
 
-        // bryanb: this is the same as above -- but for some assinine reason prevents
-        // weirdness
-        if (m_buffers.size() == 0U) {
-            m_flushMutex.unlock();
-            return false;
-        }
-
-        // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
-
-        ret = true;
-        if (!m_socket->write(m_buffers)) {
-            LogError(LOG_NET, "Failed writing data to the network");
-            ret = false;
-        }
-
-        deleteBuffers();
+    if (m_buffers.empty()) {
+        return false;
     }
-    m_flushMutex.unlock();
 
+    // bryanb: this is the same as above -- but for some assinine reason prevents
+    // weirdness
+    if (m_buffers.size() == 0U) {
+        return false;
+    }
+
+    // LogDebug(LOG_NET, "m_buffers len = %u", m_buffers.size());
+
+    ret = true;
+    if (!m_socket->write(m_buffers)) {
+        LogError(LOG_NET, "Failed writing data to the network");
+        ret = false;
+    }
+
+    deleteBuffers();
     return ret;
 }
 

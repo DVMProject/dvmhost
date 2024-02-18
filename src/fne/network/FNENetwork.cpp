@@ -38,6 +38,12 @@ const uint8_t MAX_PEER_LIST_BEFORE_FLUSH = 10U;
 const uint32_t MAX_RID_LIST_CHUNK = 50U;
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex FNENetwork::m_peerMutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -80,7 +86,6 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_status(NET_STAT_INVALID),
-    m_peerMutex(),
     m_peers(),
     m_peerAffiliations(),
     m_maintainenceTimer(1000U, pingTime),
@@ -975,19 +980,15 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 /// <returns></returns>
 bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 {
-    m_peerMutex.lock();
-    {
-        auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
-        if (it != m_peerAffiliations.end()) {
-            lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
-            m_peerAffiliations.erase(peerId);
-            delete aff;
+    std::lock_guard<std::mutex> lock(m_peerMutex);
+    auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
+    if (it != m_peerAffiliations.end()) {
+        lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+        m_peerAffiliations.erase(peerId);
+        delete aff;
 
-            m_peerMutex.unlock();
-            return true;
-        }
+        return true;
     }
-    m_peerMutex.unlock();
 
     return false;
 }
@@ -999,16 +1000,12 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 /// <returns></returns>
 bool FNENetwork::erasePeer(uint32_t peerId)
 {
-    m_peerMutex.lock();
-    {
-        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-        if (it != m_peers.end()) {
-            m_peers.erase(peerId);
-            m_peerMutex.unlock();
-            return true;
-        }
+    std::lock_guard<std::mutex> lock(m_peerMutex);
+    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+    if (it != m_peers.end()) {
+        m_peers.erase(peerId);
+        return true;
     }
-    m_peerMutex.unlock();
 
     return false;
 }

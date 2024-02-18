@@ -59,7 +59,7 @@ namespace network
         uint32_t m_addrLen;
         udp::Socket* m_socket;
 
-        std::mutex m_flushMutex;
+        static std::mutex m_flushMutex;
         udp::BufferVector m_buffers;
 
         bool m_debug;

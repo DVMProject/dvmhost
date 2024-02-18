@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
 *   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
@@ -114,6 +114,9 @@ namespace lookups
         /// <summary>Initializes a new instance of the RadioIdLookup class.</summary>
         RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl);
 
+        /// <summary>Clears all entries from the lookup table.</summary>
+        void clear() override;
+
         /// <summary>Toggles the specified radio ID enabled or disabled.</summary>
         void toggleEntry(uint32_t id, bool enabled);
 
@@ -141,6 +144,9 @@ namespace lookups
         /// <summary>Saves the table to the passed lookup table file.</summary>
         /// <returns>True, if lookup table was saved, otherwise false.</returns>
         bool save() override;
+
+    private:
+        static std::mutex m_mutex;
     };
 } // namespace lookups
 

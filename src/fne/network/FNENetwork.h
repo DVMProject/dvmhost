@@ -270,7 +270,7 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        std::mutex m_peerMutex;
+        static std::mutex m_peerMutex;
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;

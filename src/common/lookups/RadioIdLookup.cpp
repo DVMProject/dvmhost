@@ -25,6 +25,12 @@ using namespace lookups;
 #include <fstream>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex RadioIdLookup::m_mutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -38,6 +44,15 @@ RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, b
     m_acl(ridAcl)
 {
     /* stub */
+}
+
+/// <summary>
+/// Clears all entries from the lookup table.
+/// </summary>
+void RadioIdLookup::clear()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_table.clear();
 }
 
 /// <summary>
@@ -65,21 +80,18 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
 
     RadioId entry = RadioId(enabled, false, alias);
 
-    m_mutex.lock();
-    {
-        try {
-            RadioId _entry = m_table.at(id);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        RadioId _entry = m_table.at(id);
 
-            // if the enabled value doesn't match -- override with the intended
-            if (_entry.radioEnabled() != enabled) {
-                _entry = RadioId(enabled, false, alias);
-                m_table[id] = _entry;
-            }
-        } catch (...) {
-            m_table[id] = entry;
+        // if the enabled value doesn't match -- override with the intended
+        if (_entry.radioEnabled() != enabled) {
+            _entry = RadioId(enabled, false, alias);
+            m_table[id] = _entry;
         }
+    } catch (...) {
+        m_table[id] = entry;
     }
-    m_mutex.unlock();
 }
 
 /// <summary>
@@ -88,16 +100,13 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
 /// <param name="id">Unique ID to erase.</param>
 void RadioIdLookup::eraseEntry(uint32_t id)
 {
-    m_mutex.lock();
-    {
-        try {
-            m_table.at(id);
-            m_table.erase(id);
-        } catch (...) {
-            /* stub */
-        }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        m_table.at(id);
+        m_table.erase(id);
+    } catch (...) {
+        /* stub */
     }
-    m_mutex.unlock();
 }
 
 /// <summary>
@@ -113,15 +122,12 @@ RadioId RadioIdLookup::find(uint32_t id)
         return RadioId(true, false);
     }
 
-    m_mutex.lock();
-    {
-        try {
-            entry = m_table.at(id);
-        } catch (...) {
-            entry = RadioId(false, true);
-        }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    try {
+        entry = m_table.at(id);
+    } catch (...) {
+        entry = RadioId(false, true);
     }
-    m_mutex.unlock();
 
     return entry;
 }
@@ -166,51 +172,49 @@ bool RadioIdLookup::load()
     // clear table
     clear();
 
-    m_mutex.lock();
-    {
-        // read lines from file
-        std::string line;
-        while (std::getline(file, line)) {
-            if (line.length() > 0) {
-                // Skip comments with #
-                if (line.at(0) == '#')
-                    continue;
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-                // tokenize line
-                std::string next;
-                std::vector<std::string> parsed;
-                char delim = ',';
+    // read lines from file
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.length() > 0) {
+            // Skip comments with #
+            if (line.at(0) == '#')
+                continue;
 
-                for (char c : line) {
-                    if (c == delim) {
-                        if (!next.empty()) {
-                            parsed.push_back(next);
-                            next.clear();
-                        }
+            // tokenize line
+            std::string next;
+            std::vector<std::string> parsed;
+            char delim = ',';
+
+            for (char c : line) {
+                if (c == delim) {
+                    if (!next.empty()) {
+                        parsed.push_back(next);
+                        next.clear();
                     }
-                    else
-                        next += c;
                 }
-                if (!next.empty())
-                    parsed.push_back(next);
+                else
+                    next += c;
+            }
+            if (!next.empty())
+                parsed.push_back(next);
 
-                // parse tokenized line
-                uint32_t id = ::atoi(parsed[0].c_str());
-                bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
-                bool radioDefault = false;
+            // parse tokenized line
+            uint32_t id = ::atoi(parsed[0].c_str());
+            bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
+            bool radioDefault = false;
 
-                // Check for an optional alias field
-                if (parsed.size() >= 3) {
-                    m_table[id] = RadioId(radioEnabled, radioDefault, parsed[2]);
-                    LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
-                } else {
-                    m_table[id] = RadioId(radioEnabled, radioDefault);
-                    LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
-                }
+            // Check for an optional alias field
+            if (parsed.size() >= 3) {
+                m_table[id] = RadioId(radioEnabled, radioDefault, parsed[2]);
+                LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
+            } else {
+                m_table[id] = RadioId(radioEnabled, radioDefault);
+                LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
             }
         }
     }
-    m_mutex.unlock();
 
     file.close();
 
@@ -244,32 +248,30 @@ bool RadioIdLookup::save()
     // Counter for lines written
     unsigned int lines = 0;
 
-    m_mutex.lock();
-    {
-        // String for writing
-        std::string line;
-        // iterate over each entry in the RID lookup and write it to the open file
-        for (auto& entry: m_table) {
-            // Get the parameters
-            uint32_t rid = entry.first;
-            bool enabled = entry.second.radioEnabled();
-            std::string alias = entry.second.radioAlias();
-            // Format into a string
-            line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
-            // Add the alias if we have one
-            if (alias.length() > 0) {
-                line += alias;
-                line += ",";
-            }
-            // Add the newline
-            line += "\n";
-            // Write to file
-            file << line;
-            // Increment
-            lines++;
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    // String for writing
+    std::string line;
+    // iterate over each entry in the RID lookup and write it to the open file
+    for (auto& entry: m_table) {
+        // Get the parameters
+        uint32_t rid = entry.first;
+        bool enabled = entry.second.radioEnabled();
+        std::string alias = entry.second.radioAlias();
+        // Format into a string
+        line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
+        // Add the alias if we have one
+        if (alias.length() > 0) {
+            line += alias;
+            line += ",";
         }
+        // Add the newline
+        line += "\n";
+        // Write to file
+        file << line;
+        // Increment
+        lines++;
     }
-    m_mutex.unlock();
 
     file.close();
 

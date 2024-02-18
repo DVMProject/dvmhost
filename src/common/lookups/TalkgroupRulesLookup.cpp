@@ -22,6 +22,12 @@ using namespace lookups;
 #include <vector>
 
 // ---------------------------------------------------------------------------
+//  Static Class Members
+// ---------------------------------------------------------------------------
+
+std::mutex TalkgroupRulesLookup::m_mutex;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -105,11 +111,8 @@ bool TalkgroupRulesLookup::read()
 /// </summary>
 void TalkgroupRulesLookup::clear()
 {
-    m_mutex.lock();
-    {
-        m_groupVoice.clear();
-    }
-    m_mutex.unlock();
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_groupVoice.clear();
 }
 
 /// <summary>
@@ -126,40 +129,37 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled)
     source.tgSlot(slot);
     config.active(enabled);
 
-    m_mutex.lock();
-    {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
-            [&](TalkgroupRuleGroupVoice x) 
-            { 
-                if (slot != 0U) {
-                    return x.source().tgId() == id && x.source().tgSlot() == slot;
-                }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+        [&](TalkgroupRuleGroupVoice x)
+        {
+            if (slot != 0U) {
+                return x.source().tgId() == id && x.source().tgSlot() == slot;
+            }
 
-                return x.source().tgId() == id; 
-            });
-        if (it != m_groupVoice.end()) {
-            source = it->source();
-            source.tgId(id);
-            source.tgSlot(slot);
-            
-            config = it->config();
-            config.active(enabled);
+            return x.source().tgId() == id;
+        });
+    if (it != m_groupVoice.end()) {
+        source = it->source();
+        source.tgId(id);
+        source.tgSlot(slot);
+        
+        config = it->config();
+        config.active(enabled);
 
-            TalkgroupRuleGroupVoice entry = *it;
-            entry.config(config);
-            entry.source(source);
+        TalkgroupRuleGroupVoice entry = *it;
+        entry.config(config);
+        entry.source(source);
 
-            m_groupVoice[it - m_groupVoice.begin()] = entry;
-        }
-        else {
-            TalkgroupRuleGroupVoice entry;
-            entry.config(config);
-            entry.source(source);
-
-            m_groupVoice.push_back(entry);
-        }
+        m_groupVoice[it - m_groupVoice.begin()] = entry;
     }
-    m_mutex.unlock();
+    else {
+        TalkgroupRuleGroupVoice entry;
+        entry.config(config);
+        entry.source(source);
+
+        m_groupVoice.push_back(entry);
+    }
 }
 
 /// <summary>
@@ -175,25 +175,22 @@ void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
     uint32_t id = entry.source().tgId();
     uint8_t slot = entry.source().tgSlot();
 
-    m_mutex.lock();
-    {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), 
-            [&](TalkgroupRuleGroupVoice x) 
-            { 
-                if (slot != 0U) {
-                    return x.source().tgId() == id && x.source().tgSlot() == slot;
-                }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+        [&](TalkgroupRuleGroupVoice x)
+        {
+            if (slot != 0U) {
+                return x.source().tgId() == id && x.source().tgSlot() == slot;
+            }
 
-                return x.source().tgId() == id; 
-            });
-        if (it != m_groupVoice.end()) {
-            m_groupVoice[it - m_groupVoice.begin()] = entry;
-        }
-        else {
-            m_groupVoice.push_back(entry);
-        }
+            return x.source().tgId() == id;
+        });
+    if (it != m_groupVoice.end()) {
+        m_groupVoice[it - m_groupVoice.begin()] = entry;
     }
-    m_mutex.unlock();
+    else {
+        m_groupVoice.push_back(entry);
+    }
 }
 
 /// <summary>
@@ -203,14 +200,11 @@ void TalkgroupRulesLookup::addEntry(TalkgroupRuleGroupVoice groupVoice)
 /// <param name="slot">DMR slot this talkgroup is valid on.</param>
 void TalkgroupRulesLookup::eraseEntry(uint32_t id, uint8_t slot)
 {
-    m_mutex.lock();
-    {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), [&](TalkgroupRuleGroupVoice x) { return x.source().tgId() == id && x.source().tgSlot() == slot; });
-        if (it != m_groupVoice.end()) {
-            m_groupVoice.erase(it);
-        }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(), [&](TalkgroupRuleGroupVoice x) { return x.source().tgId() == id && x.source().tgSlot() == slot; });
+    if (it != m_groupVoice.end()) {
+        m_groupVoice.erase(it);
     }
-    m_mutex.unlock();
 }
 
 /// <summary>
@@ -223,24 +217,21 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::find(uint32_t id, uint8_t slot)
 {
     TalkgroupRuleGroupVoice entry;
 
-    m_mutex.lock();
-    {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-            [&](TalkgroupRuleGroupVoice x)
-            {
-                if (slot != 0U) {
-                    return x.source().tgId() == id && x.source().tgSlot() == slot;
-                }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+        [&](TalkgroupRuleGroupVoice x)
+        {
+            if (slot != 0U) {
+                return x.source().tgId() == id && x.source().tgSlot() == slot;
+            }
 
-                return x.source().tgId() == id;
-            });
-        if (it != m_groupVoice.end()) {
-            entry = *it;
-        } else {
-            entry = TalkgroupRuleGroupVoice();
-        }
+            return x.source().tgId() == id;
+        });
+    if (it != m_groupVoice.end()) {
+        entry = *it;
+    } else {
+        entry = TalkgroupRuleGroupVoice();
     }
-    m_mutex.unlock();
 
     return entry;
 }
@@ -256,36 +247,33 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
 {
     TalkgroupRuleGroupVoice entry;
 
-    m_mutex.lock();
-    {
-        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
-            [&](TalkgroupRuleGroupVoice x)
-            {
-                if (x.config().rewrite().size() == 0)
-                    return false;
-
-                std::vector<TalkgroupRuleRewrite> rewrite = x.config().rewrite();
-                auto innerIt = std::find_if(rewrite.begin(), rewrite.end(),
-                    [&](TalkgroupRuleRewrite y)
-                    {
-                        if (slot != 0U) {
-                            return y.peerId() == peerId && y.tgId() == id && y.tgSlot() == slot;
-                        }
-
-                        return y.peerId() == peerId && y.tgId() == id;
-                    });
-
-                if (innerIt != rewrite.end())
-                    return true;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+        [&](TalkgroupRuleGroupVoice x)
+        {
+            if (x.config().rewrite().size() == 0)
                 return false;
-            });
-        if (it != m_groupVoice.end()) {
-            entry = *it;
-        } else {
-            entry = TalkgroupRuleGroupVoice();
-        }
+
+            std::vector<TalkgroupRuleRewrite> rewrite = x.config().rewrite();
+            auto innerIt = std::find_if(rewrite.begin(), rewrite.end(),
+                [&](TalkgroupRuleRewrite y)
+                {
+                    if (slot != 0U) {
+                        return y.peerId() == peerId && y.tgId() == id && y.tgSlot() == slot;
+                    }
+
+                    return y.peerId() == peerId && y.tgId() == id;
+                });
+
+            if (innerIt != rewrite.end())
+                return true;
+            return false;
+        });
+    if (it != m_groupVoice.end()) {
+        entry = *it;
+    } else {
+        entry = TalkgroupRuleGroupVoice();
     }
-    m_mutex.unlock();
 
     return entry;
 }
@@ -336,37 +324,34 @@ bool TalkgroupRulesLookup::load()
     // clear table
     clear();
 
-    m_mutex.lock();
-    {
-        yaml::Node& groupVoiceList = m_rules["groupVoice"];
+    std::lock_guard<std::mutex> lock(m_mutex);
+    yaml::Node& groupVoiceList = m_rules["groupVoice"];
 
-        if (groupVoiceList.size() == 0U) {
-            ::LogError(LOG_HOST, "No group voice rules list defined!");
-            return false;
-        }
-
-        for (size_t i = 0; i < groupVoiceList.size(); i++) {
-            TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
-            m_groupVoice.push_back(groupVoice);
-
-            std::string groupName = groupVoice.name();
-            uint32_t tgId = groupVoice.source().tgId();
-            uint8_t tgSlot = groupVoice.source().tgSlot();
-            bool active = groupVoice.config().active();
-            bool parrot = groupVoice.config().parrot();
-
-            uint32_t incCount = groupVoice.config().inclusion().size();
-            uint32_t excCount = groupVoice.config().exclusion().size();
-            uint32_t rewrCount = groupVoice.config().rewrite().size();
-
-            if (incCount > 0 && excCount > 0) {
-                ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
-            }
-
-            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
-        }
+    if (groupVoiceList.size() == 0U) {
+        ::LogError(LOG_HOST, "No group voice rules list defined!");
+        return false;
     }
-    m_mutex.unlock();
+
+    for (size_t i = 0; i < groupVoiceList.size(); i++) {
+        TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
+        m_groupVoice.push_back(groupVoice);
+
+        std::string groupName = groupVoice.name();
+        uint32_t tgId = groupVoice.source().tgId();
+        uint8_t tgSlot = groupVoice.source().tgSlot();
+        bool active = groupVoice.config().active();
+        bool parrot = groupVoice.config().parrot();
+
+        uint32_t incCount = groupVoice.config().inclusion().size();
+        uint32_t excCount = groupVoice.config().exclusion().size();
+        uint32_t rewrCount = groupVoice.config().rewrite().size();
+
+        if (incCount > 0 && excCount > 0) {
+            ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
+        }
+
+        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
+    }
 
     size_t size = m_groupVoice.size();
     if (size == 0U)
@@ -388,7 +373,7 @@ bool TalkgroupRulesLookup::save()
         return false;
     }
 
-    m_mutex.lock();
+    std::lock_guard<std::mutex> lock(m_mutex);
     
     // New list for our new group voice rules
     yaml::Node groupVoiceList;
@@ -404,8 +389,6 @@ bool TalkgroupRulesLookup::save()
     
     // Set the new rules
     newRules["groupVoice"] = groupVoiceList;
-
-    m_mutex.unlock();
 
     // Make sure we actually did stuff right
     if (newRules["groupVoice"].size() != m_groupVoice.size()) {

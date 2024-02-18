@@ -371,7 +371,7 @@ namespace lookups
 
         bool m_acl;
 
-        std::mutex m_mutex;
+        static std::mutex m_mutex;
         bool m_stop;
 
         /// <summary>Loads the table from the passed lookup table file.</summary>

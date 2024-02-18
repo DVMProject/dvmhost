@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
 *   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
@@ -96,6 +96,9 @@ namespace lookups
         /// <summary>Initializes a new instance of the IdenTableLookup class.</summary>
         IdenTableLookup(const std::string& filename, uint32_t reloadTime);
 
+        /// <summary>Clears all entries from the lookup table.</summary>
+        void clear() override;
+
         /// <summary>Finds a table entry in this lookup table.</summary>
         IdenTable find(uint32_t id) override;
         /// <summary>Returns the list of entries in this lookup table.</summary>
@@ -109,6 +112,9 @@ namespace lookups
         /// <summary>Saves the table to the passed lookup table file.</summary>
         /// <returns>True, if lookup table was saved, otherwise false.</returns>
         bool save() override;
+
+    private:
+        static std::mutex m_mutex;
     };
 } // namespace lookups
 

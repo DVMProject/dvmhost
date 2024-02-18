@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2018-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
 *   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *
 */
@@ -98,11 +98,9 @@ namespace lookups
         /// <summary>Clears all entries from the lookup table.</summary>
         virtual void clear()
         {
-            m_mutex.lock();
-            {
-                m_table.clear();
-            }
-            m_mutex.unlock();
+            // bryanb: this is not thread-safe and thread saftey should be implemented
+            // on the derived class
+            m_table.clear();
         }
 
         /// <summary>Helper to check if this lookup table has the specified unique ID.</summary>
@@ -110,19 +108,13 @@ namespace lookups
         /// <returns>True, if the lookup table has an entry by the specified unique ID, otherwise false.</returns>
         virtual bool hasEntry(uint32_t id)
         {
-            m_mutex.lock();
-            {
-                try {
-                    m_table.at(id);
-                    m_mutex.unlock();
-                    return true;
-                }
-                catch (...) {
-                    m_mutex.unlock();
-                    return false;
-                }
+            try {
+                m_table.at(id);
+                return true;
             }
-            m_mutex.unlock();
+            catch (...) {
+                return false;
+            }
 
             return false;
         }
@@ -140,7 +132,6 @@ namespace lookups
         std::string m_filename;
         uint32_t m_reloadTime;
         std::unordered_map<uint32_t, T> m_table;
-        std::mutex m_mutex;
         bool m_stop;
 
         /// <summary>Loads the table from the passed lookup table file.</summary>
