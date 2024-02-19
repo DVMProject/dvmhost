@@ -83,13 +83,16 @@ void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
         RadioId _entry = m_table.at(id);
-
-        // if the enabled value doesn't match -- override with the intended
-        if (_entry.radioEnabled() != enabled) {
+        // if either the alias or the enabled flag doesn't match, update the entry
+        if (_entry.radioEnabled() != enabled || _entry.radioAlias() != alias) {
+            //LogDebug(LOG_HOST, "Updating existing RID %d (%s) in ACL", id, alias.c_str());
             _entry = RadioId(enabled, false, alias);
             m_table[id] = _entry;
+        } else {
+            //LogDebug(LOG_HOST, "No changes made to RID %d (%s) in ACL", id, alias.c_str());
         }
     } catch (...) {
+        //LogDebug(LOG_HOST, "Adding new RID %d (%s) to ACL", id, alias.c_str());
         m_table[id] = entry;
     }
 }
