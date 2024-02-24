@@ -1123,6 +1123,11 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
                 listSize = ridWhitelist.size();
             }
 
+            // Ignore lists of size 0 (happens on even multiples of 50, TODO: there's probably a better fix for this)
+            if (listSize == 0) {
+                continue;
+            }
+
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
             uint8_t payload[bufSize];
@@ -1133,7 +1138,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
             // write whitelisted IDs to whitelist payload
             uint32_t offs = 4U;
             for (uint32_t j = 0; j < listSize; j++) {
-                uint32_t id = ridWhitelist.at(j + (i * listSize));
+                uint32_t id = ridWhitelist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
                     LogDebug(LOG_NET, "PEER %u whitelisting RID %u (%d / %d)", peerId, id, i, j);
@@ -1192,6 +1197,11 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
                 listSize = ridBlacklist.size();
             }
 
+            // Ignore lists of size 0 (happens on even multiples of 50, TODO: there's probably a better fix for this)
+            if (listSize == 0) {
+                continue;
+            }
+
             // build dataset
             uint16_t bufSize = 4U + (listSize * 4U);
             uint8_t payload[bufSize];
@@ -1202,7 +1212,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
             // write blacklisted IDs to blacklist payload
             uint32_t offs = 4U;
             for (uint32_t j = 0; j < listSize; j++) {
-                uint32_t id = ridBlacklist.at(j + (i * listSize));
+                uint32_t id = ridBlacklist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
                     LogDebug(LOG_NET, "PEER %u blacklisting RID %u (%d / %d)", peerId, id, i, j);
