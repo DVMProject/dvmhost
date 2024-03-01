@@ -34,7 +34,7 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the Network class.</summary>
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
         /// <summary>Finalizes a instance of the Network class.</summary>
         ~Network() override;
 
@@ -84,6 +84,7 @@ namespace network
         bool m_nxdnEnabled;
 
         bool m_updateLookup;
+        bool m_saveLookup;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;

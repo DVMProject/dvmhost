@@ -62,6 +62,9 @@ network:
 
     # Flag indicating whether the local host lookup tables (RID, TGID, etc) will be updated from the network.
     updateLookups: false
+    # Flag indicating whether the local host lookup tables will be saved to local files when updated from the network
+    # This is handy if your site occasionally operates in site trunking mode without a connection to the FNE
+    saveLookups: false
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.

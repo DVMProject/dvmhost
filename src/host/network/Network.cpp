@@ -49,7 +49,7 @@ using namespace network;
 /// <param name="allowDiagnosticTransfer">Flag indicating that the system diagnostic logs will be sent to the network.</param>
 /// <param name="updateLookup">Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.</param>
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup) :
+    bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
     m_pktLastSeq(0U),
     m_address(address),
@@ -60,6 +60,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
     m_updateLookup(updateLookup),
+    m_saveLookup(saveLookup),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_salt(nullptr),
@@ -397,6 +398,10 @@ void Network::clock(uint32_t ms)
                                 offs += 4U;
                             }
                             LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
+                            // Save to file if enabled and we got RIDs
+                            if (m_saveLookup && len > 0) {
+                                m_ridLookup->commit();
+                            }
                         }
                     }
                 }
@@ -415,6 +420,10 @@ void Network::clock(uint32_t ms)
                                 offs += 4U;
                             }
                             LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
+                            // Save to file if enabled and we got RIDs
+                            if (m_saveLookup && len > 0) {
+                                m_ridLookup->commit();
+                            }
                         }
                     }
                 }
@@ -444,6 +453,10 @@ void Network::clock(uint32_t ms)
                                 offs += 5U;
                             }
                             LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
+                            // Save if saving from network is enabled
+                            if (m_saveLookup && len > 0) {
+                                m_tidLookup->commit();
+                            }
                         }
                     }
                 }
@@ -469,6 +482,10 @@ void Network::clock(uint32_t ms)
                                 offs += 5U;
                             }
                             LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
+                            // Save if saving from network is enabled
+                            if (m_saveLookup && len > 0) {
+                                m_tidLookup->commit();
+                            }
                         }
                     }
                 }

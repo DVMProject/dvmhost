@@ -672,6 +672,7 @@ bool Host::createNetwork()
     bool allowActivityTransfer = networkConf["allowActivityTransfer"].as<bool>(false);
     bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
+    bool saveLookup = networkConf["saveLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
     bool encrypted = networkConf["encrypted"].as<bool>(false);
@@ -751,6 +752,7 @@ bool Host::createNetwork()
         LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
         LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
+        LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
@@ -774,7 +776,14 @@ bool Host::createNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, updateLookup);
+        m_network = new Network(
+            address, port, local, 
+            id, password, m_duplex, 
+            debug, m_dmrEnabled, m_p25Enabled, 
+            m_nxdnEnabled, slot1, slot2, 
+            allowActivityTransfer, allowDiagnosticTransfer, updateLookup,
+            saveLookup
+        );
 
         m_network->setLookups(m_ridLookup, m_tidLookup);
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,

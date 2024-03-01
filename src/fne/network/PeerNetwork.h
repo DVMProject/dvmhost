@@ -31,7 +31,7 @@ namespace network
     public:
         /// <summary>Initializes a new instance of the PeerNetwork class.</summary>
         PeerNetwork(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
-            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup);
+            bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool slot1, bool slot2, bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
 
         /// <summary>Gets the blocked traffic peer ID table.</summary>
         std::vector<uint32_t> blockTrafficTo() const { return m_blockTrafficToTable; }
