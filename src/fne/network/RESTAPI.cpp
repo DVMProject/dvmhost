@@ -17,6 +17,8 @@
 #include "common/network/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
+#include "fne/network/fne/TagDMRData.h"
+#include "fne/network/fne/TagP25Data.h"
 #include "fne/network/RESTAPI.h"
 #include "HostFNE.h"
 
@@ -549,6 +551,18 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
+
+    /*
+    ** Digital Mobile Radio
+    */
+
+    m_dispatcher.match(PUT_DMR_RID).put(REST_API_BIND(RESTAPI::restAPI_PutDMRRID, this));
+
+    /*
+    ** Project 25
+    */
+
+    m_dispatcher.match(PUT_P25_RID).put(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
 }
 
 /// <summary>
@@ -1184,4 +1198,167 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 
     response["affiliations"].set<json::array>(affs);
     reply.payload(response);
+}
+
+/*
+** Digital Mobile Radio
+*/
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["command"].is<std::string>()) {
+        errorPayload(reply, "command was not valid");
+        return;
+    }
+
+    // validate peer ID is a integer within the JSON blob
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peer ID was not valid");
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<uint32_t>()) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["slot"].is<uint8_t>()) {
+        errorPayload(reply, "slot was not valid");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();     
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+    uint8_t slot = req["slot"].get<uint8_t>();
+
+    if (peerId == 0U) {
+        errorPayload(reply, "peer ID was not valid");
+        return;
+    }
+
+    if (dstId == 0U) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    if (slot == 0U || slot >= 3U) {
+        errorPayload(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    std::string command = req["command"].get<std::string>();
+    if (::strtolower(command) == RID_CMD_PAGE) {
+        m_network->m_tagDMR->write_Call_Alrt(peerId, slot, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_CHECK) {
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_INHIBIT) {
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
+        m_network->m_tagDMR->write_Ext_Func(peerId, slot, dmr::DMR_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else {
+        errorPayload(reply, "invalid command");
+        return;
+    }
+}
+
+/*
+** Project 25
+*/
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    // validate state is a string within the JSON blob
+    if (!req["command"].is<std::string>()) {
+        errorPayload(reply, "command was not valid");
+        return;
+    }
+
+    // validate peer ID is a integer within the JSON blob
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peer ID was not valid");
+        return;
+    }
+
+    // validate destination ID is a integer within the JSON blob
+    if (!req["dstId"].is<uint32_t>()) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();     
+    uint32_t dstId = req["dstId"].get<uint32_t>();
+
+    if (peerId == 0U) {
+        errorPayload(reply, "peer ID was not valid");
+        return;
+    }
+
+    if (dstId == 0U) {
+        errorPayload(reply, "destination ID was not valid");
+        return;
+    }
+
+    std::string command = req["command"].get<std::string>();
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+    if (::strtolower(command) == RID_CMD_PAGE) {
+        m_network->m_tagP25->write_TSDU_Call_Alrt(peerId, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_CHECK) {
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_CHECK, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_INHIBIT) {
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_INHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
+        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, p25::P25_EXT_FNCT_UNINHIBIT, p25::P25_WUID_FNE, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_GAQ) {
+        m_network->m_tagP25->write_TSDU_Grp_Aff_Q(peerId, dstId);
+    }
+    else if (::strtolower(command) == RID_CMD_UREG) {
+        m_network->m_tagP25->write_TSDU_U_Reg_Cmd(peerId, dstId);
+    }
+    else {
+        errorPayload(reply, "invalid command");
+        return;
+    }
 }

@@ -74,7 +74,7 @@ private:
     bool m_debug;
 
     HostFNE* m_host;
-    network::FNENetwork *m_network;
+    network::FNENetwork* m_network;
 
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupRulesLookup* m_tidLookup;
@@ -129,6 +129,20 @@ private:
 
     /// <summary></summary>
     void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /*
+    ** Digital Mobile Radio
+    */
+
+    /// <summary></summary>
+    void restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /*
+    ** Project 25
+    */
+
+    /// <summary></summary>
+    void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 };
 
 #endif // __REST_API_H__

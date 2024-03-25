@@ -53,6 +53,17 @@ namespace network
             /// <summary>Helper to determine if there are stored parrot frames.</summary>
             bool hasParrotFrames() const { return m_parrotFramesReady && !m_parrotFrames.empty(); }
 
+            /// <summary>Helper to write a call alert packet.</summary>
+            void write_TSDU_Call_Alrt(uint32_t peerId, uint32_t srcId, uint32_t dstId);
+            /// <summary>Helper to write a radio monitor packet.</summary>
+            void write_TSDU_Radio_Mon(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t txMult);
+            /// <summary>Helper to write a extended function packet.</summary>
+            void write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t arg, uint32_t dstId);
+            /// <summary>Helper to write a group affiliation query packet.</summary>
+            void write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId);
+            /// <summary>Helper to write a unit registration command packet.</summary>
+            void write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId);
+
         private:
             FNENetwork* m_network;
 

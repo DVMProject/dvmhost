@@ -336,6 +336,48 @@ void TagDMRData::playbackParrot()
     m_parrotFrames.pop_front();
 }
 
+/// <summary>
+/// Helper to write a extended function packet on the RF interface.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="slot"></param>
+/// <param name="func">Extended function opcode.</param>
+/// <param name="arg">Extended function argument.</param>
+/// <param name="dstId">Destination radio ID.</param>
+void TagDMRData::write_Ext_Func(uint32_t peerId, uint8_t slot, uint32_t func, uint32_t arg, uint32_t dstId)
+{
+    std::unique_ptr<lc::csbk::CSBK_EXT_FNCT> csbk = std::make_unique<lc::csbk::CSBK_EXT_FNCT>();
+    csbk->setGI(false);
+    csbk->setExtendedFunction(func);
+    csbk->setSrcId(arg);
+    csbk->setDstId(dstId);
+
+    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, op = $%02X, arg = %u, tgt = %u",
+        slot, csbk->toString().c_str(), func, arg, dstId);
+
+    write_CSBK(peerId, slot, csbk.get());
+}
+
+/// <summary>
+/// Helper to write a call alert packet on the RF interface.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="slot"></param>
+/// <param name="srcId">Source radio ID.</param>
+/// <param name="dstId">Destination radio ID.</param>
+void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, uint32_t dstId)
+{
+    std::unique_ptr<lc::csbk::CSBK_CALL_ALRT> csbk = std::make_unique<lc::csbk::CSBK_CALL_ALRT>();
+    csbk->setGI(false);
+    csbk->setSrcId(srcId);
+    csbk->setDstId(dstId);
+
+    LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, srcId = %u, dstId = %u",
+        slot, csbk->toString().c_str(), srcId, dstId);
+
+    write_CSBK(peerId, slot, csbk.get());
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -561,15 +603,16 @@ void TagDMRData::write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t re
     csbk->setSrcId(DMR_WUID_ALL); // hmmm...
     csbk->setDstId(dstId);
 
-    write_CSBK(peerId, csbk.get());
+    write_CSBK(peerId, 1U, csbk.get());
 }
 
 /// <summary>
 /// Helper to write a network CSBK.
 /// </summary>
 /// <param name="peerId"></param>
+/// <param name="slot"></param>
 /// <param name="csbk"></param>
-void TagDMRData::write_CSBK(uint32_t peerId, lc::CSBK* csbk)
+void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
 {
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
@@ -588,7 +631,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, lc::CSBK* csbk)
     Sync::addDMRDataSync(data + 2U, true);
 
     data::Data dmrData;
-    dmrData.setSlotNo(1U);
+    dmrData.setSlotNo(slot);
     dmrData.setDataType(DT_CSBK);
     dmrData.setSrcId(csbk->getSrcId());
     dmrData.setDstId(csbk->getDstId());

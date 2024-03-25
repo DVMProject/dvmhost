@@ -75,6 +75,10 @@
 #define RCD_DMR_RID_CHECK               "dmr-rid-check"
 #define RCD_DMR_RID_INHIBIT             "dmr-rid-inhibit"
 #define RCD_DMR_RID_UNINHIBIT           "dmr-rid-uninhibit"
+#define RCD_FNE_DMR_RID_PAGE            "fne-dmr-rid-page"
+#define RCD_FNE_DMR_RID_CHECK           "fne-dmr-rid-check"
+#define RCD_FNE_DMR_RID_INHIBIT         "fne-dmr-rid-inhibit"
+#define RCD_FNE_DMR_RID_UNINHIBIT       "fne-dmr-rid-uninhibit"
 
 #define RCD_P25_SET_MFID                "p25-set-mfid"
 #define RCD_P25_RID_PAGE                "p25-rid-page"
@@ -83,6 +87,12 @@
 #define RCD_P25_RID_UNINHIBIT           "p25-rid-uninhibit"
 #define RCD_P25_RID_GAQ                 "p25-rid-gaq"
 #define RCD_P25_RID_UREG                "p25-rid-ureg"
+#define RCD_FNE_P25_RID_PAGE            "fne-p25-rid-page"
+#define RCD_FNE_P25_RID_CHECK           "fne-p25-rid-check"
+#define RCD_FNE_P25_RID_INHIBIT         "fne-p25-rid-inhibit"
+#define RCD_FNE_P25_RID_UNINHIBIT       "fne-p25-rid-uninhibit"
+#define RCD_FNE_P25_RID_GAQ             "fne-p25-rid-gaq"
+#define RCD_FNE_P25_RID_UREG            "fne-p25-rid-ureg"
 
 #define RCD_DMR_CC_DEDICATED            "dmr-cc-dedicated"
 #define RCD_DMR_CC_BCAST                "dmr-cc-bcast"
@@ -217,10 +227,10 @@ void usage(const char* message, const char* arg)
     reply += "  nxdn-debug <debug 0/1> <verbose 0/1>\r\n";
     reply += "  nxdn-dump-rcch <0/1>\r\n";
     reply += "\r\nDMR Commands:\r\n";
-    reply += "  dmr-rid-page <rid>          Pages/Calls the specified RID\r\n";
-    reply += "  dmr-rid-check <rid>         Radio Checks the specified RID\r\n";
-    reply += "  dmr-rid-inhibit <rid>       Inhibits the specified RID\r\n";
-    reply += "  dmr-rid-uninhibit <rid>     Uninhibits the specified RID\r\n";
+    reply += "  dmr-rid-page <s> <rid>      Pages/Calls the specified RID\r\n";
+    reply += "  dmr-rid-check <s> <rid>     Radio Checks the specified RID\r\n";
+    reply += "  dmr-rid-inhibit <s> <rid>   Inhibits the specified RID\r\n";
+    reply += "  dmr-rid-uninhibit <s> <rid> Uninhibits the specified RID\r\n";
     reply += "\r\n";
     reply += "  dmr-cc-dedicated            Enables or disables dedicated control channel\r\n";
     reply += "  dmr-cc-bcast                Enables or disables broadcast of the control channel\r\n";
@@ -558,7 +568,7 @@ int main(int argc, char** argv)
                 retCode = client->send(HTTP_GET, GET_DMR_DUMP_CSBK_BASE + std::to_string(verbose), json::object(), response);
             }
         }
-        else if (rcom == RCD_DMR_RID_PAGE && argCnt >= 2U) {
+        else if ((rcom == RCD_DMR_RID_PAGE || rcom == RCD_FNE_DMR_RID_PAGE) && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_PAGE));
             uint8_t slotNo = getArgInt8(args, 0U);
@@ -566,9 +576,14 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_DMR_RID_PAGE) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
-        else if (rcom == RCD_DMR_RID_CHECK && argCnt >= 2U) {
+        else if ((rcom == RCD_DMR_RID_CHECK || rcom == RCD_FNE_DMR_RID_CHECK) && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_CHECK));
             uint8_t slotNo = getArgInt8(args, 0U);
@@ -576,9 +591,14 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_DMR_RID_CHECK) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
-        else if (rcom == RCD_DMR_RID_INHIBIT && argCnt >= 2U) {
+        else if ((rcom == RCD_DMR_RID_INHIBIT || rcom == RCD_FNE_DMR_RID_INHIBIT) && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_INHIBIT));
             uint8_t slotNo = getArgInt8(args, 0U);
@@ -586,15 +606,25 @@ int main(int argc, char** argv)
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_DMR_RID_INHIBIT) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
-        else if (rcom == RCD_DMR_RID_UNINHIBIT && argCnt >= 2U) {
+        else if ((rcom == RCD_DMR_RID_UNINHIBIT || rcom == RCD_FNE_DMR_RID_UNINHIBIT) && argCnt >= 2U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_UNINHIBIT));
             uint8_t slotNo = getArgInt8(args, 0U);
             req["slot"].set<uint8_t>(slotNo);
             uint32_t dstId = getArgUInt32(args, 1U);
             req["dstId"].set<uint32_t>(dstId);
+
+            if (rcom == RCD_FNE_DMR_RID_UNINHIBIT) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
 
             retCode = client->send(HTTP_PUT, PUT_DMR_RID, req, response);
         }
@@ -642,51 +672,81 @@ int main(int argc, char** argv)
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_PAGE && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_PAGE || rcom == RCD_FNE_P25_RID_PAGE) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_PAGE));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_P25_RID_PAGE) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_CHECK && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_CHECK || rcom == RCD_FNE_P25_RID_CHECK) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_CHECK));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_P25_RID_CHECK) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_INHIBIT && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_INHIBIT || rcom == RCD_FNE_P25_RID_INHIBIT) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_INHIBIT));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_P25_RID_INHIBIT) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_UNINHIBIT && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_UNINHIBIT || rcom == RCD_FNE_P25_RID_UNINHIBIT) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_UNINHIBIT));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_P25_RID_UNINHIBIT) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_GAQ && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_GAQ || rcom == RCD_FNE_P25_RID_GAQ) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_GAQ));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
 
+            if (rcom == RCD_FNE_P25_RID_GAQ) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
+
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }
-        else if (rcom == RCD_P25_RID_UREG && argCnt >= 1U) {
+        else if ((rcom == RCD_P25_RID_UREG || rcom == RCD_FNE_P25_RID_UREG) && argCnt >= 1U) {
             json::object req = json::object();
             req["command"].set<std::string>(std::string(RID_CMD_UREG));
             uint32_t dstId = getArgUInt32(args, 0U);
             req["dstId"].set<uint32_t>(dstId);
+
+            if (rcom == RCD_FNE_P25_RID_UREG) {
+                uint32_t peerId = getArgUInt32(args, 2U);
+                req["peerId"].set<uint32_t>(peerId);
+            }
 
             retCode = client->send(HTTP_PUT, PUT_P25_RID, req, response);
         }

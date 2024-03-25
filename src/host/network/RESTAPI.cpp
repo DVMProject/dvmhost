@@ -1675,7 +1675,7 @@ void RESTAPI::restAPI_PutTSCCPayloadActivate(const HTTPPayload& request, HTTPPay
     uint8_t slot = req["slot"].get<uint8_t>();
     bool clear = req["clear"].get<bool>();
 
-    if (slot == 0U && slot >= 3U) {
+    if (slot == 0U || slot >= 3U) {
         errorPayload(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
         return;
     }

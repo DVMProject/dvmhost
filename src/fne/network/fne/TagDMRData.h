@@ -48,6 +48,11 @@ namespace network
             /// <summary>Helper to determine if there are stored parrot frames.</summary>
             bool hasParrotFrames() const { return m_parrotFramesReady && !m_parrotFrames.empty(); }
 
+            /// <summary>Helper to write a extended function packet on the RF interface.</summary>
+            void write_Ext_Func(uint32_t peerId, uint8_t slot, uint32_t func, uint32_t arg, uint32_t dstId);
+            /// <summary>Helper to write a call alert packet on the RF interface.</summary>
+            void write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, uint32_t dstId);
+
         private:
             FNENetwork* m_network;
 
@@ -81,7 +86,7 @@ namespace network
             void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service);
 
             /// <summary>Helper to write a network CSBK.</summary>
-            void write_CSBK(uint32_t peerId, dmr::lc::CSBK* csbk);
+            void write_CSBK(uint32_t peerId, uint8_t slot, dmr::lc::CSBK* csbk);
         };
     } // namespace fne
 } // namespace network

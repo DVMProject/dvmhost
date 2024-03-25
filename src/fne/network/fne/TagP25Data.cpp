@@ -405,6 +405,94 @@ void TagP25Data::playbackParrot()
     m_parrotFrames.pop_front();
 }
 
+/// <summary>
+/// Helper to write a call alert packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+void TagP25Data::write_TSDU_Call_Alrt(uint32_t peerId, uint32_t srcId, uint32_t dstId)
+{
+    std::unique_ptr<lc::tsbk::IOSP_CALL_ALRT> iosp = std::make_unique<lc::tsbk::IOSP_CALL_ALRT>();
+    iosp->setSrcId(srcId);
+    iosp->setDstId(dstId);
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", iosp->toString().c_str(), srcId, dstId);
+
+    write_TSDU(peerId, iosp.get());
+}
+
+/// <summary>
+/// Helper to write a radio monitor packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="txMult"></param>
+void TagP25Data::write_TSDU_Radio_Mon(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t txMult)
+{
+    std::unique_ptr<lc::tsbk::IOSP_RAD_MON> iosp = std::make_unique<lc::tsbk::IOSP_RAD_MON>();
+    iosp->setSrcId(srcId);
+    iosp->setDstId(dstId);
+    iosp->setTxMult(txMult);
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, txMult = %u", iosp->toString().c_str(), srcId, dstId, txMult);
+
+    write_TSDU(peerId, iosp.get());
+}
+
+/// <summary>
+/// Helper to write a extended function packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="func"></param>
+/// <param name="arg"></param>
+/// <param name="dstId"></param>
+void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t arg, uint32_t dstId)
+{
+    std::unique_ptr<lc::tsbk::IOSP_EXT_FNCT> iosp = std::make_unique<lc::tsbk::IOSP_EXT_FNCT>();
+    iosp->setExtendedFunction(func);
+    iosp->setSrcId(arg);
+    iosp->setDstId(dstId);
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
+        iosp->toString().c_str(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
+
+    write_TSDU(peerId, iosp.get());
+}
+
+/// <summary>
+/// Helper to write a group affiliation query packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="dstId"></param>
+void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
+{
+    std::unique_ptr<lc::tsbk::OSP_GRP_AFF_Q> osp = std::make_unique<lc::tsbk::OSP_GRP_AFF_Q>();
+    osp->setSrcId(P25_WUID_FNE);
+    osp->setDstId(dstId);
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, dstId = %u", osp->toString().c_str(), dstId);
+
+    write_TSDU(peerId, osp.get());
+}
+
+/// <summary>
+/// Helper to write a unit registration command packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="dstId"></param>
+void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
+{
+    std::unique_ptr<lc::tsbk::OSP_U_REG_CMD> osp = std::make_unique<lc::tsbk::OSP_U_REG_CMD>();
+    osp->setSrcId(P25_WUID_FNE);
+    osp->setDstId(dstId);
+
+    LogMessage(LOG_NET, P25_TSDU_STR ", %s, dstId = %u", osp->toString().c_str(), dstId);
+
+    write_TSDU(peerId, osp.get());
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
