@@ -97,7 +97,7 @@ bool parseResponseBody(const HTTPPayload& response, json::object& obj)
 /// <param name="address">Network Hostname/IP address to connect to.</param>
 /// <param name="port">Network port number.</param>
 /// <param name="password">Authentication password.</param>
-/// <param name="enableSSL"></param>
+/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
 /// <param name="debug">Flag indicating whether debug is enabled.</param>
 RESTClient::RESTClient(const std::string& address, uint32_t port, const std::string& password, bool enableSSL, bool debug) :
     m_address(address),
@@ -152,14 +152,14 @@ int RESTClient::send(const std::string method, const std::string endpoint, json:
 /// <param name="method">REST API method.</param>
 /// <param name="endpoint">REST API endpoint.</param>
 /// <param name="payload">REST API endpoint payload.</param>
-/// <param name="enableSSL"></param>
+/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
 /// <param name="debug">Flag indicating whether debug is enabled.</param>
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-    const std::string endpoint, json::object payload, bool enableSSL, bool debug)
+    const std::string endpoint, json::object payload, bool enableSSL, int timeout, bool debug)
 {
     json::object rsp = json::object();
-    return send(address, port, password, method, endpoint, payload, rsp, enableSSL, debug);
+    return send(address, port, password, method, endpoint, payload, rsp, enableSSL, timeout, debug);
 }
 
 /// <summary>
@@ -172,11 +172,12 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 /// <param name="endpoint">REST API endpoint.</param>
 /// <param name="payload">REST API endpoint payload.</param>
 /// <param name="response">REST API endpoint response.</param>
-/// <param name="enableSSL"></param>
+/// <param name="enableSSL">Flag indicating whether or not HTTPS is enabled.</param>
+/// <param name="timeout">REST response wait timeout.</param>
 /// <param name="debug">Flag indicating whether debug is enabled.</param>
 /// <returns>EXIT_SUCCESS, if command was sent, otherwise EXIT_FAILURE.</returns>
 int RESTClient::send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-    const std::string endpoint, json::object payload, json::object& response, bool enableSSL, bool debug)
+    const std::string endpoint, json::object payload, json::object& response, bool enableSSL, int timeout, bool debug)
 {
     if (address.empty()) {
         return ERRNO_NO_ADDRESS;
@@ -429,11 +430,12 @@ void RESTClient::responseHandler(const HTTPPayload& request, HTTPPayload& reply)
 /// <summary>
 ///
 /// </summary>
-bool RESTClient::wait()
+/// <param name="t"></param>
+bool RESTClient::wait(const int t)
 {
     m_responseAvailable = false;
 
-    int timeout = 500;
+    int timeout = t;
     while (!m_responseAvailable && timeout > 0) {
         timeout--;
         Thread::sleep(1);

@@ -900,7 +900,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["slot"].set<uint8_t>(slot);
 
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_tscc->m_debug);
+                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                     ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
@@ -951,7 +951,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                                 HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), m_tscc->m_debug);
+                                 HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -978,7 +978,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["slot"].set<uint8_t>(slot);
 
                 int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), m_tscc->m_debug);
+                    HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
                 if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
                     ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to permit TG for use, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
                     m_tscc->m_affiliations->releaseGrant(dstId, false);
@@ -1027,7 +1027,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -1185,7 +1185,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);
@@ -1232,7 +1232,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 req["voice"].set<bool>(voice);
 
                 RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
-                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), m_tscc->m_debug);
+                    HTTP_PUT, PUT_DMR_TSCC_PAYLOAD_ACT, req, voiceChData.ssl(), REST_QUICK_WAIT, m_tscc->m_debug);
             }
             else {
                 ::LogError(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), failed to activate payload channel, chNo = %u, slot = %u", m_tscc->m_slotNo, chNo, slot);

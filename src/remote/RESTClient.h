@@ -19,6 +19,9 @@
 
 #include <string>
 
+#define REST_DEFAULT_WAIT 500
+#define REST_QUICK_WAIT 150
+
 // ---------------------------------------------------------------------------
 //  Class Declaration
 //      This class implements the REST client logic.
@@ -39,10 +42,10 @@ public:
 
     /// <summary>Sends remote control command to the specified modem.</summary>
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-        const std::string endpoint, json::object payload, bool enableSSL, bool debug = false);
+        const std::string endpoint, json::object payload, bool enableSSL, int timeout = REST_DEFAULT_WAIT, bool debug = false);
     /// <summary>Sends remote control command to the specified modem.</summary>
     static int send(const std::string& address, uint32_t port, const std::string& password, const std::string method,
-        const std::string endpoint, json::object payload, json::object& response, bool enableSSL, bool debug = false);
+        const std::string endpoint, json::object payload, json::object& response, bool enableSSL, int timeout, bool debug = false);
 
 private:
     typedef network::rest::http::HTTPPayload HTTPPayload;
@@ -50,7 +53,7 @@ private:
     static void responseHandler(const HTTPPayload& request, HTTPPayload& reply);
 
     /// <summary></summary>
-    static bool wait();
+    static bool wait(const int t = REST_DEFAULT_WAIT);
 
     std::string m_address;
     uint32_t m_port;
