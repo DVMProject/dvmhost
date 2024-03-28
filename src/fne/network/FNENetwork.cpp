@@ -82,6 +82,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_p25Enabled(p25),
     m_nxdnEnabled(nxdn),
     m_parrotDelay(parrotDelay),
+    m_parrotDelayTimer(1000U, 0U, parrotDelay),
     m_parrotGrantDemand(parrotGrantDemand),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
@@ -209,22 +210,6 @@ void FNENetwork::processNetwork()
             return;
         }
     }
-    else {
-        // if the DMR handler has parrot frames to playback, playback a frame
-        if (m_tagDMR->hasParrotFrames()) {
-            m_tagDMR->playbackParrot();
-        }
-
-        // if the P25 handler has parrot frames to playback, playback a frame
-        if (m_tagP25->hasParrotFrames()) {
-            m_tagP25->playbackParrot();
-        }
-
-        // if the NXDN handler has parrot frames to playback, playback a frame
-        if (m_tagNXDN->hasParrotFrames()) {
-            m_tagNXDN->playbackParrot();
-        }
-   }
 }
 
 /// <summary>
@@ -275,6 +260,29 @@ void FNENetwork::clock(uint32_t ms)
         }
 
         m_maintainenceTimer.start();
+    }
+
+    m_parrotDelayTimer.clock(ms);
+    if (m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
+        // if the DMR handler has parrot frames to playback, playback a frame
+        if (m_tagDMR->hasParrotFrames()) {
+            m_tagDMR->playbackParrot();
+        }
+
+        // if the P25 handler has parrot frames to playback, playback a frame
+        if (m_tagP25->hasParrotFrames()) {
+            m_tagP25->playbackParrot();
+        }
+
+        // if the NXDN handler has parrot frames to playback, playback a frame
+        if (m_tagNXDN->hasParrotFrames()) {
+            m_tagNXDN->playbackParrot();
+        }
+    }
+
+    if (!m_tagDMR->hasParrotFrames() && !m_tagP25->hasParrotFrames() && !m_tagNXDN->hasParrotFrames() &&
+        m_parrotDelayTimer.isRunning() && m_parrotDelayTimer.hasExpired()) {
+        m_parrotDelayTimer.stop();
     }
 }
 

@@ -180,8 +180,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         if (m_parrotFrames.size() > 0) {
                             m_parrotFramesReady = true;
                             m_parrotFirstFrame = true;
-                            Thread::sleep(m_network->m_parrotDelay);
                             LogMessage(LOG_NET, "P25, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                            m_network->m_parrotDelayTimer.start();
                         }
                     }
 

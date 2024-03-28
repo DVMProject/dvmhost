@@ -122,8 +122,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     if (tg.config().parrot()) {
                         if (m_parrotFrames.size() > 0) {
                             m_parrotFramesReady = true;
-                            Thread::sleep(m_network->m_parrotDelay);
                             LogMessage(LOG_NET, "NXDN, Parrot Playback will Start, peer = %u, srcId = %u", peerId, srcId);
+                            m_network->m_parrotDelayTimer.start();
                         }
                     }
 

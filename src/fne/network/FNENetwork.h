@@ -263,6 +263,7 @@ namespace network
         bool m_nxdnEnabled;
 
         uint32_t m_parrotDelay;
+        Timer m_parrotDelayTimer;
         bool m_parrotGrantDemand;
 
         lookups::RadioIdLookup* m_ridLookup;
