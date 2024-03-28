@@ -188,14 +188,14 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                         connection->pktLastSeq(pktSeq);
                         connection->pktNextSeq(0U);
                     } else {
-                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq())) {
+                        if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
                             LogWarning(LOG_NET, "PEER %u stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
                         }
 
                         connection->currStreamId(streamId);
                         connection->pktLastSeq(pktSeq);
                         connection->pktNextSeq(pktSeq + 1);
-                        if (connection->pktNextSeq() > UINT16_MAX) {
+                        if (connection->pktNextSeq() > (RTP_END_OF_CALL_SEQ - 1U)) {
                             connection->pktNextSeq(0U);
                         }
                     }

@@ -731,7 +731,7 @@ uint16_t BaseNetwork::pktSeq(bool reset)
 
     uint16_t curr = m_pktSeq;
     ++m_pktSeq;
-    if (m_pktSeq >= RTP_END_OF_CALL_SEQ - 1U) {
+    if (m_pktSeq > (RTP_END_OF_CALL_SEQ - 1U)) {
         m_pktSeq = 0U;
     }
 
