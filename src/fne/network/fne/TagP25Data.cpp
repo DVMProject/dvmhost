@@ -187,6 +187,21 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     LogMessage(LOG_NET, "P25, Call End, peer = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, external = %u",
                         peerId, srcId, dstId, duration / 1000, streamId, external);
+
+                    // report call event to InfluxDB
+                    if (m_network->m_enableInfluxDB) {
+                        influxdb::QueryBuilder()
+                            .meas("call_event")
+                                .tag("peerId", std::to_string(peerId))
+                                .tag("mode", "P25")
+                                .tag("streamId", std::to_string(streamId))
+                                .tag("srcId", std::to_string(srcId))
+                                .tag("dstId", std::to_string(dstId))
+                                    .field("duration", duration)
+                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                            .request(m_network->m_influxServer);
+                    }
+
                     m_network->m_callInProgress = false;
                 }
             }
@@ -230,7 +245,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     status.dstId = dstId;
                     status.streamId = streamId;
                     m_status[dstId] = status;
+
                     LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+
                     m_network->m_callInProgress = true;
                 }
             }

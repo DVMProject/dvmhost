@@ -76,6 +76,19 @@ master:
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
     disallowExtAdjStsBcast: true
 
+    # Flag indicating whether or not InfluxDB logging and metrics recording is enabled.
+    enableInflux: false
+    # Hostname/IP address of the InfluxDB instance to connect to.
+    influxServerAddress: 127.0.0.1
+    # Port number of the InfluxDB instance to connect to.
+    influxServerPort: 8086
+    # API Token to access the InfluxDB instance API.
+    influxServerToken: "APITOKEN"
+    # Organization Name on InfluxDB instance API.
+    influxOrg: "dvm"
+    # Data Bucket Name on InfluxDB instance API.
+    influxBucket: "dvm"
+
     #
     # Talkgroup Rules Configuration
     #

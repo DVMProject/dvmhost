@@ -19,6 +19,7 @@
 #include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "fne/network/influxdb/InfluxDB.h"
 #include "host/network/Network.h"
 
 #include <string>
@@ -286,6 +287,14 @@ namespace network
 
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
+
+        bool m_enableInfluxDB;
+        std::string m_influxServerAddress;
+        uint16_t m_influxServerPort;
+        std::string m_influxServerToken;
+        std::string m_influxOrg;
+        std::string m_influxBucket;
+        influxdb::ServerInfo m_influxServer;
 
         bool m_reportPeerPing;
         bool m_verbose;

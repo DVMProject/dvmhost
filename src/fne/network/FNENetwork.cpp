@@ -95,6 +95,12 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_callInProgress(false),
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
+    m_enableInfluxDB(false),
+    m_influxServerAddress("127.0.0.1"),
+    m_influxServerPort(8086U),
+    m_influxServerToken(),
+    m_influxOrg("dvm"),
+    m_influxBucket("dvm"),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -139,6 +145,16 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         m_disallowExtAdjStsBcast = true;
     }
 
+    m_enableInfluxDB = conf["enableInflux"].as<bool>(false);
+    m_influxServerAddress = conf["influxServerAddress"].as<std::string>("127.0.0.1");
+    m_influxServerPort = conf["influxServerPort"].as<uint16_t>(8086U);
+    m_influxServerToken = conf["influxServerToken"].as<std::string>();
+    m_influxOrg = conf["influxOrg"].as<std::string>("dvm");
+    m_influxBucket = conf["influxBucket"].as<std::string>("dvm");
+    if (m_enableInfluxDB) {
+        m_influxServer = influxdb::ServerInfo(m_influxServerAddress, m_influxServerPort, m_influxOrg, m_influxServerToken, m_influxBucket);
+    }
+
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable P25 ADJ_STS_BCAST to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
@@ -146,6 +162,13 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
         }
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
+        if (m_enableInfluxDB) {
+            LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());
+            LogInfo("    InfluxDB Port: %u", m_influxServerPort);
+            LogInfo("    InfluxDB Organization: %s", m_influxOrg.c_str());
+            LogInfo("    InfluxDB Bucket: %s", m_influxBucket.c_str());
+        }
     }
 }
 
@@ -832,6 +855,16 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
                                         ::ActivityLog("%u %s", peerId, payload.c_str());
+
+                                        // report activity log to InfluxDB
+                                        if (network->m_enableInfluxDB) {
+                                            influxdb::QueryBuilder()
+                                                .meas("activity")
+                                                    .tag("peerId", std::to_string(peerId))
+                                                        .field("msg", payload)
+                                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                                .request(network->m_influxServer);
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -858,6 +891,16 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         g_disableTimeDisplay = true;
                                         ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
                                         g_disableTimeDisplay = currState;
+
+                                        // report diagnostic log to InfluxDB
+                                        if (network->m_enableInfluxDB) {
+                                            influxdb::QueryBuilder()
+                                                .meas("diag")
+                                                    .tag("peerId", std::to_string(peerId))
+                                                        .field("msg", payload)
+                                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                                .request(network->m_influxServer);
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);

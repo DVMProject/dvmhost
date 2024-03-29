@@ -223,6 +223,16 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
                                         ::ActivityLog("%u %s", peerId, payload.c_str());
+
+                                        // report activity log to InfluxDB
+                                        if (network->m_enableInfluxDB) {
+                                            influxdb::QueryBuilder()
+                                                .meas("activity")
+                                                    .tag("peerId", std::to_string(peerId))
+                                                        .field("msg", payload)
+                                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                                .request(network->m_influxServer);
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_ACT_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -249,6 +259,16 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         g_disableTimeDisplay = true;
                                         ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
                                         g_disableTimeDisplay = currState;
+
+                                        // report diagnostic log to InfluxDB
+                                        if (network->m_enableInfluxDB) {
+                                            influxdb::QueryBuilder()
+                                                .meas("diag")
+                                                    .tag("peerId", std::to_string(peerId))
+                                                        .field("msg", payload)
+                                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                                .request(network->m_influxServer);
+                                        }
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
