@@ -1295,6 +1295,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
     for (auto entry : groupVoice) {
         std::vector<uint32_t> inclusion = entry.config().inclusion();
         std::vector<uint32_t> exclusion = entry.config().exclusion();
+        std::vector<uint32_t> preferred = entry.config().preferred();
 
         // peer inclusion lists take priority over exclusion lists
         if (inclusion.size() > 0) {
@@ -1313,9 +1314,25 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
                 }
             }
         }
-        
+
+        // determine if the peer is non-preferred
+        bool nonPreferred = false;
+        if (preferred.size() > 0) {
+            auto it = std::find(preferred.begin(), preferred.end(), peerId);
+            if (it == preferred.end()) {
+                nonPreferred = true;
+            }
+        }
+
         if (entry.config().active()) {
-            tgidList.push_back({ entry.source().tgId(), entry.source().tgSlot() });
+            uint8_t slotNo = entry.source().tgSlot();
+
+            // set upper bit of the slot number to flag non-preferred
+            if (nonPreferred) {
+                slotNo = 0x80U + (slotNo & 0x03U);
+            }
+
+            tgidList.push_back({ entry.source().tgId(), slotNo });
         }
     }
 

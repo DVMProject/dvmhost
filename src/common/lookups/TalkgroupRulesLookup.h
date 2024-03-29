@@ -142,7 +142,9 @@ namespace lookups
             m_parrot(false),
             m_inclusion(),
             m_exclusion(),
-            m_rewrite()
+            m_rewrite(),
+            m_preferred(),
+            m_nonPreferred(false)
         {
             /* stub */
         }
@@ -178,6 +180,14 @@ namespace lookups
                     m_rewrite.push_back(rewrite);
                 }
             }
+
+            yaml::Node& preferredList = node["preferred"];
+            if (preferredList.size() > 0U) {
+                for (size_t i = 0; i < preferredList.size(); i++) {
+                    uint32_t peerId = preferredList[i].as<uint32_t>(0U);
+                    m_preferred.push_back(peerId);
+                }
+            }
         }
 
         /// <summary>Equals operator. Copies this TalkgroupRuleConfig to another TalkgroupRuleConfig.</summary>
@@ -190,6 +200,8 @@ namespace lookups
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
                 m_rewrite = data.m_rewrite;
+                m_preferred = data.m_preferred;
+                m_nonPreferred = data.m_nonPreferred;
             }
 
             return *this;
@@ -201,6 +213,8 @@ namespace lookups
         uint8_t exclusionSize() const { return m_exclusion.size(); }
         /// <summary>Gets the count of rewrites.</summary>
         uint8_t rewriteSize() const { return m_rewrite.size(); }
+        /// <summary>Gets the count of rewrites.</summary>
+        uint8_t preferredSize() const { return m_preferred.size(); }
 
         /// <summary>Return the YAML structure for this TalkgroupRuleConfig.</summary>
         void getYaml(yaml::Node &node)
@@ -237,6 +251,15 @@ namespace lookups
                 }
             }
             node["rewrite"] = rewriteList;
+
+            yaml::Node preferredList;
+            if (m_preferred.size() > 0U) {
+                for (auto pref : m_preferred) {
+                    yaml::Node& newPref = preferredList.push_back();
+                    newPref = __INT_STR(pref);
+                }
+            }
+            node["preferred"] = preferredList;
         }
 
     public:
@@ -252,6 +275,11 @@ namespace lookups
         __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
         /// <summary>List of rewrites performed by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
+        /// <summary>List of peer IDs preferred by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
+
+        /// <summary>Flag indicating whether or not the talkgroup is a non-preferred.</summary>
+        __PROPERTY_PLAIN(bool, nonPreferred);
     };
 
     // ---------------------------------------------------------------------------
@@ -348,7 +376,7 @@ namespace lookups
         void clear();
 
         /// <summary>Adds a new entry to the lookup table.</summary>
-        void addEntry(uint32_t id, uint8_t slot, bool enabled);
+        void addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred = false);
         /// <summary>Adds a new entry to the lookup table.</summary>
         void addEntry(TalkgroupRuleGroupVoice groupVoice);
         /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>

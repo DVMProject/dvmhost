@@ -121,13 +121,15 @@ void TalkgroupRulesLookup::clear()
 /// <param name="id">Unique ID to add.</param>
 /// <param name="slot">DMR slot this talkgroup is valid on.</param>
 /// <param name="enabled">Flag indicating if talkgroup ID is enabled or not.</param>
-void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled)
+/// <param name="nonPreferred">Flag indicating if the talkgroup ID is non-preferred.</param>
+void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool nonPreferred)
 {
     TalkgroupRuleGroupVoiceSource source;
     TalkgroupRuleConfig config;
     source.tgId(id);
     source.tgSlot(slot);
     config.active(enabled);
+    config.nonPreferred(nonPreferred);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
@@ -146,6 +148,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled)
         
         config = it->config();
         config.active(enabled);
+        config.nonPreferred(nonPreferred);
 
         TalkgroupRuleGroupVoice entry = *it;
         entry.config(config);
@@ -345,12 +348,13 @@ bool TalkgroupRulesLookup::load()
         uint32_t incCount = groupVoice.config().inclusion().size();
         uint32_t excCount = groupVoice.config().exclusion().size();
         uint32_t rewrCount = groupVoice.config().rewrite().size();
+        uint32_t prefCount = groupVoice.config().preferred().size();
 
         if (incCount > 0 && excCount > 0) {
             ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
         }
 
-        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
+        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
     }
 
     size_t size = m_groupVoice.size();

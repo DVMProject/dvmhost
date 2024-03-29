@@ -10,7 +10,7 @@
 *
 *   Copyright (C) 2016 Simon Rune, G7RZU
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2019 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017,2019,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_ACL__ACCESS_CONTROL_H__)
@@ -40,6 +40,9 @@ namespace p25
             static bool validateSrcId(uint32_t id);
             /// <summary>Helper to validate a talkgroup ID.</summary>
             static bool validateTGId(uint32_t id);
+
+            /// <summary>Helper to determine if a talkgroup ID is non-preferred.</summary>
+            static bool tgidNonPreferred(uint32_t id);
 
         private:
             static RadioIdLookup* m_ridLookup;

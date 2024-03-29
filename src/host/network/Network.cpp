@@ -397,8 +397,10 @@ void Network::clock(uint32_t ms)
                                 m_ridLookup->toggleEntry(id, true);
                                 offs += 4U;
                             }
+
                             LogMessage(LOG_NET, "Network Announced %u whitelisted RIDs", len);
-                            // Save to file if enabled and we got RIDs
+
+                            // save to file if enabled and we got RIDs
                             if (m_saveLookup && len > 0) {
                                 m_ridLookup->commit();
                             }
@@ -419,8 +421,10 @@ void Network::clock(uint32_t ms)
                                 m_ridLookup->toggleEntry(id, false);
                                 offs += 4U;
                             }
+
                             LogMessage(LOG_NET, "Network Announced %u blacklisted RIDs", len);
-                            // Save to file if enabled and we got RIDs
+
+                            // save to file if enabled and we got RIDs
                             if (m_saveLookup && len > 0) {
                                 m_ridLookup->commit();
                             }
@@ -438,22 +442,35 @@ void Network::clock(uint32_t ms)
                             uint32_t offs = 11U;
                             for (uint32_t i = 0; i < len; i++) {
                                 uint32_t id = __GET_UINT16(buffer, offs);
-                                uint8_t slot = (buffer[offs + 3U]);
+                                uint8_t slot = (buffer[offs + 3U]) & 0x03U;
+                                bool nonPreferred = (buffer[offs + 3U] & 0x80U) == 0x80U;
 
                                 lookups::TalkgroupRuleGroupVoice tid = m_tidLookup->find(id, slot);
+
+                                // if the TG is marked as non-preferred, and the TGID exists in the local entries
+                                // erase the local and overwrite with the FNE data
+                                if (nonPreferred) {
+                                    if (!tid.isInvalid()) {
+                                        m_tidLookup->eraseEntry(id, slot);
+                                        tid = m_tidLookup->find(id, slot);
+                                    }
+                                }
+
                                 if (tid.isInvalid()) {
                                     if (!tid.config().active()) {
                                         m_tidLookup->eraseEntry(id, slot);
                                     }
                                     
-                                    LogMessage(LOG_NET, "Activated TG %u TS %u in TGID table", id, slot);
-                                    m_tidLookup->addEntry(id, slot, true);
+                                    LogMessage(LOG_NET, "Activated%s TG %u TS %u in TGID table", (nonPreferred) ? " non-preferred" : "", id, slot);
+                                    m_tidLookup->addEntry(id, slot, true, nonPreferred);
                                 }
 
                                 offs += 5U;
                             }
+
                             LogMessage(LOG_NET, "Activated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
-                            // Save if saving from network is enabled
+
+                            // save if saving from network is enabled
                             if (m_saveLookup && len > 0) {
                                 m_tidLookup->commit();
                             }
@@ -481,8 +498,10 @@ void Network::clock(uint32_t ms)
 
                                 offs += 5U;
                             }
+
                             LogMessage(LOG_NET, "Deactivated %u TGs; loaded %u entries into lookup table", len, m_tidLookup->groupVoice().size());
-                            // Save if saving from network is enabled
+
+                            // save if saving from network is enabled
                             if (m_saveLookup && len > 0) {
                                 m_tidLookup->commit();
                             }

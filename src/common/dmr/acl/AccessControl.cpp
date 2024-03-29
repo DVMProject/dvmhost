@@ -10,7 +10,7 @@
 *
 *   Copyright (C) 2016 Simon Rune, G7RZU
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017,2019 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017,2019,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -94,4 +94,29 @@ bool AccessControl::validateTGId(uint32_t slotNo, uint32_t id)
     } else {
         return true;
     }
+}
+
+/// <summary>
+/// Helper to determine if a talkgroup ID is non-preferred.
+/// </summary>
+/// <param name="slotNo">DMR slot number.</param>
+/// <param name="id">Talkgroup ID.</param>
+/// <returns>True, if talkgroup ID is valid, otherwise false.</returns>
+bool AccessControl::tgidNonPreferred(uint32_t slotNo, uint32_t id)
+{
+    // TG0 is never valid
+    if (id == 0U)
+        return false;
+
+    // check if TID ACLs are enabled
+    if (!m_tidLookup->getACL()) {
+        return false;
+    }
+
+    // lookup TID and perform test for validity
+    TalkgroupRuleGroupVoice tid = m_tidLookup->find(id);
+    if (tid.config().nonPreferred())
+        return true;
+
+    return false;
 }

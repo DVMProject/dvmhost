@@ -2671,6 +2671,14 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
             iosp->setResponse(P25_RSP_DENY);
             noNet = true;
         }
+
+        // deny affiliation if the TG is non-preferred on this site/CC
+        if (acl::AccessControl::tgidNonPreferred(dstId)) {
+            LogWarning(LOG_RF, P25_TSDU_STR ", %s non-preferred on this site, TGID rejection, dstId = %u", iosp->toString().c_str(), dstId);
+            ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+            iosp->setResponse(P25_RSP_DENY);
+            noNet = true;
+        }
     }
 
     if (iosp->getResponse() == P25_RSP_ACCEPT) {
