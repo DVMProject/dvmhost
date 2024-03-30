@@ -55,6 +55,12 @@ namespace network
         STATE_NXDN = 3U,
     };
 
+    #define INFLUXDB_ERRSTR_DISABLED_SRC_RID "disabled source RID"
+    #define INFLUXDB_ERRSTR_DISABLED_DST_RID "disabled destination RID"
+    #define INFLUXDB_ERRSTR_INV_TALKGROUP "illegal/invalid talkgroup"
+    #define INFLUXDB_ERRSTR_DISABLED_TALKGROUP "disabled talkgroup"
+    #define INFLUXDB_ERRSTR_INV_SLOT "invalid slot for talkgroup"
+
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
