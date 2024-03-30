@@ -82,9 +82,9 @@ namespace nxdn
             */
 
             /// <summary>Helper to write a immediate single-block RCCH packet.</summary>
-            void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, false, true); }
+            void writeRF_Message_Imm(lc::RCCH *rcch, bool noNetwork) { writeRF_Message(rcch, noNetwork, true); }
             /// <summary>Helper to write a single-block RCCH packet.</summary>
-            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool clearBeforeWrite = false, bool imm = false);
+            void writeRF_Message(lc::RCCH* rcch, bool noNetwork, bool imm = false);
 
             /*
             ** Control Signalling Logic

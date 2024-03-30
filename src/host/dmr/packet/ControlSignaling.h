@@ -74,9 +74,9 @@ namespace dmr
             */
 
             /// <summary>Helper to write a immediate CSBK packet.</summary>
-            void writeRF_CSBK_Imm(lc::CSBK *csbk) { writeRF_CSBK(csbk, false, true); }
+            void writeRF_CSBK_Imm(lc::CSBK *csbk) { writeRF_CSBK(csbk, true); }
             /// <summary>Helper to write a CSBK packet.</summary>
-            void writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite = false, bool imm = false);
+            void writeRF_CSBK(lc::CSBK* csbk, bool imm = false);
 
             /*
             ** Control Signalling Logic

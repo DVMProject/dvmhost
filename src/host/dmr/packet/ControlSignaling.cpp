@@ -668,9 +668,8 @@ ControlSignaling::~ControlSignaling() = default;
 /// Helper to write a CSBK packet.
 /// </summary>
 /// <param name="csbk"></param>
-/// <param name="clearBeforeWrite"></param>
 /// <param name="imm"></param>
-void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool imm)
+void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool imm)
 {
     // don't add any frames if the queue is full
     uint8_t len = DMR_FRAME_LENGTH_BYTES + 2U;
@@ -699,14 +698,6 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool clearBeforeWrite, bool 
 
     data[0U] = modem::TAG_DATA;
     data[1U] = 0x00U;
-
-    if (clearBeforeWrite) {
-        if (m_slot->m_slotNo == 1U)
-            m_slot->m_modem->clearDMRFrame1();
-        if (m_slot->m_slotNo == 2U)
-            m_slot->m_modem->clearDMRFrame2();
-        m_slot->m_txQueue.clear();
-    }
 
     if (m_slot->m_duplex)
         m_slot->addFrame(data, false, imm);
@@ -1386,7 +1377,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Activate(uint32_t dstId, uint32_t sr
 
     m_slot->setShortLC_Payload(m_slot->m_siteData, 1U);
     for (uint8_t i = 0; i < 2U; i++)
-        writeRF_CSBK(csbk.get(), false, imm);
+        writeRF_CSBK(csbk.get(), imm);
 }
 
 /// <summary>
@@ -1416,7 +1407,7 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
     }
 
     for (uint8_t i = 0; i < 2U; i++)
-        writeRF_CSBK(csbk.get(), false, imm);
+        writeRF_CSBK(csbk.get(), imm);
 }
 
 /// <summary>

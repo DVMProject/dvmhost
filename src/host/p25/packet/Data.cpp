@@ -691,8 +691,7 @@ bool Data::hasLLIdFNEReg(uint32_t llId) const
 /// </summary>
 /// <param name="dataHeader"></param>
 /// <param name="pduUserData"></param>
-/// <param name="clearBeforeWrite"></param>
-void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData, bool clearBeforeWrite)
+void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
 
@@ -722,11 +721,6 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, const uint8_t* pduUser
         Utils::setBitRange(block, data, offset, P25_PDU_FEC_LENGTH_BITS);
         offset += P25_PDU_FEC_LENGTH_BITS;
         dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
-    }
-
-    if (clearBeforeWrite) {
-        m_p25->m_modem->clearP25Frame();
-        m_p25->m_txQueue.clear();
     }
 
     writeRF_PDU(data, bitLength);

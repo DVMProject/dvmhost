@@ -361,9 +361,8 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
 /// </summary>
 /// <param name="rcch"></param>
 /// <param name="noNetwork"></param>
-/// <param name="clearBeforeWrite"></param>
 /// <param name="imm"></param>
-void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBeforeWrite, bool imm)
+void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool imm)
 {
     if (!m_nxdn->m_enableControl)
         return;
@@ -401,11 +400,6 @@ void ControlSignaling::writeRF_Message(RCCH* rcch, bool noNetwork, bool clearBef
 
     if (!noNetwork)
         writeNetwork(data, NXDN_FRAME_LENGTH_BYTES + 2U);
-
-    if (clearBeforeWrite) {
-        m_nxdn->m_modem->clearNXDNFrame();
-        m_nxdn->m_txQueue.clear();
-    }
 
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data, NXDN_FRAME_LENGTH_BYTES + 2U, imm);

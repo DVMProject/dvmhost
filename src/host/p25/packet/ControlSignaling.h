@@ -165,15 +165,15 @@ namespace p25
             void writeNet_TDULC(lc::TDULC* lc);
 
             /// <summary>Helper to write a immediate single-block P25 TSDU packet.</summary>
-            void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, false, true); }
+            void writeRF_TSDU_SBF_Imm(lc::TSBK *tsbk, bool noNetwork) { writeRF_TSDU_SBF(tsbk, noNetwork, false, true); }
             /// <summary>Helper to write a single-block P25 TSDU packet.</summary>
-            void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite = false, bool force = false, bool imm = false);
+            void writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool forceSingle = false, bool imm = false);
             /// <summary>Helper to write a network single-block P25 TSDU packet.</summary>
             void writeNet_TSDU(lc::TSBK* tsbk);
             /// <summary>Helper to write a multi-block (3-block) P25 TSDU packet.</summary>
-            void writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite = false);
+            void writeRF_TSDU_MBF(lc::TSBK* tsbk);
             /// <summary>Helper to write a alternate multi-block PDU packet.</summary>
-            void writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite = false);
+            void writeRF_TSDU_AMBT(lc::AMBT* ambt);
 
             /*
             ** Control Signalling Logic

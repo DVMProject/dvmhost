@@ -1433,10 +1433,9 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
 /// </summary>
 /// <param name="tsbk"></param>
 /// <param name="noNetwork"></param>
-/// <param name="clearBeforeWrite"></param>
-/// <param name="force"></param>
+/// <param name="forceSingle"></param>
 /// <param name="imm"></param>
-void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool clearBeforeWrite, bool force, bool imm)
+void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool forceSingle, bool imm)
 {
     if (!m_p25->m_enableControl)
         return;
@@ -1473,25 +1472,20 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool cle
     if (!noNetwork)
         writeNetworkRF(tsbk, data + 2U, true);
 
-    // bryanb: hack-o-ramma, for now -- we will force any immediate TSDUs as single-block
+    // we always force any immediate TSDUs as single-block
     if (imm) {
-        force = true;
+        forceSingle = true;
     }
 
-    if (!force) {
+    if (!forceSingle) {
         if (m_p25->m_dedicatedControl && m_ctrlTSDUMBF) {
-            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
+            writeRF_TSDU_MBF(tsbk);
             return;
         }
 
         if (m_p25->m_ccRunning && m_ctrlTSDUMBF) {
-            writeRF_TSDU_MBF(tsbk, clearBeforeWrite);
+            writeRF_TSDU_MBF(tsbk);
             return;
-        }
-
-        if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Frame();
-            m_p25->m_txQueue.clear();
         }
     }
 
@@ -1548,8 +1542,7 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
 /// Helper to write a multi-block (3-block) P25 TSDU packet.
 /// </summary>
 /// <param name="tsbk"></param>
-/// <param name="clearBeforeWrite"></param>
-void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
+void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 {
     if (!m_p25->m_enableControl) {
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
@@ -1637,11 +1630,6 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        if (clearBeforeWrite) {
-            m_p25->m_modem->clearP25Frame();
-            m_p25->m_txQueue.clear();
-        }
-
         m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
 
         ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
@@ -1669,8 +1657,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk, bool clearBeforeWrite)
 /// Helper to write a alternate multi-block trunking PDU packet.
 /// </summary>
 /// <param name="ambt"></param>
-/// <param name="clearBeforeWrite"></param>
-void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
+void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
 {
     if (!m_p25->m_enableControl)
         return;
@@ -1697,7 +1684,7 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt, bool clearBeforeWrite)
         Utils::dump(1U, "!!! *PDU (AMBT) TSBK Block Data", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * header.getBlocksToFollow());
     }
 
-    m_p25->m_data->writeRF_PDU_User(header, pduUserData, clearBeforeWrite);
+    m_p25->m_data->writeRF_PDU_User(header, pduUserData);
 }
 
 /*
@@ -2470,7 +2457,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
         if (noData) {
             return; // don't create anything
         } else {
-            writeRF_TSDU_SBF(osp.get(), true, false, false, true);
+            writeRF_TSDU_SBF_Imm(osp.get(), true);
         }
     }
     else {
@@ -2556,8 +2543,13 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
             osp->toString().c_str(), osp->getDataChnNo(), osp->getSrcId());
     }
 
-    // transmit SNDCP grant
-    writeRF_TSDU_SBF(osp.get(), false, true, net);
+    // transmit group grant
+    writeRF_TSDU_SBF_Imm(osp.get(), net);
+    if (m_redundantGrant) {
+        for (int i = 0; i < 3; i++)
+            writeRF_TSDU_SBF(osp.get(), net);
+    }
+
     return true;
 }
 
