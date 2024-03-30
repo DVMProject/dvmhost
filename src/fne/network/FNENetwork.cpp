@@ -101,6 +101,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_influxServerToken(),
     m_influxOrg("dvm"),
     m_influxBucket("dvm"),
+    m_influxLogRawData(false),
     m_reportPeerPing(reportPeerPing),
     m_verbose(verbose)
 {
@@ -151,6 +152,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_influxServerToken = conf["influxServerToken"].as<std::string>();
     m_influxOrg = conf["influxOrg"].as<std::string>("dvm");
     m_influxBucket = conf["influxBucket"].as<std::string>("dvm");
+    m_influxLogRawData = conf["influxLogRawData"].as<bool>(false);
     if (m_enableInfluxDB) {
         m_influxServer = influxdb::ServerInfo(m_influxServerAddress, m_influxServerPort, m_influxOrg, m_influxServerToken, m_influxBucket);
     }
@@ -168,6 +170,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    InfluxDB Port: %u", m_influxServerPort);
             LogInfo("    InfluxDB Organization: %s", m_influxOrg.c_str());
             LogInfo("    InfluxDB Bucket: %s", m_influxBucket.c_str());
+            LogInfo("    InfluxDB Log Raw TSBK/CSBK/RCCH: %s", m_influxLogRawData ? "yes" : "no");
         }
     }
 }

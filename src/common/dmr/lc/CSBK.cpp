@@ -72,7 +72,8 @@ CSBK::CSBK() :
     m_logicalCh1(DMR_CHNULL),
     m_logicalCh2(DMR_CHNULL),
     m_slotNo(0U),
-    m_siteIdenEntry(::lookups::IdenTable())
+    m_siteIdenEntry(::lookups::IdenTable()),
+    m_raw(nullptr)
 {
     /* stub */
 }
@@ -80,7 +81,11 @@ CSBK::CSBK() :
 /// <summary>
 /// Finalizes a instance of the CSBK class.
 /// </summary>
-CSBK::~CSBK() = default;
+CSBK::~CSBK()
+{
+    if (m_raw != nullptr)
+        delete[] m_raw;
+}
 
 /// <summary>
 /// Returns a string that represents the current CSBK.
@@ -89,6 +94,16 @@ CSBK::~CSBK() = default;
 std::string CSBK::toString()
 {
     return std::string("CSBKO_UNKWN (Unknown CSBK)");
+}
+
+/// <summary>
+/// Returns a copy of the raw decoded CSBK bytes.
+/// </summary>
+/// <remarks>This will only return data for a *decoded* CSBK, not a created or copied CSBK.</remarks>
+/// <returns></returns>
+uint8_t* CSBK::getDecodedRaw() const
+{
+    return m_raw;
 }
 
 /// <summary>
@@ -267,6 +282,9 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
     if (m_verbose) {
         Utils::dump(2U, "Decoded CSBK", csbk, DMR_CSBK_LENGTH_BYTES);
     }
+
+    m_raw = new uint8_t[DMR_CSBK_LENGTH_BYTES];
+    ::memcpy(m_raw, csbk, DMR_CSBK_LENGTH_BYTES);
 
     m_CSBKO = csbk[0U] & 0x3FU;                                                     // CSBKO
     m_lastBlock = (csbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker

@@ -231,6 +231,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
         }
 
+        // process CSBK from peer
+        if (!processCSBK(buffer, peerId, dmrData)) {
+            return false;
+        }
+
         // repeat traffic to the connected peers
         if (m_network->m_peers.size() > 0U) {
             uint32_t i = 0U;
@@ -502,6 +507,49 @@ bool TagDMRData::peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo,
     }
 
     return rewrote;
+}
+
+/// <summary>
+/// Helper to process CSBKs being passed from a peer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="data"></param>
+bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData)
+{
+    // are we receiving a CSBK?
+    if (dmrData.getDataType() == DT_CSBK) {
+        uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+        dmrData.getData(data + 2U);
+
+        std::unique_ptr<lc::CSBK> csbk = lc::csbk::CSBKFactory::createCSBK(data + 2U, DT_CSBK);
+        if (csbk != nullptr) {
+            // report csbk event to InfluxDB
+            if (m_network->m_enableInfluxDB && m_network->m_influxLogRawData) {
+                const uint8_t* raw = csbk->getDecodedRaw();
+                if (raw != nullptr) {
+                    std::stringstream ss;
+                    ss << std::hex <<
+                        (int)raw[0] << (int)raw[1]  << (int)raw[2] << (int)raw[4] <<
+                        (int)raw[5] << (int)raw[6]  << (int)raw[7] << (int)raw[8] <<
+                        (int)raw[9] << (int)raw[10] << (int)raw[11];
+
+                    influxdb::QueryBuilder()
+                        .meas("csbk_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("lco", __INT_HEX_STR(csbk->getCSBKO()))
+                            .tag("csbk", csbk->toString())
+                                .field("raw", ss.str())
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+            }
+        } else {
+            LogWarning(LOG_NET, "PEER %u, passing CSBK that failed to decode? csbk == nullptr", peerId);
+        }
+    }
+
+    return true;
 }
 
 /// <summary>

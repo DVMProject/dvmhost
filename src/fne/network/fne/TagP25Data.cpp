@@ -631,6 +631,27 @@ bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
         std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
         if (tsbk != nullptr) {
+            // report tsbk event to InfluxDB
+            if (m_network->m_enableInfluxDB && m_network->m_influxLogRawData) {
+                const uint8_t* raw = tsbk->getDecodedRaw();
+                if (raw != nullptr) {
+                    std::stringstream ss;
+                    ss << std::hex <<
+                        (int)raw[0] << (int)raw[1]  << (int)raw[2] << (int)raw[4] <<
+                        (int)raw[5] << (int)raw[6]  << (int)raw[7] << (int)raw[8] <<
+                        (int)raw[9] << (int)raw[10] << (int)raw[11];
+
+                    influxdb::QueryBuilder()
+                        .meas("tsbk_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("lco", __INT_HEX_STR(tsbk->getLCO()))
+                            .tag("tsbk", tsbk->toString())
+                                .field("raw", ss.str())
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+            }
+
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
             case TSBK_OSP_ADJ_STS_BCAST:

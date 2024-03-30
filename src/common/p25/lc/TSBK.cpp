@@ -95,7 +95,8 @@ TSBK::TSBK() :
     m_group(true),
     m_siteIdenEntry(lookups::IdenTable()),
     m_rs(),
-    m_trellis()
+    m_trellis(),
+    m_raw(nullptr)
 {
     if (m_siteCallsign == nullptr) {
         m_siteCallsign = new uint8_t[P25_MOT_CALLSIGN_LENGTH_BYTES];
@@ -112,7 +113,8 @@ TSBK::TSBK() :
 /// </summary>
 TSBK::~TSBK()
 {
-    /* stub */
+    if (m_raw != nullptr)
+        delete[] m_raw;
 }
 
 /// <summary>
@@ -123,6 +125,16 @@ TSBK::~TSBK()
 std::string TSBK::toString(bool isp)
 {
     return std::string("TSBK_IOSP_UNKWN (Unknown TSBK)");
+}
+
+/// <summary>
+/// Returns a copy of the raw decoded TSBK bytes.
+/// </summary>
+/// <remarks>This will only return data for a *decoded* TSBK, not a created or copied TSBK.</remarks>
+/// <returns></returns>
+uint8_t* TSBK::getDecodedRaw() const
+{
+    return m_raw;
 }
 
 /// <summary>
@@ -269,6 +281,9 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
     if (m_verbose) {
         Utils::dump(2U, "TSBK::decode(), TSBK Value", tsbk, P25_TSBK_LENGTH_BYTES);
     }
+
+    m_raw = new uint8_t[P25_TSBK_LENGTH_BYTES];
+    ::memcpy(m_raw, tsbk, P25_TSBK_LENGTH_BYTES);
 
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker

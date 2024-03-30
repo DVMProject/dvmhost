@@ -300,6 +300,7 @@ namespace network
         std::string m_influxServerToken;
         std::string m_influxOrg;
         std::string m_influxBucket;
+        bool m_influxLogRawData;
         influxdb::ServerInfo m_influxServer;
 
         bool m_reportPeerPing;

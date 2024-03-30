@@ -88,6 +88,8 @@ master:
     influxOrg: "dvm"
     # Data Bucket Name on InfluxDB instance API.
     influxBucket: "dvm"
+    # Flag indicating whether TSBK/CSBK/RCCH messages will be logged to InfluxDB.
+    influxLogRawData: false
 
     #
     # Talkgroup Rules Configuration

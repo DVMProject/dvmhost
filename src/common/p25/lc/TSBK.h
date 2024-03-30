@@ -68,6 +68,10 @@ namespace p25
             /// <summary>Returns a string that represents the current TSBK.</summary>
             virtual std::string toString(bool isp = false);
 
+            /// <summary>Returns a copy of the raw decoded TSBK bytes.</summary>
+            /// <remarks>This will only return data for a *decoded* TSBK, not a created or copied TSBK.</remarks>
+            uint8_t* getDecodedRaw() const;
+
             /// <summary>Gets the flag indicating verbose log output.</summary>
             static bool getVerbose() { return m_verbose; }
             /// <summary>Sets the flag indicating verbose log output.</summary>
@@ -159,6 +163,9 @@ namespace p25
             void encode(uint8_t* data, const uint8_t* payload, bool rawTSBK = false, bool noTrellis = false);
 
             __PROTECTED_COPY(TSBK);
+
+        private:
+            uint8_t* m_raw;
         };
     } // namespace lc
 } // namespace p25

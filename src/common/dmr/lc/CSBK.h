@@ -46,6 +46,10 @@ namespace dmr
             /// <summary>Returns a string that represents the current CSBK.</summary>
             virtual std::string toString();
 
+            /// <summary>Returns a copy of the raw decoded CSBK bytes.</summary>
+            /// <remarks>This will only return data for a *decoded* CSBK, not a created or copied CSBK.</remarks>
+            uint8_t* getDecodedRaw() const;
+
             /// <summary>Regenerate a DMR CSBK without decoding.</summary>
             /// <remarks>This is because the DMR architecture allows fall-thru of unsupported CSBKs.</remarks>
             static bool regenerate(uint8_t* data, uint8_t dataType);
@@ -144,6 +148,9 @@ namespace dmr
             void encode(uint8_t* data, const uint8_t* payload);
 
             __PROTECTED_COPY(CSBK);
+
+        private:
+            uint8_t* m_raw;
         };
     } // namespace lc
 } // namespace dmr

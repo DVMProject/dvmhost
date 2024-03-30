@@ -77,6 +77,9 @@ namespace network
             /// <summary>Helper to route rewrite destination ID and slot.</summary>
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, uint32_t& slotNo, bool outbound = true);
 
+            /// <summary>Helper to process CSBKs being passed from a peer.</summary>
+            bool processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData);
+
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
             bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
             /// <summary>Helper to validate the DMR call stream.</summary>
