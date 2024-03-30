@@ -449,6 +449,19 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
     lookups::RadioId rid = m_network->m_ridLookup->find(lc.getSrcId());
     if (!rid.radioDefault()) {
         if (!rid.radioEnabled()) {
+            // report error event to InfluxDB
+            if (m_network->m_enableInfluxDB) {
+                influxdb::QueryBuilder()
+                    .meas("call_error_event")
+                        .tag("peerId", std::to_string(peerId))
+                        .tag("streamId", std::to_string(streamId))
+                        .tag("srcId", std::to_string(lc.getSrcId()))
+                        .tag("dstId", std::to_string(lc.getDstId()))
+                            .field("message", "disabled source RID")
+                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                    .request(m_network->m_influxServer);
+            }
+
             return false;
         }
     }
@@ -463,6 +476,19 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
         lookups::RadioId rid = m_network->m_ridLookup->find(lc.getDstId());
         if (!rid.radioDefault()) {
             if (!rid.radioEnabled()) {
+                // report error event to InfluxDB
+                if (m_network->m_enableInfluxDB) {
+                    influxdb::QueryBuilder()
+                        .meas("call_error_event")
+                            .tag("peerId", std::to_string(peerId))
+                            .tag("streamId", std::to_string(streamId))
+                            .tag("srcId", std::to_string(lc.getSrcId()))
+                            .tag("dstId", std::to_string(lc.getDstId()))
+                                .field("message", "disabled destination RID")
+                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                        .request(m_network->m_influxServer);
+                }
+
                 return false;
             }
         }
@@ -474,10 +500,36 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
 
     // check TGID validity
     if (tg.isInvalid()) {
+        // report error event to InfluxDB
+        if (m_network->m_enableInfluxDB) {
+            influxdb::QueryBuilder()
+                .meas("call_error_event")
+                    .tag("peerId", std::to_string(peerId))
+                    .tag("streamId", std::to_string(streamId))
+                    .tag("srcId", std::to_string(lc.getSrcId()))
+                    .tag("dstId", std::to_string(lc.getDstId()))
+                        .field("message", "illegal/invalid talkgroup")
+                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                .request(m_network->m_influxServer);
+        }
+
         return false;
     }
 
     if (!tg.config().active()) {
+        // report error event to InfluxDB
+        if (m_network->m_enableInfluxDB) {
+            influxdb::QueryBuilder()
+                .meas("call_error_event")
+                    .tag("peerId", std::to_string(peerId))
+                    .tag("streamId", std::to_string(streamId))
+                    .tag("srcId", std::to_string(lc.getSrcId()))
+                    .tag("dstId", std::to_string(lc.getDstId()))
+                        .field("message", "disabled talkgroup")
+                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                .request(m_network->m_influxServer);
+        }
+
         return false;
     }
 
