@@ -542,11 +542,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     connection->lastPing(now);
                                     connection->currStreamId(streamId);
 
-                                    lookups::AffiliationLookup* affLookup = network->m_peerAffiliations[peerId];
-                                    if (affLookup != nullptr)
-                                        delete affLookup;
-                                    network->m_peerAffiliations.erase(peerId);
-
+                                    network->erasePeerAffiliations(peerId);
                                     network->setupRepeaterLogin(peerId, connection);
                                 } else {
                                     network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
@@ -696,7 +692,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         // setup the affiliations list for this peer
                                         std::stringstream peerName;
                                         peerName << "PEER " << peerId;
-                                        network->m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName.str(), network->m_verbose);
+                                        network->createPeerAffiliations(peerId, peerName.str());
 
                                         // spin up a thread and send ACL list over to peer
                                         network->peerACLUpdate(peerId);
@@ -927,9 +923,12 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             if (connection != nullptr) {
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                if (aff == nullptr) {
+                                    LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId);
+                                }
 
                                 // validate peer (simple validation really)
-                                if (connection->connected() && connection->address() == ip) {
+                                if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     uint32_t dstId = __GET_UINT16(req->buffer, 3U);             // Destination Address
                                     aff->groupUnaff(srcId);
@@ -947,9 +946,12 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             if (connection != nullptr) {
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                if (aff == nullptr) {
+                                    LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId);
+                                }
 
                                 // validate peer (simple validation really)
-                                if (connection->connected() && connection->address() == ip) {
+                                if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitReg(srcId);
                                 }
@@ -965,9 +967,12 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             if (connection != nullptr) {
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
+                                if (aff == nullptr) {
+                                    LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId);
+                                }
 
                                 // validate peer (simple validation really)
-                                if (connection->connected() && connection->address() == ip) {
+                                if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                     uint32_t srcId = __GET_UINT16(req->buffer, 0U);             // Source Address
                                     aff->unitDereg(srcId);
                                 }
@@ -986,19 +991,25 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
-                                    aff->clearGroupAff(0U, true);
-
-                                    // update TGID lists
-                                    uint32_t len = __GET_UINT32(req->buffer, 0U);
-                                    uint32_t offs = 4U;
-                                    for (uint32_t i = 0; i < len; i++) {
-                                        uint32_t srcId = __GET_UINT16(req->buffer, offs);
-                                        uint32_t dstId = __GET_UINT16(req->buffer, offs + 4U);
-
-                                        aff->groupAff(srcId, dstId);
-                                        offs += 8U;
+                                    if (aff == nullptr) {
+                                        LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId);
                                     }
-                                    LogMessage(LOG_NET, "PEER %u announced %u affiliations", peerId, len);
+
+                                    if (aff != nullptr) {
+                                        aff->clearGroupAff(0U, true);
+
+                                        // update TGID lists
+                                        uint32_t len = __GET_UINT32(req->buffer, 0U);
+                                        uint32_t offs = 4U;
+                                        for (uint32_t i = 0; i < len; i++) {
+                                            uint32_t srcId = __GET_UINT16(req->buffer, offs);
+                                            uint32_t dstId = __GET_UINT16(req->buffer, offs + 4U);
+
+                                            aff->groupAff(srcId, dstId);
+                                            offs += 8U;
+                                        }
+                                        LogMessage(LOG_NET, "PEER %u announced %u affiliations", peerId, len);
+                                    }
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1028,6 +1039,20 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 }
 
 /// <summary>
+/// Helper to create a peer on the peers affiliations list.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="peerName"></param>
+/// <returns></returns>
+void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
+{
+    erasePeerAffiliations(peerId);
+
+    std::lock_guard<std::mutex> lock(m_peerMutex);
+    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, m_verbose);
+}
+
+/// <summary>
 /// Helper to erase the peer from the peers affiliations list.
 /// </summary>
 /// <param name="peerId"></param>
@@ -1038,8 +1063,9 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
     auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
     if (it != m_peerAffiliations.end()) {
         lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
+        if (aff != nullptr)
+            delete aff;
         m_peerAffiliations.erase(peerId);
-        delete aff;
 
         return true;
     }

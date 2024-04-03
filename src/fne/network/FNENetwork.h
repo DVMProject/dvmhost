@@ -309,6 +309,8 @@ namespace network
         /// <summary>Entry point to process a given network packet.</summary>
         static void* threadedNetworkRx(void* arg);
 
+        /// <summary>Helper to create a peer on the peers affiliations list.</summary>
+        void createPeerAffiliations(uint32_t peerId, std::string peerName);
         /// <summary>Helper to erase the peer from the peers affiliations list.</summary>
         bool erasePeerAffiliations(uint32_t peerId);
         /// <summary>Helper to erase the peer from the peers list.</summary>
