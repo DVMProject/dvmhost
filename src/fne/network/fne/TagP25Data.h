@@ -94,7 +94,7 @@ namespace network
             bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
-            bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId);
+            bool isPeerPermitted(uint32_t peerId, p25::lc::LC& control, uint8_t duid, uint32_t streamId, bool external = false);
             /// <summary>Helper to validate the P25 call stream.</summary>
             bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
 

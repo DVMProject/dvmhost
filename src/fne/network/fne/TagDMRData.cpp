@@ -281,7 +281,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
                     // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, dmrData, streamId)) {
+                    if (!isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
                         continue;
                     }
 
@@ -558,8 +558,9 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
 /// <param name="peerId">Peer ID</param>
 /// <param name="data"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="external"></param>
 /// <returns></returns>
-bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId)
+bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
 {
     // private calls are always permitted
     if (data.getDataType() == FLCO_PRIVATE) {
@@ -590,7 +591,8 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
         }
 
         // is this a TG that requires affiliations to repeat?
-        if (tg.config().affiliated()) {
+        // NOTE: external peers *always* repeat traffic regardless of affiliation
+        if (tg.config().affiliated() && !external) {
             // check the affiliations for this peer to see if we can repeat traffic
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
             if (aff == nullptr) {

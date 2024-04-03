@@ -81,7 +81,7 @@ namespace network
             bool processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& dmrData);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
-            bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
+            bool isPeerPermitted(uint32_t peerId, dmr::data::Data& data, uint32_t streamId, bool external = false);
             /// <summary>Helper to validate the DMR call stream.</summary>
             bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
 

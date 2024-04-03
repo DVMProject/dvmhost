@@ -311,7 +311,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
                     // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, control, duid, streamId)) {
+                    if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
                         continue;
                     }
 
@@ -734,8 +734,9 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 /// <param name="control"></param>
 /// <param name="duid"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="external"></param>
 /// <returns></returns>
-bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId)
+bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId, bool external)
 {
     // private calls are always permitted
     if (control.getLCO() == LC_PRIVATE) {
@@ -773,7 +774,8 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
     }
 
     // is this a TG that requires affiliations to repeat?
-    if (tg.config().affiliated()) {
+    // NOTE: external peers *always* repeat traffic regardless of affiliation
+    if (tg.config().affiliated() && !external) {
         // check the affiliations for this peer to see if we can repeat traffic
         lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
         if (aff == nullptr) {

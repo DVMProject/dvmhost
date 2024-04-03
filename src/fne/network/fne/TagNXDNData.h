@@ -72,7 +72,7 @@ namespace network
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to determine if the peer is permitted for traffic.</summary>
-            bool isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId);
+            bool isPeerPermitted(uint32_t peerId, nxdn::lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external = false);
             /// <summary>Helper to validate the NXDN call stream.</summary>
             bool validate(uint32_t peerId, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
 

@@ -248,7 +248,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 // is coming from a external peer
                 if (dstPeerId != peerId) {
                     // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, lc, messageType, streamId)) {
+                    if (!isPeerPermitted(dstPeerId, lc, messageType, streamId, true)) {
                         continue;
                     }
 
@@ -391,8 +391,9 @@ bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// <param name="lc"></param>
 /// <param name="messageType"></param>
 /// <param name="streamId">Stream ID</param>
+/// <param name="external"></param>
 /// <returns></returns>
-bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId)
+bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external)
 {
     // private calls are always permitted
     if (!lc.getGroup()) {
@@ -423,7 +424,8 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         }
 
         // is this a TG that requires affiliations to repeat?
-        if (tg.config().affiliated()) {
+        // NOTE: external peers *always* repeat traffic regardless of affiliation
+        if (tg.config().affiliated() && !external) {
             // check the affiliations for this peer to see if we can repeat traffic
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
             if (aff == nullptr) {
