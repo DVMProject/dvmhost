@@ -1296,7 +1296,7 @@ void Control::processNetwork()
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
+        Utils::dump(2U, "* !!! P25 Network Frame", data.get(), frameLength);
     }
 
     // forward onto the specific processor for final processing and delivery

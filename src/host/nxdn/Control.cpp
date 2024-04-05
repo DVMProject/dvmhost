@@ -962,7 +962,7 @@ void Control::processNetwork()
     m_networkWatchdog.start();
 
     if (m_debug) {
-        Utils::dump(2U, "!!! *NXDN Network Frame", data.get(), frameLength);
+        Utils::dump(2U, "* !!! NXDN Network Frame", data.get(), frameLength);
     }
 
     NXDNUtils::scrambler(data.get() + 2U);
