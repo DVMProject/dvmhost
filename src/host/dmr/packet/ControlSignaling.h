@@ -44,12 +44,16 @@ namespace dmr
         //      packets.
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API ControlSignaling {
+        class HOST_SW_API ControlSignaling
+        {
         public:
             /// <summary>Process a data frame from the RF interface.</summary>
             bool process(uint8_t* data, uint32_t len);
             /// <summary>Process a data frame from the network.</summary>
             void processNetwork(const data::Data& dmrData);
+
+            /// <summary>Helper to write P25 adjacent site information to the network.</summary>
+            void writeAdjSSNetwork();
 
             /// <summary>Helper to write a extended function packet on the RF interface.</summary>
             void writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t dstId);
@@ -77,6 +81,8 @@ namespace dmr
             void writeRF_CSBK_Imm(lc::CSBK *csbk) { writeRF_CSBK(csbk, true); }
             /// <summary>Helper to write a CSBK packet.</summary>
             void writeRF_CSBK(lc::CSBK* csbk, bool imm = false);
+            /// <summary>Helper to write a network CSBK packet.</summary>
+            void writeNet_CSBK(lc::CSBK* csbk);
 
             /*
             ** Control Signalling Logic
@@ -103,7 +109,7 @@ namespace dmr
             /// <summary>Helper to write a TSCC Aloha broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Aloha();
             /// <summary>Helper to write a TSCC Ann-Wd broadcast packet on the RF interface.</summary>
-            void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd);
+            void writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd, uint32_t systemIdentity, bool requireReg);
             /// <summary>Helper to write a TSCC Sys_Parm broadcast packet on the RF interface.</summary>
             void writeRF_TSCC_Bcast_Sys_Parm();
             /// <summary>Helper to write a TSCC Git Hash broadcast packet on the RF interface.</summary>

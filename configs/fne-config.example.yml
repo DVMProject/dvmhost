@@ -71,7 +71,7 @@ master:
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
     parrotGrantDemand: true
 
-    # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to any peers.
+    # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
     disallowExtAdjStsBcast: true

@@ -51,6 +51,11 @@ namespace dmr
                 /// <summary>Broadcast Announce/Withdraw Channel 2 Flag.</summary>
                 __PROPERTY(bool, annWdCh2, AnnWdCh2);
 
+                /// <summary>Require Registration.</summary>
+                __PROPERTY(bool, requireReg, RequireReg);
+                /// <summary>System Identity.</summary>
+                __PROPERTY(uint32_t, systemId, SystemId);
+
                 /// <summary>Backoff Number.</summary>
                 __PROPERTY(uint8_t, backoffNo, BackoffNo);
 

@@ -118,6 +118,7 @@ using namespace dmr::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
+const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
 const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 
 // ---------------------------------------------------------------------------
@@ -405,6 +406,40 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
         if (csbko == CSBKO_BSDWNACT)
             return;
 
+        // handle updating internal adjacent site information
+        if (csbko == CSBKO_BROADCAST) {
+            CSBK_BROADCAST* osp = static_cast<CSBK_BROADCAST*>(csbk.get());
+            if (osp->getAnncType() == BCAST_ANNC_ANN_WD_TSCC) {
+                if (!m_slot->m_enableTSCC) {
+                    return;
+                }
+
+                if (osp->getSystemId() != m_slot->m_siteData.systemIdentity()) {
+                    // update site table data
+                    AdjSiteData site;
+                    try {
+                        site = m_slot->m_adjSiteTable.at(osp->getSystemId());
+                    } catch (...) {
+                        site = AdjSiteData();
+                    }
+
+                    if (m_verbose) {
+                        LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+                            osp->getSystemId(), osp->getLogicalCh1());
+                    }
+
+                    site.channelNo = osp->getLogicalCh1();
+                    site.systemIdentity = osp->getSystemId();
+                    site.requireReg = osp->getRequireReg();
+
+                    m_slot->m_adjSiteTable[site.systemIdentity] = site;
+                    m_slot->m_adjSiteUpdateCnt[site.systemIdentity] = ADJ_SITE_UPDATE_CNT;
+                }
+
+                return;
+            }
+        }
+
         uint32_t srcId = csbk->getSrcId();
         uint32_t dstId = csbk->getDstId();
 
@@ -584,6 +619,35 @@ void ControlSignaling::processNetwork(const data::Data & dmrData)
 }
 
 /// <summary>
+/// Helper to write DMR adjacent site information to the network.
+/// </summary>
+void ControlSignaling::writeAdjSSNetwork()
+{
+    if (!m_slot->m_enableTSCC) {
+        return;
+    }
+
+    if (m_slot->m_network != nullptr) {
+        // transmit adjacent site broadcast
+        std::unique_ptr<CSBK_BROADCAST> csbk = std::make_unique<CSBK_BROADCAST>();
+        csbk->siteIdenEntry(m_slot->m_idenEntry);
+        csbk->setCdef(false);
+        csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
+        csbk->setLogicalCh1(m_slot->m_channelNo);
+        csbk->setAnnWdCh1(true);
+        csbk->setSystemId(m_slot->m_siteData.systemIdentity());
+        csbk->setRequireReg(m_slot->m_siteData.requireReg());
+
+        if (m_verbose) {
+            LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, network announce, sysId = $%03X, chNo = %u", m_slot->m_slotNo, csbk->toString().c_str(),
+                m_slot->m_siteData.systemIdentity(), m_slot->m_channelNo);
+        }
+
+        writeNet_CSBK(csbk.get());
+    }
+}
+
+/// <summary>
 /// Helper to write a extended function packet on the RF interface.
 /// </summary>
 /// <param name="func">Extended function opcode.</param>
@@ -701,6 +765,39 @@ void ControlSignaling::writeRF_CSBK(lc::CSBK* csbk, bool imm)
 
     if (m_slot->m_duplex)
         m_slot->addFrame(data, false, imm);
+}
+
+/// <summary>
+/// Helper to write a network CSBK.
+/// </summary>
+/// <param name="csbk"></param>
+void ControlSignaling::writeNet_CSBK(lc::CSBK* csbk)
+{
+    uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data + 2U, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    SlotType slotType;
+    slotType.setColorCode(m_slot->m_colorCode);
+    slotType.setDataType(DT_CSBK);
+
+    // Regenerate the CSBK data
+    csbk->encode(data + 2U);
+
+    // Regenerate the Slot Type
+    slotType.encode(data + 2U);
+
+    // Convert the Data Sync to be from the BS or MS as needed
+    Sync::addDMRDataSync(data + 2U, true);
+
+    m_slot->m_rfSeqNo = 0U;
+
+    data[0U] = modem::TAG_DATA;
+    data[1U] = 0x00U;
+
+    if (m_slot->m_duplex)
+        m_slot->addFrame(data);
+
+    m_slot->writeNetwork(data, DT_CSBK, csbk->getGI() ? FLCO_GROUP : FLCO_PRIVATE, csbk->getSrcId(), csbk->getDstId(), 0U, true);
 }
 
 /*
@@ -1428,7 +1525,9 @@ void ControlSignaling::writeRF_TSCC_Aloha()
 /// </summary>
 /// <param name="channelNo"></param>
 /// <param name="annWd"></param>
-void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
+/// <param name="systemIdentity"></param>
+/// <param name="requireReg"></param>
+void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd, uint32_t systemIdentity, bool requireReg)
 {
     m_slot->m_rfSeqNo = 0U;
 
@@ -1438,6 +1537,8 @@ void ControlSignaling::writeRF_TSCC_Bcast_Ann_Wd(uint32_t channelNo, bool annWd)
     csbk->setAnncType(BCAST_ANNC_ANN_WD_TSCC);
     csbk->setLogicalCh1(channelNo);
     csbk->setAnnWdCh1(annWd);
+    csbk->setSystemId(systemIdentity);
+    csbk->setRequireReg(requireReg);
 
     if (m_debug) {
         LogMessage(LOG_RF, "DMR Slot %u, DT_CSBK, %s, channelNo = %u, annWd = %u",

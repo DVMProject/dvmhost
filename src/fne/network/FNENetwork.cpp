@@ -159,7 +159,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
-        LogInfo("    Disable P25 ADJ_STS_BCAST to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
         }

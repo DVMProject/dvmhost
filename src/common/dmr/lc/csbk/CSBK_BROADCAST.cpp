@@ -31,6 +31,8 @@ CSBK_BROADCAST::CSBK_BROADCAST() : CSBK(),
     m_hibernating(false),
     m_annWdCh1(false),
     m_annWdCh2(false),
+    m_requireReg(false),
+    m_systemId(0U),
     m_backoffNo(1U)
 {
     m_CSBKO = CSBKO_BROADCAST;
@@ -45,7 +47,34 @@ bool CSBK_BROADCAST::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+
+    bool ret = CSBK::decode(data, csbk);
+    if (!ret)
+        return false;
+
+    ulong64_t csbkValue = CSBK::toValue(csbk);
+
+    m_anncType = ((csbkValue >> 59) & 0x0FU);                                       // Announcement Type
+
+    switch (m_anncType)
+    {
+    case BCAST_ANNC_ANN_WD_TSCC:
+        // Broadcast Params 1
+        m_colorCode = (uint8_t)((csbkValue >> 51) & 0x0FU);                         // Color Code 1
+        m_annWdCh1 = ((csbkValue >> 44) & 0x04U) == 0x04U;                          // Announce/Withdraw Channel 1
+        m_annWdCh2 = ((csbkValue >> 44) & 0x02U) == 0x02U;                          // Announce/Withdraw Channel 2
+
+        m_requireReg = ((csbkValue >> 44) & 0x01U) == 0x01U;                        // Require Registration
+        m_backoffNo = (uint8_t)((csbkValue >> 40) & 0x0FU);                         // Backoff Number
+        m_systemId = (uint8_t)((csbkValue >> 24) & 0xFFFFU);                        // Site Identity
+
+        // Broadcast Params 2
+        m_logicalCh1 = (uint32_t)((csbkValue >> 12) & 0xFFFU);                      // Logical Channel 1
+        m_logicalCh2 = (uint32_t)(csbkValue & 0xFFFU);                              // Logical Channel 2
+        break;
+    }
 
     return true;
 }
@@ -74,9 +103,9 @@ void CSBK_BROADCAST::encode(uint8_t* data)
         csbkValue = (csbkValue << 1) + ((m_annWdCh1) ? 1U : 0U);                    // Announce/Withdraw Channel 1
         csbkValue = (csbkValue << 1) + ((m_annWdCh2) ? 1U : 0U);                    // Announce/Withdraw Channel 2
 
-        csbkValue = (csbkValue << 1) + ((m_siteData.requireReg()) ? 1U : 0U);       // Require Registration
+        csbkValue = (csbkValue << 1) + ((m_requireReg) ? 1U : 0U);                  // Require Registration
         csbkValue = (csbkValue << 4) + (m_backoffNo & 0x0FU);                       // Backoff Number
-        csbkValue = (csbkValue << 16) + m_siteData.systemIdentity();                // Site Identity
+        csbkValue = (csbkValue << 16) + (m_systemId & 0xFFFFU);                     // Site Identity
 
         // Broadcast Params 2
         csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                    // Logical Channel 1

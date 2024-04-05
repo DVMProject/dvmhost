@@ -84,6 +84,13 @@ uint8_t Slot::m_alohaNRandWait = DEFAULT_NRAND_WAIT;
 uint8_t Slot::m_alohaBackOff = 1U;
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t ADJ_SITE_TIMER_TIMEOUT = 60U;
+const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -125,6 +132,10 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_netTimeoutTimer(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_packetTimer(1000U, 0U, 50U),
+    m_adjSiteTable(),
+    m_adjSiteUpdateCnt(),
+    m_adjSiteUpdateTimer(1000U),
+    m_adjSiteUpdateInterval(ADJ_SITE_TIMER_TIMEOUT),
     m_adjSiteUpdate(1000U, 75U),
     m_ccPacketInterval(1000U, 0U, DMR_SLOT_TIME),
     m_interval(),
@@ -158,6 +169,7 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
     m_tsccPayloadActRetry(1000U, 0U, 250U),
+    m_tsccAdjSSCnt(0U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
     m_supervisor(false),
@@ -166,6 +178,13 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_debug(debug)
 {
     m_interval.start();
+
+    m_adjSiteTable.clear();
+    m_adjSiteUpdateCnt.clear();
+
+    m_adjSiteUpdateInterval = ADJ_SITE_TIMER_TIMEOUT;
+    m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
+    m_adjSiteUpdateTimer.start();
 
     m_voice = new Voice(this, m_network, m_embeddedLCOnly, m_dumpTAData, debug, verbose);
     m_data = new Data(this, m_network, dumpDataPacket, repeatDataPacket, debug, verbose);
@@ -475,17 +494,43 @@ void Slot::clock()
         }
 
         // do we need to network announce ourselves?
-        if (!m_adjSiteUpdate.isRunning()) {
-            m_adjSiteUpdate.start();
+        if (!m_adjSiteUpdateTimer.isRunning()) {
+            m_control->writeAdjSSNetwork();
+            m_adjSiteUpdateTimer.start();
         }
 
-        m_adjSiteUpdate.clock(ms);
-        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
+        m_adjSiteUpdateTimer.clock(ms);
+        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_control->writeAdjSSNetwork();
                 if (m_network != nullptr)
                     m_network->announceAffiliationUpdate(m_affiliations->grpAffTable());
-                m_adjSiteUpdate.start();
+                m_adjSiteUpdateTimer.start();
             }
+        }
+
+        // clock adjacent site and SCCB update timers
+        m_adjSiteUpdateTimer.clock(ms);
+        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
+            // update adjacent site data
+            for (auto& entry : m_adjSiteUpdateCnt) {
+                uint8_t siteId = entry.first;
+                uint8_t updateCnt = entry.second;
+                if (updateCnt > 0U) {
+                    updateCnt--;
+                }
+
+                if (updateCnt == 0U) {
+                    AdjSiteData siteData = m_adjSiteTable[siteId];
+                    LogWarning(LOG_NET, "DMR, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, chNo = %u",
+                        siteData.systemIdentity, siteData.channelNo);
+                }
+
+                entry.second = updateCnt;
+            }
+
+            m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
+            m_adjSiteUpdateTimer.start();
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
@@ -1374,47 +1419,72 @@ void Slot::writeRF_ControlData(uint16_t frameCnt, uint8_t n)
 
         switch (n)
         {
-        case 3:
-        {
-            std::unordered_map<uint32_t, uint32_t> grants = m_affiliations->grantTable();
-            if (grants.size() > 0) {
-                uint32_t j = 0U;
-                if (m_lastLateEntry > grants.size()) {
-                    m_lastLateEntry = 0U;
-                }
-
-                for (auto entry : grants) {
-                    if (j == m_lastLateEntry) {
-                        uint32_t dstId = entry.first;
-                        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-                        bool grp = m_affiliations->isGroup(dstId);
-
-                        if (m_debug) {
-                            LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
-                        }
-
-                        m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId, grp);
-                        m_lastLateEntry = j++;
-                        break;
-                    }
-
-                    j++;
-                }
-            }
-            else {
-                m_control->writeRF_TSCC_Bcast_Sys_Parm();
-            }
-        }
-        break;
-        case 2:
-            m_control->writeRF_TSCC_Bcast_Ann_Wd(m_channelNo, true);
+        /** required data */
+        case 0:
+        default:
+            m_control->writeRF_TSCC_Bcast_Sys_Parm();
             break;
         case 1:
             m_control->writeRF_TSCC_Aloha();
             break;
-        case 0:
-        default:
-            m_control->writeRF_TSCC_Bcast_Sys_Parm();
+        case 2:
+            m_control->writeRF_TSCC_Bcast_Ann_Wd(m_channelNo, true, m_siteData.systemIdentity(), m_siteData.requireReg());
+            break;
+        case 3:
+            {
+                std::unordered_map<uint32_t, uint32_t> grants = m_affiliations->grantTable();
+                if (grants.size() > 0) {
+                    uint32_t j = 0U;
+                    if (m_lastLateEntry > grants.size()) {
+                        m_lastLateEntry = 0U;
+                    }
+
+                    for (auto entry : grants) {
+                        if (j == m_lastLateEntry) {
+                            uint32_t dstId = entry.first;
+                            uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+                            bool grp = m_affiliations->isGroup(dstId);
+
+                            if (m_debug) {
+                                LogDebug(LOG_DMR, "writeRF_ControlData, frameCnt = %u, seq = %u, late entry, dstId = %u, srcId = %u", frameCnt, n, dstId, srcId);
+                            }
+
+                            m_control->writeRF_CSBK_Grant_LateEntry(dstId, srcId, grp);
+                            m_lastLateEntry = j++;
+                            break;
+                        }
+
+                        j++;
+                    }
+                }
+                else {
+                    m_control->writeRF_TSCC_Bcast_Sys_Parm();
+                }
+            }
+            break;
+        /** extra data */
+        case 4:
+            // write ADJSS
+            if (m_adjSiteTable.size() > 0) {
+                if (m_tsccAdjSSCnt >= m_adjSiteTable.size())
+                    m_tsccAdjSSCnt = 0U;
+
+                uint8_t i = 0U;
+                for (auto entry : m_adjSiteTable) {
+                    // no good very bad way of skipping entries...
+                    if (i != m_tsccAdjSSCnt) {
+                        i++;
+                        continue;
+                    }
+                    else {
+                        AdjSiteData site = entry.second;
+                        m_control->writeRF_TSCC_Bcast_Ann_Wd(site.channelNo, true, site.systemIdentity, site.requireReg);
+                        m_tsccAdjSSCnt++;
+                        break;
+                    }
+                }
+                break;
+            }
             break;
         }
 

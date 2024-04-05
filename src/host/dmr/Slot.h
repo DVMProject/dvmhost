@@ -46,6 +46,22 @@ namespace dmr
     namespace packet { class HOST_SW_API ControlSignaling; }
 
     // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    //      This structure contains shortened data for adjacent sites.
+    // ---------------------------------------------------------------------------
+
+    struct AdjSiteData 
+    {
+        public:
+            /// <summary>Channel Number.</summary>
+            uint32_t channelNo;
+            /// <summary>System Identity.</summary>
+            uint32_t systemIdentity;
+            /// <summary>DMR require registration.</summary>
+            bool requireReg;
+    };
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     //      This class implements core logic for handling DMR slots.
     // ---------------------------------------------------------------------------
@@ -164,6 +180,11 @@ namespace dmr
         Timer m_netTGHang;
         Timer m_packetTimer;
 
+        std::unordered_map<uint8_t, AdjSiteData> m_adjSiteTable;
+        std::unordered_map<uint8_t, uint8_t> m_adjSiteUpdateCnt;
+
+        Timer m_adjSiteUpdateTimer;
+        uint32_t m_adjSiteUpdateInterval;
         Timer m_adjSiteUpdate;
 
         Timer m_ccPacketInterval;
@@ -208,6 +229,7 @@ namespace dmr
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
         Timer m_tsccPayloadActRetry;
+        uint8_t m_tsccAdjSSCnt;
 
         bool m_disableGrantSrcIdCheck;
 

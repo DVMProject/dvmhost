@@ -1240,7 +1240,6 @@ int Host::run()
                             if (m_state != STATE_NXDN)
                                 setState(STATE_NXDN);
 
-                            //nxdn->writeAdjSSNetwork();
                             nxdn->setCCRunning(true);
 
                             // hide this message for continuous CC -- otherwise display every time we process
@@ -1281,7 +1280,6 @@ int Host::run()
                     // the network
                     if (nxdnBcastIntervalTimer.isRunning() && nxdnBcastIntervalTimer.hasExpired()) {
                         if ((m_state == STATE_IDLE || m_state == STATE_NXDN) && !m_modem->hasTX()) {
-                            //nxdn->writeAdjSSNetwork();
                             nxdnBcastIntervalTimer.start();
                         }
                     }

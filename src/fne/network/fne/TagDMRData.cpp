@@ -544,6 +544,27 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
                         .request(m_network->m_influxServer);
                 }
             }
+
+            switch (csbk->getCSBKO()) {
+            case CSBKO_BROADCAST:
+                {
+                    lc::csbk::CSBK_BROADCAST* osp = static_cast<lc::csbk::CSBK_BROADCAST*>(csbk.get());
+                    if (osp->getAnncType() == BCAST_ANNC_ANN_WD_TSCC) {
+                        if (m_network->m_disallowAdjStsBcast) {
+                            // LogWarning(LOG_NET, "PEER %u, passing BCAST_ANNC_ANN_WD_TSCC to internal peers is prohibited, dropping", peerId);
+                            return false;
+                        } else {
+                            if (m_network->m_verbose) {
+                                LogMessage(LOG_NET, "DMR Slot %u, DT_CSBK, %s, sysId = $%03X, chNo = %u, peerId = %u", dmrData.getSlotNo(), csbk->toString().c_str(),
+                                    osp->getSystemId(), osp->getLogicalCh1(), peerId);
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
         } else {
             LogWarning(LOG_NET, "PEER %u, passing CSBK that failed to decode? csbk == nullptr", peerId);
         }
