@@ -194,6 +194,17 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
             }
         }
         config["rewrite"].set<json::array>(rewrites);
+
+        json::array preferreds = json::array();
+        std::vector<uint32_t> preferred = groupVoice.config().preferred();
+        if (preferred.size() > 0) {
+            for (auto prefEntry : preferred) {
+                uint32_t peerId = prefEntry;
+                preferreds.push_back(json::value((double)peerId));
+            }
+        }
+        config["nonpreferred"].set<json::array>(preferreds);
+
         tg["config"].set<json::object>(config);
     }
 
@@ -364,6 +375,27 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
                 rewrite.push_back(rewriteRule);
             }
             config.rewrite(rewrite);
+        }
+
+        if (!configObj["preferred"].is<json::array>()) {
+            errorPayload(reply, "TG configuration \"preferred\" was not a valid JSON array");
+            LogDebug(LOG_REST,  "TG configuration \"preferred\" was not a valid JSON array");
+            return TalkgroupRuleGroupVoice();
+        }
+        json::array preferreds = configObj["exclusion"].get<json::array>();
+
+        std::vector<uint32_t> preferred = groupVoice.config().preferred();
+        if (preferreds.size() > 0) {
+            for (auto prefEntry : preferreds) {
+                if (!prefEntry.is<uint32_t>()) {
+                    errorPayload(reply, "TG configuration preferred value was not a valid number");
+                    LogDebug(LOG_REST,  "TG configuration preferred value was not a valid number");
+                    return TalkgroupRuleGroupVoice();
+                }
+
+                preferred.push_back(prefEntry.get<uint32_t>());
+            }
+            config.preferred(preferred);
         }
 
         groupVoice.config(config);
@@ -1039,12 +1071,13 @@ void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, c
     uint32_t incCount = groupVoice.config().inclusion().size();
     uint32_t excCount = groupVoice.config().exclusion().size();
     uint32_t rewrCount = groupVoice.config().rewrite().size();
+    uint32_t prefCount = groupVoice.config().preferred().size();
 
     if (incCount > 0 && excCount > 0) {
         ::LogWarning(LOG_REST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
     }
 
-    ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount);
+    ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
 
     m_tidLookup->addEntry(groupVoice);
 /*    
