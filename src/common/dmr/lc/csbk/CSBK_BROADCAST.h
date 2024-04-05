@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_LC_CSBK__CSBK_BROADCAST_H__)
