@@ -188,8 +188,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         return true;
     }
     else if (duid == P25_DUID_LDU1) {
-
-        // prevent two LDUs of the same type from being sent consecutively
+        // prevent two xDUs of the same type from being sent consecutively
         if (m_lastDUID == P25_DUID_LDU1) {
             return false;
         }
@@ -718,7 +717,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else if (duid == P25_DUID_LDU2) {
-        // prevent two LDUs of the same type from being sent consecutively
+        // prevent two xDUs of the same type from being sent consecutively
         if (m_lastDUID == P25_DUID_LDU2) {
             return false;
         }
@@ -818,6 +817,173 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (m_verbose) {
                 LogMessage(LOG_RF, P25_LDU2_STR ", audio, algo = $%02X, kid = $%04X, errs = %u/1233 (%.1f%%)",
                     m_rfLC.getAlgId(), m_rfLC.getKId(), errors, float(errors) / 12.33F);
+            }
+
+            return true;
+        }
+    }
+    else if (duid == P25_DUID_VSELP1) {
+        // prevent two xDUs of the same type from being sent consecutively
+        if (m_lastDUID == P25_DUID_VSELP1) {
+            return false;
+        }
+        m_lastDUID = P25_DUID_VSELP1;
+
+        // VSELP has no decoding -- its just passed transparently
+
+        if (m_p25->m_rfState == RS_RF_LISTENING) {
+            // stop network frames from processing -- RF wants to transmit on a different talkgroup
+            if (m_p25->m_netState != RS_NET_IDLE) {
+                LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic");
+                resetRF();
+                m_p25->m_rfState = RS_RF_LISTENING;
+                return false;
+            }
+
+            // if this is a late entry call, clear states
+            if (m_rfLastHDU.getDstId() == 0U) {
+                if (!m_p25->m_dedicatedControl) {
+                    m_p25->m_modem->clearP25Frame();
+                }
+                m_p25->m_txQueue.clear();
+
+                resetRF();
+            }
+
+            m_lastRejectId = 0U;
+            ::ActivityLog("P25", true, "RF VSELP voice transmission");
+
+            m_hadVoice = true;
+
+            m_p25->m_rfState = RS_RF_AUDIO;
+
+            // make sure we actually got a HDU -- otherwise treat the call as a late entry
+            if (m_rfLastHDU.getDstId() != 0U) {
+                m_p25->m_rfTGHang.start();
+                m_p25->m_netTGHang.stop();
+                m_p25->m_rfLastDstId = m_rfLastHDU.getDstId();
+
+                m_rfLC = lc::LC();
+
+                // copy destination and encryption parameters from the last HDU received (if possible)
+                if (m_rfLC.getDstId() != m_rfLastHDU.getDstId()) {
+                    m_rfLC.setDstId(m_rfLastHDU.getDstId());
+                }
+
+                m_rfLC.setAlgId(m_rfLastHDU.getAlgId());
+                m_rfLC.setKId(m_rfLastHDU.getKId());
+
+                uint8_t mi[P25_MI_LENGTH_BYTES];
+                m_rfLastHDU.getMI(mi);
+                m_rfLC.setMI(mi);
+
+                uint8_t buffer[P25_HDU_FRAME_LENGTH_BYTES + 2U];
+                ::memset(buffer, 0x00U, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+
+                // Generate Sync
+                Sync::addP25Sync(buffer + 2U);
+
+                // Generate NID
+                m_p25->m_nid.encode(buffer + 2U, P25_DUID_HDU);
+
+                // Generate HDU
+                m_rfLC.encodeHDU(buffer + 2U);
+
+                // Add busy bits
+                P25Utils::addBusyBits(buffer + 2U, P25_HDU_FRAME_LENGTH_BITS, false, true);
+
+                writeNetwork(buffer, P25_DUID_HDU);
+
+                if (m_p25->m_duplex) {
+                    buffer[0U] = modem::TAG_DATA;
+                    buffer[1U] = 0x00U;
+
+                    m_p25->addFrame(buffer, P25_HDU_FRAME_LENGTH_BYTES + 2U);
+                }
+
+                if (m_verbose) {
+                    LogMessage(LOG_RF, P25_HDU_STR ", dstId = %u, algo = $%02X, kid = $%04X", m_rfLC.getDstId(), m_rfLC.getAlgId(), m_rfLC.getKId());
+                }
+            }
+            else {
+                LogWarning(LOG_RF, P25_HDU_STR ", not transmitted; possible late entry, dstId = %u, algo = $%02X, kid = $%04X", m_rfLastHDU.getDstId(), m_rfLastHDU.getAlgId(), m_rfLastHDU.getKId());
+            }
+
+            m_rfFrames = 0U;
+            m_rfErrs = 0U;
+            m_rfBits = 1U;
+            m_rfUndecodableLC = 0U;
+            m_vocLDU1Count = 0U;
+            m_roamLDU1Count = 0U;
+            m_p25->m_rfTimeout.start();
+            m_lastDUID = P25_DUID_HDU;
+
+            m_rfLastHDU = lc::LC();
+        }
+
+        if (m_p25->m_rfState == RS_RF_AUDIO) {
+            m_rfFrames++;
+
+            // generate Sync
+            Sync::addP25Sync(data + 2U);
+
+            // generate NID
+            m_p25->m_nid.encode(data + 2U, P25_DUID_VSELP1);
+
+            // add busy bits
+            P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
+
+            writeNetwork(data + 2U, P25_DUID_VSELP1);
+
+            if (m_p25->m_duplex) {
+                data[0U] = modem::TAG_DATA;
+                data[1U] = 0x00U;
+
+                m_p25->addFrame(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_VSELP1_STR ", audio");
+            }
+
+            return true;
+        }
+    }
+    else if (duid == P25_DUID_VSELP2) {
+        // prevent two xDUs of the same type from being sent consecutively
+        if (m_lastDUID == P25_DUID_VSELP2) {
+            return false;
+        }
+        m_lastDUID = P25_DUID_VSELP2;
+
+        // VSELP has no decoding -- its just passed transparently
+
+        if (m_p25->m_rfState == RS_RF_LISTENING) {
+            return false;
+        }
+        else if (m_p25->m_rfState == RS_RF_AUDIO) {
+            m_rfFrames++;
+
+            // generate Sync
+            Sync::addP25Sync(data + 2U);
+
+            // generate NID
+            m_p25->m_nid.encode(data + 2U, P25_DUID_VSELP2);
+
+            // add busy bits
+            P25Utils::addBusyBits(data + 2U, P25_LDU_FRAME_LENGTH_BITS, false, true);
+
+            writeNetwork(data + 2U, P25_DUID_VSELP2);
+
+            if (m_p25->m_duplex) {
+                data[0U] = modem::TAG_DATA;
+                data[1U] = 0x00U;
+
+                m_p25->addFrame(data, P25_LDU_FRAME_LENGTH_BYTES + 2U);
+            }
+
+            if (m_verbose) {
+                LogMessage(LOG_RF, P25_VSELP2_STR ", audio");
             }
 
             return true;
@@ -1119,6 +1285,10 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
                     writeNet_LDU2();
                 }
             }
+            break;
+        case P25_DUID_VSELP1:
+        case P25_DUID_VSELP2:
+            // currently ignored -- this is a TODO
             break;
         case P25_DUID_TDU:
         case P25_DUID_TDULC:

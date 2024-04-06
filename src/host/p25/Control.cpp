@@ -634,6 +634,8 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
+        case P25_DUID_VSELP1:
+        case P25_DUID_VSELP2:
         case P25_DUID_LDU2:
             if (m_controlOnly) {
                 if (m_debug) {
@@ -1303,6 +1305,8 @@ void Control::processNetwork()
     switch (duid) {
         case P25_DUID_HDU:
         case P25_DUID_LDU1:
+        case P25_DUID_VSELP1:
+        case P25_DUID_VSELP2:
         case P25_DUID_LDU2:
             if (m_controlOnly) {
                 if (m_debug) {
