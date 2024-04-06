@@ -626,6 +626,7 @@ void Network::clock(uint32_t ms)
     if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
         switch (m_status) {
             case NET_STAT_WAITING_LOGIN:
+                LogError(LOG_NET, "PEER %u, retrying master login, remotePeerId = %u", m_peerId, m_remotePeerId);
                 writeLogin();
                 break;
             case NET_STAT_WAITING_AUTHORISATION:
@@ -669,7 +670,7 @@ bool Network::open()
     }
 
     m_status = NET_STAT_WAITING_CONNECT;
-    m_timeoutTimer.stop();
+    m_timeoutTimer.start();
     m_retryTimer.start();
 
     return true;
