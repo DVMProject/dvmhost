@@ -242,7 +242,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                     writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                 } else {
-                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
+                    if (m_p25->m_network != nullptr)
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
                 }
             }
             break;
@@ -272,7 +273,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
-                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                        if (m_p25->m_network != nullptr)
+                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
                     }
                 }
             }
@@ -302,7 +304,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
-                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                        if (m_p25->m_network != nullptr)
+                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
                     }
                 }
                 else if (iosp->getResponse() == P25_ANS_RSP_DENY) {
@@ -2685,7 +2688,8 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         // update dynamic affiliation table
         m_p25->m_affiliations.groupAff(srcId, dstId);
 
-        m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+        if (m_p25->m_network != nullptr)
+            m_p25->m_network->announceGroupAffiliation(srcId, dstId);
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNet);
@@ -2731,7 +2735,8 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
             m_p25->m_affiliations.unitReg(srcId);
         }
 
-        m_p25->m_network->announceUnitRegistration(srcId);
+        if (m_p25->m_network != nullptr)
+            m_p25->m_network->announceUnitRegistration(srcId);
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), true);
@@ -2767,7 +2772,8 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 
         writeRF_TSDU_SBF_Imm(osp.get(), false);
 
-        m_p25->m_network->announceUnitDeregistration(srcId);
+        if (m_p25->m_network != nullptr)
+            m_p25->m_network->announceUnitDeregistration(srcId);
     }
 }
 

@@ -221,7 +221,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
                     } else {
-                        m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
                     }
                     break;
                 case SVC_KIND_GRP_VOICE_CALL:
@@ -239,7 +240,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     if (m_slot->m_authoritative) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     } else {
-                        m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false);
+                        if (m_slot->m_network != nullptr)
+                            m_slot->m_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false);
                     }
                     break;
                 case SVC_KIND_IND_DATA_CALL:
@@ -1355,7 +1357,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         // remove dynamic unit registration table entry
         m_slot->m_affiliations->unitDereg(srcId);
 
-        m_slot->m_network->announceUnitDeregistration(srcId);
+        if (m_slot->m_network != nullptr)
+            m_slot->m_network->announceUnitDeregistration(srcId);
 
         csbk->setReason(TS_ACK_RSN_REG);
     }
@@ -1382,7 +1385,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
                 m_slot->m_affiliations->unitReg(srcId);
             }
 
-            m_slot->m_network->announceUnitRegistration(srcId);
+            if (m_slot->m_network != nullptr)
+                m_slot->m_network->announceUnitRegistration(srcId);
         }
     }
 

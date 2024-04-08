@@ -365,10 +365,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // send network grant demand TDU
-            if (!m_p25->m_enableControl && m_p25->m_convNetGrantDemand) {
-                uint8_t controlByte = 0x80U + ((group) ? 0x00U : 0x01U);
-                LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
-                m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
+            if (m_p25->m_network != nullptr) {
+                if (!m_p25->m_enableControl && m_p25->m_convNetGrantDemand) {
+                    uint8_t controlByte = 0x80U + ((group) ? 0x00U : 0x01U);
+                    LogMessage(LOG_RF, P25_HDU_STR " remote grant demand, srcId = %u, dstId = %u", srcId, dstId);
+                    m_p25->m_network->writeP25TDU(lc, m_rfLSD, controlByte);
+                }
             }
 
             m_rfLC = lc;

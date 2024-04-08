@@ -187,7 +187,8 @@ bool ControlSignaling::process(uint8_t fct, uint8_t option, uint8_t* data, uint3
             if (m_nxdn->m_authoritative) {
                 writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
             } else {
-                m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
+                if (m_nxdn->m_network != nullptr)
+                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
             }
         }
         break;
@@ -724,7 +725,8 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
         // update dynamic affiliation table
         m_nxdn->m_affiliations.groupAff(srcId, dstId);
 
-        m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
+        if (m_nxdn->m_network != nullptr)
+            m_nxdn->m_network->announceGroupAffiliation(srcId, dstId);
     }
 
     writeRF_Message_Imm(rcch.get(), false);
@@ -767,7 +769,8 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t locId)
             m_nxdn->m_affiliations.unitReg(srcId);
         }
 
-        m_nxdn->m_network->announceUnitRegistration(srcId);
+        if (m_nxdn->m_network != nullptr)
+            m_nxdn->m_network->announceUnitRegistration(srcId);
     }
 
     rcch->setSrcId(srcId);
