@@ -222,9 +222,6 @@ namespace p25
 
             /// <summary>Helper to automatically inhibit a source ID on a denial.</summary>
             void denialInhibit(uint32_t srcId);
-
-            /// <summary>Helper to add the idle status bits on P25 frame data.</summary>
-            void addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2);
         };
     } // namespace packet
 } // namespace p25

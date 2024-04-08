@@ -42,24 +42,17 @@ namespace p25
             /// <summary>Helper to reset data values to defaults.</summary>
             void reset();
 
-            /// <summary>Gets the total number of data octets.</summary>
-            uint32_t getDataOctets() const;
+            /// <summary>Gets the total length in bytes of enclosed packet data.</summary>
+            uint32_t getPacketLength() const;
 
             /// <summary>Gets the raw header data.</summary>
             uint32_t getData(uint8_t* buffer) const;
 
-            /** Common Data */
-            /// <summary>Sets the total number of blocks to follow this header.</summary>
-            void setBlocksToFollow(uint8_t blocksToFollow);
-            /// <summary>Gets the total number of blocks to follow this header.</summary>
-            uint8_t getBlocksToFollow() const;
-            /// <summary>Sets the count of block padding.</summary>
-            void setPadCount(uint8_t padCount);
-            /// <summary>Gets the count of block padding.</summary>
-            uint8_t getPadCount() const;
-
             /// <summary>Sets the flag indicating CRC-errors should be warnings and not errors.</summary>
             static void setWarnCRC(bool warnCRC) { m_warnCRC = warnCRC; }
+
+            /// <summary>Helper to determine the pad length for a given packet length.</summary>
+            static uint32_t calculatePadLength(uint8_t fmt, uint32_t packetLength);
 
         public:
             /// <summary>Flag indicating if acknowledgement is needed.</summary>
@@ -74,6 +67,10 @@ namespace p25
             __PROPERTY(uint8_t, mfId, MFId);
             /// <summary>Logical link ID.</summary>
             __PROPERTY(uint32_t, llId, LLId);
+            /// <summary>Total number of blocks following this header.</summary>
+            __PROPERTY(uint8_t, blocksToFollow, BlocksToFollow);
+            /// <summary>Total number of padding bytes.</summary>
+            __PROPERTY(uint8_t, padLength, PadLength);
             /// <summary>Flag indicating whether or not this data packet is a full message.</summary>
             /// <remarks>When a response header, this represents the extended flag.</summary>
             __PROPERTY(bool, F, FullMessage);
@@ -108,10 +105,6 @@ namespace p25
 
         private:
             edac::Trellis m_trellis;
-
-            uint8_t m_blocksToFollow;
-            uint8_t m_padCount;
-            uint32_t m_dataOctets;
 
             uint8_t* m_data;
         

@@ -47,6 +47,8 @@ DataHeader::DataHeader() :
     m_sap(0U),
     m_mfId(P25_MFG_STANDARD),
     m_llId(0U),
+    m_blocksToFollow(0U),
+    m_padLength(0U),
     m_F(true),
     m_S(false),
     m_fsn(0U),
@@ -61,9 +63,6 @@ DataHeader::DataHeader() :
     m_ambtField8(0U),
     m_ambtField9(0U),
     m_trellis(),
-    m_blocksToFollow(0U),
-    m_padCount(0U),
-    m_dataOctets(0U),
     m_data(nullptr)
 {
     m_data = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
@@ -136,16 +135,9 @@ bool DataHeader::decode(const uint8_t* data, bool noTrellis)
     m_F = (m_data[6U] & 0x80U) == 0x80U;                                        // Full Message Flag
     m_blocksToFollow = m_data[6U] & 0x7FU;                                      // Block Frames to Follow
 
-    m_padCount = m_data[7U] & 0x1FU;                                            // Pad Count
+    m_padLength = m_data[7U] & 0x1FU;                                           // Pad Byte Count
     if (m_fmt == PDU_FMT_RSP || m_fmt == PDU_FMT_AMBT) {
-        m_padCount = 0;
-    }
-
-    if (m_fmt == PDU_FMT_CONFIRMED) {
-        m_dataOctets = 16 * m_blocksToFollow - 4 - m_padCount;
-    }
-    else {
-        m_dataOctets = 12 * m_blocksToFollow - 4 - m_padCount;
+        m_padLength = 0U;
     }
 
     switch (m_fmt) {
@@ -225,7 +217,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
 
     switch (m_fmt) {
     case PDU_FMT_CONFIRMED:
-        header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
+        header[7U] = (m_padLength & 0x1FU);                                     // Pad Byte Count
         header[8U] = (m_S ? 0x80U : 0x00U) +                                    // Re-synchronize Flag
             ((m_Ns & 0x07U) << 4) +                                             // Packet Sequence No.
             (m_lastFragment ? 0x08U : 0x00U) +                                  // Last Fragment Flag
@@ -250,7 +242,7 @@ void DataHeader::encode(uint8_t* data, bool noTrellis)
         break;
     case PDU_FMT_UNCONFIRMED:
     default:
-        header[7U] = (m_padCount & 0x1FU);                                      // Pad Count
+        header[7U] = (m_padLength & 0x1FU);                                     // Pad Byte Count
         header[8U] = 0x00U;
         header[9U] = m_headerOffset & 0x3FU;                                    // Data Header Offset
         break;
@@ -287,9 +279,7 @@ void DataHeader::reset()
 
     m_F = true;
     m_blocksToFollow = 0U;
-    m_padCount = 0U;
-
-    m_dataOctets = 0U;
+    m_padLength = 0U;
 
     m_S = false;
 
@@ -312,12 +302,17 @@ void DataHeader::reset()
 }
 
 /// <summary>
-/// Gets the total number of data octets.
+/// Gets the total length in bytes of enclosed packet data.
 /// </summary>
 /// <returns></returns>
-uint32_t DataHeader::getDataOctets() const
+uint32_t DataHeader::getPacketLength() const
 {
-    return m_dataOctets;
+    if (m_fmt == PDU_FMT_CONFIRMED) {
+        return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
+    }
+    else {
+        return P25_PDU_UNCONFIRMED_LENGTH_BYTES * m_blocksToFollow - 4 - m_padLength;
+    }
 }
 
 /// <summary>
@@ -333,55 +328,18 @@ uint32_t DataHeader::getData(uint8_t* buffer) const
     return P25_PDU_HEADER_LENGTH_BYTES;
 }
 
-/** Common Data */
 /// <summary>
-/// Sets the total number of blocks to follow this header.
+/// Helper to determine the pad length for a given packet length.
 /// </summary>
-/// <param name="blocksToFollow"></param>
-void DataHeader::setBlocksToFollow(uint8_t blocksToFollow)
+/// <param name="fmt"></param>
+/// <param name="packetLength"></param>
+uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
-    m_blocksToFollow = blocksToFollow;
-
-    // recalculate count of data octets
-    if (m_fmt == PDU_FMT_CONFIRMED) {
-        m_dataOctets = 16 * m_blocksToFollow - 4 - m_padCount;
+    uint32_t len = packetLength + 4;
+    if (fmt == PDU_FMT_CONFIRMED) {
+        return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
     }
     else {
-        m_dataOctets = 12 * m_blocksToFollow - 4 - m_padCount;
+        return P25_PDU_UNCONFIRMED_LENGTH_BYTES - (len % P25_PDU_UNCONFIRMED_LENGTH_BYTES);
     }
-}
-
-/// <summary>
-/// Gets the total number of blocks to follow this header.
-/// </summary>
-/// <returns></returns>
-uint8_t DataHeader::getBlocksToFollow() const
-{
-    return m_blocksToFollow;
-}
-
-/// <summary>
-/// Sets the count of block padding.
-/// </summary>
-/// <param name="padCount"></param>
-void DataHeader::setPadCount(uint8_t padCount)
-{
-    m_padCount = padCount;
-
-    // recalculate count of data octets
-    if (m_fmt == PDU_FMT_CONFIRMED) {
-        m_dataOctets = 16 * m_blocksToFollow - 4 - m_padCount;
-    }
-    else {
-        m_dataOctets = 12 * m_blocksToFollow - 4 - m_padCount;
-    }
-}
-
-/// <summary>
-/// Gets the count of block padding.
-/// </summary>
-/// <returns></returns>
-uint8_t DataHeader::getPadCount() const
-{
-    return m_padCount;
 }

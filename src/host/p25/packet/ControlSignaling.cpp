@@ -1628,7 +1628,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
         P25Utils::addBusyBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, false);
 
         // Add idle bits
-        addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
+        P25Utils::addIdleBits(data + 2U, P25_TSDU_TRIPLE_FRAME_LENGTH_BITS, true, true);
 
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
@@ -1676,9 +1676,9 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
     ambt->encodeMBT(header, pduUserData);
 
     if (m_debug) {
-        LogDebug(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padCount = %u, n = %u, seqNo = %u, hdrOffset = %u",
+        LogDebug(LOG_RF, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, hdrOffset = %u",
             header.getAckNeeded(), header.getOutbound(), header.getFormat(), header.getSAP(), header.getFullMessage(),
-            header.getBlocksToFollow(), header.getPadCount(), header.getNs(), header.getFSN(),
+            header.getBlocksToFollow(), header.getPadLength(), header.getNs(), header.getFSN(),
             header.getHeaderOffset());
         LogDebug(LOG_RF, P25_PDU_STR " AMBT, lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
             ambt->getLCO(), ambt->getMFId(), ambt->getLastBlock(), ambt->getAIV(), ambt->getEX(), ambt->getSrcId(), ambt->getDstId(),
@@ -2964,23 +2964,5 @@ void ControlSignaling::denialInhibit(uint32_t srcId)
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_P25, P25_TSDU_STR ", denial, system auto-inhibit RID, srcId = %u", srcId);
         writeRF_TSDU_Ext_Func(P25_EXT_FNCT_INHIBIT, P25_WUID_FNE, srcId);
-    }
-}
-
-/// <summary>
-/// Helper to add the idle status bits on P25 frame data.
-/// </summary>
-/// <param name="data"></param>
-/// <param name="length"></param>
-/// <param name="b1"></param>
-/// <param name="b2"></param>
-void ControlSignaling::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
-{
-    assert(data != nullptr);
-
-    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
-        uint32_t ss1Pos = ss0Pos + 1U;
-        WRITE_BIT(data, ss0Pos, b1);
-        WRITE_BIT(data, ss1Pos, b2);
     }
 }

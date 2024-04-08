@@ -58,7 +58,25 @@ void P25Utils::addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2)
     }
 
     // interleave the requested status bits (every other)
-    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2)) {
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 2U)) {
+        uint32_t ss1Pos = ss0Pos + 1U;
+        WRITE_BIT(data, ss0Pos, b1);
+        WRITE_BIT(data, ss1Pos, b2);
+    }
+}
+
+/// <summary>
+/// Helper to add the idle status bits on P25 frame data.
+/// </summary>
+/// <param name="data"></param>
+/// <param name="length"></param>
+/// <param name="b1"></param>
+/// <param name="b2"></param>
+void P25Utils::addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2)
+{
+    assert(data != nullptr);
+
+    for (uint32_t ss0Pos = P25_SS0_START; ss0Pos < length; ss0Pos += (P25_SS_INCREMENT * 5U)) {
         uint32_t ss1Pos = ss0Pos + 1U;
         WRITE_BIT(data, ss0Pos, b1);
         WRITE_BIT(data, ss1Pos, b2);

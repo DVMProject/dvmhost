@@ -96,6 +96,8 @@ namespace p25
         static void setBusyBits(uint8_t* data, uint32_t ssOffset, bool b1, bool b2);
         /// <summary>Helper to add the busy status bits on P25 frame data.</summary>
         static void addBusyBits(uint8_t* data, uint32_t length, bool b1, bool b2);
+        /// <summary>Helper to add the idle status bits on P25 frame data.</summary>
+        static void addIdleBits(uint8_t* data, uint32_t length, bool b1, bool b2);
 
         /// <summary>Decode bit interleaving.</summary>
         static uint32_t decode(const uint8_t* in, uint8_t* out, uint32_t start, uint32_t stop);
