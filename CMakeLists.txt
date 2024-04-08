@@ -220,8 +220,8 @@ if (ENABLE_TESTS)
     
     add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmtests_SRC})
     target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
-    target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common asio::asio Threads::Threads util)
-    target_include_directories(dvmtests PRIVATE src src/host tests)
+    target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
+    target_include_directories(dvmtests PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host tests)
 endif (ENABLE_TESTS)
 
 #
