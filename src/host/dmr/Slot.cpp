@@ -503,8 +503,12 @@ void Slot::clock()
         if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
-                if (m_network != nullptr)
-                    m_network->announceAffiliationUpdate(m_affiliations->grpAffTable());
+                if (m_network != nullptr) {
+                    if (m_affiliations->grpAffSize() > 0) {
+                        auto affs = m_affiliations->grpAffTable();
+                        m_network->announceAffiliationUpdate(affs);
+                    }
+                }
                 m_adjSiteUpdateTimer.start();
             }
         }
