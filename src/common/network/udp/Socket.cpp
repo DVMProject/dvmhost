@@ -629,7 +629,7 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 /// <summary>
 ///
 /// </summary>
-/// <returns>Zero if no error during lookup, otherwise error.</returns>
+/// <returns>Textual IP address for the local network interface.</returns>
 std::string Socket::getLocalAddress()
 {
     struct ifaddrs *ifaddr, *ifa;

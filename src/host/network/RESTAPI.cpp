@@ -1213,7 +1213,7 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
         if (voiceCh.address() == "0.0.0.0") {
             voiceCh.address(restAddress);
         }
-        
+
         if (voiceCh.port() == 0U || voiceCh.port() == REST_API_DEFAULT_PORT) {
             voiceCh.port(restPort);
         }
