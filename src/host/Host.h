@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__HOST_H__)
@@ -18,6 +18,7 @@
 #include "Defines.h"
 #include "common/Timer.h"
 #include "common/lookups/AffiliationLookup.h"
+#include "common/lookups/ChannelLookup.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
@@ -54,10 +55,8 @@ public:
     /// <summary>Executes the main modem host processing loop.</summary>
     int run();
 
-    /// <summary>Gets the voice channel number list.</summary>
-    std::vector<uint32_t> getVoiceChNo() const { return m_voiceChNo; }
-    /// <summary>Gets the voice channel data.</summary>
-    std::unordered_map<uint32_t, lookups::VoiceChData> getVoiceChData() const { return m_voiceChData; }
+    /// <summary>Gets the RF channel lookup class.</summary>
+    lookups::ChannelLookup* rfCh() const { return m_channelLookup; }
 
 private:
     const std::string& m_confFile;
@@ -107,8 +106,7 @@ private:
     uint8_t m_channelId;
     uint32_t m_channelNo;
 
-    std::vector<uint32_t> m_voiceChNo;
-    std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
+    lookups::ChannelLookup* m_channelLookup;
     std::unordered_map<uint32_t, uint32_t> m_voiceChPeerId;
     lookups::VoiceChData m_controlChData;
 
@@ -125,6 +123,8 @@ private:
     bool m_nxdnCCData;
     bool m_nxdnCtrlChannel;
     bool m_nxdnCtrlBroadcast;
+
+    uint32_t m_presenceTime;
 
     uint8_t m_siteId;
     uint32_t m_sysId;
@@ -150,7 +150,9 @@ private:
     uint8_t m_idleTickDelay;
 
     friend class RESTAPI;
-    RESTAPI* m_RESTAPI;
+    std::string m_restAddress;
+    uint16_t m_restPort;
+    RESTAPI *m_RESTAPI;
 
     /// <summary>Modem port open callback.</summary>
     bool rmtPortModemOpen(modem::Modem* modem);

@@ -2201,7 +2201,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (!m_p25->m_affiliations.isGranted(dstId)) {
-            if (!m_p25->m_affiliations.isRFChAvailable()) {
+            if (!m_p25->m_affiliations.rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request) queued, no channels available, dstId = %u", dstId);
@@ -2234,7 +2234,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             else {
                 if (m_p25->m_affiliations.grantCh(dstId, srcId, GRANT_TIMER_TIMEOUT, grp, net)) {
                     chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.rfCh()->rfChSize() + m_p25->m_affiliations.getGrantedRFChCnt());
                 }
             }
         }
@@ -2274,7 +2274,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
 
     if (chNo > 0U) {
-        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+        ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
         if (grp) {
             if (!net) {
@@ -2418,7 +2418,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                 uint32_t chNo = entry.second;
                 bool grp = m_p25->m_affiliations.isGroup(dstId);
 
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
                 if (chNo == 0U) {
                     noData = true;
@@ -2503,7 +2503,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
         }
 
         if (!m_p25->m_affiliations.isGranted(srcId)) {
-            if (!m_p25->m_affiliations.isRFChAvailable()) {
+            if (!m_p25->m_affiliations.rfCh()->isRFChAvailable()) {
                 if (!net) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBK_ISP_SNDCP_CH_REQ (SNDCP Data Channel Request) queued, no channels available, srcId = %u", srcId);
                     writeRF_TSDU_Queue(srcId, dstId, P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL, TSBK_ISP_SNDCP_CH_REQ);
@@ -2517,18 +2517,18 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, uint32_t dstId, 
             else {
                 if (m_p25->m_affiliations.grantCh(srcId, srcId, GRANT_TIMER_TIMEOUT, false, net)) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
-                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
                     osp->setDataChnNo(chNo);
-                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.getRFChCnt() + m_p25->m_affiliations.getGrantedRFChCnt());
+                    m_p25->m_siteData.setChCnt(m_p25->m_affiliations.rfCh()->rfChSize() + m_p25->m_affiliations.getGrantedRFChCnt());
                 }
             }
         }
         else {
             uint32_t chNo = m_p25->m_affiliations.getGrantedCh(srcId);
-            ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
             osp->setGrpVchId(voiceChData.chId());
             osp->setGrpVchNo(chNo);

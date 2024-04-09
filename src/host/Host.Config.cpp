@@ -139,6 +139,7 @@ bool Host::readParams()
         ** Channel Configuration
         */
         yaml::Node rfssConfig = systemConf["config"];
+        m_channelLookup = new ChannelLookup();
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
         if (m_channelId > 15U) { // clamp to 15
             m_channelId = 15U;
@@ -188,6 +189,7 @@ bool Host::readParams()
             uint16_t restApiPort = (uint16_t)controlCh["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = controlCh["restPassword"].as<std::string>();
             bool restSsl = controlCh["restSsl"].as<bool>(false);
+            m_presenceTime = controlCh["presence"].as<uint32_t>(120U);
 
             VoiceChData data = VoiceChData(m_channelId, m_channelNo, restApiAddress, restApiPort, restApiPassword, restSsl);
             m_controlChData = data;
@@ -232,7 +234,7 @@ bool Host::readParams()
                 chNo = 4095U;
             }
 
-            std::string restApiAddress = channel["restAddress"].as<std::string>("127.0.0.1");
+            std::string restApiAddress = channel["restAddress"].as<std::string>("0.0.0.0");
             uint16_t restApiPort = (uint16_t)channel["restPort"].as<uint32_t>(REST_API_DEFAULT_PORT);
             std::string restApiPassword = channel["restPassword"].as<std::string>();
             bool restSsl = channel["restSsl"].as<bool>(false);
@@ -240,14 +242,15 @@ bool Host::readParams()
             ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", chId, chNo, restApiAddress.c_str(), restApiPort, restSsl);
 
             VoiceChData data = VoiceChData(chId, chNo, restApiAddress, restApiPort, restApiPassword, restSsl);
-            m_voiceChData[chNo] = data;
-            m_voiceChNo.push_back(chNo);
+            m_channelLookup->setRFChData(chNo, data);
+            m_channelLookup->addRFCh(chNo);
         }
 
         std::string strVoiceChNo = "";
-        for (auto it = m_voiceChNo.begin(); it != m_voiceChNo.end(); ++it) {
+        std::vector<uint32_t> voiceChNo = m_channelLookup->rfChTable();
+        for (auto it = voiceChNo.begin(); it != voiceChNo.end(); ++it) {
             uint32_t chNo = ::atoi(std::to_string(*it).c_str());
-            ::lookups::VoiceChData voiceChData = m_voiceChData[chNo];
+            ::lookups::VoiceChData voiceChData = m_channelLookup->getRFChData(chNo);
 
             char hexStr[29];
 
@@ -816,6 +819,8 @@ bool Host::createNetwork()
 
     // initialize network remote command
     if (restApiEnable) {
+        m_restAddress = restApiAddress;
+        m_restPort = restApiPort;
         m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
@@ -827,6 +832,8 @@ bool Host::createNetwork()
         }
     }
     else {
+        m_restAddress = "0.0.0.0";
+        m_restPort = REST_API_DEFAULT_PORT;
         m_RESTAPI = nullptr;
     }
 

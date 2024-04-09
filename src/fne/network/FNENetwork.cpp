@@ -1092,7 +1092,8 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
     erasePeerAffiliations(peerId);
 
     std::lock_guard<std::mutex> lock(m_peerMutex);
-    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, m_verbose);
+    lookups::ChannelLookup* chLookup = new lookups::ChannelLookup();
+    m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, chLookup, m_verbose);
 }
 
 /// <summary>
@@ -1106,8 +1107,12 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
     auto it = std::find_if(m_peerAffiliations.begin(), m_peerAffiliations.end(), [&](PeerAffiliationMapPair x) { return x.first == peerId; });
     if (it != m_peerAffiliations.end()) {
         lookups::AffiliationLookup* aff = m_peerAffiliations[peerId];
-        if (aff != nullptr)
+        if (aff != nullptr) {
+            lookups::ChannelLookup* rfCh = aff->rfCh();
+            if (rfCh != nullptr)
+                delete rfCh;
             delete aff;
+        }
         m_peerAffiliations.erase(peerId);
 
         return true;

@@ -372,6 +372,9 @@ system:
             restSsl: false
             # Flag indicating voice channels will notify the control channel of traffic status.
             notifyEnable: true
+            # Amount of time between network presence announcements. (seconds)
+            # NOTE: This value applies to VC -> CC and CC -> FNE presence notification messages.
+            presence: 120
 
         #
         # Voice Channels

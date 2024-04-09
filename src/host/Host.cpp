@@ -15,6 +15,7 @@
 */
 #include "Defines.h"
 #include "common/lookups/RSSIInterpolator.h"
+#include "common/network/udp/Socket.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
 #include "common/Thread.h"
@@ -86,8 +87,7 @@ Host::Host(const std::string& confFile) :
     m_txFrequency(0U),
     m_channelId(0U),
     m_channelNo(0U),
-    m_voiceChNo(),
-    m_voiceChData(),
+    m_channelLookup(),
     m_voiceChPeerId(),
     m_controlChData(),
     m_idenTable(nullptr),
@@ -102,6 +102,7 @@ Host::Host(const std::string& confFile) :
     m_nxdnCCData(false),
     m_nxdnCtrlChannel(false),
     m_nxdnCtrlBroadcast(false),
+    m_presenceTime(120U),
     m_siteId(1U),
     m_sysId(1U),
     m_dmrNetId(1U),
@@ -120,6 +121,8 @@ Host::Host(const std::string& confFile) :
     m_nxdnBcastDurationTimer(1000U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
+    m_restAddress("0.0.0.0"),
+    m_restPort(REST_API_DEFAULT_PORT),
     m_RESTAPI(nullptr)
 {
     /* stub */
@@ -404,9 +407,9 @@ int Host::run()
         }
 
         dmr = std::make_unique<dmr::Control>(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
-            embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, 
+            embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, 
             m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose);
-        dmr->setOptions(m_conf, m_supervisor, m_voiceChNo, m_voiceChData, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
+        dmr->setOptions(m_conf, m_supervisor, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
             m_channelNo, true);
 
         if (dmrCtrlChannel) {
@@ -475,9 +478,9 @@ int Host::run()
         }
 
         p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
-            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
+            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
             p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose);
-        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData,
+        p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData,
             m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -537,9 +540,9 @@ int Host::run()
         }
 
         nxdn = std::make_unique<nxdn::Control>(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
-            m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
+            m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
-        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_voiceChNo, m_voiceChData, m_controlChData, m_siteId, 
+        nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData, m_siteId, 
             m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {
@@ -897,9 +900,90 @@ int Host::run()
     nxdnFrameWriteThread.run();
     nxdnFrameWriteThread.setName("nxdn:frame-w");
 
-    Timer ccRegisterTimer(1000U, 120U);
-    ccRegisterTimer.start();
-    bool hasInitialRegistered = false;
+    /** Network Presence Notification */
+    ThreadFunc presenceThread([&, this]() {
+        if (g_killed)
+            return;
+
+        Timer presenceNotifyTimer(1000U, m_presenceTime);
+        presenceNotifyTimer.start();
+        bool hasInitialRegistered = false;
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        while (!g_killed) {
+            // scope is intentional
+            {
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+
+                presenceNotifyTimer.clock(ms);
+
+                // VC -> CC presence registration
+                if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr && m_RESTAPI != nullptr) {
+                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
+                        LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", m_controlChData.address().c_str(), m_controlChData.port(), m_network->getPeerId());
+                        hasInitialRegistered = true;
+
+                        std::string localAddress = network::udp::Socket::getLocalAddress();
+                        if (m_restAddress == "0.0.0.0") {
+                            m_restAddress = localAddress;
+                        }
+
+                        // callback REST API to release the granted TG on the specified control channel
+                        json::object req = json::object();
+                        req["channelNo"].set<uint32_t>(m_channelNo);
+                        uint32_t peerId = m_network->getPeerId();
+                        req["peerId"].set<uint32_t>(peerId);
+                        req["restAddress"].set<std::string>(m_restAddress);
+                        req["restPort"].set<uint16_t>(m_restPort);
+
+                        int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+                            HTTP_PUT, PUT_REGISTER_CC_VC, req, m_controlChData.ssl(), REST_QUICK_WAIT, false);
+                        if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                            ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", m_controlChData.address().c_str(), m_controlChData.port());
+                        }
+
+                        presenceNotifyTimer.start();
+                    }
+                }
+
+                // CC -> FNE registered VC announcement
+                if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
+                    if (presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) {
+                        if (m_network != nullptr && m_voiceChPeerId.size() > 0) {
+                            LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", m_network->getPeerId());
+
+                            std::vector<uint32_t> peers;
+                            for (auto it : m_voiceChPeerId) {
+                                peers.push_back(it.second);
+                            }
+
+                            m_network->announceSiteVCs(peers);
+                        }
+
+                        presenceNotifyTimer.start();
+                    }
+                }
+            }
+
+            if (m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+    });
+
+    if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr) {
+        presenceThread.run();
+        presenceThread.setName("host:presence");
+    }
+
+    if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
+        presenceThread.run();
+        presenceThread.setName("host:presence");
+    }
 
     // main execution loop
     while (!killed) {
@@ -1048,47 +1132,6 @@ int Host::run()
             p25->clock(ms);
         if (nxdn != nullptr)
             nxdn->clock(ms);
-
-        ccRegisterTimer.clock(ms);
-
-        // VC -> CC presence registration
-        if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr) {
-            if ((ccRegisterTimer.isRunning() && ccRegisterTimer.hasExpired()) || !hasInitialRegistered) {
-                LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", m_controlChData.address().c_str(), m_controlChData.port(), m_network->getPeerId());
-                hasInitialRegistered = true;
-
-                // callback REST API to release the granted TG on the specified control channel
-                json::object req = json::object();
-                req["channelNo"].set<uint32_t>(m_channelNo);
-                uint32_t peerId = m_network->getPeerId();
-                req["peerId"].set<uint32_t>(peerId);
-
-                int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
-                    HTTP_PUT, PUT_REGISTER_CC_VC, req, m_controlChData.ssl(), REST_QUICK_WAIT, false);
-                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                    ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", m_controlChData.address().c_str(), m_controlChData.port());
-                }
-
-                ccRegisterTimer.start();
-            }
-        }
-
-        // CC -> FNE registered VC announcement
-        if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
-            if (ccRegisterTimer.isRunning() && ccRegisterTimer.hasExpired()) {
-                if (m_network != nullptr && m_voiceChPeerId.size() > 0) {
-                    LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", m_network->getPeerId());
-
-                    std::vector<uint32_t> peers;
-                    for (auto it : m_voiceChPeerId) {
-                        peers.push_back(it.second);
-                    }
-
-                    m_network->announceSiteVCs(peers);
-                }
-                ccRegisterTimer.start();
-            }
-        }
 
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --
@@ -1608,6 +1651,10 @@ void Host::setState(uint8_t state)
                 if (m_RESTAPI != nullptr) {
                     m_RESTAPI->close();
                     delete m_RESTAPI;
+                }
+
+                if (m_channelLookup != nullptr) {
+                    delete m_channelLookup;
                 }
 
                 if (m_tidLookup != nullptr) {

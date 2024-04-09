@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "common/Log.h"
@@ -24,8 +24,9 @@ using namespace dmr::lookups;
 /// <summary>
 /// Initializes a new instance of the DMRAffiliationLookup class.
 /// </summary>
+/// <param name="channelLookup">Instance of the channel lookup class.</param>
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
-DMRAffiliationLookup::DMRAffiliationLookup(bool verbose) : ::lookups::AffiliationLookup("DMR Affiliation", verbose),
+DMRAffiliationLookup::DMRAffiliationLookup(::lookups::ChannelLookup* chLookup, bool verbose) : ::lookups::AffiliationLookup("DMR Affiliation", chLookup, verbose),
     m_grantChSlotTable(),
     m_tsccChNo(0U),
     m_tsccSlot(0U)
@@ -49,7 +50,7 @@ DMRAffiliationLookup::~DMRAffiliationLookup() = default;
 /// <returns></returns>
 bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTimeout, bool grp, bool netGranted)
 {
-    uint32_t chNo = m_rfChTable.at(0);
+    uint32_t chNo = m_chLookup->getFirstRFChannel();
     uint8_t slot = getAvailableSlotForChannel(chNo);
 
     if (slot == 0U) {
@@ -75,18 +76,17 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
-    if (!isRFChAvailable()) {
+    if (!m_chLookup->isRFChAvailable()) {
         return false;
     }
 
-    uint32_t chNo = m_rfChTable.at(0);
+    uint32_t chNo = m_chLookup->getFirstRFChannel();
     if (chNo == m_tsccChNo && slot == m_tsccSlot) {
         return false;
     }
 
     if (getAvailableSlotForChannel(chNo) == 0U || chNo == m_tsccChNo) {
-        auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
-        m_rfChTable.erase(it);
+        m_chLookup->removeRFCh(chNo);
     }
 
     m_grantChTable[dstId] = chNo;
@@ -156,10 +156,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantChSlotTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
 
-        auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
-        if (it == m_rfChTable.end()) {
-            m_rfChTable.push_back(chNo);
-        }
+        m_chLookup->addRFCh(chNo);
 
         if (m_rfGrantChCnt > 0U) {
             m_rfGrantChCnt--;

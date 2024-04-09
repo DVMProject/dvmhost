@@ -62,6 +62,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="modem">Instance of the Modem class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="chLookup">Instance of the ChannelLookup class.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
@@ -70,7 +71,7 @@ const uint8_t SCRAMBLER[] = {
 /// <param name="debug">Flag indicating whether P25 debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether P25 verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t queueSize, uint32_t timeout, uint32_t tgHang,
-    modem::Modem* modem, network::Network* network, bool duplex, lookups::RadioIdLookup* ridLookup,
+    modem::Modem* modem, network::Network* network, bool duplex, lookups::ChannelLookup* chLookup, lookups::RadioIdLookup* ridLookup,
     lookups::TalkgroupRulesLookup* tidLookup, lookups::IdenTableLookup* idenTable, lookups::RSSIInterpolator* rssiMapper,
     bool dumpRCCHData, bool debug, bool verbose) :
     m_voice(nullptr),
@@ -94,7 +95,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
-    m_affiliations("NXDN Affiliations", verbose),
+    m_affiliations("NXDN Affiliations", chLookup, verbose),
     m_controlChData(),
     m_idenEntry(),
     m_txImmQueue(queueSize, "NXDN Imm Frame"),
@@ -131,6 +132,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_verbose(verbose),
     m_debug(debug)
 {
+    assert(chLookup != nullptr);
     assert(ridLookup != nullptr);
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
@@ -197,16 +199,13 @@ void Control::reset()
 /// <param name="conf">Instance of the yaml::Node class.</param>
 /// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
 /// <param name="cwCallsign">CW callsign of this host.</param>
-/// <param name="voiceChNo">Voice Channel Number list.</param>
-/// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="controlChData">Control Channel data.</param>
 /// <param name="siteId">NXDN Site Code.</param>
 /// <param name="sysId">NXDN System Code.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const std::vector<uint32_t> voiceChNo,
-    const std::unordered_map<uint32_t, lookups::VoiceChData> voiceChData, lookups::VoiceChData controlChData,
+void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
     uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
@@ -274,20 +273,13 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_siteData = SiteData(locId, channelId, (channelNo & 0x3FF), serviceClass, false);
     m_siteData.setCallsign(cwCallsign);
 
-    for (uint32_t ch : voiceChNo) {
-        m_affiliations.addRFCh(ch);
-    }
-
-    std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
-    m_affiliations.setRFChData(chData);
-
     m_controlChData = controlChData;
 
     // set the grant release callback
     m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations.getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_affiliations.rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_siteData.channelNo()) {
                 json::object req = json::object();
@@ -747,7 +739,7 @@ void Control::releaseGrantTG(uint32_t dstId)
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
         uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_NXDN, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
@@ -770,7 +762,7 @@ void Control::touchGrantTG(uint32_t dstId)
     if (m_affiliations.isGranted(dstId)) {
         uint32_t chNo = m_affiliations.getGrantedCh(dstId);
         uint32_t srcId = m_affiliations.getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations.getRFChData(chNo);
+        ::lookups::VoiceChData voiceCh = m_affiliations.rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_NXDN, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);

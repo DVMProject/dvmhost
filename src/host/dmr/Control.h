@@ -45,15 +45,15 @@ namespace dmr
     public:
         /// <summary>Initializes a new instance of the Control class.</summary>
         Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
-            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex,
+            bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup,
             ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssi,
             uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose);
         /// <summary>Finalizes a instance of the Control class.</summary>
         ~Control();
 
         /// <summary>Helper to set DMR configuration options.</summary>
-        void setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-            ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
+        void setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
+            uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /// <summary>Gets a flag indicating whether the DMR control channel is running.</summary>
         bool getCCRunning() const { return m_ccRunning; }
@@ -87,7 +87,7 @@ namespace dmr
         void touchGrantTG(uint32_t dstId, uint8_t slot);
 
         /// <summary>Gets instance of the DMRAffiliationLookup class.</summary>
-        lookups::DMRAffiliationLookup affiliations();
+        lookups::DMRAffiliationLookup* affiliations();
 
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;

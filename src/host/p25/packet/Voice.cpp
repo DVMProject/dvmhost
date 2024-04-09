@@ -413,7 +413,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 // if voice on control; insert grant updates before voice traffic
                 if (m_p25->m_voiceOnControl) {
                     uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                    ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
                     bool grp = m_p25->m_affiliations.isGroup(dstId);
 
                     std::unique_ptr<lc::TSBK> osp;
@@ -516,7 +516,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // if voice on control; insert group voice channel updates directly after HDU but before LDUs
             if (m_p25->m_voiceOnControl) {
                 uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
                 bool grp = m_p25->m_affiliations.isGroup(dstId);
 
                 std::unique_ptr<lc::TSBK> osp;
@@ -1676,7 +1676,7 @@ void Voice::writeNet_LDU1()
             // if voice on control; insert grant updates before voice traffic
             if (m_p25->m_voiceOnControl) {
                 uint32_t chNo = m_p25->m_affiliations.getGrantedCh(dstId);
-                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.getRFChData(chNo);
+                ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
                 bool grp = m_p25->m_affiliations.isGroup(dstId);
 
                 std::unique_ptr<lc::TSBK> osp;

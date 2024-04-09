@@ -42,6 +42,7 @@ using namespace dmr;
 /// <param name="modem">Instance of the Modem class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="chLookup">Instance of the ChannelLookup class.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
@@ -53,7 +54,7 @@ using namespace dmr;
 /// <param name="debug">Flag indicating whether DMR debug is enabled.</param>
 /// <param name="verbose">Flag indicating whether DMR verbose logging is enabled.</param>
 Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint32_t queueSize, bool embeddedLCOnly,
-    bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex,
+    bool dumpTAData, uint32_t timeout, uint32_t tgHang, modem::Modem* modem, network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup,
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
@@ -78,13 +79,14 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_debug(debug)
 {
     assert(modem != nullptr);
+    assert(chLookup != nullptr);
     assert(ridLookup != nullptr);
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
-    Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
+    Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, chLookup, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
     lc::CSBK::setVerbose(m_dumpCSBKData);
 
     m_slot1 = new Slot(1U, timeout, tgHang, queueSize, dumpDataPacket, repeatDataPacket, dumpCSBKData, debug, verbose);
@@ -107,16 +109,14 @@ Control::~Control()
 /// </summary>
 /// <param name="conf">Instance of the ConfigINI class.</param>
 /// <param name="supervisor">Flag indicating whether the DMR has supervisory functions.</param>
-/// <param name="voiceChNo">Voice Channel Number list.</param>
-/// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="printOptions"></param>
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
+void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
+    uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
@@ -142,7 +142,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::vector<ui
         dedicatedTSCC = false;
     }
 
-    Slot::setSiteData(voiceChNo, voiceChData, controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
+    Slot::setSiteData(controlChData, netId, siteId, channelId, channelNo, dedicatedTSCC);
     Slot::setAlohaConfig(nRandWait, backOff);
 
     bool disableGrantSourceIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
@@ -481,7 +481,7 @@ void Control::touchGrantTG(uint32_t dstId, uint8_t slot)
 /// <summary>
 /// Gets instance of the AffiliationLookup class.
 /// </summary>
-dmr::lookups::DMRAffiliationLookup Control::affiliations()
+dmr::lookups::DMRAffiliationLookup* Control::affiliations()
 {
     switch (m_tsccSlotNo) {
     case 1U:
@@ -493,7 +493,7 @@ dmr::lookups::DMRAffiliationLookup Control::affiliations()
         break;
     }
 
-    return 0; // ??
+    return nullptr;
 }
 
 /// <summary>

@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__P25_AFFILIATION_LOOKUP_H__)
@@ -15,6 +15,7 @@
 
 #include "Defines.h"
 #include "common/lookups/AffiliationLookup.h"
+#include "common/lookups/ChannelLookup.h"
 
 namespace p25
 {
@@ -35,7 +36,7 @@ namespace p25
         class HOST_SW_API P25AffiliationLookup : public ::lookups::AffiliationLookup {
         public:
             /// <summary>Initializes a new instance of the P25AffiliationLookup class.</summary>
-            P25AffiliationLookup(Control* p25, bool verbose);
+            P25AffiliationLookup(Control* p25, ::lookups::ChannelLookup* chLookup, bool verbose);
             /// <summary>Finalizes a instance of the P25AffiliationLookup class.</summary>
             ~P25AffiliationLookup() override;
 

@@ -7,13 +7,15 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "lookups/AffiliationLookup.h"
 #include "Log.h"
 
 using namespace lookups;
+
+#include <cassert>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -23,10 +25,9 @@ using namespace lookups;
 /// Initializes a new instance of the AffiliationLookup class.
 /// </summary>
 /// <param name="name">Name of lookup table.</param>
+/// <param name="channelLookup">Instance of the channel lookup class.</param>
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
-AffiliationLookup::AffiliationLookup(const std::string name, bool verbose) :
-    m_rfChTable(),
-    m_rfChDataTable(),
+AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* channelLookup, bool verbose) :
     m_rfGrantChCnt(0U),
     m_unitRegTable(),
     m_grpAffTable(),
@@ -37,11 +38,12 @@ AffiliationLookup::AffiliationLookup(const std::string name, bool verbose) :
     m_grantTimers(),
     m_releaseGrant(nullptr),
     m_name(),
+    m_chLookup(channelLookup),
     m_verbose(verbose)
 {
-    m_name = name;
+    assert(channelLookup != nullptr);
 
-    m_rfChTable.clear();
+    m_name = name;
 
     m_unitRegTable.clear();
     m_grpAffTable.clear();
@@ -268,13 +270,12 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
         return false;
     }
 
-    if (!isRFChAvailable()) {
+    if (!m_chLookup->isRFChAvailable()) {
         return false;
     }
 
-    uint32_t chNo = m_rfChTable.at(0);
-    auto it = std::find(m_rfChTable.begin(), m_rfChTable.end(), chNo);
-    m_rfChTable.erase(it);
+    uint32_t chNo = m_chLookup->getFirstRFChannel();
+    m_chLookup->removeRFCh(chNo);
 
     m_grantChTable[dstId] = chNo;
     m_grantSrcIdTable[dstId] = srcId;
@@ -355,7 +356,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantSrcIdTable.erase(dstId);
         m_uuGrantedTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
-        m_rfChTable.push_back(chNo);
+        m_chLookup->addRFCh(chNo, true);
 
         if (m_rfGrantChCnt > 0U) {
             m_rfGrantChCnt--;
@@ -512,27 +513,6 @@ uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
     }
 
     return 0U;
-}
-
-/// <summary>
-/// Helper to get RF channel data.
-/// </summary>
-/// <param name="chNo"></param>
-/// <returns></returns>
-VoiceChData AffiliationLookup::getRFChData(uint32_t chNo) const
-{
-    if (chNo == 0U) {
-        return VoiceChData();
-    }
-
-    VoiceChData data;
-    try {
-        data = m_rfChDataTable.at(chNo);
-    } catch (...) {
-        data = VoiceChData();
-    }
-
-    return data;
 }
 
 /// <summary>

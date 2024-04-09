@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_AFFILIATION_LOOKUP_H__)
@@ -15,6 +15,7 @@
 
 #include "Defines.h"
 #include "common/lookups/AffiliationLookup.h"
+#include "common/lookups/ChannelLookup.h"
 
 #include <tuple>
 
@@ -31,7 +32,7 @@ namespace dmr
         class HOST_SW_API DMRAffiliationLookup : public ::lookups::AffiliationLookup {
         public:
             /// <summary>Initializes a new instance of the DMRAffiliationLookup class.</summary>
-            DMRAffiliationLookup(bool verbose);
+            DMRAffiliationLookup(::lookups::ChannelLookup* chLookup, bool verbose);
             /// <summary>Finalizes a instance of the DMRAffiliationLookup class.</summary>
             ~DMRAffiliationLookup() override;
 

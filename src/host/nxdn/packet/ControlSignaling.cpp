@@ -518,7 +518,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
         }
 
         if (!m_nxdn->m_affiliations.isGranted(dstId)) {
-            if (!m_nxdn->m_affiliations.isRFChAvailable()) {
+            if (!m_nxdn->m_affiliations.rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
@@ -593,7 +593,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
 
     // callback REST API to permit the granted TG on the specified voice channel
     if (m_nxdn->m_authoritative && m_nxdn->m_supervisor) {
-        ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.getRFChData(chNo);
+        ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations.rfCh()->getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {
             json::object req = json::object();

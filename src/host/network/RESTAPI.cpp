@@ -662,8 +662,9 @@ void RESTAPI::restAPI_GetVoiceCh(const HTTPPayload& request, HTTPPayload& reply,
     setResponseDefaultStatus(response);
 
     json::array channels = json::array();
-    if (m_host->m_voiceChData.size() > 0) {
-        for (auto entry : m_host->m_voiceChData) {
+    if (m_host->rfCh()->rfChDataSize() > 0) {
+        auto voiceChData = m_host->rfCh()->rfChDataTable();
+        for (auto entry : voiceChData) {
             uint32_t chNo = entry.first;
             lookups::VoiceChData data = entry.second;
 
@@ -1109,7 +1110,8 @@ void RESTAPI::restAPI_GetReleaseGrants(const HTTPPayload& request, HTTPPayload& 
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
-        m_dmr->affiliations().releaseGrant(0, true);
+        if (m_dmr->affiliations() != nullptr)
+            m_dmr->affiliations()->releaseGrant(0, true);
     }
 
     if (m_p25 != nullptr) {
@@ -1135,7 +1137,8 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
 
     errorPayload(reply, "OK", HTTPPayload::OK);
     if (m_dmr != nullptr) {
-        m_dmr->affiliations().clearGroupAff(0, true);
+        if (m_dmr->affiliations() != nullptr)
+            m_dmr->affiliations()->clearGroupAff(0, true);
     }
 
     if (m_p25 != nullptr) {
@@ -1179,7 +1182,7 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
 
     uint32_t channelNo = req["channelNo"].get<uint32_t>();
 
-    // validate channelNo is a string within the JSON blob
+    // validate peerId is a string within the JSON blob
     if (!req["peerId"].is<int>()) {
         errorPayload(reply, "peerId was not a valid integer");
         return;
@@ -1189,11 +1192,39 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
 
     // LogDebug(LOG_REST, "restAPI_PutRegisterCCVC(): callback, channelNo = %u, peerId = %u", channelNo, peerId);
 
-    if (m_host->m_voiceChData.find(channelNo) != m_host->m_voiceChData.end()) {
-        ::lookups::VoiceChData voiceCh = m_host->m_voiceChData[channelNo];
+    // validate restAddress is a string within the JSON blob
+    if (!req["restAddress"].is<std::string>()) {
+        errorPayload(reply, "restAddress was not a valid string");
+        return;
+    }
+
+    if (!req["restPort"].is<int>()) {
+        errorPayload(reply, "restPort was not a valid integer");
+        return;
+    }
+
+    std::string restAddress = req["restAddress"].get<std::string>();
+    uint16_t restPort = (uint16_t)req["restPort"].get<int>();
+
+    auto voiceChData = m_host->rfCh()->rfChDataTable();
+    if (voiceChData.find(channelNo) != voiceChData.end()) {
+        ::lookups::VoiceChData voiceCh = m_host->rfCh()->getRFChData(channelNo);
+
+        if (voiceCh.address() == "0.0.0.0") {
+            voiceCh.address(restAddress);
+        }
+        
+        if (voiceCh.port() == 0U || voiceCh.port() == REST_API_DEFAULT_PORT) {
+            voiceCh.port(restPort);
+        }
+
+        m_host->rfCh()->setRFChData(channelNo, voiceCh);
 
         m_host->m_voiceChPeerId[channelNo] = peerId;
         LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
+        LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port(), voiceCh.ssl());
+    } else {
+        LogMessage(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
     }
 }
 
@@ -1790,17 +1821,19 @@ void RESTAPI::restAPI_GetDMRAffList(const HTTPPayload& request, HTTPPayload& rep
     setResponseDefaultStatus(response);
 
     json::array affs = json::array();
-    std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations().grpAffTable();
-    if (affTable.size() > 0) {
-        for (auto entry : affTable) {
-            uint32_t srcId = entry.first;
-            uint32_t grpId = entry.second;
+    if (m_dmr->affiliations() != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> affTable = m_dmr->affiliations()->grpAffTable();
+        if (affTable.size() > 0) {
+            for (auto entry : affTable) {
+                uint32_t srcId = entry.first;
+                uint32_t grpId = entry.second;
 
-            json::object aff = json::object();
-            aff["srcId"].set<uint32_t>(srcId);
-            aff["grpId"].set<uint32_t>(grpId);
+                json::object aff = json::object();
+                aff["srcId"].set<uint32_t>(srcId);
+                aff["grpId"].set<uint32_t>(grpId);
 
-            affs.push_back(json::value(aff));
+                affs.push_back(json::value(aff));
+            }
         }
     }
 

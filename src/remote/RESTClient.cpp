@@ -182,6 +182,9 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
     if (address.empty()) {
         return ERRNO_NO_ADDRESS;
     }
+    if (address == "0.0.0.0") {
+        return ERRNO_NO_ADDRESS;
+    }
     if (port <= 0U) {
         return ERRNO_NO_ADDRESS;
     }

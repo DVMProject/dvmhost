@@ -905,7 +905,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (!m_tscc->m_affiliations->isGranted(dstId)) {
-            if (!m_tscc->m_affiliations->isRFChAvailable()) {
+            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
@@ -981,7 +981,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // callback REST API to permit the granted TG on the specified voice channel
         if (m_tscc->m_authoritative && m_tscc->m_supervisor &&
             m_tscc->m_channelNo != chNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 int state = modem::DVM_STATE::STATE_DMR;
@@ -1030,7 +1030,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);
@@ -1059,7 +1059,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // callback REST API to permit the granted TG on the specified voice channel
         if (m_tscc->m_authoritative && m_tscc->m_supervisor &&
             m_tscc->m_channelNo != chNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 int state = modem::DVM_STATE::STATE_DMR;
@@ -1106,7 +1106,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);
@@ -1196,7 +1196,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
         }
 
         if (!m_tscc->m_affiliations->isGranted(dstId)) {
-            if (!m_tscc->m_affiliations->isRFChAvailable()) {
+            if (!m_tscc->m_affiliations->rfCh()->isRFChAvailable()) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, DT_CSBK, CSBKO_RAND (Random Access), SVC_KIND_GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", m_tscc->m_slotNo, dstId);
@@ -1264,7 +1264,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);
@@ -1311,7 +1311,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != m_tscc->m_channelNo) {
-            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = m_tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["dstId"].set<uint32_t>(dstId);

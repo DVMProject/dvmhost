@@ -24,6 +24,8 @@ using namespace network::udp;
 #include <cerrno>
 #include <cstring>
 
+#include <ifaddrs.h>
+
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
@@ -578,15 +580,15 @@ void Socket::setPresharedKey(const uint8_t* presharedKey)
 /// </summary>
 /// <param name="hostname">String containing hostname to resolve.</param>
 /// <param name="port">Numeric port number of service to resolve.</param>
-/// <param name="addr">Socket address structure.</param>
+/// <param name="address">Socket address structure.</param>
 /// <param name="addrLen"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen)
+int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& address, uint32_t& addrLen)
 {
     struct addrinfo hints;
     ::memset(&hints, 0, sizeof(hints));
 
-    return lookup(hostname, port, addr, addrLen, hints);
+    return lookup(hostname, port, address, addrLen, hints);
 }
 
 /// <summary>
@@ -594,11 +596,11 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 /// </summary>
 /// <param name="hostname">String containing hostname to resolve.</param>
 /// <param name="port">Numeric port number of service to resolve.</param>
-/// <param name="addr">Socket address structure.</param>
+/// <param name="address">Socket address structure.</param>
 /// <param name="addrLen"></param>
 /// <param name="hints"></param>
 /// <returns>Zero if no error during lookup, otherwise error.</returns>
-int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& addr, uint32_t& addrLen, struct addrinfo& hints)
+int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints)
 {
     std::string portstr = std::to_string(port);
     struct addrinfo* res;
@@ -608,7 +610,7 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
 
     int err = getaddrinfo(hostname.empty() ? NULL : hostname.c_str(), portstr.c_str(), &hints, &res);
     if (err != 0) {
-        sockaddr_in* paddr = (sockaddr_in*)& addr;
+        sockaddr_in* paddr = (sockaddr_in*)& address;
         ::memset(paddr, 0x00U, addrLen = sizeof(sockaddr_in));
         paddr->sin_family = AF_INET;
         paddr->sin_port = htons(port);
@@ -617,11 +619,54 @@ int Socket::lookup(const std::string& hostname, uint16_t port, sockaddr_storage&
         return err;
     }
 
-    ::memcpy(&addr, res->ai_addr, addrLen = res->ai_addrlen);
+    ::memcpy(&address, res->ai_addr, addrLen = res->ai_addrlen);
 
     freeaddrinfo(res);
 
     return 0;
+}
+
+/// <summary>
+///
+/// </summary>
+/// <returns>Zero if no error during lookup, otherwise error.</returns>
+std::string Socket::getLocalAddress()
+{
+    struct ifaddrs *ifaddr, *ifa;
+    int n;
+    char host[NI_MAXHOST];
+
+    std::string address = std::string();
+
+    int err = -1;
+    if ((err = getifaddrs(&ifaddr)) == -1) {
+        LogError(LOG_NET, "Cannot retreive system network interfaces");
+        return "0.0.0.0";
+    }
+
+    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        int family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET || family == AF_INET6) {
+            err = getnameinfo(ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
+                host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if (err != 0) {
+                LogError(LOG_NET, "Cannot retreive system network interfaces, err: %d", errno);
+                break;
+            }
+
+            address = std::string(host);
+            if (address == "127.0.0.1" || address == "::1")
+                continue;
+            else
+                break;
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return address;
 }
 
 /// <summary>

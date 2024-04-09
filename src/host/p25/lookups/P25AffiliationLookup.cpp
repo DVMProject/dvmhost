@@ -7,7 +7,7 @@
 * @package DVM / Modem Host Software
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "common/Log.h"
@@ -24,8 +24,9 @@ using namespace p25::lookups;
 /// Initializes a new instance of the P25AffiliationLookup class.
 /// </summary>
 /// <param name="name">Name of lookup table.</param>
+/// <param name="channelLookup">Instance of the channel lookup class.</param>
 /// <param name="verbose">Flag indicating whether verbose logging is enabled.</param>
-P25AffiliationLookup::P25AffiliationLookup(Control* p25, bool verbose) : ::lookups::AffiliationLookup("P25 Affiliation", verbose),
+P25AffiliationLookup::P25AffiliationLookup(Control* p25, ::lookups::ChannelLookup* chLookup, bool verbose) : ::lookups::AffiliationLookup("P25 Affiliation", chLookup, verbose),
     m_p25(p25)
 {
     /* stub */
@@ -46,10 +47,10 @@ bool P25AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
     bool ret = ::lookups::AffiliationLookup::releaseGrant(dstId, releaseAll);
     if (ret) {
         if (m_rfGrantChCnt > 0U) {
-            m_p25->m_siteData.setChCnt(getRFChCnt() + m_rfGrantChCnt);
+            m_p25->m_siteData.setChCnt(m_chLookup->rfChSize() + m_rfGrantChCnt);
         }
         else {
-            m_p25->m_siteData.setChCnt(getRFChCnt());
+            m_p25->m_siteData.setChCnt(m_chLookup->rfChSize());
         }
     }
 

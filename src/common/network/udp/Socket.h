@@ -137,6 +137,9 @@ namespace network
             static int lookup(const std::string& hostName, uint16_t port, sockaddr_storage& address, uint32_t& addrLen, struct addrinfo& hints);
 
             /// <summary></summary>
+            static std::string getLocalAddress();
+
+            /// <summary></summary>
             static bool match(const sockaddr_storage& addr1, const sockaddr_storage& addr2, IPMATCHTYPE type = IMT_ADDRESS_AND_PORT);
 
             /// <summary></summary>

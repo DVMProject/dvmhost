@@ -740,7 +740,7 @@ void Slot::releaseGrantTG(uint32_t dstId)
     if (m_affiliations->isGranted(dstId)) {
         uint32_t chNo = m_affiliations->getGrantedCh(dstId);
         uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, TG grant released, srcId = %u, dstId = %u, chId = %u, chNo = %u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
@@ -763,7 +763,7 @@ void Slot::touchGrantTG(uint32_t dstId)
     if (m_affiliations->isGranted(dstId)) {
         uint32_t chNo = m_affiliations->getGrantedCh(dstId);
         uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations->getRFChData(chNo);
+        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogMessage(LOG_DMR, "DMR Slot %u, VC %s:%u, call in progress, srcId = %u, dstId = %u, chId = %u, chNo = %u", m_slotNo, voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
@@ -870,6 +870,7 @@ uint32_t Slot::getLastSrcId() const
 /// <param name="modem">Instance of the Modem class.</param>
 /// <param name="network">Instance of the BaseNetwork class.</param>
 /// <param name="duplex">Flag indicating full-duplex operation.</param>
+/// <param name="chLookup">Instance of the ChannelLookup class.</param>
 /// <param name="ridLookup">Instance of the RadioIdLookup class.</param>
 /// <param name="tidLookup">Instance of the TalkgroupRulesLookup class.</param>
 /// <param name="idenTable">Instance of the IdenTableLookup class.</param>
@@ -877,11 +878,12 @@ uint32_t Slot::getLastSrcId() const
 /// <param name="jitter"></param>
 /// <param name="verbose"></param>
 void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData siteData, bool embeddedLCOnly, bool dumpTAData, uint32_t callHang, modem::Modem* modem,
-    network::Network* network, bool duplex, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
+    network::Network* network, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
     ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper, uint32_t jitter, bool verbose)
 {
     assert(dmr != nullptr);
     assert(modem != nullptr);
+    assert(chLookup != nullptr);
     assert(ridLookup != nullptr);
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
@@ -906,7 +908,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
     m_idenTable = idenTable;
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
-    m_affiliations = new dmr::lookups::DMRAffiliationLookup(verbose);
+    m_affiliations = new dmr::lookups::DMRAffiliationLookup(chLookup, verbose);
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
@@ -917,7 +919,7 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                 return;
             }
 
-            ::lookups::VoiceChData voiceChData = tscc->m_affiliations->getRFChData(chNo);
+            ::lookups::VoiceChData voiceChData = tscc->m_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
                 req["slot"].set<uint8_t>(slot);
@@ -973,16 +975,13 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 /// <summary>
 /// Sets local configured site data.
 /// </summary>
-/// <param name="voiceChNo">Voice Channel Number list.</param>
-/// <param name="voiceChData">Voice Channel data map.</param>
 /// <param name="controlChData">Control Channel data.</param>
 /// <param name="netId">DMR Network ID.</param>
 /// <param name="siteId">DMR Site ID.</param>
 /// <param name="channelId">Channel ID.</param>
 /// <param name="channelNo">Channel Number.</param>
 /// <param name="requireReg"></param>
-void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unordered_map<uint32_t, ::lookups::VoiceChData> voiceChData,
-    ::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
+void Slot::setSiteData(::lookups::VoiceChData controlChData, uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool requireReg)
 {
     m_siteData = SiteData(SITE_MODEL_SMALL, netId, siteId, 3U, requireReg);
     m_channelNo = channelNo;
@@ -994,13 +993,6 @@ void Slot::setSiteData(const std::vector<uint32_t> voiceChNo, const std::unorder
             break;
         }
     }
-
-    for (uint32_t chNo : voiceChNo) {
-        m_affiliations->addRFCh(chNo);
-    }
-
-    std::unordered_map<uint32_t, ::lookups::VoiceChData> chData = std::unordered_map<uint32_t, ::lookups::VoiceChData>(voiceChData);
-    m_affiliations->setRFChData(chData);
 
     m_controlChData = controlChData;
 

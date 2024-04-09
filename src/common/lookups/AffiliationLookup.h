@@ -14,6 +14,7 @@
 #define __AFFILIATION_LOOKUP_H__
 
 #include "common/Defines.h"
+#include "common/lookups/ChannelLookup.h"
 #include "common/Timer.h"
 
 #include <cstdio>
@@ -26,79 +27,6 @@ namespace lookups
 {
     // ---------------------------------------------------------------------------
     //  Class Declaration
-    //      Represents voice channel data.
-    // ---------------------------------------------------------------------------
-
-    class HOST_SW_API VoiceChData {
-    public:
-        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
-        VoiceChData() :
-            m_chId(0U),
-            m_chNo(0U),
-            m_address(),
-            m_port(),
-            m_password(),
-            m_ssl()
-        {
-            /* stub */
-        }
-        /// <summary>Initializes a new instance of the VoiceChData class.</summary>
-        /// <param name="chId">Voice Channel Identity.</param>
-        /// <param name="chNo">Voice Channel Number.</param>
-        /// <param name="address">REST API Address.</param>
-        /// <param name="port">REST API Port.</param>
-        /// <param name="password">REST API Password.</param>
-        /// <param name="ssl">Flag indicating REST is using SSL.</param>
-        VoiceChData(uint8_t chId, uint32_t chNo, std::string address, uint16_t port, std::string password, bool ssl) :
-            m_chId(chId),
-            m_chNo(chNo),
-            m_address(address),
-            m_port(port),
-            m_password(password),
-            m_ssl(ssl)
-        {
-            /* stub */
-        }
-
-        /// <summary>Equals operator.</summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        VoiceChData & operator=(const VoiceChData & data)
-        {
-            if (this != &data) {
-                m_chId = data.m_chId;
-                m_chNo = data.m_chNo;
-                m_address = data.m_address;
-                m_port = data.m_port;
-                m_password = data.m_password;
-                m_ssl = data.m_ssl;
-            }
-
-            return *this;
-        }
-
-        /// <summary>Helper to determine if the channel identity is valid.</summary>
-        bool isValidChId() const { return m_chId != 0U; }
-        /// <summary>Helper to determine if the channel is valid.</summary>
-        bool isValidCh() const { return m_chNo != 0U; }
-
-    public:
-        /// <summary>Voice Channel Identity.</summary>
-        __READONLY_PROPERTY_PLAIN(uint8_t, chId);
-        /// <summary>Voice Channel Number.</summary>
-        __READONLY_PROPERTY_PLAIN(uint32_t, chNo);
-        /// <summary>REST API Address.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, address);
-        /// <summary>REST API Port.</summary>
-        __READONLY_PROPERTY_PLAIN(uint16_t, port);
-        /// <summary>REST API Password.</summary>
-        __READONLY_PROPERTY_PLAIN(std::string, password);
-        /// <summary>Flag indicating REST is using SSL.</summary>
-        __READONLY_PROPERTY_PLAIN(bool, ssl);
-    };
-
-    // ---------------------------------------------------------------------------
-    //  Class Declaration
     //      Implements a lookup table class that contains subscriber registration
     //      and group affiliation information.
     // ---------------------------------------------------------------------------
@@ -106,10 +34,11 @@ namespace lookups
     class HOST_SW_API AffiliationLookup {
     public:
         /// <summary>Initializes a new instance of the AffiliationLookup class.</summary>
-        AffiliationLookup(const std::string name, bool verbose);
+        AffiliationLookup(const std::string name, ChannelLookup* chLookup, bool verbose);
         /// <summary>Finalizes a instance of the AffiliationLookup class.</summary>
         virtual ~AffiliationLookup();
 
+        /** Unit Registrations */
         /// <summary>Gets the count of unit registrations.</summary>
         uint8_t unitRegSize() const { return m_unitRegTable.size(); }
         /// <summary>Gets the unit registration table.</summary>
@@ -123,6 +52,7 @@ namespace lookups
         /// <summary>Helper to release unit registrations.</summary>
         virtual void clearUnitReg();
 
+        /** Group Affiliations */
         /// <summary>Gets the count of affiliations.</summary>
         uint8_t grpAffSize() const { return m_grpAffTable.size(); }
         /// <summary>Gets the group affiliation table.</summary>
@@ -138,6 +68,7 @@ namespace lookups
         /// <summary>Helper to release group affiliations.</summary>
         virtual std::vector<uint32_t> clearGroupAff(uint32_t dstId, bool releaseAll);
 
+        /** Channel Grants */
         /// <summary>Gets the count of grants.</summary>
         uint8_t grantSize() const { return m_grantChTable.size(); }
         /// <summary>Gets the grant table.</summary>
@@ -162,22 +93,11 @@ namespace lookups
         virtual uint32_t getGrantedBySrcId(uint32_t srcId);
         /// <summary>Helper to get the source ID granted for the given destination ID.</summary>
         virtual uint32_t getGrantedSrcId(uint32_t dstId);
-
-        /// <summary>Helper to set RF channel data.</summary>
-        void setRFChData(const std::unordered_map<uint32_t, VoiceChData>& chData) { m_rfChDataTable = chData; }
-        /// <summary>Helper to get RF channel data.</summary>
-        VoiceChData getRFChData(uint32_t chNo) const;
-
-        /// <summary>Helper to add a RF channel.</summary>
-        void addRFCh(uint32_t chNo) { m_rfChTable.push_back(chNo); }
-        /// <summary>Helper to remove a RF channel.</summary>
-        void removeRFCh(uint32_t chNo) { m_rfChTable.push_back(chNo); }
-        /// <summary>Gets the count of RF channels.</summary>
-        uint8_t getRFChCnt() const { return m_rfChTable.size(); }
-        /// <summary>Helper to determine if there are any RF channels available..</summary>
-        bool isRFChAvailable() const { return !m_rfChTable.empty(); }
         /// <summary>Gets the count of granted RF channels.</summary>
         uint8_t getGrantedRFChCnt() const { return m_rfGrantChCnt; }
+
+        /// <summary>Gets the RF channel lookup class.</summary>
+        ChannelLookup* rfCh() const { return m_chLookup; }
 
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
@@ -186,8 +106,6 @@ namespace lookups
         void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
 
     protected:
-        std::vector<uint32_t> m_rfChTable;
-        std::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
         uint8_t m_rfGrantChCnt;
 
         std::vector<uint32_t> m_unitRegTable;
@@ -203,6 +121,7 @@ namespace lookups
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
 
         std::string m_name;
+        ChannelLookup* m_chLookup;
 
         bool m_verbose;
     };
