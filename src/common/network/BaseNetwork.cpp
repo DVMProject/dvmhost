@@ -251,6 +251,30 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
 }
 
 /// <summary>
+/// Writes a complete update of the peer's voice channel list to the network.
+/// </summary>
+/// <param name="affs"></param>
+bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[4U + (peers.size() * 4U)];
+    ::memset(buffer, 0x00U, 4U + (peers.size() * 4U));
+
+    __SET_UINT32(peers.size(), buffer, 0U);
+
+    // write peer IDs to active TGID payload
+    uint32_t offs = 4U;
+    for (auto it : peers) {
+        __SET_UINT32(it, buffer, offs);
+        offs += 4U;
+    }
+
+    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), 0U, 0U);
+}
+
+/// <summary>
 /// Resets the DMR ring buffer for the given slot.
 /// </summary>
 /// <param name="slotNo">DMR slot ring buffer to reset.</param>

@@ -109,6 +109,7 @@ namespace network
     const uint8_t   NET_ANNC_SUBFUNC_UNIT_REG = 0x01U;                          // Announce Unit Registration
     const uint8_t   NET_ANNC_SUBFUNC_UNIT_DEREG = 0x02U;                        // Announce Unit Deregistration
     const uint8_t   NET_ANNC_SUBFUNC_AFFILS = 0x90U;                            // Update All Affiliations
+    const uint8_t   NET_ANNC_SUBFUNC_SITE_VC = 0x9AU;                           // Announce Site VCs
 
     // ---------------------------------------------------------------------------
     //  Network Peer Connection Status
@@ -183,6 +184,8 @@ namespace network
         virtual bool announceUnitDeregistration(uint32_t srcId);
         /// <summary>Writes a complete update of the peer affiliation list to the network.</summary>
         virtual bool announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs);
+        /// <summary>Writes a complete update of the peer's voice channel list to the network.</summary>
+        virtual bool announceSiteVCs(const std::vector<uint32_t> peers);
 
         /// <summary>Updates the timer by the passed number of milliseconds.</summary>
         virtual void clock(uint32_t ms) = 0;

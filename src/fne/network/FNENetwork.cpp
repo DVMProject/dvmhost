@@ -95,6 +95,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_callInProgress(false),
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
+    m_allowConvSiteAffOverride(false),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
     m_influxServerPort(8086U),
@@ -134,6 +135,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
+    m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_softConnLimit = conf["connectionLimit"].as<uint32_t>(MAX_HARD_CONN_CAP);
 
     if (m_softConnLimit > MAX_HARD_CONN_CAP) {
@@ -164,6 +166,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogWarning(LOG_NET, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
         }
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
         if (m_enableInfluxDB) {
             LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());
@@ -682,6 +685,17 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (peerConfig["externalPeer"].is<bool>()) {
                                             bool external = peerConfig["externalPeer"].get<bool>();
                                             connection->isExternalPeer(external);
+                                            if (external)
+                                                LogInfoEx(LOG_NET, "PEER %u reports external peer", peerId);
+                                        }
+
+                                        if (peerConfig["conventionalPeer"].is<bool>()) {
+                                            if (network->m_allowConvSiteAffOverride) {
+                                                bool convPeer = peerConfig["conventionalPeer"].get<bool>();
+                                                connection->isConventionalPeer(convPeer);
+                                                if (convPeer)
+                                                    LogInfoEx(LOG_NET, "PEER %u reports conventional peer", peerId);
+                                            }
                                         }
 
                                         if (peerConfig["software"].is<std::string>()) {
@@ -1010,6 +1024,35 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         }
                                         LogMessage(LOG_NET, "PEER %u announced %u affiliations", peerId, len);
                                     }
+                                }
+                                else {
+                                    network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                }
+                            }
+                        }
+                    }
+                    else if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_SITE_VC) {     // Announce Site VCs
+                        if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                            FNEPeerConnection* connection = network->m_peers[peerId];
+                            if (connection != nullptr) {
+                                std::string ip = udp::Socket::address(req->address);
+
+                                // validate peer (simple validation really)
+                                if (connection->connected() && connection->address() == ip) {
+                                    // update peer association
+                                    uint32_t len = __GET_UINT32(req->buffer, 0U);
+                                    uint32_t offs = 4U;
+                                    for (uint32_t i = 0; i < len; i++) {
+                                        uint32_t vcPeerId = __GET_UINT32(req->buffer, offs);
+                                        if (vcPeerId > 0 && (network->m_peers.find(vcPeerId) != network->m_peers.end())) {
+                                            FNEPeerConnection* vcConnection = network->m_peers[vcPeerId];
+                                            if (vcConnection != nullptr) {
+                                                vcConnection->ccPeerId(peerId);
+                                            }
+                                        }
+                                        offs += 4U;
+                                    }
+                                    LogMessage(LOG_NET, "PEER %u announced %u VCs", peerId, len);
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);

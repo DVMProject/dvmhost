@@ -734,6 +734,11 @@ bool Host::createNetwork()
         restApiEnableSSL = false;
     }
 
+    yaml::Node protocolConf = m_conf["protocols"];
+    bool dmrCtrlChannel = protocolConf["dmr"]["control"]["dedicated"].as<bool>(false);
+    bool p25CtrlChannel = protocolConf["p25"]["control"]["dedicated"].as<bool>(false);
+    bool nxdnCtrlChannel = protocolConf["nxdn"]["control"]["dedicated"].as<bool>(false);
+
     IdenTable entry = m_idenTable->find(m_channelId);
 
     LogInfo("Network Parameters");
@@ -776,21 +781,23 @@ bool Host::createNetwork()
 
     // initialize networking
     if (netEnable) {
-        m_network = new Network(
-            address, port, local, 
-            id, password, m_duplex, 
-            debug, m_dmrEnabled, m_p25Enabled, 
-            m_nxdnEnabled, slot1, slot2, 
-            allowActivityTransfer, allowDiagnosticTransfer, updateLookup,
-            saveLookup
-        );
+        m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, slot1, slot2, 
+            allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
 
         m_network->setLookups(m_ridLookup, m_tidLookup);
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
             m_power, m_latitude, m_longitude, m_height, m_location);
+
         if (restApiEnable) {
             m_network->setRESTAPIData(restApiPassword, restApiPort);
         }
+
+        if (!dmrCtrlChannel && !p25CtrlChannel && !nxdnCtrlChannel) {
+            if (m_controlChData.address().empty() && m_controlChData.port() == 0) {
+                m_network->setConventional(true);
+            }
+        }
+
         if (encrypted) {
             m_network->setPresharedKey(presharedKey);
         }

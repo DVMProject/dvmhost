@@ -126,6 +126,8 @@ private:
     void restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
+    void restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
     void restAPI_PutReleaseGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_PutTouchGrant(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);

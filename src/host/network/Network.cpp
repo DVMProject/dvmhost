@@ -82,6 +82,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_location(),
     m_restApiPassword(),
     m_restApiPort(0),
+    m_conventional(false),
     m_remotePeerId(0U)
 {
     assert(!address.empty());
@@ -811,6 +812,7 @@ bool Network::writeConfig()
     rcon["port"].set<uint16_t>(m_restApiPort);                                      // REST API Port
     config["rcon"].set<json::object>(rcon);
 
+    config["conventionalPeer"].set<bool>(m_conventional);                           // Conventional Peer Marker
     config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);

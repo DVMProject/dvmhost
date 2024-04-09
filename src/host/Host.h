@@ -109,6 +109,7 @@ private:
 
     std::vector<uint32_t> m_voiceChNo;
     std::unordered_map<uint32_t, lookups::VoiceChData> m_voiceChData;
+    std::unordered_map<uint32_t, uint32_t> m_voiceChPeerId;
     lookups::VoiceChData m_controlChData;
 
     lookups::IdenTableLookup* m_idenTable;

@@ -423,13 +423,34 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             }
         }
 
+        FNEPeerConnection* connection = nullptr;
+        if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+            connection = m_network->m_peers[peerId];
+        }
+
+        // is this peer a conventional peer?
+        if (m_network->m_allowConvSiteAffOverride) {
+            if (connection != nullptr) {
+                if (connection->isConventionalPeer()) {
+                    external = true; // we'll just set the external flag to disable the affiliation check
+                                     // for conventional peers
+                }
+            }
+        }
+
         // is this a TG that requires affiliations to repeat?
         // NOTE: external peers *always* repeat traffic regardless of affiliation
         if (tg.config().affiliated() && !external) {
+            uint32_t lookupPeerId = peerId;
+            if (connection != nullptr) {
+                if (connection->ccPeerId() > 0U)
+                    lookupPeerId = connection->ccPeerId();
+            }
+
             // check the affiliations for this peer to see if we can repeat traffic
-            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
             if (aff == nullptr) {
-                LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId);
+                LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
                 return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
             }
             else {

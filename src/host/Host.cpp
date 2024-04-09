@@ -20,6 +20,7 @@
 #include "common/Thread.h"
 #include "common/ThreadFunc.h"
 #include "common/Utils.h"
+#include "remote/RESTClient.h"
 #include "host/Host.h"
 #include "ActivityLog.h"
 #include "HostMain.h"
@@ -87,6 +88,7 @@ Host::Host(const std::string& confFile) :
     m_channelNo(0U),
     m_voiceChNo(),
     m_voiceChData(),
+    m_voiceChPeerId(),
     m_controlChData(),
     m_idenTable(nullptr),
     m_ridLookup(nullptr),
@@ -895,6 +897,10 @@ int Host::run()
     nxdnFrameWriteThread.run();
     nxdnFrameWriteThread.setName("nxdn:frame-w");
 
+    Timer ccRegisterTimer(1000U, 120U);
+    ccRegisterTimer.start();
+    bool hasInitialRegistered = false;
+
     // main execution loop
     while (!killed) {
         if (m_modem->hasLockout() && m_state != HOST_STATE_LOCKOUT)
@@ -1043,6 +1049,47 @@ int Host::run()
         if (nxdn != nullptr)
             nxdn->clock(ms);
 
+        ccRegisterTimer.clock(ms);
+
+        // VC -> CC presence registration
+        if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr) {
+            if ((ccRegisterTimer.isRunning() && ccRegisterTimer.hasExpired()) || !hasInitialRegistered) {
+                LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", m_controlChData.address().c_str(), m_controlChData.port(), m_network->getPeerId());
+                hasInitialRegistered = true;
+
+                // callback REST API to release the granted TG on the specified control channel
+                json::object req = json::object();
+                req["channelNo"].set<uint32_t>(m_channelNo);
+                uint32_t peerId = m_network->getPeerId();
+                req["peerId"].set<uint32_t>(peerId);
+
+                int ret = RESTClient::send(m_controlChData.address(), m_controlChData.port(), m_controlChData.password(),
+                    HTTP_PUT, PUT_REGISTER_CC_VC, req, m_controlChData.ssl(), REST_QUICK_WAIT, false);
+                if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
+                    ::LogError(LOG_HOST, "failed to notify the CC %s:%u of VC registration", m_controlChData.address().c_str(), m_controlChData.port());
+                }
+
+                ccRegisterTimer.start();
+            }
+        }
+
+        // CC -> FNE registered VC announcement
+        if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
+            if (ccRegisterTimer.isRunning() && ccRegisterTimer.hasExpired()) {
+                if (m_network != nullptr && m_voiceChPeerId.size() > 0) {
+                    LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", m_network->getPeerId());
+
+                    std::vector<uint32_t> peers;
+                    for (auto it : m_voiceChPeerId) {
+                        peers.push_back(it.second);
+                    }
+
+                    m_network->announceSiteVCs(peers);
+                }
+                ccRegisterTimer.start();
+            }
+        }
+
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --
         // ------------------------------------------------------
@@ -1060,7 +1107,7 @@ int Host::run()
                     m_nxdnBcastDurationTimer.stop();
                 }
 
-                LogDebug(LOG_HOST, "CW, start transmitting");
+                LogMessage(LOG_HOST, "CW, start transmitting");
                 m_isTxCW = true;
                 std::lock_guard<std::mutex> lock(clockingMutex);
 
@@ -1081,7 +1128,7 @@ int Host::run()
                     m_modem->clock(ms);
 
                     if (!first && !m_modem->hasTX()) {
-                        LogDebug(LOG_HOST, "CW, finished transmitting");
+                        LogMessage(LOG_HOST, "CW, finished transmitting");
                         break;
                     }
 
@@ -1131,10 +1178,10 @@ int Host::run()
 
                     g_fireDMRBeacon = false;
                     if (m_dmrTSCCData) {
-                        LogDebug(LOG_HOST, "DMR, start CC broadcast");
+                        LogMessage(LOG_HOST, "DMR, start CC broadcast");
                     }
                     else {
-                        LogDebug(LOG_HOST, "DMR, roaming beacon burst");
+                        LogMessage(LOG_HOST, "DMR, roaming beacon burst");
                     }
                     dmrBeaconIntervalTimer.start();
                     m_dmrBeaconDurationTimer.start();

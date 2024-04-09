@@ -82,6 +82,7 @@ namespace network
         /// <summary>Initializes a new instance of the FNEPeerConnection class.</summary>
         FNEPeerConnection() :
             m_id(0U),
+            m_ccPeerId(0U),
             m_currStreamId(0U),
             m_socketStorage(),
             m_sockStorageLen(0U),
@@ -106,6 +107,7 @@ namespace network
         /// <param name="sockStorageLen"></param>
         FNEPeerConnection(uint32_t id, sockaddr_storage& socketStorage, uint32_t sockStorageLen) :
             m_id(id),
+            m_ccPeerId(0U),
             m_currStreamId(0U),
             m_socketStorage(socketStorage),
             m_sockStorageLen(sockStorageLen),
@@ -131,6 +133,9 @@ namespace network
     public:
         /// <summary>Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, id);
+
+        /// <summary>Control Channel Peer ID.</summary>
+        __PROPERTY_PLAIN(uint32_t, ccPeerId);
 
         /// <summary>Current Stream ID.</summary>
         __PROPERTY_PLAIN(uint32_t, currStreamId);
@@ -163,6 +168,9 @@ namespace network
 
         /// <summary>Flag indicating this connection is from an external peer.</summary>
         __PROPERTY_PLAIN(bool, isExternalPeer);
+        /// <summary>Flag indicating this connection is from an conventional peer.</summary>
+        /// <remarks>This flag is specifically used to determine whether affiliation based checking is performed.</summary>
+        __PROPERTY_PLAIN(bool, isConventionalPeer);
 
         /// <summary>JSON objecting containing peer configuration information.</summary>
         __PROPERTY_PLAIN(json::object, config);
@@ -293,6 +301,7 @@ namespace network
 
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
+        bool m_allowConvSiteAffOverride;
 
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;

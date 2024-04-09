@@ -75,6 +75,8 @@ master:
     disallowAdjStsBcast: false
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
     disallowExtAdjStsBcast: true
+    # Flag indicating whether or not a conventional site can override affiliation rules.
+    allowConvSiteAffOverride: true
 
     # Flag indicating whether or not InfluxDB logging and metrics recording is enabled.
     enableInflux: false

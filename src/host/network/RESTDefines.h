@@ -51,6 +51,7 @@
 #define GET_RELEASE_GRNTS               "/release-grants"
 #define GET_RELEASE_AFFS                "/release-affs"
 
+#define PUT_REGISTER_CC_VC              "/register-cc-vc"
 #define PUT_RELEASE_TG                  "/release-tg-grant"
 #define PUT_TOUCH_TG                    "/touch-tg-grant"
 

@@ -305,6 +305,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(GET_RELEASE_GRNTS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseGrants, this));
     m_dispatcher.match(GET_RELEASE_AFFS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseAffs, this));
 
+    m_dispatcher.match(PUT_REGISTER_CC_VC).put(REST_API_BIND(RESTAPI::restAPI_PutRegisterCCVC, this));
     m_dispatcher.match(PUT_RELEASE_TG).put(REST_API_BIND(RESTAPI::restAPI_PutReleaseGrant, this));
     m_dispatcher.match(PUT_TOUCH_TG).put(REST_API_BIND(RESTAPI::restAPI_PutTouchGrant, this));
 
@@ -1143,6 +1144,56 @@ void RESTAPI::restAPI_GetReleaseAffs(const HTTPPayload& request, HTTPPayload& re
 
     if (m_nxdn != nullptr) {
         m_nxdn->affiliations().clearGroupAff(0, true);
+    }
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!m_host->m_dmrTSCCData && !m_host->m_p25CCData && !m_host->m_nxdnCCData) {
+        errorPayload(reply, "Host is not a control channel, cannot register voice channel");
+        return;
+    }
+
+    // validate channelNo is a string within the JSON blob
+    if (!req["channelNo"].is<int>()) {
+        errorPayload(reply, "channelNo was not a valid integer");
+        return;
+    }
+
+    uint32_t channelNo = req["channelNo"].get<uint32_t>();
+
+    // validate channelNo is a string within the JSON blob
+    if (!req["peerId"].is<int>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    // LogDebug(LOG_REST, "restAPI_PutRegisterCCVC(): callback, channelNo = %u, peerId = %u", channelNo, peerId);
+
+    if (m_host->m_voiceChData.find(channelNo) != m_host->m_voiceChData.end()) {
+        ::lookups::VoiceChData voiceCh = m_host->m_voiceChData[channelNo];
+
+        m_host->m_voiceChPeerId[channelNo] = peerId;
+        LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
     }
 }
 
