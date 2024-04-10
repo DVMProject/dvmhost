@@ -79,12 +79,13 @@ void MBT_OSP_AUTH_DMD::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 
     dataHeader.setBlocksToFollow(2U);
 
-    dataHeader.setAMBTField8((m_netId >> 12) & 0xFFU);                              // Network ID (b19-12)
-    dataHeader.setAMBTField9((m_netId >> 4) & 0xFFU);                               // Network ID (b11-b4)
+    dataHeader.setAMBTField8((m_siteData.netId() >> 12) & 0xFFU);                   // Network ID (b19-12)
+    dataHeader.setAMBTField9((m_siteData.netId() >> 4) & 0xFFU);                    // Network ID (b11-b4)
 
     /** Block 1 */
-    pduUserData[0U] = ((m_netId & 0x0FU) << 4) + ((m_sysId >> 8) & 0xFFU);          // Network ID (b3-b0) + System ID (b11-b8)
-    pduUserData[1U] = (m_sysId & 0xFFU);                                            // System ID (b7-b0)
+    pduUserData[0U] = ((m_siteData.netId() & 0x0FU) << 4) +                         // Network ID (b3-b0)
+        ((m_siteData.sysId() >> 8) & 0xFFU);                                        // System ID (b11-b8)
+    pduUserData[1U] = (m_siteData.sysId() & 0xFFU);                                 // System ID (b7-b0)
 
     __SET_UINT16(m_dstId, pduUserData, 2U);                                         // Target Radio Address
 
