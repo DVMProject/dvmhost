@@ -456,6 +456,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         m_netDataBlockCnt = 0U;
         m_netPDUCount = 0U;
 
+        ::memset(m_netPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+
         m_p25->m_netState = RS_NET_DATA;
 
         uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
@@ -872,7 +874,6 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 /// <param name="pdu"></param>
 /// <param name="bitlength"></param>
 /// <param name="noNulls"></param>
-/// <remarks>This simply takes data packed into m_rfPDU and transmits it.</remarks>
 void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 {
     assert(pdu != nullptr);
@@ -983,10 +984,10 @@ void Data::writeNet_PDU_Buffered()
                     m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netData[i].getSAP(), m_netData[i].getLLId());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_netData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -997,10 +998,10 @@ void Data::writeNet_PDU_Buffered()
                     m_netData[i].getLastBlock());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_netData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1079,10 +1080,10 @@ void Data::writeRF_PDU_Buffered()
                     m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1093,10 +1094,10 @@ void Data::writeRF_PDU_Buffered()
                     m_rfData[i].getLastBlock());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
