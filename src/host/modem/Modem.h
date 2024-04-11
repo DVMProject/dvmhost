@@ -514,7 +514,7 @@ namespace modem
         void printDebug(const uint8_t* buffer, uint16_t len);
 
         /// <summary>Helper to get the raw response packet from modem.</summary>
-        RESP_TYPE_DVM getResponse(bool noReportInvalid = false);
+        RESP_TYPE_DVM getResponse();
 
         /// <summary>Helper to convert a serial opcode to a string.</summary>
         std::string cmdToString(uint8_t opcode);

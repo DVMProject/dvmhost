@@ -1806,7 +1806,7 @@ bool Modem::getFirmwareVersion()
 
         for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
             Thread::sleep(10U);
-            RESP_TYPE_DVM resp = getResponse(true);
+            RESP_TYPE_DVM resp = getResponse();
 
             if (resp == RTM_ERROR)
                 continue;
@@ -2146,7 +2146,7 @@ bool Modem::readFlash()
 
         for (uint32_t count = 0U; count < MAX_RESPONSES; count++) {
             Thread::sleep(10U);
-            RESP_TYPE_DVM resp = getResponse(true);
+            RESP_TYPE_DVM resp = getResponse();
 
             if (resp == RTM_ERROR)
                 continue;
@@ -2374,9 +2374,8 @@ void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 /// <summary>
 /// Helper to get the raw response packet from modem.
 /// </summary>
-/// <param name="noReportInvalid">Ignores invalid frame start and does not report as error.</param>
 /// <returns>Response type from modem.</returns>
-RESP_TYPE_DVM Modem::getResponse(bool noReportInvalid)
+RESP_TYPE_DVM Modem::getResponse()
 {
     m_rspDoubleLength = false;
 
@@ -2398,11 +2397,7 @@ RESP_TYPE_DVM Modem::getResponse(bool noReportInvalid)
 
         if (m_buffer[0U] != DVM_SHORT_FRAME_START &&
             m_buffer[0U] != DVM_LONG_FRAME_START) {
-            if (!noReportInvalid) {
-                LogError(LOG_MODEM, "Modem::getResponse(), illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
-                Utils::dump(1U, "Modem Invalid Frame", m_buffer, 250U);
-            }
-
+            //LogError(LOG_MODEM, "Modem::getResponse(), illegal response, first byte not a frame start; byte = %02X", m_buffer[0U]);
             ::memset(m_buffer, 0x00U, BUFFER_LENGTH);
             return RTM_ERROR;
         }

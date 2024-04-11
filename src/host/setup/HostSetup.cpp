@@ -362,9 +362,20 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
     }
 
     if (rspType == RTM_OK && len > 0) {
-        switch (buffer[2U]) {
+        uint8_t cmdOffset = 2U;
+        if (rspDblLen) {
+            cmdOffset = 3U;
+        }
+
+        switch (buffer[cmdOffset]) {
+        /** Calibration */
         case CMD_CAL_DATA:
         {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_CAL_DATA double length?; len = %u", len);
+                break;
+            }
+
             bool inverted = (buffer[3U] == 0x80U);
             short high = buffer[4U] << 8 | buffer[5U];
             short low = buffer[6U] << 8 | buffer[7U];
@@ -375,6 +386,11 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         break;
         case CMD_RSSI_DATA:
         {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_RSSI_DATA double length?; len = %u", len);
+                break;
+            }
+
             uint16_t max = buffer[3U] << 8 | buffer[4U];
             uint16_t min = buffer[5U] << 8 | buffer[6U];
             uint16_t ave = buffer[7U] << 8 | buffer[8U];
@@ -382,14 +398,27 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         }
         break;
 
+        /** Digital Mobile Radio */
         case CMD_DMR_DATA1:
         case CMD_DMR_DATA2:
+        {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_DMR_DATA double length?; len = %u", len);
+                break;
+            }
+
             processDMRBER(buffer + 4U, buffer[3]);
-            break;
+        }
+        break;
 
         case CMD_DMR_LOST1:
         case CMD_DMR_LOST2:
         {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_DMR_LOST double length?; len = %u", len);
+                break;
+            }
+
             LogMessage(LOG_CAL, "DMR Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_dmrEnabled) {
@@ -402,12 +431,18 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         }
         break;
 
+        /** Project 25 */
         case CMD_P25_DATA:
             processP25BER(buffer + 4U);
             break;
 
         case CMD_P25_LOST:
         {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_P25_LOST double length?; len = %u", len);
+                break;
+            }
+
             LogMessage(LOG_CAL, "P25 Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_p25Enabled) {
@@ -420,12 +455,25 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         }
         break;
 
+        /** Next Generation Digital Narrowband */
         case CMD_NXDN_DATA:
+        {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_NXDN_DATA double length?; len = %u", len);
+                break;
+            }
+
             processNXDNBER(buffer + 4U);
-            break;
+        }
+        break;
 
         case CMD_NXDN_LOST:
         {
+            if (rspDblLen) {
+                LogError(LOG_MODEM, "CMD_NXDN_DATA double length?; len = %u", len);
+                break;
+            }
+
             LogMessage(LOG_CAL, "NXDN Transmission lost, total frames: %d, bits: %d, uncorrectable frames: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", m_berFrames, m_berBits, m_berUncorrectable, m_berUndecodableLC, m_berErrs, float(m_berErrs * 100U) / float(m_berBits));
 
             if (m_nxdnEnabled) {
@@ -438,6 +486,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
         }
         break;
 
+        /** General */
         case CMD_GET_STATUS:
         {
             m_isHotspot = (buffer[3U] & 0x01U) == 0x01U;

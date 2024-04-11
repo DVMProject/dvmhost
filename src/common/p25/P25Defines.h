@@ -41,7 +41,7 @@ namespace p25
     const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES = 90U;
     const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BITS = P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 8U;
 
-    const uint32_t  P25_PDU_FRAME_LENGTH_BYTES = 500U; // this will unfortunately truncate full length minimum PDUs
+    const uint32_t  P25_PDU_FRAME_LENGTH_BYTES = 512U;
     const uint32_t  P25_PDU_FRAME_LENGTH_BITS = P25_PDU_FRAME_LENGTH_BYTES * 8U;
 
     const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
