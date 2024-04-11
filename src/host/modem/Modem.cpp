@@ -1460,7 +1460,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
     assert(length > 0U);
 
     if (m_p25Enabled) {
-        const uint8_t MAX_LENGTH = 250U;
+        const uint16_t MAX_LENGTH = 520U;
 
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;
@@ -1472,11 +1472,19 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
 
         uint8_t buffer[MAX_LENGTH];
 
-        buffer[0U] = DVM_SHORT_FRAME_START;
-        buffer[1U] = length + 2U;
-        buffer[2U] = CMD_P25_DATA;
-
-        ::memcpy(buffer + 3U, data + 1U, length - 1U);
+        if (length < 252U) {
+            buffer[0U] = DVM_SHORT_FRAME_START;
+            buffer[1U] = length + 2U;
+            buffer[2U] = CMD_P25_DATA;
+            ::memcpy(buffer + 3U, data + 1U, length - 1U);
+        } else {
+            length += 3U;
+            buffer[0U] = DVM_LONG_FRAME_START;
+            buffer[1U] = (length >> 8U) & 0xFFU;
+            buffer[2U] = (length & 0xFFU);
+            buffer[3U] = CMD_P25_DATA;
+            ::memcpy(buffer + 4U, data + 1U, length - 1U);
+        }
 
         uint8_t len = length + 2U;
 
