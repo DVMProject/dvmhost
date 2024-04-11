@@ -43,7 +43,7 @@ void Host::interruptP25Control(p25::Control* control)
 /// <param name="afterReadCallback"></param>
 void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterReadCallback)
 {
-    uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[p25::P25_PDU_FRAME_LENGTH_BYTES * 2U];
 
     // read P25 frames from modem, and if there are frames
     // write those frames to the P25 controller

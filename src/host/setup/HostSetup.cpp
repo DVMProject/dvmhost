@@ -339,7 +339,7 @@ bool HostSetup::portModemHandler(Modem* modem, uint32_t ms, RESP_TYPE_DVM rspTyp
 
                     uint8_t buffer[250U];
 
-                    buffer[0U] = DVM_FRAME_START;
+                    buffer[0U] = DVM_SHORT_FRAME_START;
                     buffer[1U] = dataLen + 2U;
                     buffer[2U] = CMD_P25_DATA;
 
@@ -870,7 +870,7 @@ bool HostSetup::setTransmit()
 
     uint8_t buffer[50U];
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 4U;
     buffer[2U] = CMD_CAL_DATA;
     buffer[3U] = m_transmit ? 0x01U : 0x00U;
@@ -1236,8 +1236,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
         uint8_t pduBuffer[P25_LDU_FRAME_LENGTH_BYTES];
         uint32_t bits = P25Utils::decode(buffer, pduBuffer, 0, P25_LDU_FRAME_LENGTH_BITS);
 
-        uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
-        ::memset(rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        uint8_t* rfPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+        ::memset(rfPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
         uint32_t rfPDUBits = 0U;
 
         for (uint32_t i = 0U; i < bits; i++, rfPDUBits++) {
@@ -1481,7 +1481,7 @@ bool HostSetup::writeConfig(uint8_t modeOverride)
     ::memset(buffer, 0x00U, 25U);
     uint8_t lengthToWrite = 17U;
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[2U] = CMD_SET_CONFIG;
 
     buffer[3U] = 0x00U;
@@ -1591,7 +1591,7 @@ bool HostSetup::writeRFParams()
     ::memset(buffer, 0x00U, 22U);
     uint8_t lengthToWrite = 18U;
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[2U] = CMD_SET_RFPARAMS;
 
     buffer[3U] = 0x00U;
@@ -1661,7 +1661,7 @@ bool HostSetup::writeSymbolAdjust()
     ::memset(buffer, 0x00U, 20U);
     uint8_t lengthToWrite = 7U;
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[2U] = CMD_SET_SYMLVLADJ;
 
     m_conf["system"]["modem"]["repeater"]["dmrSymLvl3Adj"] = __INT_STR(m_modem->m_dmrSymLevel3Adj);
@@ -1705,7 +1705,7 @@ bool HostSetup::writeFifoLength()
     uint8_t buffer[9U];
     ::memset(buffer, 0x00U, 9U);
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 9U;
     buffer[2U] = CMD_SET_BUFFERS;
 
@@ -1750,7 +1750,7 @@ bool HostSetup::readFlash()
     uint8_t buffer[3U];
     ::memset(buffer, 0x00U, 3U);
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 3U;
     buffer[2U] = CMD_FLSH_READ;
 
@@ -1892,7 +1892,7 @@ bool HostSetup::eraseFlash()
     uint8_t buffer[249U];
     ::memset(buffer, 0x00U, 249U);
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 249U;
     buffer[2U] = CMD_FLSH_WRITE;
 
@@ -1926,7 +1926,7 @@ bool HostSetup::writeFlash()
     uint8_t buffer[249U];
     ::memset(buffer, 0x00U, 249U);
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 249U;
     buffer[2U] = CMD_FLSH_WRITE;
 
@@ -2070,7 +2070,7 @@ void HostSetup::getStatus()
 {
     uint8_t buffer[50U];
 
-    buffer[0U] = DVM_FRAME_START;
+    buffer[0U] = DVM_SHORT_FRAME_START;
     buffer[1U] = 4U;
     buffer[2U] = CMD_GET_STATUS;
 

@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *   Copyright (C) 2021 Nat Moore
 *
 */
@@ -211,7 +211,8 @@ namespace modem
         ADF_GAIN_HIGH = 3U
     };
 
-    const uint8_t DVM_FRAME_START = 0xFEU;
+    const uint8_t DVM_SHORT_FRAME_START = 0xFEU;
+    const uint8_t DVM_LONG_FRAME_START = 0xFDU;
 
     const uint8_t DVM_CONF_AREA_VER = 0x02U;
     const uint8_t DVM_CONF_AREA_LEN = 246U;

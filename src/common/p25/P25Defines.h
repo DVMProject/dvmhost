@@ -41,6 +41,9 @@ namespace p25
     const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES = 90U;
     const uint32_t  P25_TSDU_TRIPLE_FRAME_LENGTH_BITS = P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES * 8U;
 
+    const uint32_t  P25_PDU_FRAME_LENGTH_BYTES = 500U; // this will unfortunately truncate full length minimum PDUs
+    const uint32_t  P25_PDU_FRAME_LENGTH_BITS = P25_PDU_FRAME_LENGTH_BYTES * 8U;
+
     const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
     const uint32_t  P25_TDULC_FRAME_LENGTH_BITS = P25_TDULC_FRAME_LENGTH_BYTES * 8U;
 
@@ -68,8 +71,8 @@ namespace p25
     const uint32_t  P25_TSBK_FEC_LENGTH_BITS = P25_TSBK_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
     const uint32_t  P25_TSBK_LENGTH_BYTES = 12U;
 
-    const uint32_t  P25_MAX_PDU_COUNT = 32U;
-    const uint32_t  P25_MAX_PDU_LENGTH = 512U;
+    const uint32_t  P25_MAX_PDU_BLOCKS = 42U;
+
     const uint32_t  P25_PDU_HEADER_LENGTH_BYTES = 12U;
     const uint32_t  P25_PDU_CONFIRMED_LENGTH_BYTES = 18U;
     const uint32_t  P25_PDU_CONFIRMED_DATA_LENGTH_BYTES = 16U;
