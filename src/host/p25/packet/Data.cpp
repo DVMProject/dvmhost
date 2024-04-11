@@ -100,12 +100,8 @@ bool Data::process(uint8_t* data, uint32_t len)
         uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
 
-         Utils::dump(2U, "* !!! P25_DUID_PDU - data", data + 2U, len - 2U);
-
         uint32_t bits = P25Utils::decode(data + 2U, buffer, start, start + P25_PDU_FRAME_LENGTH_BITS);
         m_rfPDUBits = Utils::getBits(buffer, m_rfPDU, 0U, bits);
-
-         Utils::dump(2U, "* !!! P25_DUID_PDU - m_rfPDU", m_rfPDU, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
         uint32_t offset = P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS;
         if (m_rfPDUCount == 0U) {
@@ -885,8 +881,6 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
     uint8_t data[P25_PDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
-     Utils::dump(2U, "!!! *Raw PDU Frame Data - pdu", pdu, bitLength / 8U);
-
     // Add the data
     uint32_t newBitLength = P25Utils::encode(pdu, data + 2U, bitLength);
     uint32_t newByteLength = newBitLength / 8U;
@@ -904,8 +898,6 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 
     // Add idle bits
     P25Utils::addIdleBits(data + 2U, newBitLength, true, true);
-
-     Utils::dump(2U, "!!! *P25_DUID_PDU - data", data + 2U, newByteLength);
 
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;

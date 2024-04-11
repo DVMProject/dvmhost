@@ -454,6 +454,22 @@ bool Host::createModem()
     uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
     uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
 
+    // clamp fifo sizes
+    if (dmrFifoLength < DMR_TX_BUFFER_LEN) {
+        LogWarning(LOG_HOST, "DMR FIFO size must be greater then %u bytes, defaulting to %u bytes!", DMR_TX_BUFFER_LEN, DMR_TX_BUFFER_LEN);
+        dmrFifoLength = DMR_TX_BUFFER_LEN;
+    }
+
+    if (p25FifoLength < 442U/*P25_TX_BUFFER_LEN*/) {
+        LogWarning(LOG_HOST, "P25 FIFO size must be greater then %u bytes, defaulting to %u bytes!", 442U/*P25_TX_BUFFER_LEN*/, 442U/*P25_TX_BUFFER_LEN*/);
+        p25FifoLength = 442U/*P25_TX_BUFFER_LEN*/;
+    }
+
+    if (nxdnFifoLength < NXDN_TX_BUFFER_LEN) {
+        LogWarning(LOG_HOST, "NXDN FIFO size must be greater then %u frames, defaulting to %u frames!", NXDN_TX_BUFFER_LEN, NXDN_TX_BUFFER_LEN);
+        nxdnFifoLength = NXDN_TX_BUFFER_LEN;
+    }
+
     float rxLevel = modemConf["rxLevel"].as<float>(50.0F);
     float cwIdTXLevel = modemConf["cwIdTxLevel"].as<float>(50.0F);
     float dmrTXLevel = modemConf["dmrTxLevel"].as<float>(50.0F);
