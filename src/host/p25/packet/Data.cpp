@@ -250,10 +250,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
 
                                 if (m_dumpPDUData) {
-                                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                     m_rfData[i].getData(dataBlock);
-                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                 }
                             }
 
@@ -272,10 +272,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     m_rfData[i].getLastBlock());
 
                                 if (m_dumpPDUData) {
-                                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                     m_rfData[i].getData(dataBlock);
-                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                 }
                             }
                         }
@@ -1191,7 +1191,7 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     if (ackClass == PDU_ACK_CLASS_ACK && ackType != PDU_ACK_TYPE_ACK)
         return;
 
-    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    uint32_t bitLength = (1U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     uint8_t data[bitLength / 8U];
