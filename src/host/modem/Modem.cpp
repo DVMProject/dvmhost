@@ -1044,6 +1044,13 @@ uint32_t Modem::readP25Frame(uint8_t* data)
 
     uint16_t len = 0U;
     len = (length[0U] << 8) + length[1U];
+
+    // this ensures we never get in a situation where we have length stuck on the queue
+    if (m_rxP25Queue.dataSize() == 2U && len > m_rxP25Queue.dataSize()) {
+        m_rxP25Queue.get(length, 2U); // ensure we pop the length off
+        return 0U;
+    }
+
     if (m_rxP25Queue.dataSize() >= len) {
         m_rxP25Queue.get(length, 2U); // ensure we pop the length off
         m_rxP25Queue.get(data, len);
