@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -48,22 +48,6 @@ const uint8_t CRC8_TABLE[] = {
     0xB2, 0xB5, 0xBC, 0xBB, 0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,
     0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF,
     0xFA, 0xFD, 0xF4, 0xF3, 0x01 };
-
-const uint16_t CRC9_TABLE[] = {
-    0x1E7U, 0x1F3U, 0x1F9U, 0x1FCU, 0x0D2U, 0x045U, 0x122U, 0x0BDU, 0x15EU, 0x083,
-    0x141U, 0x1A0U, 0x0FCU, 0x052U, 0x005U, 0x102U, 0x0ADU, 0x156U, 0x087U, 0x143,
-    0x1A1U, 0x1D0U, 0x0C4U, 0x04EU, 0x00BU, 0x105U, 0x182U, 0x0EDU, 0x176U, 0x097,
-    0x14BU, 0x1A5U, 0x1D2U, 0x0C5U, 0x162U, 0x09DU, 0x14EU, 0x08BU, 0x145U, 0x1A2,
-    0x0FDU, 0x17EU, 0x093U, 0x149U, 0x1A4U, 0x0FEU, 0x053U, 0x129U, 0x194U, 0x0E6,
-    0x05FU, 0x12FU, 0x197U, 0x1CBU, 0x1E5U, 0x1F2U, 0x0D5U, 0x16AU, 0x099U, 0x14C,
-    0x08AU, 0x069U, 0x134U, 0x0B6U, 0x077U, 0x13BU, 0x19DU, 0x1CEU, 0x0CBU, 0x165,
-    0x1B2U, 0x0F5U, 0x17AU, 0x091U, 0x148U, 0x088U, 0x068U, 0x018U, 0x020U, 0x03C,
-    0x032U, 0x035U, 0x11AU, 0x0A1U, 0x150U, 0x084U, 0x06EU, 0x01BU, 0x10DU, 0x186,
-    0x0EFU, 0x177U, 0x1BBU, 0x1DDU, 0x1EEU, 0x0DBU, 0x16DU, 0x1B6U, 0x0F7U, 0x17B,
-    0x1BDU, 0x1DEU, 0x0C3U, 0x161U, 0x1B0U, 0x0F4U, 0x056U, 0x007U, 0x103U, 0x181,
-    0x1C0U, 0x0CCU, 0x04AU, 0x009U, 0x104U, 0x0AEU, 0x07BU, 0x13DU, 0x19EU, 0x0E3,
-    0x171U, 0x1B8U, 0x0F0U, 0x054U, 0x006U, 0x02FU, 0x117U, 0x18BU, 0x1C5U, 0x1E2,
-    0x0DDU, 0x16EU, 0x09BU, 0x14DU, 0x1A6U };
 
 const uint16_t CCITT16_TABLE1[] = {
     0x0000U, 0x1189U, 0x2312U, 0x329BU, 0x4624U, 0x57ADU, 0x6536U, 0x74BFU,
@@ -428,38 +412,6 @@ uint8_t CRC::crc8(const uint8_t *in, uint32_t length)
 }
 
 /// <summary>
-/// Generate 9-bit CRC.
-/// </summary>
-/// <param name="in">Input byte array.</param>
-/// <param name="bitLength">Length of byte array in bits.</param>
-/// <returns>Calculated 9-bit CRC value.</returns>
-uint16_t CRC::crc9(const uint8_t* in, uint32_t bitLength)
-{
-    assert(in != nullptr);
-
-    uint16_t crc = 0x00U;
-
-    for (uint32_t i = 0; i < bitLength; i++) {
-        bool b = READ_BIT(in, i);
-        if (b) {
-            if (i < 7U) {
-                crc ^= CRC9_TABLE[i];
-            } else if (i > 15) {
-                crc ^= CRC9_TABLE[i - 9];
-            }
-        }
-    }
-
-    crc &= 0x1FFU;
-
-#if DEBUG_CRC_CHECK
-    LogDebug(LOG_HOST, "CRC::crc9(), crc = $%03X, bitlen = %u", crc, bitLength);
-#endif
-
-    return crc;
-}
-
-/// <summary>
 /// Check 6-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
@@ -694,7 +646,31 @@ uint16_t CRC::addCRC16(uint8_t* in, uint32_t bitLength)
 }
 
 /// <summary>
-///
+/// Generate 9-bit CRC.
+/// </summary>
+/// <param name="in">Input byte array.</param>
+/// <param name="bitLength">Length of byte array in bits.</param>
+/// <returns></returns>
+uint16_t CRC::createCRC9(const uint8_t* in, uint32_t bitLength)
+{
+    uint16_t crc = 0U;
+
+    for (uint32_t i = 0U; i < bitLength; i++) {
+        bool bit1 = READ_BIT(in, i) != 0x00U;
+        bool bit2 = (crc & 0x100U) == 0x100U;
+
+        crc <<= 1;
+
+        if (bit1 ^ bit2)
+            crc ^= 0x59U;
+    }
+
+    crc = ~crc;
+    return crc & 0x1FFU;
+}
+
+/// <summary>
+/// Generate 16-bit CRC.
 /// </summary>
 /// <param name="in">Input byte array.</param>
 /// <param name="bitLength">Length of byte array in bits.</param>

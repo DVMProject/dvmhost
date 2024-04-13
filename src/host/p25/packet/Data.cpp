@@ -87,25 +87,21 @@ bool Data::process(uint8_t* data, uint32_t len)
             m_rfPDUCount = 0U;
             m_rfPDUBits = 0U;
 
-            ::memset(m_rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+            ::memset(m_rfPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
             m_p25->m_rfState = RS_RF_DATA;
 
-            ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+            ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
             m_pduUserDataLength = 0U;
         }
 
-        uint32_t start = m_rfPDUCount * P25_LDU_FRAME_LENGTH_BITS;
+        uint32_t start = m_rfPDUCount * P25_PDU_FRAME_LENGTH_BITS;
 
-        uint8_t buffer[P25_MAX_PDU_LENGTH];
-        ::memset(buffer, 0x00U, P25_MAX_PDU_LENGTH);
+        uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES];
+        ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
 
-        // Utils::dump(2U, "* !!! P25_DUID_PDU - data", data + 2U, len - 2U);
-
-        uint32_t bits = P25Utils::decode(data + 2U, buffer, start, start + P25_LDU_FRAME_LENGTH_BITS);
+        uint32_t bits = P25Utils::decode(data + 2U, buffer, start, start + P25_PDU_FRAME_LENGTH_BITS);
         m_rfPDUBits = Utils::getBits(buffer, m_rfPDU, 0U, bits);
-
-        // Utils::dump(2U, "* !!! P25_DUID_PDU - m_rfPDU", m_rfPDU, P25_LDU_FRAME_LENGTH_BYTES * 2U);
 
         uint32_t offset = P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS;
         if (m_rfPDUCount == 0U) {
@@ -133,8 +129,8 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             // make sure we don't get a PDU with more blocks then we support
-            if (m_rfDataHeader.getBlocksToFollow() >= P25_MAX_PDU_COUNT) {
-                LogError(LOG_RF, P25_PDU_STR ", ISP, too many PDU blocks to process, %u > %u", m_rfDataHeader.getBlocksToFollow(), P25_MAX_PDU_COUNT);
+            if (m_rfDataHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
+                LogError(LOG_RF, P25_PDU_STR ", ISP, too many PDU blocks to process, %u > %u", m_rfDataHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
 
                 m_rfDataHeader.reset();
                 m_rfSecondHeader.reset();
@@ -254,10 +250,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
 
                                 if (m_dumpPDUData) {
-                                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                     m_rfData[i].getData(dataBlock);
-                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                 }
                             }
 
@@ -276,10 +272,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                                     m_rfData[i].getLastBlock());
 
                                 if (m_dumpPDUData) {
-                                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                     m_rfData[i].getData(dataBlock);
-                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                                 }
                             }
                         }
@@ -460,6 +456,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         m_netDataBlockCnt = 0U;
         m_netPDUCount = 0U;
 
+        ::memset(m_netPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+
         m_p25->m_netState = RS_NET_DATA;
 
         uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
@@ -487,8 +485,8 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint32_t blockLength)
         }
 
         // make sure we don't get a PDU with more blocks then we support
-        if (m_netDataHeader.getBlocksToFollow() >= P25_MAX_PDU_COUNT) {
-            LogError(LOG_NET, P25_PDU_STR ", too many PDU blocks to process, %u > %u", m_netDataHeader.getBlocksToFollow(), P25_MAX_PDU_COUNT);
+        if (m_netDataHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
+            LogError(LOG_NET, P25_PDU_STR ", too many PDU blocks to process, %u > %u", m_netDataHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
 
             m_netDataHeader.reset();
             m_netSecondHeader.reset();
@@ -820,18 +818,18 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_verbose(verbose),
     m_debug(debug)
 {
-    m_rfData = new data::DataBlock[P25_MAX_PDU_COUNT];
+    m_rfData = new data::DataBlock[P25_MAX_PDU_BLOCKS];
 
-    m_rfPDU = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(m_rfPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+    m_rfPDU = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(m_rfPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
-    m_netData = new data::DataBlock[P25_MAX_PDU_COUNT];
+    m_netData = new data::DataBlock[P25_MAX_PDU_BLOCKS];
 
-    m_netPDU = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(m_netPDU, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+    m_netPDU = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(m_netPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
-    m_pduUserData = new uint8_t[P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-    ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_COUNT * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+    m_pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+    ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
     m_fneRegTable.clear();
     m_connQueueTable.clear();
@@ -876,16 +874,13 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t *data, uint32_
 /// <param name="pdu"></param>
 /// <param name="bitlength"></param>
 /// <param name="noNulls"></param>
-/// <remarks>This simply takes data packed into m_rfPDU and transmits it.</remarks>
 void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 {
     assert(pdu != nullptr);
     assert(bitLength > 0U);
 
-    uint8_t data[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
-
-    // Utils::dump(2U, "!!! *Raw PDU Frame Data - pdu", pdu, bitLength / 8U);
+    uint8_t data[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     // Add the data
     uint32_t newBitLength = P25Utils::encode(pdu, data + 2U, bitLength);
@@ -904,8 +899,6 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool noNulls)
 
     // Add idle bits
     P25Utils::addIdleBits(data + 2U, newBitLength, true, true);
-
-    // Utils::dump(2U, "!!! *P25_DUID_PDU - data", data + 2U, newByteLength);
 
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;
@@ -991,10 +984,10 @@ void Data::writeNet_PDU_Buffered()
                     m_netData[i].getSerialNo(), m_netData[i].getFormat(), m_netData[i].getLastBlock(), m_netData[i].getSAP(), m_netData[i].getLLId());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_netData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1005,10 +998,10 @@ void Data::writeNet_PDU_Buffered()
                     m_netData[i].getLastBlock());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_netData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1087,10 +1080,10 @@ void Data::writeRF_PDU_Buffered()
                     m_rfData[i].getSerialNo(), m_rfData[i].getFormat(), m_rfData[i].getLastBlock(), m_rfData[i].getSAP(), m_rfData[i].getLLId());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1101,10 +1094,10 @@ void Data::writeRF_PDU_Buffered()
                     m_rfData[i].getLastBlock());
 
                 if (m_dumpPDUData) {
-                    uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    uint8_t dataBlock[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                    ::memset(dataBlock, 0xAAU, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                     m_rfData[i].getData(dataBlock);
-                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(2U, "Data Block", dataBlock, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
                 }
             }
         }
@@ -1198,7 +1191,7 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
     if (ackClass == PDU_ACK_CLASS_ACK && ackType != PDU_ACK_TYPE_ACK)
         return;
 
-    uint32_t bitLength = (2U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
+    uint32_t bitLength = (1U * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
     uint8_t data[bitLength / 8U];

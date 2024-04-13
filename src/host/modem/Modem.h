@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
 *   Copyright (C) 2021 Nat Moore
 *
 */
@@ -35,8 +35,8 @@
 
 // 505 = DMR_FRAME_LENGTH_BYTES * 15 + 10 (BUFFER_LEN = DMR_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
 #define DMR_TX_BUFFER_LEN 505U  // 15 frames + pad
-// 442 = P25_LDU_FRAME_LENGTH_BYTES * 2 + 10 (BUFFER_LEN = P25_LDU_FRAME_LENGTH_BYTES * NO_OF_FRAMES + 10)
-#define P25_TX_BUFFER_LEN 442U  // 2 frames + pad
+// 522 = P25_PDU_FRAME_LENGTH_BYTES + 10 (BUFFER_LEN = P25_PDU_FRAME_LENGTH_BYTES + 10)
+#define P25_TX_BUFFER_LEN 522U  // 1 PDU frame + pad
 // 538 = NXDN_FRAME_LENGTH_BYTES * 11 + 10 (BUFFER_LEN = NXDN_FRAME_LENGTH_BYTES * NO_OF_FRAMES)
 #define NXDN_TX_BUFFER_LEN 538U // 11 frames + pad
 
@@ -211,7 +211,8 @@ namespace modem
         ADF_GAIN_HIGH = 3U
     };
 
-    const uint8_t DVM_FRAME_START = 0xFEU;
+    const uint8_t DVM_SHORT_FRAME_START = 0xFEU;
+    const uint8_t DVM_LONG_FRAME_START = 0xFDU;
 
     const uint8_t DVM_CONF_AREA_VER = 0x02U;
     const uint8_t DVM_CONF_AREA_LEN = 246U;
@@ -513,7 +514,7 @@ namespace modem
         void printDebug(const uint8_t* buffer, uint16_t len);
 
         /// <summary>Helper to get the raw response packet from modem.</summary>
-        RESP_TYPE_DVM getResponse(bool noReportInvalid = false);
+        RESP_TYPE_DVM getResponse();
 
         /// <summary>Helper to convert a serial opcode to a string.</summary>
         std::string cmdToString(uint8_t opcode);

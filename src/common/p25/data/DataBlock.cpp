@@ -100,11 +100,24 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             }
             else {
                 ::memcpy(m_data, buffer + 2U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);         // Payload Data
-             }
+            }
+
+            uint8_t crcBuffer[18U];
+            ::memset(crcBuffer, 0x00U, 18U);
+
+            // generate CRC buffer
+            for (uint32_t i = 0; i < 144U; i++) {
+                bool b = READ_BIT(buffer, i);
+                if (i < 7U) {
+                    WRITE_BIT(crcBuffer, i, b);
+                } else if (i > 15U) {
+                    WRITE_BIT(crcBuffer, i - 9U, b);
+                }
+            }
 
             // compute CRC-9 for the packet
-            uint16_t calculated = edac::CRC::crc9(buffer, 144U);
-            if (((crc ^ calculated) != 0) && ((crc ^ calculated) != 0x1FFU)) {
+            uint16_t calculated = edac::CRC::createCRC9(crcBuffer, 135U);
+            if ((crc ^ calculated) != 0) {
                 LogWarning(LOG_P25, "P25_DUID_PDU, fmt = $%02X, invalid crc = $%04X != $%04X (computed)", m_fmt, crc, calculated);
             }
 
@@ -176,7 +189,20 @@ void DataBlock::encode(uint8_t* data)
             ::memcpy(buffer + 2U, m_data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         }
 
-        uint16_t crc = edac::CRC::crc9(buffer, 144U);
+        uint8_t crcBuffer[18U];
+        ::memset(crcBuffer, 0x00U, 18U);
+
+        // generate CRC buffer
+        for (uint32_t i = 0; i < 144U; i++) {
+            bool b = READ_BIT(buffer, i);
+            if (i < 7U) {
+                WRITE_BIT(crcBuffer, i, b);
+            } else if (i > 15U) {
+                WRITE_BIT(crcBuffer, i - 9U, b);
+            }
+        }
+
+        uint16_t crc = edac::CRC::createCRC9(crcBuffer, 135U);
         buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
         buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
 

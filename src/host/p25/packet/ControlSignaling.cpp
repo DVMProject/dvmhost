@@ -1260,8 +1260,8 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_verbose(verbose),
     m_debug(debug)
 {
-    m_rfMBF = new uint8_t[P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+    m_rfMBF = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES + 2U];
+    ::memset(m_rfMBF, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
 
     m_adjSiteTable.clear();
     m_adjSiteUpdateCnt.clear();
@@ -1549,7 +1549,7 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
 void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 {
     if (!m_p25->m_enableControl) {
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        ::memset(m_rfMBF, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
         return;
     }
@@ -1563,7 +1563,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 
     // trunking data is unsupported in simplex operation
     if (!m_p25->m_duplex) {
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        ::memset(m_rfMBF, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
         return;
     }
@@ -1636,7 +1636,7 @@ void ControlSignaling::writeRF_TSDU_MBF(lc::TSBK* tsbk)
 
         m_p25->addFrame(data, P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U);
 
-        ::memset(m_rfMBF, 0x00U, P25_MAX_PDU_COUNT * P25_LDU_FRAME_LENGTH_BYTES + 2U);
+        ::memset(m_rfMBF, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
         m_mbfCnt = 0U;
         return;
     }
@@ -1669,8 +1669,8 @@ void ControlSignaling::writeRF_TSDU_AMBT(lc::AMBT* ambt)
     assert(ambt != nullptr);
 
     DataHeader header = DataHeader();
-    uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT];
-    ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES * P25_MAX_PDU_COUNT);
+    uint8_t pduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+    ::memset(pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
     // Generate TSBK block
     ambt->setLastBlock(true); // always set last block -- this a Single Block TSDU

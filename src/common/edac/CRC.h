@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2018,2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2018,2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__CRC_H__)
@@ -49,9 +49,6 @@ namespace edac
         /// <summary>Generate 8-bit CRC.</summary>
         static uint8_t crc8(const uint8_t* in, uint32_t length);
 
-        /// <summary>Generate 9-bit CRC.</summary>
-        static uint16_t crc9(const uint8_t* in, uint32_t bitLength);
-
         /// <summary>Check 6-bit CRC.</summary>
         static bool checkCRC6(const uint8_t* in, uint32_t bitLength);
         /// <summary>Encode 6-bit CRC.</summary>
@@ -72,7 +69,9 @@ namespace edac
         /// <summary>Encode 16-bit CRC CCITT-162 w/ initial generator of 1.</summary>
         static uint16_t addCRC16(uint8_t* in, uint32_t bitLength);
 
-        /// <summary></summary>
+        /// <summary>Generate 9-bit CRC.</summary>
+        static uint16_t createCRC9(const uint8_t* in, uint32_t bitLength);
+        /// <summary>Generate 16-bit CRC.</summary>
         static uint16_t createCRC16(const uint8_t* in, uint32_t bitLength);
 
     private:

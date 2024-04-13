@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2021 Jonathan Naylor, G4KLX
-*   Copyright (C) 2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "modem/port/ModemNullPort.h"
@@ -115,7 +115,7 @@ void ModemNullPort::getVersion()
 {
     unsigned char reply[200U];
 
-    reply[0U] = DVM_FRAME_START;
+    reply[0U] = DVM_SHORT_FRAME_START;
     reply[1U] = 0U;
     reply[2U] = CMD_GET_VERSION;
 
@@ -142,7 +142,7 @@ void ModemNullPort::getStatus()
     unsigned char reply[15U];
 
     // Send all sorts of interesting internal values
-    reply[0U] = DVM_FRAME_START;
+    reply[0U] = DVM_SHORT_FRAME_START;
     reply[1U] = 11U;
     reply[2U] = CMD_GET_STATUS;
 
@@ -172,7 +172,7 @@ void ModemNullPort::writeAck(uint8_t type)
 {
     unsigned char reply[4U];
 
-    reply[0U] = DVM_FRAME_START;
+    reply[0U] = DVM_SHORT_FRAME_START;
     reply[1U] = 4U;
     reply[2U] = CMD_ACK;
     reply[3U] = type;
@@ -189,7 +189,7 @@ void ModemNullPort::writeNAK(uint8_t opcode, uint8_t err)
 {
     uint8_t reply[5U];
 
-    reply[0U] = DVM_FRAME_START;
+    reply[0U] = DVM_SHORT_FRAME_START;
     reply[1U] = 5U;
     reply[2U] = CMD_NAK;
     reply[3U] = opcode;

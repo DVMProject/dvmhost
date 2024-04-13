@@ -473,7 +473,7 @@ system:
         # Size (in bytes) of the DMR transmit FIFO buffer.
         dmrFifoLength: 505
         # Size (in bytes) of the P25 transmit FIFO buffer.
-        p25FifoLength: 442
+        p25FifoLength: 522
         # Size (in bytes) of the NXDN transmit FIFO buffer.
         nxdnFifoLength: 538
 
