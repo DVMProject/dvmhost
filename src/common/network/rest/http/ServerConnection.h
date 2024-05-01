@@ -104,14 +104,17 @@ namespace network
                             m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
 
                             if (result == HTTPLexer::GOOD) {
+                                ::LogDebug(LOG_REST, "Good HTTP request: %s", m_request.content.c_str());
                                 m_requestHandler.handleRequest(m_request, m_reply);
                                 write();
                             }
                             else if (result == HTTPLexer::BAD) {
                                 m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
+                                ::LogError(LOG_REST, "Bad HTTP request: %s", m_request.content.c_str());
                                 write();
                             }
                             else {
+                                ::LogDebug(LOG_REST, "Got HTTP message segment of length %d, reading more data", bytes_transferred);
                                 read();
                             }
                         }
