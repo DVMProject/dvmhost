@@ -203,7 +203,7 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
                 preferreds.push_back(json::value((double)peerId));
             }
         }
-        config["nonpreferred"].set<json::array>(preferreds);
+        config["preferred"].set<json::array>(preferreds);
 
         tg["config"].set<json::object>(config);
     }
@@ -382,7 +382,7 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
             LogDebug(LOG_REST,  "TG configuration \"preferred\" was not a valid JSON array");
             return TalkgroupRuleGroupVoice();
         }
-        json::array preferreds = configObj["exclusion"].get<json::array>();
+        json::array preferreds = configObj["preferred"].get<json::array>();
 
         std::vector<uint32_t> preferred = groupVoice.config().preferred();
         if (preferreds.size() > 0) {
