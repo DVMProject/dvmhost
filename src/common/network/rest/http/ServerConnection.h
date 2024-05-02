@@ -98,6 +98,15 @@ namespace network
                             std::string contentLength = m_request.headers.find("Content-Length");
                             if (contentLength != "") {
                                 size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
+                                
+                                // Make sure we actually got enough bytes to read
+                                size_t left = m_buffer.data() + bytes_transferred - content;
+                                if (left < length) {
+                                    ::LogError(LOG_REST, "HTTP payload segmented, TODO: handle this");
+                                    m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
+                                    write();
+                                }
+                                
                                 m_request.content = std::string(content, length);
                             }
 
@@ -114,7 +123,6 @@ namespace network
                                 write();
                             }
                             else {
-                                ::LogDebug(LOG_REST, "Got HTTP message segment of length %d, reading more data", bytes_transferred);
                                 read();
                             }
                         }
