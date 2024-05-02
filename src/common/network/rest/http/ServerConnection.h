@@ -103,8 +103,7 @@ namespace network
                                 size_t left = m_buffer.data() + bytes_transferred - content;
                                 if (left < length) {
                                     ::LogError(LOG_REST, "HTTP payload segmented, TODO: handle this");
-                                    m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
-                                    write();
+                                    result = HTTPLexer::BAD;
                                 }
                                 
                                 m_request.content = std::string(content, length);
