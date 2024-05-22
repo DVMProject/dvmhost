@@ -7,7 +7,7 @@
 * @package DVM / Common Library
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
-*   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -26,7 +26,8 @@ using namespace p25;
 /// <summary>
 /// Initializes a new instance of the MBT_IOSP_GRP_AFF class.
 /// </summary>
-MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT()
+MBT_IOSP_GRP_AFF::MBT_IOSP_GRP_AFF() : AMBT(),
+    m_announceGroup(P25_WUID_ALL)
 {
     m_lco = TSBK_IOSP_GRP_AFF;
 }
@@ -67,9 +68,24 @@ void MBT_IOSP_GRP_AFF::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserD
 {
     assert(pduUserData != nullptr);
 
-    /* stub */
+    dataHeader.setBlocksToFollow(2U);
 
-    return;
+    dataHeader.setAMBTField8((m_siteData.netId() >> 12) & 0xFFU);                   // Network ID (b19-12)
+    dataHeader.setAMBTField9((m_siteData.netId() >> 4) & 0xFFU);                    // Network ID (b11-b4)
+
+    /** Block 1 */
+    pduUserData[0U] = ((m_siteData.netId() & 0x0FU) << 4) +                         // Network ID (b3-b0)
+        ((m_siteData.sysId() >> 8) & 0xFFU);                                        // System ID (b11-b8)
+    pduUserData[1U] = (m_siteData.sysId() & 0xFFU);                                 // System ID (b7-b0)
+
+    __SET_UINT16B(m_dstId, pduUserData, 2U);                                        // Group ID
+    __SET_UINT16B(m_announceGroup, pduUserData, 4U);                                // Announcement Group
+    __SET_UINT16B(m_dstId, pduUserData, 6U);                                        // Talkgroup Address
+
+    /** Block 2 */
+    ::memset(pduUserData + 12U, 0x00U, 7U);
+
+    AMBT::encode(dataHeader, pduUserData);
 }
 
 /// <summary>

@@ -40,6 +40,10 @@ namespace p25
 
                 /// <summary>Returns a string that represents the current TSBK.</summary>
                 std::string toString(bool isp = false) override;
+
+            public:
+                /// <summary>Announcement group.</summary>
+                __PROPERTY(uint32_t, announceGroup, AnnounceGroup);
             };
         } // namespace tsbk
     } // namespace lc
