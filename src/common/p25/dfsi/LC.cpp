@@ -251,8 +251,8 @@ void LC::encodeLDU1(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
     rs[0U] = m_control->getLCO();                                                   // LCO
     rs[1U] = m_control->getMFId();                                                  // MFId
@@ -504,8 +504,8 @@ void LC::encodeLDU2(uint8_t* data, const uint8_t* imbe)
             break;
     }
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
     for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
         rs[i] = mi[i];                                                              // Message Indicator

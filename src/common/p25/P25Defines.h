@@ -61,7 +61,7 @@ namespace p25
     const uint32_t  P25_LDU_FRAME_TIME = 180U;
 
     const uint32_t  P25_HDU_LENGTH_BYTES = 81U;
-    const uint32_t  P25_LDU_LC_LENGTH_BYTES = 18U;
+    const uint32_t  P25_LDU_LC_FEC_LENGTH_BYTES = 18U;
 
     const uint32_t  P25_TDULC_FEC_LENGTH_BYTES = 36U;
     const uint32_t  P25_TDULC_LENGTH_BYTES = 18U;
@@ -92,6 +92,8 @@ namespace p25
     const uint8_t   P25_ENCRYPTED_NULL_IMBE[] = { 0xFCU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
 
     const uint8_t   P25_MFG_STANDARD = 0x00U;
+    const uint8_t   P25_MFG_STANDARD_ALT = 0x01U;
+
     const uint8_t   P25_MFG_MOT = 0x90U;
     const uint8_t   P25_MFG_DVM_OCS = 0x9CU;                // P25 MFId used for internal signalling; Omaha Communication Systems, LLC ($9C)
 

@@ -233,7 +233,7 @@ bool LC::decodeLDU1(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES + 1U];
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES + 1U];
 
     // deinterleave and decode Hamming (10,6,3) for LC data
     uint8_t raw[5U];
@@ -268,7 +268,7 @@ bool LC::decodeLDU1(const uint8_t* data)
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
 
@@ -287,8 +287,8 @@ void LC::encodeLDU1(uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
     encodeLC(rs);
 
@@ -337,7 +337,7 @@ bool LC::decodeLDU2(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES + 1U];
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES + 1U];
 
     // deinterleave and decode Hamming (10,6,3) for LC data
     uint8_t raw[5U];
@@ -372,7 +372,7 @@ bool LC::decodeLDU2(const uint8_t* data)
         }
     }
     catch (...) {
-        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_LENGTH_BYTES);
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
 
@@ -415,8 +415,8 @@ void LC::encodeLDU2(uint8_t* data)
     assert(data != nullptr);
     assert(m_mi != nullptr);
 
-    uint8_t rs[P25_LDU_LC_LENGTH_BYTES];
-    ::memset(rs, 0x00U, P25_LDU_LC_LENGTH_BYTES);
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
     for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
         rs[i] = m_mi[i];                                                            // Message Indicator
@@ -566,20 +566,10 @@ bool LC::decodeLC(const uint8_t* rs)
 
     m_mfId = rs[1U];                                                                // Mfg Id.
 
-    // Motorola P25 vendor opcodes (these are just detected for passthru)
-    if (m_mfId == P25_MFG_MOT) {
-        switch (m_lco) {
-        case LC_TEL_INT_VCH_USER:   // MOT GPS DATA
-            m_rsValue = rsValue;
-            break;
-        default:
-            LogError(LOG_P25, "LC::decodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
-            break;
-        }
-
-        if (m_mfId == P25_MFG_MOT) {
-            return true;
-        }
+    // non-standard P25 vendor opcodes (these are just detected for passthru)
+    if ((m_mfId != P25_MFG_STANDARD) && (m_mfId != P25_MFG_STANDARD_ALT)) {
+        m_rsValue = rsValue;
+        return true;
     }
 
     // standard P25 reference opcodes
@@ -703,18 +693,10 @@ void LC::encodeLC(uint8_t* rs)
         break;
     }
 
-    // Motorola P25 vendor opcodes (these are just detected for passthru)
-    if (m_mfId == P25_MFG_MOT) {
+    // non-standard P25 vendor opcodes (these are just detected for passthru)
+    if ((m_mfId != P25_MFG_STANDARD) && (m_mfId != P25_MFG_STANDARD_ALT)) {
         rsValue = 0U;
-
-        switch (m_lco) {
-        case LC_TEL_INT_VCH_USER:   // MOT GPS DATA
-            rsValue = m_rsValue;
-            break;
-        default:
-            LogError(LOG_P25, "LC::encodeLC(), unknown LC value, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
-            break;
-        }
+        rsValue = m_rsValue;
     }
 
     // split ulong64_t (8 byte) value into bytes
