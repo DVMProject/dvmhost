@@ -360,6 +360,7 @@ system:
         # Control Channel
         # Note: These parameters are used by a voice channel to communicate back to a
         #   control channel to give the control channel "real time" traffic channel updates.
+        #   These parameters should be left default for dedicated control channels.
         #
         controlCh:
             # REST API IP Address for control channel. (If blank, notifications are disabled.)

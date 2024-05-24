@@ -921,7 +921,8 @@ int Host::run()
                 presenceNotifyTimer.clock(ms);
 
                 // VC -> CC presence registration
-                if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr && m_RESTAPI != nullptr) {
+                if (!m_controlChData.address().empty() && m_controlChData.port() != 0 && m_network != nullptr && m_RESTAPI != nullptr &&
+                    !m_dmrCtrlChannel && !m_p25CtrlChannel && !m_nxdnCtrlChannel) {
                     if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || !hasInitialRegistered) {
                         LogMessage(LOG_HOST, "CC %s:%u, notifying CC of VC registration, peerId = %u", m_controlChData.address().c_str(), m_controlChData.port(), m_network->getPeerId());
                         hasInitialRegistered = true;
