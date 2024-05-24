@@ -1002,22 +1002,30 @@ void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstI
 /// <param name="tsbk"></param>
 void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
 {
-    uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
+    uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES];
+    ::memset(data, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
 
     // Generate Sync
-    Sync::addP25Sync(data + 2U);
+    Sync::addP25Sync(data);
+
+    // network bursts have no NID
 
     // Generate TSBK block
     tsbk->setLastBlock(true); // always set last block -- this a Single Block TSDU
-    tsbk->encode(data + 2U);
+    tsbk->encode(data);
+
+    // Add busy bits
+    P25Utils::addBusyBits(data, P25_TSDU_FRAME_LENGTH_BYTES, true, false);
+
+    // Set first busy bits to 1,1
+    P25Utils::setBusyBits(data, P25_SS0_START, true, true);
 
     if (m_debug) {
         LogDebug(LOG_RF, P25_TSDU_STR ", lco = $%02X, mfId = $%02X, lastBlock = %u, AIV = %u, EX = %u, srcId = %u, dstId = %u, sysId = $%03X, netId = $%05X",
             tsbk->getLCO(), tsbk->getMFId(), tsbk->getLastBlock(), tsbk->getAIV(), tsbk->getEX(), tsbk->getSrcId(), tsbk->getDstId(),
             tsbk->getSysId(), tsbk->getNetId());
 
-        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES + 2U, P25_TSBK_FEC_LENGTH_BYTES);
+        Utils::dump(1U, "!!! *TSDU (SBF) TSBK Block Data", data + P25_PREAMBLE_LENGTH_BYTES, P25_TSBK_FEC_LENGTH_BYTES);
     }
 
     lc::LC lc = lc::LC();
