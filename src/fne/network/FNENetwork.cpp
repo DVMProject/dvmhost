@@ -268,7 +268,7 @@ void FNENetwork::clock(uint32_t ms)
                 if (connection->connected()) {
                     uint64_t dt = connection->lastPing() + (m_host->m_pingTime * m_host->m_maxMissedPings);
                     if (dt < now) {
-                        LogInfoEx(LOG_NET, "PEER %u (%8s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
+                        LogInfoEx(LOG_NET, "PEER %u (%s) timed out, dt = %u, now = %u", id, connection->identity().c_str(),
                             dt, now);
                         peersToRemove.push_back(id);
                     }
@@ -409,7 +409,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         connection->pktNextSeq(0U);
                     } else {
                         if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
-                            LogWarning(LOG_NET, "PEER %u (%8s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                            LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
                                 streamId, pktSeq, connection->pktNextSeq());
                         }
 
@@ -428,7 +428,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             // if we don't have a stream ID and are receiving call data -- throw an error and discard
             if (streamId == 0 && req->fneHeader.getFunction() == NET_FUNC_PROTOCOL) {
                 std::string peerIdentity = network->resolvePeerIdentity(peerId);
-                LogError(LOG_NET, "PEER %u (%8s) malformed packet (no stream ID for a call?)", peerId, peerIdentity.c_str());
+                LogError(LOG_NET, "PEER %u (%s) malformed packet (no stream ID for a call?)", peerId, peerIdentity.c_str());
 
                 if (req->buffer != nullptr)
                     delete req->buffer;
@@ -544,7 +544,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
                                 if (connection->connectionState() == NET_STAT_RUNNING) {
-                                    LogMessage(LOG_NET, "PEER %u (%8s) resetting peer connection, connectionState = %u", peerId, connection->identity().c_str(),
+                                    LogMessage(LOG_NET, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identity().c_str(),
                                         connection->connectionState());
                                     delete connection;
 
@@ -557,7 +557,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 } else {
                                     network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
 
-                                    LogWarning(LOG_NET, "PEER %u (%8s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identity().c_str(),
+                                    LogWarning(LOG_NET, "PEER %u (%s) RPTL NAK, bad connection state, connectionState = %u", peerId, connection->identity().c_str(),
                                         connection->connectionState());
 
                                     delete connection;
@@ -693,7 +693,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (peerConfig["identity"].is<std::string>()) {
                                             std::string identity = peerConfig["identity"].get<std::string>();
                                             connection->identity(identity);
-                                            LogInfoEx(LOG_NET, "PEER %u reports identity [%8s]", peerId, identity.c_str());
+                                            LogInfoEx(LOG_NET, "PEER %u reports identity [%s]", peerId, identity.c_str());
                                         }
 
                                         if (peerConfig["externalPeer"].is<bool>()) {
@@ -728,7 +728,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 }
                             }
                             else {
-                                LogWarning(LOG_NET, "PEER %u (%8s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identity().c_str(),
+                                LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identity().c_str(),
                                     connection->connectionState());
                                 network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE);
                                 network->erasePeer(peerId);
@@ -751,7 +751,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                             // validate peer (simple validation really)
                             if (connection->connected() && connection->address() == ip) {
-                                LogInfoEx(LOG_NET, "PEER %u (%8s) is closing down", peerId, connection->identity().c_str());
+                                LogInfoEx(LOG_NET, "PEER %u (%s) is closing down", peerId, connection->identity().c_str());
                                 if (network->erasePeer(peerId)) {
                                     network->erasePeerAffiliations(peerId);
                                     delete connection;
@@ -781,7 +781,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 // does this peer need an ACL update?
                                 uint64_t dt = connection->lastACLUpdate() + network->m_updateLookupTime;
                                 if (dt < now) {
-                                    LogInfoEx(LOG_NET, "PEER %u (%8s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
+                                    LogInfoEx(LOG_NET, "PEER %u (%s) updating ACL list, dt = %u, now = %u", peerId, connection->identity().c_str(),
                                         dt, now);
                                     network->peerACLUpdate(peerId);
                                     connection->lastACLUpdate(now);
@@ -791,7 +791,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 network->writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
 
                                 if (network->m_reportPeerPing) {
-                                    LogInfoEx(LOG_NET, "PEER %u (%8s) ping, pingsReceived = %u, lastPing = %u", peerId, connection->identity().c_str(),
+                                    LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u", peerId, connection->identity().c_str(),
                                         connection->pingsReceived(), lastPing);
                                 }
                             }
@@ -884,7 +884,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
-                                        ::ActivityLog("%u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                        ::ActivityLog("%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
 
                                         // report activity log to InfluxDB
                                         if (network->m_enableInfluxDB) {
@@ -920,7 +920,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                         bool currState = g_disableTimeDisplay;
                                         g_disableTimeDisplay = true;
-                                        ::Log(9999U, nullptr, "%u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                        ::Log(9999U, nullptr, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
                                         g_disableTimeDisplay = currState;
 
                                         // report diagnostic log to InfluxDB
@@ -957,7 +957,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
                                 }
 
                                 // validate peer (simple validation really)
@@ -980,7 +980,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
                                 }
 
                                 // validate peer (simple validation really)
@@ -1001,7 +1001,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string ip = udp::Socket::address(req->address);
                                 lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                 if (aff == nullptr) {
-                                    LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                    LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
                                 }
 
                                 // validate peer (simple validation really)
@@ -1025,7 +1025,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 if (connection->connected() && connection->address() == ip) {
                                     lookups::AffiliationLookup* aff = network->m_peerAffiliations[peerId];
                                     if (aff == nullptr) {
-                                        LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
+                                        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, connection->identity().c_str());
                                     }
 
                                     if (aff != nullptr) {
@@ -1041,7 +1041,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             aff->groupAff(srcId, dstId);
                                             offs += 8U;
                                         }
-                                        LogMessage(LOG_NET, "PEER %u (%8s) announced %u affiliations", peerId, connection->identity().c_str(), len);
+                                        LogMessage(LOG_NET, "PEER %u (%s) announced %u affiliations", peerId, connection->identity().c_str(), len);
                                     }
                                 }
                                 else {
@@ -1071,7 +1071,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         }
                                         offs += 4U;
                                     }
-                                    LogMessage(LOG_NET, "PEER %u (%8s) announced %u VCs", peerId, connection->identity().c_str(), len);
+                                    LogMessage(LOG_NET, "PEER %u (%s) announced %u VCs", peerId, connection->identity().c_str(), len);
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1235,7 +1235,7 @@ void* FNENetwork::threadedACLUpdate(void* arg)
         ::pthread_detach(req->thread);
 
         std::string peerIdentity = req->network->resolvePeerIdentity(req->peerId);
-        LogInfoEx(LOG_NET, "PEER %u (%8s) sending ACL list updates", req->peerId, peerIdentity.c_str());
+        LogInfoEx(LOG_NET, "PEER %u (%s) sending ACL list updates", req->peerId, peerIdentity.c_str());
 
         req->network->writeWhitelistRIDs(req->peerId);
         req->network->writeBlacklistRIDs(req->peerId);
@@ -1308,7 +1308,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
                 uint32_t id = ridWhitelist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
-                    LogDebug(LOG_NET, "PEER %u (%8s) whitelisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
+                    LogDebug(LOG_NET, "PEER %u (%s) whitelisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
                         id, i, j);
 
                 __SET_UINT32(id, payload, offs);
@@ -1383,7 +1383,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
                 uint32_t id = ridBlacklist.at(j + (i * MAX_RID_LIST_CHUNK));
 
                 if (m_debug)
-                    LogDebug(LOG_NET, "PEER %u (%8s) blacklisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
+                    LogDebug(LOG_NET, "PEER %u (%s) blacklisting RID %u (%d / %d)", peerId, connection->identity().c_str(),
                         id, i, j);
 
                 __SET_UINT32(id, payload, offs);
@@ -1465,7 +1465,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
     for (std::pair<uint32_t, uint8_t> tg : tgidList) {
         if (m_debug) {
             std::string peerIdentity = resolvePeerIdentity(peerId);
-            LogDebug(LOG_NET, "PEER %u (%8s) activating TGID %u TS %u", peerId, peerIdentity.c_str(),
+            LogDebug(LOG_NET, "PEER %u (%s) activating TGID %u TS %u", peerId, peerIdentity.c_str(),
                 tg.first, tg.second);
         }
         __SET_UINT32(tg.first, payload, offs);
@@ -1527,7 +1527,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
     for (std::pair<uint32_t, uint8_t> tg : tgidList) {
         if (m_debug) {
             std::string peerIdentity = resolvePeerIdentity(peerId);
-            LogDebug(LOG_NET, "PEER %u (%8s) deactivating TGID %u TS %u", peerId, peerIdentity.c_str(),
+            LogDebug(LOG_NET, "PEER %u (%s) deactivating TGID %u TS %u", peerId, peerIdentity.c_str(),
                 tg.first, tg.second);
         }
         __SET_UINT32(tg.first, payload, offs);

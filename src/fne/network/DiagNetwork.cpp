@@ -189,7 +189,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                         connection->pktNextSeq(0U);
                     } else {
                         if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
-                            LogWarning(LOG_NET, "PEER %u (%8s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                            LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
                                 streamId, pktSeq, connection->pktNextSeq());
                         }
 
@@ -223,7 +223,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
-                                        ::ActivityLog("%u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                        ::ActivityLog("%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
 
                                         // report activity log to InfluxDB
                                         if (network->m_enableInfluxDB) {
@@ -259,7 +259,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                         bool currState = g_disableTimeDisplay;
                                         g_disableTimeDisplay = true;
-                                        ::Log(9999U, nullptr, "%u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
+                                        ::Log(9999U, nullptr, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
                                         g_disableTimeDisplay = currState;
 
                                         // report diagnostic log to InfluxDB
