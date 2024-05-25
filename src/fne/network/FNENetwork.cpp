@@ -178,7 +178,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    InfluxDB Bucket: %s", m_influxBucket.c_str());
             LogInfo("    InfluxDB Log Raw TSBK/CSBK/RCCH: %s", m_influxLogRawData ? "yes" : "no");
         }
-        LogInfo("    Parrot Repeat to Only Originating Peer: %u", m_parrotOnlyOriginating ? "yes" : "no");
+        LogInfo("    Parrot Repeat to Only Originating Peer: %s", m_parrotOnlyOriginating ? "yes" : "no");
     }
 }
 
