@@ -693,7 +693,8 @@ bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", peerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%8s), passing TSBK that failed to decode? tsbk == nullptr", peerId, peerIdentity.c_str());
         }
     }
 
@@ -740,7 +741,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", srcPeerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(srcPeerId);
+            LogWarning(LOG_NET, "PEER %u (%8s), passing TSBK that failed to decode? tsbk == nullptr", srcPeerId, peerIdentity.c_str());
         }
     }
 
@@ -820,7 +822,8 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
         // check the affiliations for this peer to see if we can repeat traffic
         lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
         if (aff == nullptr) {
-            LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+            LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
             return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
         }
         else {

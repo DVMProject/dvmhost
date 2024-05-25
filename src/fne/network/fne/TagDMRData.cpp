@@ -589,7 +589,8 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing CSBK that failed to decode? csbk == nullptr", peerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%8s), passing CSBK that failed to decode? csbk == nullptr", peerId, peerIdentity.c_str());
         }
     }
 
@@ -661,7 +662,8 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
             // check the affiliations for this peer to see if we can repeat traffic
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
             if (aff == nullptr) {
-                LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
+                std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
                 return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
             }
             else {

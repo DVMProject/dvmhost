@@ -133,6 +133,8 @@ namespace network
     public:
         /// <summary>Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, id);
+        /// <summary>Peer Identity.</summary>
+        __PROPERTY_PLAIN(std::string, identity);
 
         /// <summary>Control Channel Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, ccPeerId);
@@ -325,6 +327,9 @@ namespace network
         bool erasePeerAffiliations(uint32_t peerId);
         /// <summary>Helper to erase the peer from the peers list.</summary>
         bool erasePeer(uint32_t peerId);
+
+        /// <summary>Helper to resolve the peer ID to its identity string.</summary>
+        std::string resolvePeerIdentity(uint32_t peerId);
 
         /// <summary>Helper to complete setting up a repeater login request.</summary>
         void setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection);

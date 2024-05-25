@@ -471,7 +471,8 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             // check the affiliations for this peer to see if we can repeat traffic
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
             if (aff == nullptr) {
-                LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
+                std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                LogError(LOG_NET, "PEER %u (%8s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
                 return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
             }
             else {
