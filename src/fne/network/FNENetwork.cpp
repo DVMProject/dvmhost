@@ -693,7 +693,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                         if (peerConfig["identity"].is<std::string>()) {
                                             std::string identity = peerConfig["identity"].get<std::string>();
                                             connection->identity(identity);
-                                            LogInfoEx(LOG_NET, "PEER %u reports identity [%s]", peerId, identity.c_str());
+                                            LogInfoEx(LOG_NET, "PEER %u reports identity [%8s]", peerId, identity.c_str());
                                         }
 
                                         if (peerConfig["externalPeer"].is<bool>()) {
