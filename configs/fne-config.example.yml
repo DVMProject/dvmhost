@@ -70,6 +70,8 @@ master:
     parrotDelay: 2000
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
     parrotGrantDemand: true
+    # Flag indicating whether or not a parrot TG call will only be sent to the originating peer.
+    parrotOnlyToOrginiatingPeer: false
 
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false

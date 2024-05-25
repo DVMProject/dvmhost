@@ -84,6 +84,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_parrotDelay(parrotDelay),
     m_parrotDelayTimer(1000U, 0U, parrotDelay),
     m_parrotGrantDemand(parrotGrantDemand),
+    m_parrotOnlyOriginating(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
     m_status(NET_STAT_INVALID),
@@ -159,6 +160,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         m_influxServer = influxdb::ServerInfo(m_influxServerAddress, m_influxServerPort, m_influxOrg, m_influxServerToken, m_influxBucket);
     }
 
+    m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
+
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
@@ -175,6 +178,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    InfluxDB Bucket: %s", m_influxBucket.c_str());
             LogInfo("    InfluxDB Log Raw TSBK/CSBK/RCCH: %s", m_influxLogRawData ? "yes" : "no");
         }
+        LogInfo("    Parrot Repeat to Only Originating Peer: %u", m_parrotOnlyOriginating);
     }
 }
 

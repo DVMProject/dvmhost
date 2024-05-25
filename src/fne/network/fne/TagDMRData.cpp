@@ -200,8 +200,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_parrotFramesReady = false;
                     if (m_parrotFrames.size() > 0) {
                         for (auto& pkt : m_parrotFrames) {
-                            if (std::get<0>(pkt) != nullptr) {
-                                delete std::get<0>(pkt);
+                            if (pkt.buffer != nullptr) {
+                                delete pkt.buffer;
                             }
                         }
                         m_parrotFrames.clear();
@@ -228,7 +228,21 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t* copy = new uint8_t[len];
             ::memcpy(copy, buffer, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
+
+            ParrotFrame parrotFrame = ParrotFrame();
+            parrotFrame.buffer = copy;
+            parrotFrame.bufferLen = len;
+
+            parrotFrame.slotNo = slotNo;
+
+            parrotFrame.pktSeq = pktSeq;
+            parrotFrame.streamId = streamId;
+            parrotFrame.peerId = peerId;
+
+            parrotFrame.srcId = srcId;
+            parrotFrame.dstId = dstId;
+
+            m_parrotFrames.push_back(parrotFrame);
         }
 
         // process CSBK from peer
@@ -343,17 +357,26 @@ void TagDMRData::playbackParrot()
     }
 
     auto& pkt = m_parrotFrames[0];
-    if (std::get<0>(pkt) != nullptr) {
-        // repeat traffic to the connected peers
-        for (auto peer : m_network->m_peers) {
-            m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
+    if (pkt.buffer != nullptr) {
+        if (m_network->m_parrotOnlyOriginating) {
+            m_network->writePeer(pkt.peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "DMR, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                    peer.first, std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt));
+                    pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+            }
+        }
+        else {
+            // repeat traffic to the connected peers
+            for (auto peer : m_network->m_peers) {
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "DMR, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                }
             }
         }
 
-        delete std::get<0>(pkt);
+        delete pkt.buffer;
     }
     Thread::sleep(60);
     m_parrotFrames.pop_front();

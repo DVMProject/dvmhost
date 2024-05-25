@@ -280,6 +280,7 @@ namespace network
         uint32_t m_parrotDelay;
         Timer m_parrotDelayTimer;
         bool m_parrotGrantDemand;
+        bool m_parrotOnlyOriginating;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;

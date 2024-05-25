@@ -230,8 +230,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_parrotFramesReady = false;
                         if (m_parrotFrames.size() > 0) {
                             for (auto& pkt : m_parrotFrames) {
-                                if (std::get<0>(pkt) != nullptr) {
-                                    delete std::get<0>(pkt);
+                                if (pkt.buffer != nullptr) {
+                                    delete pkt.buffer;
                                 }
                             }
                             m_parrotFrames.clear();
@@ -258,7 +258,19 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t *copy = new uint8_t[len];
             ::memcpy(copy, buffer, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId, srcId, dstId));
+
+            ParrotFrame parrotFrame = ParrotFrame();
+            parrotFrame.buffer = copy;
+            parrotFrame.bufferLen = len;
+
+            parrotFrame.pktSeq = pktSeq;
+            parrotFrame.streamId = streamId;
+            parrotFrame.peerId = peerId;
+
+            parrotFrame.srcId = srcId;
+            parrotFrame.dstId = dstId;
+
+            m_parrotFrames.push_back(parrotFrame);
         }
 
         // process TSDU from peer
@@ -376,11 +388,11 @@ void TagP25Data::playbackParrot()
     }
 
     auto& pkt = m_parrotFrames[0];
-    if (std::get<0>(pkt) != nullptr) {
+    if (pkt.buffer != nullptr) {
         if (m_parrotFirstFrame) {
             if (m_network->m_parrotGrantDemand) {
-                uint32_t srcId = std::get<4>(pkt);
-                uint32_t dstId = std::get<5>(pkt);
+                uint32_t srcId = pkt.srcId;
+                uint32_t dstId = pkt.dstId;
 
                 // create control data
                 lc::LC control = lc::LC();
@@ -407,16 +419,24 @@ void TagP25Data::playbackParrot()
             m_parrotFirstFrame = false;
         }
 
-        // repeat traffic to the connected peers
-        for (auto peer : m_network->m_peers) {
-            m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
+        if (m_network->m_parrotOnlyOriginating) {
+            m_network->writePeer(pkt.peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                    peer.first, std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt));
+                    pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+            }
+        } else {
+            // repeat traffic to the connected peers
+            for (auto peer : m_network->m_peers) {
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                }
             }
         }
 
-        delete std::get<0>(pkt);
+        delete pkt.buffer;
     }
     Thread::sleep(180);
     m_parrotFrames.pop_front();

@@ -67,7 +67,19 @@ namespace network
         private:
             FNENetwork* m_network;
 
-            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t, uint32_t, uint32_t, uint32_t>> m_parrotFrames;
+            class ParrotFrame {
+            public:
+                uint8_t* buffer;
+                uint32_t bufferLen;
+
+                uint16_t pktSeq;
+                uint32_t streamId;
+                uint32_t peerId;
+
+                uint32_t srcId;
+                uint32_t dstId;
+            };
+            std::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
             bool m_parrotFirstFrame;
 
