@@ -735,7 +735,10 @@ void Modem::clock(uint32_t ms)
                 //    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
 
                 uint8_t length[2U];
-                length[0U] = ((m_length - cmdOffset) >> 8U) & 0xFFU;
+                if (m_length > 255U)
+                    length[0U] = ((m_length - cmdOffset) >> 8U) & 0xFFU;
+                else
+                    length[0U] = 0x00U;
                 length[1U] = (m_length - cmdOffset) & 0xFFU;
                 m_rxP25Queue.addData(length, 2U);
 
