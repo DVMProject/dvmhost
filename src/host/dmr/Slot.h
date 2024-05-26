@@ -85,6 +85,8 @@ namespace dmr
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
+        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        uint32_t peekFrameLength();
         /// <summary>Get data frame from data ring buffer.</summary>
         uint32_t getFrame(uint8_t* data);
 

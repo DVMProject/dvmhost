@@ -143,8 +143,11 @@ private:
     bool m_supervisor;
 
     Timer m_dmrBeaconDurationTimer;
+    Timer m_dmrDedicatedTxTestTimer;
     Timer m_p25BcastDurationTimer;
+    Timer m_p25DedicatedTxTestTimer;
     Timer m_nxdnBcastDurationTimer;
+    Timer m_nxdnDedicatedTxTestTimer;
 
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;

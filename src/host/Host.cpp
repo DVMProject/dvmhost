@@ -117,8 +117,11 @@ Host::Host(const std::string& confFile) :
     m_authoritative(true),
     m_supervisor(false),
     m_dmrBeaconDurationTimer(1000U),
+    m_dmrDedicatedTxTestTimer(1000U, 0U, 125U),
     m_p25BcastDurationTimer(1000U),
+    m_p25DedicatedTxTestTimer(1000U, 0U, 125U),
     m_nxdnBcastDurationTimer(1000U),
+    m_nxdnDedicatedTxTestTimer(1000U, 0U, 125U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_restAddress("0.0.0.0"),
@@ -1127,12 +1130,41 @@ int Host::run()
         if (m_network != nullptr)
             m_network->clock(ms);
 
-        if (dmr != nullptr)
+        if (dmr != nullptr) {
             dmr->clock(ms);
-        if (p25 != nullptr)
+
+            if (m_dmrCtrlChannel) {
+                if (!m_dmrDedicatedTxTestTimer.isRunning()) {
+                    m_dmrDedicatedTxTestTimer.start();
+                } else {
+                    m_dmrDedicatedTxTestTimer.clock(ms);
+                }
+            }
+        }
+
+        if (p25 != nullptr) {
             p25->clock(ms);
-        if (nxdn != nullptr)
+
+            if (m_p25CtrlChannel) {
+                if (!m_p25DedicatedTxTestTimer.isRunning()) {
+                    m_p25DedicatedTxTestTimer.start();
+                } else {
+                    m_p25DedicatedTxTestTimer.clock(ms);
+                }
+            }
+        }
+
+        if (nxdn != nullptr) {
             nxdn->clock(ms);
+
+            if (m_nxdnCtrlChannel) {
+                if (!m_nxdnDedicatedTxTestTimer.isRunning()) {
+                    m_nxdnDedicatedTxTestTimer.start();
+                } else {
+                    m_nxdnDedicatedTxTestTimer.clock(ms);
+                }
+            }
+        }
 
         // ------------------------------------------------------
         //  -- Timer Clocking                                 --

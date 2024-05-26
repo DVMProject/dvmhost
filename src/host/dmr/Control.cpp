@@ -332,8 +332,27 @@ bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <param name="slotNo"></param>
+/// <returns>Length of frame data retrieved.</returns>
+uint32_t Control::peekFrameLength(uint32_t slotNo)
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->peekFrameLength();
+    case 2U:
+        return m_slot2->peekFrameLength();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        return 0U;
+    }
+}
+
+/// <summary>
 /// Get a data frame for slot, from data ring buffer.
 /// </summary>
+/// <param name="slotNo"></param>
 /// <param name="data">Buffer to put retrieved DMR data frame data.</param>
 /// <returns>Length of data retrieved from DMR ring buffer.</returns>
 uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)

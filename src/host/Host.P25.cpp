@@ -124,13 +124,22 @@ void Host::readFramesP25(p25::Control* control, std::function<void()>&& afterRea
 /// <param name="afterWriteCallback"></param>
 void Host::writeFramesP25(p25::Control* control, std::function<void()>&& afterWriteCallback)
 {
-    uint8_t data[p25::P25_LDU_FRAME_LENGTH_BYTES * 2U];
+    uint8_t data[p25::P25_PDU_FRAME_LENGTH_BYTES * 2U];
 
     // check if there is space on the modem for P25 frames,
     // if there is read frames from the P25 controller and write it
     // to the modem
     if (control != nullptr) {
         uint8_t nextLen = control->peekFrameLength();
+        if (m_p25CtrlChannel) {
+            if (m_p25DedicatedTxTestTimer.hasExpired()) {
+                m_p25DedicatedTxTestTimer.pause();
+                if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_P25 && control->getCCRunning()) {
+                    LogError(LOG_HOST, "P25 dedicated control not transmitting, running = %u, halted = %u, frameLength = %u", control->getCCRunning(), control->getCCHalted(), nextLen);
+                }
+            }
+        }
+
         if (nextLen > 0U) {
             bool ret = m_modem->hasP25Space(nextLen);
             if (ret) {

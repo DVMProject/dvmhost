@@ -481,6 +481,28 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <returns>Length of frame data retrieved.</returns>
+uint32_t Control::peekFrameLength()
+{
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.peek(&len, 1U);
+    }
+    else {
+        m_txQueue.peek(&len, 1U);
+    }
+
+    return len;
+}
+
+/// <summary>
 /// Get frame data from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to store frame data.</param>
