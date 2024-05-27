@@ -1,0 +1,84 @@
+#
+# Digital Voice Modem - DFSI Software Configuration
+#
+# @package DVM / DFSI Software
+#
+
+# Flag indicating whether the host will run as a background or foreground task.
+daemon: false
+
+#
+# Network Configuration
+#
+network:
+    # Textual Name
+    identity: DFSI
+    # Network Peer ID
+    peerId: 9000123
+    # Hostname/IP address of FNE master to connect to.
+    address: 127.0.0.1
+    # Port number to connect to.
+    port: 62031
+    # FNE access password.
+    password: RPT1234
+    # Additional debug logging
+    debug: false
+    # Encrypted endpoint networking
+    encrypted: false
+    # Pre-shared key for encrypted networking (AES-256 32-byte hex keystring)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+#
+# DFSI Configuration
+#
+dfsi:
+    # Mode
+    #   1 - UDP DFSI to DVM FNE (TODO: Implement this)
+    #   2 - Serial DFSI to DVM FNE (Using DVM-V24 adapter board)
+    #   3 - Serial DFSI to UDP DFSI (TODO: Implement this)
+    mode: 2
+
+    # Flag enabling "the" Manufacturer standard of RTP.
+    theManufacturer: false
+    
+    udp:
+        # Time in seconds between heartbets to DFSI peers.
+        heartbeat: 5
+        # Flag disabling control connection establishment.
+        noConnectionEstablishment: false
+        # Local DFSI RTP Port number.
+        localRtpPort: 27500
+        # Remote RFSS DFSI Hostname/IP address of FNE master to connect to.
+        remoteDfsiAddress: 127.0.0.2
+        # Remote DFSI Control Port number to connect to.
+        remoteControlPort: 27000
+        # Remote DFSI RTP Port number to connect to.
+        remoteRtpPort: 27500
+
+    serial:
+        # Serial configuration for serial DFSI
+        serialPortName: "/dev/ttyACM0"
+        serialBaudrate: 115200
+        serialTxJitter: 200
+
+#
+# Logging Configuration
+#   Logging Levels:
+#     1 - Debug
+#     2 - Message
+#     3 - Informational
+#     4 - Warning
+#     5 - Error
+#     6 - Fatal
+#
+log:
+    # Console display logging level (used when in foreground).
+    displayLevel: 1
+    # File logging level.
+    fileLevel: 1
+    # Full path for the directory to store the log files.
+    filePath: .
+    # Full path for the directory to store the activity log files.
+    activityFilePath: .
+    # Log filename prefix.
+    fileRoot: dvmdfsi
