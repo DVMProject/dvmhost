@@ -2,6 +2,7 @@
 build/
 dvmcmd
 dvmhost
+dvmdfsi
 
 # Ignore CMake temporary files
 CMakeLists.txt.user
