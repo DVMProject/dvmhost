@@ -153,12 +153,31 @@ int Dfsi::run()
     if (!ret)
         return EXIT_FAILURE;
 
-    ::LogInfoEx(LOG_HOST, "DFSI peer is up and running");
+    ::LogInfoEx(LOG_HOST, "DFSI peer network is up and running");
+
+    // Read DFSI config
+    yaml::Node dfsi_conf = m_conf["dfsi"];
+
+    // Read serial config
+    yaml::Node serial_conf = dfsi_conf["serial"];
+    std::string port = serial_conf["port"].as<std::string>();
+    uint16_t baudrate = serial_conf["baudrate"].as<uint16_t>();
+    bool serial_debug = serial_conf["debug"].as<bool>();
+
+    // Create serial service
+    SerialService* serial = new SerialService(port, baudrate, m_network, serial_debug);
+
+    // Open serial
+    ret = serial->open();
+    if (!ret)
+        return EXIT_FAILURE;
 
     StopWatch stopWatch;
     stopWatch.start();
 
-    // main execution loop
+    ///
+    /// main execution loop
+    ///
     while (!g_killed) {
         uint32_t ms = stopWatch.elapsed();
 
@@ -174,20 +193,6 @@ int Dfsi::run()
 
         uint32_t length = 0U;
         bool netReadRet = false;
-        UInt8Array dmrBuffer = m_network->readDMR(netReadRet, length);
-        if (netReadRet) {
-            uint8_t seqNo = dmrBuffer[4U];
-
-            uint32_t srcId = __GET_UINT16(dmrBuffer, 5U);
-            uint32_t dstId = __GET_UINT16(dmrBuffer, 8U);
-
-            uint8_t flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
-
-            uint32_t slotNo = (dmrBuffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
-
-            if (!g_hideMessages)
-                LogMessage(LOG_NET, "DMR, slotNo = %u, seqNo = %u, flco = $%02X, srcId = %u, dstId = %u, len = %u", slotNo, seqNo, flco, srcId, dstId, length);
-        }
 
         UInt8Array p25Buffer = m_network->readP25(netReadRet, length);
         if (netReadRet) {
@@ -201,6 +206,25 @@ int Dfsi::run()
 
             if (!g_hideMessages)
                 LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
+
+            // Send the data to the serial handler
+            serial->processP25(std::move(p25Buffer), length);
+        }
+
+        // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDNS
+        UInt8Array dmrBuffer = m_network->readDMR(netReadRet, length);
+        if (netReadRet) {
+            uint8_t seqNo = dmrBuffer[4U];
+
+            uint32_t srcId = __GET_UINT16(dmrBuffer, 5U);
+            uint32_t dstId = __GET_UINT16(dmrBuffer, 8U);
+
+            uint8_t flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
+
+            uint32_t slotNo = (dmrBuffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+            if (!g_hideMessages)
+                LogMessage(LOG_NET, "DMR, slotNo = %u, seqNo = %u, flco = $%02X, srcId = %u, dstId = %u, len = %u", slotNo, seqNo, flco, srcId, dstId, length);
         }
 
         UInt8Array nxdnBuffer = m_network->readNXDN(netReadRet, length);
@@ -222,6 +246,11 @@ int Dfsi::run()
     if (m_network != nullptr) {
         m_network->close();
         delete m_network;
+    }
+
+    if (serial != nullptr) {
+        serial->close();
+        delete serial;
     }
 
     if (m_tidLookup != nullptr) {
