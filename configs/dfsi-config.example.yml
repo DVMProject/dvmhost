@@ -57,9 +57,12 @@ dfsi:
 
     serial:
         # Serial configuration for serial DFSI
-        serialPortName: "/dev/ttyACM0"
-        serialBaudrate: 115200
-        serialTxJitter: 200
+        port: "/dev/ttyACM0"
+        baudrate: 115200
+        # Jitter buffer length in ms
+        jitter: 200
+        # Debug logging
+        debug: false
 
 #
 # Logging Configuration

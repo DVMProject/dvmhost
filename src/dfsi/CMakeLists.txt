@@ -12,10 +12,18 @@
 #*
 #*/
 file(GLOB dvmdfsi_SRC
+    # Modem libs for serial communication
+    "src/host/modem/*.h"
+    "src/host/modem/*.cpp"
+    "src/host/modem/port/*.h"
+    "src/host/modem/port/*.cpp"
+    # Core network libs
     "src/host/network/Network.h"
     "src/host/network/Network.cpp"
+    # DFSI network libs
     "src/dfsi/network/*.h"
     "src/dfsi/network/*.cpp"
+    # Core DFSI
     "src/dfsi/*.h"
     "src/dfsi/*.cpp"
 )

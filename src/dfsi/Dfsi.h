@@ -20,6 +20,7 @@
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/DfsiPeerNetwork.h"
+#include "network/SerialService.h"
 
 #include <string>
 #include <unordered_map>
