@@ -86,7 +86,8 @@ void SerialService::clock(uint32_t ms)
                 ::memset(dfsiData, 0x00, length - 4);
                 ::memcpy(dfsiData, m_serialBuffer + 4, length - 4);
 
-                // Process the DFSI data TODO
+                // Process the DFSI data 
+                // TODO: utilize the existing logic in BaseNetwork.cpp to convert the modem data to net data
             }
             break;
 
@@ -533,7 +534,8 @@ void SerialService::writeP25Frame(const uint8_t* data, uint32_t length)
     // Copy the P25 data
     ::memcpy(buffer + 4, data, length);
 
-    // Write TODO
+    // Write 
+    // TODO: we need to create a jitter buffer that propely doles out the IMBE frames at 20ms increments
 
 }
 
