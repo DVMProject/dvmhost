@@ -40,6 +40,9 @@ dfsi:
 
     # Flag enabling "the" Manufacturer standard of RTP.
     theManufacturer: false
+
+    # P25 buffer size in bytes
+    p25BufferSize: 522
     
     udp:
         # Time in seconds between heartbets to DFSI peers.
@@ -63,6 +66,8 @@ dfsi:
         jitter: 200
         # Debug logging
         debug: false
+        # Trace logging (prints lots of data)
+        trace: false
 
 #
 # Logging Configuration

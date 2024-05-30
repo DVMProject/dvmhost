@@ -59,6 +59,8 @@ private:
 
     bool m_repeatTraffic;
 
+    network::SerialService* m_serial;
+
     /// <summary>Reads basic configuration parameters from the INI.</summary>
     bool readParams();
     /// <summary>Initializes peer network connectivity.</summary>
