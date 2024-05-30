@@ -58,7 +58,8 @@ Dfsi::Dfsi(const std::string& confFile) :
     m_maxMissedPings(5U),
     m_updateLookupTime(10U),
     m_debug(false),
-    m_repeatTraffic(true)
+    m_repeatTraffic(true),
+    m_serial(nullptr)
 {
     /* stub */
 }
@@ -157,18 +158,20 @@ int Dfsi::run()
 
     // Read DFSI config
     yaml::Node dfsi_conf = m_conf["dfsi"];
+    uint32_t p25BufferSize = dfsi_conf["p25BufferSize"].as<uint32_t>();
 
     // Read serial config
     yaml::Node serial_conf = dfsi_conf["serial"];
     std::string port = serial_conf["port"].as<std::string>();
-    uint16_t baudrate = serial_conf["baudrate"].as<uint16_t>();
+    uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
     bool serial_debug = serial_conf["debug"].as<bool>();
+    bool serial_trace = serial_conf["trace"].as<bool>();
 
     // Create serial service
-    SerialService* serial = new SerialService(port, baudrate, m_network, serial_debug);
+    m_serial = new SerialService(port, baudrate, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
 
     // Open serial
-    ret = serial->open();
+    ret = m_serial->open();
     if (!ret)
         return EXIT_FAILURE;
 
@@ -185,7 +188,7 @@ int Dfsi::run()
         stopWatch.start();
 
         // ------------------------------------------------------
-        //  -- Network Clocking                               --
+        //  -- Network RX Clocking                             --
         // ------------------------------------------------------
 
         if (m_network != nullptr)
@@ -208,7 +211,7 @@ int Dfsi::run()
                 LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
 
             // Send the data to the serial handler
-            serial->processP25(std::move(p25Buffer), length);
+            m_serial->processP25(std::move(p25Buffer), length);
         }
 
         // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDNS
@@ -238,6 +241,21 @@ int Dfsi::run()
                 LogMessage(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
         }
 
+        // ------------------------------------------------------
+        //  -- Network TX Clocking                             --
+        // ------------------------------------------------------
+
+        // TODO: Get a P25 frame from the serial p25RxQueue and send it to the network
+
+        // ------------------------------------------------------
+        //  -- Serial Clocking                                 --
+        // ------------------------------------------------------
+
+        if (m_serial != nullptr) {
+            m_serial->clock(ms);
+        }
+
+        // Timekeeping
         if (ms < 2U)
             Thread::sleep(1U);
     }
@@ -248,9 +266,9 @@ int Dfsi::run()
         delete m_network;
     }
 
-    if (serial != nullptr) {
-        serial->close();
-        delete serial;
+    if (m_serial != nullptr) {
+        m_serial->close();
+        delete m_serial;
     }
 
     if (m_tidLookup != nullptr) {
@@ -327,7 +345,7 @@ bool Dfsi::createPeerNetwork()
 
     std::string identity = networkConf["identity"].as<std::string>();
 
-    bool debug = networkConf["debug"].as<bool>();
+    bool netDebug = networkConf["debug"].as<bool>();
 
     LogInfo("Network Parameters");
     LogInfo("    Identity: %s", identity.c_str());
@@ -342,7 +360,7 @@ bool Dfsi::createPeerNetwork()
     }
 
     // initialize networking
-    m_network = new DfsiPeerNetwork(address, port, 0U, id, password, true, debug, false, true, false, true, true, true, true, true, false);
+    m_network = new DfsiPeerNetwork(address, port, 0U, id, password, true, netDebug, false, true, false, true, true, true, true, true, false);
     m_network->setMetadata(identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
     m_network->setLookups(m_ridLookup, m_tidLookup);
 
