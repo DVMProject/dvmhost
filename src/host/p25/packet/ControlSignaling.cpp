@@ -775,7 +775,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     case TSBK_IOSP_GRP_VCH:
                     case TSBK_IOSP_UU_VCH:
                     {
-                        if (m_p25->m_enableControl) {
+                        if (m_p25->m_enableControl && m_p25->m_dedicatedControl) {
                             if (!m_p25->m_affiliations.isGranted(dstId)) {
                                 if (m_verbose) {
                                     LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u",

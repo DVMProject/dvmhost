@@ -35,7 +35,7 @@
 
 #define EOL    "\r\n"
 
-const uint32_t LOG_BUFFER_LEN = 4096U;
+const uint32_t LOG_BUFFER_LEN = 16384U;
 
 // ---------------------------------------------------------------------------
 //  Global Variables
