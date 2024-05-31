@@ -362,6 +362,8 @@ namespace network
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
 
+        /// <summary>Helper to log a warning specifying which NAK reason is being sent a peer.</summary>
+        void logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>

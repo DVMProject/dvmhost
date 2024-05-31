@@ -1652,6 +1652,41 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
 }
 
 /// <summary>
+/// Helper to log a warning specifying which NAK reason is being sent a peer.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="tag"></param>
+/// <param name="reason"></param>
+void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason)
+{
+    switch (reason) {
+    case NET_CONN_NAK_MODE_NOT_ENABLED:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; digital mode not enabled on FNE", peerId, tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_ILLEGAL_PACKET:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; illegal/unknown packet", peerId ,tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_FNE_UNAUTHORIZED:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; unauthorized", peerId, tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_BAD_CONN_STATE:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; bad connection state", peerId ,tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_INVALID_CONFIG_DATA:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; invalid configuration data", peerId, tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_FNE_MAX_CONN:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; FNE has reached maximum permitted connections", peerId, tag, (uint16_t)reason);
+        break;
+
+    case NET_CONN_NAK_GENERAL_FAILURE:
+    default:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; general failure", peerId, tag, (uint16_t)reason);
+        break;
+    }
+}
+
+/// <summary>
 /// Helper to send a NAK response to the specified peer.
 /// </summary>
 /// <param name="peerId"></param>
@@ -1668,7 +1703,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
-    LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u", peerId, tag, (uint16_t)reason);
+    logPeerNAKReason(peerId, tag, reason);
     return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
@@ -1691,7 +1726,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT32(peerId, buffer, 6U);                                           // Peer ID
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
-    LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u", peerId, tag, (uint16_t)reason);
+    logPeerNAKReason(peerId, tag, reason);
     return m_frameQueue->write(buffer, 12U, createStreamId(), peerId, m_peerId,
         { NET_FUNC_NAK, NET_SUBFUNC_NOP }, 0U, addr, addrLen);
 }
