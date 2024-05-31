@@ -119,11 +119,14 @@ void ActivityLog(const char* msg, ...)
 
     char buffer[ACT_LOG_BUFFER_LEN];
 
-    va_list vl;
+    va_list vl, vl_len;
     va_start(vl, msg);
+    va_copy(vl_len, vl);
 
-    ::vsnprintf(buffer, ACT_LOG_BUFFER_LEN - 1U, msg, vl);
+    size_t len = ::vsnprintf(nullptr, 0U, msg, vl_len);
+    ::vsnprintf(buffer, len + 1U, msg, vl);
 
+    va_end(vl_len);
     va_end(vl);
 
     bool ret = ::ActivityLogOpen();

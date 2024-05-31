@@ -35,7 +35,7 @@
 
 #define EOL    "\r\n"
 
-const uint32_t LOG_BUFFER_LEN = 16384U;
+const uint32_t LOG_BUFFER_LEN = 4096U;
 
 // ---------------------------------------------------------------------------
 //  Global Variables
@@ -216,11 +216,14 @@ void Log(uint32_t level, const char *module, const char* fmt, ...)
         }
     }
 
-    va_list vl;
+    va_list vl, vl_len;
     va_start(vl, fmt);
+    va_copy(vl_len, vl);
 
-    ::vsnprintf(buffer + ::strlen(buffer), LOG_BUFFER_LEN - 1U, fmt, vl);
+    size_t len = ::vsnprintf(nullptr, 0U, fmt, vl_len);
+    ::vsnprintf(buffer + ::strlen(buffer), len + 1U, fmt, vl);
 
+    va_end(vl_len);
     va_end(vl);
 
     if (m_outStream && g_logDisplayLevel == 0U) {
