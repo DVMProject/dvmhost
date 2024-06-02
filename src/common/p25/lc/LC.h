@@ -95,6 +95,11 @@ namespace p25
             /// <summary>Voice channel number.</summary>
             __PROPERTY(uint32_t, grpVchNo, GrpVchNo);
 
+            /// <summary>Voice channel number.</summary>
+            __PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+            /// <summary>Destination ID.</summary>
+            __PROPERTY(uint32_t, dstIdB, DstIdB);
+
             /// <summary>Flag indicating explicit addressing.</summary>
             __PROPERTY(bool, explicitId, ExplicitId);
 
