@@ -148,7 +148,7 @@ using namespace p25::packet;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint32_t ADJ_SITE_TIMER_TIMEOUT = 30U;
+const uint32_t ADJ_SITE_TIMER_TIMEOUT = 60U;
 const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
 const uint32_t TSDU_CTRL_BURST_COUNT = 2U;
 const uint32_t TSBK_MBF_CNT = 3U;
@@ -994,59 +994,6 @@ void ControlSignaling::writeAdjSSNetwork()
         }
 
         RF_TO_WRITE_NET(osp.get());
-    }
-}
-
-/// <summary>
-/// Updates the processor by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
-void ControlSignaling::clock(uint32_t ms)
-{
-    if (m_p25->m_enableControl) {
-        // clock all the grant timers
-        m_p25->m_affiliations.clock(ms);
-
-        // clock adjacent site and SCCB update timers
-        m_adjSiteUpdateTimer.clock(ms);
-        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
-            // update adjacent site data
-            for (auto& entry : m_adjSiteUpdateCnt) {
-                uint8_t siteId = entry.first;
-                uint8_t updateCnt = entry.second;
-                if (updateCnt > 0U) {
-                    updateCnt--;
-                }
-
-                if (updateCnt == 0U) {
-                    SiteData siteData = m_adjSiteTable[siteId];
-                    LogWarning(LOG_NET, "P25, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
-                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
-                }
-
-                entry.second = updateCnt;
-            }
-
-            // update SCCB data
-            for (auto& entry : m_sccbUpdateCnt) {
-                uint8_t rfssId = entry.first;
-                uint8_t updateCnt = entry.second;
-                if (updateCnt > 0U) {
-                    updateCnt--;
-                }
-
-                if (updateCnt == 0U) {
-                    SiteData siteData = m_sccbTable[rfssId];
-                    LogWarning(LOG_NET, "P25, Secondary Control Channel Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
-                        siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
-                }
-
-                entry.second = updateCnt;
-            }
-
-            m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
-            m_adjSiteUpdateTimer.start();
-        }
     }
 }
 

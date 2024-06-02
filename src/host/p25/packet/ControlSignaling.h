@@ -58,9 +58,6 @@ namespace p25
             /// <summary>Helper to write P25 adjacent site information to the network.</summary>
             void writeAdjSSNetwork();
 
-            /// <summary>Updates the processor by the passed number of milliseconds.</summary>
-            void clock(uint32_t ms);
-
             /// <summary>Helper to write a call alert packet.</summary>
             void writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId);
             /// <summary>Helper to write a radio monitor packet.</summary>

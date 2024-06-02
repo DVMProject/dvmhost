@@ -26,6 +26,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/AffiliationLookup.h"
 #include "common/RingBuffer.h"
+#include "common/StopWatch.h"
 #include "common/Timer.h"
 #include "common/yaml/Yaml.h"
 #include "nxdn/packet/Voice.h"
@@ -85,8 +86,10 @@ namespace nxdn
         /// <summary>Get frame data from data ring buffer.</summary>
         uint32_t getFrame(uint8_t* data);
 
-        /// <summary>Updates the processor by the passed number of milliseconds.</summary>
-        void clock(uint32_t ms);
+        /// <summary>Updates the processor.</summary>
+        void clock();
+        /// <summary>Updates the adj. site tables and affiliations.</summary>
+        void clockSiteData(uint32_t ms);
 
         /// <summary>Sets a flag indicating whether NXDN has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
@@ -183,6 +186,8 @@ namespace nxdn
         Timer m_adjSiteUpdate;
 
         Timer m_ccPacketInterval;
+
+        StopWatch m_interval;
 
         uint8_t m_frameLossCnt;
         uint8_t m_frameLossThreshold;

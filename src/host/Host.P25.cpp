@@ -132,7 +132,7 @@ void Host::writeFramesP25(p25::Control* control, std::function<void()>&& afterWr
     if (control != nullptr) {
         uint8_t nextLen = control->peekFrameLength();
         if (m_p25CtrlChannel) {
-            if (m_p25DedicatedTxTestTimer.hasExpired()) {
+            if (m_p25DedicatedTxTestTimer.hasExpired() && !m_p25DedicatedTxTestTimer.isPaused()) {
                 m_p25DedicatedTxTestTimer.pause();
                 if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_P25 && control->getCCRunning()) {
                     LogError(LOG_HOST, "P25 dedicated control not transmitting, running = %u, halted = %u, frameLength = %u", control->getCCRunning(), control->getCCHalted(), nextLen);

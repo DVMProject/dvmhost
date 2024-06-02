@@ -371,27 +371,26 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 }
 
 /// <summary>
-/// Updates the processor by the passed number of milliseconds.
+/// Updates the processor.
 /// </summary>
-/// <param name="ms"></param>
-void Control::clock(uint32_t ms)
+void Control::clock()
 {
     if (m_network != nullptr) {
         processNetwork();
     }
 
-    m_tsccCntInterval.clock(ms);
-    if (m_tsccCntInterval.isRunning() && m_tsccCntInterval.hasExpired()) {
-        m_tsccCnt++;
-        if (m_tsccCnt == TSCC_MAX_CSC_CNT) {
-            m_tsccCnt = 0U;
-        }
-
-        m_tsccCntInterval.start();
-    }
-
     m_slot1->clock();
     m_slot2->clock();
+}
+
+/// <summary>
+/// Updates the adj. site tables.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clockSiteData(uint32_t ms)
+{
+    m_slot1->clockSiteData(ms);
+    m_slot2->clockSiteData(ms);
 }
 
 /// <summary>

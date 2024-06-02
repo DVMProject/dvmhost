@@ -75,7 +75,9 @@ namespace dmr
         uint32_t getFrame(uint32_t slotNo, uint8_t* data);
 
         /// <summary>Updates the processor.</summary>
-        void clock(uint32_t ms);
+        void clock();
+        /// <summary>Updates the adj. site tables.</summary>
+        void clockSiteData(uint32_t ms);
 
         /// <summary>Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor);

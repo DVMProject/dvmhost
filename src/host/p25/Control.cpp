@@ -118,6 +118,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_networkWatchdog(1000U, 0U, 1500U),
     m_adjSiteUpdate(1000U, 75U),
     m_ccPacketInterval(1000U, 0U, 10U),
+    m_interval(),
     m_hangCount(3U * 8U),
     m_tduPreambleCount(8U),
     m_frameLossCnt(0U),
@@ -146,6 +147,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
+
+    m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
@@ -753,11 +756,13 @@ bool Control::writeRF_VoiceEnd()
 }
 
 /// <summary>
-/// Updates the processor by the passed number of milliseconds.
+/// Updates the processor.
 /// </summary>
-/// <param name="ms"></param>
-void Control::clock(uint32_t ms)
+void Control::clock()
 {
+    uint32_t ms = m_interval.elapsed();
+    m_interval.start();
+
     if (m_network != nullptr) {
         processNetwork();
 
@@ -802,26 +807,6 @@ void Control::clock(uint32_t ms)
         if (m_ccPrevRunning && !m_ccRunning) {
             writeRF_ControlEnd();
             m_ccPrevRunning = m_ccRunning;
-        }
-
-        // do we need to network announce ourselves?
-        if (!m_adjSiteUpdate.isRunning()) {
-            m_control->writeAdjSSNetwork();
-            m_adjSiteUpdate.start();
-        }
-
-        m_adjSiteUpdate.clock(ms);
-        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
-            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
-                m_control->writeAdjSSNetwork();
-                if (m_network != nullptr) {
-                    if (m_affiliations.grpAffSize() > 0) {
-                        auto affs = m_affiliations.grpAffTable();
-                        m_network->announceAffiliationUpdate(affs);
-                    }
-                }
-                m_adjSiteUpdate.start();
-            }
         }
     }
 
@@ -933,9 +918,86 @@ void Control::clock(uint32_t ms)
     if (m_data != nullptr) {
         m_data->clock(ms);
     }
+}
+
+/// <summary>
+/// Updates the adj. site tables and affiliations.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clockSiteData(uint32_t ms)
+{
+    if (m_enableControl) {
+        // clock all the grant timers
+        m_affiliations.clock(ms);
+    }
 
     if (m_control != nullptr) {
-        m_control->clock(ms);
+        // do we need to network announce ourselves?
+        if (!m_adjSiteUpdate.isRunning()) {
+            m_control->writeAdjSSNetwork();
+            m_adjSiteUpdate.start();
+        }
+
+        m_adjSiteUpdate.clock(ms);
+        if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
+            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_control->writeAdjSSNetwork();
+                if (m_network != nullptr) {
+                    if (m_affiliations.grpAffSize() > 0) {
+                        auto affs = m_affiliations.grpAffTable();
+                        m_network->announceAffiliationUpdate(affs);
+                    }
+                }
+                m_adjSiteUpdate.start();
+            }
+        }
+
+        if (m_enableControl) {
+            // clock adjacent site and SCCB update timers
+            m_control->m_adjSiteUpdateTimer.clock(ms);
+            if (m_control->m_adjSiteUpdateTimer.isRunning() && m_control->m_adjSiteUpdateTimer.hasExpired()) {
+                if (m_control->m_adjSiteUpdateCnt.size() > 0) {
+                    // update adjacent site data
+                    for (auto &entry : m_control->m_adjSiteUpdateCnt) {
+                        uint8_t siteId = entry.first;
+                        uint8_t updateCnt = entry.second;
+                        if (updateCnt > 0U) {
+                            updateCnt--;
+                        }
+
+                        if (updateCnt == 0U) {
+                            SiteData siteData = m_control->m_adjSiteTable[siteId];
+                            LogWarning(LOG_NET, "P25, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                                siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
+                        }
+
+                        entry.second = updateCnt;
+                    }
+                }
+
+                if (m_control->m_sccbUpdateCnt.size() > 0) {
+                    // update SCCB data
+                    for (auto& entry : m_control->m_sccbUpdateCnt) {
+                        uint8_t rfssId = entry.first;
+                        uint8_t updateCnt = entry.second;
+                        if (updateCnt > 0U) {
+                            updateCnt--;
+                        }
+
+                        if (updateCnt == 0U) {
+                            SiteData siteData = m_control->m_sccbTable[rfssId];
+                            LogWarning(LOG_NET, "P25, Secondary Control Channel Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X",
+                                siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
+                        }
+
+                        entry.second = updateCnt;
+                    }
+                }
+
+                m_control->m_adjSiteUpdateTimer.setTimeout(m_control->m_adjSiteUpdateInterval);
+                m_control->m_adjSiteUpdateTimer.start();
+            }
+        }
     }
 }
 

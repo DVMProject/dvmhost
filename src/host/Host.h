@@ -148,6 +148,20 @@ private:
     Timer m_p25DedicatedTxTestTimer;
     Timer m_nxdnBcastDurationTimer;
     Timer m_nxdnDedicatedTxTestTimer;
+    
+    Timer m_dmrTx1WatchdogTimer;
+    uint32_t m_dmrTx1LoopMS;
+    Timer m_dmrTx2WatchdogTimer;
+    uint32_t m_dmrTx2LoopMS;
+    Timer m_p25TxWatchdogTimer;
+    uint32_t m_p25TxLoopMS;
+    Timer m_nxdnTxWatchdogTimer;
+    uint32_t m_nxdnTxLoopMS;
+    uint8_t m_mainLoopStage;
+    uint32_t m_mainLoopMS;
+    Timer m_mainLoopWatchdogTimer;
+    uint32_t m_adjSiteLoopMS;
+    Timer m_adjSiteLoopWatchdogTimer;
 
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;

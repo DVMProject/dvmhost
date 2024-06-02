@@ -90,7 +90,7 @@ void Host::writeFramesNXDN(nxdn::Control* control, std::function<void()>&& after
         if (ret) {
             uint32_t nextLen = control->peekFrameLength();
             if (m_nxdnCtrlChannel) {
-                if (m_nxdnDedicatedTxTestTimer.hasExpired()) {
+                if (m_nxdnDedicatedTxTestTimer.hasExpired() && !m_nxdnDedicatedTxTestTimer.isPaused()) {
                     m_nxdnDedicatedTxTestTimer.pause();
                     if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_NXDN && control->getCCRunning()) {
                         LogError(LOG_HOST, "NXDN dedicated control stopped transmitting, running = %u, halted = %u, frameLength = %u", control->getCCRunning(), control->getCCHalted(), nextLen);

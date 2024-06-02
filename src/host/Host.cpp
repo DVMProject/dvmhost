@@ -122,6 +122,19 @@ Host::Host(const std::string& confFile) :
     m_p25DedicatedTxTestTimer(1000U, 0U, 125U),
     m_nxdnBcastDurationTimer(1000U),
     m_nxdnDedicatedTxTestTimer(1000U, 0U, 125U),
+    m_dmrTx1WatchdogTimer(1000U, 1U),
+    m_dmrTx1LoopMS(0U),
+    m_dmrTx2WatchdogTimer(1000U, 1U),
+    m_dmrTx2LoopMS(0U),
+    m_p25TxWatchdogTimer(1000U, 1U),
+    m_p25TxLoopMS(0U),
+    m_nxdnTxWatchdogTimer(1000U, 1U),
+    m_nxdnTxLoopMS(0U),
+    m_mainLoopStage(0U),
+    m_mainLoopMS(0U),
+    m_mainLoopWatchdogTimer(1000U, 1U),
+    m_adjSiteLoopMS(0U),
+    m_adjSiteLoopWatchdogTimer(1000U, 1U),
     m_activeTickDelay(5U),
     m_idleTickDelay(5U),
     m_restAddress("0.0.0.0"),
@@ -733,15 +746,102 @@ int Host::run()
             }                                                                                                           \
         }
 
-    // setup protocol processor threads
-    /** Digital Mobile Radio */
+    /** Watchdog */
+    ThreadFunc watchdogThread([&, this]() {
+        if (g_killed)
+            return;
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        LogDebug(LOG_HOST, "started watchdog");
+        while (!g_killed) {
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+
+            // scope is intentional
+            {
+                /** Digital Mobile Radio */
+                if (dmr != nullptr) {
+                    if (m_dmrTx1WatchdogTimer.isRunning())
+                        m_dmrTx1WatchdogTimer.clock(ms);
+                    if (m_dmrTx1WatchdogTimer.isRunning() && m_dmrTx1WatchdogTimer.hasExpired() && !m_dmrTx1WatchdogTimer.isPaused()) {
+                        m_dmrTx1WatchdogTimer.pause();
+                        LogError(LOG_HOST, "DMR, slot 1 frame processor hung >%us, ms = %u", m_dmrTx1WatchdogTimer.getTimeout(), m_dmrTx1LoopMS);
+                    }
+
+                    if (m_dmrTx2WatchdogTimer.isRunning())
+                        m_dmrTx2WatchdogTimer.clock(ms);
+                    if (m_dmrTx2WatchdogTimer.isRunning() && m_dmrTx2WatchdogTimer.hasExpired() && !m_dmrTx2WatchdogTimer.isPaused()) {
+                        m_dmrTx2WatchdogTimer.pause();
+                        LogError(LOG_HOST, "DMR, slot 2 frame processor hung >%us, ms = %u", m_dmrTx2WatchdogTimer.getTimeout(), m_dmrTx2LoopMS);
+                    }
+                }
+
+                /** Project 25 */
+                if (p25 != nullptr) {
+                    if (m_p25TxWatchdogTimer.isRunning())
+                        m_p25TxWatchdogTimer.clock(ms);
+                    if (m_p25TxWatchdogTimer.isRunning() && m_p25TxWatchdogTimer.hasExpired() && !m_p25TxWatchdogTimer.isPaused()) {
+                        m_p25TxWatchdogTimer.pause();
+                        LogError(LOG_HOST, "P25, frame processor hung >%us, ms = %u", m_p25TxWatchdogTimer.getTimeout(), m_p25TxLoopMS);
+                    }
+                }
+
+                /** Next Generation Digital Narrowband */
+                if (nxdn != nullptr) {
+                    if (m_nxdnTxWatchdogTimer.isRunning())
+                        m_nxdnTxWatchdogTimer.clock(ms);
+                    if (m_nxdnTxWatchdogTimer.isRunning() && m_nxdnTxWatchdogTimer.hasExpired() && !m_nxdnTxWatchdogTimer.isPaused()) {
+                        m_nxdnTxWatchdogTimer.pause();
+                        LogError(LOG_HOST, "NXDN, frame processor hung >%us, ms = %u", m_nxdnTxWatchdogTimer.getTimeout(), m_nxdnTxLoopMS);
+                    }
+                }
+            }
+
+            // scope is intentional
+            {
+                if (m_mainLoopWatchdogTimer.isRunning())
+                    m_mainLoopWatchdogTimer.clock(ms);
+                if (m_mainLoopWatchdogTimer.isRunning() && m_mainLoopWatchdogTimer.hasExpired() && !m_mainLoopWatchdogTimer.isPaused()) {
+                    m_mainLoopWatchdogTimer.pause();
+                    LogError(LOG_HOST, "main processor hung >%us, stage = %u, ms = %u", m_mainLoopWatchdogTimer.getTimeout(), m_mainLoopStage, m_mainLoopMS);
+                }
+
+                if (m_adjSiteLoopWatchdogTimer.isRunning())
+                    m_adjSiteLoopWatchdogTimer.clock(ms);
+                if (m_adjSiteLoopWatchdogTimer.isRunning() && m_adjSiteLoopWatchdogTimer.hasExpired() && !m_adjSiteLoopWatchdogTimer.isPaused()) {
+                    m_adjSiteLoopWatchdogTimer.pause();
+                    LogError(LOG_HOST, "adj. site update hung >%us, ms = %u", m_adjSiteLoopWatchdogTimer.getTimeout(), m_adjSiteLoopMS);
+                }
+            }
+
+            if (m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+    });
+    watchdogThread.run();
+    watchdogThread.setName("host:watchdog");
+
+    /** Digital Mobile Radio Frame Processor */
     ThreadFunc dmrFrame1WriteThread([&, this]() {
         if (g_killed)
             return;
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started slot 1 frame processor (modem write)");
             while (!g_killed) {
+                m_dmrTx1WatchdogTimer.start();
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+                m_dmrTx1LoopMS = ms;
+
                 // scope is intentional
                 {
                     std::lock_guard<std::mutex> lock(clockingMutex);
@@ -782,9 +882,18 @@ int Host::run()
         if (g_killed)
             return;
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (dmr != nullptr) {
             LogDebug(LOG_HOST, "DMR, started slot 2 frame processor (modem write)");
             while (!g_killed) {
+                m_dmrTx2WatchdogTimer.start();
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+                m_dmrTx2LoopMS = ms;
+
                 // scope is intentional
                 {
                     std::lock_guard<std::mutex> lock(clockingMutex);
@@ -821,14 +930,23 @@ int Host::run()
     dmrFrame2WriteThread.run();
     dmrFrame2WriteThread.setName("dmr:frame2-w");
 
-    /** Project 25 */
+    /** Project 25 Frame Processor */
     ThreadFunc p25FrameWriteThread([&, this]() {
         if (g_killed)
             return;
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (p25 != nullptr) {
             LogDebug(LOG_HOST, "P25, started frame processor (modem write)");
             while (!g_killed) {
+                m_p25TxWatchdogTimer.start();
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+                m_p25TxLoopMS = ms;
+
                 // scope is intentional
                 {
                     std::lock_guard<std::mutex> lock(clockingMutex);
@@ -862,14 +980,23 @@ int Host::run()
     p25FrameWriteThread.run();
     p25FrameWriteThread.setName("p25:frame-w");
 
-    /** Next Generation Digital Narrowband */
+    /** Next Generation Digital Narrowband Frame Processor */
     ThreadFunc nxdnFrameWriteThread([&, this]() {
         if (g_killed)
             return;
 
+        StopWatch stopWatch;
+        stopWatch.start();
+
         if (nxdn != nullptr) {
             LogDebug(LOG_HOST, "NXDN, started frame processor (modem write)");
             while (!g_killed) {
+                m_nxdnTxWatchdogTimer.start();
+
+                uint32_t ms = stopWatch.elapsed();
+                stopWatch.start();
+                m_nxdnTxLoopMS = ms;
+
                 // scope is intentional
                 {
                     std::lock_guard<std::mutex> lock(clockingMutex);
@@ -903,6 +1030,38 @@ int Host::run()
     nxdnFrameWriteThread.run();
     nxdnFrameWriteThread.setName("nxdn:frame-w");
 
+    /** Adjacent Site and Affiliation Update */
+    ThreadFunc siteDataUpdateThread([&, this]() {
+        if (g_killed)
+            return;
+
+        StopWatch stopWatch;
+        stopWatch.start();
+
+        LogDebug(LOG_HOST, "started adj. site and affiliation processor");
+        while (!g_killed) {
+            m_nxdnTxWatchdogTimer.start();
+
+            uint32_t ms = stopWatch.elapsed();
+            stopWatch.start();
+            m_adjSiteLoopMS = ms;
+
+            if (dmr != nullptr)
+                dmr->clockSiteData(ms);
+            if (p25 != nullptr)
+                p25->clockSiteData(ms);
+            if (nxdn != nullptr)
+                nxdn->clockSiteData(ms);
+
+            if (m_state != STATE_IDLE)
+                Thread::sleep(m_activeTickDelay);
+            if (m_state == STATE_IDLE)
+                Thread::sleep(m_idleTickDelay);
+        }
+    });
+    siteDataUpdateThread.run();
+    siteDataUpdateThread.setName("host:site-data");
+
     /** Network Presence Notification */
     ThreadFunc presenceThread([&, this]() {
         if (g_killed)
@@ -915,6 +1074,7 @@ int Host::run()
         StopWatch stopWatch;
         stopWatch.start();
 
+        LogDebug(LOG_HOST, "started presence notifier");
         while (!g_killed) {
             // scope is intentional
             {
@@ -1026,6 +1186,9 @@ int Host::run()
             }
         }
 
+        m_mainLoopWatchdogTimer.start();
+        m_mainLoopStage = 0U; // intentional magic number
+
         // scope is intentional
         {
             std::lock_guard<std::mutex> lock(clockingMutex);
@@ -1038,7 +1201,10 @@ int Host::run()
             stopWatch.start();
 
             m_modem->clock(ms);
+            m_mainLoopStage = 1U; // intentional magic number
         }
+
+        m_mainLoopMS = ms;
 
         // ------------------------------------------------------
         //  -- Read from Modem Processing                     --
@@ -1046,6 +1212,8 @@ int Host::run()
 
         /** Digital Mobile Radio */
         if (dmr != nullptr) {
+            m_mainLoopStage = 2U; // intentional magic number
+
             // read DMR slot 1 frames from modem
             readFramesDMR1(dmr.get(), [&, this]() {
                 if (dmr != nullptr) {
@@ -1091,6 +1259,8 @@ int Host::run()
 
         /** Project 25 */
         if (p25 != nullptr) {
+            m_mainLoopStage = 3U; // intentional magic number
+
             // read P25 frames from modem
             readFramesP25(p25.get(), [&, this]() {
                 if (dmr != nullptr) {
@@ -1108,6 +1278,8 @@ int Host::run()
 
         /** Next Generation Digital Narrowband */
         if (nxdn != nullptr) {
+            m_mainLoopStage = 4U; // intentional magic number
+
             // read NXDN frames from modem
             readFramesNXDN(nxdn.get(), [&, this]() {
                 if (dmr != nullptr) {
@@ -1127,11 +1299,14 @@ int Host::run()
         //  -- Network, DMR, and P25 Clocking                 --
         // ------------------------------------------------------
 
-        if (m_network != nullptr)
+        if (m_network != nullptr) {
+            m_mainLoopStage = 5U; // intentional magic number
             m_network->clock(ms);
+        }
 
         if (dmr != nullptr) {
-            dmr->clock(ms);
+            m_mainLoopStage = 6U; // intentional magic number
+            dmr->clock();
 
             if (m_dmrCtrlChannel) {
                 if (!m_dmrDedicatedTxTestTimer.isRunning()) {
@@ -1143,7 +1318,8 @@ int Host::run()
         }
 
         if (p25 != nullptr) {
-            p25->clock(ms);
+            m_mainLoopStage = 7U; // intentional magic number
+            p25->clock();
 
             if (m_p25CtrlChannel) {
                 if (!m_p25DedicatedTxTestTimer.isRunning()) {
@@ -1155,7 +1331,8 @@ int Host::run()
         }
 
         if (nxdn != nullptr) {
-            nxdn->clock(ms);
+            m_mainLoopStage = 8U; // intentional magic number
+            nxdn->clock();
 
             if (m_nxdnCtrlChannel) {
                 if (!m_nxdnDedicatedTxTestTimer.isRunning()) {
@@ -1173,6 +1350,7 @@ int Host::run()
         // clock and check CW timer
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
+            m_mainLoopStage = 9U; // intentional magic number
             if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel && !m_nxdnCtrlChannel) {
                 if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning() ||
                     m_nxdnBcastDurationTimer.isRunning()) {
@@ -1221,6 +1399,8 @@ int Host::run()
                 m_cwIdTimer.start();
             }
         }
+
+        m_mainLoopStage = 10U; // intentional magic number
 
         /** Digial Mobile Radio */
         if (dmr != nullptr) {
@@ -1411,11 +1591,20 @@ int Host::run()
         }
 
         if (g_killed) {
-            // shutdown writer threads
-            dmrFrame1WriteThread.wait();
-            dmrFrame2WriteThread.wait();
-            p25FrameWriteThread.wait();
-            nxdnFrameWriteThread.wait();
+            // shutdown helper threads
+            presenceThread.wait();
+            siteDataUpdateThread.wait();
+
+            if (dmr != nullptr) {
+                dmrFrame1WriteThread.wait();
+                dmrFrame2WriteThread.wait();
+            }
+            if (p25 != nullptr)
+                p25FrameWriteThread.wait();
+            if (nxdn != nullptr)
+                nxdnFrameWriteThread.wait();
+
+            watchdogThread.wait();
 
             if (dmr != nullptr) {
                 if (m_state == STATE_DMR && m_duplex && m_modem->hasTX()) {

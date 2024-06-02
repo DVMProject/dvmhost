@@ -91,6 +91,7 @@ namespace lookups
 
             if (m_reloadTime > 0U)
                 run();
+            setName("host:lookup-tbl");
 
             return ret;
         }

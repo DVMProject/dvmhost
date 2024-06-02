@@ -116,6 +116,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
+    m_interval(),
     m_frameLossCnt(0U),
     m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccFrameCnt(0U),
@@ -137,6 +138,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
+
+    m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
@@ -530,11 +533,13 @@ uint32_t Control::getFrame(uint8_t* data)
 }
 
 /// <summary>
-/// Updates the processor by the passed number of milliseconds.
+/// Updates the processor.
 /// </summary>
-/// <param name="ms"></param>
-void Control::clock(uint32_t ms)
+void Control::clock()
 {
+    uint32_t ms = m_interval.elapsed();
+    m_interval.start();
+
     if (m_network != nullptr) {
         processNetwork();
 
@@ -701,10 +706,17 @@ void Control::clock(uint32_t ms)
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
     }
+}
 
-    // clock data and trunking
-    if (m_control != nullptr) {
-        m_control->clock(ms);
+/// <summary>
+/// Updates the adj. site tables and affiliations.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clockSiteData(uint32_t ms)
+{
+    if (m_enableControl) {
+        // clock all the grant timers
+        m_affiliations.clock(ms);
     }
 }
 
