@@ -753,11 +753,11 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                                 return false; // this will cause no TSDU to pass for this peer now...I'm not sure this is good behavior
                             }
                             else {
-                                if (m_debug) {
-                                    std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
-                                    LogDebug(LOG_NET, "PEER %u (%s) can fuck off there's no affiliations.", lookupPeerId, peerIdentity.c_str()); // just so Faulty can see more "salty" log messages
-                                }
                                 if (!aff->hasGroupAff(dstId)) {
+                                    if (m_debug) {
+                                        std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                                        LogDebug(LOG_NET, "PEER %u (%s) can fuck off there's no affiliations.", lookupPeerId, peerIdentity.c_str()); // just so Faulty can see more "salty" log messages
+                                    }
                                     return false;
                                 }
                             }
