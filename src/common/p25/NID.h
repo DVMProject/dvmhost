@@ -52,6 +52,8 @@ namespace p25
         bool m_splitNac;
 
         /// <summary></summary>
+        void cleanupArrays();
+        /// <summary></summary>
         void createRxTxNID(uint32_t nac);
         /// <summary></summary>
         void createTxNID(uint32_t nac);

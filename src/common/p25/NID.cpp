@@ -60,17 +60,7 @@ NID::NID(uint32_t nac) :
 /// </summary>
 NID::~NID()
 {
-    for (uint8_t i = 0; i < 16U; i++)
-    {
-        if (m_rxTx[i] != nullptr) {
-            delete[] m_rxTx[i];
-        }
-
-        if (m_tx[i] != nullptr) {
-            delete[] m_tx[i];
-        }
-    }
-
+    cleanupArrays();
     delete[] m_rxTx;
     delete[] m_tx;
 }
@@ -90,6 +80,7 @@ bool NID::decode(const uint8_t* data)
     // handle digital "squelch" NAC
     if ((m_nac == P25_NAC_DIGITAL_SQ) || (m_nac == P25_NAC_REUSE_RX_NAC)) {
         uint32_t nac = ((nid[0U] << 4) + (nid[1U] >> 4)) & 0xFFFU;
+        cleanupArrays();
         createRxTxNID(nac); // bryanb: I hate this and it'll be slow
     }
 
@@ -165,6 +156,7 @@ void NID::encode(uint8_t* data, uint8_t duid)
     else {
         // handle digital "squelch" NAC
         if (m_nac == P25_NAC_DIGITAL_SQ) {
+            cleanupArrays();
             createRxTxNID(P25_DEFAULT_NAC);
         }
 
@@ -201,6 +193,23 @@ void NID::setTxNAC(uint32_t nac)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+///
+/// </summary>
+void NID::cleanupArrays()
+{
+    for (uint8_t i = 0; i < 16U; i++)
+    {
+        if (m_rxTx[i] != nullptr) {
+            delete[] m_rxTx[i];
+        }
+
+        if (m_tx[i] != nullptr) {
+            delete[] m_tx[i];
+        }
+    }
+}
 
 /// <summary>
 ///
