@@ -186,6 +186,10 @@ namespace p25
 
     const uint32_t  P25_SID_STD_DEFAULT = 0x001U;
 
+    const uint32_t  P25_NAC_DIGITAL_SQ = 0xF7EU;
+    const uint32_t  P25_NAC_REUSE_RX_NAC = 0xF7FU;
+    const uint32_t  P25_DEFAULT_NAC = 0x293U;
+
     const uint32_t  P25_WUID_FNE = 0xFFFFFCU;
     const uint32_t  P25_WUID_REG = 0xFFFFFEU;
     const uint32_t  P25_WUID_ALL = 0xFFFFFFU;

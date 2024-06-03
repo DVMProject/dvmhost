@@ -273,10 +273,10 @@ bool Host::readParams()
         m_dmrNetId = (uint32_t)::strtoul(rfssConfig["dmrNetId"].as<std::string>("1").c_str(), NULL, 16);
         m_dmrNetId = dmr::DMRUtils::netId(m_dmrNetId, dmr::SITE_MODEL_SMALL);
 
-        m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("293").c_str(), NULL, 16);
+        m_p25NAC = (uint32_t)::strtoul(rfssConfig["nac"].as<std::string>("F7E").c_str(), NULL, 16);
         m_p25NAC = p25::P25Utils::nac(m_p25NAC);
 
-        uint32_t p25TxNAC = (uint32_t)::strtoul(rfssConfig["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
+        uint32_t p25TxNAC = (uint32_t)::strtoul(rfssConfig["txNAC"].as<std::string>("293").c_str(), NULL, 16);
         if (p25TxNAC == m_p25NAC) {
             LogWarning(LOG_HOST, "Only use txNAC when split NAC operations are needed. nac and txNAC should not be the same!");
         }
@@ -318,7 +318,7 @@ bool Host::readParams()
         LogInfo("    DMR Network Id: $%05X", m_dmrNetId);
         LogInfo("    P25 NAC: $%03X", m_p25NAC);
 
-        if (p25TxNAC != 0xF7EU && p25TxNAC != m_p25NAC) {
+        if (p25TxNAC != p25::P25_NAC_DIGITAL_SQ && p25TxNAC != m_p25NAC) {
             LogInfo("    P25 Tx NAC: $%03X", p25TxNAC);
         }
 
@@ -630,7 +630,10 @@ bool Host::createModem()
             p25PostBWAdj, nxdnPostBWAdj, adfGainMode, afcEnable, afcKI, afcKP, afcRange);
         m_modem->setSoftPot(rxCoarse, rxFine, txCoarse, txFine, rssiCoarse, rssiFine);
         m_modem->setDMRColorCode(m_dmrColorCode);
-        m_modem->setP25NAC(m_p25NAC);
+        if (m_p25NAC == p25::P25_NAC_REUSE_RX_NAC)
+            m_modem->setP25NAC(p25::P25_NAC_DIGITAL_SQ);
+        else
+            m_modem->setP25NAC(m_p25NAC);
     }
 
     if (m_modemRemote) {

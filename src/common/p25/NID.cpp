@@ -13,6 +13,7 @@
 *
 */
 #include "Defines.h"
+#include "common/Utils.h"
 #include "p25/P25Defines.h"
 #include "p25/NID.h"
 #include "p25/P25Utils.h"
@@ -86,6 +87,12 @@ bool NID::decode(const uint8_t* data)
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(data, nid, 48U, 114U);
 
+    // handle digital "squelch" NAC
+    if ((m_nac == P25_NAC_DIGITAL_SQ) || (m_nac == P25_NAC_REUSE_RX_NAC)) {
+        uint32_t nac = ((nid[0U] << 4) + (nid[1U] >> 4)) & 0xFFFU;
+        createRxTxNID(nac); // bryanb: I hate this and it'll be slow
+    }
+
     uint32_t errs = P25Utils::compare(nid, m_rxTx[P25_DUID_LDU1], P25_NID_LENGTH_BYTES);
     if (errs < MAX_NID_ERRS) {
         m_duid = P25_DUID_LDU1;
@@ -136,7 +143,7 @@ bool NID::decode(const uint8_t* data)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="duid"></param>
-void NID::encode(uint8_t* data, uint8_t duid) const
+void NID::encode(uint8_t* data, uint8_t duid)
 {
     assert(data != nullptr);
 
@@ -156,6 +163,11 @@ void NID::encode(uint8_t* data, uint8_t duid) const
         }
     }
     else {
+        // handle digital "squelch" NAC
+        if (m_nac == P25_NAC_DIGITAL_SQ) {
+            createRxTxNID(P25_DEFAULT_NAC);
+        }
+
         switch (duid) {
             case P25_DUID_HDU:
             case P25_DUID_TDU:

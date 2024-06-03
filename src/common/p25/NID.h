@@ -34,7 +34,7 @@ namespace p25
         /// <summary>Decodes P25 network identifier data.</summary>
         bool decode(const uint8_t* data);
         /// <summary>Encodes P25 network identifier data.</summary>
-        void encode(uint8_t* data, uint8_t duid) const;
+        void encode(uint8_t* data, uint8_t duid);
 
         /// <summary>Helper to configure a separate Tx NAC.</summary>
         void setTxNAC(uint32_t nac);
