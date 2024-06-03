@@ -97,6 +97,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
+    m_restrictGrantToAffOnly(false),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
     m_influxServerPort(8086U),
@@ -161,6 +162,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
+    m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
 
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
@@ -170,6 +172,7 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
+        LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
         if (m_enableInfluxDB) {
             LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());

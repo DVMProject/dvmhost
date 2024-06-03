@@ -274,7 +274,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         }
 
         // process TSDU from peer
-        if (!processTSDU(buffer, peerId, duid)) {
+        if (!processTSDUFrom(buffer, peerId, duid)) {
             return false;
         }
 
@@ -285,6 +285,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (peerId != peer.first) {
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                        continue;
+                    }
+
+                    // process TSDU to peer
+                    if (!processTSDUTo(buffer, peer.first, duid)) {
                         continue;
                     }
 
@@ -639,7 +644,7 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// <param name="buffer"></param>
 /// <param name="peerId">Peer ID</param>
 /// <param name="duid"></param>
-bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == P25_DUID_TSDU) {
@@ -685,6 +690,77 @@ bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                         if (m_network->m_verbose) {
                             LogMessage(LOG_NET, P25_TSDU_STR ", %s, sysId = $%03X, rfss = $%02X, site = $%02X, chId = %u, chNo = %u, svcClass = $%02X, peerId = %u", tsbk->toString().c_str(),
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass(), peerId);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        } else {
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%s), passing TSBK that failed to decode? tsbk == nullptr", peerId, peerIdentity.c_str());
+        }
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to process TSDUs being passed to a peer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="duid"></param>
+bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+{
+    // are we receiving a TSDU?
+    if (duid == P25_DUID_TSDU) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        if (tsbk != nullptr) {
+            uint32_t srcId = tsbk->getSrcId();
+            uint32_t dstId = tsbk->getDstId();
+
+            FNEPeerConnection* connection = nullptr;
+            if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+                connection = m_network->m_peers[peerId];
+            }
+
+            // handle standard P25 reference opcodes
+            switch (tsbk->getLCO()) {
+            case TSBK_IOSP_GRP_VCH:
+                {
+                    if (m_network->m_restrictGrantToAffOnly) {
+                        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                        if (tg.config().affiliated()) {
+                            uint32_t lookupPeerId = peerId;
+                            if (connection != nullptr) {
+                                if (connection->ccPeerId() > 0U)
+                                    lookupPeerId = connection->ccPeerId();
+                            }
+
+                            // check the affiliations for this peer to see if we can repeat the TSDU
+                            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
+                            if (aff == nullptr) {
+                                std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                                LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
+                                return false; // this will cause no TSDU to pass for this peer now...I'm not sure this is good behavior
+                            }
+                            else {
+                                if (m_debug) {
+                                    std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                                    LogDebug(LOG_NET, "PEER %u (%s) can fuck off there's no affiliations.", lookupPeerId, peerIdentity.c_str()); // just so Faulty can see more "salty" log messages
+                                }
+                                if (!aff->hasGroupAff(dstId)) {
+                                    return false;
+                                }
+                            }
                         }
                     }
                 }

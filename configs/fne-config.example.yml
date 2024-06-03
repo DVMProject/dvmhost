@@ -73,6 +73,9 @@ master:
     # Flag indicating whether or not a parrot TG call will only be sent to the originating peer.
     parrotOnlyToOrginiatingPeer: false
 
+    # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
+    restrictGrantToAffiliatedOnly: false
+
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.

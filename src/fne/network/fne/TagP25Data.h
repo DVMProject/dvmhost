@@ -101,7 +101,9 @@ namespace network
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to process TSDUs being passed from a peer.</summary>
-            bool processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid);
+            bool processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid);
+            /// <summary>Helper to process TSDUs being passed to a peer.</summary>
+            bool processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid);
             /// <summary>Helper to process TSDUs being passed to an external peer.</summary>
             bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
