@@ -286,7 +286,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
                     if (m_p25->m_enableControl) {
-                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_VALID, (group ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH));
+                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_VALID, (group ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH), group, true);
                         m_p25->m_control->denialInhibit(srcId);
                     }
 
@@ -308,7 +308,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
                         if (m_p25->m_enableControl) {
-                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH);
+                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_UNIT_NOT_VALID, TSBK_IOSP_UU_VCH, false, true);
                         }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
@@ -328,7 +328,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
                         if (m_p25->m_enableControl) {
-                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH);
+                            m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_TGT_GROUP_NOT_VALID, TSBK_IOSP_GRP_VCH, true, true);
                         }
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
@@ -349,7 +349,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (!m_p25->m_affiliations.isGroupAff(srcId, dstId) && m_p25->m_control->m_verifyAff) {
                     if (m_lastRejectId == 0 || m_lastRejectId != srcId) {
                         LogWarning(LOG_RF, P25_HDU_STR " denial, RID not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
-                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH);
+                        m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_REQ_UNIT_NOT_AUTH, TSBK_IOSP_GRP_VCH, true, true);
                         m_p25->m_control->writeRF_TSDU_U_Reg_Cmd(srcId);
 
                         ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);

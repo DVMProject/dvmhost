@@ -1049,8 +1049,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
 /// <param name="service"></param>
+/// <param name="grp"></param>
 /// <param name="aiv"></param>
-void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_DENY_RSP> osp = std::make_unique<lc::tsbk::OSP_DENY_RSP>();
     osp->setAIV(aiv);
@@ -1058,6 +1059,7 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
     osp->setDstId(dstId);
     osp->setService(service);
     osp->setResponse(reason);
+    osp->setGroup(grp);
 
     if (m_network->m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
@@ -1074,9 +1076,9 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
 /// <param name="service"></param>
-/// <param name="aiv"></param>
 /// <param name="grp"></param>
-void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
+/// <param name="aiv"></param>
+void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_QUE_RSP> osp = std::make_unique<lc::tsbk::OSP_QUE_RSP>();
     osp->setAIV(aiv);
