@@ -195,8 +195,6 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             m_p25->m_rfState = RS_RF_DATA;
         }
 
-        m_p25->m_txQueue.clear();
-
         if (preDecodedTSBK == nullptr) {
             tsbk = TSBKFactory::createTSBK(data + 2U);
             if (tsbk == nullptr) {
@@ -2224,10 +2222,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations.rfCh()->getRFChData(chNo);
 
         if (grp) {
-            if (!net) {
-                ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
-            }
-
             // callback REST API to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -2240,7 +2234,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
                         m_p25->m_affiliations.releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH, grp, true);
@@ -2251,8 +2245,12 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
                 }
                 else {
-                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
                 }
+            }
+
+            if (!net) {
+                ::ActivityLog("P25", true, "group grant request from %u to TG %u", srcId, dstId);
             }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = std::make_unique<IOSP_GRP_VCH>();
@@ -2278,10 +2276,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            if (!net) {
-                ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
-            }
-
             // callback REST API to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -2294,7 +2288,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     int ret = RESTClient::send(voiceChData.address(), voiceChData.port(), voiceChData.password(),
                         HTTP_PUT, PUT_PERMIT_TG, req, voiceChData.ssl(), REST_QUICK_WAIT, m_p25->m_debug);
                     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
-                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                        ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
                         m_p25->m_affiliations.releaseGrant(dstId, false);
                         if (!net) {
                             writeRF_TSDU_Deny(srcId, dstId, P25_DENY_RSN_PTT_BONK, (grp) ? TSBK_IOSP_GRP_VCH : TSBK_IOSP_UU_VCH, grp, true);
@@ -2305,8 +2299,12 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     }
                 }
                 else {
-                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Grant), failed to permit TG for use, chNo = %u", chNo);
+                    ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBK_IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u", chNo);
                 }
+            }
+
+            if (!net) {
+                ::ActivityLog("P25", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
             }
 
             std::unique_ptr<IOSP_UU_VCH> iosp = std::make_unique<IOSP_UU_VCH>();

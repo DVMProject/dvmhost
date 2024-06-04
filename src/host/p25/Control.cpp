@@ -1585,18 +1585,20 @@ bool Control::writeRF_ControlData()
         m_ccSeq = 0U;
     }
 
-    if (m_netState == RS_NET_IDLE && m_rfState == RS_RF_LISTENING) {
-        m_control->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
-
-        m_ccSeq++;
-        if (m_ccSeq == maxSeq) {
-            m_ccFrameCnt++;
+    if (!m_dedicatedControl || m_voiceOnControl) {
+        if (m_netState != RS_NET_IDLE && m_rfState != RS_RF_LISTENING) {
+            return false;
         }
-
-        return true;
     }
 
-    return false;
+    m_control->writeRF_ControlData(m_ccFrameCnt, m_ccSeq, true);
+
+    m_ccSeq++;
+    if (m_ccSeq == maxSeq) {
+        m_ccFrameCnt++;
+    }
+
+    return true;
 }
 
 /// <summary>
