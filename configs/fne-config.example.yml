@@ -83,6 +83,14 @@ master:
     # Flag indicating whether or not a conventional site can override affiliation rules.
     allowConvSiteAffOverride: true
 
+    # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
+    filterHeaders: true
+    # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
+    filterTerminators: true
+
+    # List of peers that unit to unit calls are dropped for.
+    dropUnitToUnit: []
+
     # Flag indicating whether or not InfluxDB logging and metrics recording is enabled.
     enableInflux: false
     # Hostname/IP address of the InfluxDB instance to connect to.

@@ -421,9 +421,10 @@ bool TagNXDNData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// <returns></returns>
 bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, uint32_t streamId, bool external)
 {
-    // private calls are always permitted
     if (!lc.getGroup()) {
-        return true;
+        if (!m_network->checkU2UDroppedPeer(peerId))
+            return true;
+        return false;
     }
 
     // is this a group call?

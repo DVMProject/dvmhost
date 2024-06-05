@@ -633,6 +633,7 @@ bool HostFNE::createPeerNetworks()
             /*
             ** Block Traffic To Peers
             */
+
             yaml::Node& blockTrafficTo = peerConf["blockTrafficTo"];
             if (blockTrafficTo.size() > 0U) {
                 for (size_t i = 0; i < blockTrafficTo.size(); i++) {

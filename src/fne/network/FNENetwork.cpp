@@ -98,6 +98,9 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_disallowExtAdjStsBcast(true),
     m_allowConvSiteAffOverride(false),
     m_restrictGrantToAffOnly(false),
+    m_filterHeaders(true),
+    m_filterTerminators(true),
+    m_dropU2UPeerTable(),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
     m_influxServerPort(8086U),
@@ -163,6 +166,22 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
+    m_filterHeaders = conf["filterHeaders"].as<bool>(true);
+    m_filterTerminators = conf["filterTerminators"].as<bool>(true);
+
+    /*
+    ** Drop Unit to Unit Peers
+    */
+
+    yaml::Node& dropUnitToUnit = conf["dropUnitToUnit"];
+    if (dropUnitToUnit.size() > 0U) {
+        for (size_t i = 0; i < dropUnitToUnit.size(); i++) {
+            uint32_t peerId = (uint32_t)::strtoul(dropUnitToUnit[i].as<std::string>("0").c_str(), NULL, 10);
+            if (peerId != 0U) {
+                m_dropU2UPeerTable.push_back(peerId);
+            }
+        }
+    }
 
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
@@ -173,6 +192,8 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable P25 ADJ_STS_BCAST to external peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
+        LogInfo("    Traffic Headers Filtered by Destination ID: %s", m_filterHeaders ? "yes" : "no");
+        LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
         if (m_enableInfluxDB) {
             LogInfo("    InfluxDB Address: %s", m_influxServerAddress.c_str());
@@ -1101,6 +1122,22 @@ void* FNENetwork::threadedNetworkRx(void* arg)
     }
 
     return nullptr;
+}
+
+/// <summary>
+/// Checks if the passed peer ID is blocked from unit-to-unit traffic.
+/// </summary>
+/// <param name="peerId"></param>
+bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
+{
+    if (m_dropU2UPeerTable.empty())
+        return false;
+
+    if (std::find(m_dropU2UPeerTable.begin(), m_dropU2UPeerTable.end(), peerId) != m_dropU2UPeerTable.end()) {
+        return true;
+    }
+
+    return false;
 }
 
 /// <summary>

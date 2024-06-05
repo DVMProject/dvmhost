@@ -612,9 +612,10 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
 /// <returns></returns>
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
 {
-    // private calls are always permitted
     if (data.getDataType() == FLCO_PRIVATE) {
-        return true;
+        if (!m_network->checkU2UDroppedPeer(peerId))
+            return true;
+        return false;
     }
 
     // is this a group call?

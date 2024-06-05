@@ -684,6 +684,13 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
+            case TSBK_IOSP_UU_VCH:
+            case TSBK_IOSP_UU_ANS:
+                {
+                    if (m_network->checkU2UDroppedPeer(peerId))
+                        return false;
+                }
+                break;
             case TSBK_OSP_ADJ_STS_BCAST:
                 {
                     if (m_network->m_disallowAdjStsBcast) {
@@ -841,18 +848,76 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 /// <returns></returns>
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId, bool external)
 {
-    // private calls are always permitted
     if (control.getLCO() == LC_PRIVATE) {
-        return true;
+        if (!m_network->checkU2UDroppedPeer(peerId))
+            return true;
+        return false;
     }
 
     // always permit a TSDU or PDU
     if (duid == P25_DUID_TSDU || duid == P25_DUID_PDU)
         return true;
 
-    // always permit a terminator
-    if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC)
+    if (duid == P25_DUID_HDU) {
+        if (m_network->m_filterHeaders) {
+            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+                // is this a group call?
+                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                // is this a U2U call?
+                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+                if (!rid.radioDefault() && rid.radioEnabled()) {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        // always permit a headers
         return true;
+    }
+
+    if (duid == P25_DUID_TDULC) {
+        // always permit a terminator
+        return true;
+    }
+
+    if (duid == P25_DUID_TDU) {
+        if (m_network->m_filterTerminators) {
+            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+                // is this a group call?
+                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                // is this a U2U call?
+                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+                if (!rid.radioDefault() && rid.radioEnabled()) {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        // always permit a terminator
+        return true;
+    }
 
     // is this a group call?
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());

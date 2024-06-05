@@ -307,6 +307,11 @@ namespace network
         bool m_allowConvSiteAffOverride;
         bool m_restrictGrantToAffOnly;
 
+        bool m_filterHeaders;
+        bool m_filterTerminators;
+
+        std::vector<uint32_t> m_dropU2UPeerTable;
+
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;
         uint16_t m_influxServerPort;
@@ -321,6 +326,9 @@ namespace network
 
         /// <summary>Entry point to process a given network packet.</summary>
         static void* threadedNetworkRx(void* arg);
+
+        /// <summary>Checks if the passed peer ID is blocked from unit-to-unit traffic.</summary>
+        bool checkU2UDroppedPeer(uint32_t peerId);
 
         /// <summary>Helper to create a peer on the peers affiliations list.</summary>
         void createPeerAffiliations(uint32_t peerId, std::string peerName);
