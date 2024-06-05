@@ -237,6 +237,11 @@ int HostFNE::run()
             if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
 
+                // skip peer if it isn't enabled
+                if (!peerNetwork->isEnabled()) {
+                    continue;
+                }
+
                 // process peer network traffic
                 processPeer(peerNetwork);
             }

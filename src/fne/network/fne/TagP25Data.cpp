@@ -337,6 +337,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
+                    // skip peer if it isn't enabled
+                    if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
                     uint8_t outboundPeerBuffer[len];
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);

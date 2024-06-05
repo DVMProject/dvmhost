@@ -114,10 +114,6 @@ peers:
     - name: EXAMPLEPEER
       # Flag indicating whether or not the peer is enabled.
       enabled: true
-      # Hostname/IP address to listen on (blank for all).
-      address: 127.0.0.1
-      # Port number to listen on.
-      port: 32091
       # Hostname/IP address of the FNE master to connect to.
       masterAddress: 127.0.0.1
       # Port number of the FNE master to connect to.

@@ -66,6 +66,8 @@ namespace network
         /// <summary>Closes connection to the network.</summary>
         void close() override;
 
+        /// <summary>Flat indicating if this network connection enabled.</summary>
+        bool isEnabled() const { return m_enabled; }
         /// <summary>Sets flag enabling network communication.</summary>
         void enable(bool enabled);
 
