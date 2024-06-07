@@ -40,8 +40,8 @@ MotFullRateVoice::MotFullRateVoice(uint8_t* data)
 
 MotFullRateVoice::~MotFullRateVoice()
 {
-    delete imbeData;
-    delete additionalData;
+    delete[] imbeData;
+    delete[] additionalData;
 }
 
 uint32_t MotFullRateVoice::size()
@@ -86,6 +86,8 @@ bool MotFullRateVoice::decode(uint8_t* data, bool shortened)
             imbeData[i] = data[i + 1U];
         }
         source = data[12U];
+        // Forgot to set this originally and left additionalData uninitialized, whoops!
+        additionalData = nullptr;
     } else {
         // Frames 0x6A and 0x73 are missing the 0x00 padding byte, so we start IMBE data 1 byte earlier
         uint8_t imbeStart = 5U;
@@ -325,7 +327,7 @@ MotVoiceHeader1::MotVoiceHeader1(uint8_t* data)
 MotVoiceHeader1::~MotVoiceHeader1()
 {
     delete startOfStream;
-    delete header;
+    delete[] header;
 }
 
 bool MotVoiceHeader1::decode(uint8_t* data)
@@ -395,7 +397,7 @@ MotVoiceHeader2::MotVoiceHeader2(uint8_t* data)
 
 MotVoiceHeader2::~MotVoiceHeader2()
 {
-    delete header;
+    delete[] header;
 }
 
 bool MotVoiceHeader2::decode(uint8_t* data)
