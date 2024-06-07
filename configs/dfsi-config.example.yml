@@ -62,6 +62,8 @@ dfsi:
         # Serial configuration for serial DFSI
         port: "/dev/ttyACM0"
         baudrate: 115200
+        # RT/RT flag enabled or disabled
+        rtrt: false
         # Jitter buffer length in ms
         jitter: 200
         # Debug logging

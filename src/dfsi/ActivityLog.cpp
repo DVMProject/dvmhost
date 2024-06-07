@@ -115,15 +115,12 @@ void ActivityLogFinalise()
 /// Writes a new entry to the activity log.
 /// </summary>
 /// <remarks>This is a variable argument function.</remarks>
-/// <param name="mode">Digital mode (usually P25 or DMR).</param>
-/// <param name="sourceRf">Flag indicating that the entry was generated from an RF event.</param>
 /// <param name="msg">Formatted string to write to activity log.</param>
-void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
+void ActivityLog(const char* msg, ...)
 {
 #if defined(CATCH2_TEST_COMPILATION)
     return;
 #endif
-    assert(mode != nullptr);
     assert(msg != nullptr);
 
     char buffer[ACT_LOG_BUFFER_LEN];
@@ -132,18 +129,16 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
 
     struct tm* tm = ::gmtime(&now.tv_sec);
 
-    if (strcmp(mode, "") == 0) {
-        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
-    }
-    else {
-        ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
-    }
+    ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U);
 
-    va_list vl;
+    va_list vl, vl_len;
     va_start(vl, msg);
+    va_copy(vl_len, vl);
 
-    ::vsnprintf(buffer + ::strlen(buffer), ACT_LOG_BUFFER_LEN - 1U, msg, vl);
+    size_t len = ::vsnprintf(nullptr, 0U, msg, vl_len);
+    ::vsnprintf(buffer + ::strlen(buffer), len + 1U, msg, vl);
 
+    va_end(vl_len);
     va_end(vl);
 
     bool ret = ::ActivityLogOpen();

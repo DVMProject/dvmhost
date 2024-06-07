@@ -23,6 +23,9 @@ file(GLOB dvmdfsi_SRC
     # DFSI network libs
     "src/dfsi/network/*.h"
     "src/dfsi/network/*.cpp"
+    # DFSI rtp libs
+    "src/dfsi/rtp/*.h"
+    "src/dfsi/rtp/*.cpp"
     # Core DFSI
     "src/dfsi/*.h"
     "src/dfsi/*.cpp"

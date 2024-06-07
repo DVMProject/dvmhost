@@ -164,11 +164,13 @@ int Dfsi::run()
     yaml::Node serial_conf = dfsi_conf["serial"];
     std::string port = serial_conf["port"].as<std::string>();
     uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
+    bool rtrt = serial_conf["rtrt"].as<bool>();
+    uint16_t jitter = serial_conf["jitter"].as<uint16_t>();
     bool serial_debug = serial_conf["debug"].as<bool>();
     bool serial_trace = serial_conf["trace"].as<bool>();
 
     // Create serial service
-    m_serial = new SerialService(port, baudrate, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
+    m_serial = new SerialService(port, baudrate, rtrt, jitter, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
 
     // Open serial
     ret = m_serial->open();
@@ -211,7 +213,7 @@ int Dfsi::run()
                 LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
 
             // Send the data to the serial handler
-            m_serial->processP25(std::move(p25Buffer), length);
+            m_serial->processP25FromNet(std::move(p25Buffer), length);
         }
 
         // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDNS
@@ -245,7 +247,10 @@ int Dfsi::run()
         //  -- Network TX Clocking                             --
         // ------------------------------------------------------
 
-        // TODO: Get a P25 frame from the serial p25RxQueue and send it to the network
+        // Processes data in the serial rx P25 buffer and sends it to the network buffer for sending
+        if (m_serial != nullptr) {
+            m_serial->processP25ToNet();
+        }
 
         // ------------------------------------------------------
         //  -- Serial Clocking                                 --

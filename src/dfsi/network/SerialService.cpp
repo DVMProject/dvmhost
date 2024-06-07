@@ -16,19 +16,25 @@
 
 #include "network/SerialService.h"
 
+#include "dfsi/ActivityLog.h"
+
 using namespace network;
 using namespace modem;
 using namespace p25;
+using namespace dfsi;
 
-SerialService::SerialService(const std::string& portName, uint32_t baudrate, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
+SerialService::SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
     m_portName(portName),
     m_baudrate(baudrate),
+    m_rtrt(rtrt),
     m_port(),
+    m_jitter(jitter),
     m_debug(debug),
     m_trace(trace),
     m_network(network),
     m_lastIMBE(nullptr),
-    m_streamTimestamps(),
+    m_lastHeard(),
+    m_sequences(),
     m_msgBuffer(nullptr),
     m_msgState(RESP_START),
     m_msgLength(0U),
@@ -38,7 +44,15 @@ SerialService::SerialService(const std::string& portName, uint32_t baudrate, Dfs
     m_netFrames(0U),
     m_netLost(0U),
     m_rxP25Queue(p25RxQueueSize, "RX P25 Queue"),
-    m_txP25Queue(p25TxQueueSize, "TX P25 Queue")
+    m_txP25Queue(p25TxQueueSize, "TX P25 Queue"),
+    m_lastP25Tx(0U),
+    m_rs(),
+    m_rxP25LDUCounter(0U),
+    m_netCallInProgress(false),
+    m_lclCallInProgress(false),
+    m_rxVoiceControl(nullptr),
+    m_rxVoiceLsd(nullptr),
+    m_rxVoiceCallData(nullptr)
 {
     assert(!portName.empty());
     assert(baudrate > 0U);
@@ -60,9 +74,14 @@ SerialService::~SerialService()
         delete m_port;
     }
 
+    // Delete our buffers
     delete[] m_lastIMBE;
-
     delete[] m_msgBuffer;
+
+    // Delete our rx P25 objects
+    delete m_rxVoiceControl;
+    delete m_rxVoiceLsd;
+    delete m_rxVoiceCallData;
 }
 
 void SerialService::clock(uint32_t ms)
@@ -174,11 +193,8 @@ void SerialService::close()
 /// <summary>
 /// Process P25 data from the peer network and send to writeP25Frame()
 /// </summary>
-void SerialService::processP25(UInt8Array p25Buffer, uint32_t length)
+void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 {
-    // Get the current timestamp
-    uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
     // Decode grant info
     bool grantDemand = (p25Buffer[14U] & 0x80U) == 0x80U;
     bool grantDenial = (p25Buffer[14U] & 0x40U) == 0x40U;
@@ -339,12 +355,17 @@ void SerialService::processP25(UInt8Array p25Buffer, uint32_t length)
                     count += dfsi::P25_DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
 
                     control = lc::LC(*dfsiLC.control());
+
+                    // Override the source/destination from the FNE RTP header (handles rewrites properly)
+                    control.setSrcId(srcId);
+                    control.setDstId(dstId);
+
                     LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
                         control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
 
                     insertMissingAudio(netLDU1, m_netLost);
 
-                    writeP25Frame(netLDU1, 225U);
+                    writeP25Frame(duid, dfsiLC, netLDU1);
                 }
             }
             break;
@@ -402,7 +423,7 @@ void SerialService::processP25(UInt8Array p25Buffer, uint32_t length)
 
                     insertMissingAudio(netLDU2, m_netLost);
 
-                    writeP25Frame(netLDU2, 225U);
+                    writeP25Frame(duid, dfsiLC, netLDU2);
                 }
             }
             break;
@@ -430,9 +451,376 @@ void SerialService::processP25(UInt8Array p25Buffer, uint32_t length)
                     break; // ignore grant demands
                 }
 
-                //writeNet_TDU(control.getSrcId(), control.getDstId());
+                // Log print
+                LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u, dstId = %u", srcId, dstId);
+
+                // End the call
+                endOfStream();
+
+                // Update our sequence number
+                m_sequences[dstId] = RTP_END_OF_CALL_SEQ;
             }
             break;
+    }
+}
+
+/// <summary>
+/// Retrieve and process a P25 frame from the rx P25 queue
+/// </summary>
+/// This function pieces together LDU1/LDU2 messages from individual DFSI frames received over the serial port
+/// It's called multiple times before an LDU is sent, and each time adds more data pieces to the LDUs
+void SerialService::processP25ToNet()
+{
+    // If there's already a call from the network in progress, ignore any additional frames comfing from the V24 interface
+    if (m_netCallInProgress) {
+        return;
+    }
+
+    // Buffer to store the retrieved P25 frame
+    uint8_t data[P25_PDU_FRAME_LENGTH_BYTES * 2U];
+
+    // Get a P25 frame from the RX queue
+    uint32_t len = readP25Frame(data);
+
+    // If we didn't read anything, return
+    if (len <= 0U) {
+        return;
+    }
+
+    // Create a new link control object if needed
+    if (m_rxVoiceControl == nullptr) {
+        m_rxVoiceControl = new lc::LC();
+    }
+
+    // Create a new lsd object if needed
+    if (m_rxVoiceLsd == nullptr) {
+        m_rxVoiceLsd = new data::LowSpeedData();
+    }
+
+    // Create a new call data object if needed
+    if (m_rxVoiceCallData == nullptr) {
+        m_rxVoiceCallData = new VoiceCallData();
+    }
+
+    // Parse out the data
+    uint8_t tag = data[0U];
+    uint8_t dfsiData[len - 1];
+    ::memset(dfsiData, 0x00U, len - 1);
+    ::memcpy(dfsiData, data + 1U, len - 1);
+
+    // Extract DFSI frame type
+    uint8_t frameType = dfsiData[0U];
+
+    // Switch based on DFSI frame type
+    switch (frameType) {
+        // Start/Stop Frame
+        case P25_DFSI_MOT_START_STOP:
+        {
+            // Decode the frame
+            MotStartOfStream start = MotStartOfStream(dfsiData);
+            // Handle start/stop
+            if (start.startStop == StartStopFlag::START) {
+                // Flag we have a local call (i.e. from V24) in progress
+                m_lclCallInProgress = true;
+                // Reset the call data (just in case)
+                m_rxVoiceCallData->resetCallData();
+                // Generate a new random stream ID
+                m_rxVoiceCallData->newStreamId();
+                // Log
+                LogInfo(LOG_SERIAL, "V24 CALL START [STREAM ID %u]", m_rxVoiceCallData->streamId);
+            } else {
+                // Flag call over
+                m_lclCallInProgress = false;
+                // Log
+                LogInfo(LOG_SERIAL, "V24 CALL END [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                // Send the TDU (using call data which we hope has been filled earlier)
+                m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
+                // Reset
+                m_rxVoiceCallData->resetCallData();
+            }
+        }
+        break;
+        // VHDR 1 Frame
+        case P25_DFSI_MOT_VHDR_1:
+        {
+            // Decode
+            MotVoiceHeader1 vhdr1 = MotVoiceHeader1(dfsiData);
+            // Copy to call data VHDR1
+            m_rxVoiceCallData->VHDR1 = new uint8_t[vhdr1.HCW_LENGTH];
+            ::memcpy(m_rxVoiceCallData->VHDR1, vhdr1.header, vhdr1.HCW_LENGTH);
+            // Debug Log
+            if (m_debug) {
+                LogDebug(LOG_SERIAL, "V24 VHDR1 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+            }
+        }
+        break;
+        // VHDR 2 Frame
+        case P25_DFSI_MOT_VHDR_2:
+        {
+            // Decode
+            MotVoiceHeader2 vhdr2 = MotVoiceHeader2(dfsiData);
+            // Copy to call data
+            ::memcpy(m_rxVoiceCallData->VHDR2, vhdr2.header, vhdr2.HCW_LENGTH);
+            // Debug Log
+            if (m_debug) {
+                LogDebug(LOG_SERIAL, "V24 VHDR2 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+            }
+
+            // Buffer for raw VHDR data
+            uint8_t raw[P25_DFSI_VHDR_RAW_LEN];
+            // Get VHDR1 data
+            ::memcpy(raw, m_rxVoiceCallData->VHDR1, 8U);
+            ::memcpy(raw + 8U, m_rxVoiceCallData->VHDR1 + 9U, 8U);
+            ::memcpy(raw + 16U, m_rxVoiceCallData->VHDR1 + 18U, 2U);
+            // Get VHDR2 data
+            ::memcpy(raw + 18U, m_rxVoiceCallData->VHDR2, 8U);
+            ::memcpy(raw + 26U, m_rxVoiceCallData->VHDR2 + 9U, 8U);
+            ::memcpy(raw + 34U, m_rxVoiceCallData->VHDR2 + 18U, 2U);
+
+            // Buffer for decoded VHDR data
+            uint8_t vhdr[P25_DFSI_VHDR_LEN];
+
+            // Copy over the data, decoding hex with the weird bit stuffing nonsense
+            uint offset = 0U;
+            for (uint32_t i = 0; i < P25_DFSI_VHDR_RAW_LEN; i++, offset += 6)
+                Utils::hex2Bin(raw[i], vhdr, offset);
+
+            // Try to decode the RS data
+            try {
+                bool ret = m_rs.decode362017(vhdr);
+                if (!ret) {
+                    LogError(LOG_SERIAL, "V24 traffic failed to decode RS (36,20,17) FEC [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                } else {
+                    // Copy Message Indicator
+                    ::memcpy(m_rxVoiceCallData->mi, vhdr, P25_MI_LENGTH_BYTES);
+                    // Get additional info
+                    m_rxVoiceCallData->mfId = vhdr[9U];
+                    m_rxVoiceCallData->algoId = vhdr[10U];
+                    m_rxVoiceCallData->kId = __GET_UINT16B(vhdr, 11U);
+                    m_rxVoiceCallData->dstId = __GET_UINT16B(vhdr, 13U);
+                }
+            }
+            catch (...) {
+                LogError(LOG_SERIAL, "V24 traffic got exception while trying to decode RS data for VHDR [STREAM ID %u]", m_rxVoiceCallData->streamId);
+            }
+        }
+        break;
+        // VOICE1/10 create a start voice frame
+        case P25_DFSI_LDU1_VOICE1:
+        {
+            MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memcpy(m_rxVoiceCallData->netLDU1 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+        }
+        break;
+        case P25_DFSI_LDU2_VOICE10:
+        {
+            MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            ::memcpy(m_rxVoiceCallData->netLDU2 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+        }
+        break;
+        // The remaining LDUs all create full rate voice frames so we do that here
+        default:
+        {
+            MotFullRateVoice voice = MotFullRateVoice(dfsiData);
+            switch (frameType) {
+                // VOICE2
+                case P25_DFSI_LDU1_VOICE2:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 26U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE3
+                case P25_DFSI_LDU1_VOICE3:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 55U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->lco = voice.additionalData[0U];
+                        m_rxVoiceCallData->mfId = voice.additionalData[1U];
+                        m_rxVoiceCallData->serviceOptions = voice.additionalData[2U];
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC3 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE4
+                case P25_DFSI_LDU1_VOICE4:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 80U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->dstId = __GET_UINT32(voice.additionalData, 0U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC4 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE5
+                case P25_DFSI_LDU1_VOICE5:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 105U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->srcId = __GET_UINT32(voice.additionalData, 0U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC5 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE6
+                case P25_DFSI_LDU1_VOICE6:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 130U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE7
+                case P25_DFSI_LDU1_VOICE7:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 155U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE8
+                case P25_DFSI_LDU1_VOICE8:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 180U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE9
+                case P25_DFSI_LDU1_VOICE9:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 204U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->lsd1 = voice.additionalData[0U];
+                        m_rxVoiceCallData->lsd2 = voice.additionalData[1U];
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC9 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE11
+                case P25_DFSI_LDU2_VOICE11:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 26U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE12
+                case P25_DFSI_LDU2_VOICE12:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 55U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        ::memcpy(m_rxVoiceCallData->mi, voice.additionalData, 3U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC12 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE13
+                case P25_DFSI_LDU2_VOICE13:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 80U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        ::memcpy(m_rxVoiceCallData->mi + 3U, voice.additionalData, 3U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC13 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE14
+                case P25_DFSI_LDU2_VOICE14:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 105U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        ::memcpy(m_rxVoiceCallData->mi + 6U, voice.additionalData, 3U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC14 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE15
+                case P25_DFSI_LDU2_VOICE15:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 130U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->algoId = voice.additionalData[0U];
+                        m_rxVoiceCallData->kId = __GET_UINT16B(voice.additionalData, 1U);
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC15 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+                // VOICE16
+                case P25_DFSI_LDU2_VOICE16:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 155U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE17
+                case P25_DFSI_LDU2_VOICE17:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 180U, voice.imbeData, voice.IMBE_BUF_LEN);
+                }
+                break;
+                // VOICE18
+                case P25_DFSI_LDU2_VOICE18:
+                {
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 204U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    if (voice.additionalData != nullptr) {
+                        m_rxVoiceCallData->lsd1 = voice.additionalData[0U];
+                        m_rxVoiceCallData->lsd2 = voice.additionalData[1U];
+                    } else {
+                        LogWarning(LOG_SERIAL, "V24 VC18 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                    }
+                }
+                break;
+            }
+        }
+        break;
+    }
+
+    // Get LC & LSD data if we're ready for either LDU1 or LDU2 (don't do this every frame to be more efficient)
+
+    if (m_rxVoiceCallData->n == 8U || m_rxVoiceCallData->n == 17U) {
+        // Create LC
+        m_rxVoiceControl->setSrcId(m_rxVoiceCallData->srcId);
+        m_rxVoiceControl->setDstId(m_rxVoiceCallData->dstId);
+        // Get service options
+        bool emergency = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x80U) == 0x80U;    // Emergency Flag
+        bool encryption = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x40U) == 0x40U;   // Encryption Flag
+        uint8_t priority = ((m_rxVoiceCallData->serviceOptions & 0xFFU) & 0x07U);           // Priority
+        m_rxVoiceControl->setEmergency(emergency);
+        m_rxVoiceControl->setEncrypted(encryption);
+        m_rxVoiceControl->setPriority(priority);
+        // Get more data
+        m_rxVoiceControl->setMI(m_rxVoiceCallData->mi);
+        m_rxVoiceControl->setAlgId(m_rxVoiceCallData->algoId);
+        m_rxVoiceControl->setKId(m_rxVoiceCallData->kId);
+        // Get LSD
+        m_rxVoiceLsd->setLSD1(m_rxVoiceCallData->lsd1);
+        m_rxVoiceLsd->setLSD2(m_rxVoiceCallData->lsd2);
+    }
+
+    // Send LDU1 if ready
+    if (m_rxVoiceCallData->n == 8U) {
+        // Send
+        m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
+        // Optional Debug
+        if (m_debug) {
+            LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+        }
+    }
+    
+    // Send LDU2 if ready
+    else if (m_rxVoiceCallData->n == 17U) {
+        // Send
+        m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
+        // Optional Debug
+        if (m_debug) {
+            LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+        }
+        // Reset counter since we've sent both frames
+        m_rxVoiceCallData->n = 0;
+    }
+
+    else {
+        // Increment our frame counter
+        m_rxVoiceCallData->n++;
     }
 }
 
@@ -601,13 +989,91 @@ RESP_TYPE_DVM SerialService::readSerial()
     return RTM_OK;
 }
 
-int SerialService::writeSerial(const uint8_t* data, uint32_t length)
+/// <summary>Called from clock thread, checks for an available P25 frame to write and sends it based on jitter timing requirements</summary>
+/// Very similar to the readP25Frame function below
+///
+uint32_t SerialService::writeSerial()
 {
-    return m_port->write(data, length);
+    /**
+     *  Serial TX ringbuffer format:
+     * 
+     *  | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x09 | 0x0A | 0x0B | 0x0C | ... |
+     *  |   Length    | Tag  |               int64_t timestamp in ms                 |   data     |
+    */
+
+    // Check empty
+    if (m_txP25Queue.isEmpty())
+        return 0U;
+
+    // Get length
+    uint8_t length[2U];
+    ::memset(length, 0x00U, 2U);
+    m_txP25Queue.peek(length, 2U);
+
+    // Convert length byets to int
+    uint16_t len = 0U;
+    len = (length[0U] << 8) + length[1U];
+
+    // This ensures we never get in a situation where we have length & type bytes stuck in the queue by themselves
+    if (m_txP25Queue.dataSize() == 2U && len > m_txP25Queue.dataSize()) {
+        m_txP25Queue.get(length, 2U); // ensure we pop bytes off
+        return 0U;
+    }
+
+    // Peek the timestamp to see if we should wait
+    if (m_txP25Queue.dataSize() >= 11U) {
+        // Get current timestamp
+        int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        // Peek everything up to the timestamp
+        uint8_t lengthTagTs[11U];
+        ::memset(lengthTagTs, 0x00U, 11U);
+        m_txP25Queue.peek(lengthTagTs, 11U);
+        // Get the timestamp
+        int64_t ts;
+        assert(sizeof ts == 8);
+        ::memcpy(&ts, lengthTagTs + 3U, 8U);
+        // If it's not time to send, return
+        if (ts > now) {
+            return 0U;
+        }
+    }
+
+    // Check if we have enough data to get
+    if (m_txP25Queue.dataSize() >= len + 2U) {
+        // Create buffer for data and read everything
+        uint8_t buffer[len];
+        m_txP25Queue.get(length, 2U);
+        m_txP25Queue.get(buffer, len);
+        
+        // Sanity check on data tag
+        uint8_t tag = buffer[0U];
+        if (tag != TAG_DATA) {
+            LogError(LOG_SERIAL, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
+            return 0U;
+        }
+
+        // We already checked the timestamp above, so we just get the data and write it
+        return m_port->write(buffer + 9U, len - 8U);
+    }
+
+    return 0U;
 }
 
+/// <summary>
+/// Gets a frame of P25 data from the RX queue 
+/// <summary>
+/// <param name="*data">The data buffer to populate</param>
+/// <returns>The size of the P25 data retreived, including the leading data tag
 uint32_t SerialService::readP25Frame(uint8_t* data)
 {
+
+    /**
+     *  Serial RX ringbuffer format:
+     * 
+     *  | 0x01 | 0x02 | 0x03 | 0x04 | ... |
+     *  |   Length    | Tag  |   data     |
+    */
+
     // sanity check
     assert(data != nullptr);
 
@@ -639,29 +1105,489 @@ uint32_t SerialService::readP25Frame(uint8_t* data)
     return 0U;
 }
 
-void SerialService::writeP25Frame(const uint8_t* data, uint32_t length)
+/// <summary>
+/// Break apart a P25 LDU and add to the TX queue, timed appropriately
+/// </summary>
+/// <param name="duid">DUID flag for the LDU</param>
+/// <param name="lc">Link Control data</param>
+/// <param name="ldu">LDU data</param>
+///
+/// This is very similar to the C# Mot_DFSISendFrame functions, we don't implement the TIA DFSI sendframe in serial
+/// because the only devices we connect to over serial V24 are Moto
+void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
 {
-    assert(data != nullptr);
-    assert(length > 0U);
+    // Sanity check
+    assert(ldu != nullptr);
 
-    // TODO: do the RS encoding/FEC calculations n stuff (borrow this from the modem class?)
+    // Get now
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // Buffer for outgoing message (padded for the DVM signalling bytes)
-    uint8_t buffer[length + 4];
-    ::memset(buffer, 0x00, length + 4);
+    // Break out the control components
+    lc::LC control = lc::LC(*lc.control());
+    data::LowSpeedData lsd = data::LowSpeedData(*lc.lsd());
 
-    buffer[0] = DVM_SHORT_FRAME_START;
-    buffer[1] = (uint8_t)(length + 4);
-    buffer[2] = CMD_P25_DATA;
-    buffer[3] = 0x00;
+    // Get the service options
+    uint8_t serviceOptions = 
+        (control.getEmergency() ? 0x80U : 0x00U) +
+        (control.getEncrypted() ? 0x40U : 0x00U) +
+        (control.getPriority() & 0x07U);
 
-    // Copy the P25 data
-    ::memcpy(buffer + 4, data, length);
+    // Get the MI
+    uint8_t mi[P25_MI_LENGTH_BYTES];
+    control.getMI(mi);
 
-    // Write 
-    // TODO: we need to create a jitter buffer that propely doles out the P25 frames at 20ms increments in our clock() thread
-    //       look at the C# SerialService Send() function to get an idea on how
+    // Calculate reed-solomon encoding depending on DUID type
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+    switch(duid) {
+        case P25_DUID_LDU1:
+        {
+            rs[0U] = control.getLCO();                                  // LCO
+            rs[1U] = control.getMFId();                                 // MFId
+            rs[2U] = serviceOptions;                                    // Service Options
+            uint32_t dstId = control.getDstId();
+            rs[3U] = (dstId >> 16) & 0xFFU;                             // Target Address
+            rs[4U] = (dstId >> 8) & 0xFFU;
+            rs[5U] = (dstId >> 0) & 0xFFU;
+            uint32_t srcId = control.getSrcId();
+            rs[6U] = (srcId >> 16) & 0xFFU;                             // Source Address
+            rs[7U] = (srcId >> 8) & 0xFFU;
+            rs[8U] = (srcId >> 0) & 0xFFU;
 
+            // encode RS (24,12,13) FEC
+            m_rs.encode241213(rs);
+        }
+        break;
+        case P25_DUID_LDU2:
+        {
+            for (uint32_t i = 0; i < P25_MI_LENGTH_BYTES; i++)
+                rs[i] = mi[i];                                          // Message Indicator
+
+            rs[9U] = control.getAlgId();                                // Algorithm ID
+            rs[10U] = (control.getKId() >> 8) & 0xFFU;                  // Key ID
+            rs[11U] = (control.getKId() >> 0) & 0xFFU;                  // ...
+
+            // encode RS (24,16,9) FEC
+            m_rs.encode24169(rs);
+        }
+        break;
+    }
+
+    // Placeholder for last call timestamp
+    int64_t lastHeard = 0U;
+    uint32_t sequence = 0U;
+
+    // Get the last heard value (not used currently, TODO: use this for covnentional TGID timeout purposes)
+    {
+        auto entry = m_lastHeard.find(control.getDstId());
+        if (entry != m_lastHeard.end()) {
+            lastHeard = m_lastHeard[control.getDstId()];
+        }
+    }
+
+    // Get the last sequence number
+    {
+        auto entry = m_sequences.find(control.getDstId());
+        if (entry != m_sequences.end()) {
+            sequence = m_sequences[control.getDstId()];
+        }
+    }
+
+    // Check if we need to start a new data stream
+    if (duid == P25_DUID_LDU1 && ((sequence == 0U) || (sequence == RTP_END_OF_CALL_SEQ))) {
+        // Start the new stream
+        startOfStream(lc);
+        // Update our call entries
+        m_lastHeard[control.getDstId()] = now;
+        m_sequences[control.getDstId()] = ++sequence;
+
+        // Log
+        LogInfo(LOG_SERIAL, "CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+
+        ActivityLog("network %svoice transmission call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+    } else {
+        // If this TGID isn't either lookup, consider it a late entry and start a new stream
+        if ( (m_sequences.find(control.getDstId()) == m_sequences.end()) || (m_lastHeard.find(control.getDstId()) == m_lastHeard.end()) ) {
+            // Start the stream, same as above
+            startOfStream(lc);
+            m_lastHeard[control.getDstId()] = now;
+            m_sequences[control.getDstId()] = ++sequence;
+            ActivityLog("network %svoice transmission late entry from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        }
+    }
+
+    // Check if we need to end the call
+    if ( (duid == P25_DUID_TDU) || (duid == P25_DUID_TDULC) ) {
+        // Stop
+        endOfStream();
+        // Log
+        LogInfo(LOG_SERIAL, "CALL END: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        // Clear our counters
+        m_sequences[control.getDstId()] = RTP_END_OF_CALL_SEQ;
+    }
+
+    // Break out the 9 individual P25 packets
+    for (int n = 0; n < 9; n++) {
+        
+        // We use this buffer and fullrate voice object to slim down the code to a common sendFrame routine at the bottom
+        uint8_t* buffer = nullptr;
+        uint16_t bufferSize = 0;
+        MotFullRateVoice voice = MotFullRateVoice();
+
+        switch (n) {
+            case 0: // VOICE1/10
+            {
+                // Create the new frame objects
+                MotStartVoiceFrame svf = MotStartVoiceFrame();
+                svf.startOfStream = new MotStartOfStream();
+                svf.fullRateVoice = new MotFullRateVoice();
+                // Set values appropriately
+                svf.startOfStream->startStop = StartStopFlag::START;
+                svf.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+                svf.fullRateVoice->frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE1 : P25_DFSI_LDU2_VOICE10;
+                // Copy data
+                ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, svf.fullRateVoice->IMBE_BUF_LEN);
+                // Encode
+                buffer = new uint8_t[svf.LENGTH];
+                ::memset(buffer, 0x00U, svf.LENGTH);
+                svf.encode(buffer);
+                bufferSize = svf.LENGTH;
+            }
+            break;
+            case 1: // VOICE2/11
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE2 : P25_DFSI_LDU2_VOICE11;
+                ::memcpy(voice.imbeData, ldu + 26U, voice.IMBE_BUF_LEN);
+            }
+            break;
+            case 2: // VOICE3/12
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE3 : P25_DFSI_LDU2_VOICE12;
+                ::memcpy(voice.imbeData, ldu + 55U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // We copy the additional data from the LDU (what it is depends on the LDU but it's the same offsets either way)
+                voice.additionalData[0U] = ldu[51U];    // LCO or MI[0]
+                voice.additionalData[1U] = ldu[52U];    // MFID or MI[1]
+                voice.additionalData[2U] = ldu[53U];    // Service options or MI[2]
+            }
+            break;
+            case 3: // VOICE4/13
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE4 : P25_DFSI_LDU2_VOICE13;
+                ::memcpy(voice.imbeData, ldu + 80U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // We set the additional data based on LDU1/2
+                switch (duid) {
+                    case P25_DUID_LDU1:
+                    {
+                        // Destination address (3 bytes)
+                        __SET_UINT16(control.getDstId(), voice.additionalData, 0U);
+                    }
+                    break;
+                    case P25_DUID_LDU2:
+                    {
+                        // Message Indicator
+                        voice.additionalData[0U] = ldu[76U];
+                        voice.additionalData[1U] = ldu[77U];
+                        voice.additionalData[2U] = ldu[78U];
+                    }
+                    break;
+                }
+            }
+            break;
+            case 4: // VOICE5/14
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE5 : P25_DFSI_LDU2_VOICE14;
+                ::memcpy(voice.imbeData, ldu + 105U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // Same as case 3 above
+                switch (duid) {
+                    case P25_DUID_LDU1:
+                    {
+                        // Source address (3 bytes)
+                        __SET_UINT16(control.getSrcId(), voice.additionalData, 0U);
+                    }
+                    break;
+                    case P25_DUID_LDU2:
+                    {
+                        // Message indicator
+                        voice.additionalData[0U] = ldu[101U];
+                        voice.additionalData[1U] = ldu[102U];
+                        voice.additionalData[2U] = ldu[103U];
+                    }
+                    break;
+                }
+            }
+            break;
+            case 5: // VOICE6/15
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE6 : P25_DFSI_LDU2_VOICE15;
+                ::memcpy(voice.imbeData, ldu + 130U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // Another switch on LDU1/2
+                switch (duid) {
+                    case P25_DUID_LDU1:
+                    {
+                        // RS encoding
+                        voice.additionalData[0U] = rs[9U];
+                        voice.additionalData[1U] = rs[10U];
+                        voice.additionalData[2U] = rs[11U];
+                    }
+                    break;
+                    case P25_DUID_LDU2:
+                    {
+                        voice.additionalData[0U] = ldu[126U];   // Algo ID
+                        voice.additionalData[1U] = ldu[127U];   // Key ID
+                        voice.additionalData[2U] = ldu[128U];   // ... (something else)
+                    }
+                    break;
+                }
+            }
+            break;
+            case 6: // VOICE7/16
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE7 : P25_DFSI_LDU2_VOICE16;
+                ::memcpy(voice.imbeData, ldu + 155U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // RS data offsets are the same regardless of LDU
+                voice.additionalData[0U] = rs[12U];
+                voice.additionalData[1U] = rs[13U];
+                voice.additionalData[2U] = rs[14U];
+            }
+            break;
+            case 7: // VOICE8/17
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE8 : P25_DFSI_LDU2_VOICE17;
+                ::memcpy(voice.imbeData, ldu + 180U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // RS data offsets are the same regardless of LDU
+                voice.additionalData[0U] = rs[15U];
+                voice.additionalData[1U] = rs[16U];
+                voice.additionalData[2U] = rs[17U];
+            }
+            break;
+            case 8: // VOICE9/18
+            {
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE9 : P25_DFSI_LDU2_VOICE18;
+                ::memcpy(voice.imbeData, ldu + 204U, voice.IMBE_BUF_LEN);
+                voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                // Get low speed data bytes
+                voice.additionalData[0U] = lsd.getLSD1();
+                voice.additionalData[1U] = lsd.getLSD2();
+            }
+            break;
+        }
+
+        // For n=0 (VHDR1/10) case we create the buffer in the switch, for all other frame types we do that here
+        if (n != 0) {
+            buffer = new uint8_t[voice.size()];
+            voice.encode(buffer);
+            bufferSize = voice.size();
+        }
+
+        // Debug logging
+        if (m_debug)
+            LogDebug(LOG_SERIAL, "encoded mot p25 voice frame");
+        if (m_trace)
+            Utils::dump(1U, "data", buffer, bufferSize);
+
+        // Send if we have data (which we always should)
+        if (buffer != nullptr) {
+            addTxToQueue(buffer, bufferSize, SERIAL_TX_TYPE::IMBE);
+        }
+
+    }
+}
+
+/// <summary>
+/// Send a start of stream sequence (HDU, etc) to the connected serial V24 device
+/// </summary>
+/// <param name="lc">Link control data object</param>
+void SerialService::startOfStream(const LC& lc)
+{
+    // Create new start of stream
+    MotStartOfStream start = MotStartOfStream();
+    start.startStop = StartStopFlag::START;
+    start.rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+
+    // Create buffer for bytes and encode
+    uint8_t buffer[start.LENGTH];
+    ::memset(buffer, 0x00U, start.LENGTH);
+    start.encode(buffer);
+    
+    // Optional debug & trace
+    if (m_debug)
+        LogDebug(LOG_SERIAL, "encoded mot p25 start frame");
+    if (m_trace)
+        Utils::dump(1U, "data", buffer, start.LENGTH);
+
+    // Send start frame
+    addTxToQueue(buffer, start.LENGTH, network::SERIAL_TX_TYPE::NONIMBE);
+
+    // Break out the control components
+    lc::LC control = lc::LC(*lc.control());
+    data::LowSpeedData lsd = data::LowSpeedData(*lc.lsd());
+    
+    // Init message indicator & get
+    uint8_t mi[P25_MI_LENGTH_BYTES];
+    ::memset(mi, 0x00U, P25_MI_LENGTH_BYTES);
+    control.getMI(mi);
+
+    // Init VHDR data array
+    uint8_t vhdr[P25_DFSI_VHDR_LEN];
+    ::memset(vhdr, 0x00U, P25_DFSI_VHDR_LEN);
+
+    // Copy MI to VHDR
+    ::memcpy(vhdr, mi, P25_MI_LENGTH_BYTES);
+
+    // Set values
+    vhdr[9U] = control.getMFId();
+    vhdr[10U] = control.getAlgId();
+    __SET_UINT16B(control.getKId(), vhdr, 11U);
+    __SET_UINT16B(control.getDstId(), vhdr, 13U);
+
+    // Perform RS encoding
+    m_rs.encode362017(vhdr);
+
+    // Convert the binary bytes to hex bytes (some kind of bit packing thing I don't understand)
+    uint8_t raw[P25_DFSI_VHDR_RAW_LEN];
+    uint32_t offset = 0;
+    for (uint8_t i = 0; i < P25_DFSI_VHDR_RAW_LEN; i++, offset += 6) {
+        raw[i] = Utils::bin2Hex(vhdr, offset);
+    }
+
+    // Prepare VHDR1
+    MotVoiceHeader1 vhdr1 = MotVoiceHeader1();
+    vhdr1.startOfStream = new MotStartOfStream();
+    vhdr1.startOfStream->startStop = StartStopFlag::START;
+    vhdr1.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+    ::memcpy(vhdr1.header, raw, 8U);
+    ::memcpy(vhdr1.header + 9U, raw + 8U, 8U);
+    ::memcpy(vhdr1.header + 18U, raw + 16U, 2U);
+
+    // Encode VHDR1 and send
+    uint8_t buffer1[vhdr1.LENGTH];
+    ::memset(buffer1, 0x00U, vhdr1.LENGTH);
+    vhdr1.encode(buffer1);
+    if (m_debug)
+        LogDebug(LOG_SERIAL, "encoded mot VHDR1 p25 frame");
+    if (m_trace)
+        Utils::dump(1U, "data", buffer1, vhdr1.LENGTH);
+    addTxToQueue(buffer1, vhdr1.LENGTH, SERIAL_TX_TYPE::NONIMBE);
+
+    // Prepare VHDR2
+    MotVoiceHeader2 vhdr2 = MotVoiceHeader2();
+    ::memcpy(vhdr2.header, raw + 18U, 8U);
+    ::memcpy(vhdr2.header + 9U, raw + 26U, 8U);
+    ::memcpy(vhdr2.header + 18U, raw + 34U, 2U);
+
+    // Encode VHDR2 and send
+    uint8_t buffer2[vhdr2.LENGTH];
+    ::memset(buffer2, 0x00U, vhdr2.LENGTH);
+    vhdr2.encode(buffer2);
+    if (m_debug)
+        LogDebug(LOG_SERIAL, "encoded mot VHDR2 p25 frame");
+    if (m_trace)
+        Utils::dump(1U, "data", buffer2, vhdr2.LENGTH);
+    addTxToQueue(buffer2, vhdr2.LENGTH, SERIAL_TX_TYPE::NONIMBE);
+}
+
+/// <summary>
+/// Send an end of stream sequence (TDU, etc) to the connected serial V24 device
+/// </summary>
+/// <param name="lc">Link control data object</param>
+void SerialService::endOfStream()
+{
+    // Create the new end of stream (which looks like a start of stream with the stop flag)
+    MotStartOfStream end = MotStartOfStream();
+    end.startStop = StartStopFlag::STOP;
+
+    // Create buffer and encode
+    uint8_t buffer[end.LENGTH];
+    ::memset(buffer, 0x00U, end.LENGTH);
+    end.encode(buffer);
+
+    // Optional debug/trace
+    if (m_debug)
+        LogDebug(LOG_SERIAL, "encoded mot p25 end frame");
+    if (m_trace)
+        Utils::dump(1U, "data", buffer, end.LENGTH);
+
+    // Send start frame
+    addTxToQueue(buffer, end.LENGTH, network::SERIAL_TX_TYPE::NONIMBE);
+}
+
+/// <summary>
+/// Send a frame of data to the connected V24 device
+/// </summary>
+/// <param name="lc">Link control data object</param>
+void SerialService::sendStream(const LC& lc)
+{
+
+}
+
+/// <summary>
+/// Helper to add a V24 dataframe to the P25 TX queue with the proper timestamp
+/// </summary>
+/// <param name="data">Data array to send</param>
+/// <param name="len">Length of data in array</param>
+/// <param name="msgType">Type of message to send (used for proper jitter clocking)</param>
+void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType)
+{
+    // If the port isn't connected, just return
+    if (m_port == nullptr) { return; }
+
+    // Get current time in ms
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // Timestamp for this message (in ms)
+    uint64_t msgTime = 0U;
+
+    // If this is our first message, timestamp is just now + the jitter buffer offset in ms
+    if (m_lastP25Tx == 0U) {  
+        msgTime = now + m_jitter;
+    // If we had a message before this, calculate the new timestamp dynamically
+    } else {
+        // If the last message occurred longer than our jitter buffer delay, we restart the sequence and calculate the same as above
+        if (now - m_lastP25Tx > m_jitter) {
+            msgTime = now + m_jitter;
+        // Otherwise, we time out messages as required by the message type
+        } else {
+            if (msgType == IMBE) {
+                // IMBEs must go out at 20ms intervals
+                msgTime = m_lastP25Tx + 20;
+            } else {
+                // Otherwise we don't care, we use 5ms since that's the theoretical minimum time a 9600 baud message can take
+                msgTime = m_lastP25Tx + 5;
+            }
+        }
+    }
+
+    // Convert 16-bit length to 2 bytes
+    uint8_t length[2U];
+    if (len > 255U)
+        length[0U] = len & 0xFFU;
+    else
+        length[0U] = 0x00U;
+    length[1U] = len && 0xFFU;
+                
+    m_txP25Queue.addData(length, 2U);
+
+    // Add the data tag
+    uint8_t tag = TAG_DATA;
+    m_txP25Queue.addData(&tag, 1U);
+
+    // Convert 64-bit timestamp to 8 bytes and add
+    uint8_t tsBytes[8U];
+    assert(sizeof msgTime == 8U);
+    ::memcpy(tsBytes, &msgTime, 8U);
+    m_txP25Queue.addData(tsBytes, 8U);
+
+    // Add the data
+    m_txP25Queue.addData(data, len);
+
+    // Update the last message time
+    m_lastP25Tx = msgTime;
 }
 
 /// <summary>

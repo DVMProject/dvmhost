@@ -33,6 +33,7 @@
 #define LOG_DMR     "DMR"
 #define LOG_CAL     "CAL"
 #define LOG_SETUP   "SETUP"
+#define LOG_SERIAL  "SERIAL"
 
 // ---------------------------------------------------------------------------
 //  Macros
