@@ -1379,6 +1379,9 @@ int Host::run()
                     ms = stopWatch.elapsed();
                     stopWatch.start();
 
+                    m_mainLoopWatchdogTimer.start();
+                    m_mainLoopMS = ms;
+
                     m_modem->clock(ms);
 
                     if (!first && !m_modem->hasTX()) {
