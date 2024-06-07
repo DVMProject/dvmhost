@@ -27,6 +27,6 @@ extern HOST_SW_API bool ActivityLogInitialise(const std::string& filePath, const
 /// <summary>Finalizes the activity log.</summary>
 extern HOST_SW_API void ActivityLogFinalise();
 /// <summary>Writes a new entry to the activity log.</summary>
-extern HOST_SW_API void ActivityLog(const char* mode, const bool sourceRf, const char* msg, ...);
+extern HOST_SW_API void ActivityLog(const char* msg, ...);
 
 #endif // __ACTIVITY_LOG_H__
