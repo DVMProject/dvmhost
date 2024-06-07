@@ -344,17 +344,23 @@ bool TalkgroupRulesLookup::load()
         uint8_t tgSlot = groupVoice.source().tgSlot();
         bool active = groupVoice.config().active();
         bool parrot = groupVoice.config().parrot();
+        bool affil = groupVoice.config().affiliated();
 
         uint32_t incCount = groupVoice.config().inclusion().size();
         uint32_t excCount = groupVoice.config().exclusion().size();
         uint32_t rewrCount = groupVoice.config().rewrite().size();
+        uint32_t alwyCount = groupVoice.config().alwaysSend().size();
         uint32_t prefCount = groupVoice.config().preferred().size();
 
         if (incCount > 0 && excCount > 0) {
-            ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
+            ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusion rules take precedence and exclusion rules will be ignored.", groupName.c_str());
         }
 
-        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
+        if (alwyCount > 0 && affil) {
+            ::LogWarning(LOG_HOST, "Talkgroup (%s) is marked as affiliation required and has a defined always send list! Always send peers take rule precedence and defined peers will always receive traffic.", groupName.c_str());
+        }
+
+        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u AFFILIATED: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u ALWAYS: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, affil, incCount, excCount, rewrCount, alwyCount, prefCount);
     }
 
     size_t size = m_groupVoice.size();
