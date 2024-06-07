@@ -96,6 +96,13 @@ namespace lookups
             return ret;
         }
 
+        /// <summary>Reads the lookup table from the specified lookup table file.</summary>
+        /// <returns>True, if lookup table was read, otherwise false.</returns>
+        virtual bool reload()
+        {
+            return load();
+        }
+
         /// <summary>Clears all entries from the lookup table.</summary>
         virtual void clear()
         {

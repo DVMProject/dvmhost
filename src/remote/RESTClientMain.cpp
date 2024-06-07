@@ -45,6 +45,8 @@
 #define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
 #define RCD_FNE_GET_AFFLIST             "fne-affs"
+#define RCD_FNE_GET_RELOADTGS           "fne-reload-tgs"
+#define RCD_FNE_GET_RELOADRIDS          "fne-reload-rids"
 
 #define RCD_MODE                        "mdm-mode"
 #define RCD_MODE_OPT_IDLE               "idle"
@@ -200,6 +202,8 @@ void usage(const char* message, const char* arg)
     reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
     reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
+    reply += "  fne-reload-tgs              Forces the FNE to reload its TGID list from disk (Converged FNE only)\r\n";
+    reply += "  fne-reload-rids             Forces the FNE to reload its RID list from disk (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  mdm-mode <mode>             Set current mode of host (idle, lockout, dmr, p25, nxdn)\r\n";
     reply += "  mdm-kill                    Causes the host to quit\r\n";
@@ -810,6 +814,12 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_GET_AFFLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_AFF_LIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_RELOADTGS) {
+            retCode = client->send(HTTP_GET, FNE_GET_RELOAD_TGS, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_RELOADRIDS) {
+            retCode = client->send(HTTP_GET, FNE_GET_RELOAD_RIDS, json::object(), response);
         }
         else {
             args.clear();

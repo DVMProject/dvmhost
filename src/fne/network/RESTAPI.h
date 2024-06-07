@@ -128,6 +128,11 @@ private:
     void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
+    void restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /// <summary></summary>
     void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /*

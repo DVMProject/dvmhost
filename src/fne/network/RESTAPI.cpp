@@ -582,6 +582,9 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
+    m_dispatcher.match(FNE_GET_RELOAD_TGS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadTGs, this));
+    m_dispatcher.match(FNE_GET_RELOAD_RIDS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadRIDs, this));
+
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 
     /*
@@ -1171,11 +1174,55 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-/*
+
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
-*/
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_tidLookup->reload();
+    }
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_ridLookup->reload();
+    }
+
     reply.payload(response);
 }
 

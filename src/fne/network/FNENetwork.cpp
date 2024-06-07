@@ -281,6 +281,13 @@ void FNENetwork::clock(uint32_t ms)
 
     uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
+    if (m_forceListUpdate) {
+        for (auto peer : m_peers) {
+            peerACLUpdate(peer.first);
+        }
+        m_forceListUpdate = false;
+    }
+
     m_maintainenceTimer.clock(ms);
     if (m_maintainenceTimer.isRunning() && m_maintainenceTimer.hasExpired()) {
         // check to see if any peers have been quiet (no ping) longer than allowed

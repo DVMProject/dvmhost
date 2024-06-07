@@ -395,6 +395,9 @@ namespace lookups
         /// <summary>Reads the lookup table from the specified lookup table file.</summary>
         /// <returns>True, if lookup table was read, otherwise false.</returns>
         bool read();
+        /// <summary>Reads the lookup table from the specified lookup table file.</summary>
+        /// <returns>True, if lookup table was read, otherwise false.</returns>
+        bool reload() { return load(); }
         /// <summary>Clears all entries from the lookup table.</summary>
         void clear();
 

@@ -310,6 +310,8 @@ namespace network
         bool m_filterHeaders;
         bool m_filterTerminators;
 
+        bool m_forceListUpdate;
+
         std::vector<uint32_t> m_dropU2UPeerTable;
 
         bool m_enableInfluxDB;

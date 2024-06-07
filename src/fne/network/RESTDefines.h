@@ -35,6 +35,9 @@
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 
+#define FNE_GET_RELOAD_TGS              "/reload-tgs"
+#define FNE_GET_RELOAD_RIDS             "/reload-rids"
+
 #define FNE_GET_AFF_LIST                "/report-affiliations"
 
 #endif // __FNE_REST_DEFINES_H__
