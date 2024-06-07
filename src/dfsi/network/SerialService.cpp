@@ -166,11 +166,19 @@ void SerialService::clock(uint32_t ms)
             }
         }
     }
+
+    // Write anything waiting to the serial port
+    int out = writeSerial();
+    if (m_trace && out > 0) {
+        LogDebug(LOG_SERIAL, "Wrote %u-byte message to the serial V24 device", out);
+    } else if (out < 0) {
+        LogError(LOG_SERIAL, "Failed to write to serial port!");
+    }
 }
 
 bool SerialService::open()
 {
-    LogMessage(LOG_SERIAL, "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
+    LogInfoEx(LOG_SERIAL, "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
 
     bool ret = m_port->open();
 
@@ -186,7 +194,7 @@ bool SerialService::open()
 
 void SerialService::close()
 {
-    LogMessage(LOG_SERIAL, "Closing port");
+    LogInfoEx(LOG_SERIAL, "Closing port");
     m_port->close();
 }
 
@@ -216,7 +224,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
         data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
         ::memset(data.get(), 0x00U, length);
         ::memcpy(data.get(), p25Buffer.get(), length);
-        LogMessage(LOG_SERIAL, "Got P25 PDU, we don't handle these (yet)");
+        LogInfoEx(LOG_SERIAL, "Got P25 PDU, we don't handle these (yet)");
     }
     // Handle everything else
     else {
@@ -279,6 +287,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+            }
+            if (m_trace) {
                 Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
             }
 
@@ -299,7 +309,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    if (m_debug) {
+    if (m_trace) {
         Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
     }
 
@@ -362,7 +372,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     control.setSrcId(srcId);
                     control.setDstId(dstId);
 
-                    LogMessage(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
+                    LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
                         control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
 
                     insertMissingAudio(netLDU1, m_netLost);
@@ -421,7 +431,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     count += dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
                     control = lc::LC(*dfsiLC.control());
-                    LogMessage(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
+                    LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
 
                     insertMissingAudio(netLDU2, m_netLost);
 
@@ -454,7 +464,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                 }
 
                 // Log print
-                LogMessage(LOG_NET, P25_TDU_STR ", srcId = %u, dstId = %u", srcId, dstId);
+                LogInfoEx(LOG_NET, P25_TDU_STR ", srcId = %u, dstId = %u", srcId, dstId);
 
                 // End the call
                 endOfStream();
@@ -545,16 +555,18 @@ void SerialService::processP25ToNet()
                 // Generate a new random stream ID
                 m_rxVoiceCallData->newStreamId();
                 // Log
-                LogMessage(LOG_SERIAL, "V24 CALL START [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                LogInfoEx(LOG_SERIAL, "V24 CALL START [STREAM ID %u]", m_rxVoiceCallData->streamId);
             } else {
-                // Flag call over
-                m_lclCallInProgress = false;
-                // Log
-                LogMessage(LOG_SERIAL, "V24 CALL END");
-                // Send the TDU (using call data which we hope has been filled earlier)
-                m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
-                // Reset
-                m_rxVoiceCallData->resetCallData();
+                if (m_lclCallInProgress) {
+                    // Flag call over
+                    m_lclCallInProgress = false;
+                    // Log
+                    LogInfoEx(LOG_SERIAL, "V24 CALL END");
+                    // Send the TDU (using call data which we hope has been filled earlier)
+                    m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
+                    // Reset
+                    m_rxVoiceCallData->resetCallData();
+                }
             }
         }
         break;
@@ -665,7 +677,7 @@ void SerialService::processP25ToNet()
                 {
                     ::memcpy(m_rxVoiceCallData->netLDU1 + 80U, voice.imbeData, voice.IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
-                        m_rxVoiceCallData->dstId = __GET_UINT32(voice.additionalData, 0U);
+                        m_rxVoiceCallData->dstId = __GET_UINT16(voice.additionalData, 0U);
                     } else {
                         LogWarning(LOG_SERIAL, "V24 VC4 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
                     }
@@ -676,7 +688,7 @@ void SerialService::processP25ToNet()
                 {
                     ::memcpy(m_rxVoiceCallData->netLDU1 + 105U, voice.imbeData, voice.IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
-                        m_rxVoiceCallData->srcId = __GET_UINT32(voice.additionalData, 0U);
+                        m_rxVoiceCallData->srcId = __GET_UINT16(voice.additionalData, 0U);
                     } else {
                         LogWarning(LOG_SERIAL, "V24 VC5 traffic missing metadata [STREAM ID %u]", m_rxVoiceCallData->streamId);
                     }
@@ -817,20 +829,30 @@ void SerialService::processP25ToNet()
     // Send LDU1 if ready
     if (m_rxVoiceCallData->n == 8U) {
         // Send
-        m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
+        bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
         // Optional Debug
-        if (m_debug) {
-            LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+        if (ret) {
+            if (m_debug) {
+                LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
+            }
+        }
+        else {
+            LogError(LOG_SERIAL, "V24 LDU1 failed to write to network");
         }
     }
     
     // Send LDU2 if ready
-    else if (m_rxVoiceCallData->n == 17U) {
+    if (m_rxVoiceCallData->n == 17U) {
         // Send
-        m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
+        bool ret = m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
         // Optional Debug
-        if (m_debug) {
-            LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u]", m_rxVoiceCallData->streamId);
+        if (ret) {
+            if (m_debug) {
+                LogDebug(LOG_SERIAL, "V24 LDU2 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
+            }
+        }
+        else {
+            LogError(LOG_SERIAL, "V24 LDU2 failed to write to network");
         }
         // Reset counter since we've sent both frames
         m_rxVoiceCallData->n = 0;
@@ -1010,7 +1032,8 @@ RESP_TYPE_DVM SerialService::readSerial()
 /// <summary>Called from clock thread, checks for an available P25 frame to write and sends it based on jitter timing requirements</summary>
 /// Very similar to the readP25Frame function below
 ///
-uint32_t SerialService::writeSerial()
+/// Note: the length encoded at the start does not include the length, tag, or timestamp bytes
+int SerialService::writeSerial()
 {
     /**
      *  Serial TX ringbuffer format:
@@ -1056,22 +1079,25 @@ uint32_t SerialService::writeSerial()
         }
     }
 
-    // Check if we have enough data to get
-    if (m_txP25Queue.dataSize() >= len + 2U) {
-        // Create buffer for data and read everything
+    // Check if we have enough data to get everything - len + 2U (length bytes) + 1U (tag) + 8U (timestamp)
+    if (m_txP25Queue.dataSize() >= len + 11U) {
+        // Get the length, tag and timestamp
+        uint8_t lengthTagTs[11U];
+        m_txP25Queue.get(lengthTagTs, 11U);
+        
+        // Get the actual data
         uint8_t buffer[len];
-        m_txP25Queue.get(length, 2U);
         m_txP25Queue.get(buffer, len);
         
         // Sanity check on data tag
-        uint8_t tag = buffer[0U];
+        uint8_t tag = lengthTagTs[2U];
         if (tag != TAG_DATA) {
             LogError(LOG_SERIAL, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
             return 0U;
         }
 
         // We already checked the timestamp above, so we just get the data and write it
-        return m_port->write(buffer + 9U, len - 8U);
+        return m_port->write(buffer, len);
     }
 
     return 0U;
@@ -1406,10 +1432,10 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         }
 
         // Debug logging
-        if (m_debug)
+        if (m_trace) {
             LogDebug(LOG_SERIAL, "encoded mot p25 voice frame");
-        if (m_trace)
             Utils::dump(1U, "data", buffer, bufferSize);
+        }      
 
         // Send if we have data (which we always should)
         if (buffer != nullptr) {
@@ -1547,7 +1573,7 @@ void SerialService::sendStream(const LC& lc)
 }
 
 /// <summary>
-/// Helper to add a V24 dataframe to the P25 TX queue with the proper timestamp
+/// Helper to add a V24 dataframe to the P25 TX queue with the proper timestamp and formatting
 /// </summary>
 /// <param name="data">Data array to send</param>
 /// <param name="len">Length of data in array</param>
@@ -1583,13 +1609,16 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
         }
     }
 
+    // Increment the length by 4 for the header bytes
+    len += 4U;
+
     // Convert 16-bit length to 2 bytes
     uint8_t length[2U];
     if (len > 255U)
-        length[0U] = len & 0xFFU;
+        length[0U] = (len >> 8U) & 0xFFU;
     else
         length[0U] = 0x00U;
-    length[1U] = len && 0xFFU;
+    length[1U] = len & 0xFFU;
                 
     m_txP25Queue.addData(length, 2U);
 
@@ -1603,8 +1632,16 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
     ::memcpy(tsBytes, &msgTime, 8U);
     m_txP25Queue.addData(tsBytes, 8U);
 
+    // Add the DVM start byte, length byte, CMD byte, and padding 0
+    uint8_t header[4U];
+    header[0U] = DVM_SHORT_FRAME_START;
+    header[1U] = len & 0xFFU;
+    header[2U] = CMD_P25_DATA;
+    header[3U] = 0x00U;
+    m_txP25Queue.addData(header, 4U);
+
     // Add the data
-    m_txP25Queue.addData(data, len);
+    m_txP25Queue.addData(data, len - 4U);
 
     // Update the last message time
     m_lastP25Tx = msgTime;
