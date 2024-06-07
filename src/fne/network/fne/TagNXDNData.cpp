@@ -450,6 +450,15 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             }
         }
 
+        // peer always send list takes priority over any following affiliation rules
+        std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
+        if (alwaysSend.size() > 0) {
+            auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peerId);
+            if (it != alwaysSend.end()) {
+                return true; // skip any following checks and always send traffic
+            }
+        }
+
         FNEPeerConnection* connection = nullptr;
         if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
             connection = m_network->m_peers[peerId];
