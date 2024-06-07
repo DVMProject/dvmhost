@@ -163,6 +163,7 @@ bool ControlSignaling::process(uint8_t fct, uint8_t option, uint8_t* data, uint3
 
     uint16_t srcId = rcch->getSrcId();
     uint16_t dstId = rcch->getDstId();
+    m_nxdn->m_affiliations.touchUnitReg(srcId);
 
     switch (rcch->getMessageType()) {
         case RTCH_MESSAGE_TYPE_VCALL:

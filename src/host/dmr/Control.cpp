@@ -174,6 +174,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
+    bool disableUnitRegTimeout = dmrProtocol["disableUnitRegTimeout"].as<bool>(false);
+    m_slot1->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_slot2->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+
     /*
     ** Voice Silence and Frame Loss Thresholds
     */

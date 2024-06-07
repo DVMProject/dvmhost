@@ -415,6 +415,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_controlChData = controlChData;
 
+    bool disableUnitRegTimeout = p25Protocol["disableUnitRegTimeout"].as<bool>(false);
+    m_affiliations.setDisableUnitRegTimeout(disableUnitRegTimeout);
+
     // set the grant release callback
     m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
@@ -435,6 +438,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 ::LogError(LOG_P25, P25_TSDU_STR ", TSBK_IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
             }
         }
+    });
+
+    // set the unit deregistration callback
+    m_affiliations.setUnitDeregCallback([=](uint32_t srcId) {
+        if (m_network != nullptr)
+            m_network->announceUnitDeregistration(srcId);
     });
 
     if (printOptions) {
@@ -486,6 +495,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
 
+        if (disableUnitRegTimeout) {
+            LogInfo("    Disable Unit Registration Timeout: yes");
+        }
+
         LogInfo("    Redundant Immediate: %s", m_control->m_redundantImmediate ? "yes" : "no");
         if (m_control->m_redundantGrant) {
             LogInfo("    Redundant Grant Transmit: yes");
@@ -494,7 +507,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // are we overriding the NAC for split NAC operations?
     uint32_t txNAC = (uint32_t)::strtoul(systemConf["config"]["txNAC"].as<std::string>("F7E").c_str(), NULL, 16);
-    if (txNAC != 0xF7EU && txNAC != m_nac) {
+    if (txNAC != P25_NAC_DIGITAL_SQ && txNAC != m_nac) {
         LogMessage(LOG_P25, "Split NAC operations, setting Tx NAC to $%03X", txNAC);
         m_txNAC = txNAC;
         m_nid.setTxNAC(m_txNAC);

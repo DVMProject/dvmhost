@@ -1153,6 +1153,7 @@ void FNENetwork::createPeerAffiliations(uint32_t peerId, std::string peerName)
     std::lock_guard<std::mutex> lock(m_peerMutex);
     lookups::ChannelLookup* chLookup = new lookups::ChannelLookup();
     m_peerAffiliations[peerId] = new lookups::AffiliationLookup(peerName, chLookup, m_verbose);
+    m_peerAffiliations[peerId]->setDisableUnitRegTimeout(true); // FNE doesn't allow unit registration timeouts (notification must come from the peers)
 }
 
 /// <summary>

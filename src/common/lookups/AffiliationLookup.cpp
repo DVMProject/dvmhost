@@ -18,6 +18,12 @@ using namespace lookups;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t UNIT_REG_TIMEOUT = 43200U; // 12 hours
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -30,6 +36,7 @@ using namespace lookups;
 AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* channelLookup, bool verbose) :
     m_rfGrantChCnt(0U),
     m_unitRegTable(),
+    m_unitRegTimers(),
     m_grpAffTable(),
     m_grantChTable(),
     m_grantSrcIdTable(),
@@ -39,6 +46,7 @@ AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* chan
     m_releaseGrant(nullptr),
     m_name(),
     m_chLookup(channelLookup),
+    m_disableUnitRegTimeout(false),
     m_verbose(verbose)
 {
     assert(channelLookup != nullptr);
@@ -46,6 +54,7 @@ AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* chan
     m_name = name;
 
     m_unitRegTable.clear();
+    m_unitRegTimers.clear();
     m_grpAffTable.clear();
 
     m_grantChTable.clear();
@@ -69,6 +78,9 @@ void AffiliationLookup::unitReg(uint32_t srcId)
     }
 
     m_unitRegTable.push_back(srcId);
+
+    m_unitRegTimers[srcId] = Timer(1000U, UNIT_REG_TIMEOUT);
+    m_unitRegTimers[srcId].start();
 
     if (m_verbose) {
         LogMessage(LOG_HOST, "%s, unit registration, srcId = %u",
@@ -95,6 +107,8 @@ bool AffiliationLookup::unitDereg(uint32_t srcId)
 
     groupUnaff(srcId);
 
+    m_unitRegTimers[srcId].stop();
+
     // remove dynamic unit registration table entry
     if (std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId) != m_unitRegTable.end()) {
         auto it = std::find(m_unitRegTable.begin(), m_unitRegTable.end(), srcId);
@@ -102,7 +116,65 @@ bool AffiliationLookup::unitDereg(uint32_t srcId)
         ret = true;
     }
 
+    if (ret) {
+        if (m_unitDereg != nullptr) {
+            m_unitDereg(srcId);
+        }
+    }
+
     return ret;
+}
+
+/// <summary>
+/// Helper to start the source ID registration timer.
+/// </summary>
+/// <param name="srcId"></param>
+/// <returns></returns>
+void AffiliationLookup::touchUnitReg(uint32_t srcId)
+{
+    if (srcId == 0U) {
+        return;
+    }
+
+    if (isUnitReg(srcId)) {
+        m_unitRegTimers[srcId].start();
+    }
+}
+
+/// <summary>
+/// Gets the current timer timeout for this unit registration.
+/// </summary>
+/// <param name="srcId"></param>
+/// <returns></returns>
+uint32_t AffiliationLookup::unitRegTimeout(uint32_t srcId)
+{
+    if (srcId == 0U) {
+        return 0U;
+    }
+
+    if (isUnitReg(srcId)) {
+        return m_unitRegTimers[srcId].getTimeout();
+    }
+
+    return 0U;
+}
+
+/// <summary>
+/// Gets the current timer value for this unit registration.
+/// </summary>
+/// <param name="srcId"></param>
+/// <returns></returns>
+uint32_t AffiliationLookup::unitRegTimer(uint32_t srcId)
+{
+    if (srcId == 0U) {
+        return 0U;
+    }
+
+    if (isUnitReg(srcId)) {
+        return m_unitRegTimers[srcId].getTimer();
+    }
+
+    return 0U;
 }
 
 /// <summary>
@@ -156,8 +228,7 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
 bool AffiliationLookup::groupUnaff(uint32_t srcId)
 {
     // lookup dynamic affiliation table entry
-    auto entry = m_grpAffTable.find(srcId);    
-    if (entry != m_grpAffTable.end()) {
+    if (m_grpAffTable.find(srcId) != m_grpAffTable.end()) {
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (m_verbose) {
             LogMessage(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
@@ -204,8 +275,7 @@ bool AffiliationLookup::hasGroupAff(uint32_t dstId) const
 bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
 {
     // lookup dynamic affiliation table entry
-    auto entry = m_grpAffTable.find(srcId);    
-    if (entry != m_grpAffTable.end()) {
+    if (m_grpAffTable.find(srcId) != m_grpAffTable.end()) {
         uint32_t tblDstId = m_grpAffTable.at(srcId);
         if (tblDstId == dstId) {
             return true;
@@ -535,5 +605,21 @@ void AffiliationLookup::clock(uint32_t ms)
     // release grants that have timed out
     for (uint32_t dstId : gntsToRel) {
         releaseGrant(dstId, false);
+    }
+
+    if (!m_disableUnitRegTimeout) {
+        // clock all the unit registration timers
+        std::vector<uint32_t> unitsToDereg = std::vector<uint32_t>();
+        for (uint32_t srcId : m_unitRegTable) {
+            m_unitRegTimers[srcId].clock(ms);
+            if (m_unitRegTimers[srcId].isRunning() && m_unitRegTimers[srcId].hasExpired()) {
+                unitsToDereg.push_back(srcId);
+            }
+        }
+
+        // release units registrations that have timed out
+        for (uint32_t srcId : unitsToDereg) {
+            unitDereg(srcId);
+        }
     }
 }

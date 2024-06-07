@@ -47,6 +47,12 @@ namespace lookups
         virtual void unitReg(uint32_t srcId);
         /// <summary>Helper to deregister a source ID.</summary>
         virtual bool unitDereg(uint32_t srcId);
+        /// <summary>Helper to start the source ID registration timer.</summary>
+        virtual void touchUnitReg(uint32_t srcId);
+        /// <summary>Gets the current timer timeout for this unit registration.</summary>
+        virtual uint32_t unitRegTimeout(uint32_t srcId);
+        /// <summary>Gets the current timer value for this unit registration.</summary>
+        virtual uint32_t unitRegTimer(uint32_t srcId);
         /// <summary>Helper to determine if the source ID has unit registered.</summary>
         virtual bool isUnitReg(uint32_t srcId) const;
         /// <summary>Helper to release unit registrations.</summary>
@@ -102,13 +108,21 @@ namespace lookups
         /// <summary>Updates the processor by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Helper to determine if the unit registration timeout is enabled or not.</summary>
+        virtual bool isDisableUnitRegTimeout() const { return m_disableUnitRegTimeout; }
+        /// <summary>Disables the unit registration timeout.</summary>
+        void setDisableUnitRegTimeout(bool disabled) { m_disableUnitRegTimeout = disabled; }
+
         /// <summary>Helper to set the release grant callback.</summary>
         void setReleaseGrantCallback(std::function<void(uint32_t, uint32_t, uint8_t)>&& callback) { m_releaseGrant = callback; }
+        /// <summary>Helper to set the unit deregistration callback.</summary>
+        void setUnitDeregCallback(std::function<void(uint32_t)>&& callback) { m_unitDereg = callback; }
 
     protected:
         uint8_t m_rfGrantChCnt;
 
         std::vector<uint32_t> m_unitRegTable;
+        std::unordered_map<uint32_t, Timer> m_unitRegTimers;
         std::unordered_map<uint32_t, uint32_t> m_grpAffTable;
 
         std::unordered_map<uint32_t, uint32_t> m_grantChTable;
@@ -119,9 +133,13 @@ namespace lookups
 
         //                 chNo      dstId     slot
         std::function<void(uint32_t, uint32_t, uint8_t)> m_releaseGrant;
+        //                 srcId
+        std::function<void(uint32_t)> m_unitDereg;
 
         std::string m_name;
         ChannelLookup* m_chLookup;
+
+        bool m_disableUnitRegTimeout;
 
         bool m_verbose;
     };

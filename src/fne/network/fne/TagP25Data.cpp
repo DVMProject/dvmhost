@@ -992,7 +992,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
 }
 
 /// <summary>
-/// Helper to validate the DMR call stream.
+/// Helper to validate the P25 call stream.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
 /// <param name="control"></param>

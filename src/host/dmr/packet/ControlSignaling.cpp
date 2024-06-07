@@ -156,6 +156,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         uint32_t srcId = csbk->getSrcId();
         uint32_t dstId = csbk->getDstId();
 
+        m_slot->m_affiliations->touchUnitReg(srcId);
+
         if (srcId != 0U || dstId != 0U) {
             CHECK_TRAFFIC_COLLISION(dstId);
 
@@ -1357,8 +1359,8 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         // remove dynamic unit registration table entry
         m_slot->m_affiliations->unitDereg(srcId);
 
-        if (m_slot->m_network != nullptr)
-            m_slot->m_network->announceUnitDeregistration(srcId);
+//        if (m_slot->m_network != nullptr)
+//            m_slot->m_network->announceUnitDeregistration(srcId);
 
         csbk->setReason(TS_ACK_RSN_REG);
     }

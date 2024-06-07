@@ -214,6 +214,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
         uint32_t srcId = tsbk->getSrcId();
         uint32_t dstId = tsbk->getDstId();
 
+        m_p25->m_affiliations.touchUnitReg(srcId);
         m_lastMFID = tsbk->getMFId();
 
         // handle standard P25 reference opcodes
@@ -2619,6 +2620,26 @@ bool ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
         noNet = true;
     }
 
+    // register the RID if the MFID is $90 (this is typically DVRS, and DVRS won't unit register so we'll do it for them)
+    if (!m_p25->m_affiliations.isUnitReg(srcId) && m_lastMFID == P25_MFG_MOT) {
+        // validate the source RID
+        if (!acl::AccessControl::validateSrcId(srcId)) {
+            LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, srcId = %u", iosp->toString().c_str(), srcId);
+            ::ActivityLog("P25", true, "unit registration request from %u denied", srcId);
+            iosp->setResponse(P25_RSP_REFUSED);
+            noNet = true;
+        }
+        else {
+            // update dynamic unit registration table
+            if (!m_p25->m_affiliations.isUnitReg(srcId)) {
+                m_p25->m_affiliations.unitReg(srcId);
+            }
+
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->announceUnitRegistration(srcId);
+        }
+    }
+
     // validate the source RID is registered
     if (!m_p25->m_affiliations.isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", iosp->toString().c_str(), srcId);
@@ -2744,8 +2765,8 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 
         writeRF_TSDU_SBF_Imm(osp.get(), false);
 
-        if (m_p25->m_network != nullptr)
-            m_p25->m_network->announceUnitDeregistration(srcId);
+//        if (m_p25->m_network != nullptr)
+//            m_p25->m_network->announceUnitDeregistration(srcId);
     }
 }
 
