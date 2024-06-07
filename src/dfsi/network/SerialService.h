@@ -130,7 +130,7 @@ namespace network
 
         // Functions called by clock() to read/write from/to the serial port
         RESP_TYPE_DVM readSerial();
-        uint32_t writeSerial();
+        int writeSerial();
 
         uint32_t readP25Frame(uint8_t* data);
         void writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu);
