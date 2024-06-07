@@ -107,18 +107,14 @@ void SerialService::clock(uint32_t ms)
 
             // P25 data is handled identically to the dvmhost modem
             case CMD_P25_DATA:
-            {
-                if (m_debug) {
-                    LogDebug("SERIAL", "Got P25 data from V24 board");
-                }
-                
+            {   
                 // Get length
                 uint8_t length[2U];
                 if (m_msgLength > 255U)
                     length[0U] = ((m_msgLength - cmdOffset) >> 8U) & 0xFFU;
                 else
                     length[0U] = 0x00U;
-                length[1U] = (m_msgLength - cmdOffset) && 0xFFU;
+                length[1U] = (m_msgLength - cmdOffset) & 0xFFU;
                 m_rxP25Queue.addData(length, 2U);
 
                 // Add data tag to queue
@@ -127,6 +123,10 @@ void SerialService::clock(uint32_t ms)
 
                 // Add P25 data to buffer
                 m_rxP25Queue.addData(m_msgBuffer + (cmdOffset + 1U), m_msgLength - (cmdOffset + 1U));
+
+                if (m_debug) {
+                    LogDebug(LOG_SERIAL, "Got P25 data from V24 board (len: %u)", m_msgLength);
+                }
             }
             break;
 
@@ -134,10 +134,10 @@ void SerialService::clock(uint32_t ms)
             case CMD_P25_LOST:
             {
                 if (m_debug)
-                    LogDebug("SERIAL", "Got P25 lost msg from V24 board");
+                    LogDebug(LOG_SERIAL, "Got P25 lost msg from V24 board");
 
                 if (m_msgDoubleLength) {
-                    LogError("SERIAL", "CMD_P25_LOST got double length byte?");
+                    LogError(LOG_SERIAL, "CMD_P25_LOST got double length byte?");
                     break;
                 }
 
@@ -162,7 +162,7 @@ void SerialService::clock(uint32_t ms)
             // Fallback if we get a message we have no clue how to handle
             default:
             {
-                LogError("SERIAL", "Unhandled command from V24 board: %02X", m_msgBuffer[2U]);
+                LogError(LOG_SERIAL, "Unhandled command from V24 board: %02X", m_msgBuffer[2U]);
             }
         }
     }
@@ -170,12 +170,12 @@ void SerialService::clock(uint32_t ms)
 
 bool SerialService::open()
 {
-    LogMessage("SERIAL", "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
+    LogMessage(LOG_SERIAL, "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
 
     bool ret = m_port->open();
 
     if (!ret) {
-        LogError("SERIAL", "Failed to open port!");
+        LogError(LOG_SERIAL, "Failed to open port!");
         return false;
     }
 
@@ -186,7 +186,7 @@ bool SerialService::open()
 
 void SerialService::close()
 {
-    LogMessage("SERIAL", "Closing port");
+    LogMessage(LOG_SERIAL, "Closing port");
     m_port->close();
 }
 
@@ -197,8 +197,10 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 {
     // Decode grant info
     bool grantDemand = (p25Buffer[14U] & 0x80U) == 0x80U;
-    bool grantDenial = (p25Buffer[14U] & 0x40U) == 0x40U;
-    bool unitToUnit = (p25Buffer[14U] & 0x01U) == 0x01U;
+    
+    // We don't use these (yet?)
+    //bool grantDenial = (p25Buffer[14U] & 0x40U) == 0x40U;
+    //bool unitToUnit = (p25Buffer[14U] & 0x01U) == 0x01U;
 
     // Decode network header
     uint8_t duid = p25Buffer[22U];
@@ -214,7 +216,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
         data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
         ::memset(data.get(), 0x00U, length);
         ::memcpy(data.get(), p25Buffer.get(), length);
-        LogMessage("SERIAL", "Got P25 PDU, we don't handle these (yet)");
+        LogMessage(LOG_SERIAL, "Got P25 PDU, we don't handle these (yet)");
     }
     // Handle everything else
     else {
@@ -487,6 +489,12 @@ void SerialService::processP25ToNet()
         return;
     }
 
+    //LogDebug(LOG_SERIAL, "processP25ToNet() got data (len: %u)", len);
+
+    if (m_trace) {
+        Utils::dump(1U, "data: ", data, len);
+    }
+
     // Create a new link control object if needed
     if (m_rxVoiceControl == nullptr) {
         m_rxVoiceControl = new lc::LC();
@@ -504,12 +512,22 @@ void SerialService::processP25ToNet()
 
     // Parse out the data
     uint8_t tag = data[0U];
-    uint8_t dfsiData[len - 1];
-    ::memset(dfsiData, 0x00U, len - 1);
-    ::memcpy(dfsiData, data + 1U, len - 1);
+
+    // Sanity check
+    if (tag != TAG_DATA) {
+        LogError(LOG_SERIAL, "Unexpected data tag in RX P25 frame buffer: 0x%02X", tag);
+        return;
+    }
+
+    // Get the DFSI data (skip the 0x00 padded byte at the start)
+    uint8_t dfsiData[len - 2];
+    ::memset(dfsiData, 0x00U, len - 2);
+    ::memcpy(dfsiData, data + 2U, len - 2);
 
     // Extract DFSI frame type
     uint8_t frameType = dfsiData[0U];
+
+    //LogDebug(LOG_SERIAL, "Handling DFSI frameType 0x%02X", frameType);
 
     // Switch based on DFSI frame type
     switch (frameType) {
@@ -527,12 +545,12 @@ void SerialService::processP25ToNet()
                 // Generate a new random stream ID
                 m_rxVoiceCallData->newStreamId();
                 // Log
-                LogInfo(LOG_SERIAL, "V24 CALL START [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                LogMessage(LOG_SERIAL, "V24 CALL START [STREAM ID %u]", m_rxVoiceCallData->streamId);
             } else {
                 // Flag call over
                 m_lclCallInProgress = false;
                 // Log
-                LogInfo(LOG_SERIAL, "V24 CALL END [STREAM ID %u]", m_rxVoiceCallData->streamId);
+                LogMessage(LOG_SERIAL, "V24 CALL END");
                 // Send the TDU (using call data which we hope has been filled earlier)
                 m_network->writeP25TDU(*m_rxVoiceControl, *m_rxVoiceLsd);
                 // Reset
@@ -839,7 +857,7 @@ RESP_TYPE_DVM SerialService::readSerial()
 
         // Catch read error
         if (ret < 0) {
-            LogError("SERIAL", "Error reading from serial port, ret = %d", ret);
+            LogError(LOG_SERIAL, "Error reading from serial port, ret = %d", ret);
             m_msgState = RESP_START;
             return RTM_ERROR;
         }
@@ -872,7 +890,7 @@ RESP_TYPE_DVM SerialService::readSerial()
         
         // Catch read error
         if (ret < 0) {
-            LogError("SERIAL", "Error reading from serial port, ret = %d", ret);
+            LogError(LOG_SERIAL, "Error reading from serial port, ret = %d", ret);
             m_msgState = RESP_START;
             return RTM_ERROR;
         }
@@ -884,7 +902,7 @@ RESP_TYPE_DVM SerialService::readSerial()
 
         // Handle invalid length
         if (m_msgBuffer[1U] >= 250U && !m_msgDoubleLength) {
-            LogError("SERIAL", "Invalid length received from the modem, len = %u", m_msgBuffer[1U]);
+            LogError(LOG_SERIAL, "Invalid length received from the modem, len = %u", m_msgBuffer[1U]);
             return RTM_ERROR;
         }
 
@@ -909,7 +927,7 @@ RESP_TYPE_DVM SerialService::readSerial()
 
         // Catch read error
         if (ret < 0) {
-            LogError("SERIAL", "Error reading from serial port, ret = %d", ret);
+            LogError(LOG_SERIAL, "Error reading from serial port, ret = %d", ret);
             m_msgState = RESP_START;
             return RTM_ERROR;
         }
@@ -938,7 +956,7 @@ RESP_TYPE_DVM SerialService::readSerial()
         
         // Catch read error
         if (ret < 0) {
-            LogError("SERIAL", "Error reading from serial port, ret = %d", ret);
+            LogError(LOG_SERIAL, "Error reading from serial port, ret = %d", ret);
             m_msgState = RESP_START;
             return RTM_ERROR;
         }
@@ -958,8 +976,8 @@ RESP_TYPE_DVM SerialService::readSerial()
 
     // Get the data
     if (m_msgState == RESP_DATA) {
-        if (m_debug) {
-            LogDebug("SERIAL", "readSerial(), RESP_DATA, len = %u, offset = %u, type = %02X", m_msgLength, m_msgOffset, m_msgType);
+        if (m_trace) {
+            LogDebug(LOG_SERIAL, "readSerial(), RESP_DATA, len = %u, offset = %u, type = %02X", m_msgLength, m_msgOffset, m_msgType);
         }
 
         // Get the data based on the earlier length
@@ -967,7 +985,7 @@ RESP_TYPE_DVM SerialService::readSerial()
             int ret = m_port->read(m_msgBuffer + m_msgOffset, m_msgLength - m_msgOffset);
 
             if (ret < 0) {
-                LogError("SERIAL", "Error reading from serial port, ret = %d", ret);
+                LogError(LOG_SERIAL, "Error reading from serial port, ret = %d", ret);
                 m_msgState = RESP_START;
                 return RTM_ERROR;
             }
@@ -1173,17 +1191,19 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         break;
     }
 
-    // Placeholder for last call timestamp
-    int64_t lastHeard = 0U;
+    // Placeholder for last call timestamp retrieved below (not yet used)
+    //int64_t lastHeard = 0U;
+
+    // Placeholder for sequence number retrieved below 
     uint32_t sequence = 0U;
 
     // Get the last heard value (not used currently, TODO: use this for covnentional TGID timeout purposes)
-    {
+    /*{
         auto entry = m_lastHeard.find(control.getDstId());
         if (entry != m_lastHeard.end()) {
             lastHeard = m_lastHeard[control.getDstId()];
         }
-    }
+    }*/
 
     // Get the last sequence number
     {
@@ -1682,36 +1702,36 @@ void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
     }
     else {
         if (m_msgDoubleLength) {
-            LogError("SERIAL", "Invalid debug data received from the V24 board, len = %u", len);
+            LogError(LOG_SERIAL, "Invalid debug data received from the V24 board, len = %u", len);
             return;
         }
     }
 
     // Handle the individual debug types
     if (buffer[2U] == CMD_DEBUG1) {
-        LogDebug("SERIAL", "V24: %.*s", len - 3U, buffer + 3U);
+        LogDebug(LOG_SERIAL, "V24: %.*s", len - 3U, buffer + 3U);
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug("SERIAL", "V24: %.*s %X", len - 5U, buffer + 3U, val1);
+        LogDebug(LOG_SERIAL, "V24: %.*s %X", len - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug("SERIAL", "V24: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
+        LogDebug(LOG_SERIAL, "V24: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug("SERIAL", "V24: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_SERIAL, "V24: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
         short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug("SERIAL", "V24: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_SERIAL, "V24: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
     }
     else if (buffer[2U] == CMD_DEBUG_DUMP) {
         uint8_t data[255U];
