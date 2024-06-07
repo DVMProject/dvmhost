@@ -269,7 +269,6 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
         case TSBK_IOSP_GRP_AFF:
         case TSBK_IOSP_U_REG:
         case TSBK_ISP_CAN_SRV_REQ:
-        case TSBK_ISP_GRP_AFF_Q_RSP:
         case TSBK_OSP_DENY_RSP:
         case TSBK_OSP_QUE_RSP:
         case TSBK_ISP_U_DEREG_REQ:
@@ -277,6 +276,8 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
         case TSBK_ISP_LOC_REG_REQ:
             mfId = P25_MFG_STANDARD;
             break;
+        case TSBK_ISP_GRP_AFF_Q_RSP:
+            return decode(new MBT_ISP_GRP_AFF_Q_RSP(), dataHeader, blocks);
         default:
             LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
             break;

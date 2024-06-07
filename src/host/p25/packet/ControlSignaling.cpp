@@ -514,6 +514,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 // make sure control data is supported
                 IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBK_ISP_GRP_AFF_Q_RSP, srcId);
 
+                if (m_p25->m_ackTSBKRequests) {
+                    writeRF_TSDU_ACK_FNE(srcId, TSBK_ISP_GRP_AFF_Q_RSP, true, true);
+                }
+
                 ISP_GRP_AFF_Q_RSP* isp = static_cast<ISP_GRP_AFF_Q_RSP*>(tsbk.get());
                 if (m_verbose) {
                     LogMessage(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, dstId = %u, anncId = %u", 
@@ -1006,6 +1010,11 @@ void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
+    if (m_lastMFID != P25_MFG_STANDARD) {
+        iosp->setMFId(m_lastMFID);
+        m_lastMFID = P25_MFG_STANDARD;
+    }
+
     VERBOSE_LOG_TSBK(iosp->toString(), srcId, dstId);
     ::ActivityLog("P25", true, "call alert request from %u to %u", srcId, dstId);
 
@@ -1047,6 +1056,11 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
     iosp->setSrcId(arg);
     iosp->setDstId(dstId);
 
+    if (m_lastMFID != P25_MFG_STANDARD) {
+        iosp->setMFId(m_lastMFID);
+        m_lastMFID = P25_MFG_STANDARD;
+    }
+
     if (m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", %s, op = $%02X, arg = %u, tgt = %u",
             iosp->toString().c_str(), iosp->getExtendedFunction(), iosp->getSrcId(), iosp->getDstId());
@@ -1076,6 +1090,11 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
 
+    if (m_lastMFID != P25_MFG_STANDARD) {
+        osp->setMFId(m_lastMFID);
+        m_lastMFID = P25_MFG_STANDARD;
+    }
+
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
     ::ActivityLog("P25", true, "group affiliation query command from %u to %u", P25_WUID_FNE, dstId);
 
@@ -1091,6 +1110,11 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
     std::unique_ptr<OSP_U_REG_CMD> osp = std::make_unique<OSP_U_REG_CMD>();
     osp->setSrcId(P25_WUID_FNE);
     osp->setDstId(dstId);
+
+    if (m_lastMFID != P25_MFG_STANDARD) {
+        osp->setMFId(m_lastMFID);
+        m_lastMFID = P25_MFG_STANDARD;
+    }
 
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
     ::ActivityLog("P25", true, "unit registration command from %u to %u", P25_WUID_FNE, dstId);
