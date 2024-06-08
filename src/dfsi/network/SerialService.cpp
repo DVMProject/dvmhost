@@ -315,6 +315,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 
     uint8_t* message = data.get();
 
+    //Utils::dump(2U, "!!! *P25 Network Frame", message, frameLength);
+
     // forward onto the specific processor for final processing and delivery
     switch (duid) {
         case P25_DUID_LDU1:
@@ -375,6 +377,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
                         control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
 
+                    //Utils::dump("P25 LDU1 from net", netLDU1, 9U * 25U);
+
                     writeP25Frame(duid, dfsiLC, netLDU1);
                 }
             }
@@ -430,6 +434,8 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 
                     control = lc::LC(*dfsiLC.control());
                     LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
+
+                    //Utils::dump("P25 LDU2 from net", netLDU2, 9U * 25U);
 
                     writeP25Frame(duid, dfsiLC, netLDU2);
                 }
@@ -494,8 +500,6 @@ void SerialService::processP25ToNet()
     if (len <= 0U) {
         return;
     }
-
-    Utils::dump("Got V24 data from serial", data, len);
 
     //LogDebug(LOG_SERIAL, "processP25ToNet() got data (len: %u)", len);
 
@@ -574,12 +578,6 @@ void SerialService::processP25ToNet()
             // Decode
             MotVoiceHeader1 vhdr1 = MotVoiceHeader1(dfsiData);
 
-            // Temp debug
-            uint8_t buffer[vhdr1.LENGTH];
-            ::memset(buffer, 0x00U, vhdr1.LENGTH);
-            vhdr1.encode(buffer);
-            Utils::dump("Decoded V24 data", buffer, vhdr1.LENGTH);
-
             // Copy to call data VHDR1
             m_rxVoiceCallData->VHDR1 = new uint8_t[vhdr1.HCW_LENGTH];
             ::memcpy(m_rxVoiceCallData->VHDR1, vhdr1.header, vhdr1.HCW_LENGTH);
@@ -600,12 +598,6 @@ void SerialService::processP25ToNet()
             if (m_debug) {
                 LogDebug(LOG_SERIAL, "V24 VHDR2 [STREAM ID %u]", m_rxVoiceCallData->streamId);
             }
-
-            // Temp debug
-            uint8_t buffer[vhdr2.LENGTH];
-            ::memset(buffer, 0x00U, vhdr2.LENGTH);
-            vhdr2.encode(buffer);
-            Utils::dump("Decoded V24 data", buffer, vhdr2.LENGTH);
 
             // Buffer for raw VHDR data
             uint8_t raw[P25_DFSI_VHDR_RAW_LEN];
@@ -651,26 +643,20 @@ void SerialService::processP25ToNet()
         {
             // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
-            // Temp debug
-            uint8_t buffer[svf.LENGTH];
-            ::memset(buffer, 0x00U, svf.LENGTH);
-            svf.encode(buffer);
-            Utils::dump("Decoded V24 data", buffer, svf.LENGTH);
             // Copy
             ::memcpy(m_rxVoiceCallData->netLDU1 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+            // Increment our voice frame counter
+            m_rxVoiceCallData->n++;
         }
         break;
         case P25_DFSI_LDU2_VOICE10:
         {
             // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
-            // Temp debug
-            uint8_t buffer[svf.LENGTH];
-            ::memset(buffer, 0x00U, svf.LENGTH);
-            svf.encode(buffer);
-            Utils::dump("Decoded V24 data", buffer, svf.LENGTH);
             // Copy
             ::memcpy(m_rxVoiceCallData->netLDU2 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+            // Increment our voice frame counter
+            m_rxVoiceCallData->n++;
         }
         break;
         // The remaining LDUs all create full rate voice frames so we do that here
@@ -678,11 +664,6 @@ void SerialService::processP25ToNet()
         {
             // Decode
             MotFullRateVoice voice = MotFullRateVoice(dfsiData);
-            // Temp debug
-            uint8_t buffer[voice.size()];
-            ::memset(buffer, 0x00U, voice.size());
-            voice.encode(buffer);
-            Utils::dump("Decoded V24 data", buffer, voice.size());
             // Copy based on frame type
             switch (frameType) {
                 // VOICE2
@@ -832,13 +813,16 @@ void SerialService::processP25ToNet()
                 }
                 break;
             }
+
+            // Increment our voice frame counter
+            m_rxVoiceCallData->n++;
         }
         break;
     }
 
     // Get LC & LSD data if we're ready for either LDU1 or LDU2 (don't do this every frame to be more efficient)
 
-    if (m_rxVoiceCallData->n == 8U || m_rxVoiceCallData->n == 17U) {
+    if (m_rxVoiceCallData->n == 9U || m_rxVoiceCallData->n == 18U) {
         // Create LC
         m_rxVoiceControl->setSrcId(m_rxVoiceCallData->srcId);
         m_rxVoiceControl->setDstId(m_rxVoiceCallData->dstId);
@@ -859,7 +843,7 @@ void SerialService::processP25ToNet()
     }
 
     // Send LDU1 if ready
-    if (m_rxVoiceCallData->n == 8U) {
+    if (m_rxVoiceCallData->n == 9U) {
         // Send
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
         // Optional Debug
@@ -875,7 +859,7 @@ void SerialService::processP25ToNet()
     }
     
     // Send LDU2 if ready
-    if (m_rxVoiceCallData->n == 17U) {
+    if (m_rxVoiceCallData->n == 18U) {
         // Send
         bool ret = m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
         // Optional Debug
@@ -890,11 +874,6 @@ void SerialService::processP25ToNet()
         }
         // Reset counter since we've sent both frames
         m_rxVoiceCallData->n = 0;
-    }
-
-    else {
-        // Increment our frame counter
-        m_rxVoiceCallData->n++;
     }
 }
 
@@ -1350,7 +1329,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE3 : P25_DFSI_LDU2_VOICE12;
                 ::memcpy(voice.imbeData, ldu + 55U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // Copy additional data
                 if (voice.frameType == P25_DUID_LDU1) {
                     voice.additionalData[0U] = control.getLCO();
@@ -1367,7 +1348,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE4 : P25_DFSI_LDU2_VOICE13;
                 ::memcpy(voice.imbeData, ldu + 80U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // We set the additional data based on LDU1/2
                 switch (duid) {
                     case P25_DUID_LDU1:
@@ -1391,7 +1374,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE5 : P25_DFSI_LDU2_VOICE14;
                 ::memcpy(voice.imbeData, ldu + 105U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // Same as case 3 above
                 switch (duid) {
                     case P25_DUID_LDU1:
@@ -1415,7 +1400,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE6 : P25_DFSI_LDU2_VOICE15;
                 ::memcpy(voice.imbeData, ldu + 130U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // Another switch on LDU1/2
                 switch (duid) {
                     case P25_DUID_LDU1:
@@ -1428,9 +1415,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                     break;
                     case P25_DUID_LDU2:
                     {
-                        voice.additionalData[0U] = ldu[126U];   // Algo ID
-                        voice.additionalData[1U] = ldu[127U];   // Key ID
-                        voice.additionalData[2U] = ldu[128U];   // ... (something else)
+                        voice.additionalData[0U] = control.getAlgId();              // Algo ID
+                        __SET_UINT16B(control.getKId(), voice.additionalData, 1U);  // Key ID
                     }
                     break;
                 }
@@ -1440,7 +1426,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE7 : P25_DFSI_LDU2_VOICE16;
                 ::memcpy(voice.imbeData, ldu + 155U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // RS data offsets are the same regardless of LDU
                 voice.additionalData[0U] = rs[12U];
                 voice.additionalData[1U] = rs[13U];
@@ -1451,7 +1439,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE8 : P25_DFSI_LDU2_VOICE17;
                 ::memcpy(voice.imbeData, ldu + 180U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // RS data offsets are the same regardless of LDU
                 voice.additionalData[0U] = rs[15U];
                 voice.additionalData[1U] = rs[16U];
@@ -1462,7 +1452,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE9 : P25_DFSI_LDU2_VOICE18;
                 ::memcpy(voice.imbeData, ldu + 204U, voice.IMBE_BUF_LEN);
+                // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
+                ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // Get low speed data bytes
                 voice.additionalData[0U] = lsd.getLSD1();
                 voice.additionalData[1U] = lsd.getLSD2();
@@ -1480,11 +1472,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
 
         // Debug logging
         if (m_trace) {
-            LogDebug(LOG_SERIAL, "encoded mot p25 voice frame");
-            
+            Utils::dump("Encoded V24 voice frame data", buffer, bufferSize);
         }
-
-        Utils::dump("Encoded V24 data", buffer, bufferSize);
 
         // Send if we have data (which we always should)
         if (buffer != nullptr) {
