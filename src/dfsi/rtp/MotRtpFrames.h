@@ -65,7 +65,7 @@ namespace p25
 
             uint32_t size();
             bool decode(uint8_t* data, bool shortened = false);
-            void encode(uint8_t data[], bool shortened = false);
+            void encode(uint8_t* data, bool shortened = false);
         private:
             bool isVoice1or2or10or11();
             bool isVoice2or11();
@@ -87,7 +87,7 @@ namespace p25
             MotStartOfStream(uint8_t* data);
 
             bool decode(uint8_t* data);
-            void encode(uint8_t data[]);
+            void encode(uint8_t* data);
         };
 
         class MotStartVoiceFrame {
@@ -97,6 +97,7 @@ namespace p25
             uint8_t icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
+            uint8_t nRssi;
             uint8_t adjMM;
 
             MotStartOfStream* startOfStream;
@@ -107,7 +108,7 @@ namespace p25
             ~MotStartVoiceFrame();
 
             bool decode(uint8_t* data);
-            void encode(uint8_t data[]);
+            void encode(uint8_t* data);
         };
 
         class MotVoiceHeader1 {
@@ -118,7 +119,7 @@ namespace p25
             uint8_t icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
-            uint8_t source;
+            uint8_t nRssi;
 
             uint8_t* header;
             MotStartOfStream* startOfStream;
@@ -128,7 +129,7 @@ namespace p25
             ~MotVoiceHeader1();
 
             bool decode(uint8_t* data);
-            void encode(uint8_t data[]);
+            void encode(uint8_t* data);
         };
 
         class MotVoiceHeader2 {
@@ -139,6 +140,7 @@ namespace p25
             uint8_t icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
+            uint8_t nRssi;
             MotStartOfStream startOfStream;
             uint8_t source;
 
@@ -149,7 +151,7 @@ namespace p25
             ~MotVoiceHeader2();
 
             bool decode(uint8_t* data);
-            void encode(uint8_t data[]);
+            void encode(uint8_t* data);
         };
     }
 }

@@ -14,6 +14,8 @@
 
 #include "rtp/MotRtpFrames.h"
 #include "common/p25/dfsi/DFSIDefines.h"
+#include "common/Utils.h"
+#include "common/Log.h"
 
 #include <cassert>
 #include <cstring>
@@ -31,6 +33,7 @@ MotFullRateVoice::MotFullRateVoice()
     additionalData = nullptr;
     source = 0x02U;
     imbeData = new uint8_t[IMBE_BUF_LEN];
+    ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 }
 
 MotFullRateVoice::MotFullRateVoice(uint8_t* data)
@@ -55,11 +58,6 @@ uint32_t MotFullRateVoice::size()
         length += LENGTH;
     }
 
-    // We're one byte short on these, for some reason, so add it here
-    if (isVoice2or11()) {
-        length += 1;
-    }
-
     // These are weird
     if (isVoice9or18()) {
         length -= 1;
@@ -75,16 +73,17 @@ bool MotFullRateVoice::decode(uint8_t* data, bool shortened)
     assert(data != nullptr);
 
     imbeData = new uint8_t[IMBE_BUF_LEN];
+    ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 
-    frameType = data[0U] & 0xFFU;
+    frameType = data[0U];
 
-    if (isVoice2or11())
+    if (isVoice2or11()) {
         shortened = true;
+    }
+        
 
     if (shortened) {
-        for (int i = 0; i < IMBE_BUF_LEN; i++) {
-            imbeData[i] = data[i + 1U];
-        }
+        ::memcpy(imbeData, data + 1U, IMBE_BUF_LEN);
         source = data[12U];
         // Forgot to set this originally and left additionalData uninitialized, whoops!
         additionalData = nullptr;
@@ -99,33 +98,33 @@ bool MotFullRateVoice::decode(uint8_t* data, bool shortened)
         ::memset(additionalData, 0x00U, ADDITIONAL_LENGTH);
         ::memcpy(additionalData, data + 1U, ADDITIONAL_LENGTH);
 
-        for (int i = 0; i < IMBE_BUF_LEN; i++) {
-            imbeData[i] = data[i + imbeStart];
-        }
+        // Copy IMBE data based on our imbe start position
+        ::memcpy(imbeData, data + imbeStart, IMBE_BUF_LEN);
 
-        source = data[11 + imbeStart];
+        source = data[IMBE_BUF_LEN + imbeStart];
     }
 
     return true;
 }
 
-void MotFullRateVoice::encode(uint8_t data[], bool shortened)
+void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 {
     // Sanity check
     assert(data != nullptr);
 
     // Check if we're a shortened frame
     data[0U] = frameType;
-    if (isVoice9or18()) {
+    if (isVoice2or11()) {
         shortened = true;
     }
 
     // Copy based on shortened frame or not
     if (shortened) {
-        for (int i = 0; i < IMBE_BUF_LEN; i++)
-            data[i + 1U] = imbeData[i];
         ::memcpy(data + 1U, imbeData, IMBE_BUF_LEN);
-    } else {
+        data[12U] = source;
+    } 
+    // If not shortened, our IMBE data start position depends on frame type
+    else {
         // Starting index for the IMBE data
         uint8_t imbeStart = 5U;
         if (isVoice9or18()) {
@@ -143,12 +142,11 @@ void MotFullRateVoice::encode(uint8_t data[], bool shortened)
         // Source byte at the end
         data[11U + imbeStart] = source;
     }
-
 }
 
 bool MotFullRateVoice::isVoice1or2or10or11()
 {
-    if (frameType == P25_DFSI_LDU1_VOICE1 || frameType == P25_DFSI_LDU1_VOICE2 || frameType == P25_DFSI_LDU2_VOICE10 || frameType == P25_DFSI_LDU2_VOICE11 ) {
+    if ( (frameType == P25_DFSI_LDU1_VOICE1) || (frameType == P25_DFSI_LDU1_VOICE2) || (frameType == P25_DFSI_LDU2_VOICE10) || (frameType == P25_DFSI_LDU2_VOICE11) ) {
         return true;
     } else {
         return false;
@@ -157,7 +155,7 @@ bool MotFullRateVoice::isVoice1or2or10or11()
 
 bool MotFullRateVoice::isVoice2or11()
 {
-    if (frameType == P25_DFSI_LDU1_VOICE2 || frameType == P25_DFSI_LDU2_VOICE11) {
+    if ( (frameType == P25_DFSI_LDU1_VOICE2) || (frameType == P25_DFSI_LDU2_VOICE11) ) {
         return true;
     } else {
         return false;
@@ -166,7 +164,7 @@ bool MotFullRateVoice::isVoice2or11()
 
 bool MotFullRateVoice::isVoice9or18()
 {
-    if (frameType == P25_DFSI_LDU1_VOICE9 || frameType == P25_DFSI_LDU2_VOICE18) {
+    if ( (frameType == P25_DFSI_LDU1_VOICE9) || (frameType == P25_DFSI_LDU2_VOICE18) ) {
         return true;
     } else {
         return false;
@@ -174,7 +172,7 @@ bool MotFullRateVoice::isVoice9or18()
 }
 
 // ---------------------------------------------------------------------------
-//  Motorola start of stream frame
+//  Motorola start of stream frame (10 bytes long)
 // ---------------------------------------------------------------------------
 
 MotStartOfStream::MotStartOfStream()
@@ -202,7 +200,7 @@ bool MotStartOfStream::decode(uint8_t* data)
     return true;
 }
 
-void MotStartOfStream::encode(uint8_t data[])
+void MotStartOfStream::encode(uint8_t* data)
 {
     // Sanity check
     assert(data != nullptr);
@@ -224,6 +222,7 @@ MotStartVoiceFrame::MotStartVoiceFrame()
     icw = 0;
     rssi = 0;
     rssiValidity = INVALID;
+    nRssi = 0;
     adjMM = 0;
 
     startOfStream = nullptr;
@@ -248,32 +247,33 @@ bool MotStartVoiceFrame::decode(uint8_t* data)
     // Create a new startOfStream
     startOfStream = new MotStartOfStream();
     
-    // Create a buffer to decode
+    // Create a buffer to decode the start record skipping the 10th byte (adjMM)
     uint8_t startBuffer[startOfStream->LENGTH];
     ::memset(startBuffer, 0x00U, startOfStream->LENGTH);
-    ::memcpy(startBuffer, data + 1U, 4);
+    ::memcpy(startBuffer, data, 9U);
 
     // Decode start of stream
     startOfStream->decode(startBuffer);
 
-    // Decode the full rate voice the same way
+    // Decode the full rate voice frames
     fullRateVoice = new MotFullRateVoice();
     uint8_t voiceBuffer[fullRateVoice->SHORTENED_LENGTH];
     ::memset(voiceBuffer, 0x00U, fullRateVoice->SHORTENED_LENGTH);
     voiceBuffer[0U] = data[0U];
-    ::memcpy(voiceBuffer + 1U, data + 10U, fullRateVoice->SHORTENED_LENGTH - 2);
-    fullRateVoice->decode(voiceBuffer);
+    ::memcpy(voiceBuffer + 1U, data + 10U, fullRateVoice->SHORTENED_LENGTH - 1);
+    fullRateVoice->decode(voiceBuffer, true);
 
     // Get rest of data
     icw = data[5U];
     rssi = data[6U];
     rssiValidity = (RssiValidityFlag)data[7U];
+    nRssi = data[8U];
     adjMM = data[9U];
 
     return true;
 }
 
-void MotStartVoiceFrame::encode(uint8_t data[])
+void MotStartVoiceFrame::encode(uint8_t* data)
 {
     // Sanity checks
     assert(data != nullptr);
@@ -284,14 +284,14 @@ void MotStartVoiceFrame::encode(uint8_t data[])
     if (startOfStream != nullptr) {
         uint8_t buffer[startOfStream->LENGTH];
         startOfStream->encode(buffer);
-        // Copy to data array
-        ::memcpy(data + 1U, buffer + 1U, startOfStream->LENGTH - 1);
+        // Copy to data array (skipping first and last bytes)
+        ::memcpy(data + 1U, buffer + 1U, startOfStream->LENGTH - 2);
     }
 
     // Encode full rate voice
     if (fullRateVoice != nullptr) {
         uint8_t buffer[fullRateVoice->SHORTENED_LENGTH];
-        fullRateVoice->encode(buffer);
+        fullRateVoice->encode(buffer, true);
         data[0U] = fullRateVoice->frameType;
         ::memcpy(data + 10U, buffer + 1U, fullRateVoice->SHORTENED_LENGTH - 1);
     }
@@ -300,7 +300,7 @@ void MotStartVoiceFrame::encode(uint8_t data[])
     data[5U] = icw;
     data[6U] = rssi;
     data[7U] = (uint8_t)rssiValidity;
-    data[8U] = rssi;
+    data[8U] = nRssi;
     data[9U] = adjMM;
 }
 
@@ -313,10 +313,11 @@ MotVoiceHeader1::MotVoiceHeader1()
     icw = 0;
     rssi = 0;
     rssiValidity = INVALID;
-    source = 0x02U;
+    nRssi = 0;
 
     startOfStream = nullptr;
     header = new uint8_t[HCW_LENGTH];
+    ::memset(header, 0x00U, HCW_LENGTH);
 }
 
 MotVoiceHeader1::MotVoiceHeader1(uint8_t* data)
@@ -338,22 +339,25 @@ bool MotVoiceHeader1::decode(uint8_t* data)
     startOfStream = new MotStartOfStream();
     uint8_t buffer[startOfStream->LENGTH];
     ::memset(buffer, 0x00U, startOfStream->LENGTH);
-    ::memcpy(buffer, data + 1U, 4);
+    // We copy the bytes from [1:4] 
+    ::memcpy(buffer + 1U, data + 1U, 4);
     startOfStream->decode(buffer);
 
     // Decode the other stuff
     icw = data[5U];
     rssi = data[6U];
     rssiValidity = (RssiValidityFlag)data[7U];
-    source = data[29];
+    nRssi = data[8U];
 
+    // Our header includes the trailing source and check bytes
     header = new uint8_t[HCW_LENGTH];
+    ::memset(header, 0x00U, HCW_LENGTH);
     ::memcpy(header, data + 10U, HCW_LENGTH);
 
     return true;
 }
 
-void MotVoiceHeader1::encode(uint8_t data[])
+void MotVoiceHeader1::encode(uint8_t* data)
 {
     assert(data != nullptr);
     assert(startOfStream != nullptr);
@@ -364,19 +368,19 @@ void MotVoiceHeader1::encode(uint8_t data[])
         uint8_t buffer[startOfStream->LENGTH];
         ::memset(buffer, 0x00U, startOfStream->LENGTH);
         startOfStream->encode(buffer);
-        ::memcpy(data + 1U, buffer + 1U, startOfStream->LENGTH - 1);
+        // Copy the 4 start record bytes from the start of stream frame
+        ::memcpy(data + 1U, buffer + 1U, 4U);
     }
 
     data[5U] = icw;
     data[6U] = rssi;
     data[7U] = (uint8_t)rssiValidity;
-    data[8U] = rssi;
+    data[8U] = nRssi;
 
+    // Our header includes the trailing source and check bytes
     if (header != nullptr) {
-        ::memcpy(data + 9U, header, HCW_LENGTH);
+        ::memcpy(data + 10U, header, HCW_LENGTH);
     }
-
-    data[LENGTH - 1] = source;
 }
 
 // ---------------------------------------------------------------------------
@@ -388,6 +392,7 @@ MotVoiceHeader2::MotVoiceHeader2()
     source = 0x02U;
 
     header = new uint8_t[HCW_LENGTH];
+    ::memset(header, 0x00U, HCW_LENGTH);
 }
 
 MotVoiceHeader2::MotVoiceHeader2(uint8_t* data)
@@ -407,12 +412,13 @@ bool MotVoiceHeader2::decode(uint8_t* data)
     source = data[21];
 
     header = new uint8_t[HCW_LENGTH];
+    ::memset(header, 0x00U, HCW_LENGTH);
     ::memcpy(header, data + 1U, HCW_LENGTH);
 
     return true;
 }
 
-void MotVoiceHeader2::encode(uint8_t data[])
+void MotVoiceHeader2::encode(uint8_t* data)
 {
     assert(data != nullptr);
 

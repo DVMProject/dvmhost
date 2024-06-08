@@ -138,7 +138,6 @@ namespace network
         // Helpers for TX stream data
         void startOfStream(const LC& lc);
         void endOfStream();
-        void sendStream(const LC& lc);
 
         // Helper for timing TX data appropriately based on frame type
         void addTxToQueue(uint8_t* data, uint16_t length, SERIAL_TX_TYPE msgType);

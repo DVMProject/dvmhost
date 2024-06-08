@@ -375,8 +375,6 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u",
                         control.getSrcId(), control.getDstId(), control.getGroup(), control.getEmergency(), control.getEncrypted(), control.getPriority());
 
-                    insertMissingAudio(netLDU1, m_netLost);
-
                     writeP25Frame(duid, dfsiLC, netLDU1);
                 }
             }
@@ -432,8 +430,6 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 
                     control = lc::LC(*dfsiLC.control());
                     LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
-
-                    insertMissingAudio(netLDU2, m_netLost);
 
                     writeP25Frame(duid, dfsiLC, netLDU2);
                 }
@@ -498,6 +494,8 @@ void SerialService::processP25ToNet()
     if (len <= 0U) {
         return;
     }
+
+    Utils::dump("Got V24 data from serial", data, len);
 
     //LogDebug(LOG_SERIAL, "processP25ToNet() got data (len: %u)", len);
 
@@ -575,6 +573,13 @@ void SerialService::processP25ToNet()
         {
             // Decode
             MotVoiceHeader1 vhdr1 = MotVoiceHeader1(dfsiData);
+
+            // Temp debug
+            uint8_t buffer[vhdr1.LENGTH];
+            ::memset(buffer, 0x00U, vhdr1.LENGTH);
+            vhdr1.encode(buffer);
+            Utils::dump("Decoded V24 data", buffer, vhdr1.LENGTH);
+
             // Copy to call data VHDR1
             m_rxVoiceCallData->VHDR1 = new uint8_t[vhdr1.HCW_LENGTH];
             ::memcpy(m_rxVoiceCallData->VHDR1, vhdr1.header, vhdr1.HCW_LENGTH);
@@ -595,6 +600,12 @@ void SerialService::processP25ToNet()
             if (m_debug) {
                 LogDebug(LOG_SERIAL, "V24 VHDR2 [STREAM ID %u]", m_rxVoiceCallData->streamId);
             }
+
+            // Temp debug
+            uint8_t buffer[vhdr2.LENGTH];
+            ::memset(buffer, 0x00U, vhdr2.LENGTH);
+            vhdr2.encode(buffer);
+            Utils::dump("Decoded V24 data", buffer, vhdr2.LENGTH);
 
             // Buffer for raw VHDR data
             uint8_t raw[P25_DFSI_VHDR_RAW_LEN];
@@ -638,20 +649,41 @@ void SerialService::processP25ToNet()
         // VOICE1/10 create a start voice frame
         case P25_DFSI_LDU1_VOICE1:
         {
+            // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            // Temp debug
+            uint8_t buffer[svf.LENGTH];
+            ::memset(buffer, 0x00U, svf.LENGTH);
+            svf.encode(buffer);
+            Utils::dump("Decoded V24 data", buffer, svf.LENGTH);
+            // Copy
             ::memcpy(m_rxVoiceCallData->netLDU1 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
         }
         break;
         case P25_DFSI_LDU2_VOICE10:
         {
+            // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
+            // Temp debug
+            uint8_t buffer[svf.LENGTH];
+            ::memset(buffer, 0x00U, svf.LENGTH);
+            svf.encode(buffer);
+            Utils::dump("Decoded V24 data", buffer, svf.LENGTH);
+            // Copy
             ::memcpy(m_rxVoiceCallData->netLDU2 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
         }
         break;
         // The remaining LDUs all create full rate voice frames so we do that here
         default:
         {
+            // Decode
             MotFullRateVoice voice = MotFullRateVoice(dfsiData);
+            // Temp debug
+            uint8_t buffer[voice.size()];
+            ::memset(buffer, 0x00U, voice.size());
+            voice.encode(buffer);
+            Utils::dump("Decoded V24 data", buffer, voice.size());
+            // Copy based on frame type
             switch (frameType) {
                 // VOICE2
                 case P25_DFSI_LDU1_VOICE2:
@@ -832,9 +864,10 @@ void SerialService::processP25ToNet()
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
         // Optional Debug
         if (ret) {
-            if (m_debug) {
+            if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            }
+            if (m_trace)
+                Utils::dump(1U, "LDU1 to net", m_rxVoiceCallData->netLDU1, 9U * 25U);
         }
         else {
             LogError(LOG_SERIAL, "V24 LDU1 failed to write to network");
@@ -847,9 +880,10 @@ void SerialService::processP25ToNet()
         bool ret = m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
         // Optional Debug
         if (ret) {
-            if (m_debug) {
+            if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU2 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            }
+            if (m_trace)
+                Utils::dump(1U, "LDU2 to net", m_rxVoiceCallData->netLDU2, 9U * 25U);
         }
         else {
             LogError(LOG_SERIAL, "V24 LDU2 failed to write to network");
@@ -1020,7 +1054,7 @@ RESP_TYPE_DVM SerialService::readSerial()
         }
 
         if (m_debug && m_trace)
-            Utils::dump(1U, "Serial readSerial()", m_msgBuffer, m_msgLength);
+            Utils::dump(1U, "Serial RX Data", m_msgBuffer, m_msgLength);
     }
 
     m_msgState = RESP_START;
@@ -1061,10 +1095,11 @@ int SerialService::writeSerial()
         return 0U;
     }
 
+    // Get current timestamp
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     // Peek the timestamp to see if we should wait
     if (m_txP25Queue.dataSize() >= 11U) {
-        // Get current timestamp
-        int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         // Peek everything up to the timestamp
         uint8_t lengthTagTs[11U];
         ::memset(lengthTagTs, 0x00U, 11U);
@@ -1258,6 +1293,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             startOfStream(lc);
             m_lastHeard[control.getDstId()] = now;
             m_sequences[control.getDstId()] = ++sequence;
+
+            LogInfo(LOG_SERIAL, "LATE CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
             ActivityLog("network %svoice transmission late entry from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
         }
     }
@@ -1283,6 +1320,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         switch (n) {
             case 0: // VOICE1/10
             {
+                // Set frametype
+                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE1 : P25_DFSI_LDU2_VOICE10;
                 // Create the new frame objects
                 MotStartVoiceFrame svf = MotStartVoiceFrame();
                 svf.startOfStream = new MotStartOfStream();
@@ -1290,7 +1329,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                 // Set values appropriately
                 svf.startOfStream->startStop = StartStopFlag::START;
                 svf.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
-                svf.fullRateVoice->frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE1 : P25_DFSI_LDU2_VOICE10;
+                // Set frame type
+                svf.fullRateVoice->frameType = voice.frameType;
                 // Copy data
                 ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, svf.fullRateVoice->IMBE_BUF_LEN);
                 // Encode
@@ -1311,10 +1351,16 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE3 : P25_DFSI_LDU2_VOICE12;
                 ::memcpy(voice.imbeData, ldu + 55U, voice.IMBE_BUF_LEN);
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
-                // We copy the additional data from the LDU (what it is depends on the LDU but it's the same offsets either way)
-                voice.additionalData[0U] = ldu[51U];    // LCO or MI[0]
-                voice.additionalData[1U] = ldu[52U];    // MFID or MI[1]
-                voice.additionalData[2U] = ldu[53U];    // Service options or MI[2]
+                // Copy additional data
+                if (voice.frameType == P25_DUID_LDU1) {
+                    voice.additionalData[0U] = control.getLCO();
+                    voice.additionalData[1U] = control.getMFId();
+                    voice.additionalData[2U] = serviceOptions;
+                } else {
+                    voice.additionalData[0U] = mi[0U];
+                    voice.additionalData[1U] = mi[1U];
+                    voice.additionalData[2U] = mi[2U];
+                }
             }
             break;
             case 3: // VOICE4/13
@@ -1427,6 +1473,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         // For n=0 (VHDR1/10) case we create the buffer in the switch, for all other frame types we do that here
         if (n != 0) {
             buffer = new uint8_t[voice.size()];
+            ::memset(buffer, 0x00U, voice.size());
             voice.encode(buffer);
             bufferSize = voice.size();
         }
@@ -1434,8 +1481,10 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         // Debug logging
         if (m_trace) {
             LogDebug(LOG_SERIAL, "encoded mot p25 voice frame");
-            Utils::dump(1U, "data", buffer, bufferSize);
-        }      
+            
+        }
+
+        Utils::dump("Encoded V24 data", buffer, bufferSize);
 
         // Send if we have data (which we always should)
         if (buffer != nullptr) {
@@ -1466,7 +1515,7 @@ void SerialService::startOfStream(const LC& lc)
         LogDebug(LOG_SERIAL, "encoded mot p25 start frame");
     if (m_trace)
         Utils::dump(1U, "data", buffer, start.LENGTH);
-
+        
     // Send start frame
     addTxToQueue(buffer, start.LENGTH, network::SERIAL_TX_TYPE::NONIMBE);
 
@@ -1515,10 +1564,12 @@ void SerialService::startOfStream(const LC& lc)
     uint8_t buffer1[vhdr1.LENGTH];
     ::memset(buffer1, 0x00U, vhdr1.LENGTH);
     vhdr1.encode(buffer1);
+    
     if (m_debug)
         LogDebug(LOG_SERIAL, "encoded mot VHDR1 p25 frame");
     if (m_trace)
         Utils::dump(1U, "data", buffer1, vhdr1.LENGTH);
+        
     addTxToQueue(buffer1, vhdr1.LENGTH, SERIAL_TX_TYPE::NONIMBE);
 
     // Prepare VHDR2
@@ -1531,10 +1582,12 @@ void SerialService::startOfStream(const LC& lc)
     uint8_t buffer2[vhdr2.LENGTH];
     ::memset(buffer2, 0x00U, vhdr2.LENGTH);
     vhdr2.encode(buffer2);
+    
     if (m_debug)
         LogDebug(LOG_SERIAL, "encoded mot VHDR2 p25 frame");
     if (m_trace)
         Utils::dump(1U, "data", buffer2, vhdr2.LENGTH);
+    
     addTxToQueue(buffer2, vhdr2.LENGTH, SERIAL_TX_TYPE::NONIMBE);
 }
 
@@ -1553,23 +1606,13 @@ void SerialService::endOfStream()
     ::memset(buffer, 0x00U, end.LENGTH);
     end.encode(buffer);
 
-    // Optional debug/trace
-    if (m_debug)
+    if (m_trace) {
         LogDebug(LOG_SERIAL, "encoded mot p25 end frame");
-    if (m_trace)
         Utils::dump(1U, "data", buffer, end.LENGTH);
+    }
 
     // Send start frame
-    addTxToQueue(buffer, end.LENGTH, network::SERIAL_TX_TYPE::NONIMBE);
-}
-
-/// <summary>
-/// Send a frame of data to the connected V24 device
-/// </summary>
-/// <param name="lc">Link control data object</param>
-void SerialService::sendStream(const LC& lc)
-{
-
+    addTxToQueue(buffer, end.LENGTH, SERIAL_TX_TYPE::NONIMBE);
 }
 
 /// <summary>
@@ -1584,7 +1627,7 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
     if (m_port == nullptr) { return; }
 
     // Get current time in ms
-    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // Timestamp for this message (in ms)
     uint64_t msgTime = 0U;
@@ -1592,13 +1635,15 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
     // If this is our first message, timestamp is just now + the jitter buffer offset in ms
     if (m_lastP25Tx == 0U) {  
         msgTime = now + m_jitter;
+    } 
     // If we had a message before this, calculate the new timestamp dynamically
-    } else {
+    else {
         // If the last message occurred longer than our jitter buffer delay, we restart the sequence and calculate the same as above
-        if (now - m_lastP25Tx > m_jitter) {
+        if ((int64_t)(now - m_lastP25Tx) > m_jitter) {
             msgTime = now + m_jitter;
+        } 
         // Otherwise, we time out messages as required by the message type
-        } else {
+        else {
             if (msgType == IMBE) {
                 // IMBEs must go out at 20ms intervals
                 msgTime = m_lastP25Tx + 20;
@@ -1642,6 +1687,8 @@ void SerialService::addTxToQueue(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msg
 
     // Add the data
     m_txP25Queue.addData(data, len - 4U);
+
+    //Utils::dump(1U, "SERIAL TX DATA", data, len - 4U);
 
     // Update the last message time
     m_lastP25Tx = msgTime;
@@ -1746,34 +1793,34 @@ void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
 
     // Handle the individual debug types
     if (buffer[2U] == CMD_DEBUG1) {
-        LogDebug(LOG_SERIAL, "V24: %.*s", len - 3U, buffer + 3U);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s", len - 3U, buffer + 3U);
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24: %.*s %X", len - 5U, buffer + 3U, val1);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X", len - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
         short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
     }
     else if (buffer[2U] == CMD_DEBUG_DUMP) {
         uint8_t data[255U];
         ::memset(data, 0x00U, 255U);
         ::memcpy(data, buffer, len);
-        Utils::dump(1U, "V24 Debug Dump", data, len);
+        Utils::dump(1U, "V24 USB Debug Dump", data, len);
     }
 }
