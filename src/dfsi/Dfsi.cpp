@@ -165,12 +165,22 @@ int Dfsi::run()
     std::string port = serial_conf["port"].as<std::string>();
     uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
     bool rtrt = serial_conf["rtrt"].as<bool>();
+    bool diu = serial_conf["diu"].as<bool>();
     uint16_t jitter = serial_conf["jitter"].as<uint16_t>();
     bool serial_debug = serial_conf["debug"].as<bool>();
     bool serial_trace = serial_conf["trace"].as<bool>();
 
+    LogInfo("Serial Parameters");
+    LogInfo("    Port:        %s", port.c_str());
+    LogInfo("    Baudrate:    %u", baudrate);
+    LogInfo("    RT/RT:       %s", rtrt ? "Enabled" : "Disabled");
+    LogInfo("    DIU Flag:    %s", diu ? "Enabled" : "Disabled");
+    LogInfo("    Jitter Size: %u ms", jitter);
+    LogInfo("    Debug:       %s", serial_debug ? "Enabled" : "Disabled");
+    LogInfo("    Trace:       %s", serial_trace ? "Enabled" : "Disabled");
+
     // Create serial service
-    m_serial = new SerialService(port, baudrate, rtrt, jitter, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
+    m_serial = new SerialService(port, baudrate, rtrt, diu, jitter, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
 
     // Open serial
     ret = m_serial->open();

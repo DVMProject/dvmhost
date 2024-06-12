@@ -42,7 +42,7 @@ dfsi:
     theManufacturer: false
 
     # P25 buffer size in bytes
-    p25BufferSize: 522
+    p25BufferSize: 1044
     
     udp:
         # Time in seconds between heartbets to DFSI peers.
@@ -64,6 +64,8 @@ dfsi:
         baudrate: 115200
         # RT/RT flag enabled or disabled
         rtrt: false
+        # Use the DIU source flag (0x02) instead of the quantar source flag (0x00)
+        diu: false
         # Jitter buffer length in ms
         jitter: 200
         # Debug logging

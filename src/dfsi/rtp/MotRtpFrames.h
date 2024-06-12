@@ -42,6 +42,11 @@ namespace p25
             VALID = 0x1A
         };
 
+        enum SourceFlag {
+            DIU = 0x00,
+            QUANTAR = 0x02
+        };
+
         // ---------------------------------------------------------------------------
         //  Classes for Motorola-specific DFSI Frames (aka "THE" manufacturer)
         // ---------------------------------------------------------------------------
@@ -57,7 +62,7 @@ namespace p25
             uint8_t frameType;
             uint8_t* imbeData;
             uint8_t* additionalData;
-            uint8_t source;
+            SourceFlag source;
 
             MotFullRateVoice();
             MotFullRateVoice(uint8_t* data);
@@ -142,7 +147,7 @@ namespace p25
             RssiValidityFlag rssiValidity;
             uint8_t nRssi;
             MotStartOfStream startOfStream;
-            uint8_t source;
+            SourceFlag source;
 
             uint8_t* header;
 

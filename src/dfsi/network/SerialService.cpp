@@ -23,10 +23,11 @@ using namespace modem;
 using namespace p25;
 using namespace dfsi;
 
-SerialService::SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
+SerialService::SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, bool diu, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
     m_portName(portName),
     m_baudrate(baudrate),
     m_rtrt(rtrt),
+    m_diu(diu),
     m_port(),
     m_jitter(jitter),
     m_debug(debug),
@@ -1310,6 +1311,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                 svf.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
                 // Set frame type
                 svf.fullRateVoice->frameType = voice.frameType;
+                // Set source flag
+                svf.fullRateVoice->source = m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR;
                 // Copy data
                 ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, svf.fullRateVoice->IMBE_BUF_LEN);
                 // Encode
@@ -1322,6 +1325,8 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             case 1: // VOICE2/11
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE2 : P25_DFSI_LDU2_VOICE11;
+                // Set source flag
+                voice.source = m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR;
                 ::memcpy(voice.imbeData, ldu + 26U, voice.IMBE_BUF_LEN);
             }
             break;
@@ -1786,25 +1791,25 @@ void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X", len - 5U, buffer + 3U, val1);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i", len - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i", len - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i %i", len - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
         short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i %i %i", len - 11U, buffer + 3U, val1, val2, val3, val4);
     }
     else if (buffer[2U] == CMD_DEBUG_DUMP) {
         uint8_t data[255U];

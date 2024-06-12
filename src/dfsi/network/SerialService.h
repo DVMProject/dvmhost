@@ -62,7 +62,7 @@ namespace network
 
     class HOST_SW_API SerialService {
     public:
-        SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace);
+        SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, bool diu, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace);
 
         ~SerialService();
 
@@ -82,6 +82,7 @@ namespace network
         std::string m_portName;
         uint32_t m_baudrate;
         bool m_rtrt;
+        bool m_diu;
 
         port::IModemPort* m_port;
         uint16_t m_jitter;
