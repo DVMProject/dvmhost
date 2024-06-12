@@ -62,10 +62,10 @@ dfsi:
         # Serial configuration for serial DFSI
         port: "/dev/ttyACM0"
         baudrate: 115200
-        # RT/RT flag enabled or disabled
+        # RT/RT flag enabled (0x02) or disabled (0x04)
         rtrt: false
-        # Use the DIU source flag (0x02) instead of the quantar source flag (0x00)
-        diu: false
+        # Use the DIU source flag (0x00) instead of the quantar source flag (0x02)
+        diu: true
         # Jitter buffer length in ms
         jitter: 200
         # Debug logging
