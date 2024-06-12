@@ -352,7 +352,7 @@ bool MotVoiceHeader1::decode(uint8_t* data)
     // Our header includes the trailing source and check bytes
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
-    ::memcpy(header, data + 10U, HCW_LENGTH);
+    ::memcpy(header, data + 9U, HCW_LENGTH);
 
     return true;
 }
@@ -379,7 +379,7 @@ void MotVoiceHeader1::encode(uint8_t* data)
 
     // Our header includes the trailing source and check bytes
     if (header != nullptr) {
-        ::memcpy(data + 10U, header, HCW_LENGTH);
+        ::memcpy(data + 9U, header, HCW_LENGTH);
     }
 }
 

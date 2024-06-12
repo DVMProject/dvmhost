@@ -43,8 +43,8 @@ namespace p25
         };
 
         enum SourceFlag {
-            DIU = 0x00,
-            QUANTAR = 0x02
+            DIU = 0x00U,
+            QUANTAR = 0x02U
         };
 
         // ---------------------------------------------------------------------------
@@ -119,7 +119,7 @@ namespace p25
         class MotVoiceHeader1 {
         public:
             static const uint8_t LENGTH = 30;
-            static const uint8_t HCW_LENGTH = 20;
+            static const uint8_t HCW_LENGTH = 21;
 
             uint8_t icw;
             uint8_t rssi;
