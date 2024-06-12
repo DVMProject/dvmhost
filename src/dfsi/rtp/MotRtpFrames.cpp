@@ -31,7 +31,7 @@ MotFullRateVoice::MotFullRateVoice()
 {
     frameType = P25_DFSI_LDU1_VOICE1;
     additionalData = nullptr;
-    source = 0x02U;
+    source = SourceFlag::QUANTAR;
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 }
@@ -84,7 +84,7 @@ bool MotFullRateVoice::decode(uint8_t* data, bool shortened)
 
     if (shortened) {
         ::memcpy(imbeData, data + 1U, IMBE_BUF_LEN);
-        source = data[12U];
+        source = (SourceFlag)data[12U];
         // Forgot to set this originally and left additionalData uninitialized, whoops!
         additionalData = nullptr;
     } else {
@@ -101,7 +101,7 @@ bool MotFullRateVoice::decode(uint8_t* data, bool shortened)
         // Copy IMBE data based on our imbe start position
         ::memcpy(imbeData, data + imbeStart, IMBE_BUF_LEN);
 
-        source = data[IMBE_BUF_LEN + imbeStart];
+        source = (SourceFlag)data[IMBE_BUF_LEN + imbeStart];
     }
 
     return true;
@@ -121,7 +121,7 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
     // Copy based on shortened frame or not
     if (shortened) {
         ::memcpy(data + 1U, imbeData, IMBE_BUF_LEN);
-        data[12U] = source;
+        data[12U] = (uint8_t)source;
     } 
     // If not shortened, our IMBE data start position depends on frame type
     else {
@@ -140,7 +140,7 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
         ::memcpy(data + imbeStart, imbeData, IMBE_BUF_LEN);
 
         // Source byte at the end
-        data[11U + imbeStart] = source;
+        data[11U + imbeStart] = (uint8_t)source;
     }
 }
 
@@ -389,7 +389,7 @@ void MotVoiceHeader1::encode(uint8_t* data)
 
 MotVoiceHeader2::MotVoiceHeader2()
 {
-    source = 0x02U;
+    source = SourceFlag::QUANTAR;
 
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
@@ -409,7 +409,7 @@ bool MotVoiceHeader2::decode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    source = data[21];
+    source = (SourceFlag)data[21];
 
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
@@ -428,5 +428,5 @@ void MotVoiceHeader2::encode(uint8_t* data)
         ::memcpy(data + 1U, header, HCW_LENGTH);
     }
 
-    data[LENGTH - 1U] = source;
+    data[LENGTH - 1U] = (uint8_t)source;
 }
