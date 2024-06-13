@@ -631,7 +631,6 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             case NET_FUNC_RPTK:                                                                 // Repeater Authentication
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                    
                         FNEPeerConnection* connection = network->m_peers[peerId];
                         if (connection != nullptr) {
                             connection->lastPing(now);
