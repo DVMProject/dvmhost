@@ -314,6 +314,9 @@ namespace network
 
         std::vector<uint32_t> m_dropU2UPeerTable;
 
+        std::vector<uint32_t> m_peerBlacklistTable;
+        std::vector<uint32_t> m_peerWhitelistTable;
+
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;
         uint16_t m_influxServerPort;
@@ -331,6 +334,11 @@ namespace network
 
         /// <summary>Checks if the passed peer ID is blocked from unit-to-unit traffic.</summary>
         bool checkU2UDroppedPeer(uint32_t peerId);
+
+        /// <summary>Checks if a peer is blacklisted.</summary>
+        bool isPeerBlacklisted(uint32_t peerId) const;
+        /// <summary>Checks if a peer is whitelisted.</summary>
+        bool isPeerWhitelisted(uint32_t peerId) const;
 
         /// <summary>Helper to create a peer on the peers affiliations list.</summary>
         void createPeerAffiliations(uint32_t peerId, std::string peerName);

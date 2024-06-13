@@ -101,6 +101,8 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_filterHeaders(true),
     m_filterTerminators(true),
     m_dropU2UPeerTable(),
+    m_peerBlacklistTable(),
+    m_peerWhitelistTable(),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
     m_influxServerPort(8086U),
@@ -183,7 +185,37 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
     }
 
+    // Load Peer Blacklist
+    yaml::Node& peerBlacklist = conf["peerBlacklist"];
+    if (peerBlacklist.size() > 0U) {
+        for (size_t i = 0; i < peerBlacklist.size(); i++) {
+            uint32_t peerId = (uint32_t)::strtoul(peerBlacklist[i].as<std::string>("0").c_str(), NULL, 10);
+            if (peerId != 0U) {
+                m_peerBlacklistTable.push_back(peerId);
+            }
+        }
+    }
+
+    // Load Peer Whitelist
+    yaml::Node& peerWhitelist = conf["peerWhitelist"];
+    if (peerWhitelist.size() > 0U) {
+        for (size_t i = 0; i < peerWhitelist.size(); i++) {
+            uint32_t peerId = (uint32_t)::strtoul(peerWhitelist[i].as<std::string>("0").c_str(), NULL, 10);
+            if (peerId != 0U) {
+                m_peerWhitelistTable.push_back(peerId);
+            }
+        }
+    }
+
     if (printOptions) {
+            // TODO: REMOVE!!
+        LogInfo("    Number of Blacklisted Peers: %u", static_cast<uint32_t>(m_peerBlacklistTable.size()));
+        LogInfo("    Number of Whitelisted Peers: %u", static_cast<uint32_t>(m_peerWhitelistTable.size()));
+
+        LogInfo("    Whitelisted Peers:");
+        for (const auto& peer : m_peerWhitelistTable) {
+            LogInfo("        %u", peer);
+        }
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
@@ -607,6 +639,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             case NET_FUNC_RPTK:                                                                 // Repeater Authentication
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                    
                         FNEPeerConnection* connection = network->m_peers[peerId];
                         if (connection != nullptr) {
                             connection->lastPing(now);
@@ -644,6 +677,18 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             break;
                                         }
                                     }
+                                }
+
+                                // check if the peer is blacklisted
+                                if (network->isPeerBlacklisted(peerId)) {
+                                    LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
+                                    valid = false;
+                                }
+
+                                // check if the peer is whitelisted (only if whitelist is not empty)
+                                if (!network->m_peerWhitelistTable.empty() && !network->isPeerWhitelisted(peerId)) {
+                                    LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
+                                    valid = false;
                                 }
 
                                 if (valid) {
@@ -1145,6 +1190,22 @@ bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
     }
 
     return false;
+}
+
+/// <summary>
+/// Checks if a peer ID is backlisted.
+/// </summary>
+/// <param name="peerId"></param>
+bool FNENetwork::isPeerBlacklisted(uint32_t peerId) const {
+    return std::find(m_peerBlacklistTable.begin(), m_peerBlacklistTable.end(), peerId) != m_peerBlacklistTable.end();
+}
+
+/// <summary>
+/// Checks if a peer ID is whitelisted.
+/// </summary>
+/// <param name="peerId"></param>
+bool FNENetwork::isPeerWhitelisted(uint32_t peerId) const {
+    return std::find(m_peerWhitelistTable.begin(), m_peerWhitelistTable.end(), peerId) != m_peerWhitelistTable.end();
 }
 
 /// <summary>
