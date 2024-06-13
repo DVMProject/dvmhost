@@ -10,6 +10,7 @@
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
 *   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *   Copyright (c) 2024 Caleb, KO4UYJ
 *
 */
@@ -41,6 +42,15 @@ PeerListLookup::PeerListLookup(const std::string& listFile, Mode mode, uint32_t 
     : LookupTable(listFile, reloadTime), m_mode(mode), m_enabled(enabled)
 {
     /* stub */
+}
+
+/// <summary>
+/// Get the list of peers in the table.
+/// </summary>
+std::vector<uint32_t> PeerListLookup::getPeerList() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_list;
 }
 
 /// <summary>
@@ -106,6 +116,15 @@ bool PeerListLookup::isPeerAllowed(uint32_t peerId) const
     }
 
     return allowed;
+}
+
+/// <summary>
+/// Commit the table.
+/// </summary>
+/// <param name="mode">The mode to set.</param>
+void PeerListLookup::commit()
+{
+    save();
 }
 
 /// <summary>

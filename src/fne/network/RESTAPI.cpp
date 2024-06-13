@@ -435,6 +435,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_network(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_authTokens()
 {
     assert(!address.empty());
@@ -483,10 +484,11 @@ RESTAPI::~RESTAPI() = default;
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
 /// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+    m_peerListLookup = peerListLookup;
 }
 
 /// <summary>
@@ -579,6 +581,11 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_TGID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutTGAdd, this));
     m_dispatcher.match(FNE_PUT_TGID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutTGDelete, this));
     m_dispatcher.match(FNE_GET_TGID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetTGCommit, this));
+
+    m_dispatcher.match(FNE_GET_PEER_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
+    m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
+    m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
+    m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
@@ -1156,6 +1163,112 @@ void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply
         errorPayload(reply, "failed to write new TGID file");
         return;
     }
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array peers = json::array();
+    if (m_peerListLookup != nullptr) {
+        for (const auto& peerId : m_peerListLookup->getPeerList()) {
+            json::object peerObj = json::object();
+            peerObj["peerId"].set<uint32_t>(peerId);
+            peers.push_back(json::value(peerObj));
+        }
+    }
+
+    response["peers"].set<json::array>(peers);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_peerListLookup->addEntry(peerId);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_peerListLookup->removeEntry(peerId);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    m_peerListLookup->commit();
 
     reply.payload(response);
 }

@@ -33,6 +33,11 @@
 #define FNE_PUT_TGID_DELETE             "/tg/delete"
 #define FNE_GET_TGID_COMMIT             "/tg/commit"
 
+#define FNE_GET_PEER_LIST               "/peer/list"
+#define FNE_PUT_PEER_ADD                "/peer/add"
+#define FNE_PUT_PEER_DELETE             "/peer/delete"
+#define FNE_GET_PEER_COMMIT             "/peer/commit"
+
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 
 #define FNE_GET_RELOAD_TGS              "/reload-tgs"

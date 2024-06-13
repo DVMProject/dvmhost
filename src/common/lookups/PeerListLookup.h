@@ -10,6 +10,7 @@
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
 *   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (c) 2024 Patrick McDonnell, W3AXL
 *   Copyright (c) 2024 Caleb, KO4UYJ
 *
 */
@@ -41,6 +42,9 @@ namespace lookups
         /// <summary>Initializes a new instance of the PeerListLookup class.</summary>
         PeerListLookup(const std::string& listFile, Mode mode, uint32_t reloadTime, bool enabled);
 
+        /// <sumary>Get the list of peers in the table.</summary>
+        std::vector<uint32_t> getPeerList() const;
+
         /// <summary>Clears all entries from the list.</summary>
         void clear() override;
 
@@ -55,6 +59,9 @@ namespace lookups
 
         /// <summary>Checks if a peer ID is allowed based on the mode and enabled flag.</summary>
         bool isPeerAllowed(uint32_t peerId) const;
+
+        /// <summary>Commit the table.</summary>
+        void commit();
 
         /// <summary>Sets the mode to either WHITELIST or BLACKLIST.</summary>
         void setMode(Mode mode);
