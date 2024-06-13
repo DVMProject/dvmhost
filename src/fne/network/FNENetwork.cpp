@@ -208,14 +208,6 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
     }
 
     if (printOptions) {
-            // TODO: REMOVE!!
-        LogInfo("    Number of Blacklisted Peers: %u", static_cast<uint32_t>(m_peerBlacklistTable.size()));
-        LogInfo("    Number of Whitelisted Peers: %u", static_cast<uint32_t>(m_peerWhitelistTable.size()));
-
-        LogInfo("    Whitelisted Peers:");
-        for (const auto& peer : m_peerWhitelistTable) {
-            LogInfo("        %u", peer);
-        }
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
