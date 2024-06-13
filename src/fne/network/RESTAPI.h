@@ -134,7 +134,6 @@ private:
     /// <summary></summary>
     void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
-
     /// <summary></summary>
     void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 

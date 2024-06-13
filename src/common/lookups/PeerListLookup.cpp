@@ -140,7 +140,8 @@ void PeerListLookup::setMode(Mode mode)
 /// <summary>
 /// Gets the current mode.
 /// </summary>
-PeerListLookup::Mode PeerListLookup::getMode() const {
+PeerListLookup::Mode PeerListLookup::getMode() const 
+{
     return m_mode;
 }
 
