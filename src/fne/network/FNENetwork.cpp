@@ -87,6 +87,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_parrotOnlyOriginating(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerAffiliations(),
@@ -101,8 +102,6 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_filterHeaders(true),
     m_filterTerminators(true),
     m_dropU2UPeerTable(),
-    m_peerBlacklistTable(),
-    m_peerWhitelistTable(),
     m_enableInfluxDB(false),
     m_influxServerAddress("127.0.0.1"),
     m_influxServerPort(8086U),
@@ -185,28 +184,6 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
     }
 
-    // Load Peer Blacklist
-    yaml::Node& peerBlacklist = conf["peerBlacklist"];
-    if (peerBlacklist.size() > 0U) {
-        for (size_t i = 0; i < peerBlacklist.size(); i++) {
-            uint32_t peerId = (uint32_t)::strtoul(peerBlacklist[i].as<std::string>("0").c_str(), NULL, 10);
-            if (peerId != 0U) {
-                m_peerBlacklistTable.push_back(peerId);
-            }
-        }
-    }
-
-    // Load Peer Whitelist
-    yaml::Node& peerWhitelist = conf["peerWhitelist"];
-    if (peerWhitelist.size() > 0U) {
-        for (size_t i = 0; i < peerWhitelist.size(); i++) {
-            uint32_t peerId = (uint32_t)::strtoul(peerWhitelist[i].as<std::string>("0").c_str(), NULL, 10);
-            if (peerId != 0U) {
-                m_peerWhitelistTable.push_back(peerId);
-            }
-        }
-    }
-
     if (printOptions) {
         LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
@@ -231,14 +208,15 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 }
 
 /// <summary>
-/// Sets the instances of the Radio ID and Talkgroup Rules lookup tables.
+/// Sets the instances of the Radio ID, Talkgroup Rules, and Peer List lookup tables.
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
 /// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
-void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
+void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+    m_peerListLookup = peerListLookup;
 }
 
 /// <summary>
@@ -670,15 +648,13 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                     }
                                 }
 
-                                // check if the peer is blacklisted
-                                if (network->isPeerBlacklisted(peerId)) {
-                                    LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
-                                    valid = false;
-                                }
-
-                                // check if the peer is whitelisted (only if whitelist is not empty)
-                                if (!network->m_peerWhitelistTable.empty() && !network->isPeerWhitelisted(peerId)) {
-                                    LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
+                                // check if the peer is (not)whitelisted or blacklisted
+                                if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                    if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
+                                        LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
+                                    } else {
+                                        LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
+                                    }
                                     valid = false;
                                 }
 
@@ -1181,22 +1157,6 @@ bool FNENetwork::checkU2UDroppedPeer(uint32_t peerId)
     }
 
     return false;
-}
-
-/// <summary>
-/// Checks if a peer ID is backlisted.
-/// </summary>
-/// <param name="peerId"></param>
-bool FNENetwork::isPeerBlacklisted(uint32_t peerId) const {
-    return std::find(m_peerBlacklistTable.begin(), m_peerBlacklistTable.end(), peerId) != m_peerBlacklistTable.end();
-}
-
-/// <summary>
-/// Checks if a peer ID is whitelisted.
-/// </summary>
-/// <param name="peerId"></param>
-bool FNENetwork::isPeerWhitelisted(uint32_t peerId) const {
-    return std::find(m_peerWhitelistTable.begin(), m_peerWhitelistTable.end(), peerId) != m_peerWhitelistTable.end();
 }
 
 /// <summary>

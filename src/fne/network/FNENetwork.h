@@ -19,6 +19,7 @@
 #include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "host/network/Network.h"
 
@@ -242,7 +243,7 @@ namespace network
         fne::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup);
         /// <summary>Sets endpoint preshared encryption key.</summary>
         void setPresharedKey(const uint8_t* presharedKey);
 
@@ -286,6 +287,7 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+        lookups::PeerListLookup* m_peerListLookup;
 
         NET_CONN_STATUS m_status;
 
@@ -314,9 +316,6 @@ namespace network
 
         std::vector<uint32_t> m_dropU2UPeerTable;
 
-        std::vector<uint32_t> m_peerBlacklistTable;
-        std::vector<uint32_t> m_peerWhitelistTable;
-
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;
         uint16_t m_influxServerPort;
@@ -334,11 +333,6 @@ namespace network
 
         /// <summary>Checks if the passed peer ID is blocked from unit-to-unit traffic.</summary>
         bool checkU2UDroppedPeer(uint32_t peerId);
-
-        /// <summary>Checks if a peer is blacklisted.</summary>
-        bool isPeerBlacklisted(uint32_t peerId) const;
-        /// <summary>Checks if a peer is whitelisted.</summary>
-        bool isPeerWhitelisted(uint32_t peerId) const;
 
         /// <summary>Helper to create a peer on the peers affiliations list.</summary>
         void createPeerAffiliations(uint32_t peerId, std::string peerName);

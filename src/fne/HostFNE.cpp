@@ -57,6 +57,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_nxdnEnabled(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
@@ -283,9 +284,15 @@ int HostFNE::run()
         m_tidLookup->stop();
         delete m_tidLookup;
     }
+
     if (m_ridLookup != nullptr) {
         m_ridLookup->stop();
         delete m_ridLookup;
+    }
+
+    if (m_peerListLookup != nullptr) {
+        m_peerListLookup->stop();
+        delete m_peerListLookup;
     }
 
     return EXIT_SUCCESS;
@@ -340,6 +347,18 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
+    bool peerListLookupEnable = systemConf["peer_acl"]["enabled"].as<bool>();
+    std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
+    uint32_t peerListConfigReload = systemConf["peer_acl"]["time"].as<uint32_t>(30U);
+
+    lookups::PeerListLookup::Mode peerListMode;
+    if (peerListModeStr == "blacklist") {
+        peerListMode = lookups::PeerListLookup::BLACKLIST;
+    } else {
+        peerListMode = lookups::PeerListLookup::WHITELIST;
+    }
+
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", talkgroupConfig.length() > 0U ? talkgroupConfig.c_str() : "None");
     if (talkgroupConfigReload > 0U)
@@ -348,6 +367,17 @@ bool HostFNE::readParams()
     m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload, true);
     m_tidLookup->sendTalkgroups(sendTalkgroups);
     m_tidLookup->read();
+
+    // try to load peer whitelist/blacklist
+    LogInfo("Peer List Lookups");
+    LogInfo("    Enabled: %s", peerListLookupEnable ? "Yes" : "No");
+    LogInfo("    Mode: %s", peerListMode == lookups::PeerListLookup::BLACKLIST ? "Blacklist" : "Whitelist");
+    LogInfo("    File: %s", peerListLookupFile.length() > 0U ? peerListLookupFile.c_str() : "None");
+    if (peerListConfigReload > 0U)
+        LogInfo("    Reload: %u mins", peerListConfigReload);
+
+    m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListMode, peerListConfigReload, peerListLookupEnable);
+    m_peerListLookup->read();
 
     return true;
 }
@@ -521,7 +551,7 @@ bool HostFNE::createMasterNetwork()
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
     m_network->setOptions(masterConf, true);
 
-    m_network->setLookups(m_ridLookup, m_tidLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup);
 
     if (m_RESTAPI != nullptr) {
         m_RESTAPI->setNetwork(m_network);

@@ -16,6 +16,7 @@
 #include "Defines.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
@@ -67,6 +68,7 @@ private:
 
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
+    lookups::PeerListLookup* m_peerListLookup;
 
     std::unordered_map<std::string, network::PeerNetwork*> m_peerNetworks;
 
