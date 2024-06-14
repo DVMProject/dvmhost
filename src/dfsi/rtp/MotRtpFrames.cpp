@@ -31,7 +31,7 @@ MotFullRateVoice::MotFullRateVoice()
 {
     frameType = P25_DFSI_LDU1_VOICE1;
     additionalData = nullptr;
-    source = SourceFlag::QUANTAR;
+    source = SOURCE_QUANTAR;
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 }
@@ -208,9 +208,9 @@ void MotStartOfStream::encode(uint8_t* data)
     // Copy data
     data[0U] = P25_DFSI_MOT_START_STOP;
     data[1U] = FIXED_MARKER;
-    data[2U] = (uint8_t)rt;
-    data[3U] = (uint8_t)startStop;
-    data[4U] = (uint8_t)streamType;
+    data[2U] = rt;
+    data[3U] = startStop;
+    data[4U] = streamType;
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +219,7 @@ void MotStartOfStream::encode(uint8_t* data)
 
 MotStartVoiceFrame::MotStartVoiceFrame()
 {
-    icw = 0;
+    icw = ICW_DIU;
     rssi = 0;
     rssiValidity = INVALID;
     nRssi = 0;
@@ -264,7 +264,7 @@ bool MotStartVoiceFrame::decode(uint8_t* data)
     fullRateVoice->decode(voiceBuffer, true);
 
     // Get rest of data
-    icw = data[5U];
+    icw = (ICWFlag)data[5U];
     rssi = data[6U];
     rssiValidity = (RssiValidityFlag)data[7U];
     nRssi = data[8U];
@@ -299,7 +299,7 @@ void MotStartVoiceFrame::encode(uint8_t* data)
     // Copy the rest
     data[5U] = icw;
     data[6U] = rssi;
-    data[7U] = (uint8_t)rssiValidity;
+    data[7U] = rssiValidity;
     data[8U] = nRssi;
     data[9U] = adjMM;
 }
@@ -310,7 +310,7 @@ void MotStartVoiceFrame::encode(uint8_t* data)
 
 MotVoiceHeader1::MotVoiceHeader1()
 {
-    icw = 0;
+    icw = ICW_DIU;
     rssi = 0;
     rssiValidity = INVALID;
     nRssi = 0;
@@ -344,7 +344,7 @@ bool MotVoiceHeader1::decode(uint8_t* data)
     startOfStream->decode(buffer);
 
     // Decode the other stuff
-    icw = data[5U];
+    icw = (ICWFlag)data[5U];
     rssi = data[6U];
     rssiValidity = (RssiValidityFlag)data[7U];
     nRssi = data[8U];
@@ -389,7 +389,7 @@ void MotVoiceHeader1::encode(uint8_t* data)
 
 MotVoiceHeader2::MotVoiceHeader2()
 {
-    source = SourceFlag::QUANTAR;
+    source = SOURCE_QUANTAR;
 
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
