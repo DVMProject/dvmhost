@@ -207,12 +207,15 @@ system:
         # Amount of time between updates of Radio ID ACL file. (minutes)
         time: 2
 
+    #
     # Peer whitelist and blacklist configuration
+    #
     peer_acl:
-        enabled: true
-        # whitelist or blacklist
+        # Flag indicating whether or not the peer ACLs are enabled.
+        enabled: false
+        # Peer ACL mode: whitelist or blacklist
         mode: whitelist
-        # Full path to the White/Blacklist file.
-        file: peer_whitelist.dat
-        # Amount of time between updates of White/Blacklist file. (minutes)
-        time: 1
+        # Full path to the white/blacklist file.
+        file: peer_list.dat
+        # Amount of time between updates of white/blacklist file. (minutes)
+        time: 2
