@@ -202,7 +202,17 @@ system:
     # Radio ID ACL Configuration
     #
     radio_id:
-        # Full path to the identity table file.
+        # Full path to the Radio ID ACL file.
         file: rid_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Amount of time between updates of Radio ID ACL file. (minutes)
         time: 2
+
+    # Peer whitelist and blacklist configuration
+    peer_acl:
+        enabled: true
+        # whitelist or blacklist
+        mode: whitelist
+        # Full path to the White/Blacklist file.
+        file: peer_whitelist.dat
+        # Amount of time between updates of White/Blacklist file. (minutes)
+        time: 1

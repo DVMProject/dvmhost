@@ -47,7 +47,7 @@ public:
     ~RESTAPI() override;
 
     /// <summary>Sets the instances of the Radio ID and Talkgroup ID lookup tables.</summary>
-    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup);
+    void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup);
     /// <summary>Sets the instance of the FNE network.</summary>
     void setNetwork(::network::FNENetwork* network);
 
@@ -78,6 +78,7 @@ private:
 
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupRulesLookup* m_tidLookup;
+    ::lookups::PeerListLookup* m_peerListLookup;
 
     typedef std::unordered_map<std::string, uint64_t>::value_type AuthTokenValueType;
     std::unordered_map<std::string, uint64_t> m_authTokens;
@@ -123,6 +124,15 @@ private:
     void restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+
+    /// <summary></summary>
+    void restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
     void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);

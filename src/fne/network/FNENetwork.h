@@ -19,6 +19,7 @@
 #include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "host/network/Network.h"
 
@@ -242,7 +243,7 @@ namespace network
         fne::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup);
         /// <summary>Sets endpoint preshared encryption key.</summary>
         void setPresharedKey(const uint8_t* presharedKey);
 
@@ -286,6 +287,7 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+        lookups::PeerListLookup* m_peerListLookup;
 
         NET_CONN_STATUS m_status;
 

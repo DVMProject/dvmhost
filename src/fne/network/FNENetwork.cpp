@@ -87,6 +87,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_parrotOnlyOriginating(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerAffiliations(),
@@ -207,14 +208,15 @@ void FNENetwork::setOptions(yaml::Node& conf, bool printOptions)
 }
 
 /// <summary>
-/// Sets the instances of the Radio ID and Talkgroup Rules lookup tables.
+/// Sets the instances of the Radio ID, Talkgroup Rules, and Peer List lookup tables.
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
 /// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
-void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
+void FNENetwork::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+    m_peerListLookup = peerListLookup;
 }
 
 /// <summary>
@@ -644,6 +646,16 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             break;
                                         }
                                     }
+                                }
+
+                                // check if the peer is (not)whitelisted or blacklisted
+                                if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                    if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
+                                        LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
+                                    } else {
+                                        LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
+                                    }
+                                    valid = false;
                                 }
 
                                 if (valid) {
