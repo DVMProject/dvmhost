@@ -41,8 +41,9 @@ dfsi:
     # Flag enabling "the" Manufacturer standard of RTP.
     theManufacturer: false
 
-    # P25 buffer size in bytes
-    p25BufferSize: 1044
+    # P25 buffer size in bytes (don't change this unless you have a good reason to)
+    # Default of 3060 is 10 full LDU1/2s worth of data
+    p25BufferSize: 3060
     
     udp:
         # Time in seconds between heartbets to DFSI peers.
@@ -65,7 +66,7 @@ dfsi:
         # RT/RT flag enabled (0x02) or disabled (0x04)
         rtrt: false
         # Use the DIU source flag (0x00) instead of the quantar source flag (0x02)
-        diu: true
+        diu: false
         # Jitter buffer length in ms
         jitter: 200
         # Debug logging

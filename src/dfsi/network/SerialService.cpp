@@ -23,7 +23,7 @@ using namespace modem;
 using namespace p25;
 using namespace dfsi;
 
-SerialService::SerialService(const std::string& portName, uint32_t baudrate, uint16_t jitter, bool rtrt, bool diu, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
+SerialService::SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
     m_portName(portName),
     m_baudrate(baudrate),
     m_rtrt(rtrt),
@@ -289,9 +289,9 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
             if (m_debug) {
                 LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
             }
-            if (m_trace) {
+            /*if (m_trace) {
                 Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
-            }
+            }*/
 
             control.setAlgId(algId);
             control.setKId(kid);
@@ -310,9 +310,9 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    if (m_trace) {
+    /*if (m_trace) {
         Utils::dump(2U, "!!! *P25 Network Frame", data.get(), frameLength);
-    }
+    }*/
 
     uint8_t* message = data.get();
 
@@ -504,9 +504,9 @@ void SerialService::processP25ToNet()
 
     //LogDebug(LOG_SERIAL, "processP25ToNet() got data (len: %u)", len);
 
-    if (m_trace) {
+    /*if (m_trace) {
         Utils::dump(1U, "data: ", data, len);
-    }
+    }*/
 
     // Create a new link control object if needed
     if (m_rxVoiceControl == nullptr) {
@@ -851,8 +851,8 @@ void SerialService::processP25ToNet()
         if (ret) {
             if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU1 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            if (m_trace)
-                Utils::dump(1U, "LDU1 to net", m_rxVoiceCallData->netLDU1, 9U * 25U);
+            /*if (m_trace)
+                Utils::dump(1U, "LDU1 to net", m_rxVoiceCallData->netLDU1, 9U * 25U);*/
         }
         else {
             LogError(LOG_SERIAL, "V24 LDU1 failed to write to network");
@@ -867,8 +867,8 @@ void SerialService::processP25ToNet()
         if (ret) {
             if (m_debug)
                 LogDebug(LOG_SERIAL, "V24 LDU2 [STREAM ID %u, SRC %u, DST %u]", m_rxVoiceCallData->streamId, m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
-            if (m_trace)
-                Utils::dump(1U, "LDU2 to net", m_rxVoiceCallData->netLDU2, 9U * 25U);
+            /*if (m_trace)
+                Utils::dump(1U, "LDU2 to net", m_rxVoiceCallData->netLDU2, 9U * 25U);*/
         }
         else {
             LogError(LOG_SERIAL, "V24 LDU2 failed to write to network");
@@ -1311,8 +1311,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                 svf.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
                 // Set frame type
                 svf.fullRateVoice->frameType = voice.frameType;
-                // Set source flag
-                svf.fullRateVoice->source = m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR;
+                // Set source flag & ICW flag
+                svf.fullRateVoice->source = m_diu ? SOURCE_DIU : SOURCE_QUANTAR;
+                svf.icw = m_diu ? ICW_DIU : ICW_QUANTAR;
                 // Copy data
                 ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, svf.fullRateVoice->IMBE_BUF_LEN);
                 // Encode
@@ -1326,7 +1327,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             {
                 voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE2 : P25_DFSI_LDU2_VOICE11;
                 // Set source flag
-                voice.source = m_diu ? SourceFlag::DIU : SourceFlag::QUANTAR;
+                voice.source = m_diu ? SOURCE_DIU : SOURCE_QUANTAR;
                 ::memcpy(voice.imbeData, ldu + 26U, voice.IMBE_BUF_LEN);
             }
             break;
@@ -1550,6 +1551,7 @@ void SerialService::startOfStream(const LC& lc)
     vhdr1.startOfStream = new MotStartOfStream();
     vhdr1.startOfStream->startStop = StartStopFlag::START;
     vhdr1.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+    vhdr1.icw = m_diu ? ICW_DIU : ICW_QUANTAR;
     ::memcpy(vhdr1.header, raw, 8U);
     ::memcpy(vhdr1.header + 9U, raw + 8U, 8U);
     ::memcpy(vhdr1.header + 18U, raw + 16U, 2U);
@@ -1791,25 +1793,25 @@ void SerialService::printDebug(const uint8_t* buffer, uint16_t len)
     }
     else if (buffer[2U] == CMD_DEBUG2) {
         short val1 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i", len - 5U, buffer + 3U, val1);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X", len - 5U, buffer + 3U, val1);
     }
     else if (buffer[2U] == CMD_DEBUG3) {
         short val1 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val2 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i", len - 7U, buffer + 3U, val1, val2);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X", len - 7U, buffer + 3U, val1, val2);
     }
     else if (buffer[2U] == CMD_DEBUG4) {
         short val1 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val2 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val3 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i %i", len - 9U, buffer + 3U, val1, val2, val3);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X", len - 9U, buffer + 3U, val1, val2, val3);
     }
     else if (buffer[2U] == CMD_DEBUG5) {
         short val1 = (buffer[len - 8U] << 8) | buffer[len - 7U];
         short val2 = (buffer[len - 6U] << 8) | buffer[len - 5U];
         short val3 = (buffer[len - 4U] << 8) | buffer[len - 3U];
         short val4 = (buffer[len - 2U] << 8) | buffer[len - 1U];
-        LogDebug(LOG_SERIAL, "V24 USB: %.*s %i %i %i %i", len - 11U, buffer + 3U, val1, val2, val3, val4);
+        LogDebug(LOG_SERIAL, "V24 USB: %.*s %X %X %X %X", len - 11U, buffer + 3U, val1, val2, val3, val4);
     }
     else if (buffer[2U] == CMD_DEBUG_DUMP) {
         uint8_t data[255U];

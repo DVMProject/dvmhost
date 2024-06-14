@@ -43,8 +43,13 @@ namespace p25
         };
 
         enum SourceFlag {
-            DIU = 0x00U,
-            QUANTAR = 0x02U
+            SOURCE_DIU = 0x00U,
+            SOURCE_QUANTAR = 0x02U
+        };
+
+        enum ICWFlag {
+            ICW_DIU = 0x00U,
+            ICW_QUANTAR = 0x1B
         };
 
         // ---------------------------------------------------------------------------
@@ -99,7 +104,7 @@ namespace p25
         public:
             static const uint8_t LENGTH = 22;
 
-            uint8_t icw;
+            ICWFlag icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
             uint8_t nRssi;
@@ -121,7 +126,7 @@ namespace p25
             static const uint8_t LENGTH = 30;
             static const uint8_t HCW_LENGTH = 21;
 
-            uint8_t icw;
+            ICWFlag icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
             uint8_t nRssi;
@@ -142,7 +147,7 @@ namespace p25
             static const uint8_t LENGTH = 22;
             static const uint8_t HCW_LENGTH = 20;
 
-            uint8_t icw;
+            ICWFlag icw;
             uint8_t rssi;
             RssiValidityFlag rssiValidity;
             uint8_t nRssi;
