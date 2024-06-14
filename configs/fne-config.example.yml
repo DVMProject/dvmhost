@@ -216,6 +216,6 @@ system:
         # Peer ACL mode: whitelist or blacklist
         mode: whitelist
         # Full path to the white/blacklist file.
-        file: peer_whitelist.dat
+        file: peer_list.dat
         # Amount of time between updates of white/blacklist file. (minutes)
         time: 2
