@@ -212,7 +212,7 @@ system:
     #
     peer_acl:
         # Flag indicating whether or not the peer ACLs are enabled.
-        enabled: true
+        enabled: false
         # Peer ACL mode: whitelist or blacklist
         mode: whitelist
         # Full path to the white/blacklist file.
