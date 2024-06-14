@@ -259,6 +259,9 @@ namespace network
         /// <summary>Closes connection to the network.</summary>
         void close() override;
 
+        /// <summary></summary>
+        bool resetPeer(uint32_t peerId);
+
     private:
         friend class DiagNetwork;
         friend class fne::TagDMRData;

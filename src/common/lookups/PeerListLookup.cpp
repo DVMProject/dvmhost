@@ -156,6 +156,14 @@ void PeerListLookup::setEnabled(bool enabled)
 }
 
 /// <summary>
+/// Gets whether the lookup is enabled.
+/// </summary>
+bool PeerListLookup::getEnabled() const
+{
+    return m_enabled;
+}
+
+/// <summary>
 /// Finds a table entry in this lookup table.
 /// </summary>
 /// <param name="id">Unique identifier for table entry.</param>

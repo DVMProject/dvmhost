@@ -106,6 +106,8 @@ private:
     void restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
     void restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
@@ -133,6 +135,8 @@ private:
     void restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
     /// <summary></summary>
     void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
+    /// <summary></summary>
+    void restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);
 
     /// <summary></summary>
     void restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const network::rest::RequestMatch& match);

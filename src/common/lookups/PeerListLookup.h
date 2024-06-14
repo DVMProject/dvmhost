@@ -72,6 +72,9 @@ namespace lookups
         /// <summary>Sets whether the lookup is enabled.</summary>
         void setEnabled(bool enabled);
 
+        /// <summary>Gets whether the lookup is enabled.</summary>
+        bool getEnabled() const;
+
         /// <summary>Finds a table entry in this lookup table.</summary>
         uint32_t find(uint32_t id) override;
 
