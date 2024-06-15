@@ -1207,6 +1207,11 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
+
+    m_rfLastDstId = 0U;
+    m_rfLastSrcId = 0U;
+    m_netLastDstId = 0U;
+    m_netLastSrcId = 0U;
 }
 
 /// <summary>
