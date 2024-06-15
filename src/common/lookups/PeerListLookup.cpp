@@ -189,13 +189,12 @@ uint32_t PeerListLookup::find(uint32_t id)
 bool PeerListLookup::load()
 {
     if (m_filename.empty()) {
-        LogError(LOG_NET, "List file is empty");
         return false;
     }
 
     std::ifstream file(m_filename, std::ifstream::in);
     if (file.fail()) {
-        LogError("Cannot open the white/blacklist file: %s", m_filename.c_str());
+        LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
 
@@ -212,7 +211,7 @@ bool PeerListLookup::load()
             uint32_t peerId = ::strtoul(line.c_str(), nullptr, 10);
             if (peerId != 0) {
                 m_list.push_back(peerId);
-                LogDebug(LOG_HOST, "Loaded peer ID %u into list from file %s", peerId, m_filename.c_str());
+                LogDebug(LOG_HOST, "Loaded peer ID %u into peer lookup table", peerId);
             }
         }
     }
@@ -229,14 +228,15 @@ bool PeerListLookup::load()
 /// <returns>True, if lookup table was saved, otherwise false.</returns>
 bool PeerListLookup::save()
 {
+    LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
+
     if (m_filename.empty()) {
-        LogError(LOG_NET, "List file is empty");
         return false;
     }
 
     std::ofstream file(m_filename, std::ofstream::out);
     if (file.fail()) {
-        LogError("Cannot open the file: %s", m_filename.c_str());
+        LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
 
