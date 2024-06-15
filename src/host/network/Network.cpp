@@ -545,7 +545,9 @@ void Network::clock(uint32_t ms)
                         LogWarning(LOG_NET, "PEER %u master NAK; FNE demanded connection reset, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;
                     case NET_CONN_NAK_PEER_ACL:
-                        LogWarning(LOG_NET, "PEER %u master NAK; ACL rejection, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogError(LOG_NET, "PEER %u master NAK; ACL rejection, network disabled, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        m_status = NET_STAT_WAITING_LOGIN;
+                        m_enabled = false; // ACL rejection give up stop trying to connect
                         break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:
@@ -562,9 +564,11 @@ void Network::clock(uint32_t ms)
                     m_retryTimer.start();
                 }
                 else {
-                    LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                    close();
-                    open();
+                    if (m_enabled) {
+                        LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        close();
+                        open();
+                    }
                     return;
                 }
             }

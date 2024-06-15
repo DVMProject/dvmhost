@@ -569,6 +569,22 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                         connection->currStreamId(streamId);
 
                         network->setupRepeaterLogin(peerId, connection);
+
+                        // check if the peer is in the peer ACL list
+                        if (network->m_peerListLookup->getACL()) {
+                            if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
+                                    LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
+                                } else {
+                                    LogWarning(LOG_NET, "PEER %u RPTL, failed whitelist check", peerId);
+                                }
+
+                                network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
+
+                                delete connection;
+                                network->erasePeer(peerId);
+                            }
+                        }
                     }
                     else {
                         // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
@@ -587,6 +603,22 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                     network->erasePeerAffiliations(peerId);
                                     network->setupRepeaterLogin(peerId, connection);
+
+                                    // check if the peer is in the peer ACL list
+                                    if (network->m_peerListLookup->getACL()) {
+                                        if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                            if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
+                                                LogWarning(LOG_NET, "PEER %u RPTL, blacklisted from access", peerId);
+                                            } else {
+                                                LogWarning(LOG_NET, "PEER %u RPTL, failed whitelist check", peerId);
+                                            }
+
+                                            network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
+
+                                            delete connection;
+                                            network->erasePeer(peerId);
+                                        }
+                                    }
                                 } else {
                                     network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
 
