@@ -637,35 +637,42 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 delete[] in;
 
                                 // validate hash
-                                bool valid = false;
+                                bool validHash = false;
                                 if (req->length - 8U == 32U) {
-                                    valid = true;
+                                    validHash = true;
                                     for (uint8_t i = 0; i < 32U; i++) {
                                         if (hash[i] != out[i]) {
-                                            valid = false;
+                                            validHash = false;
                                             break;
                                         }
                                     }
                                 }
 
                                 // check if the peer is (not)whitelisted or blacklisted
+                                bool validAcl = true;
                                 if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
                                     if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
                                         LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
                                     } else {
                                         LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
                                     }
-                                    valid = false;
+                                    validAcl = false;
                                 }
 
-                                if (valid) {
+                                if (validHash && validAcl) {
                                     connection->connectionState(NET_STAT_WAITING_CONFIG);
                                     network->writePeerACK(peerId);
                                     LogInfoEx(LOG_NET, "PEER %u RPTK ACK, completed the login exchange", peerId);
                                 }
                                 else {
                                     LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
-                                    network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    
+                                    if (!validAcl) {
+                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_PEER_ACL);
+                                    } else {
+                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    }
+
                                     network->erasePeer(peerId);
                                 }
 
@@ -1218,6 +1225,34 @@ bool FNENetwork::erasePeer(uint32_t peerId)
 }
 
 /// <summary>
+/// Helper to reset a peer connection.
+/// </summary>
+/// <param name="peerId"></param>
+/// <returns></returns>
+bool FNENetwork::resetPeer(uint32_t peerId)
+{
+    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
+        FNEPeerConnection* connection = m_peers[peerId];
+        if (connection != nullptr) {
+            sockaddr_storage addr = connection->socketStorage();
+            uint32_t addrLen = connection->sockStorageLen();
+
+            LogInfoEx(LOG_NET, "PEER %u (%s) resetting peer connection", peerId, connection->identity().c_str());
+
+            writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
+
+            delete connection;
+            erasePeer(peerId);
+
+            return true;
+        }
+    }
+
+    LogWarning(LOG_NET, "PEER %u reset failed; peer not found.", peerId);
+    return false;
+}
+
+/// <summary>
 /// Helper to resolve the peer ID to its identity string.
 /// </summary>
 /// <param name="peerId"></param>
@@ -1737,6 +1772,12 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
         break;
     case NET_CONN_NAK_FNE_MAX_CONN:
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; FNE has reached maximum permitted connections", peerId, tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_PEER_RESET:
+        LogWarning(LOG_NET, "PEER %u master NAK; FNE Called for a connection reset", peerId, tag, (uint16_t)reason);
+        break;
+    case NET_CONN_NAK_PEER_ACL:
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; ACL Rejection", peerId, tag, (uint16_t)reason);
         break;
 
     case NET_CONN_NAK_GENERAL_FAILURE:

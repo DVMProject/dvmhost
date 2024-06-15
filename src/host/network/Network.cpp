@@ -541,6 +541,12 @@ void Network::clock(uint32_t ms)
                     case NET_CONN_NAK_FNE_MAX_CONN:
                         LogWarning(LOG_NET, "PEER %u master NAK; FNE has reached maximum permitted connections, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;
+                    case NET_CONN_NAK_PEER_RESET:
+                        LogWarning(LOG_NET, "PEER %u master NAK; FNE Called for a connection reset, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_PEER_ACL:
+                        LogWarning(LOG_NET, "PEER %u master NAK; ACL Rejection, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:
                     default:

@@ -571,6 +571,7 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(FNE_GET_PEER_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetPeerQuery, this));
     m_dispatcher.match(FNE_GET_PEER_COUNT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCount, this));
+    m_dispatcher.match(FNE_PUT_PEER_RESET).put(REST_API_BIND(RESTAPI::restAPI_PutPeerReset, this));
 
     m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
     m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
@@ -586,6 +587,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
     m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
     m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
+    m_dispatcher.match(FNE_GET_PEER_MODE).get(REST_API_BIND(RESTAPI::restAPI_GetPeerMode, this));
 
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
 
@@ -871,6 +873,35 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
     }
 
     reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_network->resetPeer(peerId);
 }
 
 /// <summary>
@@ -1270,6 +1301,47 @@ void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& rep
 
     m_peerListLookup->commit();
 
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    lookups::PeerListLookup::Mode mode = m_peerListLookup->getMode();
+    bool enabled = m_peerListLookup->getEnabled();
+
+    std::string modeStr;
+
+    if (enabled) {
+        switch (mode) {
+            case lookups::PeerListLookup::WHITELIST:
+                modeStr = "WHITELIST";
+                break;
+            case lookups::PeerListLookup::BLACKLIST:
+                modeStr = "BLACKLIST";
+                break;
+            default:
+                modeStr = "UNKNOWN";
+                break;
+        }
+    }
+    else {
+        modeStr = "DISABLED";
+    }
+
+    response["mode"].set<std::string>(modeStr);
     reply.payload(response);
 }
 

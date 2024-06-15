@@ -22,6 +22,7 @@
 
 #define FNE_GET_PEER_QUERY              "/peer/query"
 #define FNE_GET_PEER_COUNT              "/peer/count"
+#define FNE_PUT_PEER_RESET              "/peer/reset"
 
 #define FNE_GET_RID_QUERY               "/rid/query"
 #define FNE_PUT_RID_ADD                 "/rid/add"
@@ -37,6 +38,7 @@
 #define FNE_PUT_PEER_ADD                "/peer/add"
 #define FNE_PUT_PEER_DELETE             "/peer/delete"
 #define FNE_GET_PEER_COMMIT             "/peer/commit"
+#define FNE_GET_PEER_MODE               "/peer/mode"
 
 #define FNE_GET_FORCE_UPDATE            "/force-update"
 
