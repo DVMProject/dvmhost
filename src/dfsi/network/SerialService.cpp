@@ -643,7 +643,7 @@ void SerialService::processP25ToNet()
                 }
                 // Log if we decoded succesfully
                 if (m_debug) {
-                    LogDebug(LOG_SERIAL, "P25, HDU algId = $%02X, kId = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId);
+                    LogDebug(LOG_SERIAL, "P25, HDU algId = $%02X, kId = $%04X, dstId = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId, m_rxVoiceCallData->dstId);
                 }
             }
             catch (...) {
@@ -857,7 +857,7 @@ void SerialService::processP25ToNet()
 
     // Send LDU1 if ready
     if (m_rxVoiceCallData->n == 9U) {
-        // Send
+        // Send (TODO: dynamically set HDU_VALID or DATA_VALID depending on start of call or not)
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
         // Print
         LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
@@ -1384,9 +1384,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                     case P25_DUID_LDU2:
                     {
                         // Message Indicator
-                        voice.additionalData[0U] = ldu[76U];
-                        voice.additionalData[1U] = ldu[77U];
-                        voice.additionalData[2U] = ldu[78U];
+                        voice.additionalData[0U] = mi[3U];
+                        voice.additionalData[1U] = mi[4U];
+                        voice.additionalData[2U] = mi[5U];
                     }
                     break;
                 }
@@ -1409,10 +1409,10 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
                     break;
                     case P25_DUID_LDU2:
                     {
-                        // Message indicator
-                        voice.additionalData[0U] = ldu[101U];
-                        voice.additionalData[1U] = ldu[102U];
-                        voice.additionalData[2U] = ldu[103U];
+                        // Message Indicator
+                        voice.additionalData[0U] = mi[6U];
+                        voice.additionalData[1U] = mi[7U];
+                        voice.additionalData[2U] = mi[8U];
                     }
                     break;
                 }
