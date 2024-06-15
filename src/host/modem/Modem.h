@@ -54,6 +54,7 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
+class HOST_SW_API Host;
 class HOST_SW_API HostCal;
 class HOST_SW_API RESTAPI;
 
@@ -365,6 +366,7 @@ namespace modem
         uint8_t getVersion() const;
 
     private:
+        friend class ::Host;
         friend class ::HostCal;
         friend class ::RESTAPI;
 

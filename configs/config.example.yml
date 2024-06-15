@@ -69,6 +69,8 @@ network:
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
+    # Flag indicating whether or not the host status will be sent to the network.
+    allowStatusTransfer: true
 
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false

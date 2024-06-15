@@ -22,6 +22,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/json/json.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
@@ -90,6 +91,8 @@ private:
 
     uint32_t m_lastDstId;
     uint32_t m_lastSrcId;
+
+    bool m_allowStatusTransfer;
 
     std::string m_identity;
     std::string m_cwCallsign;
@@ -170,6 +173,9 @@ private:
     std::string m_restAddress;
     uint16_t m_restPort;
     RESTAPI *m_RESTAPI;
+
+    /// <summary>Helper to generate the status of the host in JSON format.</summary>
+    json::object getStatus();
 
     /// <summary>Modem port open callback.</summary>
     bool rmtPortModemOpen(modem::Modem* modem);

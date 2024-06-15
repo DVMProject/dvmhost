@@ -509,138 +509,16 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    json::object response = json::object();
+    json::object response = m_host->getStatus();
     setResponseDefaultStatus(response);
 
-    yaml::Node systemConf = m_host->m_conf["system"];
-    yaml::Node networkConf = m_host->m_conf["network"];
     {
-        response["state"].set<uint8_t>(m_host->m_state);
         bool dmrEnabled = m_dmr != nullptr;
         response["dmrEnabled"].set<bool>(dmrEnabled);
         bool p25Enabled = m_p25 != nullptr;
         response["p25Enabled"].set<bool>(p25Enabled);
         bool nxdnEnabled = m_nxdn != nullptr;
         response["nxdnEnabled"].set<bool>(nxdnEnabled);
-
-        response["isTxCW"].set<bool>(m_host->m_isTxCW);
-
-        response["fixedMode"].set<bool>(m_host->m_fixedMode);
-
-        response["dmrTSCCEnable"].set<bool>(m_host->m_dmrTSCCData);
-        response["dmrCC"].set<bool>(m_host->m_dmrCtrlChannel);
-        response["p25CtrlEnable"].set<bool>(m_host->m_p25CCData);
-        response["p25CC"].set<bool>(m_host->m_p25CtrlChannel);
-        response["nxdnCtrlEnable"].set<bool>(m_host->m_nxdnCCData);
-        response["nxdnCC"].set<bool>(m_host->m_nxdnCtrlChannel);
-
-        yaml::Node p25Protocol = m_host->m_conf["protocols"]["p25"];
-        yaml::Node nxdnProtocol = m_host->m_conf["protocols"]["nxdn"];
-
-        response["tx"].set<bool>(m_host->m_modem->m_tx);
-
-        response["channelId"].set<uint8_t>(m_host->m_channelId);
-        response["channelNo"].set<uint32_t>(m_host->m_channelNo);
-
-        response["lastDstId"].set<uint32_t>(m_host->m_lastDstId);
-        response["lastSrcId"].set<uint32_t>(m_host->m_lastSrcId);
-
-        uint32_t peerId = networkConf["id"].as<uint32_t>();
-        response["peerId"].set<uint32_t>(peerId);
-    }
-
-    yaml::Node modemConfig = m_host->m_conf["system"]["modem"];
-    {
-        json::object modemInfo = json::object();
-        std::string portType = modemConfig["protocol"]["type"].as<std::string>();
-        modemInfo["portType"].set<std::string>(portType);
-
-        yaml::Node uartConfig = modemConfig["protocol"]["uart"];
-        std::string modemPort = uartConfig["port"].as<std::string>();
-        modemInfo["modemPort"].set<std::string>(modemPort);
-        uint32_t portSpeed = uartConfig["speed"].as<uint32_t>(115200U);
-        modemInfo["portSpeed"].set<uint32_t>(portSpeed);
-
-        if (!m_host->m_modem->isHotspot()) {
-            modemInfo["pttInvert"].set<bool>(m_host->m_modem->m_pttInvert);
-            modemInfo["rxInvert"].set<bool>(m_host->m_modem->m_rxInvert);
-            modemInfo["txInvert"].set<bool>(m_host->m_modem->m_txInvert);
-            modemInfo["dcBlocker"].set<bool>(m_host->m_modem->m_dcBlocker);
-        }
-
-        modemInfo["rxLevel"].set<float>(m_host->m_modem->m_rxLevel);
-        modemInfo["cwTxLevel"].set<float>(m_host->m_modem->m_cwIdTXLevel);
-        modemInfo["dmrTxLevel"].set<float>(m_host->m_modem->m_dmrTXLevel);
-        modemInfo["p25TxLevel"].set<float>(m_host->m_modem->m_p25TXLevel);
-        modemInfo["nxdnTxLevel"].set<float>(m_host->m_modem->m_nxdnTXLevel);
-
-        modemInfo["rxDCOffset"].set<int>(m_host->m_modem->m_rxDCOffset);
-        modemInfo["txDCOffset"].set<int>(m_host->m_modem->m_txDCOffset);
-
-        if (!m_host->m_modem->isHotspot()) {
-            modemInfo["dmrSymLevel3Adj"].set<int>(m_host->m_modem->m_dmrSymLevel3Adj);
-            modemInfo["dmrSymLevel1Adj"].set<int>(m_host->m_modem->m_dmrSymLevel1Adj);
-            modemInfo["p25SymLevel3Adj"].set<int>(m_host->m_modem->m_p25SymLevel3Adj);
-            modemInfo["p25SymLevel1Adj"].set<int>(m_host->m_modem->m_p25SymLevel1Adj);
-
-            // are we on a protocol version 3 firmware?
-            if (m_host->m_modem->getVersion() >= 3U) {
-                modemInfo["nxdnSymLevel3Adj"].set<int>(m_host->m_modem->m_nxdnSymLevel3Adj);
-                modemInfo["nxdnSymLevel1Adj"].set<int>(m_host->m_modem->m_nxdnSymLevel1Adj);
-            }
-        }
-
-        if (m_host->m_modem->isHotspot()) {
-            modemInfo["dmrDiscBW"].set<int8_t>(m_host->m_modem->m_dmrDiscBWAdj);
-            modemInfo["dmrPostBW"].set<int8_t>(m_host->m_modem->m_dmrPostBWAdj);
-            modemInfo["p25DiscBW"].set<int8_t>(m_host->m_modem->m_p25DiscBWAdj);
-            modemInfo["p25PostBW"].set<int8_t>(m_host->m_modem->m_p25PostBWAdj);
-
-            // are we on a protocol version 3 firmware?
-            if (m_host->m_modem->getVersion() >= 3U) {
-                modemInfo["nxdnDiscBW"].set<int8_t>(m_host->m_modem->m_nxdnDiscBWAdj);
-                modemInfo["nxdnPostBW"].set<int8_t>(m_host->m_modem->m_nxdnPostBWAdj);
-
-                modemInfo["afcEnabled"].set<bool>(m_host->m_modem->m_afcEnable);
-                modemInfo["afcKI"].set<uint8_t>(m_host->m_modem->m_afcKI);
-                modemInfo["afcKP"].set<uint8_t>(m_host->m_modem->m_afcKP);
-                modemInfo["afcRange"].set<uint8_t>(m_host->m_modem->m_afcRange);
-            }
-
-            switch (m_host->m_modem->m_adfGainMode) {
-                case ADF_GAIN_AUTO_LIN:
-                    modemInfo["gainMode"].set<std::string>("ADF7021 Gain Mode: Auto High Linearity");
-                break;
-                case ADF_GAIN_LOW:
-                    modemInfo["gainMode"].set<std::string>("ADF7021 Gain Mode: Low");
-                break;
-                case ADF_GAIN_HIGH:
-                    modemInfo["gainMode"].set<std::string>("ADF7021 Gain Mode: High");
-                break;
-                case ADF_GAIN_AUTO:
-                default:
-                    modemInfo["gainMode"].set<std::string>("ADF7021 Gain Mode: Auto");
-                break;
-            }
-        }
-
-        modemInfo["fdmaPreambles"].set<uint8_t>(m_host->m_modem->m_fdmaPreamble);
-        modemInfo["dmrRxDelay"].set<uint8_t>(m_host->m_modem->m_dmrRxDelay);
-        modemInfo["p25CorrCount"].set<uint8_t>(m_host->m_modem->m_p25CorrCount);
-
-        modemInfo["rxFrequency"].set<uint32_t>(m_host->m_modem->m_rxFrequency);
-        modemInfo["txFrequency"].set<uint32_t>(m_host->m_modem->m_txFrequency);
-        modemInfo["rxTuning"].set<int>(m_host->m_modem->m_rxTuning);
-        modemInfo["txTuning"].set<int>(m_host->m_modem->m_txTuning);
-        uint32_t rxFreqEffective = m_host->m_modem->m_rxFrequency + m_host->m_modem->m_rxTuning;
-        modemInfo["rxFrequencyEffective"].set<uint32_t>(rxFreqEffective);
-        uint32_t txFreqEffective = m_host->m_modem->m_txFrequency + m_host->m_modem->m_txTuning;
-        modemInfo["txFrequencyEffective"].set<uint32_t>(txFreqEffective);
-
-        uint8_t protoVer = m_host->m_modem->getVersion();
-        modemInfo["protoVer"].set<uint8_t>(protoVer);
-
-        response["modem"].set<json::object>(modemInfo);
     }
 
     reply.payload(response);

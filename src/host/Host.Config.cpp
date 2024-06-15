@@ -693,9 +693,12 @@ bool Host::createNetwork()
     bool slot2 = networkConf["slot2"].as<bool>(true);
     bool allowActivityTransfer = networkConf["allowActivityTransfer"].as<bool>(false);
     bool allowDiagnosticTransfer = networkConf["allowDiagnosticTransfer"].as<bool>(false);
+    bool allowStatusTransfer = networkConf["allowStatusTransfer"].as<bool>(true);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool saveLookup = networkConf["saveLookups"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
+
+    m_allowStatusTransfer = allowStatusTransfer;
 
     bool encrypted = networkConf["encrypted"].as<bool>(false);
     std::string key = networkConf["presharedKey"].as<std::string>();
@@ -778,6 +781,7 @@ bool Host::createNetwork()
         LogInfo("    Slot 2: %s", slot2 ? "enabled" : "disabled");
         LogInfo("    Allow Activity Log Transfer: %s", allowActivityTransfer ? "yes" : "no");
         LogInfo("    Allow Diagnostic Log Transfer: %s", allowDiagnosticTransfer ? "yes" : "no");
+        LogInfo("    Allow Status Transfer: %s", m_allowStatusTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
         LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
 

@@ -129,7 +129,6 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 /// Writes the local activity log to the network.
 /// </summary>
 /// <param name="message"></param>
-/// <param name="useAlternatePort"></param>
 /// <returns></returns>
 bool BaseNetwork::writeActLog(const char* message)
 {
@@ -154,7 +153,6 @@ bool BaseNetwork::writeActLog(const char* message)
 /// Writes the local diagnostics log to the network.
 /// </summary>
 /// <param name="message"></param>
-/// <param name="useAlternatePort"></param>
 /// <returns></returns>
 bool BaseNetwork::writeDiagLog(const char* message)
 {
@@ -172,6 +170,34 @@ bool BaseNetwork::writeDiagLog(const char* message)
     ::strcpy(buffer + 11U, message);
 
     return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
+        0U, 0U, false, m_useAlternatePortForDiagnostics);
+}
+
+/// <summary>
+/// Writes the local status to the network.
+/// </summary>
+/// <param name="obj"></param>
+/// <returns></returns>
+bool BaseNetwork::writePeerStatus(json::object obj)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    if (!m_allowActivityTransfer)
+        return false;
+    if (!m_useAlternatePortForDiagnostics)
+        return false; // this is intentional -- peer status is a noisy message and it shouldn't be done
+                      // when the FNE is configured for main port transfers
+
+    json::value v = json::value(obj);
+    std::string json = std::string(v.serialize());
+
+    char buffer[DATA_PACKET_LENGTH];
+    uint32_t len = ::strlen(json.c_str());
+
+    ::strcpy(buffer + 11U, json.c_str());
+
+    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 12U,
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 

@@ -280,6 +280,36 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
+                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_STATUS) {  // Peer Status Transfer
+                        // report peer status to InfluxDB
+                        if (network->m_enableInfluxDB) {
+                            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                                FNEPeerConnection* connection = network->m_peers[peerId];
+                                if (connection != nullptr) {
+                                    std::string ip = udp::Socket::address(req->address);
+
+                                    // validate peer (simple validation really)
+                                    if (connection->connected() && connection->address() == ip) {
+                                        uint8_t rawPayload[req->length - 11U];
+                                        ::memset(rawPayload, 0x00U, req->length - 11U);
+                                        ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
+                                        std::string payload(rawPayload, rawPayload + (req->length - 11U));
+
+                                        influxdb::QueryBuilder()
+                                            .meas("peer_status")
+                                                .tag("peerId", std::to_string(peerId))
+                                                    .field("identity", connection->identity())
+                                                    .field("status", payload)
+                                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                            .request(network->m_influxServer);
+                                    }
+                                    else {
+                                        network->writePeerNAK(peerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     else {
                         network->writePeerNAK(peerId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);

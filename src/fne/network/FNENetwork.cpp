@@ -1036,6 +1036,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
+                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_STATUS) {  // Peer Status Transfer
+                        // main traffic port status transfers aren't supported for performance reasons
+                    }
                     else {
                         network->writePeerNAK(peerId, TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("unknown transfer opcode from the peer", req->buffer, req->length);
