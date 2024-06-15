@@ -62,7 +62,7 @@ namespace network {
 
         uint8_t* mi;
         uint8_t algoId;
-        uint8_t kId;
+        uint32_t kId;
 
         uint8_t* VHDR1;
         uint8_t* VHDR2;

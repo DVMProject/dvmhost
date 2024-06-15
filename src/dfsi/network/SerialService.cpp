@@ -204,6 +204,12 @@ void SerialService::close()
 /// </summary>
 void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 {
+    // If there's a local call in progress, ignore the frames
+    if (m_lclCallInProgress) {
+        LogWarning(LOG_SERIAL, "Local call in progress, ignoring frames from network");
+        return;
+    }
+
     // Decode grant info
     bool grantDemand = (p25Buffer[14U] & 0x80U) == 0x80U;
     
@@ -287,7 +293,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
             }
 
             if (m_debug) {
-                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%02X", algId, kid);
+                LogDebug(LOG_NET, "P25, HDU algId = $%02X, kId = $%04X", algId, kid);
             }
             /*if (m_trace) {
                 Utils::dump(1U, "P25 HDU Network MI", mi, p25::P25_MI_LENGTH_BYTES);
@@ -486,10 +492,6 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
 /// It's called multiple times before an LDU is sent, and each time adds more data pieces to the LDUs
 void SerialService::processP25ToNet()
 {
-    // If there's already a call from the network in progress, ignore any additional frames comfing from the V24 interface
-    if (m_netCallInProgress) {
-        return;
-    }
 
     // Buffer to store the retrieved P25 frame
     uint8_t data[P25_PDU_FRAME_LENGTH_BYTES * 2U];
@@ -499,6 +501,12 @@ void SerialService::processP25ToNet()
 
     // If we didn't read anything, return
     if (len <= 0U) {
+        return;
+    }
+
+    // If there's already a call from the network in progress, ignore any additional frames comfing from the V24 interface
+    if (m_netCallInProgress) {
+        LogWarning(LOG_SERIAL, "Remote call in progress, ignoring frames from V24");
         return;
     }
 
@@ -632,6 +640,10 @@ void SerialService::processP25ToNet()
                     m_rxVoiceCallData->algoId = vhdr[10U];
                     m_rxVoiceCallData->kId = __GET_UINT16B(vhdr, 11U);
                     m_rxVoiceCallData->dstId = __GET_UINT16B(vhdr, 13U);
+                }
+                // Log if we decoded succesfully
+                if (m_debug) {
+                    LogDebug(LOG_SERIAL, "P25, HDU algId = $%02X, kId = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId);
                 }
             }
             catch (...) {
@@ -847,6 +859,8 @@ void SerialService::processP25ToNet()
     if (m_rxVoiceCallData->n == 9U) {
         // Send
         bool ret = m_network->writeP25LDU1(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU1, P25_FT_HDU_VALID);
+        // Print
+        LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", m_rxVoiceCallData->srcId, m_rxVoiceCallData->dstId);
         // Optional Debug
         if (ret) {
             if (m_debug)
@@ -863,6 +877,8 @@ void SerialService::processP25ToNet()
     if (m_rxVoiceCallData->n == 18U) {
         // Send
         bool ret = m_network->writeP25LDU2(*m_rxVoiceControl, *m_rxVoiceLsd, m_rxVoiceCallData->netLDU2);
+        // Print
+        LogInfoEx(LOG_SERIAL, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", m_rxVoiceCallData->algoId, m_rxVoiceCallData->kId);
         // Optional Debug
         if (ret) {
             if (m_debug)
@@ -1263,7 +1279,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         m_sequences[control.getDstId()] = ++sequence;
 
         // Log
-        LogInfo(LOG_SERIAL, "CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        LogInfoEx(LOG_SERIAL, "CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
 
         ActivityLog("network %svoice transmission call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
     } else {
@@ -1274,7 +1290,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             m_lastHeard[control.getDstId()] = now;
             m_sequences[control.getDstId()] = ++sequence;
 
-            LogInfo(LOG_SERIAL, "LATE CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+            LogInfoEx(LOG_SERIAL, "LATE CALL START: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
             ActivityLog("network %svoice transmission late entry from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
         }
     }
@@ -1284,7 +1300,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         // Stop
         endOfStream();
         // Log
-        LogInfo(LOG_SERIAL, "CALL END: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
+        LogInfoEx(LOG_SERIAL, "CALL END: %svoice call from %u to TG %u", (control.getAlgId() != P25_ALGO_UNENCRYPT) ? "encrypted " : "", control.getSrcId(), control.getDstId());
         // Clear our counters
         m_sequences[control.getDstId()] = RTP_END_OF_CALL_SEQ;
     }
@@ -1495,6 +1511,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
 /// <param name="lc">Link control data object</param>
 void SerialService::startOfStream(const LC& lc)
 {
+    // Flag that we have a network call in progress
+    m_netCallInProgress = true;
+
     // Create new start of stream
     MotStartOfStream start = MotStartOfStream();
     start.startStop = StartStopFlag::START;
@@ -1609,6 +1628,9 @@ void SerialService::endOfStream()
 
     // Send start frame
     addTxToQueue(buffer, end.LENGTH, SERIAL_TX_TYPE::NONIMBE);
+
+    // Our net call is done
+    m_netCallInProgress = false;
 }
 
 /// <summary>
