@@ -1774,7 +1774,7 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; FNE has reached maximum permitted connections", peerId, tag, (uint16_t)reason);
         break;
     case NET_CONN_NAK_PEER_RESET:
-        LogWarning(LOG_NET, "PEER %u master NAK; FNE Called for a connection reset", peerId, tag, (uint16_t)reason);
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; FNE demanded connection reset", peerId, tag, (uint16_t)reason);
         break;
     case NET_CONN_NAK_PEER_ACL:
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; ACL Rejection", peerId, tag, (uint16_t)reason);
