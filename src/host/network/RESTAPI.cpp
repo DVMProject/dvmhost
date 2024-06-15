@@ -1101,6 +1101,8 @@ void RESTAPI::restAPI_PutRegisterCCVC(const HTTPPayload& request, HTTPPayload& r
         m_host->m_voiceChPeerId[channelNo] = peerId;
         LogMessage(LOG_REST, "VC %s:%u, registration notice, peerId = %u, chId = %u, chNo = %u", voiceCh.address().c_str(), voiceCh.port(), peerId, voiceCh.chId(), channelNo);
         LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X REST API Address %s:%u SSL %u", voiceCh.chId(), channelNo, voiceCh.address().c_str(), voiceCh.port(), voiceCh.ssl());
+
+        g_fireCCVCNotification = true; // announce this registration immediately to the FNE
     } else {
         LogMessage(LOG_REST, "VC, registration rejected, peerId = %u, chNo = %u, VC wasn't a defined member of the CC voice channel list", peerId, channelNo);
     }

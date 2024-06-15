@@ -58,6 +58,8 @@ bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 bool g_fireNXDNControl = false;
 
+bool g_fireCCVCNotification = false;
+
 uint8_t* g_gitHashBytes = nullptr;
 
 bool g_modemDebug = false;

@@ -1126,7 +1126,8 @@ int Host::run()
 
                 // CC -> FNE registered VC announcement
                 if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel) {
-                    if (presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) {
+                    if ((presenceNotifyTimer.isRunning() && presenceNotifyTimer.hasExpired()) || g_fireCCVCNotification) {
+                        g_fireCCVCNotification = false;
                         if (m_network != nullptr && m_voiceChPeerId.size() > 0) {
                             LogMessage(LOG_HOST, "notifying FNE of VC registrations, peerId = %u", m_network->getPeerId());
 

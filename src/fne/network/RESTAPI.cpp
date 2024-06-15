@@ -829,11 +829,23 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                     peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
                     uint64_t lastPing = peer->lastPing();
                     peerObj["lastPing"].set<uint64_t>(lastPing);
+                    uint32_t ccPeerId = peer->ccPeerId();
+                    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
 
                     json::object peerConfig = peer->config();
                     if (peerConfig["rcon"].is<json::object>())
                         peerConfig.erase("rcon");
                     peerObj["config"].set<json::object>(peerConfig);
+
+                    json::array voiceChannels = json::array();
+                    auto it = std::find_if(m_network->m_ccPeerMap.begin(), m_network->m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+                    if (it != m_network->m_ccPeerMap.end()) {
+                        std::vector<uint32_t> vcPeers = m_network->m_ccPeerMap[peerId];
+                        for (uint32_t vcEntry : vcPeers) {
+                            voiceChannels.push_back(json::value((double)vcEntry));
+                        }
+                    }
+                    peerObj["voiceChannels"].set<json::array>(voiceChannels);
 
                     peers.push_back(json::value(peerObj));
                 }

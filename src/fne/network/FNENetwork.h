@@ -299,6 +299,7 @@ namespace network
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
 
         Timer m_maintainenceTimer;
 

@@ -91,6 +91,7 @@ FNENetwork::FNENetwork(HostFNE* host, const std::string& address, uint16_t port,
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerAffiliations(),
+    m_ccPeerMap(),
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTime(updateLookupTime * 60U),
     m_softConnLimit(0U),
@@ -1156,6 +1157,8 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
                                 // validate peer (simple validation really)
                                 if (connection->connected() && connection->address() == ip) {
+                                    std::vector<uint32_t> vcPeers;
+
                                     // update peer association
                                     uint32_t len = __GET_UINT32(req->buffer, 0U);
                                     uint32_t offs = 4U;
@@ -1165,11 +1168,13 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                             FNEPeerConnection* vcConnection = network->m_peers[vcPeerId];
                                             if (vcConnection != nullptr) {
                                                 vcConnection->ccPeerId(peerId);
+                                                vcPeers.push_back(vcPeerId);
                                             }
                                         }
                                         offs += 4U;
                                     }
                                     LogMessage(LOG_NET, "PEER %u (%s) announced %u VCs", peerId, connection->identity().c_str(), len);
+                                    network->m_ccPeerMap[peerId] = vcPeers;
                                 }
                                 else {
                                     network->writePeerNAK(peerId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
@@ -1263,10 +1268,21 @@ bool FNENetwork::erasePeerAffiliations(uint32_t peerId)
 bool FNENetwork::erasePeer(uint32_t peerId)
 {
     std::lock_guard<std::mutex> lock(m_peerMutex);
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end()) {
-        m_peers.erase(peerId);
-        return true;
+    {
+        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+        if (it != m_peers.end()) {
+            m_peers.erase(peerId);
+            return true;
+        }
+    }
+
+    // erase any CC maps for this peer
+    {
+        auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+        if (it != m_ccPeerMap.end()) {
+            m_ccPeerMap.erase(peerId);
+            return true;
+        }
     }
 
     return false;
