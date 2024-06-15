@@ -206,14 +206,13 @@ bool RadioIdLookup::load()
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
             bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
-            bool radioDefault = false;
 
             // Check for an optional alias field
             if (parsed.size() >= 3) {
-                m_table[id] = RadioId(radioEnabled, radioDefault, parsed[2]);
+                m_table[id] = RadioId(radioEnabled, false, parsed[2]);
                 LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
             } else {
-                m_table[id] = RadioId(radioEnabled, radioDefault);
+                m_table[id] = RadioId(radioEnabled, false);
                 LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
             }
         }

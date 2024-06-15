@@ -122,7 +122,6 @@ namespace lookups
 
         /// <summary>Adds a new entry to the lookup table by the specified unique ID, with an alias.</summary>
         void addEntry(uint32_t id, bool enabled, const std::string& alias);
-
         /// <summary>Erases an existing entry from the lookup table by the specified unique ID.</summary>
         void eraseEntry(uint32_t id);
         /// <summary>Finds a table entry in this lookup table.</summary>

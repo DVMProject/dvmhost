@@ -1215,10 +1215,15 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
 
     json::array peers = json::array();
     if (m_peerListLookup != nullptr) {
-        for (const auto& peerId : m_peerListLookup->getPeerList()) {
-            json::object peerObj = json::object();
-            peerObj["peerId"].set<uint32_t>(peerId);
-            peers.push_back(json::value(peerObj));
+        if (m_peerListLookup->table().size() > 0) {
+            for (auto entry : m_peerListLookup->table()) {
+                json::object peerObj = json::object();
+
+                uint32_t peerId = entry.first;
+                peerObj["peerId"].set<uint32_t>(peerId);
+
+                peers.push_back(json::value(peerObj));
+            }
         }
     }
 
@@ -1281,7 +1286,7 @@ void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& rep
 
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
-    m_peerListLookup->removeEntry(peerId);
+    m_peerListLookup->eraseEntry(peerId);
 }
 
 /// <summary>
@@ -1320,11 +1325,11 @@ void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply
     setResponseDefaultStatus(response);
 
     lookups::PeerListLookup::Mode mode = m_peerListLookup->getMode();
-    bool enabled = m_peerListLookup->getEnabled();
+    bool acl = m_peerListLookup->getACL();
 
     std::string modeStr;
 
-    if (enabled) {
+    if (acl) {
         switch (mode) {
             case lookups::PeerListLookup::WHITELIST:
                 modeStr = "WHITELIST";

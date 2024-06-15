@@ -1,3 +1,6 @@
-# Example blacklist or whitelist
-1234
-12345
+#
+# This file sets the valid peer IDs allowed on a FNE.
+#
+# Entry Format: "PeerID,Peer Password,<newline>"
+#1234,
+#5678,MYSECUREPASSWORD,

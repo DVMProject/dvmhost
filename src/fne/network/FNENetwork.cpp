@@ -624,63 +624,76 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 ::memset(salt, 0x00U, 4U);
                                 __SET_UINT32(connection->salt(), salt, 0U);
 
-                                size_t size = network->m_password.size();
-                                uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
-                                ::memcpy(in, salt, sizeof(uint32_t));
-                                for (size_t i = 0U; i < size; i++)
-                                    in[i + sizeof(uint32_t)] = network->m_password.at(i);
+                                std::string passwordForPeer = network->m_password;
 
-                                uint8_t out[32U];
-                                edac::SHA256 sha256;
-                                sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
+                                // check if the peer is in the peer ACL list
+                                bool validAcl = true;
+                                if (network->m_peerListLookup->getACL()) {
+                                    if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
+                                        if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
+                                            LogWarning(LOG_NET, "PEER %u RPTK, blacklisted from access", peerId);
+                                        } else {
+                                            LogWarning(LOG_NET, "PEER %u RPTK, failed whitelist check", peerId);
+                                        }
 
-                                delete[] in;
-
-                                // validate hash
-                                bool validHash = false;
-                                if (req->length - 8U == 32U) {
-                                    validHash = true;
-                                    for (uint8_t i = 0; i < 32U; i++) {
-                                        if (hash[i] != out[i]) {
-                                            validHash = false;
-                                            break;
+                                        validAcl = false;
+                                    } else {
+                                        lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
+                                        if (peerEntry.peerDefault()) {
+                                            validAcl = false; // default peer IDs are a no-no as they have no data thus fail ACL check
+                                        } else {
+                                            passwordForPeer = peerEntry.peerPassword();
+                                            if (passwordForPeer.length() == 0) {
+                                                passwordForPeer = network->m_password;
+                                            }
                                         }
                                     }
                                 }
 
-                                // check if the peer is (not)whitelisted or blacklisted
-                                bool validAcl = true;
-                                if (!network->m_peerListLookup->isPeerAllowed(peerId)) {
-                                    if (network->m_peerListLookup->getMode() == lookups::PeerListLookup::BLACKLIST) {
-                                        LogWarning(LOG_NET, "PEER %u is blacklisted", peerId);
-                                    } else {
-                                        LogWarning(LOG_NET, "PEER %u is not whitelisted", peerId);
-                                    }
-                                    validAcl = false;
-                                }
+                                if (validAcl) {
+                                    size_t size = passwordForPeer.size();
+                                    uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
+                                    ::memcpy(in, salt, sizeof(uint32_t));
+                                    for (size_t i = 0U; i < size; i++)
+                                        in[i + sizeof(uint32_t)] = passwordForPeer.at(i);
 
-                                if (validHash && validAcl) {
-                                    connection->connectionState(NET_STAT_WAITING_CONFIG);
-                                    network->writePeerACK(peerId);
-                                    LogInfoEx(LOG_NET, "PEER %u RPTK ACK, completed the login exchange", peerId);
-                                }
-                                else {
-                                    LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
-                                    
-                                    if (!validAcl) {
-                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_PEER_ACL);
-                                    } else {
-                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    uint8_t out[32U];
+                                    edac::SHA256 sha256;
+                                    sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
+
+                                    delete[] in;
+
+                                    // validate hash
+                                    bool validHash = false;
+                                    if (req->length - 8U == 32U) {
+                                        validHash = true;
+                                        for (uint8_t i = 0; i < 32U; i++) {
+                                            if (hash[i] != out[i]) {
+                                                validHash = false;
+                                                break;
+                                            }
+                                        }
                                     }
 
+                                    if (validHash) {
+                                        connection->connectionState(NET_STAT_WAITING_CONFIG);
+                                        network->writePeerACK(peerId);
+                                        LogInfoEx(LOG_NET, "PEER %u RPTK ACK, completed the login exchange", peerId);
+                                        network->m_peers[peerId] = connection;
+                                    }
+                                    else {
+                                        LogWarning(LOG_NET, "PEER %u RPTK NAK, failed the login exchange", peerId);
+                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_FNE_UNAUTHORIZED, req->address, req->addrLen);
+                                        network->erasePeer(peerId);
+                                    }
+                                } else {
+                                    network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_PEER_ACL, req->address, req->addrLen);
                                     network->erasePeer(peerId);
                                 }
-
-                                network->m_peers[peerId] = connection;
                             }
                             else {
                                 LogWarning(LOG_NET, "PEER %u RPTK NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->connectionState());
-                                network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE);
+                                network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
                                 network->erasePeer(peerId);
                             }
                         }
@@ -709,14 +722,14 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 std::string err = json::parse(v, payload);
                                 if (!err.empty()) {
                                     LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
-                                    network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA);
+                                    network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
                                     network->erasePeer(peerId);
                                 }
                                 else  {
                                     // ensure parsed JSON is an object
                                     if (!v.is<json::object>()) {
                                         LogWarning(LOG_NET, "PEER %u RPTC NAK, supplied invalid configuration data", peerId);
-                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA);
+                                        network->writePeerNAK(peerId, TAG_REPEATER_AUTH, NET_CONN_NAK_INVALID_CONFIG_DATA, req->address, req->addrLen);
                                         network->erasePeer(peerId);
                                     }
                                     else {
@@ -780,7 +793,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             else {
                                 LogWarning(LOG_NET, "PEER %u (%s) RPTC NAK, login exchange while in an incorrect state, connectionState = %u", peerId, connection->identity().c_str(),
                                     connection->connectionState());
-                                network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE);
+                                network->writePeerNAK(peerId, TAG_REPEATER_CONFIG, NET_CONN_NAK_BAD_CONN_STATE, req->address, req->addrLen);
                                 network->erasePeer(peerId);
                             }
                         }
@@ -1777,7 +1790,7 @@ void FNENetwork::logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK
         LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; FNE demanded connection reset", peerId, tag, (uint16_t)reason);
         break;
     case NET_CONN_NAK_PEER_ACL:
-        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; ACL Rejection", peerId, tag, (uint16_t)reason);
+        LogWarning(LOG_NET, "PEER %u NAK %s, reason = %u; ACL rejection", peerId, tag, (uint16_t)reason);
         break;
 
     case NET_CONN_NAK_GENERAL_FAILURE:

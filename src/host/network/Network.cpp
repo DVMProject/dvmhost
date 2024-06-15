@@ -545,7 +545,7 @@ void Network::clock(uint32_t ms)
                         LogWarning(LOG_NET, "PEER %u master NAK; FNE demanded connection reset, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;
                     case NET_CONN_NAK_PEER_ACL:
-                        LogWarning(LOG_NET, "PEER %u master NAK; ACL Rejection, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        LogWarning(LOG_NET, "PEER %u master NAK; ACL rejection, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:

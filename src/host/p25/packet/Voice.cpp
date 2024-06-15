@@ -391,6 +391,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         if (m_p25->m_legacyGroupReg && group) {
                             if (!m_p25->m_affiliations.isGroupAff(srcId, dstId)) {
                                 if (!m_p25->m_control->writeRF_TSDU_Grp_Aff_Rsp(srcId, dstId)) {
+                                    LogWarning(LOG_RF, P25_HDU_STR " denial, conventional affiliation required, not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
+                                    m_p25->m_rfLastDstId = 0U;
+                                    m_p25->m_rfLastSrcId = 0U;
+                                    m_p25->m_rfTGHang.stop();
+                                    m_p25->m_rfState = RS_RF_REJECTED;
                                     return false;
                                 }
                             }
@@ -401,6 +406,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         }
                     }
                     else {
+                        LogWarning(LOG_RF, P25_HDU_STR " denial, conventional affiliation required, and legacy group grant disabled, not affiliated to TGID, srcId = %u, dstId = %u", srcId, dstId);
+                        m_p25->m_rfLastDstId = 0U;
+                        m_p25->m_rfLastSrcId = 0U;
+                        m_p25->m_rfTGHang.stop();
+                        m_p25->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
                 }
