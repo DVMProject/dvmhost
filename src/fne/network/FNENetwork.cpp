@@ -16,14 +16,14 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagDMRData.h"
-#include "network/fne/TagP25Data.h"
-#include "network/fne/TagNXDNData.h"
+#include "network/callhandler/TagDMRData.h"
+#include "network/callhandler/TagP25Data.h"
+#include "network/callhandler/TagNXDNData.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 
 #include <cassert>
 #include <cerrno>

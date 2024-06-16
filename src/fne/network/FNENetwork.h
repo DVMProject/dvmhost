@@ -36,9 +36,9 @@
 
 class HOST_SW_API HostFNE;
 class HOST_SW_API RESTAPI;
-namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
-namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
-namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
+namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 
 namespace network
 {
@@ -235,12 +235,12 @@ namespace network
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
 
-        /// <summary>Gets the instance of the DMR traffic handler.</summary>
-        fne::TagDMRData* dmrTrafficHandler() const { return m_tagDMR; }
-        /// <summary>Gets the instance of the P25 traffic handler.</summary>
-        fne::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
-        /// <summary>Gets the instance of the NXDN traffic handler.</summary>
-        fne::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
+        /// <summary>Gets the instance of the DMR call handler.</summary>
+        callhandler::TagDMRData* dmrTrafficHandler() const { return m_tagDMR; }
+        /// <summary>Gets the instance of the P25 call handler.</summary>
+        callhandler::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
+        /// <summary>Gets the instance of the NXDN call handler.</summary>
+        callhandler::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup);
@@ -264,12 +264,12 @@ namespace network
 
     private:
         friend class DiagNetwork;
-        friend class fne::TagDMRData;
-        fne::TagDMRData* m_tagDMR;
-        friend class fne::TagP25Data;
-        fne::TagP25Data* m_tagP25;
-        friend class fne::TagNXDNData;
-        fne::TagNXDNData* m_tagNXDN;
+        friend class callhandler::TagDMRData;
+        callhandler::TagDMRData* m_tagDMR;
+        friend class callhandler::TagP25Data;
+        callhandler::TagP25Data* m_tagP25;
+        friend class callhandler::TagNXDNData;
+        callhandler::TagNXDNData* m_tagNXDN;
         
         friend class ::RESTAPI;
         HostFNE* m_host;

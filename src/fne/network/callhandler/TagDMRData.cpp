@@ -20,12 +20,12 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagDMRData.h"
+#include "network/callhandler/TagDMRData.h"
 #include "HostFNE.h"
 
 using namespace system_clock;
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 using namespace dmr;
 
 #include <cassert>
@@ -188,7 +188,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
                     if (status.srcId != 0U && status.srcId != srcId) {
-                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
+                            peerId, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
                         return false;
                     }
                 }
@@ -215,6 +216,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 status.dstId = dstId;
                 status.slotNo = slotNo;
                 status.streamId = streamId;
+                status.peerId = peerId;
                 m_status[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
 
                 LogMessage(LOG_NET, "DMR, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);

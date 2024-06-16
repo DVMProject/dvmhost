@@ -22,12 +22,12 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagNXDNData.h"
+#include "network/callhandler/TagNXDNData.h"
 #include "HostFNE.h"
 
 using namespace system_clock;
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 using namespace nxdn;
 
 #include <cassert>
@@ -160,7 +160,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId) {
                         if (status.srcId != 0U && status.srcId != srcId) {
-                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                            LogWarning(LOG_NET, "NXDN, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -186,6 +187,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     status.srcId = srcId;
                     status.dstId = dstId;
                     status.streamId = streamId;
+                    status.peerId = peerId;
                     m_status[dstId] = status;
 
                     LogMessage(LOG_NET, "NXDN, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);

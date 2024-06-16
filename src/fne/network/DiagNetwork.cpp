@@ -18,7 +18,7 @@
 #include "HostFNE.h"
 
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 
 #include <cassert>
 

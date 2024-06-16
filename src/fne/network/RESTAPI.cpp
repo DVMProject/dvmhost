@@ -17,8 +17,8 @@
 #include "common/network/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "fne/network/fne/TagDMRData.h"
-#include "fne/network/fne/TagP25Data.h"
+#include "fne/network/callhandler/TagDMRData.h"
+#include "fne/network/callhandler/TagP25Data.h"
 #include "fne/network/RESTAPI.h"
 #include "HostFNE.h"
 

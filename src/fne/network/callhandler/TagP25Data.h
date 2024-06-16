@@ -10,8 +10,8 @@
 *   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
-#if !defined(__FNE__TAG_P25_DATA_H__)
-#define __FNE__TAG_P25_DATA_H__
+#if !defined(__CALLHANDLER__TAG_P25_DATA_H__)
+#define __CALLHANDLER__TAG_P25_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
@@ -29,11 +29,11 @@
 
 namespace network
 {
-    namespace fne
+    namespace callhandler
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements the P25 data FNE networking logic.
+        //      Implements the P25 call handler and data FNE networking logic.
         // ---------------------------------------------------------------------------
 
         class HOST_SW_API TagP25Data {
@@ -89,6 +89,7 @@ namespace network
                 uint32_t srcId;
                 uint32_t dstId;
                 uint32_t streamId;
+                uint32_t peerId;
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
@@ -120,7 +121,7 @@ namespace network
             /// <summary>Helper to write a network TSDU.</summary>
             void write_TSDU(uint32_t peerId, p25::lc::TSBK* tsbk);
         };
-    } // namespace fne
+    } // namespace callhandler
 } // namespace network
 
-#endif // __FNE__TAG_P25_DATA_H__
+#endif // __CALLHANDLER__TAG_P25_DATA_H__

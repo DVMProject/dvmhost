@@ -18,12 +18,12 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagP25Data.h"
+#include "network/callhandler/TagP25Data.h"
 #include "HostFNE.h"
 
 using namespace system_clock;
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 using namespace p25;
 
 #include <cassert>
@@ -218,7 +218,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC))) {
                         if (status.srcId != 0U && status.srcId != srcId) {
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -244,6 +245,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     status.srcId = srcId;
                     status.dstId = dstId;
                     status.streamId = streamId;
+                    status.peerId = peerId;
                     m_status[dstId] = status;
 
                     LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);

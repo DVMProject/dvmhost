@@ -32,9 +32,9 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
-namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
-namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
-namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
+namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -56,9 +56,9 @@ private:
     yaml::Node m_conf;
 
     friend class network::FNENetwork;
-    friend class network::fne::TagDMRData;
-    friend class network::fne::TagP25Data;
-    friend class network::fne::TagNXDNData;
+    friend class network::callhandler::TagDMRData;
+    friend class network::callhandler::TagP25Data;
+    friend class network::callhandler::TagNXDNData;
     network::FNENetwork* m_network;
     network::DiagNetwork* m_diagNetwork;
 

@@ -10,8 +10,8 @@
 *   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
-#if !defined(__FNE__TAG_DMR_DATA_H__)
-#define __FNE__TAG_DMR_DATA_H__
+#if !defined(__CALLHANDLER__TAG_DMR_DATA_H__)
+#define __CALLHANDLER__TAG_DMR_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/dmr/DMRDefines.h"
@@ -24,11 +24,11 @@
 
 namespace network
 {
-    namespace fne
+    namespace callhandler
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements the DMR data FNE networking logic.
+        //      Implements the DMR call handler and data FNE networking logic.
         // ---------------------------------------------------------------------------
 
         class HOST_SW_API TagDMRData {
@@ -80,6 +80,7 @@ namespace network
                 uint32_t dstId;
                 uint8_t slotNo;
                 uint32_t streamId;
+                uint32_t peerId;
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
@@ -105,7 +106,7 @@ namespace network
             /// <summary>Helper to write a network CSBK.</summary>
             void write_CSBK(uint32_t peerId, uint8_t slot, dmr::lc::CSBK* csbk);
         };
-    } // namespace fne
+    } // namespace callhandler
 } // namespace network
 
-#endif // __FNE__TAG_DMR_DATA_H__
+#endif // __CALLHANDLER__TAG_DMR_DATA_H__
