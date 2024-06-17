@@ -313,8 +313,40 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 /// <returns></returns>
 bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
-    // bryanb: TODO TODO TODO
-    return false;
+    // if we have an Rx status for the destination deny the grant
+    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+        return false;
+    }
+
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(srcId);
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+
+    // check TGID validity
+    if (tg.isInvalid()) {
+        return false;
+    }
+
+    if (!tg.config().active()) {
+        return false;
+    }
+
+    // repeat traffic to the connected peers
+    if (m_network->m_peers.size() > 0U) {
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
+                write_Message_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+            }
+        }
+    }
+
+    return true;
 }
 
 /// <summary>
@@ -601,6 +633,55 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
         return false;
     }
 
+    return true;
+}
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="serviceOptions"></param>
+/// <param name="grp"></param>
+/// <returns></returns>
+bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
+{
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
+
+    std::unique_ptr<lc::rcch::MESSAGE_TYPE_VCALL_CONN> rcch = std::make_unique<lc::rcch::MESSAGE_TYPE_VCALL_CONN>();
+
+    // check the affiliations for this peer to see if we can grant traffic
+    lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+    if (aff == nullptr) {
+        std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
+        return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
+    }
+    else {
+        if (!aff->hasGroupAff(dstId)) {
+            return false;
+        }
+    }
+
+    rcch->setMessageType(RTCH_MESSAGE_TYPE_VCALL);
+    rcch->setGrpVchNo(0U);
+    rcch->setGroup(grp);
+    rcch->setSrcId(srcId);
+    rcch->setDstId(dstId);
+
+    rcch->setEmergency(emergency);
+    rcch->setEncrypted(encryption);
+    rcch->setPriority(priority);
+
+    if (m_network->m_verbose) {
+        LogMessage(LOG_NET, "NXDN, %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
+            rcch->toString().c_str(), rcch->getEmergency(), rcch->getEncrypted(), rcch->getPriority(), rcch->getGrpVchNo(), rcch->getSrcId(), rcch->getDstId(), peerId);
+    }
+
+    write_Message(peerId, rcch.get());
     return true;
 }
 

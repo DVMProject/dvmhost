@@ -113,6 +113,8 @@ namespace network
             /// <summary>Helper to validate the P25 call stream.</summary>
             bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
 
+            /// <summary>Helper to write a grant packet.</summary>
+            bool write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
             /// <summary>Helper to write a deny packet.</summary>
             void write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool group = false, bool aiv = false);
             /// <summary>Helper to write a queue packet.</summary>

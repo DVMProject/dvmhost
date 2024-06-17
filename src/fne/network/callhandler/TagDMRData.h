@@ -100,6 +100,8 @@ namespace network
             /// <summary>Helper to validate the DMR call stream.</summary>
             bool validate(uint32_t peerId, dmr::data::Data& data, uint32_t streamId);
 
+            /// <summary>Helper to write a grant packet.</summary>
+            bool write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
             /// <summary>Helper to write a NACK RSP packet.</summary>
             void write_CSBK_NACK_RSP(uint32_t peerId, uint32_t dstId, uint8_t reason, uint8_t service);
 

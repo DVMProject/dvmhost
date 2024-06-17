@@ -349,8 +349,40 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 /// <returns></returns>
 bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
-    // bryanb: TODO TODO TODO
-    return false;
+    // if we have an Rx status for the destination deny the grant
+    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+        return false;
+    }
+
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(srcId);
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+
+    // check TGID validity
+    if (tg.isInvalid()) {
+        return false;
+    }
+
+    if (!tg.config().active()) {
+        return false;
+    }
+
+    // repeat traffic to the connected peers
+    if (m_network->m_peers.size() > 0U) {
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
+                write_CSBK_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+            }
+        }
+    }
+
+    return true;
 }
 
 /// <summary>
@@ -811,6 +843,79 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
 
             return false;
         }
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="serviceOptions"></param>
+/// <param name="grp"></param>
+/// <returns></returns>
+bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
+{
+    uint8_t slot = 0U;
+
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
+    bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
+
+    if (dstId == DMR_WUID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // check the affiliations for this peer to see if we can grant traffic
+    lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+    if (aff == nullptr) {
+        std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
+        return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
+    }
+    else {
+        if (!aff->hasGroupAff(dstId)) {
+            return false;
+        }
+    }
+
+    if (grp) {
+        std::unique_ptr<lc::csbk::CSBK_TV_GRANT> csbk = std::make_unique<lc::csbk::CSBK_TV_GRANT>();
+        if (broadcast)
+            csbk->setCSBKO(CSBKO_BTV_GRANT);
+        csbk->setLogicalCh1(0U);
+        csbk->setSlotNo(slot);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+                csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
+        }
+
+        csbk->setEmergency(emergency);
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
+
+        write_CSBK(peerId, 1U, csbk.get());
+    }
+    else {
+        std::unique_ptr<lc::csbk::CSBK_PV_GRANT> csbk = std::make_unique<lc::csbk::CSBK_PV_GRANT>();
+        csbk->setLogicalCh1(0U);
+        csbk->setSlotNo(slot);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+                csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
+        }
+
+        csbk->setEmergency(emergency);
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
+
+        write_CSBK(peerId, 1U, csbk.get());
     }
 
     return true;
