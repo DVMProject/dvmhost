@@ -326,7 +326,7 @@ bool HostFNE::readParams()
         m_updateLookupTime = 10U;
     }
 
-    m_useAlternatePortForDiagnostics = systemConf["useAlternatePortForDiagnostics"].as<bool>(false);
+    m_useAlternatePortForDiagnostics = systemConf["useAlternatePortForDiagnostics"].as<bool>(true);
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
 
