@@ -53,6 +53,8 @@
 extern uint32_t g_logDisplayLevel;
 extern bool g_disableTimeDisplay;
 
+extern bool g_useSyslog;
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
@@ -73,7 +75,7 @@ extern HOST_SW_API void* LogGetNetwork();
 extern HOST_SW_API void LogSetNetwork(void* network);
 
 /// <summary>Initializes the diagnostics log.</summary>
-extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay = false);
+extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay = false, bool useSyslog = false);
 /// <summary>Finalizes the diagnostics log.</summary>
 extern HOST_SW_API void LogFinalise();
 /// <summary>Writes a new entry to the diagnostics log.</summary>

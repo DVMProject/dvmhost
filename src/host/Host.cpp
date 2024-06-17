@@ -174,7 +174,7 @@ int Host::run()
     // initialize system logging
     yaml::Node logConf = m_conf["log"];
     ret = ::LogInitialise(logConf["filePath"].as<std::string>(), logConf["fileRoot"].as<std::string>(),
-        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U));
+        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U), false, logConf["useSyslog"].as<bool>(false));
     if (!ret) {
         ::fatal("unable to open the log file\n");
     }
