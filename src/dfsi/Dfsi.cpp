@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Patrick McDonnell, W3AXL
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"

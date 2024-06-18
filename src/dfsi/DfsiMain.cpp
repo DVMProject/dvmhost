@@ -9,6 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2024 Patrick McDonnell, W3AXL
+*   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -107,7 +108,6 @@ void usage(const char* message, const char* arg)
         "usage: %s [-vhf]"
         "[--syslog]"
         "[-c <configuration file>]"
-        "[-a <address>] [-p <port>] [-P <peer id>]"
         "\n\n"
         "  -v        show version information\n"
         "  -h        show this screen\n"
