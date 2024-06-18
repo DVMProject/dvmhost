@@ -116,6 +116,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
+    m_interval(),
     m_frameLossCnt(0U),
     m_frameLossThreshold(DEFAULT_FRAME_LOSS_THRESHOLD),
     m_ccFrameCnt(0U),
@@ -137,6 +138,8 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     assert(tidLookup != nullptr);
     assert(idenTable != nullptr);
     assert(rssiMapper != nullptr);
+
+    m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
 
@@ -275,6 +278,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_controlChData = controlChData;
 
+    bool disableUnitRegTimeout = nxdnProtocol["disableUnitRegTimeout"].as<bool>(false);
+    m_affiliations.setDisableUnitRegTimeout(disableUnitRegTimeout);
+
     // set the grant release callback
     m_affiliations.setReleaseGrantCallback([=](uint32_t chNo, uint32_t dstId, uint8_t slot) {
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
@@ -295,6 +301,12 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
                 ::LogError(LOG_NXDN, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to clear TG permit, chNo = %u", chNo);
             }
         }
+    });
+
+    // set the unit deregistration callback
+    m_affiliations.setUnitDeregCallback([=](uint32_t srcId) {
+        if (m_network != nullptr)
+            m_network->announceUnitDeregistration(srcId);
     });
 
     lc::RCCH::setSiteData(m_siteData);
@@ -321,6 +333,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
+
+        if (disableUnitRegTimeout) {
+            LogInfo("    Disable Unit Registration Timeout: yes");
+        }
     }
 
     if (m_voice != nullptr) {
@@ -481,6 +497,28 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <returns>Length of frame data retrieved.</returns>
+uint32_t Control::peekFrameLength()
+{
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.peek(&len, 1U);
+    }
+    else {
+        m_txQueue.peek(&len, 1U);
+    }
+
+    return len;
+}
+
+/// <summary>
 /// Get frame data from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to store frame data.</param>
@@ -508,11 +546,13 @@ uint32_t Control::getFrame(uint8_t* data)
 }
 
 /// <summary>
-/// Updates the processor by the passed number of milliseconds.
+/// Updates the processor.
 /// </summary>
-/// <param name="ms"></param>
-void Control::clock(uint32_t ms)
+void Control::clock()
 {
+    uint32_t ms = m_interval.elapsed();
+    m_interval.start();
+
     if (m_network != nullptr) {
         processNetwork();
 
@@ -679,10 +719,17 @@ void Control::clock(uint32_t ms)
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
     }
+}
 
-    // clock data and trunking
-    if (m_control != nullptr) {
-        m_control->clock(ms);
+/// <summary>
+/// Updates the adj. site tables and affiliations.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clockSiteData(uint32_t ms)
+{
+    if (m_enableControl) {
+        // clock all the grant timers
+        m_affiliations.clock(ms);
     }
 }
 
@@ -1052,6 +1099,11 @@ void Control::notifyCC_ReleaseGrant(uint32_t dstId)
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_NXDN, "failed to notify the CC %s:%u of the release of, dstId = %u", m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
+
+    m_rfLastDstId = 0U;
+    m_rfLastSrcId = 0U;
+    m_netLastDstId = 0U;
+    m_netLastSrcId = 0U;
 }
 
 /// <summary>

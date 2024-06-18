@@ -69,11 +69,15 @@ namespace dmr
 
         /// <summary>Process a data frame for slot, from the RF interface.</summary>
         bool processFrame(uint32_t slotNo, uint8_t* data, uint32_t len);
+        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        uint32_t peekFrameLength(uint32_t slotNo);
         /// <summary>Get a data frame for slot, from data ring buffer.</summary>
         uint32_t getFrame(uint32_t slotNo, uint8_t* data);
 
         /// <summary>Updates the processor.</summary>
-        void clock(uint32_t ms);
+        void clock();
+        /// <summary>Updates the adj. site tables.</summary>
+        void clockSiteData(uint32_t ms);
 
         /// <summary>Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor);
@@ -91,6 +95,8 @@ namespace dmr
 
         /// <summary>Helper to return the slot carrying the TSCC.</summary>
         Slot* getTSCCSlot() const;
+        /// <summary>Helper to return the slot number carrying the TSCC.</summary>
+        uint8_t getTSCCSlotNo() const { return m_tsccSlotNo; }
         /// <summary>Helper to payload activate the slot carrying granted payload traffic.</summary>
         void tsccActivateSlot(uint32_t slotNo, uint32_t dstId, uint32_t srcId, bool group, bool voice);
         /// <summary>Helper to clear an activated payload slot.</summary>

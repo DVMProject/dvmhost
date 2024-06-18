@@ -174,6 +174,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
+    bool disableUnitRegTimeout = dmrProtocol["disableUnitRegTimeout"].as<bool>(false);
+    m_slot1->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+    m_slot2->m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
@@ -332,8 +336,27 @@ bool Control::processFrame(uint32_t slotNo, uint8_t *data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <param name="slotNo"></param>
+/// <returns>Length of frame data retrieved.</returns>
+uint32_t Control::peekFrameLength(uint32_t slotNo)
+{
+    switch (slotNo) {
+    case 1U:
+        return m_slot1->peekFrameLength();
+    case 2U:
+        return m_slot2->peekFrameLength();
+    default:
+        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", slotNo);
+        return 0U;
+    }
+}
+
+/// <summary>
 /// Get a data frame for slot, from data ring buffer.
 /// </summary>
+/// <param name="slotNo"></param>
 /// <param name="data">Buffer to put retrieved DMR data frame data.</param>
 /// <returns>Length of data retrieved from DMR ring buffer.</returns>
 uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
@@ -352,27 +375,26 @@ uint32_t Control::getFrame(uint32_t slotNo, uint8_t* data)
 }
 
 /// <summary>
-/// Updates the processor by the passed number of milliseconds.
+/// Updates the processor.
 /// </summary>
-/// <param name="ms"></param>
-void Control::clock(uint32_t ms)
+void Control::clock()
 {
     if (m_network != nullptr) {
         processNetwork();
     }
 
-    m_tsccCntInterval.clock(ms);
-    if (m_tsccCntInterval.isRunning() && m_tsccCntInterval.hasExpired()) {
-        m_tsccCnt++;
-        if (m_tsccCnt == TSCC_MAX_CSC_CNT) {
-            m_tsccCnt = 0U;
-        }
-
-        m_tsccCntInterval.start();
-    }
-
     m_slot1->clock();
     m_slot2->clock();
+}
+
+/// <summary>
+/// Updates the adj. site tables.
+/// </summary>
+/// <param name="ms"></param>
+void Control::clockSiteData(uint32_t ms)
+{
+    m_slot1->clockSiteData(ms);
+    m_slot2->clockSiteData(ms);
 }
 
 /// <summary>

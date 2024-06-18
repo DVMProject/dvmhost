@@ -49,6 +49,8 @@ LC::LC() :
     m_srcId(0U),
     m_dstId(0U),
     m_grpVchNo(0U),
+    m_grpVchNoB(0U),
+    m_dstIdB(0U),
     m_explicitId(false),
     m_netId(P25_WACN_STD_DEFAULT),
     m_sysId(P25_SID_STD_DEFAULT),
@@ -498,6 +500,9 @@ void LC::copy(const LC& data)
 
     m_grpVchNo = data.m_grpVchNo;
 
+    m_grpVchNoB = data.m_grpVchNoB;
+    m_dstIdB = data.m_dstIdB;
+
     m_explicitId = data.m_explicitId;
 
     m_netId = data.m_netId;
@@ -652,8 +657,8 @@ void LC::encodeLC(uint8_t* rs)
         rsValue = (rsValue << 12) + m_grpVchNo;                                     // Group A - Channel Number
         rsValue = (rsValue << 16) + m_dstId;                                        // Group A - Talkgroup Address
         rsValue = (rsValue << 4) + m_siteData.channelId();                          // Group B - Channel ID
-        rsValue = (rsValue << 12) + m_grpVchNo;                                     // Group B - Channel Number
-        rsValue = (rsValue << 16) + m_dstId;                                        // Group B - Talkgroup Address
+        rsValue = (rsValue << 12) + m_grpVchNoB;                                    // Group B - Channel Number
+        rsValue = (rsValue << 16) + m_dstIdB;                                       // Group B - Talkgroup Address
         break;
     case LC_PRIVATE:
         rsValue = m_mfId;

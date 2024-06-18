@@ -541,6 +541,14 @@ void Network::clock(uint32_t ms)
                     case NET_CONN_NAK_FNE_MAX_CONN:
                         LogWarning(LOG_NET, "PEER %u master NAK; FNE has reached maximum permitted connections, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
                         break;
+                    case NET_CONN_NAK_PEER_RESET:
+                        LogWarning(LOG_NET, "PEER %u master NAK; FNE demanded connection reset, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        break;
+                    case NET_CONN_NAK_PEER_ACL:
+                        LogError(LOG_NET, "PEER %u master NAK; ACL rejection, network disabled, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        m_status = NET_STAT_WAITING_LOGIN;
+                        m_enabled = false; // ACL rejection give up stop trying to connect
+                        break;
 
                     case NET_CONN_NAK_GENERAL_FAILURE:
                     default:
@@ -556,9 +564,11 @@ void Network::clock(uint32_t ms)
                     m_retryTimer.start();
                 }
                 else {
-                    LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                    close();
-                    open();
+                    if (m_enabled) {
+                        LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        close();
+                        open();
+                    }
                     return;
                 }
             }
@@ -818,10 +828,10 @@ bool Network::writeConfig()
     json::value v = json::value(config);
     std::string json = v.serialize();
 
-    char buffer[json.length() + 8U];
+    char buffer[json.length() + 9U];
 
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
-    ::sprintf(buffer + 8U, "%s", json.c_str());
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
     if (m_debug) {
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);

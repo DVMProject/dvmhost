@@ -58,6 +58,8 @@ bool g_fireDMRBeacon = false;
 bool g_fireP25Control = false;
 bool g_fireNXDNControl = false;
 
+bool g_fireCCVCNotification = false;
+
 uint8_t* g_gitHashBytes = nullptr;
 
 bool g_modemDebug = false;
@@ -117,6 +119,7 @@ void usage(const char* message, const char* arg)
 
     ::fprintf(stdout, 
         "usage: %s [-vhdf]"
+        "[--syslog]"
 #if defined(ENABLE_SETUP_TUI)
         "[--setup]"
 #else
@@ -129,6 +132,8 @@ void usage(const char* message, const char* arg)
         "  -h        show this screen\n"
         "  -d        force modem debug\n"
         "  -f        foreground mode\n"
+        "\n"
+        "  --syslog  force logging to syslog\n"
         "\n"
 #if defined(ENABLE_SETUP_TUI)
         "  --setup   setup and calibration mode\n"
@@ -176,6 +181,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-f")) {
             g_foreground = true;
+        }
+        else if (IS("--syslog")) {
+            g_useSyslog = true;
         }
         else if (IS("--cal")) {
             g_calibrate = true;

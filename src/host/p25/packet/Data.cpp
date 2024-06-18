@@ -303,10 +303,26 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
                     }
                     else {
-                        if (m_rfData[i].getFormat() == PDU_FMT_CONFIRMED)
+                        if (m_rfData[i].getFormat() == PDU_FMT_CONFIRMED) {
                             LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (3/4 rate or CRC), block %u", i);
-                        else
+
+                            // to prevent data block offset errors fill the bad block with 0's
+                            uint8_t blankBuf[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+                            ::memset(blankBuf, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                            ::memcpy(m_pduUserData + dataOffset, blankBuf, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                            dataOffset += P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+                            m_pduUserDataLength = dataOffset;
+                        }
+                        else {
                             LogWarning(LOG_RF, P25_PDU_STR ", unfixable PDU data (1/2 rate or CRC), block %u", i);
+
+                            // to prevent data block offset errors fill the bad block with 0's
+                            uint8_t blankBuf[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                            ::memset(blankBuf, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                            ::memcpy(m_pduUserData + dataOffset, blankBuf, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                            dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+                            m_pduUserDataLength = dataOffset;
+                        }
 
                         if (m_dumpPDUData) {
                             Utils::dump(1U, "Unfixable PDU Data", buffer, P25_PDU_FEC_LENGTH_BYTES);

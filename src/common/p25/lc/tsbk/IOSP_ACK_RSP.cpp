@@ -70,7 +70,7 @@ void IOSP_ACK_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = (m_service & 0x3F);                                                 // Service Type
+    tsbkValue = (m_service & 0x3FU);                                                // Service Type
     tsbkValue |= (m_aivFlag) ? 0x80U : 0x00U;                                       // Additional Info. Valid Flag
     tsbkValue |= (m_extendedAddrFlag) ? 0x40U : 0x00U;                              // Extended Addressing Flag
     if (m_aivFlag && m_extendedAddrFlag) {

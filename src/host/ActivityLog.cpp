@@ -138,11 +138,14 @@ void ActivityLog(const char *mode, const bool sourceRf, const char* msg, ...)
         ::sprintf(buffer, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
     }
 
-    va_list vl;
+    va_list vl, vl_len;
     va_start(vl, msg);
+    va_copy(vl_len, vl);
 
-    ::vsnprintf(buffer + ::strlen(buffer), ACT_LOG_BUFFER_LEN - 1U, msg, vl);
+    size_t len = ::vsnprintf(nullptr, 0U, msg, vl_len);
+    ::vsnprintf(buffer + ::strlen(buffer), len + 1U, msg, vl);
 
+    va_end(vl_len);
     va_end(vl);
 
     bool ret = ::ActivityLogOpen();

@@ -13,6 +13,7 @@
 *
 */
 #include "Defines.h"
+#include "common/Utils.h"
 #include "p25/P25Defines.h"
 #include "p25/NID.h"
 #include "p25/P25Utils.h"
@@ -59,17 +60,7 @@ NID::NID(uint32_t nac) :
 /// </summary>
 NID::~NID()
 {
-    for (uint8_t i = 0; i < 16U; i++)
-    {
-        if (m_rxTx[i] != nullptr) {
-            delete[] m_rxTx[i];
-        }
-
-        if (m_tx[i] != nullptr) {
-            delete[] m_tx[i];
-        }
-    }
-
+    cleanupArrays();
     delete[] m_rxTx;
     delete[] m_tx;
 }
@@ -85,6 +76,13 @@ bool NID::decode(const uint8_t* data)
 
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(data, nid, 48U, 114U);
+
+    // handle digital "squelch" NAC
+    if ((m_nac == P25_NAC_DIGITAL_SQ) || (m_nac == P25_NAC_REUSE_RX_NAC)) {
+        uint32_t nac = ((nid[0U] << 4) + (nid[1U] >> 4)) & 0xFFFU;
+        cleanupArrays();
+        createRxTxNID(nac); // bryanb: I hate this and it'll be slow
+    }
 
     uint32_t errs = P25Utils::compare(nid, m_rxTx[P25_DUID_LDU1], P25_NID_LENGTH_BYTES);
     if (errs < MAX_NID_ERRS) {
@@ -136,7 +134,7 @@ bool NID::decode(const uint8_t* data)
 /// </summary>
 /// <param name="data"></param>
 /// <param name="duid"></param>
-void NID::encode(uint8_t* data, uint8_t duid) const
+void NID::encode(uint8_t* data, uint8_t duid)
 {
     assert(data != nullptr);
 
@@ -156,6 +154,12 @@ void NID::encode(uint8_t* data, uint8_t duid) const
         }
     }
     else {
+        // handle digital "squelch" NAC
+        if (m_nac == P25_NAC_DIGITAL_SQ) {
+            cleanupArrays();
+            createRxTxNID(P25_DEFAULT_NAC);
+        }
+
         switch (duid) {
             case P25_DUID_HDU:
             case P25_DUID_TDU:
@@ -189,6 +193,23 @@ void NID::setTxNAC(uint32_t nac)
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/// <summary>
+///
+/// </summary>
+void NID::cleanupArrays()
+{
+    for (uint8_t i = 0; i < 16U; i++)
+    {
+        if (m_rxTx[i] != nullptr) {
+            delete[] m_rxTx[i];
+        }
+
+        if (m_tx[i] != nullptr) {
+            delete[] m_tx[i];
+        }
+    }
+}
 
 /// <summary>
 ///

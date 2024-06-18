@@ -9,99 +9,77 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2022 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2022,2024 Bryan Biedenkapp, N2PLL
 *   Copyright (c) 2024 Patrick McDonnell, W3AXL
+*   Copyright (c) 2024 Caleb, KO4UYJ
 *
 */
-#include "lookups/RadioIdLookup.h"
-#include "p25/P25Defines.h"
+#include "PeerListLookup.h"
 #include "Log.h"
 
 using namespace lookups;
 
-#include <cstdlib>
-#include <string>
-#include <vector>
 #include <fstream>
+#include <algorithm>
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
-std::mutex RadioIdLookup::m_mutex;
+std::mutex PeerListLookup::m_mutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a new instance of the RadioIdLookup class.
+/// Initializes a new instance of the PeerListLookup class.
 /// </summary>
-/// <param name="filename">Full-path to the radio ID table file.</param>
-/// <param name="reloadTime">Interval of time to reload the radio ID table.</param>
-/// <param name="ridAcl">Flag indicating whether radio ID access control is enabled.</param>
-RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
-    m_acl(ridAcl)
+/// <param name="filename">Full-path to the list file.</param>
+/// <param name="mode">Mode to operate in (WHITELIST or BLACKLIST).</param>
+/// <param name="peerAcl">Flag indicating if the lookup is enabled.</param>
+PeerListLookup::PeerListLookup(const std::string& filename, Mode mode, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
+    m_acl(peerAcl), m_mode(mode)
 {
     /* stub */
 }
 
 /// <summary>
-/// Clears all entries from the lookup table.
+/// Clears all entries from the list.
 /// </summary>
-void RadioIdLookup::clear()
+void PeerListLookup::clear()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_table.clear();
 }
 
 /// <summary>
-/// Toggles the specified radio ID enabled or disabled.
+/// Adds a new entry to the list.
 /// </summary>
-/// <param name="id">Unique ID to toggle.</param>
-/// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
-void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
+/// <param name="peerId">Unique peer ID to add.</param>
+/// <param name="password"></param>
+void PeerListLookup::addEntry(uint32_t id, const std::string& password)
 {
-    RadioId rid = find(id);
-    addEntry(id, enabled, rid.radioAlias());
-}
-
-/// <summary>
-/// Adds a new entry to the lookup table by the specified unique ID.
-/// </summary>
-/// <param name="id">Unique ID to add.</param>
-/// <param name="enabled">Flag indicating if radio ID is enabled or not.</param>
-/// <param name="alias">Alias for the radio ID</param>
-void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias)
-{
-    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
-        return;
-    }
-
-    RadioId entry = RadioId(enabled, false, alias);
+    PeerId entry = PeerId(id, password, false);
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
-        RadioId _entry = m_table.at(id);
+        PeerId _entry = m_table.at(id);
         // if either the alias or the enabled flag doesn't match, update the entry
-        if (_entry.radioEnabled() != enabled || _entry.radioAlias() != alias) {
-            //LogDebug(LOG_HOST, "Updating existing RID %d (%s) in ACL", id, alias.c_str());
-            _entry = RadioId(enabled, false, alias);
+        if (_entry.peerId() == id) {
+            _entry = PeerId(id, password, false);
             m_table[id] = _entry;
-        } else {
-            //LogDebug(LOG_HOST, "No changes made to RID %d (%s) in ACL", id, alias.c_str());
         }
     } catch (...) {
-        //LogDebug(LOG_HOST, "Adding new RID %d (%s) to ACL", id, alias.c_str());
         m_table[id] = entry;
     }
 }
 
 /// <summary>
-/// Erases an existing entry from the lookup table by the specified unique ID.
+/// Removes an existing entry from the list.
 /// </summary>
-/// <param name="id">Unique ID to erase.</param>
-void RadioIdLookup::eraseEntry(uint32_t id)
+/// <param name="peerId">Unique peer ID to remove.</param>
+void PeerListLookup::eraseEntry(uint32_t id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
@@ -117,39 +95,89 @@ void RadioIdLookup::eraseEntry(uint32_t id)
 /// </summary>
 /// <param name="id">Unique identifier for table entry.</param>
 /// <returns>Table entry.</returns>
-RadioId RadioIdLookup::find(uint32_t id)
+PeerId PeerListLookup::find(uint32_t id)
 {
-    RadioId entry;
-
-    if ((id == p25::P25_WUID_ALL) || (id == p25::P25_WUID_FNE)) {
-        return RadioId(true, false);
-    }
+    PeerId entry;
 
     std::lock_guard<std::mutex> lock(m_mutex);
     try {
         entry = m_table.at(id);
     } catch (...) {
-        entry = RadioId(false, true);
+        entry = PeerId(0U, "", true);
     }
 
     return entry;
 }
 
 /// <summary>
-/// Saves loaded talkgroup rules.
+/// Commit the table.
 /// </summary>
-void RadioIdLookup::commit()
+/// <param name="mode">The mode to set.</param>
+void PeerListLookup::commit()
 {
     save();
 }
 
 /// <summary>
-/// Flag indicating whether radio ID access control is enabled or not.
+/// Gets whether the lookup is enabled.
 /// </summary>
-/// <returns>True, if radio ID access control is enabled, otherwise false.</returns>
-bool RadioIdLookup::getACL()
+bool PeerListLookup::getACL() const
 {
     return m_acl;
+}
+
+/// <summary>
+/// Checks if a peer ID is in the list.
+/// </summary>
+/// <param name="id">Unique peer ID to check.</param>
+/// <returns>True if the peer ID is in the list, otherwise false.</returns>
+bool PeerListLookup::isPeerInList(uint32_t id) const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_table.find(id) != m_table.end()) {
+        return true;
+    }
+
+    return false;
+}
+
+/// <summary>
+/// Checks if a peer ID is allowed based on the mode and enabled flag.
+/// </summary>
+/// <param name="id">Unique peer ID to check.</param>
+/// <returns>True if the peer ID is allowed, otherwise false.</returns>
+bool PeerListLookup::isPeerAllowed(uint32_t id) const
+{
+    if (!m_acl) {
+        return true; // if not enabled, allow all peers
+    }
+
+    bool allowed = false;
+    if (m_mode == WHITELIST) {
+        allowed = isPeerInList(id);
+    } else if (m_mode == BLACKLIST) {
+        allowed = !isPeerInList(id);
+    }
+
+    return allowed;
+}
+
+/// <summary>
+/// Sets the mode to either WHITELIST or BLACKLIST.
+/// </summary>
+/// <param name="mode">The mode to set.</param>
+void PeerListLookup::setMode(Mode mode)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_mode = mode;
+}
+
+/// <summary>
+/// Gets the current mode.
+/// </summary>
+PeerListLookup::Mode PeerListLookup::getMode() const 
+{
+    return m_mode;
 }
 
 // ---------------------------------------------------------------------------
@@ -160,21 +188,19 @@ bool RadioIdLookup::getACL()
 /// Loads the table from the passed lookup table file.
 /// </summary>
 /// <returns>True, if lookup table was loaded, otherwise false.</returns>
-bool RadioIdLookup::load()
+bool PeerListLookup::load()
 {
     if (m_filename.empty()) {
         return false;
     }
 
-    std::ifstream file (m_filename, std::ifstream::in);
+    std::ifstream file(m_filename, std::ifstream::in);
     if (file.fail()) {
-        LogError(LOG_HOST, "Cannot open the radio ID lookup file - %s", m_filename.c_str());
+        LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
 
-    // clear table
-    clear();
-
+    m_table.clear();
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // read lines from file
@@ -205,15 +231,14 @@ bool RadioIdLookup::load()
 
             // parse tokenized line
             uint32_t id = ::atoi(parsed[0].c_str());
-            bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
 
             // Check for an optional alias field
-            if (parsed.size() >= 3) {
-                m_table[id] = RadioId(radioEnabled, false, parsed[2]);
-                LogDebug(LOG_HOST, "Loaded RID %u (%s) into RID lookup table", id, parsed[2].c_str());
+            if (parsed.size() >= 2) {
+                m_table[id] = PeerId(id, parsed[1], false);
+                LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using unique peer password", id);
             } else {
-                m_table[id] = RadioId(radioEnabled, false);
-                LogDebug(LOG_HOST, "Loaded RID %u into RID lookup table", id);
+                m_table[id] = PeerId(id, "", false);
+                LogDebug(LOG_HOST, "Loaded peer ID %u into peer ID lookup table, using master password", id);
             }
         }
     }
@@ -224,8 +249,7 @@ bool RadioIdLookup::load()
     if (size == 0U)
         return false;
 
-    LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
-
+    LogInfoEx(LOG_HOST, "Loaded %lu peers into list", size);
     return true;
 }
 
@@ -233,17 +257,17 @@ bool RadioIdLookup::load()
 /// Saves the table to the passed lookup table file.
 /// </summary>
 /// <returns>True, if lookup table was saved, otherwise false.</returns>
-bool RadioIdLookup::save()
+bool PeerListLookup::save()
 {
-    LogDebug(LOG_HOST, "Saving RID lookup file to %s", m_filename.c_str());
+    LogDebug(LOG_HOST, "Saving peer lookup file to %s", m_filename.c_str());
 
     if (m_filename.empty()) {
         return false;
     }
 
-    std::ofstream file (m_filename, std::ofstream::out);
+    std::ofstream file(m_filename, std::ofstream::out);
     if (file.fail()) {
-        LogError(LOG_HOST, "Cannot open the radio ID lookup file - %s", m_filename.c_str());
+        LogError(LOG_HOST, "Cannot open the peer ID lookup file - %s", m_filename.c_str());
         return false;
     }
 
@@ -257,14 +281,13 @@ bool RadioIdLookup::save()
     // iterate over each entry in the RID lookup and write it to the open file
     for (auto& entry: m_table) {
         // Get the parameters
-        uint32_t rid = entry.first;
-        bool enabled = entry.second.radioEnabled();
-        std::string alias = entry.second.radioAlias();
+        uint32_t peerId = entry.first;
+        std::string password = entry.second.peerPassword();
         // Format into a string
-        line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
+        line = std::to_string(peerId) + ",";
         // Add the alias if we have one
-        if (alias.length() > 0) {
-            line += alias;
+        if (password.length() > 0) {
+            line += password;
             line += ",";
         }
         // Add the newline

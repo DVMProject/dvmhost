@@ -24,6 +24,8 @@ log:
     fileLevel: 1
     # Full path for the directory to store the log files.
     filePath: .
+    # Flag indicating file logs should be sent to syslog instead of a file.
+    useSyslog: false
     # Full path for the directory to store the activity log files.
     activityFilePath: .
     # Log filename prefix.
@@ -70,6 +72,11 @@ master:
     parrotDelay: 2000
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
     parrotGrantDemand: true
+    # Flag indicating whether or not a parrot TG call will only be sent to the originating peer.
+    parrotOnlyToOrginiatingPeer: false
+
+    # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
+    restrictGrantToAffiliatedOnly: false
 
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false
@@ -77,6 +84,14 @@ master:
     disallowExtAdjStsBcast: true
     # Flag indicating whether or not a conventional site can override affiliation rules.
     allowConvSiteAffOverride: true
+
+    # Flag indicating that traffic headers will be filtered by destination ID (i.e. valid RID or valid TGID).
+    filterHeaders: true
+    # Flag indicating that terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
+    filterTerminators: true
+
+    # List of peers that unit to unit calls are dropped for.
+    dropUnitToUnit: []
 
     # Flag indicating whether or not InfluxDB logging and metrics recording is enabled.
     enableInflux: false
@@ -109,10 +124,6 @@ peers:
     - name: EXAMPLEPEER
       # Flag indicating whether or not the peer is enabled.
       enabled: true
-      # Hostname/IP address to listen on (blank for all).
-      address: 127.0.0.1
-      # Port number to listen on.
-      port: 32091
       # Hostname/IP address of the FNE master to connect to.
       masterAddress: 127.0.0.1
       # Port number of the FNE master to connect to.
@@ -166,7 +177,7 @@ system:
     # Flag indicating the FNE should use an alternate port dedicated to diagnostic and activity
     # log processing. This port number is always: master port + 1 (so for example, a master port
     # of 62031 will use 62032 for diagnostic and activity messages.)
-    useAlternatePortForDiagnostics: false
+    useAlternatePortForDiagnostics: true
     # Flag indicating whether or not the host activity log will be sent to the network.
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
@@ -193,7 +204,20 @@ system:
     # Radio ID ACL Configuration
     #
     radio_id:
-        # Full path to the identity table file.
+        # Full path to the Radio ID ACL file.
         file: rid_acl.dat
-        # Amount of time between updates of identity table file. (minutes)
+        # Amount of time between updates of Radio ID ACL file. (minutes)
+        time: 2
+
+    #
+    # Peer whitelist and blacklist configuration
+    #
+    peer_acl:
+        # Flag indicating whether or not the peer ACLs are enabled.
+        enabled: false
+        # Peer ACL mode: whitelist or blacklist
+        mode: whitelist
+        # Full path to the white/blacklist file.
+        file: peer_list.dat
+        # Amount of time between updates of white/blacklist file. (minutes)
         time: 2

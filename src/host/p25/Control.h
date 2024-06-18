@@ -23,6 +23,7 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/p25/SiteData.h"
 #include "common/RingBuffer.h"
+#include "common/StopWatch.h"
 #include "common/Timer.h"
 #include "common/yaml/Yaml.h"
 #include "p25/packet/Data.h"
@@ -89,8 +90,10 @@ namespace p25
         /// <summary>Helper to write end of voice call frame data.</summary>
         bool writeRF_VoiceEnd();
 
-        /// <summary>Updates the processor by the passed number of milliseconds.</summary>
-        void clock(uint32_t ms);
+        /// <summary>Updates the processor.</summary>
+        void clock();
+        /// <summary>Updates the adj. site tables and affiliations.</summary>
+        void clockSiteData(uint32_t ms);
 
         /// <summary>Sets a flag indicating whether P25 has supervisory functions and can send permit TG to voice channels.</summary>
         void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
@@ -194,6 +197,8 @@ namespace p25
         Timer m_adjSiteUpdate;
 
         Timer m_ccPacketInterval;
+
+        StopWatch m_interval;
 
         uint32_t m_hangCount;
         uint32_t m_tduPreambleCount;

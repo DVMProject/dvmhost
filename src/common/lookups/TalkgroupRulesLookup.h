@@ -143,6 +143,7 @@ namespace lookups
             m_inclusion(),
             m_exclusion(),
             m_rewrite(),
+            m_alwaysSend(),
             m_preferred(),
             m_nonPreferred(false)
         {
@@ -181,6 +182,14 @@ namespace lookups
                 }
             }
 
+            yaml::Node& alwaysSendList = node["always"];
+            if (alwaysSendList.size() > 0U) {
+                for (size_t i = 0; i < alwaysSendList.size(); i++) {
+                    uint32_t peerId = alwaysSendList[i].as<uint32_t>(0U);
+                    m_alwaysSend.push_back(peerId);
+                }
+            }
+
             yaml::Node& preferredList = node["preferred"];
             if (preferredList.size() > 0U) {
                 for (size_t i = 0; i < preferredList.size(); i++) {
@@ -200,6 +209,7 @@ namespace lookups
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
                 m_rewrite = data.m_rewrite;
+                m_alwaysSend = data.m_alwaysSend;
                 m_preferred = data.m_preferred;
                 m_nonPreferred = data.m_nonPreferred;
             }
@@ -213,6 +223,8 @@ namespace lookups
         uint8_t exclusionSize() const { return m_exclusion.size(); }
         /// <summary>Gets the count of rewrites.</summary>
         uint8_t rewriteSize() const { return m_rewrite.size(); }
+        /// <summary>Gets the count of always send.</summary>
+        uint8_t alwaysSendSize() const { return m_alwaysSend.size(); }
         /// <summary>Gets the count of rewrites.</summary>
         uint8_t preferredSize() const { return m_preferred.size(); }
 
@@ -252,6 +264,15 @@ namespace lookups
             }
             node["rewrite"] = rewriteList;
 
+            yaml::Node alwaysSendList;
+            if (m_alwaysSend.size() > 0U) {
+                for (auto alw : m_alwaysSend) {
+                    yaml::Node& newAlw = alwaysSendList.push_back();
+                    newAlw = __INT_STR(alw);
+                }
+            }
+            node["always"] = alwaysSendList;
+
             yaml::Node preferredList;
             if (m_preferred.size() > 0U) {
                 for (auto pref : m_preferred) {
@@ -275,6 +296,8 @@ namespace lookups
         __PROPERTY_PLAIN(std::vector<uint32_t>, exclusion);
         /// <summary>List of rewrites performed by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<TalkgroupRuleRewrite>, rewrite);
+        /// <summary>List of always send performed by this rule.</summary>
+        __PROPERTY_PLAIN(std::vector<uint32_t>, alwaysSend);
         /// <summary>List of peer IDs preferred by this rule.</summary>
         __PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
 
@@ -372,6 +395,9 @@ namespace lookups
         /// <summary>Reads the lookup table from the specified lookup table file.</summary>
         /// <returns>True, if lookup table was read, otherwise false.</returns>
         bool read();
+        /// <summary>Reads the lookup table from the specified lookup table file.</summary>
+        /// <returns>True, if lookup table was read, otherwise false.</returns>
+        bool reload() { return load(); }
         /// <summary>Clears all entries from the lookup table.</summary>
         void clear();
 

@@ -23,6 +23,7 @@
 #include "common/p25/Audio.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/network/FrameQueue.h"
+#include "common/network/json/json.h"
 #include "common/network/udp/Socket.h"
 #include "common/RingBuffer.h"
 #include "common/Utils.h"
@@ -53,6 +54,7 @@
 #define TAG_TRANSFER            "TRNS"
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
+#define TAG_TRANSFER_STATUS     "TRNSSTS"
 
 #define TAG_ANNOUNCE            "ANNC"
 
@@ -103,6 +105,7 @@ namespace network
     const uint8_t   NET_FUNC_TRANSFER = 0x90U;                                  // Network Transfer Function
     const uint8_t   NET_TRANSFER_SUBFUNC_ACTIVITY = 0x01U;                      // Activity Log Transfer
     const uint8_t   NET_TRANSFER_SUBFUNC_DIAG = 0x02U;                          // Diagnostic Log Transfer
+    const uint8_t   NET_TRANSFER_SUBFUNC_STATUS = 0x03U;                        // Status Transfer
 
     const uint8_t   NET_FUNC_ANNOUNCE = 0x91U;                                  // Network Announce Function
     const uint8_t   NET_ANNC_SUBFUNC_GRP_AFFIL = 0x00U;                         // Announce Group Affiliation
@@ -145,6 +148,8 @@ namespace network
         NET_CONN_NAK_FNE_UNAUTHORIZED,
         NET_CONN_NAK_BAD_CONN_STATE,
         NET_CONN_NAK_INVALID_CONFIG_DATA,
+        NET_CONN_NAK_PEER_RESET,
+        NET_CONN_NAK_PEER_ACL,
 
         NET_CONN_NAK_FNE_MAX_CONN,
 
@@ -175,6 +180,9 @@ namespace network
 
         /// <summary>Writes the local diagnostic logs to the network.</summary>
         virtual bool writeDiagLog(const char* message);
+
+        /// <summary>Writes the local status to the network.</summary>
+        virtual bool writePeerStatus(json::object obj);
 
         /// <summary>Writes a group affiliation to the network.</summary>
         virtual bool announceGroupAffiliation(uint32_t srcId, uint32_t dstId);

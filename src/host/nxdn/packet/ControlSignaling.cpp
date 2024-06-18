@@ -163,6 +163,7 @@ bool ControlSignaling::process(uint8_t fct, uint8_t option, uint8_t* data, uint3
 
     uint16_t srcId = rcch->getSrcId();
     uint16_t dstId = rcch->getDstId();
+    m_nxdn->m_affiliations.touchUnitReg(srcId);
 
     switch (rcch->getMessageType()) {
         case RTCH_MESSAGE_TYPE_VCALL:
@@ -289,18 +290,6 @@ bool ControlSignaling::processNetwork(uint8_t fct, uint8_t option, lc::RTCH& net
     }
 
     return true;
-}
-
-/// <summary>
-/// Updates the processor by the passed number of milliseconds.
-/// </summary>
-/// <param name="ms"></param>
-void ControlSignaling::clock(uint32_t ms)
-{
-    if (m_nxdn->m_enableControl) {
-        // clock all the grant timers
-        m_nxdn->m_affiliations.clock(ms);
-    }
 }
 
 // ---------------------------------------------------------------------------

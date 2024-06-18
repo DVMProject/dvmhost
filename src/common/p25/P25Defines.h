@@ -159,20 +159,31 @@ namespace p25
 
     const uint32_t  P25_DENY_RSN_REQ_UNIT_NOT_VALID = 0x10U;
     const uint32_t  P25_DENY_RSN_REQ_UNIT_NOT_AUTH = 0x11U;
+
     const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_VALID = 0x20U;
     const uint32_t  P25_DENY_RSN_TGT_UNIT_NOT_AUTH = 0x21U;
     const uint32_t  P25_DENY_RSN_SU_FAILED_AUTH = 0x22U;
     const uint32_t  P25_DENY_RSN_TGT_UNIT_REFUSED = 0x2FU;
+
     const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_VALID = 0x30U;
     const uint32_t  P25_DENY_RSN_TGT_GROUP_NOT_AUTH = 0x31U;
+
+    const uint32_t  P25_DENY_RSN_NO_NET_RSRC_AVAIL = 0x53U;
+    const uint32_t  P25_DENY_RSN_NO_RF_RSRC_AVAIL = 0x54U;
+    const uint32_t  P25_DENY_RSN_SVC_IN_USE = 0x55U;
+
     const uint32_t  P25_DENY_RSN_SITE_ACCESS_DENIAL = 0x60U;
+
     const uint32_t  P25_DENY_RSN_PTT_COLLIDE = 0x67U;
     const uint32_t  P25_DENY_RSN_PTT_BONK = 0x77U;
+
     const uint32_t  P25_DENY_RSN_SYS_UNSUPPORTED_SVC = 0xFFU;
 
     const uint32_t  P25_QUE_RSN_REQ_ACTIVE_SERVICE = 0x10U;
     const uint32_t  P25_QUE_RSN_TGT_ACTIVE_SERVICE = 0x20U;
+
     const uint32_t  P25_QUE_RSN_TGT_UNIT_QUEUED = 0x2FU;
+
     const uint32_t  P25_QUE_RSN_CHN_RESOURCE_NOT_AVAIL = 0x40U;
 
     const uint32_t  P25_EXT_FNCT_CHECK = 0x0000U;           // Radio Check
@@ -185,6 +196,10 @@ namespace p25
     const uint32_t  P25_WACN_STD_DEFAULT = 0xBB800U;
 
     const uint32_t  P25_SID_STD_DEFAULT = 0x001U;
+
+    const uint32_t  P25_NAC_DIGITAL_SQ = 0xF7EU;
+    const uint32_t  P25_NAC_REUSE_RX_NAC = 0xF7FU;
+    const uint32_t  P25_DEFAULT_NAC = 0x293U;
 
     const uint32_t  P25_WUID_FNE = 0xFFFFFCU;
     const uint32_t  P25_WUID_REG = 0xFFFFFEU;

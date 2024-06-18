@@ -23,6 +23,8 @@ log:
     displayLevel: 1
     # File logging level.
     fileLevel: 1
+    # Flag indicating file logs should be sent to syslog instead of a file.
+    useSyslog: false
     # Full path for the directory to store the log files.
     filePath: .
     # Full path for the directory to store the activity log files.
@@ -69,6 +71,8 @@ network:
     allowActivityTransfer: true
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
+    # Flag indicating whether or not the host status will be sent to the network.
+    allowStatusTransfer: true
 
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
@@ -137,6 +141,8 @@ protocols:
         dumpCsbkData: false
         # Flag indicating unit registration will be verified after some operations.
         verifyReg: false
+        # Flag indicating automated 12-hour idle unit registration timeout is disabled.
+        disableUnitRegTimeout: false
         # Specifies the random wait delay for a subscriber.
         # (This should not be altered.)
         nRandWait: 8
@@ -218,6 +224,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle unit registration timeout is disabled.
+        disableUnitRegTimeout: false
         # Flag indicating the host requires LLA verification before allowing unit registration.
         requireLLAForReg: false
         # Flag indicating whether verbose dumping of P25 data packets is enabled.
@@ -277,6 +285,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle unit registration timeout is disabled.
+        disableUnitRegTimeout: false
         # Flag indicating whether verbose dumping of NXDN RCCH data is enabled.
         dumpRcchData: false
         # Amount of time to hang after a voice call.

@@ -54,6 +54,7 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
+class HOST_SW_API Host;
 class HOST_SW_API HostCal;
 class HOST_SW_API RESTAPI;
 
@@ -311,6 +312,9 @@ namespace modem
         /// <summary>Flag indicating whether or not the air interface modem is currently in an error condition.</summary>
         bool hasError() const;
 
+        /// <summary>Flag indicating whether or not the air interface modem has sent the initial modem status.</summary>
+        bool gotModemStatus() const;
+
         /// <summary>Clears any buffered DMR Slot 1 frame data to be sent to the air interface modem.</summary>
         void clearDMRFrame1();
         /// <summary>Clears any buffered DMR Slot 2 frame data to be sent to the air interface modem.</summary>
@@ -362,6 +366,7 @@ namespace modem
         uint8_t getVersion() const;
 
     private:
+        friend class ::Host;
         friend class ::HostCal;
         friend class ::RESTAPI;
 
@@ -488,6 +493,8 @@ namespace modem
 
         bool m_ignoreModemConfigArea;
         bool m_flashDisabled;
+
+        bool m_gotModemStatus;
 
         bool m_dumpModemStatus;
 

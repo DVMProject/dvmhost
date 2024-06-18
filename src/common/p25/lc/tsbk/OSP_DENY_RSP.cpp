@@ -77,21 +77,23 @@ void OSP_DENY_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
         return; // blatantly ignore creating this TSBK
     }
 
-    tsbkValue = (m_aivFlag) ? 0x80U : 0x00U;                                        // Additional Info Flag
-    tsbkValue = (tsbkValue << 6) + m_service;                                       // Service Type
+    tsbkValue = (m_service & 0x3FU);                                                // Service Type
+    tsbkValue |= (m_aivFlag) ? 0x80U : 0x00U;                                       // Additional Info. Valid Flag
     tsbkValue = (tsbkValue << 8) + m_response;                                      // Deny/Queue Reason
-
-    if (m_group) {
-        // group deny/queue
-        tsbkValue = (tsbkValue << 8) + 0U;                                          // Call Options
-        tsbkValue = (tsbkValue << 16) + m_dstId;                                    // Talkgroup Address
-        tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
+    if (m_aivFlag) {
+        if (m_group) {
+            // group deny/queue
+            tsbkValue = (tsbkValue << 8) + 0U;                                      // Call Options
+            tsbkValue = (tsbkValue << 16) + m_dstId;                                // Talkgroup Address
+        }
+        else {
+            // private/individual deny/queue
+            tsbkValue = (tsbkValue << 24) + m_dstId;                                // Target Radio Address
+        }
+    } else {
+        tsbkValue = (tsbkValue << 24) + 0U;
     }
-    else {
-        // private/individual deny/queue
-        tsbkValue = (tsbkValue << 24) + m_dstId;                                    // Target Radio Address
-        tsbkValue = (tsbkValue << 24) + m_srcId;                                    // Source Radio Address
-    }
+    tsbkValue = (tsbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
     TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);

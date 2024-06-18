@@ -18,16 +18,22 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagP25Data.h"
+#include "network/callhandler/TagP25Data.h"
 #include "HostFNE.h"
 
 using namespace system_clock;
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 using namespace p25;
 
 #include <cassert>
 #include <chrono>
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -218,7 +224,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     RxStatus status = m_status[dstId];
                     if (streamId != status.streamId && ((duid != P25_DUID_TDU) && (duid != P25_DUID_TDULC))) {
                         if (status.srcId != 0U && status.srcId != srcId) {
-                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                            LogWarning(LOG_NET, "P25, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, external = %u",
+                                peerId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, external);
                             return false;
                         }
                     }
@@ -230,8 +237,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_parrotFramesReady = false;
                         if (m_parrotFrames.size() > 0) {
                             for (auto& pkt : m_parrotFrames) {
-                                if (std::get<0>(pkt) != nullptr) {
-                                    delete std::get<0>(pkt);
+                                if (pkt.buffer != nullptr) {
+                                    delete pkt.buffer;
                                 }
                             }
                             m_parrotFrames.clear();
@@ -244,6 +251,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     status.srcId = srcId;
                     status.dstId = dstId;
                     status.streamId = streamId;
+                    status.peerId = peerId;
                     m_status[dstId] = status;
 
                     LogMessage(LOG_NET, "P25, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
@@ -258,11 +266,23 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t *copy = new uint8_t[len];
             ::memcpy(copy, buffer, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId, srcId, dstId));
+
+            ParrotFrame parrotFrame = ParrotFrame();
+            parrotFrame.buffer = copy;
+            parrotFrame.bufferLen = len;
+
+            parrotFrame.pktSeq = pktSeq;
+            parrotFrame.streamId = streamId;
+            parrotFrame.peerId = peerId;
+
+            parrotFrame.srcId = srcId;
+            parrotFrame.dstId = dstId;
+
+            m_parrotFrames.push_back(parrotFrame);
         }
 
         // process TSDU from peer
-        if (!processTSDU(buffer, peerId, duid)) {
+        if (!processTSDUFrom(buffer, peerId, duid)) {
             return false;
         }
 
@@ -273,6 +293,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 if (peerId != peer.first) {
                     // is this peer ignored?
                     if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                        continue;
+                    }
+
+                    // process TSDU to peer
+                    if (!processTSDUTo(buffer, peer.first, duid)) {
                         continue;
                     }
 
@@ -320,6 +345,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
+                    // skip peer if it isn't enabled
+                    if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
                     uint8_t outboundPeerBuffer[len];
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
@@ -360,8 +390,40 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 /// <returns></returns>
 bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
-    // bryanb: TODO TODO TODO
-    return false;
+    // if we have an Rx status for the destination deny the grant
+    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+        return false;
+    }
+
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(srcId);
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+
+    // check TGID validity
+    if (tg.isInvalid()) {
+        return false;
+    }
+
+    if (!tg.config().active()) {
+        return false;
+    }
+
+    // repeat traffic to the connected peers
+    if (m_network->m_peers.size() > 0U) {
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
+                write_TSDU_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+            }
+        }
+    }
+
+    return true;
 }
 
 /// <summary>
@@ -376,11 +438,11 @@ void TagP25Data::playbackParrot()
     }
 
     auto& pkt = m_parrotFrames[0];
-    if (std::get<0>(pkt) != nullptr) {
+    if (pkt.buffer != nullptr) {
         if (m_parrotFirstFrame) {
             if (m_network->m_parrotGrantDemand) {
-                uint32_t srcId = std::get<4>(pkt);
-                uint32_t dstId = std::get<5>(pkt);
+                uint32_t srcId = pkt.srcId;
+                uint32_t dstId = pkt.dstId;
 
                 // create control data
                 lc::LC control = lc::LC();
@@ -407,16 +469,24 @@ void TagP25Data::playbackParrot()
             m_parrotFirstFrame = false;
         }
 
-        // repeat traffic to the connected peers
-        for (auto peer : m_network->m_peers) {
-            m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
+        if (m_network->m_parrotOnlyOriginating) {
+            m_network->writePeer(pkt.peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                    peer.first, std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt));
+                    pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+            }
+        } else {
+            // repeat traffic to the connected peers
+            for (auto peer : m_network->m_peers) {
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "P25, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                }
             }
         }
 
-        delete std::get<0>(pkt);
+        delete pkt.buffer;
     }
     Thread::sleep(180);
     m_parrotFrames.pop_front();
@@ -619,7 +689,7 @@ bool TagP25Data::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 /// <param name="buffer"></param>
 /// <param name="peerId">Peer ID</param>
 /// <param name="duid"></param>
-bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 {
     // are we receiving a TSDU?
     if (duid == P25_DUID_TSDU) {
@@ -654,6 +724,13 @@ bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
+            case TSBK_IOSP_UU_VCH:
+            case TSBK_IOSP_UU_ANS:
+                {
+                    if (m_network->checkU2UDroppedPeer(peerId))
+                        return false;
+                }
+                break;
             case TSBK_OSP_ADJ_STS_BCAST:
                 {
                     if (m_network->m_disallowAdjStsBcast) {
@@ -673,7 +750,79 @@ bool TagP25Data::processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", peerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%s), passing TSBK that failed to decode? tsbk == nullptr", peerId, peerIdentity.c_str());
+        }
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to process TSDUs being passed to a peer.
+/// </summary>
+/// <param name="buffer"></param>
+/// <param name="peerId">Peer ID</param>
+/// <param name="duid"></param>
+bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
+{
+    // are we receiving a TSDU?
+    if (duid == P25_DUID_TSDU) {
+        uint32_t frameLength = buffer[23U];
+
+        UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+        ::memset(data.get(), 0x00U, frameLength);
+        ::memcpy(data.get(), buffer + 24U, frameLength);
+
+        std::unique_ptr<lc::TSBK> tsbk = lc::tsbk::TSBKFactory::createTSBK(data.get());
+        if (tsbk != nullptr) {
+            uint32_t srcId = tsbk->getSrcId();
+            uint32_t dstId = tsbk->getDstId();
+
+            FNEPeerConnection* connection = nullptr;
+            if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
+                connection = m_network->m_peers[peerId];
+            }
+
+            // handle standard P25 reference opcodes
+            switch (tsbk->getLCO()) {
+            case TSBK_IOSP_GRP_VCH:
+                {
+                    if (m_network->m_restrictGrantToAffOnly) {
+                        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+                        if (tg.config().affiliated()) {
+                            uint32_t lookupPeerId = peerId;
+                            if (connection != nullptr) {
+                                if (connection->ccPeerId() > 0U)
+                                    lookupPeerId = connection->ccPeerId();
+                            }
+
+                            // check the affiliations for this peer to see if we can repeat the TSDU
+                            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
+                            if (aff == nullptr) {
+                                std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                                LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
+                                return false; // this will cause no TSDU to pass for this peer now...I'm not sure this is good behavior
+                            }
+                            else {
+                                if (!aff->hasGroupAff(dstId)) {
+                                    if (m_debug) {
+                                        std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                                        LogDebug(LOG_NET, "PEER %u (%s) can fuck off there's no affiliations.", lookupPeerId, peerIdentity.c_str()); // just so Faulty can see more "salty" log messages
+                                    }
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        } else {
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%s), passing TSBK that failed to decode? tsbk == nullptr", peerId, peerIdentity.c_str());
         }
     }
 
@@ -720,7 +869,8 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing TSBK that failed to decode? tsbk == nullptr", srcPeerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(srcPeerId);
+            LogWarning(LOG_NET, "PEER %u (%s), passing TSBK that failed to decode? tsbk == nullptr", srcPeerId, peerIdentity.c_str());
         }
     }
 
@@ -738,18 +888,76 @@ bool TagP25Data::processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint
 /// <returns></returns>
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid, uint32_t streamId, bool external)
 {
-    // private calls are always permitted
     if (control.getLCO() == LC_PRIVATE) {
-        return true;
+        if (!m_network->checkU2UDroppedPeer(peerId))
+            return true;
+        return false;
     }
 
     // always permit a TSDU or PDU
     if (duid == P25_DUID_TSDU || duid == P25_DUID_PDU)
         return true;
 
-    // always permit a terminator
-    if (duid == P25_DUID_TDU || duid == P25_DUID_TDULC)
+    if (duid == P25_DUID_HDU) {
+        if (m_network->m_filterHeaders) {
+            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+                // is this a group call?
+                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                // is this a U2U call?
+                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+                if (!rid.radioDefault() && rid.radioEnabled()) {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        // always permit a headers
         return true;
+    }
+
+    if (duid == P25_DUID_TDULC) {
+        // always permit a terminator
+        return true;
+    }
+
+    if (duid == P25_DUID_TDU) {
+        if (m_network->m_filterTerminators) {
+            if (control.getSrcId() != 0U && control.getDstId() != 0U) {
+                // is this a group call?
+                lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                tg = m_network->m_tidLookup->findByRewrite(peerId, control.getDstId());
+                if (!tg.isInvalid()) {
+                    return true;
+                }
+
+                // is this a U2U call?
+                lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
+                if (!rid.radioDefault() && rid.radioEnabled()) {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        // always permit a terminator
+        return true;
+    }
 
     // is this a group call?
     lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(control.getDstId());
@@ -770,6 +978,15 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
             if (it != exclusion.end()) {
                 return false;
             }
+        }
+    }
+
+    // peer always send list takes priority over any following affiliation rules
+    std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
+    if (alwaysSend.size() > 0) {
+        auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peerId);
+        if (it != alwaysSend.end()) {
+            return true; // skip any following checks and always send traffic
         }
     }
 
@@ -800,7 +1017,8 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
         // check the affiliations for this peer to see if we can repeat traffic
         lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
         if (aff == nullptr) {
-            LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+            LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
             return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
         }
         else {
@@ -814,7 +1032,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, uint8_t duid,
 }
 
 /// <summary>
-/// Helper to validate the DMR call stream.
+/// Helper to validate the P25 call stream.
 /// </summary>
 /// <param name="peerId">Peer ID</param>
 /// <param name="control"></param>
@@ -943,6 +1161,76 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
     return true;
 }
 
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="grp"></param>
+/// <returns></returns>
+bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
+{
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
+
+    if (dstId == P25_TGID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // check the affiliations for this peer to see if we can grant traffic
+    lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+    if (aff == nullptr) {
+        std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
+        return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
+    }
+    else {
+        if (!aff->hasGroupAff(dstId)) {
+            return false;
+        }
+    }
+
+    if (grp) {
+        std::unique_ptr<lc::tsbk::IOSP_GRP_VCH> iosp = std::make_unique<lc::tsbk::IOSP_GRP_VCH>();
+        iosp->setSrcId(srcId);
+        iosp->setDstId(dstId);
+        iosp->setGrpVchId(0U);
+        iosp->setGrpVchNo(0U);
+        iosp->setEmergency(emergency);
+        iosp->setEncrypted(encryption);
+        iosp->setPriority(priority);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+        }
+
+        write_TSDU(peerId, iosp.get());
+    }
+    else {
+        std::unique_ptr<lc::tsbk::IOSP_UU_VCH> iosp = std::make_unique<lc::tsbk::IOSP_UU_VCH>();
+        iosp->setSrcId(srcId);
+        iosp->setDstId(dstId);
+        iosp->setGrpVchId(0U);
+        iosp->setGrpVchNo(0U);
+        iosp->setEmergency(emergency);
+        iosp->setEncrypted(encryption);
+        iosp->setPriority(priority);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u, srcId = %u, dstId = %u, peerId = %u",
+                iosp->toString().c_str(), iosp->getEmergency(), iosp->getEncrypted(), iosp->getPriority(), iosp->getGrpVchNo(), iosp->getSrcId(), iosp->getDstId(), peerId);
+        }
+
+        write_TSDU(peerId, iosp.get());
+    }
+
+    return true;
+}
+
 /// <summary>
 /// Helper to write a deny packet.
 /// </summary>
@@ -950,8 +1238,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, uint8_t duid, const 
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
 /// <param name="service"></param>
+/// <param name="grp"></param>
 /// <param name="aiv"></param>
-void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv)
+void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_DENY_RSP> osp = std::make_unique<lc::tsbk::OSP_DENY_RSP>();
     osp->setAIV(aiv);
@@ -959,6 +1248,7 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
     osp->setDstId(dstId);
     osp->setService(service);
     osp->setResponse(reason);
+    osp->setGroup(grp);
 
     if (m_network->m_verbose) {
         LogMessage(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X, srcId = %u, dstId = %u",
@@ -975,9 +1265,9 @@ void TagP25Data::write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId
 /// <param name="dstId"></param>
 /// <param name="reason"></param>
 /// <param name="service"></param>
-/// <param name="aiv"></param>
 /// <param name="grp"></param>
-void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv, bool grp)
+/// <param name="aiv"></param>
+void TagP25Data::write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<lc::tsbk::OSP_QUE_RSP> osp = std::make_unique<lc::tsbk::OSP_QUE_RSP>();
     osp->setAIV(aiv);

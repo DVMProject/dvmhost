@@ -10,8 +10,8 @@
 *   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
-#if !defined(__FNE__TAG_P25_DATA_H__)
-#define __FNE__TAG_P25_DATA_H__
+#if !defined(__CALLHANDLER__TAG_P25_DATA_H__)
+#define __CALLHANDLER__TAG_P25_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
@@ -29,11 +29,11 @@
 
 namespace network
 {
-    namespace fne
+    namespace callhandler
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements the P25 data FNE networking logic.
+        //      Implements the P25 call handler and data FNE networking logic.
         // ---------------------------------------------------------------------------
 
         class HOST_SW_API TagP25Data {
@@ -67,7 +67,19 @@ namespace network
         private:
             FNENetwork* m_network;
 
-            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t, uint32_t, uint32_t, uint32_t>> m_parrotFrames;
+            class ParrotFrame {
+            public:
+                uint8_t* buffer;
+                uint32_t bufferLen;
+
+                uint16_t pktSeq;
+                uint32_t streamId;
+                uint32_t peerId;
+
+                uint32_t srcId;
+                uint32_t dstId;
+            };
+            std::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
             bool m_parrotFirstFrame;
 
@@ -77,6 +89,7 @@ namespace network
                 uint32_t srcId;
                 uint32_t dstId;
                 uint32_t streamId;
+                uint32_t peerId;
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
@@ -89,7 +102,9 @@ namespace network
             bool peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound = true);
 
             /// <summary>Helper to process TSDUs being passed from a peer.</summary>
-            bool processTSDU(uint8_t* buffer, uint32_t peerId, uint8_t duid);
+            bool processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid);
+            /// <summary>Helper to process TSDUs being passed to a peer.</summary>
+            bool processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid);
             /// <summary>Helper to process TSDUs being passed to an external peer.</summary>
             bool processTSDUToExternal(uint8_t* buffer, uint32_t srcPeerId, uint32_t dstPeerId, uint8_t duid);
 
@@ -98,15 +113,17 @@ namespace network
             /// <summary>Helper to validate the P25 call stream.</summary>
             bool validate(uint32_t peerId, p25::lc::LC& control, uint8_t duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
 
+            /// <summary>Helper to write a grant packet.</summary>
+            bool write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
             /// <summary>Helper to write a deny packet.</summary>
-            void write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false);
+            void write_TSDU_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool group = false, bool aiv = false);
             /// <summary>Helper to write a queue packet.</summary>
-            void write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool aiv = false, bool group = true);
+            void write_TSDU_Queue(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool group = false, bool aiv = false);
 
             /// <summary>Helper to write a network TSDU.</summary>
             void write_TSDU(uint32_t peerId, p25::lc::TSBK* tsbk);
         };
-    } // namespace fne
+    } // namespace callhandler
 } // namespace network
 
-#endif // __FNE__TAG_P25_DATA_H__
+#endif // __CALLHANDLER__TAG_P25_DATA_H__

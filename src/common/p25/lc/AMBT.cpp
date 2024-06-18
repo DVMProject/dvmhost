@@ -102,12 +102,12 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     assert(pduUserData != nullptr);
 
     if (dataHeader.getFormat() != PDU_FMT_AMBT) {
-        LogError(LOG_P25, "TSBK::decodeMBT(), PDU is not a AMBT PDU");
+        LogError(LOG_P25, "AMBT::decode(), PDU is not a AMBT PDU");
         return false;
     }
 
     if (dataHeader.getBlocksToFollow() == 0U) {
-        LogError(LOG_P25, "TSBK::decodeMBT(), PDU contains no data blocks");
+        LogError(LOG_P25, "AMBT::decode(), PDU contains no data blocks");
         return false;
     }
 
@@ -116,7 +116,7 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
 
     if (dataHeader.getOutbound()) {
-        LogWarning(LOG_P25, "TSBK::decodeMBT(), MBT is an outbound MBT?, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
+        LogWarning(LOG_P25, "AMBT::decode(), MBT is an outbound MBT?, mfId = $%02X, lco = $%02X", m_mfId, m_lco);
     }
 
     // get PDU block data
@@ -126,11 +126,16 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     for (uint8_t i = 0; i < dataHeader.getBlocksToFollow(); i++) {
         uint32_t len = blocks[i].getData(pduUserData + dataOffset);
         if (len != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
-            LogError(LOG_P25, "TSBK::decodeMBT(), failed to read PDU data block");
+            LogError(LOG_P25, "AMBT::decode(), failed to read PDU data block");
             return false;
         }
 
         dataOffset += P25_PDU_UNCONFIRMED_LENGTH_BYTES;
+    }
+
+    if (m_verbose) {
+        LogDebug(LOG_P25, "AMBT::decode(), mfId = $%02X, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
+        Utils::dump(2U, "AMBT::decode(), pduUserData", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     }
 
     return true;

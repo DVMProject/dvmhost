@@ -22,6 +22,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/json/json.h"
 #include "common/yaml/Yaml.h"
 #include "dmr/Control.h"
 #include "p25/Control.h"
@@ -91,6 +92,8 @@ private:
     uint32_t m_lastDstId;
     uint32_t m_lastSrcId;
 
+    bool m_allowStatusTransfer;
+
     std::string m_identity;
     std::string m_cwCallsign;
     uint32_t m_cwIdTime;
@@ -143,8 +146,25 @@ private:
     bool m_supervisor;
 
     Timer m_dmrBeaconDurationTimer;
+    Timer m_dmrDedicatedTxTestTimer;
     Timer m_p25BcastDurationTimer;
+    Timer m_p25DedicatedTxTestTimer;
     Timer m_nxdnBcastDurationTimer;
+    Timer m_nxdnDedicatedTxTestTimer;
+    
+    Timer m_dmrTx1WatchdogTimer;
+    uint32_t m_dmrTx1LoopMS;
+    Timer m_dmrTx2WatchdogTimer;
+    uint32_t m_dmrTx2LoopMS;
+    Timer m_p25TxWatchdogTimer;
+    uint32_t m_p25TxLoopMS;
+    Timer m_nxdnTxWatchdogTimer;
+    uint32_t m_nxdnTxLoopMS;
+    uint8_t m_mainLoopStage;
+    uint32_t m_mainLoopMS;
+    Timer m_mainLoopWatchdogTimer;
+    uint32_t m_adjSiteLoopMS;
+    Timer m_adjSiteLoopWatchdogTimer;
 
     uint8_t m_activeTickDelay;
     uint8_t m_idleTickDelay;
@@ -153,6 +173,9 @@ private:
     std::string m_restAddress;
     uint16_t m_restPort;
     RESTAPI *m_RESTAPI;
+
+    /// <summary>Helper to generate the status of the host in JSON format.</summary>
+    json::object getStatus();
 
     /// <summary>Modem port open callback.</summary>
     bool rmtPortModemOpen(modem::Modem* modem);

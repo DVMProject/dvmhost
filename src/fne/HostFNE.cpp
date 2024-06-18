@@ -16,9 +16,9 @@
 #include "common/StopWatch.h"
 #include "common/Thread.h"
 #include "common/ThreadFunc.h"
-#include "network/fne/TagDMRData.h"
-#include "network/fne/TagP25Data.h"
-#include "network/fne/TagNXDNData.h"
+#include "network/callhandler/TagDMRData.h"
+#include "network/callhandler/TagP25Data.h"
+#include "network/callhandler/TagNXDNData.h"
 #include "ActivityLog.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
@@ -57,6 +57,7 @@ HostFNE::HostFNE(const std::string& confFile) :
     m_nxdnEnabled(false),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_peerNetworks(),
     m_pingTime(5U),
     m_maxMissedPings(5U),
@@ -98,7 +99,7 @@ int HostFNE::run()
     // initialize system logging
     yaml::Node logConf = m_conf["log"];
     ret = ::LogInitialise(logConf["filePath"].as<std::string>(), logConf["fileRoot"].as<std::string>(),
-        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U));
+        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U), false, logConf["useSyslog"].as<bool>(false));
     if (!ret) {
         ::fatal("unable to open the log file\n");
     }
@@ -237,6 +238,11 @@ int HostFNE::run()
             if (peerNetwork != nullptr) {
                 peerNetwork->clock(ms);
 
+                // skip peer if it isn't enabled
+                if (!peerNetwork->isEnabled()) {
+                    continue;
+                }
+
                 // process peer network traffic
                 processPeer(peerNetwork);
             }
@@ -278,9 +284,15 @@ int HostFNE::run()
         m_tidLookup->stop();
         delete m_tidLookup;
     }
+
     if (m_ridLookup != nullptr) {
         m_ridLookup->stop();
         delete m_ridLookup;
+    }
+
+    if (m_peerListLookup != nullptr) {
+        m_peerListLookup->stop();
+        delete m_peerListLookup;
     }
 
     return EXIT_SUCCESS;
@@ -314,7 +326,7 @@ bool HostFNE::readParams()
         m_updateLookupTime = 10U;
     }
 
-    m_useAlternatePortForDiagnostics = systemConf["useAlternatePortForDiagnostics"].as<bool>(false);
+    m_useAlternatePortForDiagnostics = systemConf["useAlternatePortForDiagnostics"].as<bool>(true);
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
 
@@ -335,6 +347,18 @@ bool HostFNE::readParams()
     std::string talkgroupConfig = talkgroupRules["file"].as<std::string>();
     uint32_t talkgroupConfigReload = talkgroupRules["time"].as<uint32_t>(30U);
 
+    std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
+    bool peerListLookupEnable = systemConf["peer_acl"]["enabled"].as<bool>(false);
+    std::string peerListModeStr = systemConf["peer_acl"]["mode"].as<std::string>("whitelist");
+    uint32_t peerListConfigReload = systemConf["peer_acl"]["time"].as<uint32_t>(30U);
+
+    lookups::PeerListLookup::Mode peerListMode;
+    if (peerListModeStr == "blacklist") {
+        peerListMode = lookups::PeerListLookup::BLACKLIST;
+    } else {
+        peerListMode = lookups::PeerListLookup::WHITELIST;
+    }
+
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", talkgroupConfig.length() > 0U ? talkgroupConfig.c_str() : "None");
     if (talkgroupConfigReload > 0U)
@@ -343,6 +367,17 @@ bool HostFNE::readParams()
     m_tidLookup = new TalkgroupRulesLookup(talkgroupConfig, talkgroupConfigReload, true);
     m_tidLookup->sendTalkgroups(sendTalkgroups);
     m_tidLookup->read();
+
+    // try to load peer whitelist/blacklist
+    LogInfo("Peer List Lookups");
+    LogInfo("    Enabled: %s", peerListLookupEnable ? "yes" : "no");
+    LogInfo("    Mode: %s", peerListMode == lookups::PeerListLookup::BLACKLIST ? "blacklist" : "whitelist");
+    LogInfo("    File: %s", peerListLookupFile.length() > 0U ? peerListLookupFile.c_str() : "None");
+    if (peerListConfigReload > 0U)
+        LogInfo("    Reload: %u mins", peerListConfigReload);
+
+    m_peerListLookup = new PeerListLookup(peerListLookupFile, peerListMode, peerListConfigReload, peerListLookupEnable);
+    m_peerListLookup->read();
 
     return true;
 }
@@ -409,7 +444,7 @@ bool HostFNE::initializeRESTAPI()
     // initialize network remote command
     if (restApiEnable) {
         m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
-        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
+        m_RESTAPI->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {
             delete m_RESTAPI;
@@ -516,7 +551,7 @@ bool HostFNE::createMasterNetwork()
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer, m_pingTime, m_updateLookupTime);
     m_network->setOptions(masterConf, true);
 
-    m_network->setLookups(m_ridLookup, m_tidLookup);
+    m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup);
 
     if (m_RESTAPI != nullptr) {
         m_RESTAPI->setNetwork(m_network);
@@ -628,6 +663,7 @@ bool HostFNE::createPeerNetworks()
             /*
             ** Block Traffic To Peers
             */
+
             yaml::Node& blockTrafficTo = peerConf["blockTrafficTo"];
             if (blockTrafficTo.size() > 0U) {
                 for (size_t i = 0; i < blockTrafficTo.size(); i++) {

@@ -295,7 +295,7 @@ bool Socket::write(const uint8_t* buffer, uint32_t length, const sockaddr_storag
             *lenWritten = -1;
         }
 
-        LogError(LOG_NET, "tried to write datagram with no file descriptor? this shouldn't happen BUGBUG");
+        //LogError(LOG_NET, "tried to write datagram with no file descriptor? this shouldn't happen BUGBUG");
         return false;
     }
 

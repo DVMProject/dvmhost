@@ -10,8 +10,8 @@
 *   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
-#if !defined(__FNE__TAG_NXDN_DATA_H__)
-#define __FNE__TAG_NXDN_DATA_H__
+#if !defined(__CALLHANDLER__TAG_NXDN_DATA_H__)
+#define __CALLHANDLER__TAG_NXDN_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
@@ -24,11 +24,11 @@
 
 namespace network
 {
-    namespace fne
+    namespace callhandler
     {
         // ---------------------------------------------------------------------------
         //  Class Declaration
-        //      Implements the NXDN data FNE networking logic.
+        //      Implements the NXDN call handler and data FNE networking logic.
         // ---------------------------------------------------------------------------
 
         class HOST_SW_API TagNXDNData {
@@ -51,7 +51,19 @@ namespace network
         private:
             FNENetwork* m_network;
 
-            std::deque<std::tuple<uint8_t*, uint32_t, uint16_t, uint32_t>> m_parrotFrames;
+            class ParrotFrame {
+            public:
+                uint8_t* buffer;
+                uint32_t bufferLen;
+
+                uint16_t pktSeq;
+                uint32_t streamId;
+                uint32_t peerId;
+
+                uint32_t srcId;
+                uint32_t dstId;
+            };
+            std::deque<ParrotFrame> m_parrotFrames;
             bool m_parrotFramesReady;
 
             class RxStatus {
@@ -60,6 +72,7 @@ namespace network
                 uint32_t srcId;
                 uint32_t dstId;
                 uint32_t streamId;
+                uint32_t peerId;
             };
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             std::unordered_map<uint32_t, RxStatus> m_status;
@@ -76,13 +89,15 @@ namespace network
             /// <summary>Helper to validate the NXDN call stream.</summary>
             bool validate(uint32_t peerId, nxdn::lc::RTCH& control, uint8_t messageType, uint32_t streamId);
 
+            /// <summary>Helper to write a grant packet.</summary>
+            bool write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
             /// <summary>Helper to write a deny packet.</summary>
             void write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service);
 
             /// <summary>Helper to write a network RCCH.</summary>
             void write_Message(uint32_t peerId, nxdn::lc::RCCH* rcch);
         };
-    } // namespace fne
+    } // namespace callhandler
 } // namespace network
 
-#endif // __FNE__TAG_NXDN_DATA_H__
+#endif // __CALLHANDLER__TAG_NXDN_DATA_H__

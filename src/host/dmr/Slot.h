@@ -85,14 +85,18 @@ namespace dmr
 
         /// <summary>Process a data frame from the RF interface.</summary>
         bool processFrame(uint8_t* data, uint32_t len);
+        /// <summary>Get the frame data length for the next frame in the data ring buffer.</summary>
+        uint32_t peekFrameLength();
         /// <summary>Get data frame from data ring buffer.</summary>
         uint32_t getFrame(uint8_t* data);
 
         /// <summary>Process a data frames from the network.</summary>
         void processNetwork(const data::Data& data);
 
-        /// <summary>Updates the slot processor.</summary>
+        /// <summary>Updates the DMR slot processor.</summary>
         void clock();
+        /// <summary>Updates the adj. site tables.</summary>
+        void clockSiteData(uint32_t ms);
 
         /// <summary>Permits a TGID on a non-authoritative host.</summary>
         void permittedTG(uint32_t dstId);

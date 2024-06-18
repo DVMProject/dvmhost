@@ -39,6 +39,8 @@ extern bool g_fireDMRBeacon;
 extern bool g_fireP25Control;
 extern bool g_fireNXDNControl;
 
+extern bool g_fireCCVCNotification;
+
 extern uint8_t* g_gitHashBytes;
 
 extern bool g_modemDebug;

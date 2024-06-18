@@ -110,27 +110,32 @@ namespace network
                             HTTPLexer::ResultType result;
                             char* content;
 
-                            std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+                            // catch exceptions here so we don't blatently crash the system
+                            try
+                            {
+                                std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
 
-                            std::string contentLength = m_request.headers.find("Content-Length");
-                            if (contentLength != "") {
-                                size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
-                                m_request.content = std::string(content, length);
-                            }
+                                std::string contentLength = m_request.headers.find("Content-Length");
+                                if (contentLength != "") {
+                                    size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
+                                    m_request.content = std::string(content, length);
+                                }
 
-                            m_request.headers.add("RemoteHost", m_socket.lowest_layer().remote_endpoint().address().to_string());
+                                m_request.headers.add("RemoteHost", m_socket.lowest_layer().remote_endpoint().address().to_string());
 
-                            if (result == HTTPLexer::GOOD) {
-                                m_requestHandler.handleRequest(m_request, m_reply);
-                                write();
+                                if (result == HTTPLexer::GOOD) {
+                                    m_requestHandler.handleRequest(m_request, m_reply);
+                                    write();
+                                }
+                                else if (result == HTTPLexer::BAD) {
+                                    m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
+                                    write();
+                                }
+                                else {
+                                    read();
+                                }
                             }
-                            else if (result == HTTPLexer::BAD) {
-                                m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
-                                write();
-                            }
-                            else {
-                                read();
-                            }
+                            catch(const std::exception& e) { ::LogError(LOG_REST, "SecureServerConnection::read(), %s", ec.message().c_str()); }
                         }
                         else if (ec != asio::error::operation_aborted) {
                             if (ec) {

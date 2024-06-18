@@ -328,6 +328,28 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
 }
 
 /// <summary>
+/// Get the frame data length for the next frame in the data ring buffer.
+/// </summary>
+/// <returns>Length of frame data retrieved.</returns>
+uint32_t Slot::peekFrameLength()
+{
+    if (m_txQueue.isEmpty() && m_txImmQueue.isEmpty())
+        return 0U;
+
+    uint8_t len = 0U;
+
+    // tx immediate queue takes priority
+    if (!m_txImmQueue.isEmpty()) {
+        m_txImmQueue.peek(&len, 1U);
+    }
+    else {
+        m_txQueue.peek(&len, 1U);
+    }
+
+    return len;
+}
+
+/// <summary>
 /// Get frame data from data ring buffer.
 /// </summary>
 /// <param name="data">Buffer to store frame data.</param>
@@ -447,10 +469,17 @@ void Slot::clock()
 
     // if we have control enabled; do clocking to generate a CC data stream
     if (m_enableTSCC) {
-        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
+        m_dmr->m_tsccCntInterval.clock(ms);
+        if (m_dmr->m_tsccCntInterval.isRunning() && m_dmr->m_tsccCntInterval.hasExpired()) {
+            m_dmr->m_tsccCnt++;
+            if (m_dmr->m_tsccCnt == TSCC_MAX_CSC_CNT) {
+                m_dmr->m_tsccCnt = 0U;
+            }
 
-        // clock all the grant timers
-        m_affiliations->clock(ms);
+            m_dmr->m_tsccCntInterval.start();
+        }
+
+        m_modem->setDMRIgnoreCACH_AT(m_slotNo);
 
         if (m_ccRunning && !m_ccPacketInterval.isRunning()) {
             m_ccPacketInterval.start();
@@ -491,50 +520,6 @@ void Slot::clock()
 
                 m_ccPacketInterval.start();
             }
-        }
-
-        // do we need to network announce ourselves?
-        if (!m_adjSiteUpdateTimer.isRunning()) {
-            m_control->writeAdjSSNetwork();
-            m_adjSiteUpdateTimer.start();
-        }
-
-        m_adjSiteUpdateTimer.clock(ms);
-        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
-            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
-                m_control->writeAdjSSNetwork();
-                if (m_network != nullptr) {
-                    if (m_affiliations->grpAffSize() > 0) {
-                        auto affs = m_affiliations->grpAffTable();
-                        m_network->announceAffiliationUpdate(affs);
-                    }
-                }
-                m_adjSiteUpdateTimer.start();
-            }
-        }
-
-        // clock adjacent site and SCCB update timers
-        m_adjSiteUpdateTimer.clock(ms);
-        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
-            // update adjacent site data
-            for (auto& entry : m_adjSiteUpdateCnt) {
-                uint8_t siteId = entry.first;
-                uint8_t updateCnt = entry.second;
-                if (updateCnt > 0U) {
-                    updateCnt--;
-                }
-
-                if (updateCnt == 0U) {
-                    AdjSiteData siteData = m_adjSiteTable[siteId];
-                    LogWarning(LOG_NET, "DMR, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, chNo = %u",
-                        siteData.systemIdentity, siteData.channelNo);
-                }
-
-                entry.second = updateCnt;
-            }
-
-            m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
-            m_adjSiteUpdateTimer.start();
         }
 
         if (m_ccPrevRunning && !m_ccRunning) {
@@ -684,6 +669,62 @@ void Slot::clock()
         m_frameLossCnt = 0U;
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
         processFrameLoss();
+    }
+}
+
+/// <summary>
+/// Updates the adj. site tables.
+/// </summary>
+/// <param name="ms"></param>
+void Slot::clockSiteData(uint32_t ms)
+{
+    if (m_enableTSCC) {
+        // clock all the grant timers
+        m_affiliations->clock(ms);
+
+        // do we need to network announce ourselves?
+        if (!m_adjSiteUpdateTimer.isRunning()) {
+            m_control->writeAdjSSNetwork();
+            m_adjSiteUpdateTimer.start();
+        }
+
+        m_adjSiteUpdateTimer.clock(ms);
+        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
+            if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+                m_control->writeAdjSSNetwork();
+                if (m_network != nullptr) {
+                    if (m_affiliations->grpAffSize() > 0) {
+                        auto affs = m_affiliations->grpAffTable();
+                        m_network->announceAffiliationUpdate(affs);
+                    }
+                }
+                m_adjSiteUpdateTimer.start();
+            }
+        }
+
+        // clock adjacent site update timers
+        m_adjSiteUpdateTimer.clock(ms);
+        if (m_adjSiteUpdateTimer.isRunning() && m_adjSiteUpdateTimer.hasExpired()) {
+            // update adjacent site data
+            for (auto& entry : m_adjSiteUpdateCnt) {
+                uint8_t siteId = entry.first;
+                uint8_t updateCnt = entry.second;
+                if (updateCnt > 0U) {
+                    updateCnt--;
+                }
+
+                if (updateCnt == 0U) {
+                    AdjSiteData siteData = m_adjSiteTable[siteId];
+                    LogWarning(LOG_NET, "DMR, Adjacent Site Status Expired, no data [FAILED], sysId = $%03X, chNo = %u",
+                        siteData.systemIdentity, siteData.channelNo);
+                }
+
+                entry.second = updateCnt;
+            }
+
+            m_adjSiteUpdateTimer.setTimeout(m_adjSiteUpdateInterval);
+            m_adjSiteUpdateTimer.start();
+        }
     }
 }
 
@@ -953,6 +994,12 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
         }
     });
 
+    // set the unit deregistration callback
+    m_affiliations->setUnitDeregCallback([=](uint32_t srcId) {
+        if (m_network != nullptr)
+            m_network->announceUnitDeregistration(srcId);
+    });
+
     m_hangCount = callHang * 17U;
 
     m_rssiMapper = rssiMapper;
@@ -1160,6 +1207,11 @@ void Slot::notifyCC_ReleaseGrant(uint32_t dstId)
     if (ret != network::rest::http::HTTPPayload::StatusType::OK) {
         ::LogError(LOG_DMR, "DMR Slot %u, failed to notify the CC %s:%u of the release of, dstId = %u", m_slotNo, m_controlChData.address().c_str(), m_controlChData.port(), dstId);
     }
+
+    m_rfLastDstId = 0U;
+    m_rfLastSrcId = 0U;
+    m_netLastDstId = 0U;
+    m_netLastSrcId = 0U;
 }
 
 /// <summary>

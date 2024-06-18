@@ -20,12 +20,12 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/FNENetwork.h"
-#include "network/fne/TagDMRData.h"
+#include "network/callhandler/TagDMRData.h"
 #include "HostFNE.h"
 
 using namespace system_clock;
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 using namespace dmr;
 
 #include <cassert>
@@ -188,7 +188,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 RxStatus status = it->second;
                 if (streamId != status.streamId) {
                     if (status.srcId != 0U && status.srcId != srcId) {
-                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
+                        LogWarning(LOG_NET, "DMR, Call Collision, peer = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, external = %u",
+                            peerId, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, external);
                         return false;
                     }
                 }
@@ -200,8 +201,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_parrotFramesReady = false;
                     if (m_parrotFrames.size() > 0) {
                         for (auto& pkt : m_parrotFrames) {
-                            if (std::get<0>(pkt) != nullptr) {
-                                delete std::get<0>(pkt);
+                            if (pkt.buffer != nullptr) {
+                                delete pkt.buffer;
                             }
                         }
                         m_parrotFrames.clear();
@@ -215,6 +216,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 status.dstId = dstId;
                 status.slotNo = slotNo;
                 status.streamId = streamId;
+                status.peerId = peerId;
                 m_status[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
 
                 LogMessage(LOG_NET, "DMR, Call Start, peer = %u, srcId = %u, dstId = %u, streamId = %u, external = %u", peerId, srcId, dstId, streamId, external);
@@ -228,7 +230,21 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (tg.config().parrot()) {
             uint8_t* copy = new uint8_t[len];
             ::memcpy(copy, buffer, len);
-            m_parrotFrames.push_back(std::make_tuple(copy, len, pktSeq, streamId));
+
+            ParrotFrame parrotFrame = ParrotFrame();
+            parrotFrame.buffer = copy;
+            parrotFrame.bufferLen = len;
+
+            parrotFrame.slotNo = slotNo;
+
+            parrotFrame.pktSeq = pktSeq;
+            parrotFrame.streamId = streamId;
+            parrotFrame.peerId = peerId;
+
+            parrotFrame.srcId = srcId;
+            parrotFrame.dstId = dstId;
+
+            m_parrotFrames.push_back(parrotFrame);
         }
 
         // process CSBK from peer
@@ -290,6 +306,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
+                    // skip peer if it isn't enabled
+                    if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
                     uint8_t outboundPeerBuffer[len];
                     ::memset(outboundPeerBuffer, 0x00U, len);
                     ::memcpy(outboundPeerBuffer, buffer, len);
@@ -328,8 +349,40 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 /// <returns></returns>
 bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
-    // bryanb: TODO TODO TODO
-    return false;
+    // if we have an Rx status for the destination deny the grant
+    if (std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second.dstId == dstId; }) != m_status.end()) {
+        return false;
+    }
+
+    // is the source ID a blacklisted ID?
+    lookups::RadioId rid = m_network->m_ridLookup->find(srcId);
+    if (!rid.radioDefault()) {
+        if (!rid.radioEnabled()) {
+            return false;
+        }
+    }
+
+    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+
+    // check TGID validity
+    if (tg.isInvalid()) {
+        return false;
+    }
+
+    if (!tg.config().active()) {
+        return false;
+    }
+
+    // repeat traffic to the connected peers
+    if (m_network->m_peers.size() > 0U) {
+        for (auto peer : m_network->m_peers) {
+            if (peerId != peer.first) {
+                write_CSBK_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+            }
+        }
+    }
+
+    return true;
 }
 
 /// <summary>
@@ -343,17 +396,26 @@ void TagDMRData::playbackParrot()
     }
 
     auto& pkt = m_parrotFrames[0];
-    if (std::get<0>(pkt) != nullptr) {
-        // repeat traffic to the connected peers
-        for (auto peer : m_network->m_peers) {
-            m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, std::get<0>(pkt), std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt), false);
+    if (pkt.buffer != nullptr) {
+        if (m_network->m_parrotOnlyOriginating) {
+            m_network->writePeer(pkt.peerId, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
             if (m_network->m_debug) {
                 LogDebug(LOG_NET, "DMR, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                    peer.first, std::get<1>(pkt), std::get<2>(pkt), std::get<3>(pkt));
+                    pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+            }
+        }
+        else {
+            // repeat traffic to the connected peers
+            for (auto peer : m_network->m_peers) {
+                m_network->writePeer(peer.first, { NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId, false);
+                if (m_network->m_debug) {
+                    LogDebug(LOG_NET, "DMR, parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                }
             }
         }
 
-        delete std::get<0>(pkt);
+        delete pkt.buffer;
     }
     Thread::sleep(60);
     m_parrotFrames.pop_front();
@@ -566,7 +628,8 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
                 break;
             }
         } else {
-            LogWarning(LOG_NET, "PEER %u, passing CSBK that failed to decode? csbk == nullptr", peerId);
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogWarning(LOG_NET, "PEER %u (%s), passing CSBK that failed to decode? csbk == nullptr", peerId, peerIdentity.c_str());
         }
     }
 
@@ -583,9 +646,10 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::Data& 
 /// <returns></returns>
 bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t streamId, bool external)
 {
-    // private calls are always permitted
     if (data.getDataType() == FLCO_PRIVATE) {
-        return true;
+        if (!m_network->checkU2UDroppedPeer(peerId))
+            return true;
+        return false;
     }
 
     // is this a group call?
@@ -608,6 +672,15 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
                 if (it != exclusion.end()) {
                     return false;
                 }
+            }
+        }
+
+        // peer always send list takes priority over any following affiliation rules
+        std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
+        if (alwaysSend.size() > 0) {
+            auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peerId);
+            if (it != alwaysSend.end()) {
+                return true; // skip any following checks and always send traffic
             }
         }
 
@@ -638,7 +711,8 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::Data& data, uint32_t str
             // check the affiliations for this peer to see if we can repeat traffic
             lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
             if (aff == nullptr) {
-                LogError(LOG_NET, "PEER %u has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId);
+                std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
+                LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
                 return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
             }
             else {
@@ -769,6 +843,79 @@ bool TagDMRData::validate(uint32_t peerId, data::Data& data, uint32_t streamId)
 
             return false;
         }
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Helper to write a grant packet.
+/// </summary>
+/// <param name="peerId"></param>
+/// <param name="srcId"></param>
+/// <param name="dstId"></param>
+/// <param name="serviceOptions"></param>
+/// <param name="grp"></param>
+/// <returns></returns>
+bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
+{
+    uint8_t slot = 0U;
+
+    bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
+    bool privacy = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;             // Privacy Flag
+    bool broadcast = ((serviceOptions & 0xFFU) & 0x10U) == 0x10U;           // Broadcast Flag
+    uint8_t priority = ((serviceOptions & 0xFFU) & 0x03U);                  // Priority
+
+    if (dstId == DMR_WUID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    }
+
+    // check the affiliations for this peer to see if we can grant traffic
+    lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+    if (aff == nullptr) {
+        std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+        LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
+        return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
+    }
+    else {
+        if (!aff->hasGroupAff(dstId)) {
+            return false;
+        }
+    }
+
+    if (grp) {
+        std::unique_ptr<lc::csbk::CSBK_TV_GRANT> csbk = std::make_unique<lc::csbk::CSBK_TV_GRANT>();
+        if (broadcast)
+            csbk->setCSBKO(CSBKO_BTV_GRANT);
+        csbk->setLogicalCh1(0U);
+        csbk->setSlotNo(slot);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+                csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
+        }
+
+        csbk->setEmergency(emergency);
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
+
+        write_CSBK(peerId, 1U, csbk.get());
+    }
+    else {
+        std::unique_ptr<lc::csbk::CSBK_PV_GRANT> csbk = std::make_unique<lc::csbk::CSBK_PV_GRANT>();
+        csbk->setLogicalCh1(0U);
+        csbk->setSlotNo(slot);
+
+        if (m_network->m_verbose) {
+            LogMessage(LOG_NET, "DMR, DT_CSBK, %s, emerg = %u, privacy = %u, broadcast = %u, prio = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u, peerId = %u",
+                csbk->toString().c_str(), emergency, privacy, broadcast, priority, csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId, peerId);
+        }
+
+        csbk->setEmergency(emergency);
+        csbk->setSrcId(srcId);
+        csbk->setDstId(dstId);
+
+        write_CSBK(peerId, 1U, csbk.get());
     }
 
     return true;

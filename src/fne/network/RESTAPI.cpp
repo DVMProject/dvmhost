@@ -17,8 +17,8 @@
 #include "common/network/json/json.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "fne/network/fne/TagDMRData.h"
-#include "fne/network/fne/TagP25Data.h"
+#include "fne/network/callhandler/TagDMRData.h"
+#include "fne/network/callhandler/TagP25Data.h"
 #include "fne/network/RESTAPI.h"
 #include "HostFNE.h"
 
@@ -435,6 +435,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_network(nullptr),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_peerListLookup(nullptr),
     m_authTokens()
 {
     assert(!address.empty());
@@ -483,10 +484,11 @@ RESTAPI::~RESTAPI() = default;
 /// </summary>
 /// <param name="ridLookup">Radio ID Lookup Table Instance</param>
 /// <param name="tidLookup">Talkgroup Rules Lookup Table Instance</param>
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup)
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, ::lookups::PeerListLookup* peerListLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+    m_peerListLookup = peerListLookup;
 }
 
 /// <summary>
@@ -569,6 +571,7 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(FNE_GET_PEER_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetPeerQuery, this));
     m_dispatcher.match(FNE_GET_PEER_COUNT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCount, this));
+    m_dispatcher.match(FNE_PUT_PEER_RESET).put(REST_API_BIND(RESTAPI::restAPI_PutPeerReset, this));
 
     m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
     m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
@@ -580,7 +583,16 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_TGID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutTGDelete, this));
     m_dispatcher.match(FNE_GET_TGID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetTGCommit, this));
 
+    m_dispatcher.match(FNE_GET_PEER_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
+    m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
+    m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
+    m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
+    m_dispatcher.match(FNE_GET_PEER_MODE).get(REST_API_BIND(RESTAPI::restAPI_GetPeerMode, this));
+
     m_dispatcher.match(FNE_GET_FORCE_UPDATE).get(REST_API_BIND(RESTAPI::restAPI_GetForceUpdate, this));
+
+    m_dispatcher.match(FNE_GET_RELOAD_TGS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadTGs, this));
+    m_dispatcher.match(FNE_GET_RELOAD_RIDS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadRIDs, this));
 
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 
@@ -817,11 +829,23 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                     peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
                     uint64_t lastPing = peer->lastPing();
                     peerObj["lastPing"].set<uint64_t>(lastPing);
+                    uint32_t ccPeerId = peer->ccPeerId();
+                    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
 
                     json::object peerConfig = peer->config();
                     if (peerConfig["rcon"].is<json::object>())
                         peerConfig.erase("rcon");
                     peerObj["config"].set<json::object>(peerConfig);
+
+                    json::array voiceChannels = json::array();
+                    auto it = std::find_if(m_network->m_ccPeerMap.begin(), m_network->m_ccPeerMap.end(), [&](auto x) { return x.first == peerId; });
+                    if (it != m_network->m_ccPeerMap.end()) {
+                        std::vector<uint32_t> vcPeers = m_network->m_ccPeerMap[peerId];
+                        for (uint32_t vcEntry : vcPeers) {
+                            voiceChannels.push_back(json::value((double)vcEntry));
+                        }
+                    }
+                    peerObj["voiceChannels"].set<json::array>(voiceChannels);
 
                     peers.push_back(json::value(peerObj));
                 }
@@ -861,6 +885,35 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
     }
 
     reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_network->resetPeer(peerId);
 }
 
 /// <summary>
@@ -1163,6 +1216,158 @@ void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply
 /// <param name="request"></param>
 /// <param name="reply"></param>
 /// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array peers = json::array();
+    if (m_peerListLookup != nullptr) {
+        if (m_peerListLookup->table().size() > 0) {
+            for (auto entry : m_peerListLookup->table()) {
+                json::object peerObj = json::object();
+
+                uint32_t peerId = entry.first;
+                peerObj["peerId"].set<uint32_t>(peerId);
+
+                peers.push_back(json::value(peerObj));
+            }
+        }
+    }
+
+    response["peers"].set<json::array>(peers);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_peerListLookup->addEntry(peerId);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    m_peerListLookup->eraseEntry(peerId);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    m_peerListLookup->commit();
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetPeerMode(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    lookups::PeerListLookup::Mode mode = m_peerListLookup->getMode();
+    bool acl = m_peerListLookup->getACL();
+
+    std::string modeStr;
+
+    if (acl) {
+        switch (mode) {
+            case lookups::PeerListLookup::WHITELIST:
+                modeStr = "WHITELIST";
+                break;
+            case lookups::PeerListLookup::BLACKLIST:
+                modeStr = "BLACKLIST";
+                break;
+            default:
+                modeStr = "UNKNOWN";
+                break;
+        }
+    }
+    else {
+        modeStr = "DISABLED";
+    }
+
+    response["mode"].set<std::string>(modeStr);
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
 void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
 {
     if (!validateAuth(request, reply)) {
@@ -1171,11 +1376,55 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
 
     json::object response = json::object();
     setResponseDefaultStatus(response);
-/*
+
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
-*/
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_tidLookup->reload();
+    }
+
+    reply.payload(response);
+}
+
+/// <summary>
+///
+/// </summary>
+/// <param name="request"></param>
+/// <param name="reply"></param>
+/// <param name="match"></param>
+void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_ridLookup->reload();
+    }
+
     reply.payload(response);
 }
 

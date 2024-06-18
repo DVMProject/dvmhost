@@ -16,6 +16,7 @@
 #include "Defines.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/FNENetwork.h"
@@ -31,9 +32,9 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
-namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
-namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
-namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
+namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -55,9 +56,9 @@ private:
     yaml::Node m_conf;
 
     friend class network::FNENetwork;
-    friend class network::fne::TagDMRData;
-    friend class network::fne::TagP25Data;
-    friend class network::fne::TagNXDNData;
+    friend class network::callhandler::TagDMRData;
+    friend class network::callhandler::TagP25Data;
+    friend class network::callhandler::TagNXDNData;
     network::FNENetwork* m_network;
     network::DiagNetwork* m_diagNetwork;
 
@@ -67,6 +68,7 @@ private:
 
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
+    lookups::PeerListLookup* m_peerListLookup;
 
     std::unordered_map<std::string, network::PeerNetwork*> m_peerNetworks;
 

@@ -19,6 +19,7 @@
 #include "common/lookups/AffiliationLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "fne/network/influxdb/InfluxDB.h"
 #include "host/network/Network.h"
 
@@ -35,9 +36,9 @@
 
 class HOST_SW_API HostFNE;
 class HOST_SW_API RESTAPI;
-namespace network { namespace fne { class HOST_SW_API TagDMRData; } }
-namespace network { namespace fne { class HOST_SW_API TagP25Data; } }
-namespace network { namespace fne { class HOST_SW_API TagNXDNData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
+namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 
 namespace network
 {
@@ -133,6 +134,8 @@ namespace network
     public:
         /// <summary>Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, id);
+        /// <summary>Peer Identity.</summary>
+        __PROPERTY_PLAIN(std::string, identity);
 
         /// <summary>Control Channel Peer ID.</summary>
         __PROPERTY_PLAIN(uint32_t, ccPeerId);
@@ -232,15 +235,15 @@ namespace network
         /// <summary>Gets the current status of the network.</summary>
         NET_CONN_STATUS getStatus() { return m_status; }
 
-        /// <summary>Gets the instance of the DMR traffic handler.</summary>
-        fne::TagDMRData* dmrTrafficHandler() const { return m_tagDMR; }
-        /// <summary>Gets the instance of the P25 traffic handler.</summary>
-        fne::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
-        /// <summary>Gets the instance of the NXDN traffic handler.</summary>
-        fne::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
+        /// <summary>Gets the instance of the DMR call handler.</summary>
+        callhandler::TagDMRData* dmrTrafficHandler() const { return m_tagDMR; }
+        /// <summary>Gets the instance of the P25 call handler.</summary>
+        callhandler::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
+        /// <summary>Gets the instance of the NXDN call handler.</summary>
+        callhandler::TagNXDNData* nxdnTrafficHandler() const { return m_tagNXDN; }
 
         /// <summary>Sets the instances of the Radio ID and Talkgroup Rules lookup tables.</summary>
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup);
         /// <summary>Sets endpoint preshared encryption key.</summary>
         void setPresharedKey(const uint8_t* presharedKey);
 
@@ -256,14 +259,17 @@ namespace network
         /// <summary>Closes connection to the network.</summary>
         void close() override;
 
+        /// <summary></summary>
+        bool resetPeer(uint32_t peerId);
+
     private:
         friend class DiagNetwork;
-        friend class fne::TagDMRData;
-        fne::TagDMRData* m_tagDMR;
-        friend class fne::TagP25Data;
-        fne::TagP25Data* m_tagP25;
-        friend class fne::TagNXDNData;
-        fne::TagNXDNData* m_tagNXDN;
+        friend class callhandler::TagDMRData;
+        callhandler::TagDMRData* m_tagDMR;
+        friend class callhandler::TagP25Data;
+        callhandler::TagP25Data* m_tagP25;
+        friend class callhandler::TagNXDNData;
+        callhandler::TagNXDNData* m_tagNXDN;
         
         friend class ::RESTAPI;
         HostFNE* m_host;
@@ -280,9 +286,11 @@ namespace network
         uint32_t m_parrotDelay;
         Timer m_parrotDelayTimer;
         bool m_parrotGrantDemand;
+        bool m_parrotOnlyOriginating;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+        lookups::PeerListLookup* m_peerListLookup;
 
         NET_CONN_STATUS m_status;
 
@@ -291,6 +299,7 @@ namespace network
         std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
         std::unordered_map<uint32_t, lookups::AffiliationLookup*> m_peerAffiliations;
+        std::unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
 
         Timer m_maintainenceTimer;
 
@@ -302,6 +311,14 @@ namespace network
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
         bool m_allowConvSiteAffOverride;
+        bool m_restrictGrantToAffOnly;
+
+        bool m_filterHeaders;
+        bool m_filterTerminators;
+
+        bool m_forceListUpdate;
+
+        std::vector<uint32_t> m_dropU2UPeerTable;
 
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;
@@ -318,12 +335,18 @@ namespace network
         /// <summary>Entry point to process a given network packet.</summary>
         static void* threadedNetworkRx(void* arg);
 
+        /// <summary>Checks if the passed peer ID is blocked from unit-to-unit traffic.</summary>
+        bool checkU2UDroppedPeer(uint32_t peerId);
+
         /// <summary>Helper to create a peer on the peers affiliations list.</summary>
         void createPeerAffiliations(uint32_t peerId, std::string peerName);
         /// <summary>Helper to erase the peer from the peers affiliations list.</summary>
         bool erasePeerAffiliations(uint32_t peerId);
         /// <summary>Helper to erase the peer from the peers list.</summary>
         bool erasePeer(uint32_t peerId);
+
+        /// <summary>Helper to resolve the peer ID to its identity string.</summary>
+        std::string resolvePeerIdentity(uint32_t peerId);
 
         /// <summary>Helper to complete setting up a repeater login request.</summary>
         void setupRepeaterLogin(uint32_t peerId, FNEPeerConnection* connection);
@@ -356,6 +379,8 @@ namespace network
         /// <summary>Helper to send a ACK response to the specified peer.</summary>
         bool writePeerACK(uint32_t peerId, const uint8_t* data = nullptr, uint32_t length = 0U);
 
+        /// <summary>Helper to log a warning specifying which NAK reason is being sent a peer.</summary>
+        void logPeerNAKReason(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason = NET_CONN_NAK_GENERAL_FAILURE);
         /// <summary>Helper to send a NAK response to the specified peer.</summary>

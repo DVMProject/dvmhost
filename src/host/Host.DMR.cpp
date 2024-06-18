@@ -139,6 +139,16 @@ void Host::writeFramesDMR1(dmr::Control* control, std::function<void()>&& afterW
         // to the modem
         bool ret = m_modem->hasDMRSpace1();
         if (ret) {
+            uint32_t nextLen = control->peekFrameLength(1U);
+            if (m_dmrCtrlChannel) {
+                if (m_dmrDedicatedTxTestTimer.hasExpired() && !m_dmrDedicatedTxTestTimer.isPaused()) {
+                    m_dmrDedicatedTxTestTimer.pause();
+                    if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_DMR && (control->getTSCCSlotNo() == 1U) && control->getCCRunning()) {
+                        LogError(LOG_HOST, "DMR dedicated control not transmitting, running = %u, halted = %u, frameLength1 = %u", control->getCCRunning(), control->getCCHalted(), nextLen);
+                    }
+                }
+            }
+
             uint32_t len = control->getFrame(1U, data);
             if (len > 0U) {
                 // if the state is idle; set to DMR, start mode timer and start DMR idle frames
@@ -261,6 +271,16 @@ void Host::writeFramesDMR2(dmr::Control* control, std::function<void()>&& afterW
         // to the modem
         bool ret = m_modem->hasDMRSpace2();
         if (ret) {
+            uint32_t nextLen = control->peekFrameLength(1U);
+            if (m_dmrCtrlChannel) {
+                if (m_dmrDedicatedTxTestTimer.hasExpired() && !m_dmrDedicatedTxTestTimer.isPaused()) {
+                    m_dmrDedicatedTxTestTimer.pause();
+                    if (!m_modem->hasTX() && m_modem->gotModemStatus() && m_state == STATE_DMR && (control->getTSCCSlotNo() == 2U) && control->getCCRunning()) {
+                        LogError(LOG_HOST, "DMR dedicated control not transmitting, running = %u, halted = %u, frameLength2 = %u", control->getCCRunning(), control->getCCHalted(), nextLen);
+                    }
+                }
+            }
+
             uint32_t len = control->getFrame(2U, data);
             if (len > 0U) {
                 // if the state is idle; set to DMR, start mode timer and start DMR idle frames

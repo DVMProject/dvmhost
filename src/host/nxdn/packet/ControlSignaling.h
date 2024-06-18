@@ -44,9 +44,6 @@ namespace nxdn
             /// <summary>Process a data frame from the network.</summary>
             bool processNetwork(uint8_t fct, uint8_t option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
 
-            /// <summary>Updates the processor by the passed number of milliseconds.</summary>
-            void clock(uint32_t ms);
-
         protected:
             friend class nxdn::packet::Data;
             friend class nxdn::packet::Voice;

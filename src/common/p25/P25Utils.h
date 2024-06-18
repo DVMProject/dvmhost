@@ -33,8 +33,8 @@ namespace p25
             if (nac < 0U) { // clamp to $000
                 nac = 0U;
             }
-            if (nac > 0xF7DU) { // clamp to $F7D
-                nac = 0xF7DU;
+            if (nac > 0xF7FU) { // clamp to $F7F
+                nac = 0xF7FU;
             }
 
             return nac;

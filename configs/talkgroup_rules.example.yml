@@ -24,6 +24,8 @@ groupVoice:
       exclusion: []
       # List of peer talkgroup rewrites.
       rewrite: []
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
@@ -55,6 +57,8 @@ groupVoice:
       exclusion: []
       # List of peer talkgroup rewrites.
       rewrite: []
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
@@ -92,6 +96,8 @@ groupVoice:
           tgid: 9999
           # DMR slot number.
           slot: 1
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
@@ -121,6 +127,8 @@ groupVoice:
       exclusion: []
       # List of peer talkgroup rewrites.
       rewrite: []
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
@@ -150,6 +158,8 @@ groupVoice:
       exclusion: []
       # List of peer talkgroup rewrites.
       rewrite: []
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
@@ -179,6 +189,8 @@ groupVoice:
       exclusion: []
       # List of peer talkgroup rewrites.
       rewrite: []
+      # List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.
+      always: []
       # List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access,
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)

@@ -78,6 +78,7 @@
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_AUTH_RESP_M.h"
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_AUTH_SU_DMD.h"
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_CAN_SRV_REQ.h"
+#include "common/p25/lc/tsbk/mbt/MBT_ISP_GRP_AFF_Q_RSP.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_AUTH_DMD.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_NET_STS_BCAST.h"

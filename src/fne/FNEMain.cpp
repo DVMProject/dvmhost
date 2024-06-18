@@ -100,11 +100,14 @@ void usage(const char* message, const char* arg)
 
     ::fprintf(stdout, 
         "usage: %s [-vhf]"
+        "[--syslog]"
         "[-c <configuration file>]"
         "\n\n"
         "  -v        show version information\n"
         "  -h        show this screen\n"
         "  -f        foreground mode\n"
+        "\n"
+        "  --syslog  force logging to syslog\n"
         "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
@@ -139,6 +142,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-f")) {
             g_foreground = true;
+        }
+        else if (IS("--syslog")) {
+            g_useSyslog = true;
         }
         else if (IS("-c")) {
             if (argc-- <= 0)

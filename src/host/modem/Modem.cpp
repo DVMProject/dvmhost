@@ -174,6 +174,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_error(false),
     m_ignoreModemConfigArea(ignoreModemConfigArea),
     m_flashDisabled(false),
+    m_gotModemStatus(false),
     m_dumpModemStatus(dumpModemStatus),
     m_trace(trace),
     m_debug(debug)
@@ -524,6 +525,7 @@ void Modem::setCloseHandler(std::function<MODEM_OC_PORT_HANDLER> handler)
 bool Modem::open()
 {
     LogMessage(LOG_MODEM, "Initializing modem");
+    m_gotModemStatus = false;
 
     bool ret = m_port->open();
     if (!ret)
@@ -733,7 +735,10 @@ void Modem::clock(uint32_t ms)
                 //    Utils::dump(1U, "RX P25 Data", m_buffer, m_length);
 
                 uint8_t length[2U];
-                length[0U] = ((m_length - cmdOffset) >> 8U) & 0xFFU;
+                if (m_length > 255U)
+                    length[0U] = ((m_length - cmdOffset) >> 8U) & 0xFFU;
+                else
+                    length[0U] = 0x00U;
                 length[1U] = (m_length - cmdOffset) & 0xFFU;
                 m_rxP25Queue.addData(length, 2U);
 
@@ -905,6 +910,7 @@ void Modem::clock(uint32_t ms)
                     m_rxP25Queue.length(), m_rxP25Queue.dataSize(), m_rxP25Queue.freeSpace(), m_rxNXDNQueue.length(), m_rxNXDNQueue.dataSize(), m_rxNXDNQueue.freeSpace());
             }
 
+            m_gotModemStatus = true;
             m_inactivityTimer.start();
         }
         break;
@@ -971,6 +977,8 @@ void Modem::close()
 {
     LogDebug(LOG_MODEM, "Closing the modem");
     m_port->close();
+
+    m_gotModemStatus = false;
 
     // do we have a close port handler?
     if (m_closePortHandler != nullptr) {
@@ -1165,6 +1173,15 @@ bool Modem::hasLockout() const
 bool Modem::hasError() const
 {
     return m_error;
+}
+
+/// <summary>
+/// Flag indicating whether or not the air interface modem has sent the initial modem status.
+/// </summary>
+/// <returns>True, if the air interface modem has sent the initial status, otherwise false.</returns>
+bool Modem::gotModemStatus() const
+{
+    return m_gotModemStatus;
 }
 
 /// <summary>
@@ -1467,7 +1484,10 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
     assert(length > 0U);
 
     if (m_p25Enabled) {
-        const uint16_t MAX_LENGTH = 520U;
+        uint16_t MAX_LENGTH = 520U;
+        if (m_protoVer <= 3U) {
+            MAX_LENGTH = 251U; // for older firmware always ensure frames are shorter then 252 bytes
+        }
 
         if (data[0U] != TAG_DATA && data[0U] != TAG_EOT)
             return false;

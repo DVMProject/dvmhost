@@ -18,7 +18,7 @@
 #include "HostFNE.h"
 
 using namespace network;
-using namespace network::fne;
+using namespace network::callhandler;
 
 #include <cassert>
 
@@ -189,7 +189,8 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                         connection->pktNextSeq(0U);
                     } else {
                         if ((connection->currStreamId() == streamId) && (pktSeq != connection->pktNextSeq()) && (pktSeq != (RTP_END_OF_CALL_SEQ - 1U))) {
-                            LogWarning(LOG_NET, "PEER %u stream %u out-of-sequence; %u != %u", peerId, streamId, pktSeq, connection->pktNextSeq());
+                            LogWarning(LOG_NET, "PEER %u (%s) stream %u out-of-sequence; %u != %u", peerId, connection->identity().c_str(),
+                                streamId, pktSeq, connection->pktNextSeq());
                         }
 
                         connection->currStreamId(streamId);
@@ -222,13 +223,14 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                         ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
                                         std::string payload(rawPayload, rawPayload + (req->length - 11U));
 
-                                        ::ActivityLog("%u %s", peerId, payload.c_str());
+                                        ::ActivityLog("%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
 
                                         // report activity log to InfluxDB
                                         if (network->m_enableInfluxDB) {
                                             influxdb::QueryBuilder()
                                                 .meas("activity")
                                                     .tag("peerId", std::to_string(peerId))
+                                                        .field("identity", connection->identity())
                                                         .field("msg", payload)
                                                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                                                 .request(network->m_influxServer);
@@ -257,7 +259,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
                                         bool currState = g_disableTimeDisplay;
                                         g_disableTimeDisplay = true;
-                                        ::Log(9999U, nullptr, "%u %s", peerId, payload.c_str());
+                                        ::Log(9999U, nullptr, "%.9u (%8s) %s", peerId, connection->identity().c_str(), payload.c_str());
                                         g_disableTimeDisplay = currState;
 
                                         // report diagnostic log to InfluxDB
@@ -265,6 +267,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                             influxdb::QueryBuilder()
                                                 .meas("diag")
                                                     .tag("peerId", std::to_string(peerId))
+                                                        .field("identity", connection->identity())
                                                         .field("msg", payload)
                                                     .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
                                                 .request(network->m_influxServer);
@@ -272,6 +275,36 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                                     }
                                     else {
                                         network->writePeerNAK(peerId, TAG_TRANSFER_DIAG_LOG, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_STATUS) {  // Peer Status Transfer
+                        // report peer status to InfluxDB
+                        if (network->m_enableInfluxDB) {
+                            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+                                FNEPeerConnection* connection = network->m_peers[peerId];
+                                if (connection != nullptr) {
+                                    std::string ip = udp::Socket::address(req->address);
+
+                                    // validate peer (simple validation really)
+                                    if (connection->connected() && connection->address() == ip) {
+                                        uint8_t rawPayload[req->length - 11U];
+                                        ::memset(rawPayload, 0x00U, req->length - 11U);
+                                        ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
+                                        std::string payload(rawPayload, rawPayload + (req->length - 11U));
+
+                                        influxdb::QueryBuilder()
+                                            .meas("peer_status")
+                                                .tag("peerId", std::to_string(peerId))
+                                                    .field("identity", connection->identity())
+                                                    .field("status", payload)
+                                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                            .request(network->m_influxServer);
+                                    }
+                                    else {
+                                        network->writePeerNAK(peerId, TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
                                     }
                                 }
                             }
