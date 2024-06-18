@@ -113,6 +113,8 @@ void usage(const char* message, const char* arg)
         "  -h        show this screen\n"
         "  -f        foreground mode\n"
         "\n"
+        "  --syslog  force logging to syslog\n"
+        "\n"
         "  -c <file> specifies the configuration file to use\n"
         "\n"
         "  --        stop handling options\n",
