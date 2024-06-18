@@ -59,6 +59,8 @@ namespace network
                 /// <summary>Clears the list of HTTP headers.</summary>
                 void clearHeaders() { m_headers = std::vector<Header>(); }
                 /// <summary>Helper to add a HTTP header.</summary>
+                /// <param name="name"></param>
+                /// <param name="value"></param>
                 void add(const std::string& name, const std::string& value)
                 {
                     //::LogDebug(LOG_REST, "HTTPHeaders::add(), header = %s, value = %s", name.c_str(), value.c_str());
@@ -74,6 +76,7 @@ namespace network
                     //    ::LogDebug(LOG_REST, "HTTPHeaders::add() m_headers.header = %s, m_headers.value = %s", header.name.c_str(), header.value.c_str());
                 }
                 /// <summary>Helper to add a HTTP header.</summary>
+                /// <param name="headerName"></param>
                 void remove(const std::string headerName)
                 {
                     auto header = std::find_if(m_headers.begin(), m_headers.end(), [&](const Header& h) {
@@ -85,6 +88,7 @@ namespace network
                     }
                 }
                 /// <summary>Helper to find the named HTTP header.</summary>
+                /// <param name="headerName"></param>
                 std::string find(const std::string headerName) const
                 {
                     auto header = std::find_if(m_headers.begin(), m_headers.end(), [&](const Header& h) {

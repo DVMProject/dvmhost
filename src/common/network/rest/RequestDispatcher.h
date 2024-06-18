@@ -34,6 +34,8 @@ namespace network
 
         struct RequestMatch : std::smatch {
             /// <summary>Initializes a new instance of the RequestMatch structure.</summary>
+            /// <param name="m"></param>
+            /// <param name="c"></param>
             RequestMatch(const std::smatch& m, const std::string& c) : std::smatch(m), content(c) { /* stub */ }
 
             std::string content;
@@ -49,38 +51,56 @@ namespace network
             typedef std::function<void(const Request&, Reply&, const RequestMatch&)> RequestHandlerType;
 
             /// <summary>Initializes a new instance of the RequestMatcher structure.</summary>
+            /// <param name="expression"></param>
             explicit RequestMatcher(const std::string& expression) : m_expression(expression), m_isRegEx(false) { /* stub */ }
 
             /// <summary></summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
             RequestMatcher<Request, Reply>& get(RequestHandlerType handler) {
                 m_handlers[HTTP_GET] = handler;
                 return *this;
             }
             /// <summary></summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
             RequestMatcher<Request, Reply>& post(RequestHandlerType handler) {
                 m_handlers[HTTP_POST] = handler;
                 return *this;
             }
             /// <summary></summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
             RequestMatcher<Request, Reply>& put(RequestHandlerType handler) {
                 m_handlers[HTTP_PUT] = handler;
                 return *this;
             }
             /// <summary></summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
             RequestMatcher<Request, Reply>& del(RequestHandlerType handler) {
                 m_handlers[HTTP_DELETE] = handler;
                 return *this;
             }
             /// <summary></summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
             RequestMatcher<Request, Reply>& options(RequestHandlerType handler) {
                 m_handlers[HTTP_OPTIONS] = handler;
                 return *this;
             }
 
+            /// <summary></summary>
+            /// <returns></returns>
             bool regex() const { return m_isRegEx; }
+            /// <summary></summary>
+            /// <param name="regEx"></param>
             void setRegEx(bool regEx) { m_isRegEx = regEx; }
 
             /// <summary></summary>
+            /// <param name="request"></param>
+            /// <param name="reply"></param>
+            /// <param name="what"></param>
             void handleRequest(const Request& request, Reply& reply, const std::smatch &what) {
                 // dispatching to matching based on handler
                 RequestMatch match(what, request.content);
@@ -108,11 +128,17 @@ namespace network
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
             RequestDispatcher() : m_basePath(), m_debug(false) { /* stub */ }
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
+            /// <param name="debug"></param>
             RequestDispatcher(bool debug) : m_basePath(), m_debug(debug) { /* stub */ }
             /// <summary>Initializes a new instance of the RequestDispatcher class.</summary>
+            /// <param name="basePath"></param>
+            /// <param name="debug"></param>
             RequestDispatcher(const std::string& basePath, bool debug) : m_basePath(basePath), m_debug(debug) { /* stub */ }
 
             /// <summary></summary>
+            /// <param name="expression"></param>
+            /// <param name="regex"></param>
+            /// <returns></returns>
             MatcherType& match(const std::string& expression, bool regex = false)
             {
                 MatcherTypePtr& p = m_matchers[expression];
@@ -132,6 +158,8 @@ namespace network
             }
 
             /// <summary></summary>
+            /// <param name="request"></param>
+            /// <param name="reply"></param>
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (const auto& matcher : m_matchers) {
@@ -194,9 +222,12 @@ namespace network
             /// <summary>Initializes a new instance of the DebugRequestDispatcher class.</summary>
             BasicRequestDispatcher() { /* stub */ }
             /// <summary>Initializes a new instance of the BasicRequestDispatcher class.</summary>
+            /// <param name="handler"></param>
             BasicRequestDispatcher(RequestHandlerType handler) : m_handler(handler) { /* stub */ }
 
             /// <summary></summary>
+            /// <param name="request"></param>
+            /// <param name="reply"></param>
             void handleRequest(const Request& request, Reply& reply)
             {
                 if (m_handler) {
@@ -220,6 +251,8 @@ namespace network
             DebugRequestDispatcher() { /* stub */ }
 
             /// <summary></summary>
+            /// <param name="request"></param>
+            /// <param name="reply"></param>
             void handleRequest(const Request& request, Reply& reply)
             {
                 for (auto header : request.headers.headers())

@@ -44,6 +44,8 @@ namespace network
                 ClientConnection(ClientConnection&) = delete;
 
                 /// <summary>Initializes a new instance of the ClientConnection class.</summary>
+                /// <param name="socket"></param>
+                /// <param name="handler"></param>
                 explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :
                     m_socket(std::move(socket)),
                     m_requestHandler(handler),
@@ -86,6 +88,7 @@ namespace network
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
+                /// <param name="request"></param>
                 void send(HTTPPayload request)
                 {
                     request.attachHostHeader(m_socket.remote_endpoint());
@@ -134,6 +137,7 @@ namespace network
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
+                /// <param name="request"></param>
                 void write(HTTPPayload request)
                 {
                     try

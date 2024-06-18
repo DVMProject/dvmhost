@@ -9,7 +9,7 @@
 * @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
 *
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_HTTP__HTTP_SERVER_H__)
@@ -48,12 +48,16 @@ namespace network
                 HTTPServer(HTTPServer&) = delete;
 
                 /// <summary>Initializes a new instance of the HTTPServer class.</summary>
-                explicit HTTPServer(const std::string& address, uint16_t port) :
+                /// <param name="address"></param>
+                /// <param name="port"></param>
+                /// <param name="debug"></param>
+                explicit HTTPServer(const std::string& address, uint16_t port, bool debug) :
                     m_ioService(),
                     m_acceptor(m_ioService),
                     m_connectionManager(),
                     m_socket(m_ioService),
-                    m_requestHandler()
+                    m_requestHandler(),
+                    m_debug(debug)
                 {
                     // open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR)
                     asio::ip::address ipAddress = asio::ip::address::from_string(address);
@@ -61,6 +65,8 @@ namespace network
                 }
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
+                /// <typeparam name="Handler"></typeparam>
+                /// <param name="handler"></param>
                 template<typename Handler>
                 void setHandler(Handler&& handler)
                 {
@@ -112,7 +118,7 @@ namespace network
                         }
 
                         if (!ec) {
-                            m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler));
+                            m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, m_debug));
                         }
 
                         accept();
@@ -132,6 +138,7 @@ namespace network
                 asio::ip::tcp::socket m_socket;
 
                 RequestHandlerType m_requestHandler;
+                bool m_debug;
             };
         } // namespace http
     } // namespace rest

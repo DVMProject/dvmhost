@@ -47,6 +47,9 @@ namespace network
                 SecureClientConnection(SecureClientConnection&) = delete;
 
                 /// <summary>Initializes a new instance of the SecureClientConnection class.</summary>
+                /// <param name="socket"></param>
+                /// <param name="context"></param>
+                /// <param name="handler"></param>
                 explicit SecureClientConnection(asio::ip::tcp::socket socket, asio::ssl::context& context, RequestHandlerType& handler) :
                     m_socket(std::move(socket), context),
                     m_requestHandler(handler),
@@ -94,6 +97,7 @@ namespace network
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
+                /// <param name="request"></param>
                 void send(HTTPPayload request)
                 {
                     request.attachHostHeader(m_socket.lowest_layer().remote_endpoint());
@@ -101,6 +105,8 @@ namespace network
                 }
             private:
                 /// <summary>Perform an SSL certificate verification.</summary>
+                /// <param name="preverified"></param>
+                /// <param name="context"></param>
                 bool verify_certificate(bool preverified, asio::ssl::verify_context& context)
                 {
                     return true; // ignore always valid
@@ -148,6 +154,7 @@ namespace network
                 }
 
                 /// <summary>Perform an synchronous write operation.</summary>
+                /// <param name="request"></param>
                 void write(HTTPPayload request)
                 {
                     try

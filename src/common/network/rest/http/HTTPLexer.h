@@ -9,7 +9,7 @@
 * @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
 *
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_HTTP__HTTP_LEXER_H__)
@@ -40,7 +40,7 @@ namespace network
 
             class HTTPLexer {
             public:
-                enum ResultType { GOOD, BAD, INDETERMINATE };
+                enum ResultType { GOOD, BAD, INDETERMINATE, CONTINUE };
 
                 /// <summary>Initializes a new instance of the HTTPLexer class.</summary>
                 HTTPLexer(bool clientLexer);
@@ -52,6 +52,11 @@ namespace network
                 /// been parsed, bad if the data is invalid, indeterminate when more data is
                 /// required. The InputIterator return value indicates how much of the input
                 /// has been consumed.</summary>
+                /// <typeparam name="InputIterator"></typeparam>
+                /// <param name="payload"></param>
+                /// <param name="begin"></param>
+                /// <param name="end"></param>
+                /// <returns></returns>
                 template <typename InputIterator>
                 std::tuple<ResultType, InputIterator> parse(HTTPPayload& payload, InputIterator begin, InputIterator end)
                 {
@@ -62,6 +67,9 @@ namespace network
                     }
                     return std::make_tuple(INDETERMINATE, begin);
                 }
+
+                /// <summary></summary>
+                uint32_t consumed() const { return m_consumed; }
 
             private:
                 /// <summary>Handle the next character of input.</summary>
@@ -88,6 +96,7 @@ namespace network
                 std::vector<LexedHeader> m_headers;
                 uint16_t m_status;
                 bool m_clientLexer = false;
+                uint32_t m_consumed;
 
                 enum state
                 {

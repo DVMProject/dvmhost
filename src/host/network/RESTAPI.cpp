@@ -143,9 +143,9 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
 RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& password,
     const std::string& keyFile, const std::string& certFile, bool enableSSL, Host* host, bool debug) :
     m_dispatcher(debug),
-    m_restServer(address, port),
+    m_restServer(address, port, debug),
 #if defined(ENABLE_TCP_SSL)
-    m_restSecureServer(address, port),
+    m_restSecureServer(address, port, debug),
     m_enableSSL(enableSSL),
 #endif // ENABLE_TCP_SSL
     m_random(),

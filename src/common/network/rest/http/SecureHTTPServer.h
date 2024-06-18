@@ -51,19 +51,25 @@ namespace network
                 SecureHTTPServer(SecureHTTPServer&) = delete;
 
                 /// <summary>Initializes a new instance of the SecureHTTPServer class.</summary>
-                explicit SecureHTTPServer(const std::string& address, uint16_t port) :
+                /// <param name="address"></param>
+                /// <param name="port"></param>
+                /// <param name="debug"></param>
+                explicit SecureHTTPServer(const std::string& address, uint16_t port, bool debug) :
                     m_ioService(),
                     m_acceptor(m_ioService),
                     m_connectionManager(),
                     m_context(asio::ssl::context::tlsv12),
                     m_socket(m_ioService),
-                    m_requestHandler()
+                    m_requestHandler(),
+                    m_debug(debug)
                 {
                     asio::ip::address ipAddress = asio::ip::address::from_string(address);
                     m_endpoint = asio::ip::tcp::endpoint(ipAddress, port);
                 }
 
                 /// <summary>Helper to set the SSL certificate and private key.</summary>
+                /// <param name="keyFile"></param>
+                /// <param name="certFile"></param>
                 bool setCertAndKey(const std::string& keyFile, const std::string& certFile)
                 {
                     try
@@ -79,6 +85,8 @@ namespace network
                 }
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
+                /// <typeparam name="Handler"></typeparam>
+                /// <param name="handler"></param>
                 template<typename Handler>
                 void setHandler(Handler&& handler)
                 {
@@ -130,7 +138,7 @@ namespace network
                         }
 
                         if (!ec) {
-                            m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_context, m_connectionManager, m_requestHandler));
+                            m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_context, m_connectionManager, m_requestHandler, false, m_debug));
                         }
 
                         accept();
@@ -154,6 +162,7 @@ namespace network
                 std::string m_keyFile;
 
                 RequestHandlerType m_requestHandler;
+                bool m_debug;
             };
         } // namespace http
     } // namespace rest

@@ -9,7 +9,7 @@
 * @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
 *
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__REST_HTTP__HTTP_REPLY_H__)
@@ -72,6 +72,7 @@ namespace network
 
                 HTTPHeaders headers;
                 std::string content;
+                size_t contentLength;
 
                 std::string method;
                 std::string uri;

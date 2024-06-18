@@ -50,6 +50,8 @@ namespace network
                 SecureHTTPClient(SecureHTTPClient&) = delete;
 
                 /// <summary>Initializes a new instance of the SecureHTTPClient class.</summary>
+                /// <param name="address"></param>
+                /// <param name="port"></param>
                 SecureHTTPClient(const std::string& address, uint16_t port) :
                     m_address(address),
                     m_port(port),
@@ -70,6 +72,8 @@ namespace network
                 }
 
                 /// <summary>Helper to set the HTTP request handlers.</summary>
+                /// <typeparam name="Handler"></param>
+                /// <param name="handler"></param>
                 template<typename Handler>
                 void setHandler(Handler&& handler)
                 {
@@ -77,6 +81,7 @@ namespace network
                 }
 
                 /// <summary>Send HTTP request to HTTP server.</summary>
+                /// <param name="request"></param>
                 bool request(HTTPPayload& request)
                 {
                     if (m_completed) {
@@ -144,6 +149,7 @@ namespace network
                 }
 
                 /// <summary>Perform an asynchronous connect operation.</summary>
+                /// <param name="endpoints"></param>
                 void connect(asio::ip::basic_resolver_results<asio::ip::tcp>& endpoints)
                 {
                     asio::connect(m_socket, endpoints);

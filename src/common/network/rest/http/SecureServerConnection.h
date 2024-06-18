@@ -58,13 +58,22 @@ namespace network
                 SecureServerConnection(SecureServerConnection&) = delete;
 
                 /// <summary>Initializes a new instance of the SecureServerConnection class.</summary>
+                /// <param name="socket"></param>
+                /// <param name="context"></param>
+                /// <param name="manager"></param>
+                /// <param name="handler"></param>
+                /// <param name="persistent"></param>
+                /// <param name="debug"></param>
                 explicit SecureServerConnection(asio::ip::tcp::socket socket, asio::ssl::context& context, ConnectionManagerType& manager, RequestHandlerType& handler,
-                    bool persistent = false) :
+                    bool persistent = false, bool debug = false) :
                     m_socket(std::move(socket), context),
                     m_connectionManager(manager),
                     m_requestHandler(handler),
                     m_lexer(HTTPLexer(false)),
-                    m_persistent(persistent)
+                    m_continue(false),
+                    m_contResult(HTTPLexer::INDETERMINATE),
+                    m_persistent(persistent),
+                    m_debug(debug)
                 {
                     /* stub */
                 }
@@ -105,29 +114,74 @@ namespace network
                         auto self(this->shared_from_this());
                     }
 
-                    m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t bytes_transferred) {
+                    m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t recvLength) {
                         if (!ec) {
-                            HTTPLexer::ResultType result;
+                            HTTPLexer::ResultType result = HTTPLexer::GOOD;
                             char* content;
 
                             // catch exceptions here so we don't blatently crash the system
                             try
                             {
-                                std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
+                                if (!m_continue) {
+                                    std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + recvLength);
 
-                                std::string contentLength = m_request.headers.find("Content-Length");
-                                if (contentLength != "") {
-                                    size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
-                                    m_request.content = std::string(content, length);
+                                    m_request.content = std::string();
+                                    std::string contentLength = m_request.headers.find("Content-Length");
+                                    if (contentLength != "" && (::strlen(content) != 0)) {
+                                        size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
+                                        m_request.contentLength = length;
+                                        m_request.content = std::string(content, length);
+                                    }
+
+                                    m_request.headers.add("RemoteHost", m_socket.lowest_layer().remote_endpoint().address().to_string());
+
+                                    uint32_t consumed = m_lexer.consumed();
+                                    if (result == HTTPLexer::GOOD && consumed == recvLength && 
+                                        ((m_request.method == HTTP_POST) || (m_request.method == HTTP_PUT))) {
+                                        if (m_debug) {
+                                            LogDebug(LOG_REST, "HTTPS Partial Request, recvLength = %u, consumed = %u, result = %u", recvLength, consumed, result);
+                                            Utils::dump(1U, "m_buffer", (uint8_t*)m_buffer.data(), recvLength);
+                                        }
+
+                                        result = HTTPLexer::INDETERMINATE;
+                                        m_continue = true;
+                                    }
+                                } else {
+                                    if (m_debug) {
+                                        LogDebug(LOG_REST, "HTTP Partial Request, recvLength = %u, result = %u", recvLength, result);
+                                        Utils::dump(1U, "m_buffer", (uint8_t*)m_buffer.data(), recvLength);
+                                    }
+
+                                    if (m_contResult == HTTPLexer::INDETERMINATE) {
+                                        m_request.content = std::string(m_buffer.data(), recvLength);
+                                    } else {
+                                        m_request.content.append(std::string(m_buffer.data(), recvLength));
+                                    }
+
+                                    if (m_request.contentLength != 0 && recvLength < m_request.contentLength) {
+                                        m_contResult = result = HTTPLexer::CONTINUE;
+                                        m_continue = true;
+                                    }
                                 }
 
-                                m_request.headers.add("RemoteHost", m_socket.lowest_layer().remote_endpoint().address().to_string());
-
                                 if (result == HTTPLexer::GOOD) {
+                                    if (m_debug) {
+                                        Utils::dump(1U, "HTTPS Request Content", (uint8_t*)m_request.content.c_str(), m_request.content.length());
+                                    }
+
+                                    m_continue = false;
+                                    m_contResult = HTTPLexer::INDETERMINATE;
                                     m_requestHandler.handleRequest(m_request, m_reply);
+
+                                    if (m_debug) {
+                                        Utils::dump(1U, "HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
+                                    }
+
                                     write();
                                 }
                                 else if (result == HTTPLexer::BAD) {
+                                    m_continue = false;
+                                    m_contResult = HTTPLexer::INDETERMINATE;
                                     m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
                                     write();
                                 }
@@ -135,13 +189,18 @@ namespace network
                                     read();
                                 }
                             }
-                            catch(const std::exception& e) { ::LogError(LOG_REST, "SecureServerConnection::read(), %s", ec.message().c_str()); }
+                            catch(const std::exception& e) { 
+                                ::LogError(LOG_REST, "SecureServerConnection::read(), %s", ec.message().c_str());
+                                m_continue = false;
+                                m_contResult = HTTPLexer::INDETERMINATE;
+                            }
                         }
                         else if (ec != asio::error::operation_aborted) {
                             if (ec) {
                                 ::LogError(LOG_REST, "SecureServerConnection::read(), %s, code = %u", ec.message().c_str(), ec.value());
                             }
                             m_connectionManager.stop(this->shared_from_this());
+                            m_continue = false;
                         }
                     });
                 }
@@ -197,7 +256,11 @@ namespace network
                 HTTPLexer m_lexer;
                 HTTPPayload m_reply;
 
+                bool m_continue;
+                HTTPLexer::ResultType m_contResult;
+
                 bool m_persistent;
+                bool m_debug;
             };
         } // namespace http
     } // namespace rest

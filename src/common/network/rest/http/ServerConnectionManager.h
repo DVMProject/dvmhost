@@ -44,6 +44,7 @@ namespace network
                 ServerConnectionManager() = default;
 
                 /// <summary>Add the specified connection to the manager and start it.</summary>
+                /// <param name="c"></param>
                 void start(ConnectionPtr c)
                 {
                     std::lock_guard<std::mutex> guard(m_lock);
@@ -54,6 +55,7 @@ namespace network
                 }
 
                 /// <summary>Stop the specified connection.</summary>
+                /// <param name="c"></param>
                 void stop(ConnectionPtr c)
                 {
                     std::lock_guard<std::mutex> guard(m_lock);

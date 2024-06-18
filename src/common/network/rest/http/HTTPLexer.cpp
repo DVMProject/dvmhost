@@ -9,7 +9,7 @@
 * @license BSL-1.0 License (https://opensource.org/license/bsl1-0-html)
 *
 *   Copyright (c) 2003-2013 Christopher M. Kohlhoff
-*   Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -32,6 +32,7 @@ using namespace network::rest::http;
 HTTPLexer::HTTPLexer(bool clientLexer) :
     m_headers(),
     m_clientLexer(clientLexer),
+    m_consumed(0U),
     m_state(METHOD_START)
 {
     if (m_clientLexer) {
@@ -62,6 +63,7 @@ void HTTPLexer::reset()
 /// <returns></returns>
 HTTPLexer::ResultType HTTPLexer::consume(HTTPPayload& req, char input)
 {
+    m_consumed++;
     switch (m_state)
     {
     /*
