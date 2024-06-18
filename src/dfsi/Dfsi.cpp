@@ -142,7 +142,7 @@ int Dfsi::run()
     }
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2024 DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2024 Patrick McDonnell, W3AXL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         ">> DFSI Network Peer\r\n");
 
     // read base parameters from configuration
