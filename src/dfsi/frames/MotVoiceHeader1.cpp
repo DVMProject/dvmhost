@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -13,7 +13,7 @@
 *
 */
 
-#include "rtp/MotVoiceHeader1.h"
+#include "frames/MotVoiceHeader1.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -31,14 +31,16 @@ using namespace dfsi;
 /// <summary>
 /// Initializes a instance of the MotVoiceHeader1 class.
 /// </summary>
-MotVoiceHeader1::MotVoiceHeader1()
+MotVoiceHeader1::MotVoiceHeader1() :
+    header(nullptr),
+    startOfStream(nullptr),
+    m_icw(ICW_DIU),
+    m_rssi(0U),
+    m_rssiValidity(INVALID),
+    m_nRssi(0U)
 {
-    icw = ICW_DIU;
-    rssi = 0;
-    rssiValidity = INVALID;
-    nRssi = 0;
+    startOfStream = new MotStartOfStream();
 
-    startOfStream = nullptr;
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
 }
@@ -57,8 +59,10 @@ MotVoiceHeader1::MotVoiceHeader1(uint8_t* data)
 /// </summary>
 MotVoiceHeader1::~MotVoiceHeader1()
 {
-    delete startOfStream;
-    delete[] header;
+    if (startOfStream != nullptr)
+        delete startOfStream;
+    if (header != nullptr)
+        delete[] header;
 }
 
 /// <summary>
@@ -70,21 +74,27 @@ bool MotVoiceHeader1::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    // Create a start of stream
+    // create a start of stream
+    if (startOfStream != nullptr)
+        delete startOfStream;
     startOfStream = new MotStartOfStream();
-    uint8_t buffer[startOfStream->LENGTH];
-    ::memset(buffer, 0x00U, startOfStream->LENGTH);
-    // We copy the bytes from [1:4] 
+
+    uint8_t buffer[MotStartOfStream::LENGTH];
+    ::memset(buffer, 0x00U, MotStartOfStream::LENGTH);
+    
+    // we copy the bytes from [1:4] 
     ::memcpy(buffer + 1U, data + 1U, 4);
     startOfStream->decode(buffer);
 
-    // Decode the other stuff
-    icw = (ICWFlag)data[5U];
-    rssi = data[6U];
-    rssiValidity = (RssiValidityFlag)data[7U];
-    nRssi = data[8U];
+    // decode the other stuff
+    m_icw = (ICWFlag)data[5U];
+    m_rssi = data[6U];
+    m_rssiValidity = (RssiValidityFlag)data[7U];
+    m_nRssi = data[8U];
 
-    // Our header includes the trailing source and check bytes
+    // our header includes the trailing source and check bytes
+    if (header != nullptr)
+        delete[] header;
     header = new uint8_t[HCW_LENGTH];
     ::memset(header, 0x00U, HCW_LENGTH);
     ::memcpy(header, data + 9U, HCW_LENGTH);
@@ -103,20 +113,22 @@ void MotVoiceHeader1::encode(uint8_t* data)
 
     data[0U] = P25_DFSI_MOT_VHDR_1;
 
-    if (startOfStream != nullptr) {
-        uint8_t buffer[startOfStream->LENGTH];
-        ::memset(buffer, 0x00U, startOfStream->LENGTH);
+    // scope is intentional
+    {
+        uint8_t buffer[MotStartOfStream::LENGTH];
+        ::memset(buffer, 0x00U, MotStartOfStream::LENGTH);
         startOfStream->encode(buffer);
-        // Copy the 4 start record bytes from the start of stream frame
+
+        // copy the 4 start record bytes from the start of stream frame
         ::memcpy(data + 1U, buffer + 1U, 4U);
     }
 
-    data[5U] = icw;
-    data[6U] = rssi;
-    data[7U] = (uint8_t)rssiValidity;
-    data[8U] = nRssi;
+    data[5U] = (uint8_t)m_icw;
+    data[6U] = m_rssi;
+    data[7U] = (uint8_t)m_rssiValidity;
+    data[8U] = m_nRssi;
 
-    // Our header includes the trailing source and check bytes
+    // our header includes the trailing source and check bytes
     if (header != nullptr) {
         ::memcpy(data + 9U, header, HCW_LENGTH);
     }

@@ -558,7 +558,7 @@ void SerialService::processP25ToNet()
             // Decode the frame
             MotStartOfStream start = MotStartOfStream(dfsiData);
             // Handle start/stop
-            if (start.startStop == StartStopFlag::START) {
+            if (start.getStartStop() == StartStopFlag::START) {
                 // Flag we have a local call (i.e. from V24) in progress
                 m_lclCallInProgress = true;
                 // Reset the call data (just in case)
@@ -657,7 +657,7 @@ void SerialService::processP25ToNet()
             // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
             // Copy
-            ::memcpy(m_rxVoiceCallData->netLDU1 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+            ::memcpy(m_rxVoiceCallData->netLDU1 + 10U, svf.fullRateVoice->imbeData, MotFullRateVoice::IMBE_BUF_LEN);
             // Increment our voice frame counter
             m_rxVoiceCallData->n++;
         }
@@ -667,7 +667,7 @@ void SerialService::processP25ToNet()
             // Decode
             MotStartVoiceFrame svf = MotStartVoiceFrame(dfsiData);
             // Copy
-            ::memcpy(m_rxVoiceCallData->netLDU2 + 10U, svf.fullRateVoice->imbeData, svf.fullRateVoice->IMBE_BUF_LEN);
+            ::memcpy(m_rxVoiceCallData->netLDU2 + 10U, svf.fullRateVoice->imbeData, MotFullRateVoice::IMBE_BUF_LEN);
             // Increment our voice frame counter
             m_rxVoiceCallData->n++;
         }
@@ -682,13 +682,13 @@ void SerialService::processP25ToNet()
                 // VOICE2
                 case P25_DFSI_LDU1_VOICE2:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 26U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 26U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE3
                 case P25_DFSI_LDU1_VOICE3:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 55U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 55U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->lco = voice.additionalData[0U];
                         m_rxVoiceCallData->mfId = voice.additionalData[1U];
@@ -701,7 +701,7 @@ void SerialService::processP25ToNet()
                 // VOICE4
                 case P25_DFSI_LDU1_VOICE4:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 80U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 80U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->dstId = __GET_UINT16(voice.additionalData, 0U);
                     } else {
@@ -712,7 +712,7 @@ void SerialService::processP25ToNet()
                 // VOICE5
                 case P25_DFSI_LDU1_VOICE5:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 105U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 105U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->srcId = __GET_UINT16(voice.additionalData, 0U);
                     } else {
@@ -723,25 +723,25 @@ void SerialService::processP25ToNet()
                 // VOICE6
                 case P25_DFSI_LDU1_VOICE6:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 130U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 130U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE7
                 case P25_DFSI_LDU1_VOICE7:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 155U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 155U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE8
                 case P25_DFSI_LDU1_VOICE8:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 180U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 180U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE9
                 case P25_DFSI_LDU1_VOICE9:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU1 + 204U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU1 + 204U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->lsd1 = voice.additionalData[0U];
                         m_rxVoiceCallData->lsd2 = voice.additionalData[1U];
@@ -753,13 +753,13 @@ void SerialService::processP25ToNet()
                 // VOICE11
                 case P25_DFSI_LDU2_VOICE11:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 26U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 26U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE12
                 case P25_DFSI_LDU2_VOICE12:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 55U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 55U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxVoiceCallData->mi, voice.additionalData, 3U);
                     } else {
@@ -770,7 +770,7 @@ void SerialService::processP25ToNet()
                 // VOICE13
                 case P25_DFSI_LDU2_VOICE13:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 80U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 80U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxVoiceCallData->mi + 3U, voice.additionalData, 3U);
                     } else {
@@ -781,7 +781,7 @@ void SerialService::processP25ToNet()
                 // VOICE14
                 case P25_DFSI_LDU2_VOICE14:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 105U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 105U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         ::memcpy(m_rxVoiceCallData->mi + 6U, voice.additionalData, 3U);
                     } else {
@@ -792,7 +792,7 @@ void SerialService::processP25ToNet()
                 // VOICE15
                 case P25_DFSI_LDU2_VOICE15:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 130U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 130U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->algoId = voice.additionalData[0U];
                         m_rxVoiceCallData->kId = __GET_UINT16B(voice.additionalData, 1U);
@@ -804,19 +804,19 @@ void SerialService::processP25ToNet()
                 // VOICE16
                 case P25_DFSI_LDU2_VOICE16:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 155U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 155U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE17
                 case P25_DFSI_LDU2_VOICE17:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 180U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 180U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                 }
                 break;
                 // VOICE18
                 case P25_DFSI_LDU2_VOICE18:
                 {
-                    ::memcpy(m_rxVoiceCallData->netLDU2 + 204U, voice.imbeData, voice.IMBE_BUF_LEN);
+                    ::memcpy(m_rxVoiceCallData->netLDU2 + 204U, voice.imbeData, MotFullRateVoice::IMBE_BUF_LEN);
                     if (voice.additionalData != nullptr) {
                         m_rxVoiceCallData->lsd1 = voice.additionalData[0U];
                         m_rxVoiceCallData->lsd2 = voice.additionalData[1U];
@@ -1317,21 +1317,19 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             case 0: // VOICE1/10
             {
                 // Set frametype
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE1 : P25_DFSI_LDU2_VOICE10;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE1 : P25_DFSI_LDU2_VOICE10);
                 // Create the new frame objects
                 MotStartVoiceFrame svf = MotStartVoiceFrame();
-                svf.startOfStream = new MotStartOfStream();
-                svf.fullRateVoice = new MotFullRateVoice();
                 // Set values appropriately
-                svf.startOfStream->startStop = StartStopFlag::START;
-                svf.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+                svf.startOfStream->setStartStop(StartStopFlag::START);
+                svf.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
                 // Set frame type
-                svf.fullRateVoice->frameType = voice.frameType;
+                svf.fullRateVoice->setFrameType(voice.getFrameType());
                 // Set source flag & ICW flag
-                svf.fullRateVoice->source = m_diu ? SOURCE_DIU : SOURCE_QUANTAR;
-                svf.icw = m_diu ? ICW_DIU : ICW_QUANTAR;
+                svf.fullRateVoice->setSource(m_diu ? SOURCE_DIU : SOURCE_QUANTAR);
+                svf.setICW(m_diu ? ICW_DIU : ICW_QUANTAR);
                 // Copy data
-                ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, svf.fullRateVoice->IMBE_BUF_LEN);
+                ::memcpy(svf.fullRateVoice->imbeData, ldu + 10U, MotFullRateVoice::IMBE_BUF_LEN);
                 // Encode
                 buffer = new uint8_t[svf.LENGTH];
                 ::memset(buffer, 0x00U, svf.LENGTH);
@@ -1341,21 +1339,21 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 1: // VOICE2/11
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE2 : P25_DFSI_LDU2_VOICE11;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE2 : P25_DFSI_LDU2_VOICE11);
                 // Set source flag
-                voice.source = m_diu ? SOURCE_DIU : SOURCE_QUANTAR;
+                voice.setSource(m_diu ? SOURCE_DIU : SOURCE_QUANTAR);
                 ::memcpy(voice.imbeData, ldu + 26U, voice.IMBE_BUF_LEN);
             }
             break;
             case 2: // VOICE3/12
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE3 : P25_DFSI_LDU2_VOICE12;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE3 : P25_DFSI_LDU2_VOICE12);
                 ::memcpy(voice.imbeData, ldu + 55U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
                 ::memset(voice.additionalData, 0x00U, voice.ADDITIONAL_LENGTH);
                 // Copy additional data
-                if (voice.frameType == P25_DUID_LDU1) {
+                if (voice.getFrameType() == P25_DUID_LDU1) {
                     voice.additionalData[0U] = control.getLCO();
                     voice.additionalData[1U] = control.getMFId();
                     voice.additionalData[2U] = serviceOptions;
@@ -1368,7 +1366,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 3: // VOICE4/13
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE4 : P25_DFSI_LDU2_VOICE13;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE4 : P25_DFSI_LDU2_VOICE13);
                 ::memcpy(voice.imbeData, ldu + 80U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1394,7 +1392,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 4: // VOICE5/14
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE5 : P25_DFSI_LDU2_VOICE14;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE5 : P25_DFSI_LDU2_VOICE14);
                 ::memcpy(voice.imbeData, ldu + 105U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1420,7 +1418,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 5: // VOICE6/15
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE6 : P25_DFSI_LDU2_VOICE15;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE6 : P25_DFSI_LDU2_VOICE15);
                 ::memcpy(voice.imbeData, ldu + 130U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1446,7 +1444,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 6: // VOICE7/16
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE7 : P25_DFSI_LDU2_VOICE16;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE7 : P25_DFSI_LDU2_VOICE16);
                 ::memcpy(voice.imbeData, ldu + 155U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1459,7 +1457,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 7: // VOICE8/17
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE8 : P25_DFSI_LDU2_VOICE17;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE8 : P25_DFSI_LDU2_VOICE17);
                 ::memcpy(voice.imbeData, ldu + 180U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1472,7 +1470,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
             break;
             case 8: // VOICE9/18
             {
-                voice.frameType = (duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE9 : P25_DFSI_LDU2_VOICE18;
+                voice.setFrameType((duid == P25_DUID_LDU1) ? P25_DFSI_LDU1_VOICE9 : P25_DFSI_LDU2_VOICE18);
                 ::memcpy(voice.imbeData, ldu + 204U, voice.IMBE_BUF_LEN);
                 // Create the additional data array
                 voice.additionalData = new uint8_t[voice.ADDITIONAL_LENGTH];
@@ -1516,8 +1514,8 @@ void SerialService::startOfStream(const LC& lc)
 
     // Create new start of stream
     MotStartOfStream start = MotStartOfStream();
-    start.startStop = StartStopFlag::START;
-    start.rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
+    start.setStartStop(StartStopFlag::START);
+    start.setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
 
     // Create buffer for bytes and encode
     uint8_t buffer[start.LENGTH];
@@ -1567,10 +1565,9 @@ void SerialService::startOfStream(const LC& lc)
 
     // Prepare VHDR1
     MotVoiceHeader1 vhdr1 = MotVoiceHeader1();
-    vhdr1.startOfStream = new MotStartOfStream();
-    vhdr1.startOfStream->startStop = StartStopFlag::START;
-    vhdr1.startOfStream->rt = m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED;
-    vhdr1.icw = m_diu ? ICW_DIU : ICW_QUANTAR;
+    vhdr1.startOfStream->setStartStop(StartStopFlag::START);
+    vhdr1.startOfStream->setRT(m_rtrt ? RTFlag::ENABLED : RTFlag::DISABLED);
+    vhdr1.setICW(m_diu ? ICW_DIU : ICW_QUANTAR);
     ::memcpy(vhdr1.header, raw, 8U);
     ::memcpy(vhdr1.header + 9U, raw + 8U, 8U);
     ::memcpy(vhdr1.header + 18U, raw + 16U, 2U);
@@ -1614,7 +1611,7 @@ void SerialService::endOfStream()
 {
     // Create the new end of stream (which looks like a start of stream with the stop flag)
     MotStartOfStream end = MotStartOfStream();
-    end.startStop = StartStopFlag::STOP;
+    end.setStartStop(StartStopFlag::STOP);
 
     // Create buffer and encode
     uint8_t buffer[end.LENGTH];

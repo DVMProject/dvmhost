@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -13,7 +13,7 @@
 *
 */
 
-#include "rtp/MotStartOfStream.h"
+#include "frames/MotStartOfStream.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -31,11 +31,13 @@ using namespace dfsi;
 /// <summary>
 /// Initializes a instance of the MotStartOfStream class.
 /// </summary>
-MotStartOfStream::MotStartOfStream()
+MotStartOfStream::MotStartOfStream() :
+    m_marker(FIXED_MARKER),
+    m_rt(DISABLED),
+    m_startStop(START),
+    m_streamType(VOICE)
 {
-    rt = DISABLED;
-    startStop = START;
-    streamType = VOICE;
+    /* stub */
 }
 
 /// <summary>
@@ -56,10 +58,9 @@ bool MotStartOfStream::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    // Get parameters
-    rt = (RTFlag)data[2U];
-    startStop = (StartStopFlag)data[3U];
-    streamType = (StreamTypeFlag)data[4U];
+    m_rt = (RTFlag)data[2U];
+    m_startStop = (StartStopFlag)data[3U];
+    m_streamType = (StreamTypeFlag)data[4U];
 
     return true;
 }
@@ -72,10 +73,9 @@ void MotStartOfStream::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    // Copy data
     data[0U] = P25_DFSI_MOT_START_STOP;
     data[1U] = FIXED_MARKER;
-    data[2U] = rt;
-    data[3U] = startStop;
-    data[4U] = streamType;
+    data[2U] = (uint8_t)m_rt;
+    data[3U] = (uint8_t)m_startStop;
+    data[4U] = (uint8_t)m_streamType;
 }

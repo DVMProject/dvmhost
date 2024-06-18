@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -19,9 +19,9 @@
 #include "common/Defines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "rtp/RtpDefines.h"
-#include "rtp/MotStartOfStream.h"
-#include "rtp/MotFullRateVoice.h"
+#include "frames/FrameDefines.h"
+#include "frames/MotStartOfStream.h"
+#include "frames/MotFullRateVoice.h"
 
 namespace p25
 {
@@ -52,15 +52,6 @@ namespace p25
         public:
             static const uint8_t LENGTH = 22;
 
-            ICWFlag icw;
-            uint8_t rssi;
-            RssiValidityFlag rssiValidity;
-            uint8_t nRssi;
-            uint8_t adjMM;
-
-            MotStartOfStream* startOfStream;
-            MotFullRateVoice* fullRateVoice;
-
             /// <summary>Initializes a copy instance of the MotStartVoiceFrame class.</summary>
             MotStartVoiceFrame();
             /// <summary>Initializes a copy instance of the MotStartVoiceFrame class.</summary>
@@ -72,6 +63,21 @@ namespace p25
             bool decode(const uint8_t* data);
             /// <summary>Encode a start voice frame.</summary>
             void encode(uint8_t* data);
+        
+        public:
+            MotStartOfStream* startOfStream; // ?? - this should probably be private with getters/setters
+            MotFullRateVoice* fullRateVoice; // ?? - this should probably be private with getters/setters
+
+            /// <summary></summary>
+            __PROPERTY(ICWFlag, icw, ICW);
+            /// <summary></summary>
+            __PROPERTY(uint8_t, rssi, RSSI);
+            /// <summary></summary>
+            __PROPERTY(RssiValidityFlag, rssiValidity, RSSIValidity);
+            /// <summary></summary>
+            __PROPERTY(uint8_t, nRssi, NRSSI);
+            /// <summary></summary>
+            __PROPERTY(uint8_t, adjMM, AdjMM);
         };
     } // namespace dfsi
 } // namespace p25

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -13,7 +13,7 @@
 *
 */
 
-#include "rtp/MotStartVoiceFrame.h"
+#include "frames/MotStartVoiceFrame.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -31,16 +31,17 @@ using namespace dfsi;
 /// <summary>
 /// Initializes a instance of the MotStartVoiceFrame class.
 /// </summary>
-MotStartVoiceFrame::MotStartVoiceFrame()
+MotStartVoiceFrame::MotStartVoiceFrame() :
+    startOfStream(nullptr),
+    fullRateVoice(nullptr),
+    m_icw(ICW_DIU),
+    m_rssi(0U),
+    m_rssiValidity(INVALID),
+    m_nRssi(0U),
+    m_adjMM(0U)
 {
-    icw = ICW_DIU;
-    rssi = 0;
-    rssiValidity = INVALID;
-    nRssi = 0;
-    adjMM = 0;
-
-    startOfStream = nullptr;
-    fullRateVoice = nullptr;
+    startOfStream = new MotStartOfStream();
+    fullRateVoice = new MotFullRateVoice();
 }
 
 /// <summary>
@@ -57,8 +58,10 @@ MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data)
 /// </summary>
 MotStartVoiceFrame::~MotStartVoiceFrame()
 {
-    delete startOfStream;
-    delete fullRateVoice;
+    if (startOfStream != nullptr)
+        delete startOfStream;
+    if (fullRateVoice != nullptr)
+        delete fullRateVoice;
 }
 
 /// <summary>
@@ -70,31 +73,36 @@ bool MotStartVoiceFrame::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    // Create a new startOfStream
+    // create a new start of stream
+    if (startOfStream != nullptr)
+        delete startOfStream;
     startOfStream = new MotStartOfStream();
-    
-    // Create a buffer to decode the start record skipping the 10th byte (adjMM)
-    uint8_t startBuffer[startOfStream->LENGTH];
-    ::memset(startBuffer, 0x00U, startOfStream->LENGTH);
+
+    // create a buffer to decode the start record skipping the 10th byte (adjMM)
+    uint8_t startBuffer[MotStartOfStream::LENGTH];
+    ::memset(startBuffer, 0x00U, MotStartOfStream::LENGTH);
     ::memcpy(startBuffer, data, 9U);
 
-    // Decode start of stream
+    // decode start of stream
     startOfStream->decode(startBuffer);
 
-    // Decode the full rate voice frames
+    // decode the full rate voice frames
+    if (fullRateVoice != nullptr)
+        delete fullRateVoice;
     fullRateVoice = new MotFullRateVoice();
-    uint8_t voiceBuffer[fullRateVoice->SHORTENED_LENGTH];
-    ::memset(voiceBuffer, 0x00U, fullRateVoice->SHORTENED_LENGTH);
+    
+    uint8_t voiceBuffer[MotFullRateVoice::SHORTENED_LENGTH];
+    ::memset(voiceBuffer, 0x00U, MotFullRateVoice::SHORTENED_LENGTH);
     voiceBuffer[0U] = data[0U];
-    ::memcpy(voiceBuffer + 1U, data + 10U, fullRateVoice->SHORTENED_LENGTH - 1);
+    ::memcpy(voiceBuffer + 1U, data + 10U, MotFullRateVoice::SHORTENED_LENGTH - 1);
     fullRateVoice->decode(voiceBuffer, true);
 
-    // Get rest of data
-    icw = (ICWFlag)data[5U];
-    rssi = data[6U];
-    rssiValidity = (RssiValidityFlag)data[7U];
-    nRssi = data[8U];
-    adjMM = data[9U];
+    // get rest of data
+    m_icw = (ICWFlag)data[5U];
+    m_rssi = data[6U];
+    m_rssiValidity = (RssiValidityFlag)data[7U];
+    m_nRssi = data[8U];
+    m_adjMM = data[9U];
 
     return true;
 }
@@ -109,26 +117,28 @@ void MotStartVoiceFrame::encode(uint8_t* data)
     assert(startOfStream != nullptr);
     assert(fullRateVoice != nullptr);
 
-    // Encode start of stream
-    if (startOfStream != nullptr) {
-        uint8_t buffer[startOfStream->LENGTH];
+    // encode start of stream - scope is intentional
+    {
+        uint8_t buffer[MotStartOfStream::LENGTH];
         startOfStream->encode(buffer);
-        // Copy to data array (skipping first and last bytes)
-        ::memcpy(data + 1U, buffer + 1U, startOfStream->LENGTH - 2);
+
+        // copy to data array (skipping first and last bytes)
+        ::memcpy(data + 1U, buffer + 1U, MotStartOfStream::LENGTH - 2);
     }
 
-    // Encode full rate voice
-    if (fullRateVoice != nullptr) {
-        uint8_t buffer[fullRateVoice->SHORTENED_LENGTH];
+    // encode full rate voice - scope is intentional
+    {
+        uint8_t buffer[MotFullRateVoice::SHORTENED_LENGTH];
         fullRateVoice->encode(buffer, true);
-        data[0U] = fullRateVoice->frameType;
-        ::memcpy(data + 10U, buffer + 1U, fullRateVoice->SHORTENED_LENGTH - 1);
+
+        data[0U] = fullRateVoice->getFrameType();
+        ::memcpy(data + 10U, buffer + 1U, MotFullRateVoice::SHORTENED_LENGTH - 1);
     }
 
     // Copy the rest
-    data[5U] = icw;
-    data[6U] = rssi;
-    data[7U] = rssiValidity;
-    data[8U] = nRssi;
-    data[9U] = adjMM;
+    data[5U] = (uint8_t)m_icw;
+    data[6U] = m_rssi;
+    data[7U] = (uint8_t)m_rssiValidity;
+    data[8U] = m_nRssi;
+    data[9U] = m_adjMM;
 }

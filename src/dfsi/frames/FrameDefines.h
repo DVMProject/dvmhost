@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -12,8 +12,8 @@
 *   Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 *
 */
-#if !defined(__RTP_DEFINES_H__)
-#define  __RTP_DEFINES_H__
+#if !defined(__FRAME_DEFINES_H__)
+#define  __FRAME_DEFINES_H__
 
 #include "common/Defines.h"
 
@@ -74,4 +74,4 @@ namespace p25
     } // namespace dfsi
 } // namespace p25
 
-#endif // __RTP_DEFINES_H__
+#endif // __FRAME_DEFINES_H__

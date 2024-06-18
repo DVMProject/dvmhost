@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -19,7 +19,7 @@
 #include "common/Defines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "rtp/RtpDefines.h"
+#include "frames/FrameDefines.h"
 
 namespace p25
 {
@@ -45,12 +45,6 @@ namespace p25
             static const uint8_t LENGTH = 10;
             static const uint8_t FIXED_MARKER = 0x02;
 
-            uint8_t marker = FIXED_MARKER;
-
-            RTFlag rt;
-            StartStopFlag startStop;
-            StreamTypeFlag streamType;
-
             /// <summary>Initializes a copy instance of the MotStartOfStream class.</summary>
             MotStartOfStream();
             /// <summary>Initializes a copy instance of the MotStartOfStream class.</summary>
@@ -60,6 +54,16 @@ namespace p25
             bool decode(const uint8_t* data);
             /// <summary>Encode a start of stream frame.</summary>
             void encode(uint8_t* data);
+        
+        public:
+            /// <summary></summary>
+            __PROPERTY(uint8_t, marker, Marker);
+            /// <summary></summary>
+            __PROPERTY(RTFlag, rt, RT);
+            /// <summary></summary>
+            __PROPERTY(StartStopFlag, startStop, StartStop);
+            /// <summary></summary>
+            __PROPERTY(StreamTypeFlag, streamType, StreamType);
         };
     } // namespace dfsi
 } // namespace p25

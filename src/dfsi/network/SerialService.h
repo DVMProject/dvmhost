@@ -29,7 +29,7 @@
 #include "common/RingBuffer.h"
 #include "network/DfsiPeerNetwork.h"
 #include "network/CallData.h"
-#include "rtp/RtpFrames.h"
+#include "frames/Frames.h"
 #include "host/modem/Modem.h"
 #include "host/modem/port/IModemPort.h"
 #include "host/modem/port/UARTPort.h"

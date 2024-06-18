@@ -24,8 +24,8 @@ file(GLOB dvmdfsi_SRC
     "src/dfsi/network/*.h"
     "src/dfsi/network/*.cpp"
     # DFSI rtp libs
-    "src/dfsi/rtp/*.h"
-    "src/dfsi/rtp/*.cpp"
+    "src/dfsi/frames/*.h"
+    "src/dfsi/frames/*.cpp"
     # Core DFSI
     "src/dfsi/*.h"
     "src/dfsi/*.cpp"

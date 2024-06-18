@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
-* Digital Voice Modem - Common Library
+* Digital Voice Modem - DFSI Peer Application
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-* @package DVM / DFSI peer application
+* @package DVM / DFSI Peer Application
 * @derivedfrom MMDVMHost (https://github.com/g4klx/MMDVMHost)
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
@@ -19,7 +19,7 @@
 #include "common/Defines.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "rtp/RtpDefines.h"
+#include "frames/FrameDefines.h"
 
 namespace p25
 {
@@ -52,11 +52,6 @@ namespace p25
             static const uint8_t ADDITIONAL_LENGTH = 4;
             static const uint8_t IMBE_BUF_LEN = 11;
 
-            uint8_t frameType;
-            uint8_t* imbeData;
-            uint8_t* additionalData;
-            SourceFlag source;
-
             /// <summary>Initializes a copy instance of the MotFullRateVoice class.</summary>
             MotFullRateVoice();
             /// <summary>Initializes a copy instance of the MotFullRateVoice class.</summary>
@@ -70,7 +65,16 @@ namespace p25
             bool decode(const uint8_t* data, bool shortened = false);
             /// <summary>Encode a full rate voice frame.</summary>
             void encode(uint8_t* data, bool shortened = false);
-        
+
+        public:
+            uint8_t* imbeData; // ?? - this should probably be private with getters/setters
+            uint8_t* additionalData; // ?? - this should probably be private with getters/setters
+
+            /// <summary></summary>
+            __PROPERTY(uint8_t, frameType, FrameType);
+            /// <summary></summary>
+            __PROPERTY(uint8_t, source, Source);
+
         private:
             /// <summary></summary>
             bool isVoice1or2or10or11();
