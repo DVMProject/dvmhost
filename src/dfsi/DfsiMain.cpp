@@ -97,7 +97,7 @@ void fatal(const char* msg, ...)
 void usage(const char* message, const char* arg)
 {
     ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-    ::fprintf(stdout, "Copyright (c) 2024 DVMProject (https://github.com/dvmproject) Authors.\n");
+    ::fprintf(stdout, "Copyright (c) 2024 Patrick McDonnell, W3AXL and DVMProject (https://github.com/dvmproject) Authors.\n");
     if (message != nullptr) {
         ::fprintf(stderr, "%s: ", g_progExe.c_str());
         ::fprintf(stderr, message, arg);
@@ -167,7 +167,7 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-            ::fprintf(stdout, "Copyright (c) 2017-2024 Patrick McDonnell, W3AXL and DVMProject (https://github.com/dvmproject) Authors.\n");
+            ::fprintf(stdout, "Copyright (c) 2024 Patrick McDonnell, W3AXL and DVMProject (https://github.com/dvmproject) Authors.\n");
             ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
             if (argc == 2)
                 exit(EXIT_SUCCESS);
