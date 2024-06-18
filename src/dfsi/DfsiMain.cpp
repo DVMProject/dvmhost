@@ -105,6 +105,7 @@ void usage(const char* message, const char* arg)
 
     ::fprintf(stdout, 
         "usage: %s [-vhf]"
+        "[--syslog]"
         "[-c <configuration file>]"
         "[-a <address>] [-p <port>] [-P <peer id>]"
         "\n\n"
@@ -145,6 +146,9 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-f")) {
             g_foreground = true;
+        }
+        else if (IS("--syslog")) {
+            g_useSyslog = true;
         }
         else if (IS("-s")) {
             g_hideMessages = true;
