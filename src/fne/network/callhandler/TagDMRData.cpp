@@ -245,6 +245,10 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             parrotFrame.dstId = dstId;
 
             m_parrotFrames.push_back(parrotFrame);
+
+            if (m_network->m_parrotOnlyOriginating) {
+                return true; // end here because parrot calls should never repeat anywhere
+            }
         }
 
         // process CSBK from peer

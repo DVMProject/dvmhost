@@ -279,6 +279,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             parrotFrame.dstId = dstId;
 
             m_parrotFrames.push_back(parrotFrame);
+
+            if (m_network->m_parrotOnlyOriginating) {
+                return true; // end here because parrot calls should never repeat anywhere
+            }
         }
 
         // process TSDU from peer
@@ -458,10 +462,15 @@ void TagP25Data::playbackParrot()
                 uint32_t messageLength = 0U;
                 UInt8Array message = m_network->createP25_TDUMessage(messageLength, control, lsd, controlByte);
                 if (message != nullptr) {
-                    // repeat traffic to the connected peers
-                    for (auto peer : m_network->m_peers) {
-                        LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
-                        m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                    if (m_network->m_parrotOnlyOriginating) {
+                        LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", pkt.peerId, srcId, dstId);
+                        m_network->writePeer(pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                    } else {
+                        // repeat traffic to the connected peers
+                        for (auto peer : m_network->m_peers) {
+                            LogMessage(LOG_NET, "P25, Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
+                            m_network->writePeer(peer.first, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 0U, false);
+                        }
                     }
                 }
             }
