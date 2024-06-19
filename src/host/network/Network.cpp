@@ -295,9 +295,9 @@ void Network::clock(uint32_t ms)
 
         // process incoming message frame opcodes
         switch (fneHeader.getFunction()) {
-        case NET_FUNC_PROTOCOL:
+        case NET_FUNC::PROTOCOL:
             {
-                if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {           // Encapsulated DMR data frame
+                if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {              // Encapsulated DMR data frame
                     if (m_enabled && m_dmrEnabled) {
                         uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
                         if (m_rxDMRStreamId[slotNo] == 0U) {
@@ -324,7 +324,7 @@ void Network::clock(uint32_t ms)
                         m_rxDMRData.addData(buffer.get(), len);
                     }
                 }
-                else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {      // Encapsulated P25 data frame
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {         // Encapsulated P25 data frame
                     if (m_enabled && m_p25Enabled) {
                         if (m_rxP25StreamId == 0U) {
                             m_rxP25StreamId = streamId;
@@ -350,7 +350,7 @@ void Network::clock(uint32_t ms)
                         m_rxP25Data.addData(buffer.get(), len);
                     }
                 }
-                else if (fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {     // Encapsulated NXDN data frame
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {        // Encapsulated NXDN data frame
                     if (m_enabled && m_nxdnEnabled) {
                         if (m_rxNXDNStreamId == 0U) {
                             m_rxNXDNStreamId = streamId;
@@ -382,9 +382,9 @@ void Network::clock(uint32_t ms)
             }
             break;
 
-        case NET_FUNC_MASTER:
+        case NET_FUNC::MASTER:
             {
-                if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_WL_RID) {          // Radio ID Whitelist
+                if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_WL_RID) {         // Radio ID Whitelist
                     if (m_enabled && m_updateLookup) {
                         if (m_debug)
                             Utils::dump(1U, "Network Received, WL RID", buffer.get(), length);
@@ -408,7 +408,7 @@ void Network::clock(uint32_t ms)
                         }
                     }
                 }
-                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_BL_RID) {     // Radio ID Blacklist
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_BL_RID) {        // Radio ID Blacklist
                     if (m_enabled && m_updateLookup) {
                         if (m_debug)
                             Utils::dump(1U, "Network Received, BL RID", buffer.get(), length);
@@ -432,7 +432,7 @@ void Network::clock(uint32_t ms)
                         }
                     }
                 }
-                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_ACTIVE_TGS) { // Talkgroup Active IDs
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS) {    // Talkgroup Active IDs
                     if (m_enabled && m_updateLookup) {
                         if (m_debug)
                             Utils::dump(1U, "Network Received, ACTIVE TGS", buffer.get(), length);
@@ -478,7 +478,7 @@ void Network::clock(uint32_t ms)
                         }
                     }
                 }
-                else if (fneHeader.getSubFunction() == NET_MASTER_SUBFUNC_DEACTIVE_TGS) { // Talkgroup Deactivated IDs
+                else if (fneHeader.getSubFunction() == NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS) {  // Talkgroup Deactivated IDs
                     if (m_enabled && m_updateLookup) {
                         if (m_debug)
                             Utils::dump(1U, "Network Received, DEACTIVE TGS", buffer.get(), length);
@@ -515,7 +515,7 @@ void Network::clock(uint32_t ms)
             }
             break;
 
-        case NET_FUNC_NAK:                                                              // Master Negative Ack
+        case NET_FUNC::NAK:                                                                         // Master Negative Ack
             {
                 // DVM 3.6 adds support to respond with a NAK reason, as such we just check if the NAK response is greater
                 // then 10 bytes and process the reason value
@@ -573,7 +573,7 @@ void Network::clock(uint32_t ms)
                 }
             }
             break;
-        case NET_FUNC_ACK:                                                              // Repeater Ack
+        case NET_FUNC::ACK:                                                                         // Repeater Ack
             {
                 switch (m_status) {
                     case NET_STAT_WAITING_LOGIN:
@@ -618,14 +618,14 @@ void Network::clock(uint32_t ms)
                 }
             }
             break;
-        case NET_FUNC_MST_CLOSING:                                                      // Master Shutdown
+        case NET_FUNC::MST_CLOSING:                                                                 // Master Shutdown
             {
                 LogError(LOG_NET, "PEER %u master is closing down, remotePeerId = %u", m_peerId, m_remotePeerId);
                 close();
                 open();
             }
             break;
-        case NET_FUNC_PONG:                                                             // Master Ping Response
+        case NET_FUNC::PONG:                                                                        // Master Ping Response
             m_timeoutTimer.start();
             break;
         default:
@@ -699,7 +699,7 @@ void Network::close()
         uint8_t buffer[1U];
         ::memset(buffer, 0x00U, 1U);
 
-        writeMaster({ NET_FUNC_RPT_CLOSING, NET_SUBFUNC_NOP }, buffer, 1U, pktSeq(true), createStreamId());
+        writeMaster({ NET_FUNC::RPT_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, pktSeq(true), createStreamId());
     }
 
     m_socket->close();
@@ -742,7 +742,7 @@ bool Network::writeLogin()
 
     m_loginStreamId = createStreamId();
     m_remotePeerId = 0U;
-    return writeMaster({ NET_FUNC_RPTL, NET_SUBFUNC_NOP }, buffer, 8U, pktSeq(true), m_loginStreamId);
+    return writeMaster({ NET_FUNC::RPTL, NET_SUBFUNC::NOP }, buffer, 8U, pktSeq(true), m_loginStreamId);
 }
 
 /// <summary>
@@ -775,7 +775,7 @@ bool Network::writeAuthorisation()
     if (m_debug)
         Utils::dump(1U, "Network Message, Authorisation", out, 40U);
 
-    return writeMaster({ NET_FUNC_RPTK, NET_SUBFUNC_NOP }, out, 40U, pktSeq(), m_loginStreamId);
+    return writeMaster({ NET_FUNC::RPTK, NET_SUBFUNC::NOP }, out, 40U, pktSeq(), m_loginStreamId);
 }
 
 /// <summary>
@@ -837,7 +837,7 @@ bool Network::writeConfig()
         Utils::dump(1U, "Network Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
-    return writeMaster({ NET_FUNC_RPTC, NET_SUBFUNC_NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
+    return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP }, (uint8_t*)buffer, json.length() + 8U, RTP_END_OF_CALL_SEQ, m_loginStreamId);
 }
 
 /// <summary>
@@ -851,5 +851,5 @@ bool Network::writePing()
     if (m_debug)
         Utils::dump(1U, "Network Message, Ping", buffer, 11U);
 
-    return writeMaster({ NET_FUNC_PING, NET_SUBFUNC_NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, createStreamId());
+    return writeMaster({ NET_FUNC::PING, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, createStreamId());
 }

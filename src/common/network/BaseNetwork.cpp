@@ -122,7 +122,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
 
     buffer[20U] = mode;                                                             // DVM Mode State
 
-    return writeMaster({ NET_FUNC_GRANT_REQ, NET_SUBFUNC_NOP }, buffer, MSG_HDR_SIZE, 0U, 0U);
+    return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, 0U, 0U);
 }
 
 /// <summary>
@@ -145,7 +145,7 @@ bool BaseNetwork::writeActLog(const char* message)
 
     ::strcpy(buffer + 11U, message);
 
-    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 12U,
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
@@ -169,7 +169,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
 
     ::strcpy(buffer + 11U, message);
 
-    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 12U,
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
@@ -197,7 +197,7 @@ bool BaseNetwork::writePeerStatus(json::object obj)
 
     ::strcpy(buffer + 11U, json.c_str());
 
-    return writeMaster({ NET_FUNC_TRANSFER, NET_TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 12U,
+    return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 12U,
         0U, 0U, false, m_useAlternatePortForDiagnostics);
 }
 
@@ -216,7 +216,7 @@ bool BaseNetwork::announceGroupAffiliation(uint32_t srcId, uint32_t dstId)
     __SET_UINT16(srcId, buffer, 0U);
     __SET_UINT16(dstId, buffer, 3U);
 
-    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL }, buffer, MSG_ANNC_GRP_AFFIL, 0U, 0U);
 }
 
 /// <summary>
@@ -232,7 +232,7 @@ bool BaseNetwork::announceUnitRegistration(uint32_t srcId)
 
     __SET_UINT16(srcId, buffer, 0U);
 
-    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
 }
 
 /// <summary>
@@ -248,7 +248,7 @@ bool BaseNetwork::announceUnitDeregistration(uint32_t srcId)
 
     __SET_UINT16(srcId, buffer, 0U);
 
-    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG }, buffer, MSG_ANNC_UNIT_REG, 0U, 0U);
 }
 
 /// <summary>
@@ -273,7 +273,7 @@ bool BaseNetwork::announceAffiliationUpdate(const std::unordered_map<uint32_t, u
         offs += 8U;
     }
 
-    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS }, buffer, 4U + (affs.size() * 8U), 0U, 0U);
 }
 
 /// <summary>
@@ -297,7 +297,7 @@ bool BaseNetwork::announceSiteVCs(const std::vector<uint32_t> peers)
         offs += 4U;
     }
 
-    return writeMaster({ NET_FUNC_ANNOUNCE, NET_ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), 0U, 0U);
+    return writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC }, buffer, 4U + (peers.size() * 4U), 0U, 0U);
 }
 
 /// <summary>
@@ -475,7 +475,7 @@ bool BaseNetwork::writeDMR(const dmr::data::Data& data, bool noSequence)
         seq = RTP_END_OF_CALL_SEQ;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, seq, m_dmrStreamId[slotIndex]);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, seq, m_dmrStreamId[slotIndex]);
 }
 
 /// <summary>
@@ -548,7 +548,7 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -575,7 +575,7 @@ bool BaseNetwork::writeP25LDU2(const p25::lc::LC& control, const p25::data::LowS
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, pktSeq(resetSeq), m_p25StreamId);
 }
 
 /// <summary>
@@ -607,7 +607,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
         seq = RTP_END_OF_CALL_SEQ;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
 /// <summary>
@@ -631,7 +631,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
         return false;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, m_p25StreamId);
 }
 
 /// <summary>
@@ -666,7 +666,7 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t
         seq = RTP_END_OF_CALL_SEQ;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
 /// <summary>
@@ -749,7 +749,7 @@ bool BaseNetwork::writeNXDN(const nxdn::lc::RTCH& lc, const uint8_t* data, const
         seq = RTP_END_OF_CALL_SEQ;
     }
 
-    return writeMaster({ NET_FUNC_PROTOCOL, NET_PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, seq, m_nxdnStreamId);
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, message.get(), messageLength, seq, m_nxdnStreamId);
 }
 
 /// <summary>

@@ -34,7 +34,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API FrameQueue : public RawFrameQueue {
-    public: typedef std::pair<const uint8_t, const uint8_t> OpcodePair;
+    public: typedef std::pair<const NET_FUNC::ENUM, const NET_SUBFUNC::ENUM> OpcodePair;
     public:
         auto operator=(FrameQueue&) -> FrameQueue& = delete;
         auto operator=(FrameQueue&&) -> FrameQueue& = delete;

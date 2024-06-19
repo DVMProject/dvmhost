@@ -395,7 +395,7 @@ void FNENetwork::close()
         ::memset(buffer, 0x00U, 1U);
 
         for (auto peer : m_peers) {
-            writePeer(peer.first, { NET_FUNC_MST_CLOSING, NET_SUBFUNC_NOP }, buffer, 1U, (ushort)0U, 0U);
+            writePeer(peer.first, { NET_FUNC::MST_CLOSING, NET_SUBFUNC::NOP }, buffer, 1U, (ushort)0U, 0U);
         }
     }
 
@@ -460,7 +460,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
             }
 
             // if we don't have a stream ID and are receiving call data -- throw an error and discard
-            if (streamId == 0 && req->fneHeader.getFunction() == NET_FUNC_PROTOCOL) {
+            if (streamId == 0 && req->fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
                 std::string peerIdentity = network->resolvePeerIdentity(peerId);
                 LogError(LOG_NET, "PEER %u (%s) malformed packet (no stream ID for a call?)", peerId, peerIdentity.c_str());
 
@@ -473,9 +473,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
 
             // process incoming message frame opcodes
             switch (req->fneHeader.getFunction()) {
-            case NET_FUNC_PROTOCOL:
+            case NET_FUNC::PROTOCOL:
                 {
-                    if (req->fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_DMR) {          // Encapsulated DMR data frame
+                    if (req->fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR) {         // Encapsulated DMR data frame
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -498,7 +498,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             network->writePeerNAK(peerId, TAG_DMR_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_P25) {     // Encapsulated P25 data frame
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25) {    // Encapsulated P25 data frame
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -521,7 +521,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             network->writePeerNAK(peerId, TAG_P25_DATA, NET_CONN_NAK_FNE_UNAUTHORIZED);
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_PROTOCOL_SUBFUNC_NXDN) {    // Encapsulated NXDN data frame
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN) {   // Encapsulated NXDN data frame
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -550,7 +550,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 }
                 break;
 
-            case NET_FUNC_RPTL:                                                                 // Repeater Login
+            case NET_FUNC::RPTL:                                                                        // Repeater Login
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) == network->m_peers.end())) {
                         if (network->m_peers.size() >= MAX_HARD_CONN_CAP) {
@@ -639,7 +639,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     }
                 }
                 break;
-            case NET_FUNC_RPTK:                                                                 // Repeater Authentication
+            case NET_FUNC::RPTK:                                                                        // Repeater Authentication
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -737,7 +737,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     }
                 }
                 break;
-            case NET_FUNC_RPTC:                                                                 // Repeater Configuration
+            case NET_FUNC::RPTC:                                                                        // Repeater Configuration
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -838,7 +838,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 }
                 break;
 
-            case NET_FUNC_RPT_CLOSING:                                                          // Repeater Closing (Disconnect)
+            case NET_FUNC::RPT_CLOSING:                                                                 // Repeater Closing (Disconnect)
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -857,7 +857,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                     }
                 }
                 break;
-            case NET_FUNC_PING:                                                                 // Repeater Ping
+            case NET_FUNC::PING:                                                                        // Repeater Ping
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -884,7 +884,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                                 }
 
                                 network->m_peers[peerId] = connection;
-                                network->writePeerCommand(peerId, { NET_FUNC_PONG, NET_SUBFUNC_NOP });
+                                network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP });
 
                                 if (network->m_reportPeerPing) {
                                     LogInfoEx(LOG_NET, "PEER %u (%s) ping, pingsReceived = %u, lastPing = %u", peerId, connection->identity().c_str(),
@@ -899,7 +899,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 }
                 break;
 
-            case NET_FUNC_GRANT_REQ:                                                            // Repeater Grant Request
+            case NET_FUNC::GRANT_REQ:                                                                   // Repeater Grant Request
                 {
                     if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                         FNEPeerConnection* connection = network->m_peers[peerId];
@@ -958,15 +958,15 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 }
                 break;
 
-            case NET_FUNC_TRANSFER:
+            case NET_FUNC::TRANSFER:
                 {
                     // are activity/diagnostic transfers occurring from the alternate port?
                     if (network->m_host->m_useAlternatePortForDiagnostics) {
-                        break; // for performance and other reasons -- simply ignore the entire NET_FUNC_TRANSFER at this point
+                        break; // for performance and other reasons -- simply ignore the entire NET_FUNC::TRANSFER at this point
                                // since they should be coming from the alternate port anyway
                     }
 
-                    if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_ACTIVITY) {     // Peer Activity Log Transfer
+                    if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY) {    // Peer Activity Log Transfer
                         if (network->m_allowActivityTransfer) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                                 FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1000,7 +1000,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_DIAG) {    // Peer Diagnostic Log Transfer
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG) {   // Peer Diagnostic Log Transfer
                         if (network->m_allowDiagnosticTransfer) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                                 FNEPeerConnection* connection = network->m_peers[peerId];
@@ -1037,7 +1037,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_STATUS) {  // Peer Status Transfer
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS) { // Peer Status Transfer
                         // main traffic port status transfers aren't supported for performance reasons
                     }
                     else {
@@ -1047,9 +1047,9 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                 }
                 break;
 
-            case NET_FUNC_ANNOUNCE:
+            case NET_FUNC::ANNOUNCE:
                 {
-                    if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_GRP_AFFIL) {        // Announce Group Affiliation
+                    if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL) {       // Announce Group Affiliation
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -1072,7 +1072,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_UNIT_REG) {    // Announce Unit Registration
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG) {   // Announce Unit Registration
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -1093,7 +1093,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_UNIT_DEREG) {  // Announce Unit Deregistration
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG) { // Announce Unit Deregistration
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -1114,7 +1114,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_AFFILS) {      // Announce Update All Affiliations
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_AFFILS) {     // Announce Update All Affiliations
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -1149,7 +1149,7 @@ void* FNENetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_ANNC_SUBFUNC_SITE_VC) {     // Announce Site VCs
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC) {    // Announce Site VCs
                         if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                             FNEPeerConnection* connection = network->m_peers[peerId];
                             if (connection != nullptr) {
@@ -1474,7 +1474,7 @@ void FNENetwork::writeWhitelistRIDs(uint32_t peerId)
                 offs += 4U;
             }
 
-            writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_WL_RID },
+            writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_WL_RID },
                 payload, bufSize, true);
         }
 
@@ -1549,7 +1549,7 @@ void FNENetwork::writeBlacklistRIDs(uint32_t peerId)
                 offs += 4U;
             }
 
-            writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_BL_RID },
+            writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_BL_RID },
                 payload, bufSize, true);
         }
 
@@ -1632,7 +1632,7 @@ void FNENetwork::writeTGIDs(uint32_t peerId)
         offs += 5U;
     }
 
-    writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_ACTIVE_TGS },
+    writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS },
         payload, 4U + (tgidList.size() * 5U), true);
 }
 
@@ -1694,7 +1694,7 @@ void FNENetwork::writeDeactiveTGIDs(uint32_t peerId)
         offs += 5U;
     }
 
-    writePeerCommand(peerId, { NET_FUNC_MASTER, NET_MASTER_SUBFUNC_DEACTIVE_TGS }, 
+    writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS }, 
         payload, 4U + (tgidList.size() * 5U), true);
 }
 
@@ -1807,7 +1807,7 @@ bool FNENetwork::writePeerACK(uint32_t peerId, const uint8_t* data, uint32_t len
         ::memcpy(buffer + 6U, data, length);
     }
 
-    return writePeer(peerId, { NET_FUNC_ACK, NET_SUBFUNC_NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::ACK, NET_SUBFUNC::NOP }, buffer, length + 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /// <summary>
@@ -1869,7 +1869,7 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
     __SET_UINT16B((uint16_t)reason, buffer, 10U);                               // Reason
 
     logPeerNAKReason(peerId, tag, reason);
-    return writePeer(peerId, { NET_FUNC_NAK, NET_SUBFUNC_NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
+    return writePeer(peerId, { NET_FUNC::NAK, NET_SUBFUNC::NOP }, buffer, 10U, RTP_END_OF_CALL_SEQ, false, true);
 }
 
 /// <summary>
@@ -1893,5 +1893,5 @@ bool FNENetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REA
 
     logPeerNAKReason(peerId, tag, reason);
     return m_frameQueue->write(buffer, 12U, createStreamId(), peerId, m_peerId,
-        { NET_FUNC_NAK, NET_SUBFUNC_NOP }, 0U, addr, addrLen);
+        { NET_FUNC::NAK, NET_SUBFUNC::NOP }, 0U, addr, addrLen);
 }

@@ -207,9 +207,9 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
 
             // process incoming message frame opcodes
             switch (req->fneHeader.getFunction()) {
-            case NET_FUNC_TRANSFER:
+            case NET_FUNC::TRANSFER:
                 {
-                    if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_ACTIVITY) {     // Peer Activity Log Transfer
+                    if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY) {    // Peer Activity Log Transfer
                         if (network->m_allowActivityTransfer) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                                 FNEPeerConnection* connection = network->m_peers[peerId];
@@ -243,7 +243,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_DIAG) {    // Peer Diagnostic Log Transfer
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG) {   // Peer Diagnostic Log Transfer
                         if (network->m_allowDiagnosticTransfer) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
                                 FNEPeerConnection* connection = network->m_peers[peerId];
@@ -280,7 +280,7 @@ void* DiagNetwork::threadedNetworkRx(void* arg)
                             }
                         }
                     }
-                    else if (req->fneHeader.getSubFunction() == NET_TRANSFER_SUBFUNC_STATUS) {  // Peer Status Transfer
+                    else if (req->fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS) { // Peer Status Transfer
                         // report peer status to InfluxDB
                         if (network->m_enableInfluxDB) {
                             if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
