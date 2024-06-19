@@ -30,4 +30,13 @@
 #include "frames/MotVoiceHeader1.h"
 #include "frames/MotVoiceHeader2.h"
 
+// FSC
+#include "frames/fsc/FSCMessage.h"
+#include "frames/fsc/FSCResponse.h"
+#include "frames/fsc/FSCACK.h"
+#include "frames/fsc/FSCConnect.h"
+#include "frames/fsc/FSCConnectResponse.h"
+#include "frames/fsc/FSCDisconnect.h"
+#include "frames/fsc/FSCHeartbeat.h"
+
 #endif // __DFSI_FRAMES_H__

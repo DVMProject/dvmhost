@@ -26,6 +26,73 @@ namespace p25
         // ---------------------------------------------------------------------------
 
         /// <summary>
+        /// Control Service Message.
+        /// </summary>
+        enum FSCMessageType {
+            /// <summary>
+            /// Establish connection with FSS.
+            /// </summary>
+            FSC_CONNECT = 0,
+
+            /// <summary>
+            /// Heartbeat/Connectivity Maintenance.
+            /// </summary>
+            FSC_HEARTBEAT = 1,
+            /// <summary>
+            /// Control Service Ack.
+            /// </summary>
+            FSC_ACK = 2,
+
+            /// <summary>
+            /// Detach Control Service.
+            /// </summary>
+            FSC_DISCONNECT = 9,
+
+            /// <summary>
+            /// Invalid Control Message.
+            /// </summary>
+            FSC_INVALID = 127,
+        };
+
+        /// <summary>
+        /// ACK/NAK Codes
+        /// </summary>
+        enum FSCAckResponseCode {
+            /// <summary>
+            /// Acknowledgement.
+            /// </summary>
+            CONTROL_ACK = 0,
+            /// <summary>
+            /// Unspecified Negative Acknowledgement.
+            /// </summary>
+            CONTROL_NAK = 1,
+            /// <summary>
+            /// Server is connected to some other host.
+            /// </summary>
+            CONTROL_NAK_CONNECTED = 2,
+            /// <summary>
+            /// Unsupported Manufactuerer Message.
+            /// </summary>
+            CONTROL_NAK_M_UNSUPP = 3,
+            /// <summary>
+            /// Unsupported Message Version.
+            /// </summary>
+            CONTROL_NAK_V_UNSUPP = 4,
+            /// <summary>
+            /// Unsupported Function.
+            /// </summary>
+            CONTROL_NAK_F_UNSUPP = 5,
+            /// <summary>
+            /// Bad / Unsupported Command Parameters.
+            /// </summary>
+            CONTROL_NAK_PARMS = 6,
+            /// <summary>
+            /// FSS is currently busy with a function.
+            /// </summary>
+            CONTROL_NAK_BUSY = 7
+        };
+
+        /// <summary>
         /// DFSI Block Types
         /// </summary>
         enum BlockType {

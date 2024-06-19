@@ -21,7 +21,7 @@
 #include <cstring>
 
 using namespace p25;
-using namespace dfsi;
+using namespace p25::dfsi;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
