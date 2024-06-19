@@ -60,8 +60,11 @@ dfsi:
         remoteRtpPort: 27500
 
     serial:
+        # Modem port type.
+        portType: "uart" # Valid values are "null", and "uart"
         # Serial configuration for serial DFSI
         port: "/dev/ttyACM0"
+        #
         baudrate: 115200
         # RT/RT flag enabled (0x02) or disabled (0x04)
         rtrt: false

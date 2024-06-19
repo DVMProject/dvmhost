@@ -46,7 +46,6 @@ namespace p25
 
         class HOST_SW_API MotFullRateVoice {
         public:
-            // Frame information
             static const uint8_t LENGTH = 17;
             static const uint8_t SHORTENED_LENGTH = 13;
             static const uint8_t ADDITIONAL_LENGTH = 4;
@@ -70,7 +69,7 @@ namespace p25
             uint8_t* imbeData; // ?? - this should probably be private with getters/setters
             uint8_t* additionalData; // ?? - this should probably be private with getters/setters
 
-            /// <summary></summary>
+            /// <summary>Frame Type.</summary>
             __PROPERTY(uint8_t, frameType, FrameType);
             /// <summary></summary>
             __PROPERTY(uint8_t, source, Source);

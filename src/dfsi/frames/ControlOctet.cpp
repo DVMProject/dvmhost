@@ -12,7 +12,7 @@
 *
 */
 
-#include "frames/StartOfStream.h"
+#include "frames/ControlOctet.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/Utils.h"
 #include "common/Log.h"
@@ -28,49 +28,53 @@ using namespace dfsi;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Initializes a instance of the StartOfStream class.
+/// Initializes a instance of the ControlOctet class.
 /// </summary>
-StartOfStream::StartOfStream() :
-    m_nid(0U),
-    m_errorCount(0U)
+ControlOctet::ControlOctet() :
+    m_signal(false),
+    m_compact(true),
+    m_blockHeaderCnt(0U)
 {
     /* stub */
 }
 
 /// <summary>
-/// Initializes a instance of the StartOfStream class.
+/// Initializes a instance of the ControlOctet class.
 /// </summary>
 /// <param name="data"></param>
-StartOfStream::StartOfStream(uint8_t* data) :
-    m_nid(0U),
-    m_errorCount(0U)
+ControlOctet::ControlOctet(uint8_t* data) :
+    m_signal(false),
+    m_compact(true),
+    m_blockHeaderCnt(0U)
 {
     decode(data);
 }
 
 /// <summary>
-/// Decode a start of stream frame.
+/// Decode a control octet frame.
 /// </summary>
 /// <param name="data"></param>
 /// <returns></returns>
-bool StartOfStream::decode(const uint8_t* data)
+bool ControlOctet::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    m_nid = __GET_UINT16(data, 0U);                             // Network Identifier
-    m_errorCount = (data[2U] & 0x0FU);                          // Error Count
+    m_signal = (data[0U] & 0x07U) == 0x07U;                     // Signal Flag
+    m_compact = (data[0U] & 0x06U) == 0x06U;                    // Compact Flag
+    m_blockHeaderCnt = (uint8_t)(data[0U] & 0x3FU);             // Block Header Count
 
     return true;
 }
 
 /// <summary>
-/// Encode a start of stream frame.
+/// Encode a control octet frame.
 /// </summary>
 /// <param name="data"></param>
-void StartOfStream::encode(uint8_t* data)
+void ControlOctet::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    __SET_UINT16(m_nid, data, 0U);                              // Network Identifier
-    data[2U] = m_errorCount & 0x0FU;                            // Error Count
+    data[0U] = (uint8_t)((m_signal ? 0x07U : 0x00U) +           // Signal Flag
+            (m_compact ? 0x06U : 0x00U) +                       // Control Flag
+            (m_blockHeaderCnt & 0x3F));
 }

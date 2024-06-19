@@ -225,47 +225,9 @@ int Dfsi::run()
 
         UInt8Array p25Buffer = m_network->readP25(netReadRet, length);
         if (netReadRet) {
-            uint8_t duid = p25Buffer[22U];
-            uint8_t MFId = p25Buffer[15U];
-
-            uint8_t lco = p25Buffer[4U];
-
-            uint32_t srcId = __GET_UINT16(p25Buffer, 5U);
-            uint32_t dstId = __GET_UINT16(p25Buffer, 8U);
-
-            if (!g_hideMessages)
-                LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
-
             // Send the data to the serial handler if serial is up
             if (m_serial != nullptr)
                 m_serial->processP25FromNet(std::move(p25Buffer), length);
-        }
-
-        // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDN
-        UInt8Array dmrBuffer = m_network->readDMR(netReadRet, length);
-        if (netReadRet) {
-            uint8_t seqNo = dmrBuffer[4U];
-
-            uint32_t srcId = __GET_UINT16(dmrBuffer, 5U);
-            uint32_t dstId = __GET_UINT16(dmrBuffer, 8U);
-
-            uint8_t flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? dmr::FLCO_PRIVATE : dmr::FLCO_GROUP;
-
-            uint32_t slotNo = (dmrBuffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
-
-            if (!g_hideMessages)
-                LogMessage(LOG_NET, "DMR, slotNo = %u, seqNo = %u, flco = $%02X, srcId = %u, dstId = %u, len = %u", slotNo, seqNo, flco, srcId, dstId, length);
-        }
-
-        UInt8Array nxdnBuffer = m_network->readNXDN(netReadRet, length);
-        if (netReadRet) {
-            uint8_t messageType = nxdnBuffer[4U];
-
-            uint32_t srcId = __GET_UINT16(nxdnBuffer, 5U);
-            uint32_t dstId = __GET_UINT16(nxdnBuffer, 8U);
-
-            if (!g_hideMessages)
-                LogMessage(LOG_NET, "NXDN, messageType = $%02X, srcId = %u, dstId = %u, len = %u", messageType, srcId, dstId, length);
         }
 
         // ------------------------------------------------------
@@ -414,11 +376,18 @@ bool Dfsi::createPeerNetwork()
     return true;
 }
 
+/// <summary>
+/// Initializes serial V24 network.
+/// </summary>
+/// <param name="p25BufferSize"></param>
+/// <param name="callTimeout"></param>
+/// <returns></returns>
 bool Dfsi::createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout)
 {
     // Read serial config
     yaml::Node dfsi_conf = m_conf["dfsi"];
     yaml::Node serial_conf = dfsi_conf["serial"];
+    std::string portType = serial_conf["portType"].as<std::string>("null");
     std::string port = serial_conf["port"].as<std::string>();
     uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
     bool rtrt = serial_conf["rtrt"].as<bool>();
@@ -428,6 +397,7 @@ bool Dfsi::createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout)
     bool serial_trace = serial_conf["trace"].as<bool>();
 
     LogInfo("Serial Parameters");
+    LogInfo("    Port Type:   %s", portType.c_str());
     LogInfo("    Port:        %s", port.c_str());
     LogInfo("    Baudrate:    %u", baudrate);
     LogInfo("    RT/RT:       %s", rtrt ? "Enabled" : "Disabled");
@@ -437,7 +407,7 @@ bool Dfsi::createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout)
     LogInfo("    Trace:       %s", serial_trace ? "Enabled" : "Disabled");
 
     // Create serial service
-    m_serial = new SerialService(port, baudrate, rtrt, diu, jitter, m_network, p25BufferSize, p25BufferSize, callTimeout, serial_debug, serial_trace);
+    m_serial = new SerialService(portType, port, baudrate, rtrt, diu, jitter, m_network, p25BufferSize, p25BufferSize, callTimeout, serial_debug, serial_trace);
 
     // Open serial
     bool ret = m_serial->open();

@@ -44,7 +44,11 @@ MotStartOfStream::MotStartOfStream() :
 /// Initializes a instance of the MotStartOfStream class.
 /// </summary>
 /// <param name="data"></param>
-MotStartOfStream::MotStartOfStream(uint8_t* data)
+MotStartOfStream::MotStartOfStream(uint8_t* data) :
+    m_marker(FIXED_MARKER),
+    m_rt(DISABLED),
+    m_startStop(START),
+    m_streamType(VOICE)
 {
     decode(data);
 }

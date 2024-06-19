@@ -48,12 +48,15 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
 /// Initializes a instance of the MotStartVoiceFrame class.
 /// </summary>
 /// <param name="data"></param>
-MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data)
+MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data) :
+    startOfStream(nullptr),
+    fullRateVoice(nullptr),
+    m_icw(ICW_DIU),
+    m_rssi(0U),
+    m_rssiValidity(INVALID),
+    m_nRssi(0U),
+    m_adjMM(0U)
 {
-    // set our pointers to null since we don't initialize them anywhere else
-    startOfStream = nullptr;
-    fullRateVoice = nullptr;
-    // decode
     decode(data);
 }
 

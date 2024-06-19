@@ -152,9 +152,6 @@ int checkArgs(int argc, char* argv[])
         else if (IS("--syslog")) {
             g_useSyslog = true;
         }
-        else if (IS("-s")) {
-            g_hideMessages = true;
-        }
         else if (IS("-c")) {
             if (argc-- <= 0)
                 usage("error: %s", "must specify the configuration file to use");

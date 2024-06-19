@@ -27,7 +27,6 @@ namespace p25
         // ---------------------------------------------------------------------------
         //  Class Declaration
         //      Implements a P25 DFSI start of stream packet.
-        // </summary>
         // 
         // Byte 0               1               2
         // Bit  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
@@ -51,9 +50,9 @@ namespace p25
             void encode(uint8_t* data);
         
         public:
-            /// <summary></summary>
+            /// <summary>Network Identifier.</summary>
             __PROPERTY(uint16_t, nid, NID);
-            /// <summary></summary>
+            /// <summary>Error count.</summary>
             __PROPERTY(uint8_t, errorCount, ErrorCount);
         };
     } // namespace dfsi

@@ -23,7 +23,27 @@ using namespace modem;
 using namespace p25;
 using namespace dfsi;
 
-SerialService::SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace) :
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Initializes a new instance of the SerialService class.
+/// </summary>
+/// <param name="portType"></param>
+/// <param name="portName"></param>
+/// <param name="baudrate"></param>
+/// <param name="rtrt"></param>
+/// <param name="diu"></param>
+/// <param name="jitter"></param>
+/// <param name="network"></param>
+/// <param name="p25TxQueueSize"></param>
+/// <param name="p25RxQueueSize"></param>
+/// <param name="callTimeout"></param>
+/// <param name="debug"></param>
+/// <param name="trace"></param>
+SerialService::SerialService(std::string& portType, const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, 
+    uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace) :
     m_portName(portName),
     m_baudrate(baudrate),
     m_rtrt(rtrt),
@@ -62,7 +82,13 @@ SerialService::SerialService(const std::string& portName, uint32_t baudrate, boo
     // Setup serial
     port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
 
-    m_port = new port::UARTPort(portName, serialSpeed, false);
+    std::transform(portType.begin(), portType.end(), portType.begin(), ::tolower);
+    if (portType == NULL_PORT) {
+        m_port = new port::ModemNullPort();
+    }
+    else {
+        m_port = new port::UARTPort(portName, serialSpeed, false);
+    }
 
     m_lastIMBE = new uint8_t[11U];
     ::memcpy(m_lastIMBE, P25_NULL_IMBE, 11U);
@@ -70,6 +96,9 @@ SerialService::SerialService(const std::string& portName, uint32_t baudrate, boo
     m_msgBuffer = new uint8_t[BUFFER_LENGTH];
 }
 
+/// <summary>
+/// Finalizes a instance of the SerialService class.
+/// </summary>
 SerialService::~SerialService()
 {
     if (m_port != nullptr) {
@@ -86,6 +115,10 @@ SerialService::~SerialService()
     delete m_rxVoiceCallData;
 }
 
+/// <summary>
+/// Updates the timer by the passed number of milliseconds.
+/// </summary>
+/// <param name="ms"></param>
 void SerialService::clock(uint32_t ms)
 {
     // Get now
@@ -193,6 +226,10 @@ void SerialService::clock(uint32_t ms)
     }
 }
 
+/// <summary>
+/// Opens connection to the serial interface.
+/// </summary>
+/// <returns>True, if connection is established, otherwise false.</returns>
 bool SerialService::open()
 {
     LogInfoEx(LOG_SERIAL, "Opening port %s at %u baud", m_portName.c_str(), m_baudrate);
@@ -209,6 +246,9 @@ bool SerialService::open()
     return true;
 }
 
+/// <summary>
+/// Closes connection to the serial interface.
+/// </summary>
 void SerialService::close()
 {
     LogInfoEx(LOG_SERIAL, "Closing port");
@@ -915,6 +955,10 @@ void SerialService::processP25ToNet()
         m_rxVoiceCallData->n = 0;
     }
 }
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
 
 /// <summary>Read a data message from the serial port</summary>
 /// This is borrowed from the Modem::getResponse() function

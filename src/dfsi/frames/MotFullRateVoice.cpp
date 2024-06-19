@@ -179,7 +179,7 @@ void MotFullRateVoice::encode(uint8_t* data, bool shortened)
 }
 
 // ---------------------------------------------------------------------------
-//  Protected Class Members
+//  Private Class Members
 // ---------------------------------------------------------------------------
 
 /// <summary>

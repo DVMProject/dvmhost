@@ -29,7 +29,6 @@ extern std::string g_lockFile;
 
 extern bool g_foreground;
 extern bool g_killed;
-extern bool g_hideMessages;
 
 extern std::string g_masterAddress;
 extern uint16_t g_masterPort;

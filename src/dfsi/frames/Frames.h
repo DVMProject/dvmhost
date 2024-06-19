@@ -17,8 +17,13 @@
 
 #include "Defines.h"
 
+// TIA
 #include "frames/StartOfStream.h"
+#include "frames/ControlOctet.h"
+#include "frames/BlockHeader.h"
+#include "frames/FullRateVoice.h"
 
+// "The" Manufacturer
 #include "frames/MotFullRateVoice.h"
 #include "frames/MotStartOfStream.h"
 #include "frames/MotStartVoiceFrame.h"

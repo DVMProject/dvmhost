@@ -26,6 +26,21 @@ namespace p25
         // ---------------------------------------------------------------------------
 
         /// <summary>
+        /// DFSI Block Types
+        /// </summary>
+        enum BlockType {
+            FULL_RATE_VOICE = 0,
+
+            VOICE_HEADER_P1 = 6,
+            VOICE_HEADER_P2 = 7,
+
+            START_OF_STREAM = 9,
+            END_OF_STREAM = 10,
+
+            UNDEFINED = 127
+        };
+
+        /// <summary>
         /// 
         /// </summary>
         enum RTFlag {

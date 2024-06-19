@@ -43,11 +43,10 @@ MotVoiceHeader2::MotVoiceHeader2() :
 /// Initializes a instance of the MotVoiceHeader2 class.
 /// </summary>
 /// <param name="data"></param>
-MotVoiceHeader2::MotVoiceHeader2(uint8_t* data)
+MotVoiceHeader2::MotVoiceHeader2(uint8_t* data) :
+    header(nullptr),
+    m_source(SOURCE_QUANTAR)
 {
-    // set pointer to null since it hasn't been initialized yet
-    header = nullptr;
-    // decode
     decode(data);
 }
 

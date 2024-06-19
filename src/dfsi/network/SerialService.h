@@ -33,6 +33,7 @@
 #include "host/modem/Modem.h"
 #include "host/modem/port/IModemPort.h"
 #include "host/modem/port/UARTPort.h"
+#include "host/modem/port/ModemNullPort.h"
 
 // System Includes
 #include <string>
@@ -48,7 +49,6 @@ using namespace dfsi;
 
 namespace network
 {
-
     // DFSI serial tx flags used to determine proper jitter handling of data in ringbuffer
     enum SERIAL_TX_TYPE {
         NONIMBE,
@@ -56,20 +56,24 @@ namespace network
     };
 
     // ---------------------------------------------------------------------------
-    // Class Declaration
+    //  Class Declaration
     //      Serial V24 service
     // ---------------------------------------------------------------------------
 
     class HOST_SW_API SerialService {
     public:
-        SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace);
-
+        /// <summary>Initializes an instance of the SerialService class.</summary>
+        SerialService(std::string& portType, const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace);
+        /// <summary>Finalizes an instance of the SerialService class.</summary>
         ~SerialService();
 
+        /// <summary>Updates the serial interface by the passed number of milliseconds.</summary>
         void clock(uint32_t ms);
 
+        /// <summary>Opens connection to the serial interface.</summary>
         bool open();
 
+        /// <summary>Closes connection to the serial interface.</summary>
         void close();
 
         // Handle P25 data from network to V24
@@ -156,10 +160,6 @@ namespace network
 
         void printDebug(const uint8_t* buffer, uint16_t length);
     };
-
-    // Defines for Mot DFSI
-    
-   
 } // namespace network
 
 #endif // __SERIAL_SERVICE_H__

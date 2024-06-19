@@ -49,12 +49,14 @@ MotVoiceHeader1::MotVoiceHeader1() :
 /// Initializes a instance of the MotVoiceHeader1 class.
 /// </summary>
 /// <param name="data"></param>
-MotVoiceHeader1::MotVoiceHeader1(uint8_t* data)
+MotVoiceHeader1::MotVoiceHeader1(uint8_t* data) :
+    header(nullptr),
+    startOfStream(nullptr),
+    m_icw(ICW_DIU),
+    m_rssi(0U),
+    m_rssiValidity(INVALID),
+    m_nRssi(0U)
 {
-    // set our pointers to null since we haven't initialized them yet
-    startOfStream = nullptr;
-    header = nullptr;
-    // decode
     decode(data);
 }
 
