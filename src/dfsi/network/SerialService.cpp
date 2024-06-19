@@ -23,7 +23,7 @@ using namespace modem;
 using namespace p25;
 using namespace dfsi;
 
-SerialService::SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace) :
+SerialService::SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace) :
     m_portName(portName),
     m_baudrate(baudrate),
     m_rtrt(rtrt),
@@ -51,6 +51,7 @@ SerialService::SerialService(const std::string& portName, uint32_t baudrate, boo
     m_rxP25LDUCounter(0U),
     m_netCallInProgress(false),
     m_lclCallInProgress(false),
+    m_callTimeout(callTimeout),
     m_rxVoiceControl(nullptr),
     m_rxVoiceLsd(nullptr),
     m_rxVoiceCallData(nullptr)
@@ -87,6 +88,9 @@ SerialService::~SerialService()
 
 void SerialService::clock(uint32_t ms)
 {
+    // Get now
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     // Get data from serial port
     RESP_TYPE_DVM type = readSerial();
 
@@ -125,7 +129,7 @@ void SerialService::clock(uint32_t ms)
                 // Add P25 data to buffer
                 m_rxP25Queue.addData(m_msgBuffer + (cmdOffset + 1U), m_msgLength - (cmdOffset + 1U));
 
-                if (m_debug) {
+                if (m_debug && m_trace) {
                     LogDebug(LOG_SERIAL, "Got P25 data from V24 board (len: %u)", m_msgLength);
                 }
             }
@@ -175,6 +179,18 @@ void SerialService::clock(uint32_t ms)
     } else if (out < 0) {
         LogError(LOG_SERIAL, "Failed to write to serial port!");
     }
+
+    // Clear a call in progress flag if we're longer than our timeout value
+    if (m_lclCallInProgress && (now - m_lastLclFrame > m_callTimeout)) {
+        m_lclCallInProgress = false;
+        if (m_debug)
+            LogDebug(LOG_SERIAL, "Local call activity timeout");
+    }
+    if (m_netCallInProgress && (now - m_lastNetFrame > m_callTimeout)) {
+        m_netCallInProgress = false;
+        if (m_debug)
+            LogDebug(LOG_SERIAL, "Net call activity timeout");
+    }
 }
 
 bool SerialService::open()
@@ -209,6 +225,9 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
         LogWarning(LOG_SERIAL, "Local call in progress, ignoring frames from network");
         return;
     }
+
+    // Update our last frame time
+    m_lastNetFrame = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // Decode grant info
     bool grantDemand = (p25Buffer[14U] & 0x80U) == 0x80U;
@@ -440,7 +459,7 @@ void SerialService::processP25FromNet(UInt8Array p25Buffer, uint32_t length)
                     count += dfsi::P25_DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
 
                     control = lc::LC(*dfsiLC.control());
-                    LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
+                    LogInfoEx(LOG_SERIAL, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", control.getAlgId(), control.getKId());
 
                     //Utils::dump("P25 LDU2 from net", netLDU2, 9U * 25U);
 
@@ -549,6 +568,9 @@ void SerialService::processP25ToNet()
     uint8_t frameType = dfsiData[0U];
 
     //LogDebug(LOG_SERIAL, "Handling DFSI frameType 0x%02X", frameType);
+
+    // Update our last frame time
+    m_lastLclFrame = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // Switch based on DFSI frame type
     switch (frameType) {
@@ -1248,19 +1270,19 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         break;
     }
 
-    // Placeholder for last call timestamp retrieved below (not yet used)
-    //int64_t lastHeard = 0U;
+    // Placeholder for last call timestamp retrieved below (Not used yet)
+    int64_t lastHeard = 0U;
 
     // Placeholder for sequence number retrieved below 
     uint32_t sequence = 0U;
 
-    // Get the last heard value (not used currently, TODO: use this for covnentional TGID timeout purposes)
-    /*{
+    // Get the last heard value
+    {
         auto entry = m_lastHeard.find(control.getDstId());
         if (entry != m_lastHeard.end()) {
             lastHeard = m_lastHeard[control.getDstId()];
         }
-    }*/
+    }
 
     // Get the last sequence number
     {
@@ -1274,8 +1296,7 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
     if (duid == P25_DUID_LDU1 && ((sequence == 0U) || (sequence == RTP_END_OF_CALL_SEQ))) {
         // Start the new stream
         startOfStream(lc);
-        // Update our call entries
-        m_lastHeard[control.getDstId()] = now;
+        // Update our call entry
         m_sequences[control.getDstId()] = ++sequence;
 
         // Log
@@ -1304,6 +1325,9 @@ void SerialService::writeP25Frame(uint8_t duid, dfsi::LC& lc, uint8_t* ldu)
         // Clear our counters
         m_sequences[control.getDstId()] = RTP_END_OF_CALL_SEQ;
     }
+
+    // Update our last heard value (updated to now every time a new frame arrives)
+    m_lastHeard[control.getDstId()] = now;
 
     // Break out the 9 individual P25 packets
     for (int n = 0; n < 9; n++) {

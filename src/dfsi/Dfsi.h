@@ -65,6 +65,8 @@ private:
     bool readParams();
     /// <summary>Initializes peer network connectivity.</summary>
     bool createPeerNetwork();
+    /// <summary>Initializes serial V24 network.</summary>
+    bool createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout);
 };
 
 #endif // __DFSI_H__

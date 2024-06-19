@@ -33,4 +33,8 @@
 #undef DEFAULT_LOCK_FILE
 #define DEFAULT_LOCK_FILE "/tmp/dvmdfsi.lock"
 
+#define DFSI_MODE_UDP_FNE   1
+#define DFSI_MODE_V24_FNE   2
+#define DFSI_MODE_UDP_V24   3
+
 #endif // __DEFINES_H__

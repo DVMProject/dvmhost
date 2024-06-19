@@ -62,7 +62,7 @@ namespace network
 
     class HOST_SW_API SerialService {
     public:
-        SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, bool debug, bool trace);
+        SerialService(const std::string& portName, uint32_t baudrate, bool rtrt, bool diu, uint16_t jitter, DfsiPeerNetwork* network, uint32_t p25TxQueueSize, uint32_t p25RxQueueSize, uint16_t callTimeout, bool debug, bool trace);
 
         ~SerialService();
 
@@ -111,6 +111,7 @@ namespace network
         RingBuffer<uint8_t> m_rxP25Queue;
         RingBuffer<uint8_t> m_txP25Queue;
 
+        // Storage for V24 TX jitter buffer metering
         uint64_t m_lastP25Tx;
 
         edac::RS634717 m_rs;
@@ -118,9 +119,16 @@ namespace network
         // Counter for assembling a full LDU from individual frames in the RX queue
         uint8_t m_rxP25LDUCounter;
 
-        // Flags to indicate if calls to/from the FNE are already in progress
+        // "Mutex" flags to indicate if calls to/from the FNE are already in progress
         bool m_netCallInProgress;
         bool m_lclCallInProgress;
+
+        // Time in ms to wait before considering a call in progress as "over" in case we miss the TDUs
+        uint16_t m_callTimeout;
+
+        // Storage for handling local/net call timeouts (for callInProgress mutexes)
+        uint64_t m_lastNetFrame;
+        uint64_t m_lastLclFrame;
 
         // Control and LSD objects for current RX P25 data being built to send to the net
         lc::LC* m_rxVoiceControl;

@@ -150,6 +150,12 @@ int Dfsi::run()
     if (!ret)
         return EXIT_FAILURE;
 
+    // Read DFSI config
+    yaml::Node dfsi_conf = m_conf["dfsi"];
+    uint16_t dfsiMode = dfsi_conf["mode"].as<uint16_t>();
+    uint32_t p25BufferSize = dfsi_conf["p25BufferSize"].as<uint32_t>();
+    uint16_t callTimeout = dfsi_conf["callTimeout"].as<uint16_t>();
+
     // initialize peer networking
     ret = createPeerNetwork();
     if (!ret)
@@ -157,36 +163,43 @@ int Dfsi::run()
 
     ::LogInfoEx(LOG_HOST, "DFSI peer network is up and running");
 
-    // Read DFSI config
-    yaml::Node dfsi_conf = m_conf["dfsi"];
-    uint32_t p25BufferSize = dfsi_conf["p25BufferSize"].as<uint32_t>();
+    std::string dfsiModeStr = "Unknown";
 
-    // Read serial config
-    yaml::Node serial_conf = dfsi_conf["serial"];
-    std::string port = serial_conf["port"].as<std::string>();
-    uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
-    bool rtrt = serial_conf["rtrt"].as<bool>();
-    bool diu = serial_conf["diu"].as<bool>();
-    uint16_t jitter = serial_conf["jitter"].as<uint16_t>();
-    bool serial_debug = serial_conf["debug"].as<bool>();
-    bool serial_trace = serial_conf["trace"].as<bool>();
+    switch (dfsiMode) {
+        case DFSI_MODE_UDP_FNE:
+        {
+            dfsiModeStr = "UDP DFSI to FNE";
+            LogError(LOG_HOST, "UDP DFSI mode not yet supported, sorry!");
+            return EXIT_FAILURE;
+        }
+        break;
+        case DFSI_MODE_V24_FNE:
+        {
+            dfsiModeStr = "V24 DFSI to FNE";
+            ret = createSerialNetwork(p25BufferSize, callTimeout);
+            if (!ret)
+                return EXIT_FAILURE;
+        }
+        break;
+        case DFSI_MODE_UDP_V24:
+        {
+            dfsiModeStr = "UDP DFSI to V24 DFSI";
+            LogError(LOG_HOST, "UDP to V24 mode not yet supported, sorry!");
+            return EXIT_FAILURE;
+        }
+        break;
+        default:
+        {
+            LogError(LOG_HOST, "Invalid DFSI mode specified: %d", dfsiMode);
+            return EXIT_FAILURE;
+        }
+        break;
+    }
 
-    LogInfo("Serial Parameters");
-    LogInfo("    Port:        %s", port.c_str());
-    LogInfo("    Baudrate:    %u", baudrate);
-    LogInfo("    RT/RT:       %s", rtrt ? "Enabled" : "Disabled");
-    LogInfo("    DIU Flag:    %s", diu ? "Enabled" : "Disabled");
-    LogInfo("    Jitter Size: %u ms", jitter);
-    LogInfo("    Debug:       %s", serial_debug ? "Enabled" : "Disabled");
-    LogInfo("    Trace:       %s", serial_trace ? "Enabled" : "Disabled");
-
-    // Create serial service
-    m_serial = new SerialService(port, baudrate, rtrt, diu, jitter, m_network, p25BufferSize, p25BufferSize, serial_debug, serial_trace);
-
-    // Open serial
-    ret = m_serial->open();
-    if (!ret)
-        return EXIT_FAILURE;
+    LogInfo("DFSI Parameters");
+    LogInfo("    Mode: %u (%s)", dfsiMode, dfsiModeStr.c_str());
+    LogInfo("    P25 Buffer Size: %u bytes", p25BufferSize);
+    LogInfo("    Call Timeout:    %u ms", callTimeout);
 
     StopWatch stopWatch;
     stopWatch.start();
@@ -223,11 +236,12 @@ int Dfsi::run()
             if (!g_hideMessages)
                 LogMessage(LOG_NET, "P25, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u", duid, lco, MFId, srcId, dstId, length);
 
-            // Send the data to the serial handler
-            m_serial->processP25FromNet(std::move(p25Buffer), length);
+            // Send the data to the serial handler if serial is up
+            if (m_serial != nullptr)
+                m_serial->processP25FromNet(std::move(p25Buffer), length);
         }
 
-        // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDNS
+        // We keep DMR & NXDN in so nothing breaks, even though DFSI doesn't do DMR or NXDN
         UInt8Array dmrBuffer = m_network->readDMR(netReadRet, length);
         if (netReadRet) {
             uint8_t seqNo = dmrBuffer[4U];
@@ -258,7 +272,7 @@ int Dfsi::run()
         //  -- Network TX Clocking                             --
         // ------------------------------------------------------
 
-        // Processes data in the serial rx P25 buffer and sends it to the network buffer for sending
+        // Processes data in the serial rx P25 buffer and sends it to the network buffer for sending, if serial is up
         if (m_serial != nullptr) {
             m_serial->processP25ToNet();
         }
@@ -364,10 +378,10 @@ bool Dfsi::createPeerNetwork()
     bool netDebug = networkConf["debug"].as<bool>();
 
     LogInfo("Network Parameters");
-    LogInfo("    Identity: %s", identity.c_str());
-    LogInfo("    Peer ID: %u", id);
-    LogInfo("    Address: %s", address.c_str());
-    LogInfo("    Port: %u", port);
+    LogInfo("    Identity:  %s", identity.c_str());
+    LogInfo("    Peer ID:   %u", id);
+    LogInfo("    Address:   %s", address.c_str());
+    LogInfo("    Port:      %u", port);
     LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
     if (id > 999999999U) {
@@ -396,6 +410,43 @@ bool Dfsi::createPeerNetwork()
     }
 
     ::LogSetNetwork(m_network);
+
+    return true;
+}
+
+bool Dfsi::createSerialNetwork(uint32_t p25BufferSize, uint16_t callTimeout)
+{
+    // Read serial config
+    yaml::Node dfsi_conf = m_conf["dfsi"];
+    yaml::Node serial_conf = dfsi_conf["serial"];
+    std::string port = serial_conf["port"].as<std::string>();
+    uint32_t baudrate = serial_conf["baudrate"].as<uint32_t>();
+    bool rtrt = serial_conf["rtrt"].as<bool>();
+    bool diu = serial_conf["diu"].as<bool>();
+    uint16_t jitter = serial_conf["jitter"].as<uint16_t>();
+    bool serial_debug = serial_conf["debug"].as<bool>();
+    bool serial_trace = serial_conf["trace"].as<bool>();
+
+    LogInfo("Serial Parameters");
+    LogInfo("    Port:        %s", port.c_str());
+    LogInfo("    Baudrate:    %u", baudrate);
+    LogInfo("    RT/RT:       %s", rtrt ? "Enabled" : "Disabled");
+    LogInfo("    DIU Flag:    %s", diu ? "Enabled" : "Disabled");
+    LogInfo("    Jitter Size: %u ms", jitter);
+    LogInfo("    Debug:       %s", serial_debug ? "Enabled" : "Disabled");
+    LogInfo("    Trace:       %s", serial_trace ? "Enabled" : "Disabled");
+
+    // Create serial service
+    m_serial = new SerialService(port, baudrate, rtrt, diu, jitter, m_network, p25BufferSize, p25BufferSize, callTimeout, serial_debug, serial_trace);
+
+    // Open serial
+    bool ret = m_serial->open();
+    if (!ret) {
+        delete m_serial;
+        m_serial = nullptr;
+        LogError(LOG_HOST, "failed to initialied serial V24 interface");
+        return false;
+    }
 
     return true;
 }

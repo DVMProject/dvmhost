@@ -45,6 +45,9 @@ MotVoiceHeader2::MotVoiceHeader2() :
 /// <param name="data"></param>
 MotVoiceHeader2::MotVoiceHeader2(uint8_t* data)
 {
+    // set pointer to null since it hasn't been initialized yet
+    header = nullptr;
+    // decode
     decode(data);
 }
 

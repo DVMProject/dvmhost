@@ -44,7 +44,7 @@ dfsi:
     # P25 buffer size in bytes (don't change this unless you have a good reason to)
     # Default of 3060 is 10 full LDU1/2s worth of data
     p25BufferSize: 3060
-    
+
     udp:
         # Time in seconds between heartbets to DFSI peers.
         heartbeat: 5
@@ -73,6 +73,9 @@ dfsi:
         debug: false
         # Trace logging (prints lots of data)
         trace: false
+
+    # Timer which will reset local/remote call flags if frames aren't received longer than this time in ms
+    callTimeout: 200
 
 #
 # Logging Configuration

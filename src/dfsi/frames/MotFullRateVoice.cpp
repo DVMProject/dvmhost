@@ -47,6 +47,10 @@ MotFullRateVoice::MotFullRateVoice() :
 /// <param name="data"></param>
 MotFullRateVoice::MotFullRateVoice(uint8_t* data)
 {
+    // set our pointers to null since it doesn't get initialized otherwise
+    imbeData = nullptr;
+    additionalData = nullptr;
+    // decode
     decode(data);
 }
 

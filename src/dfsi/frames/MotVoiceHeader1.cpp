@@ -51,6 +51,10 @@ MotVoiceHeader1::MotVoiceHeader1() :
 /// <param name="data"></param>
 MotVoiceHeader1::MotVoiceHeader1(uint8_t* data)
 {
+    // set our pointers to null since we haven't initialized them yet
+    startOfStream = nullptr;
+    header = nullptr;
+    // decode
     decode(data);
 }
 

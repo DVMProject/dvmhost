@@ -50,6 +50,10 @@ MotStartVoiceFrame::MotStartVoiceFrame() :
 /// <param name="data"></param>
 MotStartVoiceFrame::MotStartVoiceFrame(uint8_t* data)
 {
+    // set our pointers to null since we don't initialize them anywhere else
+    startOfStream = nullptr;
+    fullRateVoice = nullptr;
+    // decode
     decode(data);
 }
 
