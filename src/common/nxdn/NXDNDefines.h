@@ -136,10 +136,10 @@ namespace nxdn
                 CAC_INBOUND_SHORT = 3U,                 // Common Access Channel - Inbound Short
 
             // Slow Associated Control Channel / User Specific Channel
-                USC_SACCH_NS = 0U,                      //
-                USC_UDCH = 1U,                          //
-                USC_SACCH_SS = 2U,                      //
-                USC_SACCH_SS_IDLE = 3U                  //
+                USC_SACCH_NS = 0U,                      // Slow Access Control Channel - Non-Superframe
+                USC_UDCH = 1U,                          // 
+                USC_SACCH_SS = 2U,                      // Slow Access Control Channel - Superframe
+                USC_SACCH_SS_IDLE = 3U                  // Slow Access Control Channel - Sueprframe/Idle
             };
         }
 
@@ -149,14 +149,14 @@ namespace nxdn
         namespace ChOption {
             // Channel Option(s) Enumeration
             enum E : uint8_t {
-                DATA_NORMAL = 0U,                       //
-                DATA_IDLE = 1U,                         //
-                DATA_COMMON = 2U,                       //
+                DATA_NORMAL = 0U,                       // Normal RCCH Data (Mandatory Data)
+                DATA_IDLE = 1U,                         // Idle RCCH Data (Data that does not need to be Rx)
+                DATA_COMMON = 2U,                       // Common RCCH Data (Optional Data)
 
-                STEAL_NONE = 3U,                        //
-                STEAL_FACCH1_2 = 2U,                    //
-                STEAL_FACCH1_1 = 1U,                    //
-                STEAL_FACCH = 0U                        //
+                STEAL_NONE = 3U,                        // No Stealing
+                STEAL_FACCH1_2 = 2U,                    // 2 VCHs second half of FACCH1
+                STEAL_FACCH1_1 = 1U,                    // 2 VCHs first half of FACCH1
+                STEAL_FACCH = 0U                        // FACCH
             };
         }
 
@@ -166,16 +166,17 @@ namespace nxdn
         namespace ChStructure {
             // Channel Structure Enumeration
             enum E : uint8_t {
-                SR_RCCH_SINGLE = 0x00U,                 //
-                SR_RCCH_DUAL = 0x01U,                   //
-                SR_RCCH_HEAD_SINGLE = 0x02U,            //
-                SR_RCCH_HEAD_DUAL = 0x03U,              //
+                SR_RCCH_SINGLE = 0x00U,                 // Single Non-Header RCCH Message
+                SR_RCCH_DUAL = 0x01U,                   // Dual Non-Header RCCH Message
+                SR_RCCH_HEAD_SINGLE = 0x02U,            // Single Header RCCH Message
+                SR_RCCH_HEAD_DUAL = 0x03U,              // Dual Header RCCH Message
 
-                SR_SINGLE = 0U,                         //
-                SR_4_4 = 0U,                            //
-                SR_3_4 = 1U,                            //
-                SR_2_4 = 2U,                            //
-                SR_1_4 = 3U                             //
+                SR_SINGLE = 0U,                         // SACCH Single (same as SR_4_4, kept for clarity)
+
+                SR_4_4 = 0U,                            // 4/4 SACCH Single/Last
+                SR_3_4 = 1U,                            // 3/4 SACCH
+                SR_2_4 = 2U,                            // 2/4 SACCH
+                SR_1_4 = 3U                             // 1/4 SACCH Header
             };
         }
 
@@ -214,39 +215,39 @@ namespace nxdn
                 RSRC_NOT_AVAIL_NETWORK = 0x51U,         // Network Resource Not Available
                 RSRC_NOT_AVAIL_TEMP = 0x52U,            // Resource Temporarily Not Available
                 RSRC_NOT_AVAIL_QUEUED = 0x53U,          // Resource Queued Not Available
-                SVC_UNAVAILABLE = 0x06U,                // Service Unavailable
-                PROC_ERROR = 0x70U,                     //
-                PROC_ERROR_UNDEF = 0x71U,               //
+                SVC_UNAVAILABLE = 0x60U,                // Service Unavailable
+                PROC_ERROR = 0x70U,                     // Procedure Error - Lack of packet data
+                PROC_ERROR_UNDEF = 0x71U,               // Procedure Error - Invalid packet data
 
                 MM_REG_ACCEPTED = 0x01U,                // Registration Accepted
                 MM_LOC_ACPT_GRP_FAIL = 0x04U,           // Location Accepted / Group Failed
-                MM_LOC_ACPT_GRP_REFUSE = 0x04U,         // Location Accepted / Group Refused
+                MM_LOC_ACPT_GRP_REFUSE = 0x05U,         // Location Accepted / Group Refused
                 MM_REG_FAILED = 0x06U,                  // Registration Failed
                 MM_REG_REFUSED = 0x08U,                 // Registration Refused
 
-                VD_ACCEPTED = 0x10U,                    //
-                VD_GRP_NOT_PERM = 0x11U,                //
-                VD_REQ_UNIT_NOT_PERM = 0x12U,           //
-                VD_TGT_UNIT_NOT_PERM = 0x13U,           //
-                VD_REQ_UNIT_NOT_REG = 0x1CU,            //
-                VD_QUE_CHN_RESOURCE_NOT_AVAIL = 0x30U,  //
-                VD_QUE_TGT_UNIT_BUSY = 0x38U,           //
-                VD_QUE_GRP_BUSY = 0x39U,                //
+                VD_ACCEPTED = 0x10U,                    // Voice Accepted
+                VD_GRP_NOT_PERM = 0x11U,                // Voice Group Not Permitted
+                VD_REQ_UNIT_NOT_PERM = 0x12U,           // Requesting Unit Not Permitted
+                VD_TGT_UNIT_NOT_PERM = 0x13U,           // Target Unit Not Permitted
+                VD_REQ_UNIT_NOT_REG = 0x1CU,            // Requesting Unit Not Registered
+                VD_QUE_CHN_RESOURCE_NOT_AVAIL = 0x30U,  // Channel resources unavailable
+                VD_QUE_TGT_UNIT_BUSY = 0x38U,           // Target Unit Busy
+                VD_QUE_GRP_BUSY = 0x39U,                // Group Busy
 
-                SS_ACK_R = 0x01U,                       //
-                SS_ACK_S = 0x02U,                       //
-                SS_NACK = 0x08U,                        //
-                SS_ACCEPTED = 0x10U,                    //
-                SS_GRP_NOT_PERM = 0x11U,                //
-                SS_REQ_UNIT_NOT_PERM = 0x12U,           //
-                SS_TGT_UNIT_NOT_PERM = 0x13U,           //
-                SS_REQ_UNIT_NOT_REG = 0x1CU,            //
+                SS_ACK_R = 0x01U,                       // Data Response - ACK Rx Success
+                SS_ACK_S = 0x02U,                       // Data Response - ACK Tx Success
+                SS_NACK = 0x08U,                        // Data Response - NACK (Request Full Retry)
+                SS_ACCEPTED = 0x10U,                    // Data Accepted
+                SS_GRP_NOT_PERM = 0x11U,                // Data Group Not Permitted
+                SS_REQ_UNIT_NOT_PERM = 0x12U,           // Requesting Unit Not Permitted
+                SS_TGT_UNIT_NOT_PERM = 0x13U,           // Target Unit Not Permitted
+                SS_REQ_UNIT_NOT_REG = 0x1CU,            // Requesting Unit Not Registered
 
-                DREQ_USER = 0x10U,                      //
-                DREQ_OTHER = 0x1FU,                     //
+                DREQ_USER = 0x10U,                      // Disconnect by User Request
+                DREQ_OTHER = 0x1FU,                     // Other Disconnect Request
 
-                DISC_USER = 0x10U,                      //
-                DISC_OTHER = 0x1FU                      //
+                DISC_USER = 0x10U,                      // Disconnect by User
+                DISC_OTHER = 0x1FU                      // Other Disconnect
             };
         }
 
@@ -273,8 +274,8 @@ namespace nxdn
             enum : uint8_t {
                 IP_NETWORK = 0x10U,                     // IP Networked
                 PSTN_NETWORK = 0x20U,                   // PSTN Networked
-                STATUS_CALL_REM_CTRL = 0x40U,           //
-                SHORT_DATA_CALL_SVC = 0x80U             //
+                STATUS_CALL_REM_CTRL = 0x40U,           // Status Call & Remote Control Service
+                SHORT_DATA_CALL_SVC = 0x80U             // Short Data Call Service
             };
         }
 
@@ -285,8 +286,8 @@ namespace nxdn
             // Channel Access Step Enumeration
             enum E : uint8_t {
                 SYS_DEFINED = 0x00U,                    // System Defined
-                ONEDOT25K = 0x02U,                      //
-                THREEDOT125K = 0x03U                    //
+                ONEDOT25K = 0x02U,                      // 1.25khz Step
+                THREEDOT125K = 0x03U                    // 3.125khz Step
             };
         }
 
@@ -296,11 +297,11 @@ namespace nxdn
         namespace ChAccessBase {
             // Channel Access Base Enumeration
             enum E : uint8_t {
-                FREQ_100 = 0x01U,                       //
-                FREQ_330 = 0x02U,                       //
-                FREQ_400 = 0x03U,                       //
-                FREQ_750 = 0x04U,                       //
-                FREQ_SYS_DEFINED = 0x07U                //
+                FREQ_100 = 0x01U,                       // 100mhz Base
+                FREQ_330 = 0x02U,                       // 330mhz Base
+                FREQ_400 = 0x03U,                       // 400mhz Base
+                FREQ_750 = 0x04U,                       // 750mhz Base
+                FREQ_SYS_DEFINED = 0x07U                // System Defined
             };
         }
 
