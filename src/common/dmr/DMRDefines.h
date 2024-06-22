@@ -9,7 +9,7 @@
 * @license GPLv2 License (https://opensource.org/licenses/GPL-2.0)
 *
 *   Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
-*   Copyright (C) 2019-2021 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2019-2024 Bryan Biedenkapp, N2PLL
 *
 */
 #if !defined(__DMR_DEFINES_H__)
